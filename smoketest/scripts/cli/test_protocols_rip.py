@@ -57,7 +57,7 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
-    def test_rip(self):
+    def test_rip_01_parameters(self):
         distance = '40'
         network_distance = '66'
         metric = '8'
@@ -100,7 +100,7 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        # Verify FRR ospfd configuration
+        # Verify FRR ripd configuration
         frrconfig = self.getFRRconfig('router rip')
         self.assertIn(f'router rip', frrconfig)
         self.assertIn(f' distance {distance}', frrconfig)
@@ -126,6 +126,26 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' route {network}', frrconfig)
         for proto in redistribute:
             self.assertIn(f' redistribute {proto} metric {metric} route-map {route_map}', frrconfig)
+
+    def test_rip_02_zebra_route_map(self):
+        # Implemented because of T3328
+        self.cli_set(base_path + ['route-map', route_map])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol rip route-map {route_map}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

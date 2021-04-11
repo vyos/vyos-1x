@@ -32,8 +32,6 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-frr_daemon = 'ripd'
-
 def get_config(config=None):
     if config:
         conf = config
@@ -101,20 +99,30 @@ def generate(rip):
     return None
 
 def apply(rip):
+    rip_daemon = 'ripd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^ip protocol rip route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    frr_cfg.load_configuration(rip_daemon)
     frr_cfg.modify_section(r'key chain \S+', '')
     frr_cfg.modify_section(r'interface \S+', '')
-    frr_cfg.modify_section('router rip', '')
+    frr_cfg.modify_section('^router rip$', '')
+
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rip['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.commit_configuration(rip_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if rip['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
+            frr_cfg.commit_configuration(rip_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
