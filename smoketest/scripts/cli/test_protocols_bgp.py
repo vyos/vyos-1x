@@ -572,5 +572,25 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
             self.assertIn(f' bgp router-id {router_id}', frrconfig)
 
+    def test_bgp_09_zebra_route_map(self):
+        # Implemented because of T3328
+        self.cli_set(base_path + ['route-map', route_map_in])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol bgp route-map {route_map_in}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
