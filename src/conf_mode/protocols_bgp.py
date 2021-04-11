@@ -209,11 +209,12 @@ def apply(bgp):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
 
+    # Generate empty helper string which can be ammended to FRR commands, it
+    # will be either empty (default VRF) or contain the "vrf <name" statement
+    vrf = ''
     if 'vrf' in bgp:
-        vrf = bgp['vrf']
-        frr_cfg.modify_section(f'^router bgp \d+ vrf {vrf}$', '')
-    else:
-        frr_cfg.modify_section('^router bgp \d+$', '')
+        vrf = ' vrf ' + bgp['vrf']
+    frr_cfg.modify_section(f'^router bgp \d+{vrf}$', '')
 
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
