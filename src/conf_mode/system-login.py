@@ -158,11 +158,29 @@ def generate(login):
                 env = os.environ.copy()
                 env['vyos_libexec_dir'] = '/usr/libexec/vyos'
 
-                call(f"/opt/vyatta/sbin/my_delete system login user '{user}' " \
-                     f"authentication plaintext-password", env=env)
+                # Set default commands for re-adding user with encrypted password
+                del_user_plain = f"system login user '{user}' authentication plaintext-password"
+                add_user_encrypt = f"system login user '{user}' authentication encrypted-password '{encrypted_password}'"
 
-                call(f"/opt/vyatta/sbin/my_set system login user '{user}' " \
-                     f"authentication encrypted-password '{encrypted_password}'", env=env)
+                lvl = env['VYATTA_EDIT_LEVEL']
+                # We're in config edit level, for example "edit system login"
+                # Change default commands for re-adding user with encrypted password
+                if lvl != '/':
+                    # Replace '/system/login' to 'system login'
+                    lvl = lvl.strip('/').split('/')
+                    # Convert command str to list
+                    del_user_plain = del_user_plain.split()
+                    # New command exclude level, for example "edit system login"
+                    del_user_plain = del_user_plain[len(lvl):]
+                    # Convert string to list
+                    del_user_plain = " ".join(del_user_plain)
+
+                    add_user_encrypt = add_user_encrypt.split()
+                    add_user_encrypt = add_user_encrypt[len(lvl):]
+                    add_user_encrypt = " ".join(add_user_encrypt)
+
+                call(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
+                call(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
             else:
                 try:
                     if getspnam(user).sp_pwdp == dict_search('authentication.encrypted_password', user_config):
