@@ -104,6 +104,9 @@
 {%       if afi_config.allowas_in is defined and afi_config.allowas_in is not none %}
   neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is defined }}
 {%       endif %}
+{%       if afi_config.as_override is defined %}
+  neighbor {{ neighbor }} as-override
+{%       endif %}
 {%       if afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
 {%       endif %}
