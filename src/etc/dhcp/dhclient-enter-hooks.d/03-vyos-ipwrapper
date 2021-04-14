@@ -3,6 +3,9 @@
 # default route distance
 IF_METRIC=${IF_METRIC:-210}
 
+# Check if interface is inside a VRF
+VRF_OPTION=$(/usr/sbin/ip -j -d link show ${interface} | awk '{if(match($0, /.*"master":"(\w+)".*"info_slave_kind":"vrf"/, IFACE_DETAILS)) printf("vrf %s", IFACE_DETAILS[1])}')
+
 # get status of FRR
 function frr_alive () {
     /usr/lib/frr/watchfrr.sh all_status
@@ -51,12 +54,7 @@ function iptovtysh () {
         shift 2
     fi
 
-    # Add route to VRF routing table
-    local VTYSH_VRF_NAME=$(/usr/sbin/ip link show dev $VTYSH_DEV | sed -nre '1s/.* master ([^ ]*) .*/\1/p')
-    if /usr/sbin/ip -d link show dev $VTYSH_DEV | grep -q "vrf_slave"; then
-        VTYSH_VRF="vrf $VTYSH_VRF_NAME"
-    fi
-    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VTYSH_VRF"
+    VTYSH_CMD="ip route $VTYSH_NETADDR $VTYSH_GATEWAY $VTYSH_DEV tag $VTYSH_TAG $VTYSH_DISTANCE $VRF_OPTION"
 
     # delete route if the command is "del"
     if [ "$VTYSH_ACTION" == "del" ] ; then
@@ -67,10 +65,10 @@ function iptovtysh () {
 
 # delete the same route from kernel before adding new one
 function delroute () {
-    logmsg info "Checking if the route presented in kernel: $@"
-    if /usr/sbin/ip route show $@ | grep -qx "$1 " ; then
-        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@\""
-        /usr/sbin/ip route del $@
+    logmsg info "Checking if the route presented in kernel: $@ $VRF_OPTION"
+    if /usr/sbin/ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_OPTION\""
+        /usr/sbin/ip route del $@ $VRF_OPTION
     fi
 }
 
@@ -90,8 +88,7 @@ function ip () {
         else
             # add ip route to kernel
             logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
-            /usr/sbin/ip $@
+            /usr/sbin/ip $@ $VRF_OPTION
         fi
     fi
 }
-
