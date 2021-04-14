@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- Policy access|prefix|route-map lists -->
 <interfaceDefinition>
-  <node name="npolicy" owner="${vyos_conf_scripts_dir}/policy-lists.py">
+  <node name="npolicy" owner="${vyos_conf_scripts_dir}/policy.py">
     <properties>
       <help>Routing policy</help>
     </properties>
