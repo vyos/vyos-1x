@@ -26,7 +26,6 @@ from vyos.configverify import verify_route_map
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError

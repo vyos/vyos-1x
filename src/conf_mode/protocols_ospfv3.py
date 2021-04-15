@@ -22,7 +22,6 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_common_route_maps
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.ifconfig import Interface
 from vyos.xml import defaults
 from vyos import ConfigError

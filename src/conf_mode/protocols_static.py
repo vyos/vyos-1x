@@ -24,7 +24,6 @@ from vyos.configdict import dict_merge
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag

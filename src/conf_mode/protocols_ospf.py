@@ -26,7 +26,6 @@ from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos.xml import defaults

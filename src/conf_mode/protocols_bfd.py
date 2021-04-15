@@ -22,7 +22,6 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import is_ipv6
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.validate import is_ipv6_link_local
 from vyos.xml import defaults
 from vyos import ConfigError
