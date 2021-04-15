@@ -1,0 +1,312 @@
+interfaces {
+    bridge br2000 {
+        address 10.1.1.1/24
+        description "customer blue"
+        member {
+            interface eth4 {
+            }
+            interface vxlan2000 {
+            }
+        }
+        vrf blue
+    }
+    bridge br3000 {
+        address 10.2.1.1/24
+        description "customer red"
+        member {
+            interface eth5 {
+            }
+            interface vxlan3000 {
+            }
+        }
+        vrf red
+    }
+    bridge br4000 {
+        address 10.3.1.1/24
+        description "customer green"
+        member {
+            interface eth6 {
+            }
+            interface vxlan4000 {
+            }
+        }
+        vrf green
+    }
+    dummy dum0 {
+        address 172.29.255.1/32
+    }
+    ethernet eth0 {
+        address 192.0.2.59/27
+        address 2001:db8:ffff::59/64
+        description "out-of-band management"
+        vrf mgmt
+    }
+    ethernet eth1 {
+        address 172.29.0.2/31
+        description "link to pe2"
+        mtu 1600
+    }
+    ethernet eth2 {
+        disable
+    }
+    ethernet eth3 {
+        address 172.29.0.6/31
+        description "link to pe3"
+        mtu 1600
+    }
+    ethernet eth4 {
+        description "customer blue"
+    }
+    ethernet eth5 {
+        description "customer red"
+    }
+    ethernet eth6 {
+        description "customer green"
+    }
+    loopback lo {
+    }
+    vxlan vxlan2000 {
+        mtu 1500
+        parameters {
+            nolearning
+        }
+        port 4789
+        source-address 172.29.255.1
+        vni 2000
+    }
+    vxlan vxlan3000 {
+        mtu 1500
+        parameters {
+            nolearning
+        }
+        port 4789
+        source-address 172.29.255.1
+        vni 3000
+    }
+    vxlan vxlan4000 {
+        mtu 1500
+        parameters {
+            nolearning
+        }
+        port 4789
+        source-address 172.29.255.1
+        vni 4000
+    }
+}
+protocols {
+    bgp {
+        address-family {
+            l2vpn-evpn {
+                advertise {
+                    ipv4 {
+                        unicast {
+                        }
+                    }
+                }
+                advertise-all-vni
+            }
+        }
+        local-as 100
+        neighbor 172.29.255.2 {
+            peer-group ibgp
+        }
+        neighbor 172.29.255.3 {
+            peer-group ibgp
+        }
+        parameters {
+            default {
+                no-ipv4-unicast
+            }
+            log-neighbor-changes
+            router-id 172.29.255.1
+        }
+        peer-group ibgp {
+            address-family {
+                l2vpn-evpn {
+                }
+            }
+            remote-as 100
+            update-source dum0
+        }
+    }
+    ospf {
+        area 0 {
+            network 172.29.0.2/31
+            network 172.29.0.6/31
+        }
+        interface eth1 {
+            network point-to-point
+        }
+        interface eth3 {
+            network point-to-point
+        }
+        log-adjacency-changes {
+            detail
+        }
+        parameters {
+            abr-type cisco
+            router-id 172.29.255.1
+        }
+        passive-interface default
+        passive-interface-exclude eth1
+        passive-interface-exclude eth3
+        redistribute {
+            connected {
+            }
+        }
+    }
+}
+service {
+    lldp {
+        interface all {
+        }
+    }
+    ssh {
+        disable-host-validation
+        port 22
+        vrf mgmt
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 192.0.2.251
+    name-server 192.0.2.252
+    name-server 2001:db8::1
+    ntp {
+        listen-address 192.0.2.59
+        listen-address 2001:db8:ffff::59
+        server 192.0.2.251 {
+        }
+        server 192.0.2.252 {
+        }
+        server 2001:db8::251 {
+        }
+        server 2001:db8::252 {
+        }
+        vrf mgmt
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+vrf {
+    name blue {
+        protocols {
+            bgp {
+                address-family {
+                    ipv4-unicast {
+                        redistribute {
+                            connected {
+                            }
+                        }
+                    }
+                    l2vpn-evpn {
+                        advertise {
+                            ipv4 {
+                                unicast {
+                                }
+                            }
+                        }
+                    }
+                }
+                local-as 100
+            }
+        }
+        table 2000
+        vni 2000
+    }
+    name green {
+        protocols {
+            bgp {
+                address-family {
+                    ipv4-unicast {
+                        redistribute {
+                            connected {
+                            }
+                        }
+                    }
+                    l2vpn-evpn {
+                        advertise {
+                            ipv4 {
+                                unicast {
+                                }
+                            }
+                        }
+                    }
+                }
+                local-as 100
+            }
+        }
+        table 4000
+        vni 4000
+    }
+    name mgmt {
+        protocols {
+            static {
+                route 0.0.0.0/0 {
+                    next-hop 192.0.2.62 {
+                    }
+                }
+                route6 ::/0 {
+                    next-hop 2001:db8:ffff::1 {
+                    }
+                }
+            }
+        }
+        table 1000
+    }
+    name red {
+        protocols {
+            bgp {
+                address-family {
+                    ipv4-unicast {
+                        redistribute {
+                            connected {
+                            }
+                        }
+                    }
+                    l2vpn-evpn {
+                        advertise {
+                            ipv4 {
+                                unicast {
+                                }
+                            }
+                        }
+                    }
+                }
+                local-as 100
+            }
+        }
+        table 3000
+        vni 3000
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@1:broadcast-relay@1:cluster@1:config-management@1:conntrack@2:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@20:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:nat66@1:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@9:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@20:vrf@2:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.4-rolling-202104091411

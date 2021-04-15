@@ -20,7 +20,9 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_common_route_maps
+from vyos.configverify import verify_access_list
+from vyos.configverify import verify_prefix_list
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.xml import defaults
@@ -51,10 +53,12 @@ def get_config(config=None):
     ripng = dict_merge(default_values, ripng)
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     ripng = dict_merge(tmp, ripng)
 
     return ripng
@@ -63,21 +67,19 @@ def verify(ripng):
     if not ripng:
         return None
 
+    verify_common_route_maps(ripng)
+
     acl_in = dict_search('distribute_list.access_list.in', ripng)
-    if acl_in and acl_in not in  (dict_search('policy.access_list6', ripng) or []):
-        raise ConfigError(f'Inbound access-list6 "{acl_in}" does not exist!')
+    if acl_in: verify_access_list(acl_in, ripng, version='6')
 
     acl_out = dict_search('distribute_list.access_list.out', ripng)
-    if acl_out and acl_out not in (dict_search('policy.access_list6', ripng) or []):
-        raise ConfigError(f'Outbound access-list6 "{acl_out}" does not exist!')
+    if acl_out: verify_access_list(acl_out, ripng, version='6')
 
     prefix_list_in = dict_search('distribute_list.prefix_list.in', ripng)
-    if prefix_list_in and prefix_list_in.replace('-','_') not in (dict_search('policy.prefix_list6', ripng) or []):
-        raise ConfigError(f'Inbound prefix-list6 "{prefix_list_in}" does not exist!')
+    if prefix_list_in: verify_prefix_list(prefix_list_in, ripng, version='6')
 
     prefix_list_out = dict_search('distribute_list.prefix_list.out', ripng)
-    if prefix_list_out and prefix_list_out.replace('-','_') not in (dict_search('policy.prefix_list6', ripng) or []):
-        raise ConfigError(f'Outbound prefix-list6 "{prefix_list_out}" does not exist!')
+    if prefix_list_out: verify_prefix_list(prefix_list_out, ripng, version='6')
 
     if 'interface' in ripng:
         for interface, interface_options in ripng['interface'].items():
@@ -88,8 +90,6 @@ def verify(ripng):
                 if {'disable', 'poison_reverse'} <= set(interface_options['split_horizon']):
                     raise ConfigError(f'You can not have "split-horizon poison-reverse" enabled ' \
                                       f'with "split-horizon disable" for "{interface}"!')
-
-    verify_route_maps(ripng)
 
 def generate(ripng):
     if not ripng:

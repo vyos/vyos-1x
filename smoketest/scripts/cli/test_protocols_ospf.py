@@ -317,5 +317,26 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
+
+    def test_ospf_12_zebra_route_map(self):
+        # Implemented because of T3328
+        self.cli_set(base_path + ['route-map', route_map])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol ospf route-map {route_map}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -23,13 +23,17 @@ from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.ifconfig import Interface
 from vyos.template import render
+from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
+
+frr_daemon = 'zebra'
 
 config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
 
@@ -123,6 +127,7 @@ def verify(vrf):
 
 def generate(vrf):
     render(config_file, 'vrf/vrf.conf.tmpl', vrf)
+    vrf['new_frr_config'] = render_to_string('frr/vrf.frr.tmpl', vrf)
     return None
 
 def apply(vrf):
@@ -209,6 +214,22 @@ def apply(vrf):
             # clean out l3mdev-table rule if present
             if 1000 in [r.get('priority') for r in list_rules() if r.get('priority') == 1000]:
                 call(f'ip {af} rule del pref 1000')
+
+    # add configuration to FRR
+    frr_cfg = frr.FRRConfig()
+    frr_cfg.load_configuration(frr_daemon)
+    frr_cfg.modify_section(f'^vrf [a-zA-Z-]*$', '')
+    frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
+    frr_cfg.commit_configuration(frr_daemon)
+
+    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # behavior/bug not properly clearing out on one commit.
+    if vrf['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(frr_daemon)
+
+    # Save configuration to /run/frr/config/frr.conf
+    frr.save_configuration()
 
     return None
 

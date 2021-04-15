@@ -22,7 +22,8 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
-from vyos.configverify import verify_route_maps
+from vyos.configverify import verify_common_route_maps
+from vyos.configverify import verify_route_map
 from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
 from vyos.util import call
@@ -33,8 +34,6 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
-
-frr_daemon = 'ospfd'
 
 def get_config(config=None):
     if config:
@@ -130,10 +129,12 @@ def get_config(config=None):
                 ospf['interface'][interface])
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     ospf = dict_merge(tmp, ospf)
 
     return ospf
@@ -142,7 +143,11 @@ def verify(ospf):
     if not ospf:
         return None
 
-    verify_route_maps(ospf)
+    verify_common_route_maps(ospf)
+
+    # As we can have a default-information route-map, we need to validate it!
+    route_map_name = dict_search('default_information.originate.route_map', ospf)
+    if route_map_name: verify_route_map(route_map_name, ospf)
 
     if 'interface' in ospf:
         for interface in ospf['interface']:
@@ -174,17 +179,26 @@ def generate(ospf):
     return None
 
 def apply(ospf):
+    ospf_daemon = 'ospfd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
 
-    # Generate empty helper string which can be ammended to FRR commands,
-    # it will be either empty (default VRF) or contain the "vrf <name" statement
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^ip protocol ospf route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    # Generate empty helper string which can be ammended to FRR commands, it
+    # will be either empty (default VRF) or contain the "vrf <name" statement
     vrf = ''
     if 'vrf' in ospf:
         vrf = ' vrf ' + ospf['vrf']
 
+    frr_cfg.load_configuration(ospf_daemon)
     frr_cfg.modify_section(f'^router ospf{vrf}$', '')
+
     for key in ['interface', 'interface_removed']:
         if key not in ospf:
             continue
@@ -192,13 +206,13 @@ def apply(ospf):
             frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
 
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.commit_configuration(ospf_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if ospf['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
+            frr_cfg.commit_configuration(ospf_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

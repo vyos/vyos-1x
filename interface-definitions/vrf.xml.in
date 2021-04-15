@@ -85,6 +85,7 @@
               <constraintErrorMessage>VRF routing table must be in range from 100 to 2147483647</constraintErrorMessage>
             </properties>
           </leafNode>
+          #include <include/vni.xml.i>
         </children>
       </tagNode>
     </children>

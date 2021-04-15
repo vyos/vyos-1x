@@ -9,6 +9,7 @@
         </properties>
         <children>
           #include <include/isis/isis-common-config.xml.i>
+          #include <include/route-map.xml.i>
         </children>
       </node>
     </children>

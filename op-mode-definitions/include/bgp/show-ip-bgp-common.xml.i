@@ -1,4 +1,4 @@
-<!-- included start from bgp-common.xml.i -->
+<!-- included start from bgp/show-ip-bgp-common.xml.i -->
 <leafNode name="attribute-info">
   <properties>
     <help>Show BGP attribute information</help>
@@ -17,8 +17,8 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </leafNode>
-#include <include/bgp-afi-common.xml.i>
-#include <include/bgp-afi-ipv4-ipv6-common.xml.i>
+#include <include/bgp/afi-common.xml.i>
+#include <include/bgp/afi-ipv4-ipv6-common.xml.i>
 <tagNode name="prefix-list">
   <properties>
     <completionHelp>
@@ -52,7 +52,7 @@
           <properties>
             <help>Display routes matching the specified communities</help>
             <completionHelp>
-<list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
+              <list>&lt;AA:NN&gt; local-AS no-advertise no-export</list>
             </completionHelp>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
@@ -64,10 +64,10 @@
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           <children>
             <leafNode name="exact-match">
-<properties>
-  <help>Show BGP routes exactly matching specified community list</help>
-</properties>
-<command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <properties>
+              <help>Show BGP routes exactly matching specified community list</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
           </children>
         </tagNode>
@@ -75,34 +75,34 @@
           <properties>
             <help>Show detailed BGP IPv4 unicast neighbor information</help>
             <completionHelp>
-<script>vtysh -c "show ip bgp ipv4 unicast summary" | awk '{print $1}' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"</script>
+              <script>vtysh -c "show ip bgp ipv4 unicast summary" | awk '{print $1}' | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"</script>
             </completionHelp>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           <children>
             <leafNode name="advertised-routes">
-<properties>
-  <help>Show routes advertised to a BGP neighbor</help>
-</properties>
-<command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              <properties>
+                <help>Show routes advertised to a BGP neighbor</help>
+              </properties>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
             <leafNode name="prefix-counts">
-<properties>
-  <help>Show detailed prefix count information</help>
-</properties>
-<command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              <properties>
+                <help>Show detailed prefix count information</help>
+              </properties>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
             <leafNode name="received-routes">
-<properties>
-  <help>Show the received routes from neighbor</help>
-</properties>
-<command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              <properties>
+                <help>Show the received routes from neighbor</help>
+              </properties>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
             <leafNode name="routes">
-<properties>
-  <help>Show routes learned from neighbor</help>
-</properties>
-<command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              <properties>
+                <help>Show routes learned from neighbor</help>
+              </properties>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
           </children>
         </tagNode>

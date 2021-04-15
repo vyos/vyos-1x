@@ -21,6 +21,8 @@ from sys import argv
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_prefix_list
+from vyos.configverify import verify_route_map
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
@@ -31,8 +33,6 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
-
-frr_daemon = 'bgpd'
 
 def get_config(config=None):
     if config:
@@ -59,11 +59,13 @@ def get_config(config=None):
         bgp.update({'deleted' : ''})
         return bgp
 
-    # We also need some additional information from the config,
-    # prefix-lists and route-maps for instance.
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into bgp dict
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     bgp = dict_merge(tmp, bgp)
 
     return bgp
@@ -110,6 +112,16 @@ def verify(bgp):
                 if 'peer_group' not in bgp or peer_group not in bgp['peer_group']:
                     raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                       f'neighbor "{neighbor}" does not exist!')
+
+            if 'local_as' in peer_config:
+                if len(peer_config['local_as']) > 1:
+                    raise ConfigError('Only one local-as number may be specified!')
+
+                # Neighbor local-as override can not be the same as the local-as
+                # we use for this BGP instane!
+                asn = list(peer_config['local_as'].keys())[0]
+                if asn == bgp['local_as']:
+                    raise ConfigError('Cannot have local-as same as BGP AS number')
 
             # ttl-security and ebgp-multihop can't be used in the same configration
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
@@ -162,24 +174,15 @@ def verify(bgp):
                         if tmp not in afi_config['prefix_list']:
                             # bail out early
                             continue
-                        # get_config_dict() mangles all '-' characters to '_' this is legitimate, thus all our
-                        # compares will run on '_' as also '_' is a valid name for a prefix-list
-                        prefix_list = afi_config['prefix_list'][tmp].replace('-', '_')
                         if afi == 'ipv4_unicast':
-                            if dict_search(f'policy.prefix_list.{prefix_list}', bgp) == None:
-                                raise ConfigError(f'prefix-list "{prefix_list}" used for "{tmp}" does not exist!')
+                            verify_prefix_list(afi_config['prefix_list'][tmp], bgp)
                         elif afi == 'ipv6_unicast':
-                            if dict_search(f'policy.prefix_list6.{prefix_list}', bgp) == None:
-                                raise ConfigError(f'prefix-list6 "{prefix_list}" used for "{tmp}" does not exist!')
+                            verify_prefix_list(afi_config['prefix_list'][tmp], bgp, version='6')
 
                 if 'route_map' in afi_config:
                     for tmp in ['import', 'export']:
                         if tmp in afi_config['route_map']:
-                            # get_config_dict() mangles all '-' characters to '_' this is legitim, thus all our
-                            # compares will run on '_' as also '_' is a valid name for a route-map
-                            route_map = afi_config['route_map'][tmp].replace('-', '_')
-                            if dict_search(f'policy.route_map.{route_map}', bgp) == None:
-                                raise ConfigError(f'route-map "{route_map}" used for "{tmp}" does not exist!')
+                            verify_route_map(afi_config['route_map'][tmp], bgp)
 
                 if 'route_reflector_client' in afi_config:
                     if 'remote_as' in peer_config and bgp['local_as'] != peer_config['remote_as']:
@@ -238,24 +241,33 @@ def generate(bgp):
     return None
 
 def apply(bgp):
+    bgp_daemon = 'bgpd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
 
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^ip protocol bgp route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    # Generate empty helper string which can be ammended to FRR commands, it
+    # will be either empty (default VRF) or contain the "vrf <name" statement
+    vrf = ''
     if 'vrf' in bgp:
-        vrf = bgp['vrf']
-        frr_cfg.modify_section(f'^router bgp \d+ vrf {vrf}$', '')
-    else:
-        frr_cfg.modify_section('^router bgp \d+$', '')
+        vrf = ' vrf ' + bgp['vrf']
 
+    frr_cfg.load_configuration(bgp_daemon)
+    frr_cfg.modify_section(f'^router bgp \d+{vrf}$', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.commit_configuration(bgp_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if bgp['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
+            frr_cfg.commit_configuration(bgp_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

@@ -1,4 +1,4 @@
-<!-- included start from bgp-prefix-bestpath-multipath.xml.i -->
+<!-- included start from bgp/prefix-bestpath-multipath.xml.i -->
 <leafNode name="bestpath">
   <properties>
     <help>Display only the bestpath</help>

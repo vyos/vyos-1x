@@ -22,6 +22,7 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
 from vyos.util import dict_search
@@ -31,8 +32,6 @@ from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
 airbag.enable()
-
-frr_daemon = 'isisd'
 
 def get_config(config=None):
     if config:
@@ -70,10 +69,12 @@ def get_config(config=None):
         return isis
 
     # We also need some additional information from the config, prefix-lists
-    # and route-maps for instance. They will be used in verify()
-    base = ['policy']
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'))
-    # Merge policy dict into OSPF dict
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['policy'])
+    # Merge policy dict into "regular" config dict
     isis = dict_merge(tmp, isis)
 
     return isis
@@ -90,6 +91,8 @@ def verify(isis):
     tmp = isis['net'].split('.')
     if int(tmp[-1]) != 0:
         raise ConfigError('Last byte of IS-IS network entity title must always be 0!')
+
+    verify_common_route_maps(isis)
 
     # If interface not set
     if 'interface' not in isis:
@@ -141,12 +144,6 @@ def verify(isis):
                         raise ConfigError(f'"protocols isis {process} redistribute {afi} {proto} {redistr_level}" ' \
                                           f'can not be used with \"protocols isis {process} level {proc_level}\"')
 
-                    if 'route_map' in redistr_config:
-                        name = redistr_config['route_map']
-                        tmp = name.replace('-', '_')
-                        if dict_search(f'policy.route_map.{tmp}', isis) == None:
-                            raise ConfigError(f'Route-map {name} does not exist!')
-
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):
         high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
@@ -183,17 +180,26 @@ def generate(isis):
     return None
 
 def apply(isis):
+    isis_daemon = 'isisd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
 
-    # Generate empty helper string which can be ammended to FRR commands,
-    # it will be either empty (default VRF) or contain the "vrf <name" statement
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^ip protocol isis route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    # Generate empty helper string which can be ammended to FRR commands, it
+    # will be either empty (default VRF) or contain the "vrf <name" statement
     vrf = ''
     if 'vrf' in isis:
         vrf = ' vrf ' + isis['vrf']
 
+    frr_cfg.load_configuration(isis_daemon)
     frr_cfg.modify_section(f'^router isis VyOS{vrf}$', '')
+
     for key in ['interface', 'interface_removed']:
         if key not in isis:
             continue
@@ -201,13 +207,13 @@ def apply(isis):
             frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
 
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.commit_configuration(isis_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
     if isis['new_frr_config'] == '':
         for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
+            frr_cfg.commit_configuration(isis_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

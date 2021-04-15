@@ -120,6 +120,9 @@
 {%       if afi_config.allowas_in is defined and afi_config.allowas_in is not none %}
   neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is defined }}
 {%       endif %}
+{%       if afi_config.as_override is defined %}
+  neighbor {{ neighbor }} as-override
+{%       endif %}
 {%       if afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
 {%       endif %}
@@ -207,6 +210,10 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {% else %}
  no bgp ebgp-requires-policy
 {% endif %}
+{% if parameters is defined and parameters.default is defined and parameters.default.no_ipv4_unicast is defined %}
+{#   Option must be set before any neighbor - see https://phabricator.vyos.net/T3463 #}
+ no bgp default ipv4-unicast
+{% endif %}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
 {% if address_family is defined and address_family is not none %}
@@ -266,6 +273,13 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
   network {{ network }}{% if afi_config.network[network].route_map is defined %} route-map {{ afi_config.network[network].route_map }}{% endif %}{% if afi_config.network[network].backdoor is defined %} backdoor{% endif %}{% if afi_config.network[network].rd is defined and afi_config.network[network].label is defined%} rd {{ afi_config.network[network].rd }} label {{ afi_config.network[network].label }}{% endif %}
 {#######   we need this blank line!! #######}
 
+{%       endfor %}
+{%     endif %}
+{%     if afi_config.advertise is defined and afi_config.advertise is not none %}
+{%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
+{%         if adv_afi_config.unicast is defined and adv_afi_config.unicast is not none %}
+ advertise {{ adv_afi }} unicast {{ 'route-map ' + adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
+{%         endif %}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.distance is defined and afi_config.distance is not none %}
@@ -405,9 +419,6 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {%   if parameters.default is defined and parameters.default is not none %}
 {%     if parameters.default.local_pref is defined and parameters.default.local_pref is not none %}
  bgp default local-preference {{ parameters.default.local_pref }}
-{%     endif %}
-{%     if parameters.default.no_ipv4_unicast is defined %}
- no bgp default ipv4-unicast
 {%     endif %}
 {%   endif %}
 {%   if parameters.deterministic_med is defined %}

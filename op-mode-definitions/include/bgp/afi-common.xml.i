@@ -1,4 +1,4 @@
-<!-- included start from bgp-afi-common.xml.i -->
+<!-- included start from bgp/afi-common.xml.i -->
 <tagNode name="community">
   <properties>
     <help>Community number where AA and NN are (0-65535)</help>

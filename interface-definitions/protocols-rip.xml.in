@@ -225,6 +225,7 @@
             </properties>
           </leafNode>
           #include <include/rip/rip-timers.xml.i>
+          #include <include/route-map.xml.i>
         </children>
       </node>
     </children>

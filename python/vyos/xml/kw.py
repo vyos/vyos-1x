@@ -27,7 +27,6 @@ def found(word):
 
 # root
 
-version = '[version]'
 tree = '[tree]'
 priorities = '[priorities]'
 owners = '[owners]'

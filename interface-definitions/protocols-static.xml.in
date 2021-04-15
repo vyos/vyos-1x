@@ -11,7 +11,7 @@
           <priority>480</priority>
         </properties>
         <children>
-          #include <include/static/static-route-map.xml.i>
+          #include <include/route-map.xml.i>
           #include <include/static/static-route.xml.i>
           #include <include/static/static-route6.xml.i>
           <tagNode name="table">
