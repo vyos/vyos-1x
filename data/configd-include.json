@@ -30,6 +30,7 @@
 "nat.py",
 "nat66.py",
 "ntp.py",
+"policy.py",
 "policy-local-route.py",
 "protocols_bfd.py",
 "protocols_bgp.py",

@@ -39,12 +39,10 @@ interface_definitions: $(config_xml_obj)
 
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
-	rm -f $(TMPL_DIR)/policy/node.def
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
-	rm -rf $(TMPL_DIR)/npolicy
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements

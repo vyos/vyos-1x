@@ -346,3 +346,18 @@ def get_dhcp_router(interface):
         if 'option routers' in line:
             (_, _, address) = line.split()
             return address.rstrip(';')
+
+@register_filter('natural_sort')
+def natural_sort(iterable):
+    import re
+    from jinja2.runtime import Undefined
+
+    if isinstance(iterable, Undefined) or iterable is None:
+        return list()
+
+    def convert(text):
+        return int(text) if text.isdigit() else text.lower()
+    def alphanum_key(key):
+        return [convert(c) for c in re.split('([0-9]+)', str(key))]
+
+    return sorted(iterable, key=alphanum_key)
