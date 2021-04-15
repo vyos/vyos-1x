@@ -45,7 +45,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
              },
             '150' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'source' : { 'any' : '' },
                         'destination' : { 'host' : '2.2.2.2' },
@@ -59,32 +59,32 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             '2000' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'destination' : { 'any' : '' },
                         'source' : { 'network' : '10.0.0.0', 'inverse-mask' : '0.255.255.255' },
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'destination' : { 'any' : '' },
                         'source' : { 'network' : '172.16.0.0', 'inverse-mask' : '0.15.255.255' },
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'destination' : { 'any' : '' },
                         'source' : { 'network' : '192.168.0.0', 'inverse-mask' : '0.0.255.255' },
                     },
-                    '50' : {
+                    '20' : {
                         'action' : 'permit',
                         'destination' : { 'network' : '172.16.0.0', 'inverse-mask' : '0.15.255.255' },
                         'source' : { 'network' : '10.0.0.0', 'inverse-mask' : '0.255.255.255' },
                     },
-                    '60' : {
+                    '25' : {
                         'action' : 'deny',
                         'destination' : { 'network' : '192.168.0.0', 'inverse-mask' : '0.0.255.255' },
                         'source' : { 'network' : '172.16.0.0', 'inverse-mask' : '0.15.255.255' },
                     },
-                    '70' : {
+                    '30' : {
                         'action' : 'deny',
                         'destination' : { 'any' : '' },
                         'source' : { 'any' : '' },
@@ -115,9 +115,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         config = self.getFRRconfig('access-list', end='')
         for acl, acl_config in acls.items():
-            seq = '5'
             for rule, rule_config in acl_config['rule'].items():
-                tmp = f'access-list {acl} seq {seq}'
+                tmp = f'access-list {acl} seq {rule}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:
@@ -131,12 +130,16 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         if 'any' in rule_config[direction]:
                             tmp += ' any'
                         if 'host' in rule_config[direction]:
+                            # XXX: Some weird side rule from the old vyatta days
+                            # possible to clean this up after the vyos-1x migration
+                            if int(acl) in range(100, 200) or int(acl) in range(2000, 2700):
+                                tmp += ' host'
+
                             tmp += ' ' + rule_config[direction]['host']
                         if 'network' in rule_config[direction]:
                             tmp += ' ' + rule_config[direction]['network'] + ' ' + rule_config[direction]['inverse-mask']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
     def test_access_list6(self):
         acls = {
@@ -150,7 +153,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         'action' : 'deny',
                         'source' : { 'network' : '2001:db8:10::/48', 'exact-match' : '' },
                     },
-                    '10' : {
+                    '15' : {
                         'action' : 'deny',
                         'source' : { 'network' : '2001:db8:20::/48' },
                     },
@@ -174,7 +177,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         'action' : 'deny',
                         'source' : { 'network' : '2001:db8:40::/64', 'exact-match' : '' },
                     },
-                    '100' : {
+                    '25' : {
                         'action' : 'deny',
                         'source' : { 'any' : '' },
                     },
@@ -203,9 +206,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         config = self.getFRRconfig('ipv6 access-list', end='')
         for acl, acl_config in acls.items():
-            seq = '5'
             for rule, rule_config in acl_config['rule'].items():
-                tmp = f'ipv6 access-list {acl} seq {seq}'
+                tmp = f'ipv6 access-list {acl} seq {rule}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:
@@ -224,22 +226,21 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             tmp += ' exact-match'
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
 
     def test_as_path_list(self):
         test_data = {
             'VyOS' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '^44501 64502$',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'regex'  : '44501|44502|44503',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'regex'  : '^44501_([0-9]+_)+',
                     },
@@ -247,19 +248,19 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             'Customers' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '_10_',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'regex'  : '_20_',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'regex'  : '_30_',
                     },
-                    '30' : {
+                    '20' : {
                         'action' : 'deny',
                         'regex'  : '_40_',
                     },
@@ -267,19 +268,19 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             'bogons' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '_0_',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'regex'  : '_23456_',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'regex'  : '_6449[6-9]_|_65[0-4][0-9][0-9]_|_655[0-4][0-9]_|_6555[0-1]_',
                     },
-                    '30' : {
+                    '20' : {
                         'action' : 'permit',
                         'regex'  : '_6555[2-9]_|_655[6-9][0-9]_|_65[6-9][0-9][0-9]_|_6[6-9][0-9][0-9][0-]_|_[7-9][0-9][0-9][0-9][0-9]_|_1[0-2][0-9][0-9][0-9][0-9]_|_130[0-9][0-9][0-9]_|_1310[0-6][0-9]_|_13107[01]_',
                     },
@@ -321,7 +322,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         test_data = {
             '100' : {
                 'rule' : {
-                    '4' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '.*',
                     },
@@ -329,15 +330,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             '200' : {
                 'rule' : {
-                    '1' : {
+                    '5' : {
                         'action' : 'deny',
                         'regex'  : '^1:201$',
                     },
-                    '2' : {
+                    '10' : {
                         'action' : 'deny',
                         'regex'  : '1:101$',
                     },
-                    '3' : {
+                    '15' : {
                         'action' : 'deny',
                         'regex'  : '^1:100$',
                     },
@@ -364,9 +365,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp community-list {comm_list} seq {seq}'
+                tmp = f'bgp community-list {comm_list} seq {rule}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:
@@ -375,13 +375,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
     def test_extended_community_list(self):
         test_data = {
             'foo' : {
                 'rule' : {
-                    '4' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '.*',
                     },
@@ -389,15 +388,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             '200' : {
                 'rule' : {
-                    '1' : {
+                    '5' : {
                         'action' : 'deny',
                         'regex'  : '^1:201$',
                     },
-                    '2' : {
+                    '10' : {
                         'action' : 'deny',
                         'regex'  : '1:101$',
                     },
-                    '3' : {
+                    '15' : {
                         'action' : 'deny',
                         'regex'  : '^1:100$',
                     },
@@ -424,14 +423,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
                 # if the community is not a number but a name, the expanded
                 # keyword is used
                 expanded = ''
                 if not comm_list.isnumeric():
                     expanded = ' expanded'
-                tmp = f'bgp extcommunity-list{expanded} {comm_list} seq {seq}'
+                tmp = f'bgp extcommunity-list{expanded} {comm_list} seq {rule}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
@@ -441,14 +439,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
 
     def test_large_community_list(self):
         test_data = {
             'foo' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '667:123:100',
                     },
@@ -456,15 +453,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             'bar' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'regex'  : '65000:120:10',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'regex'  : '65000:120:20',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'regex'  : '65000:120:30',
                     },
@@ -491,9 +488,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             if 'rule' not in comm_list_config:
                 continue
 
-            seq = '5'
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp large-community-list expanded {comm_list} seq {seq}'
+                tmp = f'bgp large-community-list expanded {comm_list} seq {rule}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
@@ -503,25 +499,24 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                 tmp += ' ' + rule_config['regex']
 
                 self.assertIn(tmp, config)
-                seq = int(seq) + 5
 
 
     def test_prefix_list(self):
         test_data = {
             'foo' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'prefix'  : '10.0.0.0/8',
                         'ge' : '16',
                         'le' : '24',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'deny',
                         'prefix'  : '172.16.0.0/12',
                         'ge' : '16',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'prefix'  : '192.168.0.0/16',
                     },
@@ -529,18 +524,18 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             'bar' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'prefix'  : '10.0.10.0/24',
                         'ge' : '25',
                         'le' : '26',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'deny',
                         'prefix'  : '10.0.20.0/24',
                         'le' : '25',
                     },
-                    '25' : {
+                    '15' : {
                         'action' : 'permit',
                         'prefix'  : '10.0.25.0/24',
                     },
@@ -593,18 +588,18 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         test_data = {
             'foo' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'prefix'  : '2001:db8::/32',
                         'ge' : '40',
                         'le' : '48',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'deny',
                         'prefix'  : '2001:db8::/32',
                         'ge' : '48',
                     },
-                    '30' : {
+                    '15' : {
                         'action' : 'permit',
                         'prefix'  : '2001:db8:1000::/64',
                     },
@@ -612,17 +607,17 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
             },
             'bar' : {
                 'rule' : {
-                    '10' : {
+                    '5' : {
                         'action' : 'permit',
                         'prefix'  : '2001:db8:100::/40',
                         'ge' : '48',
                     },
-                    '20' : {
+                    '10' : {
                         'action' : 'permit',
                         'prefix'  : '2001:db8:200::/40',
                         'ge' : '48',
                     },
-                    '25' : {
+                    '15' : {
                         'action' : 'deny',
                         'prefix'  : '2001:db8:300::/40',
                         'le' : '64',
