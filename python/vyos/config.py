@@ -214,7 +214,8 @@ class Config(object):
         return config_dict
 
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
-                        get_first_key=False, no_multi_convert=False):
+                        get_first_key=False, no_multi_convert=False,
+                        no_tag_node_value_mangle=False):
         """
         Args:
             path (str list): Configuration tree path, can be empty
@@ -247,7 +248,7 @@ class Config(object):
                 isinstance(key_mangling[1], str)):
             raise ValueError("key_mangling must be a tuple of two strings")
 
-        conf_dict = vyos.util.mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1])
+        conf_dict = vyos.util.mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1], abs_path=xmlpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
 
         return conf_dict
 
