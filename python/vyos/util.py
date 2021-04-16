@@ -364,7 +364,7 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
     return data
 
-def mangle_dict_keys(data, regex, replacement):
+def _mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_mangle=False, mod=0):
     """ Mangles dict keys according to a regex and replacement character.
     Some libraries like Jinja2 do not like certain characters in dict keys.
     This function can be used for replacing all offending characters
@@ -375,17 +375,40 @@ def mangle_dict_keys(data, regex, replacement):
 
     Returns: dict
     """
+    from vyos.xml import is_tag
+
     new_dict = {}
+
     for key in data.keys():
-        new_key = re.sub(regex, replacement, key)
+        save_mod = mod
+        save_path = abs_path[:]
+
+        abs_path.append(key)
+
+        if not is_tag(abs_path):
+            new_key = re.sub(regex, replacement, key)
+        else:
+            if mod%2:
+                new_key = key
+            else:
+                new_key = re.sub(regex, replacement, key)
+            if no_tag_node_value_mangle:
+                mod += 1
 
         value = data[key]
+
         if isinstance(value, dict):
-            new_dict[new_key] = mangle_dict_keys(value, regex, replacement)
+            new_dict[new_key] = _mangle_dict_keys(value, regex, replacement, abs_path=abs_path, mod=mod, no_tag_node_value_mangle=no_tag_node_value_mangle)
         else:
             new_dict[new_key] = value
 
+        mod = save_mod
+        abs_path = save_path[:]
+
     return new_dict
+
+def mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_mangle=False):
+    return _mangle_dict_keys(data, regex, replacement, abs_path=abs_path, no_tag_node_value_mangle=no_tag_node_value_mangle, mod=0)
 
 def _get_sub_dict(d, lpath):
     k = lpath[0]
