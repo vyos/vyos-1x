@@ -79,7 +79,7 @@ def download(local_path, urlstring):
         username = url.username if url.username else 'anonymous'
         download_ftp(local_path, url.hostname, url.path, username, url.password)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        download_sftp(local_path, url.hostname, url.path, url.username, password)
+        download_sftp(local_path, url.hostname, url.path, url.username, url.password)
     elif url.scheme == 'tftp':
         download_tftp(local_path, url.hostname, url.path)
     else:
@@ -94,7 +94,7 @@ def upload(local_path, urlstring):
         username = url.username if url.username else 'anonymous'
         upload_ftp(local_path, url.hostname, url.path, username, url.password)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        upload_sftp(local_path, url.hostname, url.path, url.username, password)
+        upload_sftp(local_path, url.hostname, url.path, url.username, url.password)
     elif url.scheme == 'tftp':
         upload_tftp(local_path, url.hostname, url.path)
     else:
