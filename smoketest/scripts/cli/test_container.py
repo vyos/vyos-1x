@@ -39,11 +39,18 @@ def cmd_to_json(command):
 
 
 class TesContainer(VyOSUnitTestSHIM.TestCase):
+    # We need real internet connection to pull images
     def setUp(self):
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', 'dhcp'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
+        self.cli_set(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '10.0.2.2'])
+        self.cli_set(['system', 'name-server', '1.1.1.1'])
+        self.cli_set(['system', 'name-server', '8.8.8.8'])
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', 'dhcp'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
+        self.cli_delete(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '10.0.2.2'])
+        self.cli_delete(['system', 'name-server', '1.1.1.1'])
+        self.cli_delete(['system', 'name-server', '8.8.8.8'])
         self.cli_delete(base_path)
         self.cli_commit()
 
