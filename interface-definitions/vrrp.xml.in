@@ -35,6 +35,7 @@
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <node name="authentication">
                 <properties>
@@ -94,6 +95,7 @@
                         <validator name="numeric" argument="--positive" />
                       </constraint>
                     </properties>
+                    <defaultValue>3</defaultValue>
                   </leafNode>
                   <leafNode name="interval">
                     <properties>
@@ -102,6 +104,7 @@
                         <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
+                    <defaultValue>60</defaultValue>
                   </leafNode>
                   <leafNode name="script">
                     <properties>
@@ -164,6 +167,7 @@
                     <validator name="numeric" argument="--range 0-1000"/>
                   </constraint>
                 </properties>
+                <defaultValue>0</defaultValue>
               </leafNode>
               <leafNode name="priority">
                 <properties>
@@ -176,6 +180,7 @@
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
                 </properties>
+                <defaultValue>100</defaultValue>
               </leafNode>
               <leafNode name="rfc3768-compatibility">
                 <properties>
