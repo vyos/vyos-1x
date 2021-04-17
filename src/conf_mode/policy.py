@@ -92,6 +92,7 @@ def apply(policy):
     frr_cfg.modify_section(r'^ipv6 access-list .*')
     frr_cfg.modify_section(r'^ip prefix-list .*')
     frr_cfg.modify_section(r'^ipv6 prefix-list .*')
+    frr_cfg.modify_section(r'^route-map .*')
     frr_cfg.add_before('^line vty', policy['new_frr_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
