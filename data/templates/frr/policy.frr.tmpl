@@ -1,0 +1,282 @@
+!
+{% if policy.access_list is defined and policy.access_list is not none %}
+{%   for acl, acl_config in policy.access_list.items() | natural_sort %}
+{%     if acl_config.description is defined and acl_config.description is not none %}
+access-list {{ acl }} remark {{ acl_config.description }}
+{%     endif %}
+{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
+{%         set ip = '' %}
+{%         set src = '' %}
+{%         set src_mask = '' %}
+{%         if rule_config.source is defined and rule_config.source.any is defined %}
+{%           set src = 'any' %}
+{%         elif rule_config.source is defined and rule_config.source.host is defined and rule_config.source.host is not none %}
+{%           set src = 'host ' + rule_config.source.host %}
+{%         elif rule_config.source is defined and rule_config.source.network is defined and rule_config.source.network is not none %}
+{%           set src = rule_config.source.network %}
+{%           set src_mask = rule_config.source.inverse_mask %}
+{%         endif %}
+{%         set dst = '' %}
+{%         set dst_mask = '' %}
+{%         if (acl|int >= 100 and acl|int <= 199) or (acl|int >= 2000 and acl|int <= 2699) %}
+{%           set ip = 'ip' %}
+{%           set dst = 'any' %}
+{%           if rule_config.destination is defined and rule_config.destination.any is defined %}
+{%             set dst = 'any' %}
+{%           elif rule_config.destination is defined and rule_config.destination.host is defined and rule_config.destination.host is not none %}
+{%             set dst = 'host ' + rule_config.destination.host %}
+{%           elif rule_config.destination is defined and rule_config.destination.network is defined and rule_config.destination.network is not none %}
+{%             set dst = rule_config.destination.network %}
+{%             set dst_mask = rule_config.destination.inverse_mask %}
+{%           endif %}
+{%         endif %}
+access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ ip }} {{ src }} {{ src_mask }} {{ dst }} {{ dst_mask }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.access_list6 is defined and policy.access_list6 is not none %}
+{%   for acl, acl_config in policy.access_list6.items() | natural_sort %}
+{%     if acl_config.description is defined and acl_config.description is not none %}
+ipv6 access-list {{ acl }} remark {{ acl_config.description }}
+{%     endif %}
+{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
+{%         set src = '' %}
+{%         if rule_config.source is defined and rule_config.source.any is defined %}
+{%           set src = 'any' %}
+{%         elif rule_config.source is defined and rule_config.source.network is defined and rule_config.source.network is not none %}
+{%           set src = rule_config.source.network %}
+{%         endif %}
+ipv6 access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ src }} {{ 'exact-match' if rule_config.source.exact_match is defined }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.as_path_list is defined and policy.as_path_list is not none %}
+{%   for acl, acl_config in policy.as_path_list.items() | natural_sort %}
+{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
+bgp as-path access-list {{ acl }} {{ rule_config.action }} {{ rule_config.regex }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.community_list is defined and policy.community_list is not none %}
+{%   for list, list_config in policy.community_list.items() | natural_sort %}
+{%     if list_config.rule is defined and list_config.rule is not none %}
+{%       for rule, rule_config in list_config.rule.items() | natural_sort %}
+{#         by default, if casting to int fails it returns 0 #}
+{%         if list|int != 0 %}
+bgp community-list {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         else %}
+bgp community-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.extcommunity_list is defined and policy.extcommunity_list is not none %}
+{%   for list, list_config in policy.extcommunity_list.items() | natural_sort %}
+{%     if list_config.rule is defined and list_config.rule is not none %}
+{%       for rule, rule_config in list_config.rule.items() | natural_sort %}
+{#         by default, if casting to int fails it returns 0 #}
+{%         if list|int != 0 %}
+bgp extcommunity-list {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         else %}
+bgp extcommunity-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.large_community_list is defined and policy.large_community_list is not none %}
+{%   for list, list_config in policy.large_community_list.items() | natural_sort %}
+{%     if list_config.rule is defined and list_config.rule is not none %}
+{%       for rule, rule_config in list_config.rule.items() | natural_sort %}
+{#         by default, if casting to int fails it returns 0 #}
+{%         if list|int != 0 %}
+bgp large-community-list {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         else %}
+bgp large-community-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.prefix_list is defined and policy.prefix_list is not none %}
+{%   for prefix_list, prefix_list_config in policy.prefix_list.items() | natural_sort %}
+{%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
+ip prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
+{%     endif %}
+{%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
+{%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
+ip prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.prefix_list6 is defined and policy.prefix_list6 is not none %}
+{%   for prefix_list, prefix_list_config in policy.prefix_list6.items() | natural_sort %}
+{%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
+ipv6 prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
+{%     endif %}
+{%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
+{%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
+ipv6 prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%       endfor %}
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!
+{% if policy.route_map is defined and policy.route_map is not none %}
+{%   for route_map, route_map_config in policy.route_map.items() | natural_sort %}
+{%     if route_map_config.rule is defined and route_map_config.rule is not none %}
+{%       for rule, rule_config in route_map_config.rule.items() | natural_sort %}
+route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
+{%         if rule_config.call is defined and rule_config.call is not none %}
+ call {{ rule_config.call }}
+{%         endif %}
+{%         if rule_config.continue is defined and rule_config.continue is not none %}
+ on-match goto {{ rule_config.continue }}
+{%         endif %}
+{%         if rule_config.description is defined and rule_config.description is not none %}
+ description {{ rule_config.description }}
+{%         endif %}
+{%         if rule_config.match is defined and rule_config.match is not none %}
+{%           if rule_config.match.as_path is defined and rule_config.match.as_path is not none %}
+ match as-path {{ rule_config.match.as_path }}
+{%           endif %}
+{%           if rule_config.match.community is defined and rule_config.match.community.community_list is defined and rule_config.match.community.community_list is not none %}
+ match community {{ rule_config.match.community.community_list }} {{ 'exact-match' if rule_config.match.community.exact_match is defined }}
+{%           endif %}
+{%           if rule_config.match.extcommunity is defined and rule_config.match.extcommunity is not none %}
+ match extcommunity {{ rule_config.match.extcommunity }}
+{%           endif %}
+{%           if rule_config.match.interface is defined and rule_config.match.interface is not none %}
+ match interface {{ rule_config.match.interface }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.address is defined and rule_config.match.ip.address.access_list is defined and rule_config.match.ip.address.access_list is not none %}
+ match ip address {{ rule_config.match.ip.address.access_list }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.address is defined and rule_config.match.ip.address.prefix_list is defined and rule_config.match.ip.address.prefix_list is not none %}
+ match ip address prefix-list {{ rule_config.match.ip.address.prefix_list }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.nexthop is defined and rule_config.match.ip.nexthop.access_list is defined and rule_config.match.ip.nexthop.access_list is not none %}
+ match ip next-hop {{ rule_config.match.ip.nexthop.access_list }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.nexthop is defined and rule_config.match.ip.nexthop.prefix_list is defined and rule_config.match.ip.nexthop.prefix_list is not none %}
+ match ip next-hop prefix-list {{ rule_config.match.ip.nexthop.prefix_list }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.route_source is defined and rule_config.match.ip.route_source.access_list is defined and rule_config.match.ip.route_source.access_list is not none %}
+ match ip route-source {{ rule_config.match.ip.route_source.access_list }}
+{%           endif %}
+{%           if rule_config.match.ip is defined and rule_config.match.ip.route_source is defined and rule_config.match.ip.route_source.prefix_list is defined and rule_config.match.ip.route_source.prefix_list is not none %}
+ match ip route-source prefix-list {{ rule_config.match.ip.route_source.prefix_list }}
+{%           endif %}
+{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.address is defined and rule_config.match.ipv6.address.access_list is defined and rule_config.match.ipv6.address.access_list is not none %}
+ match ipv6 address {{ rule_config.match.ipv6.address.access_list }}
+{%           endif %}
+{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.address is defined and rule_config.match.ipv6.address.prefix_list is defined and rule_config.match.ipv6.address.prefix_list is not none %}
+ match ipv6 address prefix-list {{ rule_config.match.ipv6.address.prefix_list }}
+{%           endif %}
+{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.nexthop is defined and rule_config.match.ipv6.nexthop is not none %}
+ match ipv6 next-hop {{ rule_config.match.ipv6.nexthop }}
+{%           endif %}
+{%           if rule_config.match.large_community is defined and rule_config.match.large_community.large_community_list is defined and rule_config.match.large_community.large_community_list is not none %}
+ match large-community {{ rule_config.match.large_community.large_community_list }}
+{%           endif %}
+{%           if rule_config.match.local_preference is defined and rule_config.match.local_preference is not none %}
+ match local-preference {{ rule_config.match.local_preference }}
+{%           endif %}
+{%           if rule_config.match.metric is defined and rule_config.match.metric is not none %}
+ match metric {{ rule_config.match.metric }}
+{%           endif %}
+{%           if rule_config.match.origin is defined and rule_config.match.origin is not none %}
+ match origin {{ rule_config.match.origin }}
+{%           endif %}
+{%           if rule_config.match.peer is defined and rule_config.match.peer is not none %}
+ match peer {{ rule_config.match.peer }}
+{%           endif %}
+{%           if rule_config.match.rpki is defined and rule_config.match.rpki is not none %}
+ match rpki {{ rule_config.match.rpki }}
+{%           endif %}
+{%           if rule_config.match.tag is defined and rule_config.match.tag is not none %}
+ match tag {{ rule_config.match.tag }}
+{%           endif %}
+{%         endif %}
+{%         if rule_config.on_match is defined and rule_config.on_match is not none %}
+{%           if rule_config.on_match.next is defined %}
+ on-match next
+{%           endif %}
+{%           if rule_config.on_match.goto is defined and rule_config.on_match.goto is not none %}
+ on-match goto {{ rule_config.on_match.goto }}
+{%           endif %}
+{%         endif %}
+{%         if rule_config.set is defined and rule_config.set is not none %}
+{%           if rule_config.set.aggregator is defined and rule_config.set.aggregator.as is defined and rule_config.set.aggregator.ip is defined %}
+ set aggregator as {{ rule_config.set.aggregator.as }} {{ rule_config.set.aggregator.ip }}
+{%           endif %}
+{%           if rule_config.set.as_path_exclude is defined and rule_config.set.as_path_exclude is not none %}
+ set as-path exclude {{ rule_config.set.as_path_exclude }}
+{%           endif %}
+{%           if rule_config.set.as_path_prepend is defined and rule_config.set.as_path_prepend is not none %}
+ set as-path prepend {{ rule_config.set.as_path_prepend }}
+{%           endif %}
+{%           if rule_config.set.atomic_aggregate is defined %}
+ set atomic-aggregate
+{%           endif %}
+{%           if rule_config.set.distance is defined and rule_config.set.distance is not none %}
+ set distance {{ rule_config.set.distance }}
+{%           endif %}
+{%           if rule_config.set.ip_next_hop is defined and rule_config.set.ip_next_hop is not none %}
+ set ip next-hop {{ rule_config.set.ip_next_hop }}
+{%           endif %}
+{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.global is defined and rule_config.set.ipv6_next_hop.global is not none %}
+ set ipv6 next-hop global {{ rule_config.set.ipv6_next_hop.global }}
+{%           endif %}
+{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.local is defined and rule_config.set.ipv6_next_hop.local is not none %}
+ set ipv6 next-hop local {{ rule_config.set.ipv6_next_hop.local }}
+{%           endif %}
+{%           if rule_config.set.large_community is defined and rule_config.set.large_community is not none %}
+ set large-community {{ rule_config.set.large_community }}
+{%           endif %}
+{%           if rule_config.set.local_preference is defined and rule_config.set.local_preference is not none %}
+ set local-preference {{ rule_config.set.local_preference }}
+{%           endif %}
+{%           if rule_config.set.metric is defined and rule_config.set.metric is not none %}
+ set metric {{ rule_config.set.metric }}
+{%           endif %}
+{%           if rule_config.set.metric_type is defined and rule_config.set.metric_type is not none %}
+ set metric-type {{ rule_config.set.metric_type }}
+{%           endif %}
+{%           if rule_config.set.origin is defined and rule_config.set.origin is not none %}
+ set origin {{ rule_config.set.origin }}
+{%           endif %}
+{%           if rule_config.set.originator_id is defined and rule_config.set.originator_id is not none %}
+ set originator-id {{ rule_config.set.originator_id }}
+{%           endif %}
+{%           if rule_config.set.src is defined and rule_config.set.src is not none %}
+ set src {{ rule_config.set.src }}
+{%           endif %}
+{%           if rule_config.set.tag is defined and rule_config.set.tag is not none %}
+ set tag {{ rule_config.set.tag }}
+{%           endif %}
+{%           if rule_config.set.weight is defined and rule_config.set.weight is not none %}
+ set weight {{ rule_config.set.weight }}
+{%           endif %}
+{%         endif %}
+{%       endfor %}
+!
+{%     endif %}
+{%   endfor %}
+{% endif %}
+!

@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
-<!-- Policy access|prefix|route-map lists -->
 <interfaceDefinition>
-  <node name="npolicy" owner="${vyos_conf_scripts_dir}/policy.py">
+  <node name="policy" owner="${vyos_conf_scripts_dir}/policy.py">
     <properties>
+      <priority>470</priority>
       <help>Routing policy</help>
     </properties>
     <children>
       <tagNode name="access-list">
         <properties>
           <help>IP access-list filter</help>
-          <priority>470</priority>
+
           <valueHelp>
             <format>u32:1-99</format>
             <description>IP standard access list</description>
@@ -28,7 +28,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this access-list</help>
@@ -41,8 +41,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <node name="destination">
                 <properties>
                   <help>Destination network or address</help>
@@ -54,42 +54,9 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="host">
-                    <properties>
-                      <help>Single host IP address to match</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Host address to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-host"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="inverse-mask">
-                    <properties>
-                      <help>Network/netmask to match (requires network be defined)</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Inverse-mask to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="network">
-                    <properties>
-                      <help>Network/netmask to match (requires inverse-mask be defined)</help>
-                      <valueHelp>
-                        <format>ipv4net</format>
-                        <description>Inverse-mask to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ip-prefix"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/policy/host.xml.i>
+                  #include <include/policy/inverse-mask.xml.i>
+                  #include <include/policy/network.xml.i>
                 </children>
               </node>
               <node name="source">
@@ -103,42 +70,9 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="host">
-                    <properties>
-                      <help>Single host IP address to match</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Host address to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-host"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="inverse-mask">
-                    <properties>
-                      <help>Network/netmask to match (requires network be defined)</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Inverse-mask to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="network">
-                    <properties>
-                      <help>Network/netmask to match (requires inverse-mask be defined)</help>
-                      <valueHelp>
-                        <format>ipv4net</format>
-                        <description>Inverse-mask to match</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ip-prefix"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/policy/host.xml.i>
+                  #include <include/policy/inverse-mask.xml.i>
+                  #include <include/policy/network.xml.i>
                 </children>
               </node>
             </children>
@@ -148,14 +82,13 @@
       <tagNode name="access-list6">
         <properties>
           <help>IPv6 access-list filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Name of IPv6 access-list</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this access-list6</help>
@@ -168,8 +101,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <node name="source">
                 <properties>
                   <help>Source IPv6 network to match</help>
@@ -208,14 +141,13 @@
       <tagNode name="as-path-list">
         <properties>
           <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>AS path list name</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this as-path-list</help>
@@ -228,8 +160,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against an AS path</help>
@@ -246,14 +178,13 @@
       <tagNode name="community-list">
         <properties>
           <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) community-list filter</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP community list</help>
@@ -266,8 +197,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against a community list</help>
@@ -291,7 +222,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP extended community list</help>
@@ -304,8 +235,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against an extended community list</help>
@@ -330,14 +261,13 @@
       <tagNode name="large-community-list">
         <properties>
           <help>Border Gateway Protocol (BGP) large-community-list filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) large-community-list filter</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP extended community list</help>
@@ -350,8 +280,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against a large community list</help>
@@ -368,14 +298,13 @@
       <tagNode name="prefix-list">
         <properties>
           <help>IP prefix-list filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Prefix list name</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this prefix-list</help>
@@ -388,8 +317,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="ge">
                 <properties>
                   <help>Prefix length to match a netmask greater than or equal to it</help>
@@ -433,14 +362,13 @@
       <tagNode name="prefix-list6">
         <properties>
           <help>IPv6 prefix-list filter</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Prefix list name</description>
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this prefix-list6</help>
@@ -453,8 +381,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/action.xml.i>
+              #include <include/policy/description.xml.i>
               <leafNode name="ge">
                 <properties>
                   <help>Prefix length to match a netmask greater than or equal to it</help>
@@ -498,14 +426,17 @@
       <tagNode name="route-map">
         <properties>
           <help>IP route-map</help>
-          <priority>470</priority>
           <valueHelp>
             <format>txt</format>
             <description>Route map name</description>
           </valueHelp>
+          <constraint>
+            <regex>^[-a-zA-Z0-9.]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Route-map name can only contain alpha-numeric letters and a hyphen</constraintErrorMessage>
         </properties>
         <children>
-          #include <include/policy-list-description.xml.i>
+          #include <include/policy/description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this route-map</help>
@@ -518,7 +449,7 @@
               </constraint>
             </properties>
             <children>
-              #include <include/policy-list-action.xml.i>
+              #include <include/policy/action.xml.i>
               <leafNode name="call">
                 <properties>
                   <help>Call another route-map on match</help>
@@ -540,7 +471,7 @@
                   </valueHelp>
                 </properties>
               </leafNode>
-              #include <include/policy-list-rule-description.xml.i>
+              #include <include/policy/description.xml.i>
               <node name="match">
                 <properties>
                   <help>Route parameters to match</help>
@@ -759,11 +690,11 @@
                         <properties>
                           <help>IPv6 next-hop of route to match</help>
                           <valueHelp>
-                            <format>ipv4</format>
-                            <description>Peer IP address</description>
+                            <format>ipv6</format>
+                            <description>Nexthop IPv6 address</description>
                           </valueHelp>
                           <constraint>
-                            <validator name="ipv4-address"/>
+                            <validator name="ipv6-address"/>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -962,6 +893,7 @@
                   <leafNode name="atomic-aggregate">
                     <properties>
                       <help>Border Gateway Protocol (BGP) atomic aggregate attribute</help>
+                      <valueless/>
                     </properties>
                   </leafNode>
                   <leafNode name="bgp-extcommunity-rt">
@@ -1198,7 +1130,7 @@
                         <description>Orignator IP address</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="ipv4-host"/>
+                        <validator name="ipv4-address"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1214,8 +1146,8 @@
                         <description>IPv6 address</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="ipv4-host"/>
-                        <validator name="ipv6-host"/>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
                       </constraint>
                     </properties>
                   </leafNode>

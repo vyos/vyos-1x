@@ -20,46 +20,45 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.template import render
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
-from pprint import pprint
 airbag.enable()
-
-config_file = r'/tmp/policy.frr'
-frr_daemon = 'zebra'
-
-DEBUG = os.path.exists('/tmp/policy.debug')
-if DEBUG:
-    import logging
-    lg = logging.getLogger("vyos.frr")
-    lg.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    lg.addHandler(ch)
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['npolicy']
-    policy = conf.get_config_dict(base, key_mangling=('-', '_'))
 
-    # Bail out early if configuration tree does not exist
-    if not conf.exists(base):
-        return policy
-
-    pprint(policy)
-    exit(1)
+    base = ['policy']
+    policy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  no_tag_node_value_mangle=True)
     return policy
 
 def verify(policy):
     if not policy:
         return None
+
+    if 'access-list' in policy:
+        for acl, acl_config in policy['access-list'].items():
+            if 'rule' not in acl_config:
+                continue
+
+            for rule, rule_config in acl_config['rule'].items():
+                if 'source' not in rule_config:
+                    raise ConfigError(f'Source must be specified for rule {rule} '\
+                                      f'for access-list {acl}!')
+                if 'action' not in rule_config:
+                    raise ConfigError(f'Action must be specified for rule {rule} '\
+                                      f'for access-list {acl}!')
+
+                if int(acl) not in range(100, 200) or int(acl) not in range(2000, 2700):
+                    if 'destination' not in rule_config:
+                        raise ConfigError(f'Destination must be specified for rule {rule} '\
+                                          f'for access-list {acl}!')
 
     return None
 
@@ -68,41 +67,42 @@ def generate(policy):
         policy['new_frr_config'] = ''
         return None
 
-    # render(config) not needed, its only for debug
-  #  render(config_file, 'frr/policy.frr.tmpl', policy)
-  #  policy['new_frr_config'] = render_to_string('frr/policy.frr.tmpl')
-
+    policy['new_frr_config'] = render_to_string('frr/policy.frr.tmpl', policy)
     return None
 
 def apply(policy):
+    bgp_daemon = 'bgpd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
-   # frr_cfg = frr.FRRConfig()
-   # frr_cfg.load_configuration(frr_daemon)
-   # frr_cfg.modify_section(f'ip', '')
-   # frr_cfg.add_before(r'(line vty)', policy['new_frr_config'])
+    frr_cfg = frr.FRRConfig()
 
-    # Debugging
-    if DEBUG:
-        from pprint import pprint
-        print('')
-        print('--------- DEBUGGING ----------')
-        pprint(dir(frr_cfg))
-        print('Existing config:\n')
-        for line in frr_cfg.original_config:
-            print(line)
-        print(f'Replacement config:\n')
-        print(f'{policy["new_frr_config"]}')
-        print(f'Modified config:\n')
-        print(f'{frr_cfg}')
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(bgp_daemon)
+    frr_cfg.modify_section(r'^bgp as-path access-list .*')
+    frr_cfg.modify_section(r'^bgp community-list .*')
+    frr_cfg.modify_section(r'^bgp extcommunity-list .*')
+    frr_cfg.modify_section(r'^bgp large-community-list .*')
+    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.commit_configuration(bgp_daemon)
 
-   # frr_cfg.commit_configuration(frr_daemon)
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'^access-list .*')
+    frr_cfg.modify_section(r'^ipv6 access-list .*')
+    frr_cfg.modify_section(r'^ip prefix-list .*')
+    frr_cfg.modify_section(r'^ipv6 prefix-list .*')
+    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
-   # if policy['new_frr_config'] == '':
-   #     for a in range(5):
-   #         frr_cfg.commit_configuration(frr_daemon)
+    if policy['new_frr_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(zebra_daemon)
 
+    # Save configuration to /run/frr/config/frr.conf
+    frr.save_configuration()
 
     return None
 

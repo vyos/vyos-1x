@@ -767,9 +767,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     '10' : {
                         'action' : 'deny',
                         'set' : {
-# Disabled b/c of https://phabricator.vyos.net/T3479
-#                           'aggregator-as'       : '1234567890',
-#                           'aggregator-ip'       : '10.255.255.0',
+                            'aggregator-as'       : '1234567890',
+                            'aggregator-ip'       : '10.255.255.0',
                             'as-path-exclude'     : '1234',
                             'as-path-prepend'     : '1234567890 987654321',
                             'atomic-aggregate'    : '',
@@ -1036,12 +1035,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'atomic-aggregate'
                     elif 'distance' in rule_config['set']:
                         tmp += 'distance ' + rule_config['set']['distance']
+                    elif 'ip-next-hop' in rule_config['set']:
+                        tmp += 'ip next-hop ' + rule_config['set']['ip-next-hop']
                     elif 'ipv6-next-hop-global' in rule_config['set']:
                         tmp += 'ipv6 next-hop global ' + rule_config['set']['ipv6-next-hop-global']
                     elif 'ipv6-next-hop-local' in rule_config['set']:
                         tmp += 'ipv6 next-hop local ' + rule_config['set']['ipv6-next-hop-local']
-                    elif 'ip-next-hop' in rule_config['set']:
-                        tmp += 'ip next-hop ' + rule_config['set']['ip-next-hop']
                     elif 'large-community' in rule_config['set']:
                         tmp += 'large-community ' + rule_config['set']['large-community']
                     elif 'local-preference' in rule_config['set']:
