@@ -27,7 +27,7 @@ from vyos.util import read_file
 
 base_path = ['container']
 cont_image = 'busybox'
-prefix = '192.0.2.0/24'
+prefix = '192.168.205.0/24'
 net_name = 'NET01'
 PROCESS_NAME = 'podman'
 
@@ -39,23 +39,15 @@ def cmd_to_json(command):
 
 
 class TesContainer(VyOSUnitTestSHIM.TestCase):
-    # We need real internet connection to pull images
-    def setUp(self):
+
+    def test_01_basic_container(self):
+        cont_name = 'c1'
+
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
         self.cli_set(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '10.0.2.2'])
         self.cli_set(['system', 'name-server', '1.1.1.1'])
         self.cli_set(['system', 'name-server', '8.8.8.8'])
 
-    def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
-        self.cli_delete(['protocols', 'static', 'route', '0.0.0.0/0', 'next-hop', '10.0.2.2'])
-        self.cli_delete(['system', 'name-server', '1.1.1.1'])
-        self.cli_delete(['system', 'name-server', '8.8.8.8'])
-        self.cli_delete(base_path)
-        self.cli_commit()
-
-    def test_01_basic_container(self):
-        cont_name = 'c1'
         self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
         self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
 
@@ -67,7 +59,7 @@ class TesContainer(VyOSUnitTestSHIM.TestCase):
 
     def test_02_container_network(self):
         cont_name = 'c2'
-        cont_ip = '192.0.2.25'
+        cont_ip = '192.168.205.25'
         self.cli_set(base_path + ['network', net_name, 'ipv4-prefix', prefix])
         self.cli_set(base_path + ['name', cont_name, 'image', cont_image])
         self.cli_set(base_path + ['name', cont_name, 'network', net_name, 'address', cont_ip])
