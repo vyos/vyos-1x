@@ -666,6 +666,403 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
                 self.assertIn(tmp, config)
 
+    def test_route_map(self):
+        access_list = '50'
+        as_path_list = '100'
+        test_interface = 'eth0'
+        community_list = 'BGP-comm-0815'
+
+        # ext community name only allows alphanumeric characters and no hyphen :/
+        # maybe change this if possible in vyos-1x rewrite
+        extcommunity_list = 'BGPextcomm123'
+
+        large_community_list = 'bgp-large-community-123456'
+        prefix_list = 'foo-pfx-list'
+        ipv6_nexthop = 'fe80::1'
+        local_pref = '300'
+        metric = '50'
+        peer = '2.3.4.5'
+        tag = '6542'
+        goto = '25'
+
+        test_data = {
+            'foo-map-bar' : {
+                'rule' : {
+                    '5' : {
+                        'action' : 'permit',
+                        'continue' : '20',
+                    },
+                    '10' : {
+                        'action' : 'permit',
+                        'call' : 'complicated-configuration',
+                    },
+                },
+            },
+            'a-matching-rule-0815': {
+                'rule' : {
+                    '5' : {
+                        'action' : 'deny',
+                        'match' : {
+                            'as-path' : as_path_list,
+                            'rpki-invalid': '',
+                            'tag': tag,
+                        },
+                    },
+                    '10' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'community' : community_list,
+                            'interface' : test_interface,
+                            'rpki-not-found': '',
+                        },
+                    },
+                    '15' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'extcommunity' : extcommunity_list,
+                            'rpki-valid': '',
+                        },
+                        'on-match' : {
+                            'next' : '',
+                        },
+                    },
+                    '20' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-address-acl': access_list,
+                            'ip-nexthop-acl': access_list,
+                            'ip-route-source-acl': access_list,
+                            'ipv6-address-acl': access_list,
+                            'origin-incomplete' : '',
+                        },
+                        'on-match' : {
+                            'goto' : goto,
+                        },
+                    },
+                    '25' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-address-pfx': prefix_list,
+                            'ip-nexthop-pfx': prefix_list,
+                            'ip-route-source-pfx': prefix_list,
+                            'ipv6-address-pfx': prefix_list,
+                            'origin-igp': '',
+                        },
+                    },
+                    '30' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ipv6-nexthop' : ipv6_nexthop,
+                            'large-community' : large_community_list,
+                            'local-pref' : local_pref,
+                            'metric': metric,
+                            'origin-egp': '',
+                            'peer' : peer,
+                        },
+                    },
+                },
+            },
+            'complicated-configuration' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'deny',
+                        'set' : {
+# Disabled b/c of https://phabricator.vyos.net/T3479
+#                           'aggregator-as'       : '1234567890',
+#                           'aggregator-ip'       : '10.255.255.0',
+                            'as-path-exclude'     : '1234',
+                            'as-path-prepend'     : '1234567890 987654321',
+                            'atomic-aggregate'    : '',
+                            'distance'            : '110',
+                            'ipv6-next-hop-global': '2001::1',
+                            'ipv6-next-hop-local' : 'fe80::1',
+                            'ip-next-hop'         : '192.168.1.1',
+                            'large-community'     : '100:200:300',
+                            'local-preference'    : '500',
+                            'metric'              : '150',
+                            'metric-type'         : 'type-1',
+                            'origin'              : 'incomplete',
+                            'originator-id'       : '172.16.10.1',
+                            'src'                 : '100.0.0.1',
+                            'tag'                 : '65530',
+                            'weight'              : '2',
+                        },
+                    },
+                },
+            },
+        }
+
+        self.cli_set(['policy', 'access-list', access_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'access-list', access_list, 'rule', '10', 'source', 'host', '1.1.1.1'])
+        self.cli_set(['policy', 'access-list6', access_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'access-list6', access_list, 'rule', '10', 'source', 'network', '2001:db8::/32'])
+
+        self.cli_set(['policy', 'as-path-list', as_path_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'as-path-list', as_path_list, 'rule', '10', 'regex', '64501 64502'])
+        self.cli_set(['policy', 'community-list', community_list, 'rule', '10', 'action', 'deny'])
+        self.cli_set(['policy', 'community-list', community_list, 'rule', '10', 'regex', '65432'])
+        self.cli_set(['policy', 'extcommunity-list', extcommunity_list, 'rule', '10', 'action', 'deny'])
+        self.cli_set(['policy', 'extcommunity-list', extcommunity_list, 'rule', '10', 'regex', '65000'])
+        self.cli_set(['policy', 'large-community-list', large_community_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'large-community-list', large_community_list, 'rule', '10', 'regex', '100:200:300'])
+
+        self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '10', 'prefix', '192.0.2.0/24'])
+        self.cli_set(['policy', 'prefix-list6', prefix_list, 'rule', '10', 'action', 'permit'])
+        self.cli_set(['policy', 'prefix-list6', prefix_list, 'rule', '10', 'prefix', '2001:db8::/32'])
+
+        for route_map, route_map_config in test_data.items():
+            path = base_path + ['route-map', route_map]
+            self.cli_set(path + ['description', f'VyOS ROUTE-MAP {route_map}'])
+            if 'rule' not in route_map_config:
+                continue
+
+            for rule, rule_config in route_map_config['rule'].items():
+                if 'action' in rule_config:
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
+
+                if 'call' in rule_config:
+                    self.cli_set(path + ['rule', rule, 'call', rule_config['call']])
+
+                if 'continue' in rule_config:
+                    self.cli_set(path + ['rule', rule, 'continue', rule_config['continue']])
+
+                if 'match' in rule_config:
+                    if 'as-path' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'as-path', rule_config['match']['as-path']])
+                    if 'community' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'community', 'community-list', rule_config['match']['community']])
+                        self.cli_set(path + ['rule', rule, 'match', 'community', 'exact-match'])
+                    if 'extcommunity' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'extcommunity', rule_config['match']['extcommunity']])
+                    if 'interface' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'interface', rule_config['match']['interface']])
+                    if 'ip-address-acl' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'address', 'access-list', rule_config['match']['ip-address-acl']])
+                    if 'ip-address-pfx' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'address', 'prefix-list', rule_config['match']['ip-address-pfx']])
+                    if 'ip-nexthop-acl' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'access-list', rule_config['match']['ip-nexthop-acl']])
+                    if 'ip-nexthop-pfx' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'prefix-list', rule_config['match']['ip-nexthop-pfx']])
+                    if 'ip-route-source-acl' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'route-source', 'access-list', rule_config['match']['ip-route-source-acl']])
+                    if 'ip-route-source-pfx' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'route-source', 'prefix-list', rule_config['match']['ip-route-source-pfx']])
+                    if 'ipv6-address-acl' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'access-list', rule_config['match']['ipv6-address-acl']])
+                    if 'ipv6-address-pfx' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'prefix-list', rule_config['match']['ipv6-address-pfx']])
+                    if 'ipv6-nexthop' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', rule_config['match']['ipv6-nexthop']])
+                    if 'large-community' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'large-community', 'large-community-list', rule_config['match']['large-community']])
+                    if 'local-pref' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'local-preference', rule_config['match']['local-pref']])
+                    if 'metric' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'metric', rule_config['match']['metric']])
+                    if 'origin-igp' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'origin', 'igp'])
+                    if 'origin-egp' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'origin', 'egp'])
+                    if 'origin-incomplete' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'origin', 'incomplete'])
+                    if 'peer' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'peer', rule_config['match']['peer']])
+                    if 'rpki-invalid' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki', 'invalid'])
+                    if 'rpki-not-found' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki', 'notfound'])
+                    if 'rpki-valid' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'rpki', 'valid'])
+                    if 'tag' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'tag', rule_config['match']['tag']])
+
+                if 'on-match' in rule_config:
+                    if 'goto' in rule_config['on-match']:
+                        self.cli_set(path + ['rule', rule, 'on-match', 'goto', rule_config['on-match']['goto']])
+                    if 'next' in rule_config['on-match']:
+                        self.cli_set(path + ['rule', rule, 'on-match', 'next'])
+
+                if 'set' in rule_config:
+                    if 'aggregator-as' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'aggregator', 'as', rule_config['set']['aggregator-as']])
+                    if 'aggregator-ip' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'aggregator', 'ip', rule_config['set']['aggregator-ip']])
+                    if 'as-path-exclude' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'as-path-exclude', rule_config['set']['as-path-exclude']])
+                    if 'as-path-prepend' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'as-path-prepend', rule_config['set']['as-path-prepend']])
+                    if 'atomic-aggregate' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'atomic-aggregate'])
+                    if 'distance' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'distance', rule_config['set']['distance']])
+                    if 'ipv6-next-hop-global' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'ipv6-next-hop', 'global', rule_config['set']['ipv6-next-hop-global']])
+                    if 'ipv6-next-hop-local' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'ipv6-next-hop', 'local', rule_config['set']['ipv6-next-hop-local']])
+                    if 'ip-next-hop' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'ip-next-hop', rule_config['set']['ip-next-hop']])
+                    if 'large-community' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'large-community', rule_config['set']['large-community']])
+                    if 'local-preference' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'local-preference', rule_config['set']['local-preference']])
+                    if 'metric' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'metric', rule_config['set']['metric']])
+                    if 'metric-type' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'metric-type', rule_config['set']['metric-type']])
+                    if 'origin' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'origin', rule_config['set']['origin']])
+                    if 'originator-id' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'originator-id', rule_config['set']['originator-id']])
+                    if 'src' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'src', rule_config['set']['src']])
+                    if 'tag' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'tag', rule_config['set']['tag']])
+                    if 'weight' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'weight', rule_config['set']['weight']])
+
+        self.cli_commit()
+
+        for route_map, route_map_config in test_data.items():
+            if 'rule' not in route_map_config:
+                continue
+            for rule, rule_config in route_map_config['rule'].items():
+                name = f'route-map {route_map} {rule_config["action"]} {rule}'
+                config = self.getFRRconfig(name)
+                self.assertIn(name, config)
+
+                if 'call' in rule_config:
+                    tmp = 'call ' + rule_config['call']
+                    self.assertIn(tmp, config)
+
+                if 'continue' in rule_config:
+                    tmp = 'on-match goto ' + rule_config['continue']
+                    self.assertIn(tmp, config)
+
+                if 'match' in rule_config:
+                    if 'as-path' in rule_config['match']:
+                        tmp = 'match as-path ' + rule_config['match']['as-path']
+                        self.assertIn(tmp, config)
+                    if 'community' in rule_config['match']:
+                        tmp = f'match community {rule_config["match"]["community"]} exact-match'
+                        self.assertIn(tmp, config)
+                    if 'extcommunity' in rule_config['match']:
+                        tmp = f'match extcommunity {rule_config["match"]["extcommunity"]}'
+                        self.assertIn(tmp, config)
+                    if 'interface' in rule_config['match']:
+                        tmp = f'match interface {rule_config["match"]["interface"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-address-acl' in rule_config['match']:
+                        tmp = f'match ip address {rule_config["match"]["ip-address-acl"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-address-pfx' in rule_config['match']:
+                        tmp = f'match ip address prefix-list {rule_config["match"]["ip-address-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-nexthop-acl' in rule_config['match']:
+                        tmp = f'match ip next-hop {rule_config["match"]["ip-nexthop-acl"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-nexthop-pfx' in rule_config['match']:
+                        tmp = f'match ip next-hop prefix-list {rule_config["match"]["ip-nexthop-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-route-source-acl' in rule_config['match']:
+                        tmp = f'match ip route-source {rule_config["match"]["ip-route-source-acl"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-route-source-pfx' in rule_config['match']:
+                        tmp = f'match ip route-source prefix-list {rule_config["match"]["ip-route-source-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-address-acl' in rule_config['match']:
+                        tmp = f'match ipv6 address {rule_config["match"]["ipv6-address-acl"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-address-pfx' in rule_config['match']:
+                        tmp = f'match ipv6 address prefix-list {rule_config["match"]["ipv6-address-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-nexthop' in rule_config['match']:
+                        tmp = f'match ipv6 next-hop {rule_config["match"]["ipv6-nexthop"]}'
+                        self.assertIn(tmp, config)
+                    if 'large-community' in rule_config['match']:
+                        tmp = f'match large-community {rule_config["match"]["large-community"]}'
+                        self.assertIn(tmp, config)
+                    if 'local-pref' in rule_config['match']:
+                        tmp = f'match local-preference {rule_config["match"]["local-pref"]}'
+                        self.assertIn(tmp, config)
+                    if 'metric' in rule_config['match']:
+                        tmp = f'match metric {rule_config["match"]["metric"]}'
+                        self.assertIn(tmp, config)
+                    if 'origin-igp' in rule_config['match']:
+                        tmp = f'match origin igp'
+                        self.assertIn(tmp, config)
+                    if 'origin-egp' in rule_config['match']:
+                        tmp = f'match origin egp'
+                        self.assertIn(tmp, config)
+                    if 'origin-incomplete' in rule_config['match']:
+                        tmp = f'match origin incomplete'
+                        self.assertIn(tmp, config)
+                    if 'peer' in rule_config['match']:
+                        tmp = f'match peer {rule_config["match"]["peer"]}'
+                        self.assertIn(tmp, config)
+                    if 'rpki-invalid' in rule_config['match']:
+                        tmp = f'match rpki invalid'
+                        self.assertIn(tmp, config)
+                    if 'rpki-not-found' in rule_config['match']:
+                        tmp = f'match rpki notfound'
+                        self.assertIn(tmp, config)
+                    if 'rpki-valid' in rule_config['match']:
+                        tmp = f'match rpki valid'
+                        self.assertIn(tmp, config)
+                    if 'tag' in rule_config['match']:
+                        tmp = f'match tag {rule_config["match"]["tag"]}'
+                        self.assertIn(tmp, config)
+
+                if 'on-match' in rule_config:
+                    if 'goto' in rule_config['on-match']:
+                        tmp = f'on-match goto {rule_config["on-match"]["goto"]}'
+                        self.assertIn(tmp, config)
+                    if 'next' in rule_config['on-match']:
+                        tmp = f'on-match next'
+                        self.assertIn(tmp, config)
+
+                if 'set' in rule_config:
+                    tmp = ' set '
+                    if 'aggregator-as' in rule_config['set']:
+                        tmp += 'aggregator as ' + rule_config['set']['aggregator-as']
+                    elif 'aggregator-ip' in rule_config['set']:
+                        tmp += ' ' + rule_config['set']['aggregator-ip']
+                    elif 'as-path-exclude' in rule_config['set']:
+                        tmp += 'as-path exclude ' + rule_config['set']['as-path-exclude']
+                    elif 'as-path-prepend' in rule_config['set']:
+                        tmp += 'as-path prepend ' + rule_config['set']['as-path-prepend']
+                    elif 'atomic-aggregate' in rule_config['set']:
+                        tmp += 'atomic-aggregate'
+                    elif 'distance' in rule_config['set']:
+                        tmp += 'distance ' + rule_config['set']['distance']
+                    elif 'ipv6-next-hop-global' in rule_config['set']:
+                        tmp += 'ipv6 next-hop global ' + rule_config['set']['ipv6-next-hop-global']
+                    elif 'ipv6-next-hop-local' in rule_config['set']:
+                        tmp += 'ipv6 next-hop local ' + rule_config['set']['ipv6-next-hop-local']
+                    elif 'ip-next-hop' in rule_config['set']:
+                        tmp += 'ip next-hop ' + rule_config['set']['ip-next-hop']
+                    elif 'large-community' in rule_config['set']:
+                        tmp += 'large-community ' + rule_config['set']['large-community']
+                    elif 'local-preference' in rule_config['set']:
+                        tmp += 'local-preference ' + rule_config['set']['local-preference']
+                    elif 'metric' in rule_config['set']:
+                        tmp += 'metric ' + rule_config['set']['metric']
+                    elif 'metric-type' in rule_config['set']:
+                        tmp += 'metric-type ' + rule_config['set']['metric-type']
+                    elif 'origin' in rule_config['set']:
+                        tmp += 'origin ' + rule_config['set']['origin']
+                    elif 'originator-id' in rule_config['set']:
+                        tmp += 'originator-id ' + rule_config['set']['originator-id']
+                    elif 'src' in rule_config['set']:
+                        tmp += 'src ' + rule_config['set']['src']
+                    elif 'tag' in rule_config['set']:
+                        tmp += 'tag ' + rule_config['set']['tag']
+                    elif 'weight' in rule_config['set']:
+                        tmp += 'weight ' + rule_config['set']['weight']
+
+                    self.assertIn(tmp, config)
+
 
     # Test set table for some sources
     def test_table_id(self):
