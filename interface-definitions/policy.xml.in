@@ -166,7 +166,7 @@
                 <properties>
                   <help>Regular expression to match against an AS path</help>
                   <valueHelp>
-                    <format>&lt;asn&gt;</format>
+                    <format>txt</format>
                     <description>AS path regular expression (ex: "64501 64502")</description>
                   </valueHelp>
                 </properties>
@@ -201,10 +201,33 @@
               #include <include/policy/description.xml.i>
               <leafNode name="regex">
                 <properties>
-                  <help>Regular expression to match against a community list</help>
+                  <help>Regular expression to match against a community-list</help>
+                  <completionHelp>
+                    <list>local-AS no-advertise no-export internet additive</list>
+                  </completionHelp>
                   <valueHelp>
                     <format>&lt;aa:nn&gt;</format>
-                    <description>Community list regular expression or one of: internet, local-AS, no-advertise, no-export</description>
+                    <description>Community number in AA:NN format</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>local-AS</format>
+                    <description>Well-known communities value NO_EXPORT_SUBCONFED 0xFFFFFF03</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no-advertise</format>
+                    <description>Well-known communities value NO_ADVERTISE 0xFFFFFF02</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no-export</format>
+                    <description>Well-known communities value NO_EXPORT 0xFFFFFF01</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>internet</format>
+                    <description>Well-known communities value 0</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>additive</format>
+                    <description>New value is appended to the existing value</description>
                   </valueHelp>
                 </properties>
               </leafNode>
@@ -246,11 +269,11 @@
                   </valueHelp>
                   <valueHelp>
                     <format>&lt;rt aa:nn:nn&gt;</format>
-                    <description>Extended community list regular expression</description>
+                    <description>Route Target regular expression</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>&lt;soo aa:nn&gt;</format>
-                    <description>Extended community list regular expression</description>
+                    <format>&lt;soo aa:nn:nn&gt;</format>
+                    <description>Site of Origin regular expression</description>
                   </valueHelp>
                 </properties>
               </leafNode>
@@ -287,7 +310,7 @@
                   <help>Regular expression to match against a large community list</help>
                   <valueHelp>
                     <format>&lt;aa:nn:nn&gt;</format>
-                    <description>Large community list regular expression</description>
+                    <description>Large Community value</description>
                   </valueHelp>
                 </properties>
               </leafNode>
@@ -913,6 +936,9 @@
                       <leafNode name="comm-list">
                         <properties>
                           <help>BGP communities with a community-list</help>
+                          <completionHelp>
+                            <path>policy community-list</path>
+                          </completionHelp>
                           <valueHelp>
                             <format>txt</format>
                             <description>BGP communities with a community-list</description>
@@ -935,36 +961,32 @@
                       </completionHelp>
                       <valueHelp>
                         <format>&lt;aa:nn&gt;</format>
-                        <description>Community in 4 octet AS:value format</description>
+                        <description>Community number in AA:NN format</description>
                       </valueHelp>
                       <valueHelp>
                         <format>local-AS</format>
-                        <description>local-AS</description>
+                        <description>Well-known communities value NO_EXPORT_SUBCONFED 0xFFFFFF03</description>
                       </valueHelp>
                       <valueHelp>
                         <format>no-advertise</format>
-                        <description>no-advertise</description>
+                        <description>Well-known communities value NO_ADVERTISE 0xFFFFFF02</description>
                       </valueHelp>
                       <valueHelp>
                         <format>no-export</format>
-                        <description>no-export</description>
+                        <description>Well-known communities value NO_EXPORT 0xFFFFFF01</description>
                       </valueHelp>
                       <valueHelp>
                         <format>internet</format>
-                        <description>internet</description>
+                        <description>Well-known communities value 0</description>
                       </valueHelp>
                       <valueHelp>
                         <format>additive</format>
-                        <description>additive</description>
+                        <description>New value is appended to the existing value</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
-                        <description>none</description>
+                        <description>No community attribute</description>
                       </valueHelp>
-              <!--   Need to add properly validator
-                      <constraint>
-                        <regex>^(local-AS|no-advertise|no-export|internet|additive|none)$</regex>
-                      </constraint>  -->
                     </properties>
                   </leafNode>
                   <leafNode name="distance">
