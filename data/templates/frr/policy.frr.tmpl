@@ -234,8 +234,20 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           if rule_config.set.atomic_aggregate is defined %}
  set atomic-aggregate
 {%           endif %}
+{%           if rule_config.set.comm_list is defined and rule_config.set.comm_list.comm_list is defined and rule_config.set.comm_list.comm_list is not none %}
+ set comm-list {{ rule_config.set.comm_list.comm_list }} {{ 'delete' if rule_config.set.comm_list.delete is defined }}
+{%           endif %}
+{%           if rule_config.set.community is defined and rule_config.set.community is not none %}
+ set community {{ rule_config.set.community }}
+{%           endif %}
 {%           if rule_config.set.distance is defined and rule_config.set.distance is not none %}
  set distance {{ rule_config.set.distance }}
+{%           endif %}
+{%           if rule_config.set.extcommunity_rt is defined and rule_config.set.extcommunity_rt is not none %}
+ set extcommunity rt {{ rule_config.set.extcommunity_rt }}
+{%           endif %}
+{%           if rule_config.set.extcommunity_soo is defined and rule_config.set.extcommunity_soo is not none %}
+ set extcommunity soo {{ rule_config.set.extcommunity_soo }}
 {%           endif %}
 {%           if rule_config.set.ip_next_hop is defined and rule_config.set.ip_next_hop is not none %}
  set ip next-hop {{ rule_config.set.ip_next_hop }}
@@ -266,6 +278,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           endif %}
 {%           if rule_config.set.src is defined and rule_config.set.src is not none %}
  set src {{ rule_config.set.src }}
+{%           endif %}
+{%           if rule_config.set.table is defined and rule_config.set.table is not none %}
+ set table {{ rule_config.set.table }}
 {%           endif %}
 {%           if rule_config.set.tag is defined and rule_config.set.tag is not none %}
  set tag {{ rule_config.set.tag }}
