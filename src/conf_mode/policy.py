@@ -34,7 +34,7 @@ def get_config(config=None):
         conf = Config()
 
     base = ['policy']
-    policy = conf.get_config_dict(base, key_mangling=('-', '_'),
+    policy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                   no_tag_node_value_mangle=True)
     return policy
 

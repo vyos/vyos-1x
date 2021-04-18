@@ -1,6 +1,6 @@
 !
-{% if policy.access_list is defined and policy.access_list is not none %}
-{%   for acl, acl_config in policy.access_list.items() | natural_sort %}
+{% if access_list is defined and access_list is not none %}
+{%   for acl, acl_config in access_list.items() | natural_sort %}
 {%     if acl_config.description is defined and acl_config.description is not none %}
 access-list {{ acl }} remark {{ acl_config.description }}
 {%     endif %}
@@ -37,8 +37,8 @@ access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ ip }} {{ src }}
 {%   endfor %}
 {% endif %}
 !
-{% if policy.access_list6 is defined and policy.access_list6 is not none %}
-{%   for acl, acl_config in policy.access_list6.items() | natural_sort %}
+{% if access_list6 is defined and access_list6 is not none %}
+{%   for acl, acl_config in access_list6.items() | natural_sort %}
 {%     if acl_config.description is defined and acl_config.description is not none %}
 ipv6 access-list {{ acl }} remark {{ acl_config.description }}
 {%     endif %}
@@ -56,8 +56,8 @@ ipv6 access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ src }} {{ 
 {%   endfor %}
 {% endif %}
 !
-{% if policy.as_path_list is defined and policy.as_path_list is not none %}
-{%   for acl, acl_config in policy.as_path_list.items() | natural_sort %}
+{% if as_path_list is defined and as_path_list is not none %}
+{%   for acl, acl_config in as_path_list.items() | natural_sort %}
 {%     if acl_config.rule is defined and acl_config.rule is not none %}
 {%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
 bgp as-path access-list {{ acl }} {{ rule_config.action }} {{ rule_config.regex }}
@@ -66,8 +66,8 @@ bgp as-path access-list {{ acl }} {{ rule_config.action }} {{ rule_config.regex 
 {%   endfor %}
 {% endif %}
 !
-{% if policy.community_list is defined and policy.community_list is not none %}
-{%   for list, list_config in policy.community_list.items() | natural_sort %}
+{% if community_list is defined and community_list is not none %}
+{%   for list, list_config in community_list.items() | natural_sort %}
 {%     if list_config.rule is defined and list_config.rule is not none %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
@@ -81,8 +81,8 @@ bgp community-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }} {
 {%   endfor %}
 {% endif %}
 !
-{% if policy.extcommunity_list is defined and policy.extcommunity_list is not none %}
-{%   for list, list_config in policy.extcommunity_list.items() | natural_sort %}
+{% if extcommunity_list is defined and extcommunity_list is not none %}
+{%   for list, list_config in extcommunity_list.items() | natural_sort %}
 {%     if list_config.rule is defined and list_config.rule is not none %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
@@ -96,8 +96,8 @@ bgp extcommunity-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }
 {%   endfor %}
 {% endif %}
 !
-{% if policy.large_community_list is defined and policy.large_community_list is not none %}
-{%   for list, list_config in policy.large_community_list.items() | natural_sort %}
+{% if large_community_list is defined and large_community_list is not none %}
+{%   for list, list_config in large_community_list.items() | natural_sort %}
 {%     if list_config.rule is defined and list_config.rule is not none %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
@@ -111,8 +111,8 @@ bgp large-community-list expanded {{ list }} seq {{ rule }} {{ rule_config.actio
 {%   endfor %}
 {% endif %}
 !
-{% if policy.prefix_list is defined and policy.prefix_list is not none %}
-{%   for prefix_list, prefix_list_config in policy.prefix_list.items() | natural_sort %}
+{% if prefix_list is defined and prefix_list is not none %}
+{%   for prefix_list, prefix_list_config in prefix_list.items() | natural_sort %}
 {%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
 ip prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
 {%     endif %}
@@ -124,8 +124,8 @@ ip prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule
 {%   endfor %}
 {% endif %}
 !
-{% if policy.prefix_list6 is defined and policy.prefix_list6 is not none %}
-{%   for prefix_list, prefix_list_config in policy.prefix_list6.items() | natural_sort %}
+{% if prefix_list6 is defined and prefix_list6 is not none %}
+{%   for prefix_list, prefix_list_config in prefix_list6.items() | natural_sort %}
 {%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
 ipv6 prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
 {%     endif %}
@@ -137,8 +137,8 @@ ipv6 prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ ru
 {%   endfor %}
 {% endif %}
 !
-{% if policy.route_map is defined and policy.route_map is not none %}
-{%   for route_map, route_map_config in policy.route_map.items() | natural_sort %}
+{% if route_map is defined and route_map is not none %}
+{%   for route_map, route_map_config in route_map.items() | natural_sort %}
 {%     if route_map_config.rule is defined and route_map_config.rule is not none %}
 {%       for rule, rule_config in route_map_config.rule.items() | natural_sort %}
 route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
