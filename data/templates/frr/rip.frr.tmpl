@@ -89,6 +89,7 @@ router rip
 {%   endif %}
 {% endif %}
 {% include 'frr/rip_ripng.frr.j2' %}
+ exit
 !
 {% if route_map is defined and route_map is not none %}
 ip protocol rip route-map {{ route_map }}

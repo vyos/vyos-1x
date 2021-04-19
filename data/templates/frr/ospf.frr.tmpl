@@ -176,6 +176,7 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {#   Timer values have default values #}
  timers throttle spf {{ timers.throttle.spf.delay }} {{ timers.throttle.spf.initial_holdtime }} {{ timers.throttle.spf.max_holdtime }}
 {% endif %}
+ exit
 !
 {% if route_map is defined and route_map is not none %}
 ip protocol ospf route-map {{ route_map }}
