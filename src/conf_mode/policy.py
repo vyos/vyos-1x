@@ -80,6 +80,28 @@ def verify(policy):
                         raise ConfigError(f'Regex {mandatory_error}')
 
 
+    # route-maps tend to be a bit more complex so they get their own verify() section
+    if 'route_map' in policy:
+        for route_map, route_map_config in policy['route_map'].items():
+            if 'rule' not in route_map_config:
+                continue
+
+            for rule, rule_config in route_map_config['rule'].items():
+                # Specified community-list must exist
+                tmp = dict_search('match.community.community_list', rule_config)
+                if tmp and tmp not in policy.get('community_list', []):
+                    raise ConfigError(f'community-list {tmp} does not exist!')
+
+                # Specified extended community-list must exist
+                tmp = dict_search('match.extcommunity', rule_config)
+                if tmp and tmp not in policy.get('extcommunity_list', []):
+                    raise ConfigError(f'extcommunity-list {tmp} does not exist!')
+
+                # Specified large-community-list must exist
+                tmp = dict_search('match.large_community.large_community_list', rule_config)
+                if tmp and tmp not in policy.get('large_community_list', []):
+                    raise ConfigError(f'large-community-list {tmp} does not exist!')
+
     return None
 
 def generate(policy):
