@@ -140,7 +140,7 @@
       <description>Act as an area router</description>
     </valueHelp>
     <constraint>
-      <regex>(level-1|level-1-2|level-2)</regex>
+      <regex>^(level-1|level-1-2|level-2)$</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -211,7 +211,7 @@
       <description>Use new style of TLVs to carry wider metric</description>
     </valueHelp>
     <constraint>
-      <regex>(narrow|transition|wide)</regex>
+      <regex>^(narrow|transition|wide)$</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -644,7 +644,7 @@
           <description>Level-2 only adjacencies are formed</description>
         </valueHelp>
         <constraint>
-          <regex>(level-1|level-1-2|level-2-only)</regex>
+          <regex>^(level-1|level-1-2|level-2-only)$</regex>
         </constraint>
       </properties>
     </leafNode>

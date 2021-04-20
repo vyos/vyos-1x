@@ -94,7 +94,7 @@
                       <constraint>
                         <validator name="ipv6-address"/>
                         <validator name="ipv6-prefix"/>
-                        <regex>(masquerade)</regex>
+                        <regex>^(masquerade)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -144,7 +144,7 @@
                   <help>Inbound interface of NAT66 traffic</help>
                   <completionHelp>
                     <list>any</list>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script> 
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                 </properties>
               </leafNode>

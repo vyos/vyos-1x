@@ -75,7 +75,7 @@
                 <description>combine IP address and port to make hash</description>
               </valueHelp>
               <constraint>
-                <regex>(layer2\+3|layer3\+4|layer2)</regex>
+                <regex>^(layer2\+3|layer3\+4|layer2)$</regex>
               </constraint>
               <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
             </properties>
@@ -132,7 +132,7 @@
                 <description>Distribute based on MAC address</description>
               </valueHelp>
               <constraint>
-                <regex>(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)</regex>
+                <regex>^(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)$</regex>
               </constraint>
               <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, transmit-load-balance, adaptive-load-balance, or xor</constraintErrorMessage>
             </properties>

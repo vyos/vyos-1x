@@ -50,7 +50,7 @@
                 <description>Promicious mode passthrough of underlying device</description>
               </valueHelp>
               <constraint>
-                <regex>(private|vepa|bridge|passthru)</regex>
+                <regex>^(private|vepa|bridge|passthru)$</regex>
               </constraint>
               <constraintErrorMessage>mode must be private, vepa, bridge or passthru</constraintErrorMessage>
             </properties>

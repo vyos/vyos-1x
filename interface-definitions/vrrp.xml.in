@@ -61,7 +61,7 @@
                         <list>plaintext-password ah</list>
                       </completionHelp>
                       <constraint>
-                        <regex>(plaintext-password|ah)</regex>
+                        <regex>^(plaintext-password|ah)$</regex>
                       </constraint>
                       <constraintErrorMessage>Authentication type must be plaintext-password or ah</constraintErrorMessage>
                     </properties>
