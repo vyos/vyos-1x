@@ -23,7 +23,7 @@
     </valueHelp>
     <constraint>
       <validator name="ip-host"/>
-      <regex>(dhcp|dhcpv6)</regex>
+      <regex>^(dhcp|dhcpv6)$</regex>
     </constraint>
     <multi/>
   </properties>
