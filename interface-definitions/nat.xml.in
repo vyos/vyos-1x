@@ -163,7 +163,7 @@
                         <validator name="ipv4-prefix"/>
                         <validator name="ipv4-address"/>
                         <validator name="ipv4-range"/>
-                        <regex>(masquerade)</regex>
+                        <regex>^(masquerade)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>

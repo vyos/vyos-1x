@@ -47,7 +47,7 @@
                 <description>IP encapsulation</description>
               </valueHelp>
               <constraint>
-                <regex>(udp|ip)</regex>
+                <regex>^(udp|ip)$</regex>
               </constraint>
               <constraintErrorMessage>Encapsulation must be UDP or IP</constraintErrorMessage>
             </properties>

@@ -45,7 +45,7 @@
                     <list>1024 2048 4096 8192 16384 32768</list>
                   </completionHelp>
                   <constraint>
-                    <regex>(1024|2048|4096|8192|16384|32768)</regex>
+                    <regex>^(1024|2048|4096|8192|16384|32768)$</regex>
                   </constraint>
                 </properties>
               </leafNode>

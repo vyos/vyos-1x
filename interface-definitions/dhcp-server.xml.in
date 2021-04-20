@@ -198,7 +198,7 @@
                             <list>primary secondary</list>
                           </completionHelp>
                           <constraint>
-                            <regex>(primary|secondary)</regex>
+                            <regex>^(primary|secondary)$</regex>
                           </constraint>
                           <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
                         </properties>

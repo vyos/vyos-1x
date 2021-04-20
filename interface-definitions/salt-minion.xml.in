@@ -15,7 +15,7 @@
                 <list>md5 sha1 sha224 sha256 sha384 sha512</list>
               </completionHelp>
               <constraint>
-                <regex>(md5|sha1|sha224|sha256|sha384|sha512)</regex>
+                <regex>^(md5|sha1|sha224|sha256|sha384|sha512)$</regex>
               </constraint>
             </properties>
           </leafNode>

@@ -39,9 +39,6 @@
               <completionHelp>
                 <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
               </completionHelp>
-              <constraint>
-                <regex>auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all</regex>
-              </constraint>
               <valueHelp>
                 <format>auth</format>
                 <description>Authentication and authorization</description>
@@ -134,6 +131,9 @@
                 <format>all</format>
                 <description>Authentication and authorization</description>
               </valueHelp>
+              <constraint>
+                <regex>^(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)$</regex>
+              </constraint>
             </properties>
           </leafNode>
           <leafNode name="interface">
@@ -381,7 +381,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>auto$</regex>
+                    <regex>^auto$</regex>
                   </constraint>
                 </properties>
               </leafNode>

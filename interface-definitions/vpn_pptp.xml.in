@@ -86,7 +86,7 @@
                         <description>ask client for mppe, if it rejects drop connection</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(deny|prefer|require)</regex>
+                        <regex>^(deny|prefer|require)$</regex>
                       </constraint>
                       <completionHelp>
                         <list>deny prefer require</list>

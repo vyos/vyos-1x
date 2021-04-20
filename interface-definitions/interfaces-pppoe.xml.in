@@ -50,7 +50,7 @@
                 <list>auto none force</list>
               </completionHelp>
               <constraint>
-                <regex>(auto|none|force)</regex>
+                <regex>^(auto|none|force)$</regex>
               </constraint>
               <constraintErrorMessage>PPPoE default-route option must be 'auto', 'none', or 'force'</constraintErrorMessage>
               <valueHelp>
