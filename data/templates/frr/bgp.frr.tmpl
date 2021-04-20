@@ -459,7 +459,6 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}
- exit
 !
 {% if route_map is defined and route_map is not none %}
 ip protocol bgp route-map {{ route_map }}

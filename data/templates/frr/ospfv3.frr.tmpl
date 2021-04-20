@@ -81,5 +81,4 @@ router ospf6
  redistribute {{ protocol }} {{ 'route-map ' + options.route_map if options.route_map is defined }}
 {%   endfor %}
 {% endif %}
- exit
 !

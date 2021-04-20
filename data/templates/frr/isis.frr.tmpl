@@ -173,7 +173,6 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     endif %}
 {%   endfor %}
 {% endif %}
- exit
 !
 {% if route_map is defined and route_map is not none %}
 ip protocol isis route-map {{ route_map }}
