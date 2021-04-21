@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from netifaces import interfaces
-import re
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
