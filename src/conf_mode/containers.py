@@ -15,65 +15,53 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import json
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
-from vyos.configdict import leaf_node_changed
-from vyos import ConfigError
-from vyos.util import cmd, process_named_running
+from vyos.util import cmd
+from vyos.util import popen
 from vyos.template import render
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
-import json
 airbag.enable()
 
 config_containers_registry = '/etc/containers/registries.conf'
 config_containers_storage = '/etc/containers/storage.conf'
 
+def _cmd(command):
+    if os.path.exists('/tmp/vyos.container.debug'):
+        print(command)
+    return cmd(command)
+
 # Container management functions
 def container_exists(name):
     '''
-       https://docs.podman.io/en/latest/_static/api.html#operation/ContainerExistsLibpod
-       Check if container exists. Response codes.
-       204 - container exists
-       404 - no such container
+    https://docs.podman.io/en/latest/_static/api.html#operation/ContainerExistsLibpod
+    Check if container exists. Response codes.
+    204 - container exists
+    404 - no such container
     '''
-    c = cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/exists'")
-    # If container exists it return status code "0"
-    # This code not displayed
-    if c == "":
-        # Container exists
-        return True
-    else:
-        # Container not exists
-        return False
+    tmp = _cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/exists'")
+    # If container exists it return status code "0" - code can not be displayed
+    return (tmp == "")
 
 def container_status(name):
     '''
-       https://docs.podman.io/en/latest/_static/api.html#operation/ContainerInspectLibpod
+    https://docs.podman.io/en/latest/_static/api.html#operation/ContainerInspectLibpod
     '''
-    c = cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/json'")
-    data = json.loads(c)
-    status = data['State']['Status']
-
-    return status
-
-def container_stop(name):
-    c = cmd(f'podman stop {name}')
-
-def container_start(name):
-    c = cmd(f'podman start {name}')
+    tmp = _cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/json'")
+    data = json.loads(tmp)
+    return data['State']['Status']
 
 def ctnr_network_exists(name):
-    # Check explicit name for network.
-    c = cmd(f'podman network ls --quiet --filter name=^{name}$')
-    # If network name is found, return true
-    if bool(c) == True:
-        return True
-    else:
-        return False
-
+    # Check explicit name for network, returns True if network exists
+    c = _cmd(f'podman network ls --quiet --filter name=^{name}$')
+    return bool(c)
 
 # Common functions
 def get_config(config=None):
@@ -81,27 +69,21 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
     base = ['container']
-    container = conf.get_config_dict(base, get_first_key=True)
+    container = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                     get_first_key=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     container = dict_merge(default_values, container)
 
-    if 'name' in container or 'network' in container:
-        container['configured'] = True
-
     # Delete container network, delete containers
-    dict = {}
-    tmp_net = node_changed(conf, ['container', 'network'])
-    if tmp_net:
-        dict = dict_merge({'net_remove' : tmp_net}, dict)
-        container.update(dict)
+    tmp = node_changed(conf, ['container', 'network'])
+    if tmp: container.update({'net_remove' : tmp})
 
-    tmp_name = node_changed(conf, ['container', 'name'])
-    if tmp_name:
-        dict = dict_merge({'container_remove' : tmp_name}, dict)
-        container.update(dict)
+    tmp = node_changed(conf, ['container', 'name'])
+    if tmp: container.update({'container_remove' : tmp})
 
     return container
 
@@ -112,40 +94,53 @@ def verify(container):
 
     # Add new container
     if 'name' in container:
-        for cont, container_config in container['name'].items():
-            # Dont add container with wrong/undefined name network
-            if 'network' in container_config and 'network' in container:
-                if list(container_config['network'])[0] not in container['network']:
-                    # Don't allow delete network if container use this network.
-                    raise ConfigError('Netowrk with name: {0} shuld be specified!'.format(list(container_config['network'])[0]))
+        for name, container_config in container['name'].items():
+            if 'network' in container_config:
+                if len(container_config['network']) > 1:
+                    raise ConfigError(f'Only one network can be specified for container "{name}"!')
 
-            # If image not defined
+                # Check if the specified container network exists
+                network_name = list(container_config['network'])[0]
+                if network_name not in container_config['network']:
+                    raise ConfigError('Container network "{network_name}" does not exist!')
+
+            # Container image is a mandatory option
             if 'image' not in container_config:
-                raise ConfigError(f'Image for container "{cont}" is required!')
+                raise ConfigError(f'Container image for "{name}" is mandatory!')
 
             # If 'allow-host-networks' or 'network' not set.
-            if 'allow-host-networks' not in container_config and 'network' not in container_config:
-                raise ConfigError(f'"Network" or "allow-host-networks" for container "{cont}" is required!')
+            if 'allow_host_networks' not in container_config and 'network' not in container_config:
+                raise ConfigError(f'Must either set "network" or "allow-host-networks" for container "{name}"!')
 
-            # If set both parameters for networks (host and user-defined). We require only one.
-            if 'allow-host-networks' in container_config and 'network' in container_config:
-                raise ConfigError(f'"allow-host-networks" and "network" for "{cont}" cannot be both configured at the same time!')
+            # Can not set both allow-host-networks and network at the same time
+            if {'allow_host_networks', 'network'} <= set(container_config):
+                raise ConfigError(f'"allow-host-networks" and "network" for "{name}" cannot be both configured at the same time!')
 
     # Add new network
     if 'network' in container:
-        for net in container['network']:
+        v4_prefix = 0
+        v6_prefix = 0
+        for network, network_config in container['network'].items():
             # If ipv4-prefix not defined for user-defined network
-            if 'ipv4-prefix' not in container['network'][net]:
-                raise ConfigError(f'IPv4 prefix for network "{net}" is required!')
+            if 'prefix' not in network_config:
+                raise ConfigError(f'prefix for network "{net}" must be defined!')
 
-    # Don't allow to remove network which used for container
-    if 'net_remove' in container:
-        for net in container['net_remove']:
-            if 'name' in container:
-                for cont in container['name']:
-                    if 'network' in container['name'][cont]:
-                        if net in container['name'][cont]['network']:
-                            raise ConfigError(f'Can\'t remove network "{net}" used for "{cont}"')
+            for prefix in network_config['prefix']:
+                if is_ipv4(prefix): v4_prefix += 1
+                elif is_ipv6(prefix): v6_prefix += 1
+
+            if v4_prefix > 1:
+                raise ConfigError(f'Only one IPv4 prefix can be defined for network "{network}"!')
+            if v6_prefix > 1:
+                raise ConfigError(f'Only one IPv6 prefix can be defined for network "{network}"!')
+
+
+    # A network attached to a container can not be deleted
+    if {'net_remove', 'name'} <= set(container):
+        for network in container['net_remove']:
+            for container, container_config in container['name'].items():
+                if 'network' in container_config and network in container_config['network']:
+                    raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
 
     return None
 
@@ -165,63 +160,57 @@ def apply(container):
     if 'container_remove' in container:
         for name in container['container_remove']:
             if container_status(name) == 'running':
-                cmd(f'podman stop {name}')
-            cmd(f'podman rm --force {name}')
-            print(f'Container "{name}" deleted')
+                _cmd(f'podman stop {name}')
+            _cmd(f'podman rm --force {name}')
 
     # Delete old networks if needed
     if 'net_remove' in container:
-        for net in container['net_remove']:
-            cmd(f'podman network rm {net}')
+        for network in container['net_remove']:
+            _cmd(f'podman network rm {network}')
 
     # Add network
     if 'network' in container:
-        for net in container['network']:
+        for network, network_config in container['network'].items():
             # Check if the network has already been created
-            if ctnr_network_exists(net) is False:
-                prefix = container['network'][net]['ipv4-prefix']
-                if container['network'][net]['ipv4-prefix']:
-                    # Create user-defined network
-                    try:
-                        cmd(f'podman network create {net} --subnet={prefix}')
-                    except:
-                        print(f'Can\'t add network {net}')
+            if not ctnr_network_exists(network) and 'prefix' in network_config:
+                tmp = f'podman network create {network}'
+                # we can not use list comprehension here as the --ipv6 option
+                # must immediately follow the specified subnet!!!
+                for prefix in sorted(network_config['prefix']):
+                    tmp += f' --subnet={prefix}'
+                    if is_ipv6(prefix):
+                      tmp += ' --ipv6'
+                _cmd(tmp)
 
     # Add container
     if 'name' in container:
-        for name in container['name']:
+        for name, container_config in container['name'].items():
             # Check if the container has already been created
-            #if len(cmd(f'podman ps -a --filter "name=^{name}$" -q')) == 0:
-            if container_exists(name) is False:
-                image = container['name'][name]['image']
+            if not container_exists(name):
+                image = container_config['image']
+                # Currently the best way to run a command and immediately print stdout
+                print(os.system(f'podman pull {image}'))
 
                 # Check/set environment options "-e foo=bar"
                 env_opt = ''
-                if 'environment' in container['name'][name]:
+                if 'environment' in container_config:
                     env_opt = '-e '
-                    env_opt += " -e ".join(f"{k}={v['value']}" for k, v in container['name'][name]['environment'].items())
+                    env_opt += " -e ".join(f"{k}={v['value']}" for k, v in container_config['environment'].items())
 
-                if 'allow-host-networks' in container['name'][name]:
-                    try:
-                        cmd(f'podman run -dit --name {name} --net host {env_opt} {image}')
-                    except:
-                        print(f'Can\'t add container {name}')
-
+                if 'allow_host_networks' in container_config:
+                    _cmd(f'podman run -dit --name {name} --net host {env_opt} {image}')
                 else:
-                    for net in container['name'][name]['network']:
-                        if container['name'][name]['image']:
-                            ipparam = ''
-                            if 'address' in container['name'][name]['network'][net]:
-                                ipparam = '--ip {}'.format(container['name'][name]['network'][net]['address'])
-                            try:
-                                cmd(f'podman run --name {name} -dit --net {net} {ipparam} {env_opt} {image}')
-                            except:
-                                print(f'Can\'t add container {name}')
+                    for network in container_config['network']:
+                        ipparam = ''
+                        if 'address' in container_config['network'][network]:
+                            ipparam = '--ip ' + container_config['network'][network]['address']
+                        _cmd(f'podman run --name {name} -dit --net {network} {ipparam} {env_opt} {image}')
+
             # Else container is already created. Just start it.
             # It's needed after reboot.
-            else:
-                if container_status(name) != 'running':
-                    container_start(name)
+            elif container_status(name) != 'running':
+                _cmd(f'podman start {name}')
+
     return None
 
 if __name__ == '__main__':

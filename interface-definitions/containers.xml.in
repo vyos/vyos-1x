@@ -54,7 +54,7 @@
                 <properties>
                   <help>Set IPv4 static address to container (optional)</help>
                   <valueHelp>
-                    <format>ipv4</format> 
+                    <format>ipv4</format>
                     <description>IPv4 address (x.x.x.1 reserved)</description>
                   </valueHelp>
                   <constraint>
@@ -76,16 +76,17 @@
               <help>Network description</help>
             </properties>
           </leafNode>
-          <leafNode name="ipv4-prefix">
+          <leafNode name="prefix">
             <properties>
               <help>Prefix which allocated to that network</help>
               <valueHelp>
                 <format>ipv4net</format>
-                <description>IPv4 network and prefix length</description>
+                <description>IPv4 network prefix</description>
               </valueHelp>
               <constraint>
-                <validator name="ip-prefix"/>
+                <validator name="ipv4-prefix"/>
               </constraint>
+              <multi/>
             </properties>
           </leafNode>
         </children>
