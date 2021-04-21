@@ -17,6 +17,9 @@
 import os
 import json
 
+from ipaddress import ip_address
+from ipaddress import ip_network
+
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
@@ -99,10 +102,27 @@ def verify(container):
                 if len(container_config['network']) > 1:
                     raise ConfigError(f'Only one network can be specified for container "{name}"!')
 
+
                 # Check if the specified container network exists
                 network_name = list(container_config['network'])[0]
-                if network_name not in container_config['network']:
+                if network_name not in container['network']:
                     raise ConfigError('Container network "{network_name}" does not exist!')
+
+                if 'address' in container_config['network'][network_name]:
+                    if 'network' not in container_config:
+                        raise ConfigError(f'Can not use "address" without "network" for container "{name}"!')
+
+                    address = container_config['network'][network_name]['address']
+                    network = container['network'][network_name]['prefix']
+
+                    network = None
+                    if is_ipv4(address):
+                        network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
+                    elif is_ipv6(address):
+                        network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
+
+                    if ip_address(address) not in ip_network(network):
+                        raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
 
             # Container image is a mandatory option
             if 'image' not in container_config:
