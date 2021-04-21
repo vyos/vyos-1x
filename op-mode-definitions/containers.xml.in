@@ -11,7 +11,7 @@
             <properties>
               <help>Pull a new image for container</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --pull "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --pull "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -28,7 +28,7 @@
             <properties>
               <help>Delete container image</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --remove "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --remove "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -40,19 +40,19 @@
         <properties>
           <help>Show containers</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --show-containers</command>
+        <command>sudo ${vyos_op_scripts_dir}/containers_op.py --all</command>
         <children>
           <leafNode name="image">
             <properties>
-              <help>Show available container images</help>
+              <help>Delete container image</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --show-images</command>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --image</command>
           </leafNode>
           <leafNode name="network">
             <properties>
               <help>Show available container networks</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --show-networks</command>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --networks</command>
           </leafNode>
         </children>
       </node>
