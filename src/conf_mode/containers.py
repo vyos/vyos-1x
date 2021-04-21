@@ -113,16 +113,20 @@ def verify(container):
                         raise ConfigError(f'Can not use "address" without "network" for container "{name}"!')
 
                     address = container_config['network'][network_name]['address']
-                    network = container['network'][network_name]['prefix']
-
                     network = None
                     if is_ipv4(address):
                         network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
                     elif is_ipv6(address):
                         network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
 
+                    # Specified container IP address must belong to network prefix
                     if ip_address(address) not in ip_network(network):
                         raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
+
+                    # We can not use the first IP address of a network prefix as this is used by podman
+                    if ip_address(address) == ip_network(network)[1]:
+                        raise ConfigError(f'Address "{address}" reserved for the container engine!')
+
 
             # Container image is a mandatory option
             if 'image' not in container_config:
