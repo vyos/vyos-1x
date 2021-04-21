@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Expect 2 args or "show-containers" or "show-images"
-if [[ $# -ne 2 ]] && [[ $1 != "--show-containers" ]] && [[ $1 != "--show-images" ]] ; then
+if [[ $# -ne 2 ]] && [[ $1 != "--show-containers" ]] && [[ $1 != "--show-images" ]] && [[ $1 != "--show-networks" ]] ; then
     echo "Image not set or not found"
     exit 1
 fi
@@ -29,6 +29,10 @@ show_images() {
     sudo podman image ls
 }
 
+# Show networks
+show_networks() {
+    sudo podman network ls
+}
 
 if [ "$OPTION" = "--pull" ]; then
     pull_image
@@ -42,6 +46,11 @@ fi
 
 if [ "$OPTION" = "--show-containers" ]; then
     show_containers
+    exit 0
+fi
+
+if [ "$OPTION" = "--show-networks" ]; then
+    show_networks
     exit 0
 fi
 

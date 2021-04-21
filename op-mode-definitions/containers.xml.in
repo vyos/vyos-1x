@@ -44,9 +44,15 @@
         <children>
           <leafNode name="image">
             <properties>
-              <help>Delete container image</help>
+              <help>Show available container images</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --show-images</command>
+          </leafNode>
+          <leafNode name="network">
+            <properties>
+              <help>Show available container networks</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.sh --show-networks</command>
           </leafNode>
         </children>
       </node>
