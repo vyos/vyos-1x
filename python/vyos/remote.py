@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import socket
 import sys
 import tempfile
 from ftplib import FTP
@@ -23,80 +24,103 @@ import urllib.request
 from vyos.util import cmd
 from paramiko import SSHClient
 
+
 def upload_ftp(local_path, hostname, remote_path,\
-               username='anonymous', password='', port=21):
+               username='anonymous', password='', port=21, source=None):
     with open(local_path, 'rb') as file:
-        with FTP() as conn:
+        with FTP(source_address=source) as conn:
             conn.connect(hostname, port)
             conn.login(username, password)
             conn.storbinary(f'STOR {remote_path}', file)
 
 def download_ftp(local_path, hostname, remote_path,\
-                 username='anonymous', password='', port=21):
+                 username='anonymous', password='', port=21, source=None):
     with open(local_path, 'wb') as file:
-        with FTP() as conn:
+        with FTP(source_address=source) as conn:
             conn.connect(hostname, port)
             conn.login(username, password)
             conn.retrbinary(f'RETR {remote_path}', file.write)
 
 def upload_sftp(local_path, hostname, remote_path,\
-                username=None, password=None, port=22):
+                username=None, password=None, port=22, source=None):
+    sock = None
+    if source:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind((source, 0))
+        sock.connect((hostname, port))
     with SSHClient() as ssh:
         ssh.load_system_host_keys()
-        ssh.connect(hostname, port, username, password)
+        ssh.connect(hostname, port, username, password, sock=sock)
         with ssh.open_sftp() as sftp:
             sftp.put(local_path, remote_path)
+    if sock:
+        sock.shutdown()
+        sock.close()
 
 def download_sftp(local_path, hostname, remote_path,\
-                  username=None, password=None, port=22):
+                  username=None, password=None, port=22, source=None):
+    sock = None
+    if source:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind((source, 0))
+        sock.connect((hostname, port))
     with SSHClient() as ssh:
         ssh.load_system_host_keys()
-        ssh.connect(hostname, port, username, password)
+        ssh.connect(hostname, port, username, password, sock=sock)
         with ssh.open_sftp() as sftp:
             sftp.get(remote_path, local_path)
+    if sock:
+        sock.shutdown()
+        sock.close()
 
-def upload_tftp(local_path, hostname, remote_path, port=69):
+def upload_tftp(local_path, hostname, remote_path, port=69, source=None):
+    source_option = f'--interface {source}' if source else ''
     with open(local_path, 'rb') as file:
-        cmd(f'curl -s -T - tftp://{hostname}:{port}/{remote_path}', stderr=None, input=file.read()).encode()
+        cmd(f'curl {source_option} -s -T - tftp://{hostname}:{port}/{remote_path}',\
+            stderr=None, input=file.read()).encode()
 
-def download_tftp(local_path, hostname, remote_path, port=69):
+def download_tftp(local_path, hostname, remote_path, port=69, source=None):
+    source_option = f'--interface {source}' if source else ''
     with open(local_path, 'wb') as file:
-        file.write(cmd(f'curl -s tftp://{hostname}:{port}/{remote_path}', stderr=None).encode())
+        file.write(cmd(f'curl {source_option} -s tftp://{hostname}:{port}/{remote_path}',\
+                       stderr=None).encode())
 
 def download_http(urlstring, local_path):
     with open(local_path, 'wb') as file:
         with urllib.request.urlopen(urlstring) as response:
             file.write(response.read())
 
-def download(local_path, urlstring):
+def download(local_path, urlstring, source=None):
     """
     Dispatch the appropriate download function for the given URL and save to local path.
     """
     url = urllib.parse.urlparse(urlstring)
     if url.scheme == 'http' or url.scheme == 'https':
+        if source:
+            print("Warning: Custom source address not supported for HTTP connections.", file=sys.stderr)
         download_http(urlstring, local_path)
     elif url.scheme == 'ftp':
         username = url.username if url.username else 'anonymous'
-        download_ftp(local_path, url.hostname, url.path, username, url.password)
+        download_ftp(local_path, url.hostname, url.path, username, url.password, source=source)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        download_sftp(local_path, url.hostname, url.path, url.username, url.password)
+        download_sftp(local_path, url.hostname, url.path, url.username, url.password, source=source)
     elif url.scheme == 'tftp':
-        download_tftp(local_path, url.hostname, url.path)
+        download_tftp(local_path, url.hostname, url.path, source=source)
     else:
         ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def upload(local_path, urlstring):
+def upload(local_path, urlstring, source=None):
     """
     Dispatch the appropriate upload function for the given URL and upload from local path.
     """
     url = urllib.parse.urlparse(urlstring)
     if url.scheme == 'ftp':
         username = url.username if url.username else 'anonymous'
-        upload_ftp(local_path, url.hostname, url.path, username, url.password)
+        upload_ftp(local_path, url.hostname, url.path, username, url.password, source=source)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        upload_sftp(local_path, url.hostname, url.path, url.username, url.password)
+        upload_sftp(local_path, url.hostname, url.path, url.username, url.password, source=source)
     elif url.scheme == 'tftp':
-        upload_tftp(local_path, url.hostname, url.path)
+        upload_tftp(local_path, url.hostname, url.path, source=source)
     else:
         ValueError(f'Unsupported URL scheme: {url.scheme}')
 
