@@ -221,14 +221,36 @@ def apply(container):
                     env_opt = '-e '
                     env_opt += " -e ".join(f"{k}={v['value']}" for k, v in container_config['environment'].items())
 
+                # Publish ports
+                port = ''
+                if 'port' in container_config:
+                    protocol = ''
+                    for portmap in container_config['port']:
+                        if 'protocol' in container_config['port'][portmap]:
+                            protocol = container_config['port'][portmap]['protocol']
+                            protocol = f'/{protocol}'
+                        else:
+                            protocol = '/tcp'
+                        sport = container_config['port'][portmap]['source']
+                        dport = container_config['port'][portmap]['destination']
+                        port += f' -p {sport}:{dport}{protocol}'
+
+                # Bind volume
+                volume = ''
+                if 'volume' in container_config:
+                    for vol in container_config['volume']:
+                        svol = container_config['volume'][vol]['source']
+                        dvol = container_config['volume'][vol]['destination']
+                        volume += f' -v {svol}:{dvol}'
+
                 if 'allow_host_networks' in container_config:
-                    _cmd(f'podman run -dit --name {name} --net host {env_opt} {image}')
+                    _cmd(f'podman run -dit --name {name} --net host {port} {volume} {env_opt} {image}')
                 else:
                     for network in container_config['network']:
                         ipparam = ''
                         if 'address' in container_config['network'][network]:
                             ipparam = '--ip ' + container_config['network'][network]['address']
-                        _cmd(f'podman run --name {name} -dit --net {network} {ipparam} {env_opt} {image}')
+                        _cmd(f'podman run --name {name} -dit --net {network} {ipparam} {port} {volume} {env_opt} {image}')
 
             # Else container is already created. Just start it.
             # It's needed after reboot.
