@@ -143,13 +143,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['local-as', ASN])
 
     def tearDown(self):
-        self.cli_delete(['policy', 'route-map', route_map_in])
-        self.cli_delete(['policy', 'route-map', route_map_out])
-        self.cli_delete(['policy', 'prefix-list', prefix_list_in])
-        self.cli_delete(['policy', 'prefix-list', prefix_list_out])
-        self.cli_delete(['policy', 'prefix-list6', prefix_list_in6])
-        self.cli_delete(['policy', 'prefix-list6', prefix_list_out6])
-
+        self.cli_delete(['policy'])
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -578,7 +572,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         verify_families = ['ipv4 unicast', 'ipv6 unicast','ipv4 multicast', 'ipv6 multicast']
         flowspec_families = ['address-family ipv4 flowspec', 'address-family ipv6 flowspec']
         flowspec_int = 'lo'
-        
+
         # Per family distance support
         for family in distance_families:
             self.cli_set(base_path + ['address-family', family, 'distance', 'external', distance_external])
@@ -590,16 +584,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'ipv6' in family:
                 self.cli_set(base_path + ['address-family', family, 'distance',
                                           'prefix', distance_v6_prefix, 'distance', distance_prefix_value])
-        
+
         # IPv4 flowspec interface check
         self.cli_set(base_path + ['address-family', 'ipv4-flowspec', 'local-install', 'interface', flowspec_int])
-        
+
         # IPv6 flowspec interface check
         self.cli_set(base_path + ['address-family', 'ipv6-flowspec', 'local-install', 'interface', flowspec_int])
-        
+
         # Commit changes
         self.cli_commit()
-        
+
         # Verify FRR distances configuration
         frrconfig = self.getFRRconfig(f'router bgp {ASN}')
         self.assertIn(f'router bgp {ASN}', frrconfig)
@@ -610,12 +604,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'distance {distance_prefix_value} {distance_v4_prefix}', frrconfig)
             if 'ipv6' in family:
                 self.assertIn(f'distance {distance_prefix_value} {distance_v6_prefix}', frrconfig)
-        
+
         # Verify FRR flowspec configuration
         for family in flowspec_families:
             self.assertIn(f'{family}', frrconfig)
             self.assertIn(f'local-install {flowspec_int}', frrconfig)
-    
+
     def test_bgp_10_vrf_simple(self):
         router_id = '127.0.0.3'
         vrfs = ['red', 'green', 'blue']
@@ -640,6 +634,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
             self.assertIn(f' bgp router-id {router_id}', frrconfig)
-            
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

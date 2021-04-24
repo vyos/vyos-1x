@@ -25,6 +25,27 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
+def routing_policy_find(key, dictionary):
+    # Recursively traverse a dictionary and extract the value assigned to
+    # a given key as generator object. This is made for routing policies,
+    # thus also import/export is checked
+    for k, v in dictionary.items():
+        if k == key:
+            if isinstance(v, dict):
+                for a, b in v.items():
+                    if a in ['import', 'export']:
+                        yield b
+            else:
+                yield v
+        elif isinstance(v, dict):
+            for result in routing_policy_find(key, v):
+                yield result
+        elif isinstance(v, list):
+            for d in v:
+                if isinstance(d, dict):
+                    for result in routing_policy_find(key, d):
+                        yield result
+
 def get_config(config=None):
     if config:
         conf = config
@@ -35,6 +56,15 @@ def get_config(config=None):
     policy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                   no_tag_node_value_mangle=True)
 
+    # We also need some additional information from the config, prefix-lists
+    # and route-maps for instance. They will be used in verify().
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = conf.get_config_dict(['protocols'], key_mangling=('-', '_'),
+                               no_tag_node_value_mangle=True)
+    # Merge policy dict into "regular" config dict
+    policy = dict_merge(tmp, policy)
     return policy
 
 def verify(policy):
@@ -101,6 +131,37 @@ def verify(policy):
                 tmp = dict_search('match.large_community.large_community_list', rule_config)
                 if tmp and tmp not in policy.get('large_community_list', []):
                     raise ConfigError(f'large-community-list {tmp} does not exist!')
+
+                # Specified prefix-list must exist
+                tmp = dict_search('match.ip.address.prefix_list', rule_config)
+                if tmp and tmp not in policy.get('prefix_list', []):
+                    raise ConfigError(f'prefix-list {tmp} does not exist!')
+
+                # Specified prefix-list must exist
+                tmp = dict_search('match.ipv6.address.prefix_list', rule_config)
+                if tmp and tmp not in policy.get('prefix_list6', []):
+                    raise ConfigError(f'prefix-list6 {tmp} does not exist!')
+
+    # When routing protocols are active some use prefix-lists, route-maps etc.
+    # to apply the systems routing policy to the learned or redistributed routes.
+    # When the "routing policy" changes and policies, route-maps etc. are deleted,
+    # it is our responsibility to verify that the policy can not be deleted if it
+    # is used by any routing protocol
+    if 'protocols' in policy:
+        for policy_type in ['access_list', 'access_list6', 'as_path_list', 'community_list',
+                            'extcommunity_list', 'large_community_list', 'prefix_list', 'route_map']:
+            if policy_type in policy:
+                for policy_name in list(set(routing_policy_find(policy_type, policy['protocols']))):
+                    found = False
+                    if policy_name in policy[policy_type]:
+                        found = True
+                    # BGP uses prefix-list for selecting both an IPv4 or IPv6 AFI related
+                    # list - we need to go the extra mile here and check both prefix-lists
+                    if policy_type == 'prefix_list' and 'prefix_list6' in policy and policy_name in policy['prefix_list6']:
+                        found = True
+                    if not found:
+                        tmp = policy_type.replace('_','-')
+                        raise ConfigError(f'Can not delete {tmp} "{name}", still in use!')
 
     return None
 
