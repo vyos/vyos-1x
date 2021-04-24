@@ -26,6 +26,38 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey --location "$4"</command>
           </tagNode>
+          <tagNode name="mobile-config">
+            <properties>
+              <help>Generate QR code and movile configuration for Wireguard interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="server">
+                <properties>
+                  <help>IP address or FQDN the client will connect to</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                    <list>&lt;hostname&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --interface "$4" --server "$6"</command>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>IPv4/IPv6 address used on the client side</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                        <list>&lt;hostname&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/wireguard_client.py --interface "$4" --server "$6" --address "$8"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
         </children>
       </node>
     </children>
@@ -73,7 +105,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
             </properties>
-	    <command>sudo ${vyos_op_scripts_dir}/wireguard.py --showinterface "$4"</command>
+	        <command>sudo ${vyos_op_scripts_dir}/wireguard.py --showinterface "$4"</command>
             <children>
               <leafNode name="allowed-ips">
                 <properties>
