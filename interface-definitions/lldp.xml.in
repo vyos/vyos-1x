@@ -152,6 +152,9 @@
           <leafNode name="management-address">
             <properties>
               <help>Management IP Address</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+              </completionHelp>
               <valueHelp>
                 <format>ipv4</format>
                 <description>IPv4 Management Address</description>
