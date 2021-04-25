@@ -118,7 +118,9 @@ ip prefix-list {{ prefix_list }} description {{ prefix_list_config.description }
 {%     endif %}
 {%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
 {%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
+{%         if rule_config.prefix is defined and rule_config.prefix is not none %}
 ip prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%         endif %}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
@@ -131,7 +133,9 @@ ipv6 prefix-list {{ prefix_list }} description {{ prefix_list_config.description
 {%     endif %}
 {%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
 {%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
+{%         if rule_config.prefix is defined and rule_config.prefix is not none %}
 ipv6 prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%         endif %}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}

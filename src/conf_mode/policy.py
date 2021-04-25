@@ -94,20 +94,24 @@ def verify(policy):
 
                 if policy_type == 'access_list':
                     if 'source' not in rule_config:
-                        raise ConfigError(f'Source {mandatory_error}')
+                        raise ConfigError(f'A source {mandatory_error}')
 
                     if int(instance) in range(100, 200) or int(instance) in range(2000, 2700):
                         if 'destination' not in rule_config:
-                            raise ConfigError(f'Destination {mandatory_error}')
+                            raise ConfigError(f'A destination {mandatory_error}')
 
                 if policy_type == 'access_list6':
                     if 'source' not in rule_config:
-                        raise ConfigError(f'Source {mandatory_error}')
+                        raise ConfigError(f'A source {mandatory_error}')
 
                 if policy_type in ['as_path_list', 'community_list', 'extcommunity_list',
                                    'large_community_list']:
                     if 'regex' not in rule_config:
-                        raise ConfigError(f'Regex {mandatory_error}')
+                        raise ConfigError(f'A regex {mandatory_error}')
+
+                if policy_type in ['prefix_list', 'prefix_list6']:
+                    if 'prefix' not in rule_config:
+                        raise ConfigError(f'A prefix {mandatory_error}')
 
 
     # route-maps tend to be a bit more complex so they get their own verify() section
