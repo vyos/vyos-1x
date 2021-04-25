@@ -43,6 +43,7 @@ class TunnelIf(Interface):
         **{
             'section': 'tunnel',
             'prefixes': ['tun',],
+            'bridgeable': True,
         },
     }
 
