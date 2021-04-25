@@ -203,7 +203,10 @@ def reload_configuration(config, daemon=None):
     for i, e in enumerate(output.split('\n')):
         LOG.debug(f'frr-reload output: {i:3} {e}')
     if code == 1:
-        raise CommitError(f'Configuration FRR failed while commiting code, please enabling debugging to examine logs')
+        raise CommitError('FRR configuration failed while running commit. Please ' \
+                          'enable debugging to examine logs.\n\n\n' \
+                          'To enable debugging run: "touch /tmp/vyos.frr.debug" ' \
+                          'and "sudo systemctl stop vyos-configd"')
     elif code:
         raise OSError(code, output)
 
