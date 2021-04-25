@@ -2,14 +2,13 @@
 <interfaceDefinition>
   <node name="policy" owner="${vyos_conf_scripts_dir}/policy.py">
     <properties>
-      <priority>470</priority>
+      <priority>200</priority>
       <help>Routing policy</help>
     </properties>
     <children>
       <tagNode name="access-list">
         <properties>
           <help>IP access-list filter</help>
-
           <valueHelp>
             <format>u32:1-99</format>
             <description>IP standard access list</description>
@@ -238,7 +237,6 @@
       <tagNode name="extcommunity-list">
         <properties>
           <help>Border Gateway Protocol (BGP) extended community-list filter</help>
-          <priority>490</priority>
           <valueHelp>
             <format>txt</format>
             <description>Border Gateway Protocol (BGP) extended community-list filter</description>
