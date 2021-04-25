@@ -45,6 +45,7 @@ class _Tunnel(Interface):
         **{
             'section': 'tunnel',
             'prefixes': ['tun',],
+            'bridgeable': True,
         },
     }
 
@@ -134,14 +135,6 @@ class GRETapIf(_Tunnel):
     """
 
     # no multicast, ttl or tos for gretap
-
-    definition = {
-        **_Tunnel.definition,
-        **{
-            'bridgeable': True,
-        },
-    }
-
     default = {'type': 'gretap'}
     options = ['local', 'remote', 'ttl',]
 
