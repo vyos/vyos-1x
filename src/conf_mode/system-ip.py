@@ -70,7 +70,7 @@ def apply(opt):
     sysctl('net.ipv4.fib_multipath_use_neigh', tmp)
 
     tmp = '0'
-    if isinstance(dict_search('multipath.ignore_unreachable_nexthops', opt), dict):
+    if isinstance(dict_search('multipath.layer4_hashing', opt), dict):
         tmp = '1'
     sysctl('net.ipv4.fib_multipath_hash_policy', tmp)
 
