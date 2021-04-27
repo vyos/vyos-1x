@@ -26,7 +26,7 @@ import netifaces
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VRRP
-from vyos.util import cmd
+from vyos.util import cmd, call
 
 
 # interfaces = Sections.reserved()
@@ -86,6 +86,10 @@ def split_text(text, used=0):
     text: the string to split
     used: number of characted already used in the screen
     """
+    no_tty = call('tty -s')
+    if no_tty:
+        return text.split()
+
     returned = cmd('stty size')
     if len(returned) == 2:
         rows, columns = [int(_) for _ in returned]
