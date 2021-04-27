@@ -64,6 +64,81 @@
               </leafNode>
             </children>
           </tagNode>
+          <tagNode name="port">
+            <properties>
+              <help>Publish port to the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source host port</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Source host port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Source host port range (e.g. 10025-10030)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container port</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Destination container port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Destination container port range (e.g. 10025-10030)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Protocol tcp/udp</help>
+                  <completionHelp>
+                    <list>tcp udp</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>^(tcp|udp)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="volume">
+            <properties>
+              <help>Mount a volume into the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source host directory</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Source host directory</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container directory</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Destination container directory</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
         </children>
       </tagNode>
       <tagNode name="network">
