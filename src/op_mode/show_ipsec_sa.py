@@ -71,6 +71,7 @@ for sa in sas:
             for csa in installed_sas:
                 isa = installed_sas[csa]
                 csa_name = isa['name']
+                csa_name = csa_name.decode()
 
                 bytes_in = hurry.filesize.size(int(isa["bytes-in"].decode()))
                 bytes_out = hurry.filesize.size(int(isa["bytes-out"].decode()))
