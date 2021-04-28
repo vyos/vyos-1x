@@ -43,8 +43,11 @@ for sa in sas:
     # list_sas() returns a list of single-item dicts
     for peer in sa:
         parent_sa = sa[peer]
+        child_sas = parent_sa["child-sas"]
+        installed_sas = {k: v for k, v in child_sas.items() if v["state"] == b"INSTALLED"}
 
-        if parent_sa["state"] == b"ESTABLISHED":
+        # parent_sa["state"] = IKE state, child_sas["state"] = ESP state
+        if parent_sa["state"] == b"ESTABLISHED" and installed_sas:
             state = "up"
         else:
             state = "down"
@@ -61,9 +64,6 @@ for sa in sas:
             remote_id = "N/A"
 
         # The counters can only be obtained from the child SAs
-        child_sas = parent_sa["child-sas"]
-        installed_sas = {k: v for k, v in child_sas.items() if v["state"] == b"INSTALLED"}
-
         if not installed_sas:
             data = [peer, state, "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"]
             sa_data.append(data)
@@ -71,6 +71,7 @@ for sa in sas:
             for csa in installed_sas:
                 isa = installed_sas[csa]
                 csa_name = isa['name']
+                csa_name = csa_name.decode()
 
                 bytes_in = hurry.filesize.size(int(isa["bytes-in"].decode()))
                 bytes_out = hurry.filesize.size(int(isa["bytes-out"].decode()))
