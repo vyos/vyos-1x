@@ -8,7 +8,7 @@
           <priority>820</priority>
         </properties>
         <children>
-          #include <include/bgp/bgp-common-config.xml.i>
+          #include <include/bgp/protocol-common-config.xml.i>
           #include <include/route-map.xml.i>
         </children>
       </node>
