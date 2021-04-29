@@ -499,7 +499,7 @@ def get_accel_dict(config, base, chap_secrets):
     from vyos.util import get_half_cpus
     from vyos.template import is_ipv4
 
-    dict = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    dict = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
