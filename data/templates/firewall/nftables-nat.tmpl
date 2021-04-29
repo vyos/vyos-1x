@@ -52,6 +52,25 @@
 {%     endif %}
 {%   endif %}
 {%   set trns_port = ':' + config.translation.port if config.translation is defined and config.translation.port is defined and config.translation.port is not none %}
+{#  T1083: NAT Flags #}
+{%   if config.nat_flags is defined and config.nat_flags in not none %}
+{%     set nat_flags  = '' %}
+{%     if config.nat_flags.persistent is defined %}
+{%       set nat_flags  = 'persistent' %}
+{%     endif %}
+{%     if config.nat_flags.fully_random is defined %}
+{%       if nat_flags %}
+{%         set nat_flags  = nat_flags + ',' %}
+{%       endif %}
+{%       set nat_flags  = nat_flags + 'fully-random' %}
+{%     endif %}
+{%     if config.nat_flags.random is defined %}
+{%       if nat_flags %}
+{%         set nat_flags  = nat_flags + ',' %}
+{%       endif %}
+{%       set nat_flags  = nat_flags + 'random' %}
+{%     endif %}
+{%   endif %}
 {#   protocol has a default value thus it is always present #}
 {%   if config.protocol == 'tcp_udp' %}
 {%     set protocol  = 'tcp' %}
@@ -103,6 +122,9 @@
 {#     Do not add a whitespace here, translation port must be directly added after IP address #}
 {#     e.g. 192.0.2.10:3389                                                                   #}
 {%     set output = output + trns_port %}
+{%   endif %}
+{%   if nat_flags %}
+{%     set output = output + ' ' + nat_flags %}
 {%   endif %}
 {%   if comment %}
 {%     set output = output + ' comment "' + comment + '"' %}
