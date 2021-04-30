@@ -73,7 +73,7 @@ def verify(ocserv):
 
     # Check ssl
     if "ssl" in ocserv:
-        req_cert = ['ca_cert_file', 'cert_file', 'key_file']
+        req_cert = ['cert_file', 'key_file']
         for cert in req_cert:
             if not cert in ocserv["ssl"]:
                 raise ConfigError('openconnect ssl {0} required'.format(cert.replace('_', '-')))
