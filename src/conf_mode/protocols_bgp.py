@@ -161,7 +161,7 @@ def verify(bgp):
                 # Check if neighbor has both ipv4 unicast and ipv4 labeled unicast configured at the same time.
                 if 'ipv4_unicast' in peer_config['address_family'] and 'ipv4_labeled_unicast' in peer_config['address_family']:
                     raise ConfigError(f'Neighbor "{peer}" cannot have both ipv4-unicast and ipv4-labeled-unicast configured at the same time!')
-                    
+
                 # Check if neighbor has both ipv6 unicast and ipv6 labeled unicast configured at the same time.
                 if 'ipv6_unicast' in peer_config['address_family'] and 'ipv6_labeled_unicast' in peer_config['address_family']:
                     raise ConfigError(f'Neighbor "{peer}" cannot have both ipv6-unicast and ipv6-labeled-unicast configured at the same time!')
@@ -214,7 +214,7 @@ def verify(bgp):
                 if dict_search(f'parameters.distance.global.{key}', bgp) == None:
                     raise ConfigError('Missing mandatory configuration option for '\
                                      f'global administrative distance {key}!')
-        
+
     # Throw an error if the address family specific administrative distance parameters aren't all filled out.
     if dict_search('address_family', bgp) == None:
         pass
