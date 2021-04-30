@@ -18,7 +18,7 @@ use=if, if={{ iface }}
 # RFC2136 dynamic DNS configuration for {{ rfc2136 }}, {{ config.zone }}, {{ dns_record }}
 server={{ config.server }}
 protocol=nsupdate
-password={{ config.keyfile }}
+password={{ config.key }}
 ttl={{ config.ttl }}
 zone={{ config.zone }}
 {{ dns_record }}
