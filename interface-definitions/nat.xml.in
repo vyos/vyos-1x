@@ -14,7 +14,6 @@
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
             <children>
-              #include <include/nat-interface.xml.i>
 	      #include <include/nat-flags.xml.i>
               <leafNode name="inbound-interface">
                 <properties>
