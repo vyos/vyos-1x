@@ -73,24 +73,31 @@
 {%     set trns_addr = 'return' %}
 {%     set trns_port = '' %}
 {%   endif %}
-{#  T1083: NAT Flags #}
-{%   if config.nat_flags is defined and config.nat_flags is not none %}
-{%     set nat_flags  = '' %}
-{%     if config.nat_flags.persistent is defined %}
-{%       set nat_flags  = 'persistent' %}
-{%     endif %}
-{%     if config.nat_flags.fully_random is defined %}
-{%       if nat_flags %}
-{%         set nat_flags  = nat_flags + ',' %}
+{#  T1083: NAT address and port translation options #}
+{%   if config.translation.options is defined and config.translation.options is not none %}
+{%     if config.translation.options.address_mapping is defined %}
+{%       if config.translation.options.address_mapping == "persistent" %}
+{%         set trns_opts_addr  = 'persistent' %}
+{%       elif config.translation.options.address_mapping == "random" or config.translation.options.address_mapping is none %}
+{%         set trns_opts_addr  = '' %}
 {%       endif %}
-{%       set nat_flags  = nat_flags + 'fully-random' %}
 {%     endif %}
-{%     if config.nat_flags.random is defined %}
-{%       if nat_flags %}
-{%         set nat_flags  = nat_flags + ',' %}
+{%     if config.translation.options.port_mapping is defined %}
+{%       if config.translation.options.port_mapping == "random" %}
+{%         set trns_opts_port  = 'random' %}
+{%       elif config.translation.options.port_mapping == "fully-random" %}
+{%         set trns_opts_port  = 'fully-random' %}
+{%       elif config.translation.options.port_mapping == "none" or config.translation.options.port_mapping is none %}
+{%         set trns_opts_port  = '' %}
 {%       endif %}
-{%       set nat_flags  = nat_flags + 'random' %}
 {%     endif %}
+{%   endif %}
+{%   if trns_opts_addr and trns_opts_port %}
+{%     set trns_opts  = trns_opts_addr + ',' + trns_opts_port %}
+{%   elif trns_opts_addr %}
+{%     set trns_opts  = trns_opts_addr %}
+{%   elif trns_opts_port %}
+{%     set trns_opts  = trns_opts_port %}
 {%   endif %}
 {%   set output = 'add rule ip nat ' + chain + interface %}
 {%   if protocol != 'all' %}
@@ -123,8 +130,8 @@
 {#     e.g. 192.0.2.10:3389                                                                   #}
 {%     set output = output + trns_port %}
 {%   endif %}
-{%   if nat_flags %}
-{%     set output = output + ' ' + nat_flags %}
+{%   if trns_opts %}
+{%     set output = output + ' ' + trns_opts %}
 {%   endif %}
 {%   if comment %}
 {%     set output = output + ' comment "' + comment + '"' %}
