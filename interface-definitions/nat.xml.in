@@ -14,7 +14,6 @@
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
             <children>
-	      #include <include/nat-flags.xml.i>
               <leafNode name="inbound-interface">
                 <properties>
                   <help>Inbound interface of NAT traffic</help>
@@ -51,6 +50,7 @@
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
                 </children>
               </node>
             </children>
@@ -66,7 +66,6 @@
           <tagNode name="rule">
             <children>
               #include <include/nat-interface.xml.i>
-	      #include <include/nat-flags.xml.i>
               <node name="translation">
                 <properties>
                   <help>Outside NAT IP (source NAT only)</help>
@@ -103,6 +102,7 @@
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
                 </children>
               </node>
             </children>
