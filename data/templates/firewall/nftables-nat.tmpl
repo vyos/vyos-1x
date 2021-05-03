@@ -75,20 +75,14 @@
 {%   endif %}
 {#  T1083: NAT address and port translation options #}
 {%   if config.translation.options is defined and config.translation.options is not none %}
-{%     if config.translation.options.address_mapping is defined %}
-{%       if config.translation.options.address_mapping == "persistent" %}
+{%     if config.translation.options.address_mapping is defined and config.translation.options.address_mapping == "persistent" %}
 {%         set trns_opts_addr  = 'persistent' %}
-{%       elif config.translation.options.address_mapping == "random" or config.translation.options.address_mapping is none %}
-{%         set trns_opts_addr  = '' %}
-{%       endif %}
 {%     endif %}
 {%     if config.translation.options.port_mapping is defined %}
 {%       if config.translation.options.port_mapping == "random" %}
 {%         set trns_opts_port  = 'random' %}
 {%       elif config.translation.options.port_mapping == "fully-random" %}
 {%         set trns_opts_port  = 'fully-random' %}
-{%       elif config.translation.options.port_mapping == "none" or config.translation.options.port_mapping is none %}
-{%         set trns_opts_port  = '' %}
 {%       endif %}
 {%     endif %}
 {%   endif %}
