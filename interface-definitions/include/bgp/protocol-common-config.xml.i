@@ -1000,10 +1000,7 @@
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
-<!--
-    requires GitHub FRR issues #8403 to be fixed
-    bgp/neighbor-graceful-restart.xml.i
--->
+    #include <include/bgp/neighbor-graceful-restart.xml.i>
     <node name="interface">
       <properties>
         <help>Interface parameters</help>
@@ -1439,10 +1436,7 @@
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
-<!--
-    requires GitHub FRR issues #8403 to be fixed
-    bgp/neighbor-graceful-restart.xml.i
--->
+    #include <include/bgp/neighbor-graceful-restart.xml.i>
     #include <include/bgp/neighbor-graceful-restart.xml.i>
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
