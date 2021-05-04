@@ -111,20 +111,10 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="serve-rfc1918">
+              <leafNode name="no-serve-rfc1918">
                 <properties>
-                  <help>Makes the server authoritatively aware of RFC1918 addresses</help>
-                  <completionHelp>
-                    <list>yes no</list>  
-                  </completionHelp>
-                  <valueHelp>
-                    <format>yes</format>
-		    <description>Authoritatively aware about RFC1918 addresses (Default)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>no</format>
-		    <description>Authoritatively not aware about RFC1918 addresses</description>
-                  </valueHelp>
+                  <help>Makes the server authoritatively not aware of RFC1918 addresses</help>
+		  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="allow-from">
