@@ -29,5 +29,11 @@ local-address={{ listen_address | join(',') }}
 # dnssec
 dnssec={{ dnssec }}
 
+{# dns: T3277: #}
+{% if serve_rfc1918 is defined and serve_rfc1918 == 'no' %}
+# serve-rfc1918
+serve-rfc1918=no
+{% endif %}
+
 forward-zones-file=recursor.forward-zones.conf
 
