@@ -45,6 +45,9 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+        # Check for running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
+
     def test_basic_forwarding(self):
         # Check basic DNS forwarding settings
         cache_size = '20'
@@ -115,8 +118,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value('dnssec')
             self.assertEqual(tmp, option)
 
-            # Check for running process
-            self.assertTrue(process_named_running(PROCESS_NAME))
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_external_nameserver(self):
         # Externe Domain Name Servers (DNS) addresses
