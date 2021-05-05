@@ -42,7 +42,7 @@ def get_config(config=None):
     else:
         conf = Config()
     
-    base = ['load-balancing','inbound']
+    base = ['load-balancing', 'inbound', 'ipvsadm']
     conf = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     
     if 'rule' in conf:

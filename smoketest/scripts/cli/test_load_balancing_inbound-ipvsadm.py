@@ -24,7 +24,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import dict_search
 
-base_path = ['load-balancing', 'inbound']
+base_path = ['load-balancing', 'inbound', 'ipvsadm']
 virtual_ip = '127.0.0.1'
 virtual_ip6 = 'fc00::1'
 
