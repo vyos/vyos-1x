@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -97,6 +97,10 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('export-etc-hosts')
         self.assertEqual(tmp, 'no')
 
+        # RFC1918 addresses are looked up by default
+        tmp = get_config_value('serve-rfc1918')
+        self.assertEqual(tmp, 'yes')
+
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
@@ -182,6 +186,24 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             # Test 'negative trust anchor' flag for the second domain only
             if domain == domains[1]:
                 self.assertIn(f'addNTA("{domain}", "static")', hosts_conf)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_no_rfc1918_forwarding(self):
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        self.cli_set(base_path + ['no-serve-rfc1918'])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration
+        tmp = get_config_value('serve-rfc1918')
+        self.assertEqual(tmp, 'no')
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
