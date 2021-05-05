@@ -25,7 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 from vyos.template import is_ipv6
 
-base_path = ['load-balancing', 'inbound']
+base_path = ['load-balancing', 'inbound', 'ipvsadm']
 virtual_ip = '127.0.0.1'
 virtual_ip6 = 'fc00::1'
 IPVSADM_CONF = '/tmp/ipvsadm.rules'

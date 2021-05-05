@@ -7,12 +7,19 @@
           <help>Show LoadBalancing information</help>
         </properties>
         <children>
-          <leafNode name="inbound">
+          <node name="inbound">
             <properties>
               <help>Show Inbound LoadBalancing information</help>
             </properties>
-            <command>sudo ipvsadm -ln</command>
-          </leafNode>
+            <children>
+              <leafNode name="ipvsadm">
+                <properties>
+                  <help>Show Virtual Server information</help>
+                </properties>
+                <command>sudo ipvsadm -ln</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

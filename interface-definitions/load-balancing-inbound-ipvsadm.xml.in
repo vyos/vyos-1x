@@ -1,0 +1,192 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="load-balancing">
+    <properties>
+      <help>Configure load-balancing</help>
+      <priority>1200</priority>
+    </properties>
+    <children>
+      <node name="inbound">
+        <properties>
+          <help>Load balancing of inbound servers</help>
+        </properties>
+        <children>
+          <node name="ipvsadm" owner="${vyos_conf_scripts_dir}/load-balancing-inbound-ipvsadm.py">
+            <properties>
+              <help>Virtual Server</help>
+            </properties>
+            <children>
+              <tagNode name="rule">
+                <properties>
+                  <help>Backend server load balancing rules</help>
+                  <valueHelp>
+                    <format>u32:0-65535</format>
+                    <description>Number for this rule</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Back-end server load balancing rule numbers are not between 0 and 65535</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>Load balancing protocol</help>
+                      <completionHelp>
+                        <list>tcp udp sctp</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>tcp</format>
+                        <description>TCP Protocol</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>udp</format>
+                        <description>UDP Protocol</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>sctp</format>
+                        <description>SCTP Protocol</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(tcp|udp|sctp)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>The load balancing protocol must be one of tcp, udp, and sctp</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>tcp</defaultValue>
+                  </leafNode>
+                  <leafNode name="virtual-address">
+                    <properties>
+                      <help>Virtual server IP</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 VIP for the virtual server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 VIP for the virtual server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                      <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address (e.g. 192.0.2.3 or 2001:db8:ff::10)</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Execute load balancing operation mode</help>
+                      <completionHelp>
+                        <list>direct tunnel nat</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>direct</format>
+                        <description>Direct Routing mode</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>tunnel</format>
+                        <description>Tunnel mode(IPIP Tunnel)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>nat</format>
+                        <description>NAT mode</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(direct|tunnel|nat)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Operation mode must be direct, tunnel, or nat</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="algorithm">
+                    <properties>
+                      <help>Specify a load balancing algorithm</help>
+                      <completionHelp>
+                        <list>rr wrr lc wlc lblc lblcr dh sh sed nq fo ovf mh</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>rr</format>
+                        <description>Round Robin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>wrr</format>
+                        <description>Weighted Round Robin</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>lc</format>
+                        <description>Least-Connection</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>wlc</format>
+                        <description>Weighted Least-Connection</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>lblc</format>
+                        <description>Locality-Based Least-Connection</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>lblcr</format>
+                        <description>Locality-Based Least-Connection with Replication</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dh</format>
+                        <description>Destination Hashing</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>sh</format>
+                        <description>Source  Hashing</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>sed</format>
+                        <description>Shortest Expected Delay</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>nq</format>
+                        <description>Never Queue</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>fo</format>
+                        <description>Weighted Failover</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ovf</format>
+                        <description>Weighted Overflow</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>mh</format>
+                        <description>Maglev Hashing</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(rr|wrr|lc|wlc|lblc|lblcr|dh|sh|sed|nq|fo|ovf|mh)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Load balancing algorithms must be rr, wrr, lc, wlc, lblc, lblcr, dh, sh, sed, nq, fo, ovf, or mh</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="backend">
+                    <properties>
+                      <help>Back-end server</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>The IPv4 address of the back-end server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>The IPv6 address of the back-end server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                      </constraint>
+                      <constraintErrorMessage>The back end server IP address is incorrect</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/generic-disable-node.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
