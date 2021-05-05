@@ -24,9 +24,11 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_interface_exists
+from vyos.ifconfig import Interface
 from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos.template import render_to_string
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -67,6 +69,15 @@ def get_config(config=None):
         isis.update({'deleted' : ''})
         return isis
 
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    # XXX: Note that we can not call defaults(base), as defaults does not work
+    # on an instance of a tag node. As we use the exact same CLI definition for
+    # both the non-vrf and vrf version this is absolutely safe!
+    default_values = defaults(base_path)
+    # merge in default values
+    isis = dict_merge(default_values, isis)
+
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
     #
@@ -99,6 +110,13 @@ def verify(isis):
 
     for interface in isis['interface']:
         verify_interface_exists(interface)
+        # Interface MTU must be >= configured lsp-mtu
+        mtu = Interface(interface).get_mtu()
+        area_mtu = isis['lsp_mtu']
+        if mtu < int(area_mtu):
+            raise ConfigError(f'Interface {interface} has MTU {mtu}, minimum ' \
+                              f'area MTU is {area_mtu}!')
+
         if 'vrf' in isis:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS

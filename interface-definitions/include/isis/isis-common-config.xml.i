@@ -167,6 +167,7 @@
       <validator name="numeric" argument="--range 128-4352"/>
     </constraint>
   </properties>
+  <defaultValue>1497</defaultValue>
 </leafNode>
 <leafNode name="lsp-refresh-interval">
   <properties>
