@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-intervals.xml.i -->
+<!-- include start from ospf/intervals.xml.i -->
 <leafNode name="dead-interval">
   <properties>
     <help>Interval after which a neighbor is declared dead (default: 40)</help>

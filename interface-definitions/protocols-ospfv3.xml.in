@@ -90,13 +90,13 @@
               <help>Administrative distance</help>
             </properties>
             <children>
-              #include <include/ospf/ospf-distance-global.xml.i>
+              #include <include/ospf/distance-global.xml.i>
               <node name="ospfv3">
                 <properties>
                   <help>OSPFv3 administrative distance</help>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-distance-per-protocol.xml.i>
+                  #include <include/ospf/distance-per-protocol.xml.i>
                 </children>
               </node>
             </children>
@@ -116,8 +116,8 @@
               </constraint>
             </properties>
             <children>
-              #include <include/ospf/ospf-intervals.xml.i>
-              #include <include/ospf/ospf-interface-common.xml.i>
+              #include <include/ospf/intervals.xml.i>
+              #include <include/ospf/interface-common.xml.i>
               <leafNode name="ifmtu">
                 <properties>
                   <help>Interface MTU</help>
@@ -171,7 +171,7 @@
               <help>OSPFv3 specific parameters</help>
             </properties>
             <children>
-              #include <include/ospf/ospf-router-id.xml.i>
+              #include <include/ospf/router-id.xml.i>
             </children>
           </node>
           <node name="redistribute">

@@ -57,7 +57,7 @@
                   <priority>621</priority>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-common-config.xml.i>
+                  #include <include/ospf/protocol-common-config.xml.i>
                 </children>
               </node>
               <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">

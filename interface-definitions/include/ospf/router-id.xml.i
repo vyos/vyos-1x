@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-router-id.xml.i -->
+<!-- include start from ospf/router-id.xml.i -->
 <leafNode name="router-id">
   <properties>
     <help>Override the default router identifier</help>
