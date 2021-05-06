@@ -13,18 +13,35 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from ftplib import FTP
 import os
 import socket
 import sys
 import tempfile
-from ftplib import FTP
 import urllib.parse
 import urllib.request
 
-from vyos.util import cmd
+from vyos.util import cmd, ask_yes_no
 from vyos.version import get_version
-from paramiko import SSHClient
+from paramiko import SSHClient, SSHException, MissingHostKeyPolicy
 
+
+known_hosts_file = os.path.expanduser('~/.ssh/known_hosts')
+
+class InteractivePolicy(MissingHostKeyPolicy):
+    """
+    Policy for interactively querying the user on whether to proceed with
+    SSH connections to unknown hosts.
+    """
+    def missing_host_key(self, client, hostname, key):
+        print(f"Host '{hostname}' not found in known hosts.")
+        print('Fingerprint: ' + key.get_fingerprint().hex())
+        if ask_yes_no('Do you wish to continue?'):
+            if client._host_keys_filename and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
+                client._host_keys.add(hostname, key.get_name(), key)
+                client.save_host_keys(client._host_keys_filename)
+        else:
+            raise SSHException(f"Cannot connect to unknown host '{hostname}'.")
 
 ## FTP routines
 def transfer_ftp(mode, local_path, hostname, remote_path,\
@@ -67,6 +84,9 @@ def transfer_sftp(mode, local_path, hostname, remote_path,\
     try:
         with SSHClient() as ssh:
             ssh.load_system_host_keys()
+            if os.path.exists(known_hosts_file):
+                ssh.load_host_keys(known_hosts_file)
+            ssh.set_missing_host_key_policy(InteractivePolicy())
             ssh.connect(hostname, port, username, password, sock=sock)
             with ssh.open_sftp() as sftp:
                 if mode == 'upload':
