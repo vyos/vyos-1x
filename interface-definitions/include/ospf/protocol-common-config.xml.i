@@ -586,7 +586,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    #include <include/ospf/router-id.xml.i>
+    #include <include/router-id.xml.i>
   </children>
 </node>
 #include <include/routing-passive-interface-xml.i>

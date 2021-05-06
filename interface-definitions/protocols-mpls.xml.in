@@ -14,18 +14,7 @@
               <help>Label Distribution Protocol (LDP)</help>
             </properties>
             <children>
-              <leafNode name="router-id">
-                <properties>
-                  <help>Label Distribution Protocol router ID</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>LDP IPv4 ID</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/router-id.xml.i>
               <node name="allocation">
                 <properties>
                   <help>Forwarding equivalence class allocation from local routes</help>
