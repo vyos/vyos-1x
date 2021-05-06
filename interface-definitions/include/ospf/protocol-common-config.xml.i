@@ -697,6 +697,7 @@
     </leafNode>
   </children>
 </node>
+#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>Adjust routing timers</help>

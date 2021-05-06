@@ -9,7 +9,6 @@
         </properties>
         <children>
           #include <include/ospf/protocol-common-config.xml.i>
-          #include <include/route-map.xml.i>
         </children>
       </node>
     </children>
