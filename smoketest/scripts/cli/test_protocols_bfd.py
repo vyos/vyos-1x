@@ -121,8 +121,8 @@ class TestProtocolsBFD(unittest.TestCase):
                 self.assertIn(f' receive-interval {peer_config["intv_rx"]}', peerconfig)
             if 'intv_tx' in peer_config:
                 self.assertIn(f' transmit-interval {peer_config["intv_tx"]}', peerconfig)
-            if 'shutdown' not in peer_config:
-                self.assertIn(f' no shutdown', peerconfig)
+            if 'shutdown' in peer_config:
+                self.assertIn(f' shutdown', peerconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
