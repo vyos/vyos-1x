@@ -39,7 +39,7 @@
                   <priority>821</priority>
                 </properties>
                 <children>
-                  #include <include/bgp/bgp-common-config.xml.i>
+                  #include <include/bgp/protocol-common-config.xml.i>
                 </children>
               </node>
               <node name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py $VAR(../../@)">

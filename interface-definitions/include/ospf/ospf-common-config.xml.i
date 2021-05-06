@@ -55,14 +55,14 @@
 </tagNode>
 <tagNode name="area">
   <properties>
-    <help>OSPF Area</help>
+    <help>OSPF area settings</help>
     <valueHelp>
       <format>u32</format>
-      <description>OSPF area in decimal notation</description>
+      <description>OSPF area number in decimal notation</description>
     </valueHelp>
     <valueHelp>
       <format>ipv4</format>
-      <description>OSPF area in dotted decimal notation</description>
+      <description>OSPF area number in dotted decimal notation</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-4294967295"/>
@@ -83,12 +83,12 @@
         </leafNode>
         <node name="nssa">
           <properties>
-            <help>Nssa OSPF area</help>
+            <help>Not-So-Stubby OSPF area</help>
           </properties>
           <children>
             <leafNode name="default-cost">
               <properties>
-                <help>Summary-default cost of nssa area</help>
+                <help>Summary-default cost of an NSSA area</help>
                 <valueHelp>
                   <format>u32:0-16777215</format>
                   <description>Summary default cost</description>
@@ -112,15 +112,15 @@
                 </completionHelp>
                 <valueHelp>
                   <format>always</format>
-                  <description>NSSA-ABR to always translate</description>
+                  <description>Always translate LSA types</description>
                 </valueHelp>
                 <valueHelp>
                   <format>candidate</format>
-                  <description>NSSA-ABR for translate election (default)</description>
+                  <description>Translate for election (default)</description>
                 </valueHelp>
                 <valueHelp>
                   <format>never</format>
-                  <description>NSSA-ABR to never translate</description>
+                  <description>Never translate LSA types</description>
                 </valueHelp>
                 <constraint>
                   <regex>^(always|candidate|never)$</regex>
@@ -137,7 +137,7 @@
           <children>
             <leafNode name="default-cost">
               <properties>
-                <help>Summary-default cost of nssa area</help>
+                <help>Summary-default cost</help>
                 <valueHelp>
                   <format>u32:0-16777215</format>
                   <description>Summary default cost</description>
@@ -149,7 +149,7 @@
             </leafNode>
             <leafNode name="no-summary">
               <properties>
-                <help>Do not inject inter-area routes into stub</help>
+                <help>Do not inject inter-area routes into the stub</help>
                 <valueless/>
               </properties>
             </leafNode>
@@ -169,7 +169,7 @@
         </valueHelp>
         <valueHelp>
           <format>md5</format>
-          <description>Use md5 authentication</description>
+          <description>Use MD5 authentication</description>
         </valueHelp>
         <constraint>
           <regex>^(plaintext-password|md5)$</regex>
@@ -191,7 +191,7 @@
     </leafNode>
     <tagNode name="range">
       <properties>
-        <help>Summarize routes matching prefix (border routers only)</help>
+        <help>Summarize routes matching a prefix (border routers only)</help>
         <valueHelp>
           <format>ipv4net</format>
           <description>Area range prefix</description>
@@ -221,10 +221,10 @@
         </leafNode>
         <leafNode name="substitute">
           <properties>
-            <help>Announce area range as another prefix</help>
+            <help>Advertise area range as another prefix</help>
             <valueHelp>
               <format>ipv4net</format>
-              <description>Announce area range as another prefix</description>
+              <description>Advertise area range as another prefix</description>
             </valueHelp>
             <constraint>
               <validator name="ipv4-prefix"/>
@@ -297,7 +297,7 @@
 </node>
 <node name="default-information">
   <properties>
-    <help>Control distribution of default information</help>
+    <help>Default route advertisment settings</help>
   </properties>
   <children>
     <node name="originate">
@@ -307,7 +307,7 @@
       <children>
         <leafNode name="always">
           <properties>
-            <help>Always advertise default route</help>
+            <help>Always advertise a default route</help>
             <valueless/>
           </properties>
         </leafNode>
@@ -348,7 +348,7 @@
 </node>
 <tagNode name="interface">
   <properties>
-    <help>Interface related configuration</help>
+    <help>Interface configuration</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces.py</script>
     </completionHelp>
@@ -366,7 +366,7 @@
     #include <include/ospf/ospf-interface-common.xml.i>
     <leafNode name="bandwidth">
       <properties>
-        <help>Bandwidth of interface (Megabit/sec)</help>
+        <help>Interface bandwidth (Mbit/s)</help>
         <valueHelp>
           <format>u32:1-100000</format>
           <description>Bandwidth in Megabit/sec (for calculating OSPF cost)</description>
@@ -420,7 +420,7 @@
 </tagNode>
 <node name="log-adjacency-changes">
   <properties>
-    <help>Log changes in adjacency state</help>
+    <help>Log adjacency state changes</help>
   </properties>
   <children>
     <leafNode name="detail">
@@ -558,7 +558,7 @@
         </valueHelp>
         <valueHelp>
           <format>ibm</format>
-          <description>Ibm ABR type</description>
+          <description>IBM ABR type</description>
         </valueHelp>
         <valueHelp>
           <format>shortcut</format>
@@ -582,7 +582,7 @@
     </leafNode>
     <leafNode name="rfc1583-compatibility">
       <properties>
-        <help>Enable rfc1583 criteria for handling AS external routes</help>
+        <help>Enable RFC1583 criteria for handling AS external routes</help>
         <valueless/>
       </properties>
     </leafNode>
@@ -658,7 +658,7 @@
     </node>
     <node name="rip">
       <properties>
-        <help>Redistribute rip routes</help>
+        <help>Redistribute RIP routes</help>
       </properties>
       <children>
         #include <include/ospf/ospf-metric.xml.i>
@@ -714,7 +714,7 @@
           <children>
             <leafNode name="delay">
               <properties>
-                <help>Delay from first change received till SPF calculation (default: 200)</help>
+                <help>Delay from the first change received to SPF calculation (default: 200)</help>
                 <valueHelp>
                   <format>u32:0-600000</format>
                   <description>Delay in milliseconds</description>

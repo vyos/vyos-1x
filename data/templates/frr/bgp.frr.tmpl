@@ -35,6 +35,16 @@
 {%   if config.ebgp_multihop is defined and config.ebgp_multihop is not none %}
  neighbor {{ neighbor }} ebgp-multihop {{ config.ebgp_multihop }}
 {%   endif %}
+{%   if config.graceful_restart is defined and config.graceful_restart is not none %}
+{%     if config.graceful_restart == 'enable' %}
+{%       set graceful_restart = 'graceful-restart' %}
+{%     elif config.graceful_restart == 'disable' %}
+{%       set graceful_restart = 'graceful-restart-disable' %}
+{%     elif config.graceful_restart == 'restart-helper' %}
+{%       set graceful_restart = 'graceful-restart-helper' %}
+{%     endif %}
+ neighbor {{ neighbor }} {{ graceful_restart }}
+{%   endif %}
 {%   if config.local_as is defined and config.local_as is not none %}
 {%     for local_asn in config.local_as %}
  neighbor {{ neighbor }} local-as {{ local_asn }} {{ 'no-prepend' if config.local_as[local_asn].no_prepend is defined }}

@@ -209,27 +209,27 @@ def apply(login):
         for user, user_config in login['user'].items():
             # make new user using vyatta shell and make home directory (-m),
             # default group of 100 (users)
-            command = 'useradd -m -N'
+            command = 'useradd --create-home --no-user-group'
             # check if user already exists:
             if user in get_local_users():
                 # update existing account
                 command = 'usermod'
 
             # all accounts use /bin/vbash
-            command += ' -s /bin/vbash'
+            command += ' --shell /bin/vbash'
             # we need to use '' quotes when passing formatted data to the shell
             # else it will not work as some data parts are lost in translation
             tmp = dict_search('authentication.encrypted_password', user_config)
-            if tmp: command += f" -p '{tmp}'"
+            if tmp: command += f" --password '{tmp}'"
 
             tmp = dict_search('full_name', user_config)
-            if tmp: command += f" -c '{tmp}'"
+            if tmp: command += f" --comment '{tmp}'"
 
             tmp = dict_search('home_directory', user_config)
-            if tmp: command += f" -d '{tmp}'"
-            else: command += f" -d '/home/{user}'"
+            if tmp: command += f" --home '{tmp}'"
+            else: command += f" --home '/home/{user}'"
 
-            command += f' -G frrvty,vyattacfg,sudo,adm,dip,disk {user}'
+            command += f' --groups frrvty,vyattacfg,sudo,adm,dip,disk {user}'
             try:
                 cmd(command)
 
@@ -254,7 +254,7 @@ def apply(login):
                     call(f'pkill -HUP -u {user}')
 
                 # Remove user account but leave home directory to be safe
-                call(f'userdel -r {user}', stderr=DEVNULL)
+                call(f'userdel --remove {user}', stderr=DEVNULL)
 
             except Exception as e:
                 raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
