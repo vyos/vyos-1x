@@ -616,8 +616,6 @@
   </properties>
 </leafNode>
 <tagNode name="interface">
-  <!-- (config-if)# ip router isis WORD (same as name of IS-IS process)
-        if any section of "interface" pesent  -->
   <properties>
     <help>Interface params</help>
     <completionHelp>
@@ -753,4 +751,5 @@
     </leafNode>
   </children>
 </tagNode>
+#include <include/route-map.xml.i>
 <!-- include end -->

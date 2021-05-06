@@ -1,4 +1,13 @@
 !
+{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
+vrf {{ vrf }}
+ ip protocol isis route-map {{ route_map }}
+ exit-vrf
+!
+{% elif route_map is defined and route_map is not none %}
+ip protocol isis route-map {{ route_map }}
+{% endif %}
+!
 router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  net {{ net }}
 {% if dynamic_hostname is defined %}
@@ -172,9 +181,5 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  no isis three-way-handshake
 {%     endif %}
 {%   endfor %}
-{% endif %}
-!
-{% if route_map is defined and route_map is not none %}
-ip protocol isis route-map {{ route_map }}
 {% endif %}
 !
