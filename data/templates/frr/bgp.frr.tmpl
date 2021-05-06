@@ -152,7 +152,7 @@
   neighbor {{ neighbor }} capability orf prefix-list receive
 {%       endif %}
 {%       if afi_config.default_originate is defined %}
-  neighbor {{ neighbor }} default-originate {{ 'route-map ' + afi_config.default_originate.route_map if afi_config.default_originate.route_map is defined }}
+  neighbor {{ neighbor }} default-originate {{ 'route-map ' ~ afi_config.default_originate.route_map if afi_config.default_originate.route_map is defined }}
 {%       endif %}
 {%       if afi_config.distribute_list is defined and afi_config.distribute_list is not none %}
 {%         if afi_config.distribute_list.export is defined and afi_config.distribute_list.export is not none %}
@@ -214,7 +214,7 @@
 {%   endif %}
 {% endmacro %}
 !
-router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
+router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none }}
 {% if parameters is defined and parameters.ebgp_requires_policy is defined %}
  bgp ebgp-requires-policy
 {% else %}
@@ -288,7 +288,7 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {%     if afi_config.advertise is defined and afi_config.advertise is not none %}
 {%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
 {%         if adv_afi_config.unicast is defined and adv_afi_config.unicast is not none %}
- advertise {{ adv_afi }} unicast {{ 'route-map ' + adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
+ advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
@@ -445,7 +445,7 @@ router bgp {{ local_as }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%   endif %}
 {%   if parameters.graceful_restart is defined %}
- bgp graceful-restart {{ 'stalepath-time ' + parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
+ bgp graceful-restart {{ 'stalepath-time ' ~ parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
 {%   endif %}
 {%   if parameters.graceful_shutdown is defined %}
  bgp graceful-shutdown
