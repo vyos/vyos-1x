@@ -107,7 +107,7 @@ def download(local_path, urlstring, source=None):
     elif url.scheme == 'tftp':
         download_tftp(local_path, url.hostname, url.path, source=source)
     else:
-        ValueError(f'Unsupported URL scheme: {url.scheme}')
+        raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
 def upload(local_path, urlstring, source=None):
     """
@@ -122,7 +122,7 @@ def upload(local_path, urlstring, source=None):
     elif url.scheme == 'tftp':
         upload_tftp(local_path, url.hostname, url.path, source=source)
     else:
-        ValueError(f'Unsupported URL scheme: {url.scheme}')
+        raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
 def get_remote_config(urlstring):
     """
