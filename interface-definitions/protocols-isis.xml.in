@@ -8,7 +8,7 @@
           <priority>610</priority>
         </properties>
         <children>
-          #include <include/isis/isis-common-config.xml.i>
+          #include <include/isis/protocol-common-config.xml.i>
           #include <include/route-map.xml.i>
         </children>
       </node>
