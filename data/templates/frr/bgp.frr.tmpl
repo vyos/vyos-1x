@@ -214,6 +214,15 @@
 {%   endif %}
 {% endmacro %}
 !
+{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
+vrf {{ vrf }}
+ ip protocol bgp route-map {{ route_map }}
+ exit-vrf
+!
+{% elif route_map is defined and route_map is not none %}
+ip protocol bgp route-map {{ route_map }}
+{% endif %}
+!
 router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none }}
 {% if parameters is defined and parameters.ebgp_requires_policy is defined %}
  bgp ebgp-requires-policy
@@ -469,8 +478,5 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}
-!
-{% if route_map is defined and route_map is not none %}
-ip protocol bgp route-map {{ route_map }}
-{% endif %}
+ end
 !
