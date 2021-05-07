@@ -371,7 +371,7 @@ class TestPolicy(unittest.TestCase):
                 continue
 
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp community-list {comm_list}'
+                tmp = f'bgp community-list {comm_list} seq {rule}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:
@@ -434,7 +434,7 @@ class TestPolicy(unittest.TestCase):
                 expanded = ''
                 if not comm_list.isnumeric():
                     expanded = ' expanded'
-                tmp = f'bgp extcommunity-list{expanded} {comm_list}'
+                tmp = f'bgp extcommunity-list{expanded} {comm_list} seq {rule}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
@@ -494,7 +494,7 @@ class TestPolicy(unittest.TestCase):
                 continue
 
             for rule, rule_config in comm_list_config['rule'].items():
-                tmp = f'bgp large-community-list expanded {comm_list}'
+                tmp = f'bgp large-community-list expanded {comm_list} seq {rule}'
 
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
