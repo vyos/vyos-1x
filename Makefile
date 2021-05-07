@@ -38,6 +38,7 @@ interface_definitions: $(config_xml_obj)
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
+	rm -f $(TMPL_DIR)/load-balancing/node.def
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def

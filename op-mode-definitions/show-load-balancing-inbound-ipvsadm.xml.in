@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="load-balancing">
+        <properties>
+          <help>Show LoadBalancing information</help>
+        </properties>
+        <children>
+          <node name="inbound">
+            <properties>
+              <help>Show Inbound LoadBalancing information</help>
+            </properties>
+            <children>
+              <leafNode name="ipvsadm">
+                <properties>
+                  <help>Show Linux Virtual Server information</help>
+                </properties>
+                <command>sudo ipvsadm -ln</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
