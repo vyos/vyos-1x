@@ -1,0 +1,13 @@
+[Unit]
+Description=UPnP service
+ConditionPathExists=/run/upnp/miniupnp.conf
+After=vyos-router.service
+StartLimitIntervalSec=0
+
+[Service]
+WorkingDirectory=/run/upnp
+Type=simple
+ExecStart=/usr/sbin/miniupnpd -d -f /run/upnp/miniupnp.conf
+PrivateTmp=yes
+PIDFile=/run/miniupnpd.pid
+Restart=on-failure
