@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from vyos.util import cmd
@@ -378,6 +379,10 @@ class TestPolicy(unittest.TestCase):
                     tmp += ' deny'
 
                 tmp += ' ' + rule_config['regex']
+                # replace 'seq x' to ''
+                # config = 'bgp community-list 100 seq 5 permit .*'
+                # tmp = 'bgp community-list 100 permit .*''
+                config = re.sub(r'seq \d+ ', '', config)
 
                 self.assertIn(tmp, config)
 
@@ -442,6 +447,8 @@ class TestPolicy(unittest.TestCase):
                     tmp += ' deny'
 
                 tmp += ' ' + rule_config['regex']
+                # replace 'seq x' to ''
+                config = re.sub(r'seq \d+ ', '', config)
 
                 self.assertIn(tmp, config)
 
@@ -502,6 +509,8 @@ class TestPolicy(unittest.TestCase):
                     tmp += ' deny'
 
                 tmp += ' ' + rule_config['regex']
+                # replace 'seq x' to ''
+                config = re.sub(r'seq \d+ ', '', config)
 
                 self.assertIn(tmp, config)
 
