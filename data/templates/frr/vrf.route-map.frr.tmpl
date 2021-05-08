@@ -1,0 +1,10 @@
+!
+{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
+vrf {{ vrf }}
+ ip protocol {{ protocol }} route-map {{ route_map }}
+ exit-vrf
+!
+{% elif route_map is defined and route_map is not none %}
+ip protocol {{ protocol }} route-map {{ route_map }}
+{% endif %}
+!

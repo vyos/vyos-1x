@@ -190,10 +190,13 @@ def verify(isis):
 
 def generate(isis):
     if not isis or 'deleted' in isis:
-        isis['new_frr_config'] = ''
+        isis['frr_isisd_config'] = ''
+        isis['frr_zebra_config'] = ''
         return None
 
-    isis['new_frr_config'] = render_to_string('frr/isis.frr.tmpl', isis)
+    isis['protocol'] = 'isis' # required for frr/vrf.route-map.frr.tmpl
+    isis['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', isis)
+    isis['frr_isisd_config'] = render_to_string('frr/isis.frr.tmpl', isis)
     return None
 
 def apply(isis):
@@ -205,7 +208,8 @@ def apply(isis):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'\s+ip protocol isis route-map [-a-zA-Z0-9.]+$', '', ' ')
+    frr_cfg.modify_section(r'(\s+)?ip protocol isis route-map [-a-zA-Z0-9.]+$', '', '(\s|!)')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
@@ -223,14 +227,17 @@ def apply(isis):
         for interface in isis[key]:
             frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
 
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['new_frr_config'])
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['frr_isisd_config'])
     frr_cfg.commit_configuration(isis_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
-    if isis['new_frr_config'] == '':
+    if isis['frr_isisd_config'] == '':
         for a in range(5):
             frr_cfg.commit_configuration(isis_daemon)
+    if isis['frr_zebra_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(zebra_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

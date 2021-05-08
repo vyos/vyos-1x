@@ -144,6 +144,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(['policy'])
+        self.cli_delete(['vrf'])
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -624,6 +625,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(vrf_base + ['table', table])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'local-as', ASN])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'parameters', 'router-id', router_id])
+            self.cli_set(vrf_base + ['protocols', 'bgp', 'route-map', route_map_in])
             table = str(int(table) + 1000)
 
         self.cli_commit()
@@ -631,9 +633,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             # Verify FRR bgpd configuration
             frrconfig = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
-
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
             self.assertIn(f' bgp router-id {router_id}', frrconfig)
+
+            # CCC: Currently this is not working as FRR() class does not support
+            # route-maps for multiple vrfs because the modify_section() only works
+            # on lines and not text blocks.
+            #
+            # vrfconfig = self.getFRRconfig(f'vrf {vrf}')
+            # zebra_route_map = f' ip protocol bgp route-map {route_map_in}'
+            # self.assertIn(zebra_route_map, vrfconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
