@@ -25,6 +25,7 @@
 "interfaces-wireguard.py",
 "interfaces-wireless.py",
 "interfaces-wirelessmodem.py",
+"interfaces-tinc.py",
 "ipsec-settings.py",
 "lldp.py",
 "nat.py",
