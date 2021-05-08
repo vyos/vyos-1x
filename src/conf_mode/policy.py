@@ -165,7 +165,7 @@ def verify(policy):
                         found = True
                     if not found:
                         tmp = policy_type.replace('_','-')
-                        raise ConfigError(f'Can not delete {tmp} "{name}", still in use!')
+                        raise ConfigError(f'Can not delete {tmp} "{policy_name}", still in use!')
 
     return None
 
