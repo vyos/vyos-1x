@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-distance-per-protocol.xml.i -->
+<!-- include start from ospf/distance-per-protocol.xml.i -->
 <leafNode name="external">
   <properties>
     <help>Distance for external routes</help>

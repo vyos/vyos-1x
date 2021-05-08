@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-interface-common.xml.i -->
+<!-- include start from ospf/interface-common.xml.i -->
 #include <include/bfd.xml.i>
 <leafNode name="cost">
   <properties>

@@ -1,10 +1,10 @@
-<!-- include start from ospf/ospf-router-id.xml.i -->
+<!-- include start from router-id.xml.i -->
 <leafNode name="router-id">
   <properties>
-    <help>Override the default router identifier</help>
+    <help>Override default router identifier</help>
     <valueHelp>
       <format>ipv4</format>
-      <description>Override the default router identifier</description>
+      <description>Router-ID in IP address format</description>
     </valueHelp>
     <constraint>
       <validator name="ipv4-address"/>

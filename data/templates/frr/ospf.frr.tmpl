@@ -50,6 +50,15 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   endfor %}
 {% endif %}
 !
+{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
+vrf {{ vrf }}
+ ip protocol ospf route-map {{ route_map }}
+ exit-vrf
+!
+{% elif route_map is defined and route_map is not none %}
+ip protocol ospf route-map {{ route_map }}
+{% endif %}
+!
 router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if access_list is defined and access_list is not none %}
 {%   for acl, acl_config in access_list.items() %}
@@ -175,9 +184,5 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if timers is defined and timers.throttle is defined and timers.throttle.spf is defined and timers.throttle.spf is not none %}
 {#   Timer values have default values #}
  timers throttle spf {{ timers.throttle.spf.delay }} {{ timers.throttle.spf.initial_holdtime }} {{ timers.throttle.spf.max_holdtime }}
-{% endif %}
-!
-{% if route_map is defined and route_map is not none %}
-ip protocol ospf route-map {{ route_map }}
 {% endif %}
 !

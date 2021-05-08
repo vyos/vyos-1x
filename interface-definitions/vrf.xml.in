@@ -48,7 +48,7 @@
                   <priority>611</priority>
                 </properties>
                 <children>
-                  #include <include/isis/isis-common-config.xml.i>
+                  #include <include/isis/protocol-common-config.xml.i>
                 </children>
               </node>
               <node name="ospf" owner="${vyos_conf_scripts_dir}/protocols_ospf.py $VAR(../../@)">
@@ -57,7 +57,7 @@
                   <priority>621</priority>
                 </properties>
                 <children>
-                  #include <include/ospf/ospf-common-config.xml.i>
+                  #include <include/ospf/protocol-common-config.xml.i>
                 </children>
               </node>
               <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">

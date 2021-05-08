@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-distance-global.xml.i -->
+<!-- include start from ospf/distance-global.xml.i -->
 <leafNode name="global">
   <properties>
     <help>Administrative distance</help>

@@ -8,8 +8,7 @@
           <priority>620</priority>
         </properties>
         <children>
-          #include <include/ospf/ospf-common-config.xml.i>
-          #include <include/route-map.xml.i>
+          #include <include/ospf/protocol-common-config.xml.i>
         </children>
       </node>
     </children>

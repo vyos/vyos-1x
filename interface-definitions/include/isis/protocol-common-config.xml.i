@@ -1,4 +1,4 @@
-<!-- include start from isis/isis-common-config.xml.i -->
+<!-- include start from isis/protocol-common-config.xml.i -->
 <node name="area-password">
   <properties>
     <help>Configure the authentication password for an area</help>
@@ -477,7 +477,7 @@
             <help>Border Gateway Protocol (BGP)</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
         <node name="connected">
@@ -485,7 +485,7 @@
             <help>Redistribute connected routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
         <node name="kernel">
@@ -493,7 +493,7 @@
             <help>Redistribute kernel routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
         <node name="ospf">
@@ -501,7 +501,7 @@
             <help>Redistribute OSPF routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
         <node name="rip">
@@ -509,7 +509,7 @@
             <help>Redistribute RIP routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
         <node name="static">
@@ -517,7 +517,7 @@
             <help>Redistribute static routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/isis-redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-ipv4.xml.i>
           </children>
         </node>
       </children>
@@ -616,8 +616,6 @@
   </properties>
 </leafNode>
 <tagNode name="interface">
-  <!-- (config-if)# ip router isis WORD (same as name of IS-IS process)
-        if any section of "interface" pesent  -->
   <properties>
     <help>Interface params</help>
     <completionHelp>
@@ -753,4 +751,5 @@
     </leafNode>
   </children>
 </tagNode>
+#include <include/route-map.xml.i>
 <!-- include end -->

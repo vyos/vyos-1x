@@ -1401,18 +1401,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    <leafNode name="router-id">
-      <properties>
-        <help>BGP router id</help>
-        <valueHelp>
-          <format>ipv4</format>
-          <description>BGP router id</description>
-        </valueHelp>
-        <constraint>
-          <validator name="ipv4-address"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/router-id.xml.i>
   </children>
 </node>
 <tagNode name="peer-group">
@@ -1448,6 +1437,7 @@
     #include <include/bgp/neighbor-update-source.xml.i>
   </children>
 </tagNode>
+#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>BGP protocol timers</help>

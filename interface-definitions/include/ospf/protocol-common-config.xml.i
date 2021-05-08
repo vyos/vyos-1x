@@ -1,4 +1,4 @@
-<!-- include start from ospf/ospf-common-config.xml.i -->
+<!-- include start from ospf/protocol-common-config.xml.i -->
 <tagNode name="access-list">
   <properties>
     <help>Access list to filter networks in routing updates</help>
@@ -269,8 +269,8 @@
         </constraint>
       </properties>
       <children>
-        #include <include/ospf/ospf-authentication.xml.i>
-        #include <include/ospf/ospf-intervals.xml.i>
+        #include <include/ospf/authentication.xml.i>
+        #include <include/ospf/intervals.xml.i>
       </children>
     </tagNode>
   </children>
@@ -311,8 +311,8 @@
             <valueless/>
           </properties>
         </leafNode>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -335,13 +335,13 @@
     <help>Administrative distance</help>
   </properties>
   <children>
-    #include <include/ospf/ospf-distance-global.xml.i>
+    #include <include/ospf/distance-global.xml.i>
     <node name="ospf">
       <properties>
         <help>OSPF administrative distance</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-distance-per-protocol.xml.i>
+        #include <include/ospf/distance-per-protocol.xml.i>
       </children>
     </node>
   </children>
@@ -361,9 +361,9 @@
     </constraint>
   </properties>
   <children>
-    #include <include/ospf/ospf-authentication.xml.i>
-    #include <include/ospf/ospf-intervals.xml.i>
-    #include <include/ospf/ospf-interface-common.xml.i>
+    #include <include/ospf/authentication.xml.i>
+    #include <include/ospf/intervals.xml.i>
+    #include <include/ospf/interface-common.xml.i>
     <leafNode name="bandwidth">
       <properties>
         <help>Interface bandwidth (Mbit/s)</help>
@@ -586,7 +586,7 @@
         <valueless/>
       </properties>
     </leafNode>
-    #include <include/ospf/ospf-router-id.xml.i>
+    #include <include/router-id.xml.i>
   </children>
 </node>
 #include <include/routing-passive-interface-xml.i>
@@ -621,8 +621,8 @@
         <help>Redistribute BGP routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -631,8 +631,8 @@
         <help>Redistribute connected routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -641,8 +641,8 @@
         <help>Redistribute IS-IS routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -651,8 +651,8 @@
         <help>Redistribute kernel routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -661,8 +661,8 @@
         <help>Redistribute RIP routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -671,8 +671,8 @@
         <help>Redistribute static routes</help>
       </properties>
       <children>
-        #include <include/ospf/ospf-metric.xml.i>
-        #include <include/ospf/ospf-metric-type.xml.i>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
         #include <include/route-map.xml.i>
       </children>
     </node>
@@ -697,6 +697,7 @@
     </leafNode>
   </children>
 </node>
+#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>Adjust routing timers</help>
