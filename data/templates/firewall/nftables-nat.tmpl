@@ -73,6 +73,26 @@
 {%     set trns_addr = 'return' %}
 {%     set trns_port = '' %}
 {%   endif %}
+{#  T1083: NAT address and port translation options #}
+{%   if config.translation.options is defined and config.translation.options is not none %}
+{%     if config.translation.options.address_mapping is defined and config.translation.options.address_mapping == "persistent" %}
+{%         set trns_opts_addr  = 'persistent' %}
+{%     endif %}
+{%     if config.translation.options.port_mapping is defined %}
+{%       if config.translation.options.port_mapping == "random" %}
+{%         set trns_opts_port  = 'random' %}
+{%       elif config.translation.options.port_mapping == "fully-random" %}
+{%         set trns_opts_port  = 'fully-random' %}
+{%       endif %}
+{%     endif %}
+{%   endif %}
+{%   if trns_opts_addr and trns_opts_port %}
+{%     set trns_opts  = trns_opts_addr + ',' + trns_opts_port %}
+{%   elif trns_opts_addr %}
+{%     set trns_opts  = trns_opts_addr %}
+{%   elif trns_opts_port %}
+{%     set trns_opts  = trns_opts_port %}
+{%   endif %}
 {%   set output = 'add rule ip nat ' + chain + interface %}
 {%   if protocol != 'all' %}
 {%     set output = output + ' ip protocol ' + protocol %}
@@ -103,6 +123,9 @@
 {#     Do not add a whitespace here, translation port must be directly added after IP address #}
 {#     e.g. 192.0.2.10:3389                                                                   #}
 {%     set output = output + trns_port %}
+{%   endif %}
+{%   if trns_opts %}
+{%     set output = output + ' ' + trns_opts %}
 {%   endif %}
 {%   if comment %}
 {%     set output = output + ' comment "' + comment + '"' %}
