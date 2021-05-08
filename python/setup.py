@@ -19,6 +19,12 @@ setup(
     url = "http://www.vyos.io",
     packages = packages('vyos'),
     long_description="VyOS configuration libraries",
+    entry_points={
+        "console_scripts": (
+            "vyos-server-state-to-json=vyos.client_server.state_to_json:main",
+            "vyos-ipsetd=vyos.ipsetd.server:IpsetServer.cli_main",
+        ),
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Topic :: Utilities",
