@@ -1,4 +1,4 @@
-<!-- included start from bgp/neighbor-afi-ipv4-vpn.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv4-vpn.xml.i -->
 <node name="ipv4-vpn">
   <properties>
     <help>IPv4 VPN BGP neighbor parameters</help>

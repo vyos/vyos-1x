@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv4-multicast.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv4-multicast.xml.i -->
 <node name="ipv4-multicast">
   <properties>
     <help>IPv4 Multicast BGP neighbor parameters</help>

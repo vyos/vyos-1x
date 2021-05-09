@@ -1,4 +1,4 @@
-<!-- included start from policy/description.xml.i -->
+<!-- include start from policy/description.xml.i -->
 <leafNode name="description">
   <properties>
     <help>Description</help>
@@ -8,4 +8,4 @@
     </valueHelp>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

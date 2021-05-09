@@ -4,4 +4,4 @@
 #include <include/bgp/afi-route-reflector-client.xml.i>
 #include <include/bgp/afi-route-server-client.xml.i>
 #include <include/bgp/afi-soft-reconfiguration.xml.i>
-<!-- included end -->
+<!-- include end -->
