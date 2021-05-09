@@ -1406,7 +1406,10 @@
 </node>
 <tagNode name="peer-group">
   <properties>
-    <help>BGP peer-group</help>
+    <help>Name of peer-group</help>
+    <constraint>
+      <regex>^[-_a-zA-Z0-9]+$</regex>
+    </constraint>
   </properties>
   <children>
     <node name="address-family">
