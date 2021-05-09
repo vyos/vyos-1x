@@ -966,7 +966,7 @@
   <children>
     <node name="address-family">
       <properties>
-        <help>Parameters relating to IPv4 or IPv6 routes</help>
+        <help>Address-family parameters</help>
       </properties>
       <children>
         #include <include/bgp/neighbor-afi-ipv4-unicast.xml.i>
@@ -1411,7 +1411,7 @@
   <children>
     <node name="address-family">
       <properties>
-        <help>BGP peer-group address-family parameters</help>
+        <help>Address-family parameters</help>
       </properties>
       <children>
         #include <include/bgp/neighbor-afi-ipv4-unicast.xml.i>
