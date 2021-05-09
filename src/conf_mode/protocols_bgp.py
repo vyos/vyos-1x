@@ -47,7 +47,8 @@ def get_config(config=None):
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
-    bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -225,7 +226,6 @@ def verify(bgp):
             else:
                 for key in ['external', 'internal', 'local']:
                     if dict_search(f'address_family.{address_family_name}.distance.{key}', bgp) == None:
-                        address_family_name = address_family_name.replace('_', '-')
                         raise ConfigError('Missing mandatory configuration option for '\
                                          f'{address_family_name} administrative distance {key}!')
 

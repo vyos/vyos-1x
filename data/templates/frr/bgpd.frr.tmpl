@@ -404,6 +404,7 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%     if parameters.bestpath.as_path is defined and parameters.bestpath.as_path is not none %}
 {%       for option in parameters.bestpath.as_path %}
+{# replace is required for multipath-relax option #}
  bgp bestpath as-path {{ option|replace('_', '-') }}
 {%       endfor %}
 {%     endif %}
