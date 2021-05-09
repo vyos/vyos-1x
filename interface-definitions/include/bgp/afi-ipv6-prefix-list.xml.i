@@ -10,6 +10,14 @@
         <completionHelp>
           <path>policy prefix-list6</path>
         </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Name of IPv6 prefix-list</description>
+        </valueHelp>
+        <constraint>
+          <regex>^[-_a-zA-Z0-9]+$</regex>
+        </constraint>
+        <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="import">
@@ -18,6 +26,14 @@
         <completionHelp>
           <path>policy prefix-list6</path>
         </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Name of IPv6 prefix-list</description>
+        </valueHelp>
+        <constraint>
+          <regex>^[-_a-zA-Z0-9]+$</regex>
+        </constraint>
+        <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
       </properties>
     </leafNode>
   </children>
