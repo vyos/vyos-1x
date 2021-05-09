@@ -452,9 +452,9 @@
             <description>Route map name</description>
           </valueHelp>
           <constraint>
-            <regex>^[-a-zA-Z0-9.]+$</regex>
+            <regex>^[-_a-zA-Z0-9.]+$</regex>
           </constraint>
-          <constraintErrorMessage>Route-map name can only contain alpha-numeric letters and a hyphen</constraintErrorMessage>
+          <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
           #include <include/policy/description.xml.i>
