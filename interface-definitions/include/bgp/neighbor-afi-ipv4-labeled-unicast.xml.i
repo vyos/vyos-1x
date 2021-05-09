@@ -14,6 +14,7 @@
     </node>
     #include <include/bgp/afi-ipv4-prefix-list.xml.i>
     #include <include/bgp/afi-common.xml.i>
+    #include <include/bgp/afi-default-originate.xml.i>
   </children>
 </node>
 <!-- include end -->

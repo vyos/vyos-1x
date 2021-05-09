@@ -38,14 +38,6 @@
     </leafNode>
   </children>
 </node>
-<node name="default-originate">
-  <properties>
-    <help>Originate default route to this peer</help>
-  </properties>
-  <children>
-    #include <include/route-map.xml.i>
-  </children>
-</node>
 <node name="distribute-list">
   <properties>
     <help>Access-list to filter route updates to/from this peer-group</help>
@@ -135,6 +127,14 @@
     <completionHelp>
       <path>policy route-map</path>
     </completionHelp>
+    <valueHelp>
+      <format>txt</format>
+      <description>Route map name</description>
+    </valueHelp>
+    <constraint>
+      <regex>^[-_a-zA-Z0-9.]+$</regex>
+    </constraint>
+    <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
   </properties>
 </leafNode>
 <leafNode name="weight">
