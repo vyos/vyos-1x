@@ -137,6 +137,13 @@ def verify(bridge):
 
                 if 'wlan' in interface:
                     raise ConfigError(error_msg + 'VLAN aware cannot be set!')
+                
+                # T3534: VLAN cannot be both "allow-vlan" and "native-vlan"
+                if 'allowed_vlan' in interface_config:
+                    for vlan in interface_config['allowed_vlan']:
+                        if 'native_vlan' in interface_config and interface_config['native_vlan'] == vlan:
+                            print(f'Warning: VLAN {vlan} cannot be both "allowed-vlan" and "native-vlan", The VLAN will be set to "native-vlan"!')
+                
             else:
                 for option in ['allowed_vlan', 'native_vlan']:
                     if option in interface_config:
