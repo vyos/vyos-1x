@@ -43,6 +43,7 @@ class InteractivePolicy(MissingHostKeyPolicy):
         else:
             raise SSHException(f"Cannot connect to unknown host '{hostname}'.")
 
+
 ## FTP routines
 def transfer_ftp(mode, local_path, hostname, remote_path,\
                  username='anonymous', password='', port=21, source=None):
@@ -72,6 +73,7 @@ def download_ftp(*args, **kwargs):
 
 def get_ftp_file_size(*args, **kwargs):
     return transfer_ftp('size', None, *args, **kwargs)
+
 
 ## SFTP/SCP routines
 def transfer_sftp(mode, local_path, hostname, remote_path,\
@@ -109,6 +111,7 @@ def download_sftp(*args, **kwargs):
 def get_sftp_file_size(*args, **kwargs):
     return transfer_sftp('size', None, *args, **kwargs)
 
+
 ## TFTP routines
 def upload_tftp(local_path, hostname, remote_path, port=69, source=None):
     source_option = f'--interface {source}' if source else ''
@@ -125,15 +128,39 @@ def download_tftp(local_path, hostname, remote_path, port=69, source=None):
 # get_tftp_file_size() is unimplemented because there is no way to obtain a file's size through TFTP,
 # as TFTP does not specify a SIZE command.
 
+
 ## HTTP(S) routines
-def download_http(urlstring, local_path):
+def install_request_opener(urlstring, username, password):
+    """
+    Take`username` and `password` strings and install the appropriate
+    password manager to `urllib.request.urlopen()` for the given `urlstring`.
+    """
+    manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    manager.add_password(None, urlstring, username, password)
+    urllib.request.install_opener(urllib.request.build_opener(manager))
+
+# upload_http() is unimplemented.
+
+def download_http(urlstring, local_path, username=None, password=None):
+    """
+    Download the file from from `urlstring` to `local_path`.
+    Optionally takes `username` and `password` for authentication.
+    """
     request = urllib.request.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
+    if username:
+        install_request_opener(urlstring, username, password)
     with open(local_path, 'wb') as file:
         with urllib.request.urlopen(request) as response:
             file.write(response.read())
 
-def get_http_file_size(urlstring):
+def get_http_file_size(urlstring, username=None, password=None):
+    """
+    Return the size of the file from `urlstring` in terms of number of bytes.
+    Optionally takes `username` and `password` for authentication.
+    """
     request = urllib.request.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
+    if username:
+        install_request_opener(urlstring, username, password)
     with urllib.request.urlopen(request) as response:
         size = response.getheader('Content-Length')
         if size:
@@ -142,59 +169,97 @@ def get_http_file_size(urlstring):
         else:
             raise ValueError('Failed to receive file size from HTTP server.')
 
+
 # Dynamic dispatchers
-def download(local_path, urlstring, source=None):
+def download(local_path, urlstring, authentication=None, source=None):
     """
-    Dispatch the appropriate download function for the given URL and save to local path.
+    Dispatch the appropriate download function for the given `urlstring` and save to `local_path`.
+    Optionally takes a `source` address (not valid for HTTP(S)) and an `authentication` tuple
+     in the form of `(username, password)`.
+    Supports HTTP, HTTPS, FTP, SFTP, SCP (through SFTP) and TFTP.
     """
     url = urllib.parse.urlparse(urlstring)
+    if authentication:
+        username, password = authentication
+    else:
+        username, password = url.username, url.password
+
     if url.scheme == 'http' or url.scheme == 'https':
         if source:
             print('Warning: Custom source address not supported for HTTP connections.', file=sys.stderr)
-        download_http(urlstring, local_path)
+        download_http(urlstring, local_path, username, password)
     elif url.scheme == 'ftp':
-        username = url.username if url.username else 'anonymous'
-        download_ftp(local_path, url.hostname, url.path, username, url.password, source=source)
+        username = username if username else 'anonymous'
+        download_ftp(local_path, url.hostname, url.path, username, password, source=source)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        download_sftp(local_path, url.hostname, url.path, url.username, url.password, source=source)
+        download_sftp(local_path, url.hostname, url.path, username, password, source=source)
     elif url.scheme == 'tftp':
         download_tftp(local_path, url.hostname, url.path, source=source)
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def upload(local_path, urlstring, source=None):
+def upload(local_path, urlstring, authentication=None, source=None):
     """
     Dispatch the appropriate upload function for the given URL and upload from local path.
+    Optionally takes a `source` address and an `authentication` tuple
+     in the form of `(username, password)`.
+    `authentication` takes precedence over credentials in `urlstring`.
+    Supports FTP, SFTP, SCP (through SFTP) and TFTP.
     """
     url = urllib.parse.urlparse(urlstring)
+    if authentication:
+        username, password = authentication
+    else:
+        username, password = url.username, url.password
+
     if url.scheme == 'ftp':
-        username = url.username if url.username else 'anonymous'
-        upload_ftp(local_path, url.hostname, url.path, username, url.password, source=source)
+        username = username if username else 'anonymous'
+        upload_ftp(local_path, url.hostname, url.path, username, password, source=source)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        upload_sftp(local_path, url.hostname, url.path, url.username, url.password, source=source)
+        upload_sftp(local_path, url.hostname, url.path, username, password, source=source)
     elif url.scheme == 'tftp':
         upload_tftp(local_path, url.hostname, url.path, source=source)
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def get_remote_file_size(urlstring, source=None):
+def get_remote_file_size(urlstring, authentication=None, source=None):
     """
-    Return the size of the remote file in bytes.
+    Dispatch the appropriate function to return the size of the remote file from `urlstring`
+     in terms of number of bytes.
+    Optionally takes a `source` address (not valid for HTTP(S)) and an `authentication` tuple
+     in the form of `(username, password)`.
+    `authentication` takes precedence over credentials in `urlstring`.
+    Supports HTTP, HTTPS, FTP and SFTP (through SFTP).
     """
     url = urllib.parse.urlparse(urlstring)
+    if authentication:
+        username, password = authentication
+    else:
+        username, password = url.username, url.password
+
     if url.scheme == 'http' or url.scheme == 'https':
-        return get_http_file_size(urlstring)
+        return get_http_file_size(urlstring, authentication)
     elif url.scheme == 'ftp':
-        username = url.username if url.username else 'anonymous'
-        return get_ftp_file_size(url.hostname, url.path, username, url.password, source=source)
+        username = username if username else 'anonymous'
+        return get_ftp_file_size(url.hostname, url.path, username, password, source=source)
     elif url.scheme == 'sftp' or url.scheme == 'scp':
-        return get_sftp_file_size(url.hostname, url.path, url.username, url.password, source=source)
+        return get_sftp_file_size(url.hostname, url.path, username, password, source=source)
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def get_remote_config(urlstring, source=None):
+def get_remote_file_size_maybe(urlstring, authentication=None, source=None):
     """
-    Download remote (config) file and return the contents.
+    Passes arguments to `get_remote_file_size()` but returns 0 if it fails.
+    Intended to be used in shell scripts only.
+    """
+    try:
+        return get_remote_file_size(urlstring, authentication, source)
+    except ValueError:
+        return 0
+
+def get_remote_config(urlstring, authentication=None, source=None):
+    """
+    Download remote (config) file from `urlstring` and return the contents as a string.
         Args:
             remote file URI:
                 scp://<user>[:<passwd>]@<host>/<file>
@@ -203,11 +268,16 @@ def get_remote_config(urlstring, source=None):
                 https://<host>/<file>
                 ftp://[<user>[:<passwd>]@]<host>/<file>
                 tftp://<host>/<file>
+            authentication tuple (optional):
+                (<username>, <password>)
+            source address (optional):
+                <interface>
+                <IP address>
     """
     url = urllib.parse.urlparse(urlstring)
     temp = tempfile.NamedTemporaryFile(delete=False).name
     try:
-        download(temp, urlstring, source)
+        download(temp, urlstring, authentication, source)
         with open(temp, 'r') as file:
             return file.read()
     finally:
