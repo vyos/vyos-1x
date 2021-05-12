@@ -153,9 +153,9 @@
             <children>
               <leafNode name="longer-prefixes">
                 <properties>
-                  <help>Show longer prefixes of routes for specified IP address or prefix</help>
+                  <help>Show longer prefixes of routes for specified prefix</help>
                 </properties>
-                <command>vtysh -c "show ip route $4 longer-prefixes"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
             </children>
           </tagNode>

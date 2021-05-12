@@ -133,9 +133,9 @@
             <children>
               <node name="longer-prefixes">
                 <properties>
-                  <help>Show longer prefixes of routes for given address or prefix</help>
+                  <help>Show longer prefixes of routes for given prefix</help>
                 </properties>
-                <command>vtysh -c "show ipv6 route $4 longer-prefixes"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </node>
             </children>
             <command>vtysh -c "show ipv6 route $4"</command>
