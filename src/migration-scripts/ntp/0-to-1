@@ -17,7 +17,7 @@ with open(file_name, 'r') as f:
 
 config = ConfigTree(config_file)
 
-if not config.exists(['system', 'ntp']):
+if not config.exists(['system', 'ntp', 'server']):
     # Nothing to do
     sys.exit(0)
 else:
