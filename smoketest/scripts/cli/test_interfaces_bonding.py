@@ -114,5 +114,24 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             # check LACP default rate
             self.assertEqual('slow',    tmp['linkinfo']['info_data']['ad_lacp_rate'])
 
+    def test_bonding_lacp_rate(self):
+        # configure member interfaces
+        lacp_rate = 'fast'
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_set(self._base_path + [interface, 'lacp-rate', lacp_rate])
+
+        self.cli_commit()
+
+        # verify config
+        for interface in self._interfaces:
+            tmp = get_interface_config(interface)
+
+            # check LACP minimum links (default value)
+            self.assertEqual(0,         tmp['linkinfo']['info_data']['min_links'])
+            self.assertEqual(lacp_rate, tmp['linkinfo']['info_data']['ad_lacp_rate'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

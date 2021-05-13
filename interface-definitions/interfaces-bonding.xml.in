@@ -97,6 +97,26 @@
             </properties>
             <defaultValue>0</defaultValue>
           </leafNode>
+          <leafNode name="lacp-rate">
+            <properties>
+              <help>Rate in which we will ask our link partner to transmit LACPDU packets</help>
+              <completionHelp>
+                <list>slow fast</list>
+              </completionHelp>
+              <valueHelp>
+                <format>slow</format>
+                <description>Request partner to transmit LACPDUs every 30 seconds (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>fast</format>
+                <description>Request partner to transmit LACPDUs every 1 second</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(slow|fast)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>slow</defaultValue>
+          </leafNode>
           <leafNode name="mode">
             <properties>
               <help>Bonding mode</help>
