@@ -83,6 +83,9 @@ def get_config(config=None):
     tmp = leaf_node_changed(conf, ['mode'])
     if tmp: bond.update({'shutdown_required': {}})
 
+    tmp = leaf_node_changed(conf, ['lacp-rate'])
+    if tmp: bond.update({'shutdown_required': {}})
+
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, ['member', 'interface'])
     if interfaces_removed:

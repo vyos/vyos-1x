@@ -53,6 +53,10 @@ class BondIf(Interface):
             'validate': assert_positive,
             'location': '/sys/class/net/{ifname}/bonding/min_links',
         },
+        'bond_lacp_rate': {
+            'validate': lambda v: assert_list(v, ['slow', 'fast']),
+            'location': '/sys/class/net/{ifname}/bonding/lacp_rate',
+        },
         'bond_miimon': {
             'validate': assert_positive,
             'location': '/sys/class/net/{ifname}/bonding/miimon'
@@ -153,6 +157,26 @@ class BondIf(Interface):
         >>> BondIf('bond0').set_min_links('0')
         """
         self.set_interface('bond_min_links', number)
+
+    def set_lacp_rate(self, slow_fast):
+        """
+        Option specifying the rate in which we'll ask our link partner
+	    to transmit LACPDU packets in 802.3ad mode.  Possible values
+	    are:
+
+	    slow or 0
+		    Request partner to transmit LACPDUs every 30 seconds
+
+	    fast or 1
+		    Request partner to transmit LACPDUs every 1 second
+
+	    The default is slow.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_lacp_rate('slow')
+        """
+        self.set_interface('bond_lacp_rate', slow_fast)
 
     def set_arp_interval(self, interval):
         """
@@ -384,9 +408,13 @@ class BondIf(Interface):
                 if not dict_search(f'member.interface_remove.{interface}.disable', config):
                     Interface(interface).set_admin_state('up')
 
-            # Bonding policy/mode
-            value = config.get('mode')
-            if value: self.set_mode(value)
+            # Bonding policy/mode - default value, always present
+            mode = config.get('mode')
+            self.set_mode(mode)
+
+            # LACPDU transmission rate - default value
+            if mode == '802.3ad':
+                self.set_lacp_rate(config.get('lacp_rate'))
 
             # Add (enslave) interfaces to bond
             value = dict_search('member.interface', config)
