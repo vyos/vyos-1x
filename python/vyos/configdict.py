@@ -315,6 +315,33 @@ def is_source_interface(conf, interface, intftype=None):
     old_level = conf.set_level(old_level)
     return ret_val
 
+def node_diff(conf, path):
+    """
+    Returns True when a node has been changed, False otherwise
+    """
+    from vyos.configdiff import get_config_diff
+    D = get_config_diff(conf, key_mangling=('-', '_'))
+    D.set_level(conf.get_level())
+    (new, old) = D.get_value_diff(path)
+    if new != old: 
+        return True
+    else:
+        return False
+
+def T3532_set_encapsulation_changed(conf, base, vlan_config_dict):
+    """
+    This help function is responsible for detecting changes in VLAN encapsulation and setting the
+    """
+    
+    protocol_change = node_diff(conf, base + ['protocol'])
+    ingress_qos_change = node_diff(conf, base + ['ingress_qos'])
+    egress_qos_change = node_diff(conf, base + ['egress_qos'])
+    
+    if protocol_change or ingress_qos_change or egress_qos_change:
+        vlan_config_dict.update({'encapsulation_changed': {}})
+    
+    return vlan_config_dict
+
 def get_interface_dict(config, base, ifname=''):
     """
     Common utility function to retrieve and mangle the interfaces configuration
@@ -423,6 +450,10 @@ def get_interface_dict(config, base, ifname=''):
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
+        
+        # T3532: Detecting encapsulation changes
+        vif_config = T3532_set_encapsulation_changed(config, ['vif', vif], vif_config)
+        dict['vif'][vif].update(vif_config)
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
@@ -442,6 +473,10 @@ def get_interface_dict(config, base, ifname=''):
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
+        
+        # T3532: Detecting encapsulation changes
+        vif_s_config = T3532_set_encapsulation_changed(config, ['vif-s', vif_s], vif_s_config)
+        dict['vif_s'][vif_s].update(vif_s_config)
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])

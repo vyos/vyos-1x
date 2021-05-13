@@ -1286,6 +1286,8 @@ class Interface(Control):
             tmp['protocol'] = vif_s_config['protocol']
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_s_id
+            if 'encapsulation_changed' in vif_s_config:
+                tmp['encapsulation_changed'] = ''
 
             vif_s_ifname = f'{ifname}.{vif_s_id}'
             vif_s_config['ifname'] = vif_s_ifname
@@ -1318,6 +1320,8 @@ class Interface(Control):
             tmp = deepcopy(VLANIf.get_config())
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
+            if 'encapsulation_changed' in vif_config:
+                tmp['encapsulation_changed'] = ''
 
             vif_ifname = f'{ifname}.{vif_id}'
             vif_config['ifname'] = vif_ifname
@@ -1328,6 +1332,27 @@ class Interface(Control):
 class VLANIf(Interface):
     """ Specific class which abstracts 802.1q and 802.1ad (Q-in-Q) VLAN interfaces """
     iftype = 'vlan'
+    
+    def remove(self):
+        if not self.exists(f'{self.ifname}'):
+            return
+        
+        cmd = 'ip link del link {source_interface} name {ifname} type vlan id {vlan_id}'
+        if 'protocol' in self.config:
+            cmd += ' protocol {protocol}'
+        if 'ingress_qos' in self.config:
+            cmd += ' ingress-qos-map {ingress_qos}'
+        if 'egress_qos' in self.config:
+            cmd += ' egress-qos-map {egress_qos}'
+
+        self._cmd(cmd.format(**self.config))
+        
+    def update(self, config):
+        if self.exists(f'{self.ifname}'):
+            # T3532: encapsulation change delete first
+            if 'encapsulation_changed' in self.config:
+                self.remove()
+                self._create()
 
     def _create(self):
         # bail out early if interface already exists
