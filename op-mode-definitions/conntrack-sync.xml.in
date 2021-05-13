@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="conntrack-sync">
+        <properties>
+          <help>Reset connection syncing parameters</help>
+        </properties>
+        <children>
+          <leafNode name="external-cache">
+            <properties>
+              <help>Reset external cache and request resync with other systems</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-external</command>
+          </leafNode>
+          <leafNode name="internal-cache">
+            <properties>
+              <help>Reset internal cache and request resync with other systems</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-internal</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <leafNode name="conntrack-sync">
+        <properties>
+          <help>Restart connection tracking synchronization service</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/conntrack_sync.py --restart</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
