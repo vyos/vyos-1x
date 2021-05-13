@@ -22,6 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
+from vyos.util import get_json_iface_options
 from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -90,6 +91,25 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
             remove_member = self._members[0]
             state = Interface(remove_member).get_admin_state()
             self.assertEqual('up', state)
+
+    def test_bonding_min_links(self):
+        # configure member interfaces
+        min_links = len(self._interfaces)
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.session.set(self._base_path + [interface] + option.split())
+
+            self.session.set(self._base_path + [interface, 'min-links', str(min_links)])
+
+        self.session.commit()
+
+        # verify config
+        for interface in self._interfaces:
+            tmp = get_json_iface_options(interface)
+
+            self.assertEqual(min_links, tmp['linkinfo']['info_data']['min_links'])
+            # check LACP default rate
+            self.assertEqual('slow',    tmp['linkinfo']['info_data']['ad_lacp_rate'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
