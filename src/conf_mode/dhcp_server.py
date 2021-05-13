@@ -282,7 +282,7 @@ def generate(dhcp):
     # XXX: as we have the ability for a user to pass in "raw" options via VyOS
     # CLI (see T3544) we now ask ISC dhcpd to test the newly rendered
     # configuration
-    tmp = run(f'/usr/sbin/dhcpd -t -cf {tmp_file}')
+    tmp = run(f'/usr/sbin/dhcpd -4 -q -t -cf {tmp_file}')
     if tmp > 0:
         if os.path.exists(tmp_file):
             os.unlink(tmp_file)
