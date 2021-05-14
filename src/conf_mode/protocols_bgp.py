@@ -47,7 +47,8 @@ def get_config(config=None):
 
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'bgp'] or base_path
-    bgp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -225,7 +226,6 @@ def verify(bgp):
             else:
                 for key in ['external', 'internal', 'local']:
                     if dict_search(f'address_family.{address_family_name}.distance.{key}', bgp) == None:
-                        address_family_name = address_family_name.replace('_', '-')
                         raise ConfigError('Missing mandatory configuration option for '\
                                          f'{address_family_name} administrative distance {key}!')
 
@@ -233,10 +233,14 @@ def verify(bgp):
 
 def generate(bgp):
     if not bgp or 'deleted' in bgp:
-        bgp['new_frr_config'] = ''
+        bgp['frr_bgpd_config'] = ''
+        bgp['frr_zebra_config'] = ''
         return None
 
-    bgp['new_frr_config'] = render_to_string('frr/bgp.frr.tmpl', bgp)
+    bgp['protocol'] = 'bgp' # required for frr/vrf.route-map.frr.tmpl
+    bgp['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', bgp)
+    bgp['frr_bgpd_config']  = render_to_string('frr/bgpd.frr.tmpl', bgp)
+
     return None
 
 def apply(bgp):
@@ -248,7 +252,8 @@ def apply(bgp):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'\s+ip protocol bgp route-map [-a-zA-Z0-9.]+$', '', ' ')
+    frr_cfg.modify_section(r'(\s+)?ip protocol bgp route-map [-a-zA-Z0-9.]+$', '', '(\s|!)')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
@@ -259,14 +264,17 @@ def apply(bgp):
 
     frr_cfg.load_configuration(bgp_daemon)
     frr_cfg.modify_section(f'^router bgp \d+{vrf}$', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['new_frr_config'])
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['frr_bgpd_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
+    # If FRR config is blank, re-run the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
-    if bgp['new_frr_config'] == '':
+    if bgp['frr_bgpd_config'] == '':
         for a in range(5):
             frr_cfg.commit_configuration(bgp_daemon)
+    if bgp['frr_zebra_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(zebra_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv4-flowspec.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv4-flowspec.xml.i -->
 <node name="ipv4-flowspec">
   <properties>
     <help>IPv4 Flow Specification BGP neighbor parameters</help>

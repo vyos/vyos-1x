@@ -321,8 +321,12 @@
           <help>IP prefix-list filter</help>
           <valueHelp>
             <format>txt</format>
-            <description>Prefix list name</description>
+            <description>Name of IPv4 prefix-list</description>
           </valueHelp>
+          <constraint>
+            <regex>^[-_a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
           #include <include/policy/description.xml.i>
@@ -385,8 +389,12 @@
           <help>IPv6 prefix-list filter</help>
           <valueHelp>
             <format>txt</format>
-            <description>Prefix list name</description>
+            <description>Name of IPv6 prefix-list</description>
           </valueHelp>
+          <constraint>
+            <regex>^[-_a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
           #include <include/policy/description.xml.i>
@@ -452,9 +460,9 @@
             <description>Route map name</description>
           </valueHelp>
           <constraint>
-            <regex>^[-a-zA-Z0-9.]+$</regex>
+            <regex>^[-_a-zA-Z0-9.]+$</regex>
           </constraint>
-          <constraintErrorMessage>Route-map name can only contain alpha-numeric letters and a hyphen</constraintErrorMessage>
+          <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
           #include <include/policy/description.xml.i>

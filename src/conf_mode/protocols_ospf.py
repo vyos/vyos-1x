@@ -171,10 +171,13 @@ def verify(ospf):
 
 def generate(ospf):
     if not ospf or 'deleted' in ospf:
-        ospf['new_frr_config'] = ''
+        ospf['frr_ospfd_config'] = ''
+        ospf['frr_zebra_config'] = ''
         return None
 
-    ospf['new_frr_config'] = render_to_string('frr/ospf.frr.tmpl', ospf)
+    ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.tmpl
+    ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', ospf)
+    ospf['frr_ospfd_config']   = render_to_string('frr/ospf.frr.tmpl', ospf)
     return None
 
 def apply(ospf):
@@ -186,7 +189,8 @@ def apply(ospf):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'\s+ip protocol ospf route-map [-a-zA-Z0-9.]+$', '', ' ')
+    frr_cfg.modify_section(r'(\s+)?ip protocol ospf route-map [-a-zA-Z0-9.]+$', '', '(\s|!)')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
@@ -204,14 +208,17 @@ def apply(ospf):
         for interface in ospf[key]:
             frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
 
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['new_frr_config'])
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['frr_ospfd_config'])
     frr_cfg.commit_configuration(ospf_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload
     # behavior/bug not properly clearing out on one commit.
-    if ospf['new_frr_config'] == '':
+    if ospf['frr_ospfd_config'] == '':
         for a in range(5):
             frr_cfg.commit_configuration(ospf_daemon)
+    if ospf['frr_zebra_config'] == '':
+        for a in range(5):
+            frr_cfg.commit_configuration(zebra_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

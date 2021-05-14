@@ -214,15 +214,6 @@
 {%   endif %}
 {% endmacro %}
 !
-{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
-vrf {{ vrf }}
- ip protocol bgp route-map {{ route_map }}
- exit-vrf
-!
-{% elif route_map is defined and route_map is not none %}
-ip protocol bgp route-map {{ route_map }}
-{% endif %}
-!
 router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none }}
 {% if parameters is defined and parameters.ebgp_requires_policy is defined %}
  bgp ebgp-requires-policy
@@ -413,6 +404,7 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%     if parameters.bestpath.as_path is defined and parameters.bestpath.as_path is not none %}
 {%       for option in parameters.bestpath.as_path %}
+{# replace is required for multipath-relax option #}
  bgp bestpath as-path {{ option|replace('_', '-') }}
 {%       endfor %}
 {%     endif %}

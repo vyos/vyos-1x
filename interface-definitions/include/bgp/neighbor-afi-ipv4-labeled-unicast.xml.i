@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv4-labeled-unicast.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv4-labeled-unicast.xml.i -->
 <node name="ipv4-labeled-unicast">
   <properties>
     <help>IPv4 Labeled Unicast BGP neighbor parameters</help>
@@ -14,6 +14,7 @@
     </node>
     #include <include/bgp/afi-ipv4-prefix-list.xml.i>
     #include <include/bgp/afi-common.xml.i>
+    #include <include/bgp/afi-default-originate.xml.i>
   </children>
 </node>
 <!-- include end -->

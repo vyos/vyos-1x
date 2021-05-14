@@ -1,4 +1,4 @@
-<!-- included start from routing-passive-interface-xml.i -->
+<!-- include start from routing-passive-interface-xml.i -->
 <leafNode name="passive-interface">
   <properties>
     <help>Suppress routing updates on an interface</help>
@@ -21,4 +21,4 @@
     <multi/>
   </properties>
 </leafNode>
-<!-- included end -->
+<!-- include end -->

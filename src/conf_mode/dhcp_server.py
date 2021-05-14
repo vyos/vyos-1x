@@ -18,6 +18,7 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
+from shutil import move
 from sys import exit
 
 from vyos.config import Config
@@ -25,6 +26,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import run
 from vyos.validate import is_subnet_connected
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
@@ -272,10 +274,25 @@ def generate(dhcp):
     if not dhcp or 'disable' in dhcp:
         return None
 
-    # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw parameters
-    # we can pass to ISC DHCPd
-    render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
+    # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw
+    # parameters we can pass to ISC DHCPd
+    tmp_file = '/tmp/dhcpd.conf'
+    render(tmp_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
+    # XXX: as we have the ability for a user to pass in "raw" options via VyOS
+    # CLI (see T3544) we now ask ISC dhcpd to test the newly rendered
+    # configuration
+    tmp = run(f'/usr/sbin/dhcpd -4 -q -t -cf {tmp_file}')
+    if tmp > 0:
+        if os.path.exists(tmp_file):
+            os.unlink(tmp_file)
+        raise ConfigError('Configuration file errors encountered - check your options!')
+
+    # Now that we know that the newly rendered configuration is "good" we can
+    # move the temporary configuration to the "real" configuration - we could
+    # also render it two times but that would not be as fast as a move operation
+    move(tmp_file, config_file)
+
     return None
 
 def apply(dhcp):

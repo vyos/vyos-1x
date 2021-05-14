@@ -38,14 +38,6 @@
     </leafNode>
   </children>
 </node>
-<node name="default-originate">
-  <properties>
-    <help>Originate default route to this peer</help>
-  </properties>
-  <children>
-    #include <include/route-map.xml.i>
-  </children>
-</node>
 <node name="distribute-list">
   <properties>
     <help>Access-list to filter route updates to/from this peer-group</help>
@@ -83,29 +75,7 @@
     </leafNode>
   </children>
 </node>
-<node name="filter-list">
-  <properties>
-    <help>as-path-list to filter route updates to/from this peer</help>
-  </properties>
-  <children>
-    <leafNode name="export">
-      <properties>
-        <help>As-path-list to filter outgoing route updates to this peer</help>
-        <completionHelp>
-          <path>policy as-path-list</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="import">
-      <properties>
-        <help>As-path-list to filter incoming route updates from this peer</help>
-        <completionHelp>
-          <path>policy as-path-list</path>
-        </completionHelp>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/bgp/afi-filter-list.xml.i>
 <leafNode name="maximum-prefix">
   <properties>
     <help>Maximum number of prefixes to accept from this peer</help>
@@ -135,6 +105,14 @@
     <completionHelp>
       <path>policy route-map</path>
     </completionHelp>
+    <valueHelp>
+      <format>txt</format>
+      <description>Route map name</description>
+    </valueHelp>
+    <constraint>
+      <regex>^[-_a-zA-Z0-9.]+$</regex>
+    </constraint>
+    <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
   </properties>
 </leafNode>
 <leafNode name="weight">

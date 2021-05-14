@@ -1,4 +1,4 @@
-<!-- included start from bgp-neighbor-afi-ipv6-flowspec.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv6-flowspec.xml.i -->
 <node name="ipv6-flowspec">
   <properties>
     <help>IPv6 Flow Specification BGP neighbor parameters</help>

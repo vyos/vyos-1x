@@ -966,7 +966,7 @@
   <children>
     <node name="address-family">
       <properties>
-        <help>Parameters relating to IPv4 or IPv6 routes</help>
+        <help>Address-family parameters</help>
       </properties>
       <children>
         #include <include/bgp/neighbor-afi-ipv4-unicast.xml.i>
@@ -1406,12 +1406,15 @@
 </node>
 <tagNode name="peer-group">
   <properties>
-    <help>BGP peer-group</help>
+    <help>Name of peer-group</help>
+    <constraint>
+      <regex>^[-_a-zA-Z0-9]+$</regex>
+    </constraint>
   </properties>
   <children>
     <node name="address-family">
       <properties>
-        <help>BGP peer-group address-family parameters</help>
+        <help>Address-family parameters</help>
       </properties>
       <children>
         #include <include/bgp/neighbor-afi-ipv4-unicast.xml.i>
