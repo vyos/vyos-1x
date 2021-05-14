@@ -53,6 +53,11 @@ else:
         for address in tmp:
             config.set(base + ['ignore-address'], value=address, replace=False)
 
+    # we no longer support cluster mode
+    base_cluster = base + ['failover-mechanism', 'cluster']
+    if config.exists(base_cluster):
+        config.delete(base_cluster)
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

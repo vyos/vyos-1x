@@ -71,18 +71,6 @@
               <help>Failover mechanism to use for conntrack-sync</help>
             </properties>
             <children>
-              <node name="cluster">
-                <properties>
-                  <help>Cluster as failover-mechanism to use for conntrack-sync</help>
-                </properties>
-                <children>
-                  <leafNode name="group">
-                    <properties>
-                      <help>Cluster group [DEPRECATED]</help>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               <node name="vrrp">
                 <properties>
                   <help>VRRP as failover-mechanism to use for conntrack-sync</help>
