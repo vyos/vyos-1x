@@ -21,6 +21,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.template import render
 from vyos.template import get_ipv4
@@ -51,6 +52,9 @@ def get_config(config=None):
     conntrack['hash_size'] = read_file('/sys/module/nf_conntrack/parameters/hashsize')
     conntrack['table_size'] = read_file('/proc/sys/net/netfilter/nf_conntrack_max')
 
+    conntrack['vrrp'] = conf.get_config_dict(['high-availability', 'vrrp', 'sync-group'],
+                                     get_first_key=True)
+
     return conntrack
 
 def verify(conntrack):
@@ -74,6 +78,12 @@ def verify(conntrack):
         address = conntrack['listen_address']
         if not is_addr_assigned(address):
             raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
+
+    vrrp_group = dict_search('failover_mechanism.vrrp.sync_group', conntrack)
+    if vrrp_group == None:
+        raise ConfigError(f'No VRRP sync-group defined!')
+    if vrrp_group not in conntrack['vrrp']:
+        raise ConfigError(f'VRRP sync-group {vrrp_group} not configured!')
 
     return None
 

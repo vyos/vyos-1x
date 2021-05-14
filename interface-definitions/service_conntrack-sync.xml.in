@@ -78,7 +78,7 @@
                 <children>
                   <leafNode name="sync-group">
                     <properties>
-                      <help>VRRP sync group [REQUIRED]</help>
+                      <help>VRRP sync group</help>
                       <completionHelp>
                         <path>high-availability vrrp sync-group</path>
                       </completionHelp>
