@@ -68,7 +68,6 @@ Helper {
 
 # General settings
 General {
-    Nice -20
     HashSize {{ hash_size }}
     HashLimit {{ table_size | int *2 }}
     LogFile off
@@ -76,7 +75,6 @@ General {
     LockFile /var/lock/conntrack.lock
     UNIX {
         Path /run/conntrackd/conntrackd.ctl
-        Backlog 20
     }
     NetlinkBufferSize {{ 2 *1024 *1024 }}
     NetlinkBufferSizeMaxGrowth {{ event_listen_queue_size | int *1024 *1024 }}
