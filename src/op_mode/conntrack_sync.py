@@ -16,19 +16,26 @@
 
 import os
 import syslog
+import xmltodict
 
 from argparse import ArgumentParser
 from vyos.configquery import CliShellApiConfigQuery
-from vyos.util import call
+from vyos.util import cmd
 from vyos.util import run
+from vyos.template import render_to_string
 
 conntrackd_bin = '/usr/sbin/conntrackd'
 conntrackd_config = '/run/conntrackd/conntrackd.conf'
 
 parser = ArgumentParser(description='Conntrack Sync')
-parser.add_argument('--restart', help='Restart connection tracking synchronization service', action='store_true')
-parser.add_argument('--reset-cache-internal', help='Reset internal cache', action='store_true')
-parser.add_argument('--reset-cache-external', help='Reset external cache', action='store_true')
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--restart', help='Restart connection tracking synchronization service', action='store_true')
+group.add_argument('--reset-cache-internal', help='Reset internal cache', action='store_true')
+group.add_argument('--reset-cache-external', help='Reset external cache', action='store_true')
+group.add_argument('--show-internal', help='Show internal (main) tracking cache', action='store_true')
+group.add_argument('--show-external', help='Show external (main) tracking cache', action='store_true')
+group.add_argument('--show-internal-expect', help='Show internal (expect) tracking cache', action='store_true')
+group.add_argument('--show-external-expect', help='Show external (expect) tracking cache', action='store_true')
 
 def is_configured():
     """ Check if conntrack-sync service is configured """
@@ -39,13 +46,13 @@ def is_configured():
 
 def send_bulk_update():
     """ send bulk update of internal-cache to other systems """
-    tmp = run(f'{conntrackd_bin} -c {conntrackd_config} -B')
+    tmp = run(f'{conntrackd_bin} -C {conntrackd_config} -B')
     if tmp > 0:
         print('ERROR: failed to send bulk update to other conntrack-sync systems')
 
 def request_sync():
     """ request resynchronization with other systems """
-    tmp = run(f'{conntrackd_bin} -c {conntrackd_config} -n')
+    tmp = run(f'{conntrackd_bin} -C {conntrackd_config} -n')
     if tmp > 0:
         print('ERROR: failed to request resynchronization of external cache')
 
@@ -53,9 +60,19 @@ def flush_cache(direction):
     """ flush conntrackd cache (internal or external) """
     if direction not in ['internal', 'external']:
         raise ValueError()
-    tmp = run(f'{conntrackd_bin} -c {conntrackd_config} -f {direction}')
+    tmp = run(f'{conntrackd_bin} -C {conntrackd_config} -f {direction}')
     if tmp > 0:
         print('ERROR: failed to clear {direction} cache')
+
+def xml_to_stdout(xml):
+    out = []
+    for line in xml.splitlines():
+        if line == '\n':
+            continue
+        parsed = xmltodict.parse(line)
+        out.append(parsed)
+
+    print(render_to_string('conntrackd/conntrackd.op-mode.tmpl', {'data' : out}))
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -66,7 +83,7 @@ if __name__ == '__main__':
         is_configured()
 
         syslog.syslog('Restarting conntrack sync service...')
-        call('systemctl restart conntrackd.service')
+        cmd('systemctl restart conntrackd.service')
         # request resynchronization with other systems
         request_sync()
         # send bulk update of internal-cache to other systems
@@ -88,12 +105,31 @@ if __name__ == '__main__':
         flush_cache('internal')
 
         # request resynchronization of internal cache with kernel conntrack table
-        tmp = run(f'{conntrackd_bin} -c {conntrackd_config} -R')
+        tmp = run(f'{conntrackd_bin} -C {conntrackd_config} -R')
         if tmp > 0:
             print('ERROR: failed to resynchronize internal cache with kernel conntrack table')
 
         # send bulk update of internal-cache to other systems
         send_bulk_update()
+
+    elif args.show_external or args.show_internal or args.show_external_expect or args.show_internal_expect:
+        is_configured()
+        opt = ''
+        if args.show_external:
+            opt = '-e ct'
+        elif args.show_external_expect:
+            opt = '-e expect'
+        elif args.show_internal:
+            opt = '-i ct'
+        elif args.show_internal_expect:
+            opt = '-i expect'
+
+        if args.show_external or args.show_internal:
+            print('Main Table Entries:')
+        else:
+            print('Expect Table Entries:')
+        out = cmd(f'sudo {conntrackd_bin} -C {conntrackd_config} {opt} -x')
+        xml_to_stdout(out)
 
     else:
         parser.print_help()

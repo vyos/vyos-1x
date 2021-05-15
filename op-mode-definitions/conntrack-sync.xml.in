@@ -33,4 +33,62 @@
       </leafNode>
     </children>
   </node>
+  <node name="show">
+    <children>
+      <node name="conntrack-sync">
+        <properties>
+          <help>Show connection tracking synchronization information</help>
+        </properties>
+        <children>
+          <node name="cache">
+            <properties>
+              <help>Show connection tracking cache entries</help>
+            </properties>
+            <children>
+              <node name="external">
+                <properties>
+                  <help>Show external connection tracking cache entries</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external; ${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
+                <children>
+                  <leafNode name="main">
+                    <properties>
+                      <help>Show external main connection tracking cache entries</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external</command>
+                  </leafNode>
+                  <leafNode name="expect">
+                    <properties>
+                      <help>Show external expect connection tracking cache entries</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="internal">
+                <properties>
+                  <help>Show internal connection tracking cache entries</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal; ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
+                <children>
+                  <leafNode name="main">
+                    <properties>
+                      <help>Show internal main connection tracking cache entries</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal</command>
+                  </leafNode>
+                  <leafNode name="expect">
+                    <properties>
+                      <help>Show internal expect connection tracking cache entries</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
