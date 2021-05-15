@@ -36,6 +36,7 @@ from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.template import is_ipv4
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
@@ -1308,6 +1309,16 @@ class Interface(Control):
 
             vif_s_ifname = f'{ifname}.{vif_s_id}'
             vif_s_config['ifname'] = vif_s_ifname
+
+            # It is not possible to change the VLAN encapsulation protocol
+            # "on-the-fly". For this "quirk" we need to actively delete and
+            # re-create the VIF-S interface.
+            if self.exists(vif_s_ifname):
+                cur_cfg = get_interface_config(vif_s_ifname)
+                protocol = dict_search('linkinfo.info_data.protocol', cur_cfg).lower()
+                if protocol != vif_s_config['protocol']:
+                    VLANIf(vif_s_ifname).remove()
+
             s_vlan = VLANIf(vif_s_ifname, **tmp)
             s_vlan.update(vif_s_config)
 
