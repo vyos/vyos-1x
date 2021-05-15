@@ -164,8 +164,7 @@ class TestServiceDHCPServer(unittest.TestCase):
         self.session.commit()
 
         config = read_file(DHCPD_CONF)
-        self.assertIn(f'option dhcp6.name-servers {ns_global_1};', config)
-        self.assertIn(f'option dhcp6.name-servers {ns_global_2};', config)
+        self.assertIn(f'option dhcp6.name-servers {ns_global_1}, {ns_global_2};', config)
         self.assertIn(f'subnet6 {subnet}' + r' {', config)
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
 
