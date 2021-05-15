@@ -367,6 +367,50 @@ class BasicInterfaceTest:
                         tmp = read_file(f'/sys/class/net/{vif}/mtu')
                         self.assertEqual(tmp, self._mtu)
 
+        def test_vif_s_protocol_change(self):
+            # XXX: This testcase is not allowed to run as first testcase, reason
+            # is the Wireless test will first load the wifi kernel hwsim module
+            # which creates a wlan0 and wlan1 interface which will fail the
+            # tearDown() test in the end that no interface is allowed to survive!
+            if not self._test_qinq:
+                self.skipTest('not supported')
+
+            self.debug = True
+
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.cli_set(base + option.split())
+
+                for vif_s in self._qinq_range:
+                    for vif_c in self._vlan_range:
+                        base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c', vif_c]
+                        for address in self._test_addr:
+                            self.cli_set(base + ['address', address])
+
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                for vif_s in self._qinq_range:
+                    tmp = get_interface_config(f'{interface}.{vif_s}')
+                    # check for the default value
+                    self.assertEqual(tmp['linkinfo']['info_data']['protocol'], '802.1ad')
+
+            # T3532: now change ethertype
+            new_protocol = '802.1q'
+            for interface in self._interfaces:
+                for vif_s in self._qinq_range:
+                    base = self._base_path + [interface, 'vif-s', vif_s]
+                    self.cli_set(base + ['protocol', new_protocol])
+
+            self.cli_commit()
+
+            # Verify new ethertype configuration
+            for interface in self._interfaces:
+                for vif_s in self._qinq_range:
+                    tmp = get_interface_config(f'{interface}.{vif_s}')
+                    self.assertEqual(tmp['linkinfo']['info_data']['protocol'], new_protocol.upper())
+
         def test_interface_ip_options(self):
             if not self._test_ip:
                 self.skipTest('not supported')
