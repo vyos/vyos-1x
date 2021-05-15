@@ -95,7 +95,11 @@ General {
 {%   if accept_protocol is defined and accept_protocol is not none %}
         Protocol Accept {
 {%     for protocol in accept_protocol %}
+{%       if protocol == 'icmp6' %}
+            IPv6-ICMP
+{%       else %}
             {{ protocol | upper }}
+{%       endif %}
 {%     endfor %}
         }
 {%   endif %}

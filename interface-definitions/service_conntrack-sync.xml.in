@@ -12,26 +12,34 @@
             <properties>
               <help>Protocols for which local conntrack entries will be synced</help>
               <completionHelp>
-                <list>tcp udp icmp sctp</list>
+                <list>tcp udp icmp icmp6 sctp dccp</list>
               </completionHelp>
               <valueHelp>
                 <format>tcp</format>
-                <description>Sync Transmission Control Protocol conntrack entries</description>
+                <description>Sync Transmission Control Protocol entries</description>
               </valueHelp>
               <valueHelp>
                 <format>udp</format>
-                <description>Sync User Datagram Protocol conntrack entries</description>
+                <description>Sync User Datagram Protocol entries</description>
               </valueHelp>
               <valueHelp>
                 <format>icmp</format>
-                <description>Sync Internet Control Message Protocol conntrack entries</description>
+                <description>Sync Internet Control Message Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>icmp6</format>
+                <description>Sync IPv6 Internet Control Message Protocol entries</description>
               </valueHelp>
               <valueHelp>
                 <format>sctp</format>
-                <description>Sync Stream Control Transmission Protocol conntrack entries</description>
+                <description>Sync Stream Control Transmission Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dccp</format>
+                <description>Sync Datagram Congestion Control Protocol entries</description>
               </valueHelp>
               <constraint>
-                <regex>^(tcp|udp|icmp|sctp)$</regex>
+                <regex>^(tcp|udp|icmp|icmp6|sctp|dccp)$</regex>
               </constraint>
               <constraintErrorMessage>Allowed protocols: tcp udp icmp or sctp</constraintErrorMessage>
               <multi/>
