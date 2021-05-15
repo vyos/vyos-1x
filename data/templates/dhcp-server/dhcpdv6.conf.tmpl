@@ -9,9 +9,7 @@ option dhcp6.preference {{ preference }};
 {% endif %}
 
 {% if global_parameters is defined and global_parameters.name_server is defined and global_parameters.name_server is not none %}
-{%   for nameserver in global_parameters.name_server %}
-option dhcp6.name-servers {{ nameserver }};
-{%   endfor %}
+option dhcp6.name-servers {{ global_parameters.name_server | join(', ') }};
 {% endif %}
 
 # Shared network configration(s)
