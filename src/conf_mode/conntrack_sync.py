@@ -22,7 +22,9 @@ from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import process_named_running
 from vyos.util import read_file
+from vyos.util import run
 from vyos.template import render
 from vyos.template import get_ipv4
 from vyos.validate import is_addr_assigned
@@ -32,6 +34,11 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/run/conntrackd/conntrackd.conf'
+
+def resync_vrrp():
+    tmp = run('/usr/libexec/vyos/conf_mode/vrrp.py')
+    if tmp > 0:
+        print('ERROR: error restarting VRRP daemon!')
 
 def get_config(config=None):
     if config:
@@ -99,8 +106,20 @@ def generate(conntrack):
 
 def apply(conntrack):
     if not conntrack:
+        # Failover mechanism daemon should be indicated that it no longer needs
+        # to execute conntrackd actions on transition. This is only required
+        # once when conntrackd is stopped and taken out of service!
+        if process_named_running('conntrackd'):
+            resync_vrrp()
+
         call('systemctl stop conntrackd.service')
         return None
+
+    # Failover mechanism daemon should be indicated that it needs to execute
+    # conntrackd actions on transition. This is only required once when conntrackd
+    # is started the first time!
+    if not process_named_running('conntrackd'):
+        resync_vrrp()
 
     call('systemctl restart conntrackd.service')
     return None

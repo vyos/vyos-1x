@@ -74,7 +74,7 @@ General {
     Syslog on
     LockFile /var/lock/conntrack.lock
     UNIX {
-        Path /run/conntrackd/conntrackd.ctl
+        Path /var/run/conntrackd.ctl
     }
     NetlinkBufferSize {{ 2 *1024 *1024 }}
     NetlinkBufferSizeMaxGrowth {{ event_listen_queue_size | int *1024 *1024 }}
