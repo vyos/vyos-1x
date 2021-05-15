@@ -24,4 +24,5 @@ usr/libexec/vyos/services
 usr/libexec/vyos/system
 usr/libexec/vyos/validators
 usr/libexec/vyos/*.py
+usr/libexec/vyos/*.sh
 usr/share
