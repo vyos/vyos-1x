@@ -278,18 +278,119 @@ class BasicInterfaceTest:
                     self.cli_set(base + ['mtu', self._mtu])
                     for address in self._test_addr:
                         self.cli_set(base + ['address', address])
+                    self.cli_set(base + ['ingress-qos', '0:1'])
+                    self.cli_set(base + ['egress-qos', '1:6'])
 
             self.cli_commit()
 
             for intf in self._interfaces:
                 for vlan in self._vlan_range:
                     vif = f'{intf}.{vlan}'
+                    tmp = get_interface_config(f'{vif}')
+                    
+                    tmp2 = dict_search('linkinfo.info_data.ingress_qos', tmp)
+                    for item in tmp2 if tmp2 else []:
+                        from_key = item['from']
+                        to_key = item['to']
+                        self.assertEqual(from_key, 0)
+                        self.assertEqual(to_key, 1)
+                    
+                    tmp2 = dict_search('linkinfo.info_data.egress_qos', tmp)
+                    for item in tmp2 if tmp2 else []:
+                        from_key = item['from']
+                        to_key = item['to']
+                        self.assertEqual(from_key, 1)
+                        self.assertEqual(to_key, 6)
+                    
                     for address in self._test_addr:
                         self.assertTrue(is_intf_addr_assigned(vif, address))
 
                     tmp = read_file(f'/sys/class/net/{vif}/mtu')
                     self.assertEqual(tmp, self._mtu)
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
+        
+        def test_vif_qos_change(self):
+            # XXX: This testcase is not allowed to run as first testcase, reason
+            # is the Wireless test will first load the wifi kernel hwsim module
+            # which creates a wlan0 and wlan1 interface which will fail the
+            # tearDown() test in the end that no interface is allowed to survive!
+            if not self._test_vlan:
+                self.skipTest('not supported')
+            
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for option in self._options.get(interface, []):
+                    self.cli_set(base + option.split())
+
+                for vlan in self._vlan_range:
+                    base = self._base_path + [interface, 'vif', vlan]
+                    self.cli_set(base + ['mtu', self._mtu])
+                    for address in self._test_addr:
+                        self.cli_set(base + ['address', address])
+                    self.cli_set(base + ['ingress-qos', '0:1'])
+                    self.cli_set(base + ['egress-qos', '1:6'])
+
+            self.cli_commit()
+            
+            for intf in self._interfaces:
+                for vlan in self._vlan_range:
+                    vif = f'{intf}.{vlan}'
+                    tmp = get_interface_config(f'{vif}')
+                    
+                    tmp2 = dict_search('linkinfo.info_data.ingress_qos', tmp)
+                    for item in tmp2 if tmp2 else []:
+                        from_key = item['from']
+                        to_key = item['to']
+                        self.assertEqual(from_key, 0)
+                        self.assertEqual(to_key, 1)
+                    
+                    tmp2 = dict_search('linkinfo.info_data.egress_qos', tmp)
+                    for item in tmp2 if tmp2 else []:
+                        from_key = item['from']
+                        to_key = item['to']
+                        self.assertEqual(from_key, 1)
+                        self.assertEqual(to_key, 6)
+                    
+                    for address in self._test_addr:
+                        self.assertTrue(is_intf_addr_assigned(vif, address))
+
+                    tmp = read_file(f'/sys/class/net/{vif}/mtu')
+                    self.assertEqual(tmp, self._mtu)
+                    self.assertEqual(Interface(vif).get_admin_state(), 'up')
+            
+            new_ingress_qos_from = 1
+            new_ingress_qos_to = 6
+            new_egress_qos_from = 2
+            new_egress_qos_to = 7
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vlan in self._vlan_range:
+                    base = self._base_path + [interface, 'vif', vlan]
+                    self.cli_delete(base + ['ingress-qos', '0:1'])
+                    self.cli_delete(base + ['egress-qos', '1:6'])
+                    self.cli_set(base + ['ingress-qos', f'{new_ingress_qos_from}:{new_ingress_qos_to}'])
+                    self.cli_set(base + ['egress-qos', f'{new_egress_qos_from}:{new_egress_qos_to}'])
+            
+            self.cli_commit()
+            
+            for intf in self._interfaces:
+                for vlan in self._vlan_range:
+                    vif = f'{intf}.{vlan}'
+                    tmp = get_interface_config(f'{vif}')
+                    
+                    tmp2 = dict_search('linkinfo.info_data.ingress_qos', tmp)
+                    if tmp2:
+                        from_key = tmp2[0]['from']
+                        to_key = tmp2[0]['to']
+                        self.assertEqual(from_key, new_ingress_qos_from)
+                        self.assertEqual(to_key, new_ingress_qos_to)
+                    
+                    tmp2 = dict_search('linkinfo.info_data.egress_qos', tmp)
+                    if tmp2:
+                        from_key = tmp2[0]['from']
+                        to_key = tmp2[0]['to']
+                        self.assertEqual(from_key, new_egress_qos_from)
+                        self.assertEqual(to_key, new_egress_qos_to)
 
         def test_vif_8021q_lower_up_down(self):
             # Testcase for https://phabricator.vyos.net/T3349

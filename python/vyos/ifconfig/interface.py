@@ -1345,12 +1345,49 @@ class Interface(Control):
 
         # create/update 802.1q VLAN interfaces
         for vif_id, vif_config in config.get('vif', {}).items():
+            
+            vif_ifname = f'{ifname}.{vif_id}'
+            vif_config['ifname'] = vif_ifname
+            
             tmp = deepcopy(VLANIf.get_config())
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
+            
+            sep = ' '
+            
+            if 'egress_qos' in vif_config:
+                tmp['egress_qos'] = sep.join(vif_config['egress_qos'])
+                
+            if 'ingress_qos' in vif_config:
+                tmp['ingress_qos'] = sep.join(vif_config['ingress_qos'])
+                
+            # Since setting the QoS control parameters in the later stage will 
+            # not completely delete the old settings,
+            # we still need to delete the VLAN encapsulation interface in order to
+            # ensure that the changed settings are effective.
+            cur_cfg = get_interface_config(vif_ifname)
+            qos_str = ''
+            tmp2 = dict_search('linkinfo.info_data.ingress_qos', cur_cfg)
+            if 'ingress_qos' in tmp and tmp2:
+                for item in tmp2:
+                    from_key = item['from']
+                    to_key = item['to']
+                    qos_str += f'{from_key}:{to_key} '
+                if qos_str != tmp['ingress_qos']:
+                    if self.exists(vif_ifname):
+                        VLANIf(vif_ifname).remove()
+                    
+            qos_str = ''
+            tmp2 = dict_search('linkinfo.info_data.egress_qos', cur_cfg)
+            if 'egress_qos' in tmp and tmp2:
+                for item in tmp2:
+                    from_key = item['from']
+                    to_key = item['to']
+                    qos_str += f'{from_key}:{to_key} '
+                if qos_str != tmp['egress_qos']:
+                    if self.exists(vif_ifname):
+                        VLANIf(vif_ifname).remove()
 
-            vif_ifname = f'{ifname}.{vif_id}'
-            vif_config['ifname'] = vif_ifname
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
 
