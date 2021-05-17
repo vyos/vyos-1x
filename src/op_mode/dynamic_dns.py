@@ -36,6 +36,10 @@ update-status: {{ entry.status }}
 """
 
 def show_status():
+    # A ddclient status file must not always exist
+    if not os.path.exists(cache_file):
+        sys.exit(0)
+
     data = {
         'hosts': []
     }
