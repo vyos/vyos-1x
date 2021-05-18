@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,12 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import syslog as sl
+import syslog
 
 from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import run
-
 
 def get_config():
     c = Config()
@@ -39,12 +38,14 @@ def get_config():
         interfaces[intf] = [addr.strip("'") for addr in intf_addresses]
     return interfaces
 
-
 def apply(config):
+    syslog.openlog(ident='ether-resume', logoption=syslog.LOG_PID,
+                   facility=syslog.LOG_INFO)
+
     for intf, addresses in config.items():
         # bring the interface up
         cmd = ["ip", "link", "set", "dev", intf, "up"]
-        sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
+        syslog.syslog(cmd)
         run(cmd)
 
         # add configured addresses to interface
@@ -53,9 +54,8 @@ def apply(config):
                 cmd = ["dhclient", intf]
             else:
                 cmd = ["ip", "address", "add", addr, "dev", intf]
-            sl.syslog(sl.LOG_NOTICE, " ".join(cmd))
+            syslog.syslog(cmd)
             run(cmd)
-
 
 if __name__ == '__main__':
     try:
