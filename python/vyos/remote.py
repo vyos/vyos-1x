@@ -20,7 +20,7 @@ import socket
 import sys
 import tempfile
 import urllib.parse
-import urllib.request
+import urllib.request as urlreq
 
 from vyos.util import cmd, ask_yes_no
 from vyos.version import get_version
@@ -37,6 +37,18 @@ def print_error(str):
     sys.stderr.write(str)
     sys.stderr.write('\n')
     sys.stderr.flush()
+
+def get_authentication_variables(default_username=None, default_password=None):
+    """
+    Returns the environment variables `$REMOTE_USERNAME` and `$REMOTE_PASSWORD` and
+    returns the defaults provided if environment variables are empty or nonexistent.
+    """
+    username, password = os.getenv('REMOTE_USERNAME'), os.getenv('REMOTE_PASSWORD')
+    # Fall back to defaults if the username variable doesn't exist or is an empty string.
+    if not username:
+        return (default_username, default_password)
+    else:
+        return (username, password)
 
 class InteractivePolicy(MissingHostKeyPolicy):
     """
@@ -145,9 +157,9 @@ def install_request_opener(urlstring, username, password):
     Take`username` and `password` strings and install the appropriate
     password manager to `urllib.request.urlopen()` for the given `urlstring`.
     """
-    manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    manager = urlreq.HTTPPasswordMgrWithDefaultRealm()
     manager.add_password(None, urlstring, username, password)
-    urllib.request.install_opener(urllib.request.build_opener(manager))
+    urlreq.install_opener(urlreq.build_opener(urlreq.HTTPBasicAuthHandler(manager)))
 
 # upload_http() is unimplemented.
 
@@ -156,11 +168,11 @@ def download_http(urlstring, local_path, username=None, password=None):
     Download the file from from `urlstring` to `local_path`.
     Optionally takes `username` and `password` for authentication.
     """
-    request = urllib.request.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
+    request = urlreq.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
     if username:
         install_request_opener(urlstring, username, password)
     with open(local_path, 'wb') as file:
-        with urllib.request.urlopen(request) as response:
+        with urlreq.urlopen(request) as response:
             file.write(response.read())
 
 def get_http_file_size(urlstring, username=None, password=None):
@@ -168,10 +180,10 @@ def get_http_file_size(urlstring, username=None, password=None):
     Return the size of the file from `urlstring` in terms of number of bytes.
     Optionally takes `username` and `password` for authentication.
     """
-    request = urllib.request.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
+    request = urlreq.Request(urlstring, headers={'User-Agent': 'VyOS/' + get_version()})
     if username:
         install_request_opener(urlstring, username, password)
-    with urllib.request.urlopen(request) as response:
+    with urlreq.urlopen(request) as response:
         size = response.getheader('Content-Length')
         if size:
             return int(size)
@@ -181,18 +193,15 @@ def get_http_file_size(urlstring, username=None, password=None):
 
 
 # Dynamic dispatchers
-def download(local_path, urlstring, authentication=None, source=None):
+def download(local_path, urlstring, source=None):
     """
     Dispatch the appropriate download function for the given `urlstring` and save to `local_path`.
-    Optionally takes a `source` address (not valid for HTTP(S)) and an `authentication` tuple
-     in the form of `(username, password)`.
+    Optionally takes a `source` address (not valid for HTTP(S)).
     Supports HTTP, HTTPS, FTP, SFTP, SCP (through SFTP) and TFTP.
+    Reads `$REMOTE_USERNAME` and `$REMOTE_PASSWORD` environment variables.
     """
     url = urllib.parse.urlparse(urlstring)
-    if authentication:
-        username, password = authentication
-    else:
-        username, password = url.username, url.password
+    username, password = get_authentication_variables(url.username, url.password)
 
     if url.scheme == 'http' or url.scheme == 'https':
         if source:
@@ -208,19 +217,15 @@ def download(local_path, urlstring, authentication=None, source=None):
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def upload(local_path, urlstring, authentication=None, source=None):
+def upload(local_path, urlstring, source=None):
     """
     Dispatch the appropriate upload function for the given URL and upload from local path.
-    Optionally takes a `source` address and an `authentication` tuple
-     in the form of `(username, password)`.
-    `authentication` takes precedence over credentials in `urlstring`.
+    Optionally takes a `source` address.
     Supports FTP, SFTP, SCP (through SFTP) and TFTP.
+    Reads `$REMOTE_USERNAME` and `$REMOTE_PASSWORD` environment variables.
     """
     url = urllib.parse.urlparse(urlstring)
-    if authentication:
-        username, password = authentication
-    else:
-        username, password = url.username, url.password
+    username, password = get_authentication_variables(url.username, url.password)
 
     if url.scheme == 'ftp':
         username = username if username else 'anonymous'
@@ -232,23 +237,19 @@ def upload(local_path, urlstring, authentication=None, source=None):
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def get_remote_file_size(urlstring, authentication=None, source=None):
+def get_remote_file_size(urlstring, source=None):
     """
     Dispatch the appropriate function to return the size of the remote file from `urlstring`
      in terms of number of bytes.
-    Optionally takes a `source` address (not valid for HTTP(S)) and an `authentication` tuple
-     in the form of `(username, password)`.
-    `authentication` takes precedence over credentials in `urlstring`.
+    Optionally takes a `source` address (not valid for HTTP(S)).
     Supports HTTP, HTTPS, FTP and SFTP (through SFTP).
+    Reads `$REMOTE_USERNAME` and `$REMOTE_PASSWORD` environment variables.
     """
     url = urllib.parse.urlparse(urlstring)
-    if authentication:
-        username, password = authentication
-    else:
-        username, password = url.username, url.password
+    username, password = get_authentication_variables(url.username, url.password)
 
     if url.scheme == 'http' or url.scheme == 'https':
-        return get_http_file_size(urlstring, authentication)
+        return get_http_file_size(urlstring, username, password)
     elif url.scheme == 'ftp':
         username = username if username else 'anonymous'
         return get_ftp_file_size(url.hostname, url.path, username, password, source=source)
@@ -257,7 +258,7 @@ def get_remote_file_size(urlstring, authentication=None, source=None):
     else:
         raise ValueError(f'Unsupported URL scheme: {url.scheme}')
 
-def get_remote_config(urlstring, authentication=None, source=None):
+def get_remote_config(urlstring, source=None):
     """
     Download remote (config) file from `urlstring` and return the contents as a string.
         Args:
@@ -268,8 +269,6 @@ def get_remote_config(urlstring, authentication=None, source=None):
                 https://<host>/<file>
                 ftp://[<user>[:<passwd>]@]<host>/<file>
                 tftp://<host>/<file>
-            authentication tuple (optional):
-                (<username>, <password>)
             source address (optional):
                 <interface>
                 <IP address>
@@ -277,21 +276,21 @@ def get_remote_config(urlstring, authentication=None, source=None):
     url = urllib.parse.urlparse(urlstring)
     temp = tempfile.NamedTemporaryFile(delete=False).name
     try:
-        download(temp, urlstring, authentication, source)
+        download(temp, urlstring, source)
         with open(temp, 'r') as file:
             return file.read()
     finally:
         os.remove(temp)
 
-def friendly_download(local_path, urlstring, authentication=None, source=None):
+def friendly_download(local_path, urlstring, source=None):
     """
     Intended to be called from interactive, user-facing scripts.
     """
     destination_directory = os.path.dirname(local_path)
-    free_space = shutil.disk_usage(destination_directory).free
     try:
+        free_space = shutil.disk_usage(destination_directory).free
         try:
-            file_size = get_remote_file_size(urlstring, authentication, source)
+            file_size = get_remote_file_size(urlstring, source)
             if file_size < 1024 * 1024:
                 print_error(f'The file is {file_size / 1024.0:.3f} KiB.')
             else:
@@ -303,7 +302,7 @@ def friendly_download(local_path, urlstring, authentication=None, source=None):
         else:
             # TODO: Progress bar
             print_error('Downloading...')
-            download(local_path, urlstring, authentication, source)
+            download(local_path, urlstring, source)
     except KeyboardInterrupt:
         print_error('Download aborted by user.')
         sys.exit(1)
