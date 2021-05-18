@@ -17,4 +17,14 @@
       </node>
     </children>
   </node>
+  <node name="restart">
+    <children>
+      <leafNode name="openconnect-server">
+        <properties>
+          <help>Restart openconnect server process</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/openconnect-control.py --action="restart"</command>
+      </leafNode>
+    </children>
+  </node>
 </interfaceDefinition>
