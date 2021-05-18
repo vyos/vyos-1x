@@ -11,13 +11,13 @@
             <properties>
               <help>Reset external cache and request resync with other systems</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-external</command>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-external</command>
           </leafNode>
           <leafNode name="internal-cache">
             <properties>
               <help>Reset internal cache and request resync with other systems</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-internal</command>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --reset-cache-internal</command>
           </leafNode>
         </children>
       </node>
@@ -29,7 +29,7 @@
         <properties>
           <help>Restart connection tracking synchronization service</help>
         </properties>
-        <command>${vyos_op_scripts_dir}/conntrack_sync.py --restart</command>
+        <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --restart</command>
       </leafNode>
     </children>
   </node>
@@ -49,19 +49,19 @@
                 <properties>
                   <help>Show external connection tracking cache entries</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external; ${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-external; ${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
                 <children>
                   <leafNode name="main">
                     <properties>
                       <help>Show external main connection tracking cache entries</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external</command>
+                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-external</command>
                   </leafNode>
                   <leafNode name="expect">
                     <properties>
                       <help>Show external expect connection tracking cache entries</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
+                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-external-expect</command>
                   </leafNode>
                 </children>
               </node>
@@ -69,19 +69,19 @@
                 <properties>
                   <help>Show internal connection tracking cache entries</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal; ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal; ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
                 <children>
                   <leafNode name="main">
                     <properties>
                       <help>Show internal main connection tracking cache entries</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal</command>
+                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal</command>
                   </leafNode>
                   <leafNode name="expect">
                     <properties>
                       <help>Show internal expect connection tracking cache entries</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
+                    <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-internal-expect</command>
                   </leafNode>
                 </children>
               </node>

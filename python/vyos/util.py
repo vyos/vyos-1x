@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,25 +22,13 @@ import sys
 # where it is used so it is as local as possible to the execution
 #
 
-
-def _need_sudo(command):
-    return os.path.basename(command.split()[0]) in ('systemctl', )
-
-
-def _add_sudo(command):
-    if _need_sudo(command):
-        return 'sudo ' + command
-    return command
-
-
 from subprocess import Popen
 from subprocess import PIPE
 from subprocess import STDOUT
 from subprocess import DEVNULL
 
-
 def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
+          stdout=PIPE, stderr=PIPE, decode='utf-8'):
     """
     popen is a wrapper helper aound subprocess.Popen
     with it default setting it will return a tuple (out, err)
@@ -79,9 +67,6 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
     if not debug.enabled(flag):
         flag = 'command'
 
-    if autosudo:
-        command = _add_sudo(command)
-
     cmd_msg = f"cmd '{command}'"
     debug.message(cmd_msg, flag)
 
@@ -98,11 +83,8 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
         stdin = PIPE
         input = input.encode() if type(input) is str else input
 
-    p = Popen(
-        command,
-        stdin=stdin, stdout=stdout, stderr=stderr,
-        env=env, shell=use_shell,
-    )
+    p = Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
+              env=env, shell=use_shell)
 
     pipe = p.communicate(input, timeout)
 
@@ -135,7 +117,7 @@ def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=PIPE, decode='utf-8', autosudo=True):
+        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
     """
     A wrapper around popen, which discard the stdout and
     will return the error code of a command
@@ -151,8 +133,8 @@ def run(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True,
-        raising=None, message='', expect=[0]):
+        stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
+        expect=[0]):
     """
     A wrapper around popen, which returns the stdout and
     will raise the error code of a command
@@ -183,7 +165,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
 
 
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=PIPE, decode='utf-8', autosudo=True):
+         stdout=PIPE, stderr=PIPE, decode='utf-8'):
     """
     A wrapper around popen, which print the stdout and
     will return the error code of a command
