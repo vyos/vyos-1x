@@ -21,7 +21,7 @@
             <properties>
               <help>Shows all process ids associated with VRF</help>
             </properties>
-            <command>/usr/sbin/ip vrf pids "$3"</command>
+            <command>ip vrf pids "$3"</command>
           </leafNode>
         </children>
       </tagNode>

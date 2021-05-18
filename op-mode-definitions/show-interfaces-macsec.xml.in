@@ -11,7 +11,7 @@
                 <path>interfaces macsec</path>
               </completionHelp>
             </properties>
-            <command>/usr/sbin/ip macsec show</command>
+            <command>ip macsec show</command>
           </node>
           <tagNode name="macsec">
             <properties>
@@ -20,7 +20,7 @@
                 <path>interfaces macsec</path>
               </completionHelp>
             </properties>
-            <command>/usr/sbin/ip macsec show $4</command>
+            <command>ip macsec show $4</command>
           </tagNode>
         </children>
       </node>
