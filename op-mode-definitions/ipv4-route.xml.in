@@ -43,7 +43,7 @@
                     <list>&lt;x.x.x.x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo /sbin/ip neigh flush to "$5"</command>
+                <command>sudo ip neigh flush to "$5"</command>
               </tagNode>
               <tagNode name="interface">
                 <properties>
@@ -52,7 +52,7 @@
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                 </properties>
-                <command>sudo /sbin/ip neigh flush dev "$5"</command>
+                <command>sudo ip neigh flush dev "$5"</command>
               </tagNode>
             </children>
           </node>
@@ -66,7 +66,7 @@
                 <properties>
                   <help>Flush the kernel route cache</help>
                 </properties>
-                <command>sudo /sbin/ip route flush cache</command>
+                <command>sudo ip route flush cache</command>
               </leafNode>
 
               <tagNode name="cache">
@@ -76,7 +76,7 @@
                     <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo /sbin/ip route flush cache "$5"</command>
+                <command>sudo ip route flush cache "$5"</command>
               </tagNode>
             </children>
           </node>
