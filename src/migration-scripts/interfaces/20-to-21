@@ -1,0 +1,63 @@
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3551: QoS control failure of VLAN sub interface
+
+from sys import exit, argv
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    base = ['interfaces', 'ethernet']
+
+    if not config.exists(base):
+        # Nothing to do
+        exit(0)
+    
+    for interface in config.list_nodes(base):
+        intf_base = base + [interface, 'vif']
+        if config.exists(intf_base):
+            for vif in config.list_nodes(intf_base):
+                vif_base = base + [interface, 'vif', vif]
+                if config.exists(vif_base):
+                    if config.exists(vif_base + ['ingress-qos']):
+                        ingress_qos = config.return_value(vif_base + ['ingress-qos'])
+                        qos_maps = ingress_qos.split()
+                        config.delete(vif_base + ['ingress-qos'])
+                        for qos_map in qos_maps:
+                            config.set(vif_base + ['ingress-qos'], value=qos_map, replace=False)
+                    
+                    if config.exists(vif_base + ['egress-qos']):
+                        egress_qos = config.return_value(vif_base + ['egress-qos'])
+                        qos_maps = egress_qos.split()
+                        config.delete(vif_base + ['egress-qos'])
+                        for qos_map in qos_maps:
+                            config.set(vif_base + ['egress-qos'], value=qos_map, replace=False)
+                        
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)
+
