@@ -65,11 +65,10 @@ def show_status():
                 if ip:
                     outp['ip'] = ip.split(',')[0]
 
-            if 'atime=' in line:
-                atime = line.split('atime=')[1]
-                if atime:
-                    tmp = atime.split(',')[0]
-                    outp['time'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(int(tmp, base=10)))
+            if 'mtime=' in line:
+                mtime = line.split('mtime=')[1]
+                if mtime:
+                    outp['time'] = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(int(mtime.split(',')[0], base=10)))
 
             if 'status=' in line:
                 status = line.split('status=')[1]
