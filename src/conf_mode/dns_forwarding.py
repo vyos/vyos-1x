@@ -50,7 +50,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    dns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
@@ -80,6 +80,49 @@ def get_config(config=None):
 
     dns.update({'source_address_v4': source_address_v4})
     dns.update({'source_address_v6': source_address_v6})
+
+    advanced = dns.get('advanced', {})
+    if 'pdns_option' not in advanced:
+        dns['advanced']['pdns_option'] = []
+    dns['zones'] = []
+    if 'zone' in advanced:
+        for node in advanced['zone']:
+            zonedata = advanced['zone'][node]
+            if 'disable' in zonedata:
+                continue
+            zone = {
+                'name': node,
+                'file': "{}/zone.{}.conf".format(pdns_rec_run_dir, node),
+                'records': [],
+            }
+            for rtype in [ 'a', 'aaaa', 'cname', 'mx', 'ptr', 'txt' ]:
+                if rtype not in zonedata:
+                    continue
+                for subnode in zonedata[rtype]:
+                    if 'disable' in zonedata[rtype][subnode]:
+                        continue
+                    preference = '10'
+                    if 'preference' in zonedata[rtype][subnode]:
+                        preference = zonedata[rtype][subnode]['preference']
+                    target = 'hostname'
+                    if rtype in [ 'a', 'aaaa' ]:
+                        target = 'address'
+                    if rtype == 'txt':
+                        target = 'text'
+                    if target not in zonedata[rtype][subnode]:
+                        continue
+                    targetdata = zonedata[rtype][subnode][target] if rtype in [ 'a', 'aaaa' ] else [ zonedata[rtype][subnode][target] ]
+                    for item in targetdata:
+                        if rtype == 'txt':
+                            item = "\"{}\"".format(item.replace("\"", "\\\""))
+                        record = {
+                            'name': subnode,
+                            'type': rtype.upper(),
+                            'preference': preference if rtype == 'mx' else '',
+                            'target': item,
+                        }
+                        zone['records'].append(record)
+            dns['zones'].append(zone)
 
     return dns
 
@@ -118,6 +161,11 @@ def generate(dns):
 
     render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
             dns, user=pdns_rec_user, group=pdns_rec_group)
+
+    for zone in dns['zones']:
+        render(zone['file'], 'dns-forwarding/recursor.zone.conf.tmpl',
+            zone, user=pdns_rec_user, group=pdns_rec_group)
+
 
     # if vyos-hostsd didn't create its files yet, create them (empty)
     for file in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:

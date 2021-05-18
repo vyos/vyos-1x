@@ -188,6 +188,178 @@
                 </properties>
                 <defaultValue>0.0.0.0 ::</defaultValue>
               </leafNode>
+              <node name="advanced">
+                <properties>
+                  <help>Advanced settings and DNS manipulations</help>
+                </properties>
+                <children>
+                  <leafNode name="max-ttl">
+                    <properties>
+                      <help>Maximum amount of time requesting clients are allowed to cache replies</help>
+                      <valueHelp>
+                        <format>u32:0-604800</format>
+                        <description>Seconds to cache records</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-60400"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>86400</defaultValue>
+                  </leafNode>
+                  <leafNode name="port">
+                    <properties>
+                      <help>Set different listening port</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Port to listen on</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>53</defaultValue>
+                  </leafNode>
+                  <tagNode name="zone">
+                    <properties>
+                      <help>Set domain name to create/manipulate DNS zone for</help>
+                    </properties>
+                    <children>
+                      <tagNode name="a">
+                        <properties>
+                          <help>Set A record name</help>
+                        </properties>
+                        <children>
+                          <leafNode name="address">
+                            <properties>
+                              <help>Set IP address to be returned for specified domain</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>Record IPv4 address</description>
+                              </valueHelp>
+                              <multi/>
+                              <constraint>
+                                <validator name="ipv4-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="aaaa">
+                        <properties>
+                          <help>Set AAAA record name</help>
+                        </properties>
+                        <children>
+                          <leafNode name="address">
+                            <properties>
+                              <help>Set IP address to be returned for specified domain</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>Record IPv6 address</description>
+                              </valueHelp>
+                              <multi/>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="cname">
+                        <properties>
+                          <help>Set CNAME record name</help>
+                        </properties>
+                        <children>
+                          #include <include/generic-disable-node.xml.i>
+                          <leafNode name="hostname">
+                            <properties>
+                              <help>Set CNAME record target name</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record target name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-a-zA-Z0-9.]{0,63}$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="mx">
+                        <properties>
+                          <help>Set MX record name</help>
+                        </properties>
+                        <children>
+                          #include <include/generic-disable-node.xml.i>
+                          <leafNode name="hostname">
+                            <properties>
+                              <help>Set MX destination hostname</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record destination hostname</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-a-zA-Z0-9.]{0,63}$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="preference">
+                            <properties>
+                              <help>Set preference for MX record</help>
+                              <valueHelp>
+                                <format>1-999</format>
+                                <description>Preference for MX record</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 1-999"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="ptr">
+                        <properties>
+                          <help>Set PTR record name</help>
+                        </properties>
+                        <children>
+                          #include <include/generic-disable-node.xml.i>
+                          <leafNode name="hostname">
+                            <properties>
+                              <help>Set PTR record target</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record target name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-a-zA-Z0-9.]{0,63}$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="txt">
+                        <properties>
+                          <help>Set TXT record name</help>
+                        </properties>
+                        <children>
+                          #include <include/generic-disable-node.xml.i>
+                          <leafNode name="text">
+                            <properties>
+                              <help>Set TXT record text content</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record text content</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                      #include <include/generic-disable-node.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
               <leafNode name="system">
                 <properties>
                   <help>Use system name servers</help>

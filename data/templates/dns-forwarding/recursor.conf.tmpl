@@ -32,5 +32,14 @@ dnssec={{ dnssec }}
 # serve rfc1918 records
 serve-rfc1918={{ 'no' if no_serve_rfc1918 is defined else 'yes' }}
 
+# max-ttl
+max-cache-ttl={{ advanced.max_ttl }}
+
+# port
+local-port={{ advanced.port }}
+
+# zones
+auth-zones={% for z in zones %}{{ z.name }}={{ z.file }}{{- "," if not loop.last -}}{% endfor %}
+
 forward-zones-file=recursor.forward-zones.conf
 
