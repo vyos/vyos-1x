@@ -58,7 +58,7 @@ def main():
     is_ocserv_configured()
 
     if args.action == "restart":
-        run("systemctl restart ocserv")
+        run("sudo systemctl restart ocserv.service")
         sys.exit(0)
     elif args.action == "show_sessions":
         show_sessions()
