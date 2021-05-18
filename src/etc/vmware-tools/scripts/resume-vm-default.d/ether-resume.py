@@ -26,15 +26,14 @@ def get_config():
     interfaces = dict()
     for intf in c.list_effective_nodes('interfaces ethernet'):
         # skip interfaces that are disabled or is configured for dhcp
-        check_disable = "interfaces ethernet {} disable".format(intf)
-        check_dhcp = "interfaces ethernet {} address dhcp".format(intf)
+        check_disable = f'interfaces ethernet {intf} disable'
+        check_dhcp = f'interfaces ethernet {intf} address dhcp'
         if c.exists_effective(check_disable):
             continue
 
         # get addresses configured on the interface
         intf_addresses = c.return_effective_values(
-            "interfaces ethernet {} address".format(intf)
-        )
+            f'interfaces ethernet {intf} address')
         interfaces[intf] = [addr.strip("'") for addr in intf_addresses]
     return interfaces
 
@@ -44,16 +43,16 @@ def apply(config):
 
     for intf, addresses in config.items():
         # bring the interface up
-        cmd = ["ip", "link", "set", "dev", intf, "up"]
+        cmd = f'ip link set dev {intf} up'
         syslog.syslog(cmd)
         run(cmd)
 
         # add configured addresses to interface
         for addr in addresses:
-            if addr == "dhcp":
-                cmd = ["dhclient", intf]
+            if addr == 'dhcp':
+                cmd = ['dhclient', intf]
             else:
-                cmd = ["ip", "address", "add", addr, "dev", intf]
+                cmd = f'ip address add {addr} dev {intf}'
             syslog.syslog(cmd)
             run(cmd)
 
