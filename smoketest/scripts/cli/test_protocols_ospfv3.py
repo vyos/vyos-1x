@@ -150,5 +150,22 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
             cost = str(int(cost) + 10)
             priority = str(int(priority) + 5)
 
+
+    def test_ospfv3_05_area_stub(self):
+        area_stub = '23'
+        area_stub_nosum = '26'
+
+        self.cli_set(base_path + ['area', area_stub, 'area-type', 'stub'])
+        self.cli_set(base_path + ['area', area_stub_nosum, 'area-type', 'stub', 'no-summary'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f'router ospf6', frrconfig)
+        self.assertIn(f' area {area_stub} stub', frrconfig)
+        self.assertIn(f' area {area_stub_nosum} stub no-summary', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
