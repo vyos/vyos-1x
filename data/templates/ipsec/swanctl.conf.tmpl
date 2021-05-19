@@ -1,0 +1,54 @@
+# Created by VyOS - manual changes will be overwritten
+
+{%  if profile is defined %}
+connections {
+{%      for name, profile_conf in profile.items() if "bind" in profile_conf and "tunnel" in profile_conf.bind %}
+{%          set dmvpn_ike = ike_group[profile_conf.ike_group] %}
+{%          set dmvpn_esp = esp_group[profile_conf.esp_group] %}
+{%          for interface in profile_conf.bind.tunnel %}
+    dmvpn-{{ name }}-{{ interface }} {
+        proposals = {{ ciphers.ike[profile_conf.ike_group][:-1] }}
+        version = {{ dmvpn_ike.key_exchange[4:] if "key_exchange" in dmvpn_ike else "0" }}
+        rekey_time = {{ dmvpn_ike.lifetime if 'lifetime' in dmvpn_ike else '28800' }}s
+        keyingtries = 0
+{%              if profile_conf.authentication.mode == 'pre-shared-secret' %}
+        local {
+            auth = psk
+        }
+        remote {
+            auth = psk
+        }
+{%              endif %}
+        children {
+            dmvpn {
+                esp_proposals = {{ ciphers.esp[profile_conf.esp_group][:-1] }}
+                rekey_time = {{ dmvpn_esp.lifetime if 'lifetime' in dmvpn_esp else '3600' }}s
+                rand_time = 540s
+                local_ts = dynamic[gre]
+                remote_ts = dynamic[gre]
+                mode = {{ dmvpn_esp.mode if "mode" in dmvpn_esp else "transport" }}
+{%              if 'dead_peer_detection' in dmvpn_ike and 'action' in dmvpn_ike.dead_peer_detection %}
+                dpd_action = {{ dmvpn_ike.dead_peer_detection.action }}
+{%              endif %}
+{%              if 'compression' in dmvpn_esp and dmvpn_esp['compression'] == 'enable' %}
+                ipcomp = yes
+{%              endif %}
+            }
+        }
+    }
+{%          endfor %}
+{%      endfor %}
+}
+
+secrets {
+{%      for name, profile_conf in profile.items() if "bind" in profile_conf and "tunnel" in profile_conf.bind %}
+{%          if profile_conf.authentication.mode == 'pre-shared-secret' %}
+{%              for interface in profile_conf.bind.tunnel %}
+    ike-dmvpn-{{ interface }} {
+        secret = {{ profile_conf.authentication.pre_shared_secret }}
+    }
+{%              endfor %}
+{%          endif %}
+{%      endfor %}
+}
+{%  endif %}

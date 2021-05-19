@@ -1,3 +1,100 @@
+# Created by VyOS - manual changes will be overwritten
+
+{% import 'ipsec/ike-esp.tmpl' as ike_esp %}
+
+config setup
+    charondebug = "{{ charondebug }}"
+    uniqueids = {{ "no" if disable_uniqreqids is defined else "yes" }}
+
+{%  if site_to_site is defined and "peer" in site_to_site -%}
+{%      for peer, peer_conf in site_to_site.peer.items() %}
+{%          set peer_index = loop.index %}
+{%          set peer_ike = ike_group[peer_conf.ike_group] %}
+{%          set peer_esp = esp_group[peer_conf.default_esp_group] %}
+conn site{{peer_index}} # peer:{{ peer }}
+{%          if peer_conf.authentication.mode in authby %}
+    authby = {{ authby[peer_conf.authentication.mode] }}
+{%          endif %}
+
+{%          if peer_conf.authentication.mode == 'x509' %}
+{%              set cert_file = peer_conf.authentication.x509.cert_file %}
+    leftcert = {{ cert_file if cert_file.startswith(x509_path) else (x509_path + cert_file) }}
+    leftsendcert = always
+    rightca = %same
+{%          elif peer_conf.authentication.mode == 'rsa' %}
+    leftsigkey = localhost.pub
+    rightsigkey = {{ peer_conf.authentication.rsa_key_name }}.pub
+{%          endif %}
+
+    left = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%defaultroute' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
+{%          if "id" in peer_conf.authentication and "use_x509_id" not in peer_conf.authentication %}
+    leftid = "{{ peer_conf.authentication.id }}"
+{%          endif %}
+
+    right = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '%any' }}
+{%          if "remote_id" in peer_conf.authentication %}
+    rightid = "{{ peer_conf.authentication.remote_id }}"
+{%          elif peer[0:1] == '@' %}
+    rightid = "{{ peer }}"
+{%          endif %}
+
+    keylife = 3600s
+    rekeymargin = 540s
+{%          if peer[0:1] == '@' %}
+    rekey = no
+    auto = add
+    keyingtries = %forever
+{%          else %}
+{%              if 'connection_type' not in peer_conf or peer_conf.connection_type == 'initiate' %}
+    auto = start
+    keyingtries = %forever
+{%              endif %}
+{%              if peer_conf.connection_type == 'respond' %}
+    auto = route
+    keyingtries = 1
+{%              endif %}
+{%          endif %}
+
+{{ ike_esp.conn(peer_ike, ciphers.ike[peer_conf.ike_group], peer_esp, ciphers.esp[peer_conf.default_esp_group] if peer_esp else None) }}
+{%          if "vti" in peer_conf and "bind" in peer_conf.vti %}
+{%              set vti_esp = esp_group[peer_conf.vti.esp_group] if "esp_group" in peer_conf.vti else None %}
+conn site{{peer_index}}vti
+    also = site{{peer_index}}
+    leftsubnet = 0.0.0.0/0
+    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+    rightsubnet = 0.0.0.0/0
+    mark = {{ marks[peer_conf.vti.bind] }}
+{{ ike_esp.conn(None, None, vti_esp, ciphers.esp[peer_conf.vti.esp_group] if vti_esp else None) }}
+{%          elif "tunnel" in peer_conf %}
+{%              for tunnel_id, tunnel_conf in peer_conf.tunnel.items() %}
+{%                  set tunnel_esp = esp_group[tunnel_conf.esp_group] if "esp_group" in tunnel_conf else None %}
+{%                  set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '%any' %}
+conn site{{peer_index}}t{{tunnel_id}}
+    also = site{{peer_index}}
+    leftsubnet = {{ tunnel_conf.local.prefix }}[{{ proto }}/{{ tunnel_conf.local.port if "port" in tunnel_conf.local else '%any' }}]
+    rightsubnet = {{ tunnel_conf.remote.prefix }}[{{ proto }}/{{ tunnel_conf.remote.port if "port" in tunnel_conf.remote else '%any' }}]
+{{ ike_esp.conn(None, None, tunnel_esp, ciphers.esp[tunnel_conf.esp_group] if tunnel_esp else None) }}
+{%                  if tunnel_conf.passthrough %}
+conn site{{peer_index}}t{{tunnel_id}}-passthough
+    left = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%defaultroute' }}
+    right = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '%any' }}
+    leftsubnet = {{ tunnel_conf.local.prefix }}
+    rightsubnet = {{ tunnel_conf.local.prefix }}
+    type = passthrough
+    authby = never
+    auto = route
+{%                  endif %}
+{%              endfor %}
+{%          endif %}
+{%      endfor %}
+{%-  endif %}
+
+{%  if include_ipsec_conf is defined %}
+include {{ include_ipsec_conf }}
+{%  endif %}
+
+{%  if delim_ipsec_l2tp_begin is defined -%}
 {{delim_ipsec_l2tp_begin}}
 include {{ipsec_ra_conn_file}}
 {{delim_ipsec_l2tp_end}}
+{%-  endif %}
