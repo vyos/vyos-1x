@@ -18,7 +18,6 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
-from shutil import move
 from sys import exit
 
 from vyos.config import Config
@@ -289,9 +288,9 @@ def generate(dhcp):
         raise ConfigError('Configuration file errors encountered - check your options!')
 
     # Now that we know that the newly rendered configuration is "good" we can
-    # move the temporary configuration to the "real" configuration - we could
-    # also render it two times but that would not be as fast as a move operation
-    move(tmp_file, config_file)
+    # render the "real" configuration
+    render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
+           formater=lambda _: _.replace("&quot;", '"'))
 
     return None
 

@@ -96,9 +96,10 @@ vrrp_sync_group {{ sync_group.name }} {
         }
 
         {% if sync_group.conntrack_sync %}
-            notify_master "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh master {{ sync_group.name }}"
-            notify_backup "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh backup {{ sync_group.name }}"
-            notify_fault "/opt/vyatta/sbin/vyatta-vrrp-conntracksync.sh fault {{ sync_group.name }}"
+        {%  set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
+            notify_master "{{ vyos_helper }} master {{ sync_group.name }}"
+            notify_backup "{{ vyos_helper }} backup {{ sync_group.name }}"
+            notify_fault "{{ vyos_helper }} fault {{ sync_group.name }}"
         {% endif %}
 }
 

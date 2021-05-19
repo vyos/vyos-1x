@@ -121,6 +121,14 @@ def render(
 ##################################
 # Custom template filters follow #
 ##################################
+@register_filter('ip_from_cidr')
+def ip_from_cidr(prefix):
+    """ Take an IPv4/IPv6 CIDR host and strip cidr mask.
+    Example:
+    192.0.2.1/24 -> 192.0.2.1, 2001:db8::1/64 -> 2001:db8::1
+    """
+    from ipaddress import ip_interface
+    return str(ip_interface(prefix).ip)
 
 @register_filter('address_from_cidr')
 def address_from_cidr(prefix):
@@ -361,3 +369,9 @@ def natural_sort(iterable):
         return [convert(c) for c in re.split('([0-9]+)', str(key))]
 
     return sorted(iterable, key=alphanum_key)
+
+@register_filter('get_ipv4')
+def get_ipv4(interface):
+    """ Get interface IPv4 addresses"""
+    from vyos.ifconfig import Interface
+    return Interface(interface).get_addr_v4()

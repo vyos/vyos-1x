@@ -25,6 +25,26 @@
               </constraint>
             </properties>
             <children>
+              <node name="area-type">
+                <properties>
+                  <help>OSPFv3 Area type</help>
+                </properties>
+                <children>
+                  <node name="stub">
+                    <properties>
+                      <help>Stub OSPFv3 area</help>
+                    </properties>
+                    <children>
+                      <leafNode name="no-summary">
+                        <properties>
+                          <help>Do not inject inter-area routes into the stub</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <leafNode name="export-list">
                 <properties>
                   <help>Name of export-list</help>

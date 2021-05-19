@@ -36,6 +36,7 @@ from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.template import is_ipv4
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
@@ -743,28 +744,37 @@ class Interface(Control):
         """
         self.set_interface('proxy_arp_pvlan', enable)
 
-    def get_addr(self):
+    def get_addr_v4(self):
         """
-        Retrieve assigned IPv4 and IPv6 addresses from given interface.
+        Retrieve assigned IPv4 addresses from given interface.
         This is done using the netifaces and ipaddress python modules.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').get_addrs()
-        ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
+        >>> Interface('eth0').get_addr_v4()
+        ['172.16.33.30/24']
         """
-
         ipv4 = []
-        ipv6 = []
-
-        if AF_INET in ifaddresses(self.config['ifname']).keys():
+        if AF_INET in ifaddresses(self.config['ifname']):
             for v4_addr in ifaddresses(self.config['ifname'])[AF_INET]:
                 # we need to manually assemble a list of IPv4 address/prefix
                 prefix = '/' + \
                     str(IPv4Network('0.0.0.0/' + v4_addr['netmask']).prefixlen)
                 ipv4.append(v4_addr['addr'] + prefix)
+        return ipv4
 
-        if AF_INET6 in ifaddresses(self.config['ifname']).keys():
+    def get_addr_v6(self):
+        """
+        Retrieve assigned IPv6 addresses from given interface.
+        This is done using the netifaces and ipaddress python modules.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_addr_v6()
+        ['fe80::20c:29ff:fe11:a174/64']
+        """
+        ipv6 = []
+        if AF_INET6 in ifaddresses(self.config['ifname']):
             for v6_addr in ifaddresses(self.config['ifname'])[AF_INET6]:
                 # Note that currently expanded netmasks are not supported. That means
                 # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
@@ -777,8 +787,18 @@ class Interface(Control):
                 # addresses
                 v6_addr['addr'] = v6_addr['addr'].split('%')[0]
                 ipv6.append(v6_addr['addr'] + prefix)
+        return ipv6
 
-        return ipv4 + ipv6
+    def get_addr(self):
+        """
+        Retrieve assigned IPv4 and IPv6 addresses from given interface.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_addr()
+        ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
+        """
+        return self.get_addr_v4() + self.get_addr_v6()
 
     def add_addr(self, addr):
         """
@@ -1289,6 +1309,16 @@ class Interface(Control):
 
             vif_s_ifname = f'{ifname}.{vif_s_id}'
             vif_s_config['ifname'] = vif_s_ifname
+
+            # It is not possible to change the VLAN encapsulation protocol
+            # "on-the-fly". For this "quirk" we need to actively delete and
+            # re-create the VIF-S interface.
+            if self.exists(vif_s_ifname):
+                cur_cfg = get_interface_config(vif_s_ifname)
+                protocol = dict_search('linkinfo.info_data.protocol', cur_cfg).lower()
+                if protocol != vif_s_config['protocol']:
+                    VLANIf(vif_s_ifname).remove()
+
             s_vlan = VLANIf(vif_s_ifname, **tmp)
             s_vlan.update(vif_s_config)
 

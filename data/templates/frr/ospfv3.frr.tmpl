@@ -50,6 +50,11 @@ router ospf6
  interface {{ interface }} area {{ area_id }}
 {%       endfor %}
 {%     endif %}
+{%     if area_config.area_type is defined and area_config.area_type is not none %}
+{%       for type, type_config in area_config.area_type.items() %}
+ area {{ area_id }} {{ type }} {{ 'no-summary' if type_config.no_summary is defined }}
+{%       endfor %}
+{%     endif %}
 {%     if area_config.range is defined and area_config.range is not none %}
 {%       for prefix, prefix_config in area_config.range.items() %}
  area {{ area_id }} range {{ prefix }} {{ 'advertise' if prefix_config.advertise is defined }} {{ 'not-advertise' if prefix_config.not_advertise is defined }}

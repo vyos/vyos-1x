@@ -414,5 +414,29 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_dhcp_invalid_raw_options(self):
+        shared_net_name = 'SMOKE-5'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['default-router', router])
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        self.cli_set(base_path + ['global-parameters', 'this-is-crap'])
+        # check generate() - dhcpd should not acceot this garbage config
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['global-parameters'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
