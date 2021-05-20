@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <properties>
+      <help>System parameters</help>
+    </properties>
+    <children>
+      <node name="sysctl" owner="${vyos_conf_scripts_dir}/system_sysctl.py">
+        <properties>
+          <help>Configure kernel parameters at runtime</help>
+          <priority>318</priority>
+        </properties>
+        <children>
+          <tagNode name="parameter">
+            <properties>
+              <help>Sysctl key name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_sysctl_parameters.sh</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Sysctl key name</description>
+              </valueHelp>
+              <constraint>
+                <validator name="sysctl"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="value">
+                <properties>
+                  <help>Sysctl configuration value</help>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
