@@ -124,6 +124,22 @@ system {
         server 2.pool.ntp.org {
         }
     }
+    sysctl {
+        all net.ipv4.conf.eth0.tag {
+            value 1
+        }
+        all net.ipv4.conf.eth1.tag {
+            value 1
+        }
+        custom net.mpls.default_ttl {
+            value 10
+        }
+        custom net.mpls.ip_ttl_propagate {
+            value 0
+        }
+        net.ipv4.igmp_max_memberships 5
+        net.ipv4.ipfrag_time 4
+    }
     syslog {
         global {
             facility all {
