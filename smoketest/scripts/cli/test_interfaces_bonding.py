@@ -22,7 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 from vyos.util import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
@@ -105,7 +105,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # verify config
         for interface in self._interfaces:
-            tmp = get_json_iface_options(interface)
+            tmp = get_interface_config(interface)
 
             self.assertEqual(min_links, tmp['linkinfo']['info_data']['min_links'])
             # check LACP default rate
@@ -124,7 +124,7 @@ class BondingInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # verify config
         for interface in self._interfaces:
-            tmp = get_json_iface_options(interface)
+            tmp = get_interface_config(interface)
 
             # check LACP minimum links (default value)
             self.assertEqual(0,         tmp['linkinfo']['info_data']['min_links'])
