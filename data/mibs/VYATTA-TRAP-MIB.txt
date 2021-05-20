@@ -1,0 +1,97 @@
+VYATTA-TRAP-MIB DEFINITIONS ::= BEGIN
+
+    IMPORTS
+            MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE, enterprises
+                FROM SNMPv2-SMI
+            MODULE-COMPLIANCE, OBJECT-GROUP
+                FROM SNMPv2-CONF
+    ;
+
+    vyattaTrap MODULE-IDENTITY
+           LAST-UPDATED "201305060000Z" -- May 6, 2013
+           ORGANIZATION "Vyatta, A Brocade Company"
+           CONTACT-INFO
+           "                      Support
+           Postal:                Vyatta, A Brocade Company
+                                  1301 Shoreway Road Suite 200
+                                  Belmont, California 94002
+           Tel:                   +1 650 413 7200
+           E-Mail:                support@vyatta.com"
+       DESCRIPTION
+          "The MIB module to describe traps for the Vyatta
+          Router."
+      ::= { enterprises 30803 1 }
+
+
+-- Trap Support Objects
+
+mgmtTrap OBJECT IDENTIFIER ::= { vyattaTrap 1 }
+mgmtEventObjects OBJECT IDENTIFIER ::= { mgmtTrap 1 }
+mgmtEvent OBJECT IDENTIFIER ::= { mgmtTrap 2 }
+
+mgmtEventUser OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The user that initiated the event the trap is reporting."
+    ::= { mgmtEventObjects 1 }
+
+
+mgmtEventSource OBJECT-TYPE
+    SYNTAX      INTEGER {
+                 unknown (0),
+                 firewall (1) }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The source of the event the trap is reporting."
+    ::= { mgmtEventObjects 2 }
+
+
+mgmtEventType OBJECT-TYPE
+    SYNTAX      INTEGER {
+                 unknown (0),
+                 added (1),
+                 deleted (2),
+                 changed (3) }
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The event type the trap is reporting."
+    ::= { mgmtEventObjects 3 }
+
+
+mgmtEventPrevCfg OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The previous configuration. This field is only valid
+        for mgmtEventType deleted and changed."
+    ::= { mgmtEventObjects 4 }
+
+mgmtEventCurrCfg OBJECT-TYPE
+    SYNTAX      OCTET STRING
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION
+        "The current configuration. This field is only valid
+        for mgmtEventType added and changed."
+    ::= { mgmtEventObjects 5 }
+
+
+-- Traps
+
+    mgmtEventTrap NOTIFICATION-TYPE
+        OBJECTS { mgmtEventUser,
+                  mgmtEventSource,
+                  mgmtEventType,
+                  mgmtEventPrevCfg,
+                  mgmtEventCurrCfg }
+        STATUS  current
+        DESCRIPTION
+           "Notification of a configuration related event."
+   ::= { mgmtEvent 1 }
+
+END
