@@ -29,7 +29,7 @@ from vyos.util import read_file
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import process_named_running
-from vyos.util import get_json_iface_options
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 
@@ -353,7 +353,7 @@ class BasicInterfaceTest:
 
             for interface in self._interfaces:
                 for vif_s in self._qinq_range:
-                    tmp = get_json_iface_options(f'{interface}.{vif_s}')
+                    tmp = get_interface_config(f'{interface}.{vif_s}')
                     self.assertEqual(dict_search('linkinfo.info_data.protocol', tmp), '802.1ad')
 
                     for vif_c in self._vlan_range:

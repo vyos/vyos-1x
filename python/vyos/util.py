@@ -651,7 +651,7 @@ def dict_search(path, dict):
         c = c.get(p, {})
     return c.get(parts[-1], None)
 
-def get_json_iface_options(interface):
+def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
     """
