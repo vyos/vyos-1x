@@ -1353,13 +1353,19 @@ class Interface(Control):
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
             
+            # We need to ensure that the string format is consistent, and we need to exclude redundant spaces.
             sep = ' '
-            
             if 'egress_qos' in vif_config:
-                tmp['egress_qos'] = sep.join(vif_config['egress_qos'])
+                # Unwrap strings into arrays
+                egress_qos_array = vif_config['egress_qos'].split()
+                # The split array is spliced according to the fixed format
+                tmp['egress_qos'] = sep.join(egress_qos_array)
                 
             if 'ingress_qos' in vif_config:
-                tmp['ingress_qos'] = sep.join(vif_config['ingress_qos'])
+                # Unwrap strings into arrays
+                ingress_qos_array = vif_config['ingress_qos'].split()
+                # The split array is spliced according to the fixed format
+                tmp['ingress_qos'] = sep.join(ingress_qos_array)
                 
             # Since setting the QoS control parameters in the later stage will 
             # not completely delete the old settings,

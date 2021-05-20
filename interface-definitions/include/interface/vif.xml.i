@@ -23,28 +23,26 @@
       <properties>
         <help>VLAN egress QoS</help>
         <valueHelp>
-          <format>from:to</format>
-          <description>The format is FROM:TO with multiple mappings separated by spaces.</description>
+          <format>txt</format>
+          <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
         </valueHelp>
         <constraint>
-          <regex>[:0-7]+$</regex>
+          <regex>[:0-7 ]+$</regex>
         </constraint>
-        <constraintErrorMessage>QoS mapping should be in the format of '0:7' with numbers 0-9</constraintErrorMessage>
-        <multi />
+        <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="ingress-qos">
       <properties>
         <help>VLAN ingress QoS</help>
         <valueHelp>
-          <format>from:to</format>
-          <description>The format is FROM:TO with multiple mappings separated by spaces.</description>
+          <format>txt</format>
+          <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
         </valueHelp>
         <constraint>
-          <regex>[:0-7]+$</regex>
+          <regex>[:0-7 ]+$</regex>
         </constraint>
-        <constraintErrorMessage>QoS mapping should be in the format of '0:7' with numbers 0-9</constraintErrorMessage>
-        <multi />
+        <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
       </properties>
     </leafNode>
     #include <include/interface/interface-ipv4-options.xml.i>
