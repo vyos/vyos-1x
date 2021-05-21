@@ -55,6 +55,16 @@ def copy_rtradv(c, old_base, interface):
                 min_max = interval.split('-')[0]
                 c.set(new_base + ['interval', min_max], value=tmp)
 
+		# cleanup boolean nodes in individual route
+		route_base = new_base + ['route']
+		if c.exists(route_base):
+		    for route in config.list_nodes(route_base):
+			    if c.exists(route_base + [route, 'remove-route']):
+				    tmp = c.return_value(route_base + [route, 'remove-route'])
+					c.delete(route_base + [route, 'remove-route'])
+					if tmp == 'false':
+					   c.set(route_base + [route, 'no-remove-route'])
+					   
         # cleanup boolean nodes in individual prefix
         prefix_base = new_base + ['prefix']
         if c.exists(prefix_base):
