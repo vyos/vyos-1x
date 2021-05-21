@@ -22,9 +22,10 @@
     <leafNode name="egress-qos">
       <properties>
         <help>VLAN egress QoS</help>
-        <completionHelp>
-          <script>echo Format for qos mapping, e.g.: '0:1 1:6 7:6'</script>
-        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
+        </valueHelp>
         <constraint>
           <regex>[:0-7 ]+$</regex>
         </constraint>
@@ -34,9 +35,10 @@
     <leafNode name="ingress-qos">
       <properties>
         <help>VLAN ingress QoS</help>
-        <completionHelp>
-          <script>echo Format for qos mapping '0:1 1:6 7:6'</script>
-        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
+        </valueHelp>
         <constraint>
           <regex>[:0-7 ]+$</regex>
         </constraint>
