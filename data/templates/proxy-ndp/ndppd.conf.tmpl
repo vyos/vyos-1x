@@ -21,8 +21,8 @@
 {%         if config.outbound_interface not in global.ndppd_interfaces %}
 {%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.outbound_interface] %}
 {%         endif   %}
-{%         if config.translation.prefix is defined  %}
-{%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.outbound_interface,'rule':config.translation.prefix}] %}
+{%         if config.translation.address is defined and config.translation.address | is_ip_network  %}
+{%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.outbound_interface,'rule':config.translation.address}] %}
 {%         endif    %}
 {%     endif    %}
 {%   endfor %}
