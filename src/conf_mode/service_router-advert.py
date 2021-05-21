@@ -64,7 +64,6 @@ def get_config(config=None):
                     rtradv['interface'][interface]['route'][route] = dict_merge(
                         default_route_values, rtradv['interface'][interface]['route'][route])
 
-
             if 'name_server' in rtradv['interface'][interface]:
                 # always use a list when dealing with nameservers - eases the template generation
                 if isinstance(rtradv['interface'][interface]['name_server'], str):
@@ -95,7 +94,7 @@ def verify(rtradv):
 
                 if not (int(valid_lifetime) > int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
-                    
+
     return None
 
 def generate(rtradv):

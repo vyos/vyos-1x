@@ -30,17 +30,19 @@ interface {{ iface }} {
     AdvOtherConfigFlag {{ 'on' if interface[iface].other_config_flag is defined else 'off' }};
     AdvRetransTimer {{ interface[iface].retrans_timer }};
     AdvCurHopLimit {{ interface[iface].hop_limit }};
-{%     for route in interface[iface].route %}
+{%     if interface[iface].route is defined %}
+{%       for route in interface[iface].route %}
     route {{ route }} {
-{%     if interface[iface].route[route].valid_lifetime is defined %}
+{%         if interface[iface].route[route].valid_lifetime is defined %}
         AdvRouteLifetime {{ interface[iface].route[route].valid_lifetime }};
-{%     endif %}
-{%     if interface[iface].route[route].route_preference is defined %}
+{%         endif %}
+{%         if interface[iface].route[route].route_preference is defined %}
         AdvRoutePreference {{ interface[iface].route[route].route_preference }};
-{%     endif %}
+{%         endif %}
         RemoveRoute {{ 'off' if interface[iface].route[route].no_remove_route is defined else 'on' }};
     };
-{%     endfor %}
+{%       endfor %}
+{%     endif %}
 {%     for prefix in interface[iface].prefix %}
     prefix {{ prefix }} {
         AdvAutonomous {{ 'off' if interface[iface].prefix[prefix].no_autonomous_flag is defined else 'on' }};
