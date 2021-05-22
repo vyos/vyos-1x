@@ -34,8 +34,8 @@ if args.source or args.destination:
     tmp = json.loads(tmp)
     
     format_nat66_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
-    print(format_nat66_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
-    print(format_nat66_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
+    print(format_nat_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
+    print(format_nat_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
 
     data_json = jmespath.search('nftables[?rule].rule[?chain]', tmp)
     for idx in range(0, len(data_json)):
@@ -86,7 +86,7 @@ if args.source or args.destination:
             else:
                 tran_addr = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
         
-        print(format_nat66_rule.format(rule, srcdest, tran_addr, interface))
+        print(format_nat_rule.format(rule, srcdest, tran_addr, interface))
     
     exit(0)
 else:
