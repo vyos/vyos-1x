@@ -611,6 +611,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'{family}', frrconfig)
             self.assertIn(f'local-install {flowspec_int}', frrconfig)
 
+
     def test_bgp_10_vrf_simple(self):
         router_id = '127.0.0.3'
         vrfs = ['red', 'green', 'blue']
@@ -643,6 +644,28 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             # vrfconfig = self.getFRRconfig(f'vrf {vrf}')
             # zebra_route_map = f' ip protocol bgp route-map {route_map_in}'
             # self.assertIn(zebra_route_map, vrfconfig)
+
+
+    def test_bgp_11_confederation(self):
+        router_id = '127.10.10.2'
+        confed_id = str(int(ASN) + 1)
+        confed_asns = '10 20 30 40'
+
+        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_set(base_path + ['parameters', 'confederation', 'identifier', confed_id])
+        for asn in confed_asns.split():
+            self.cli_set(base_path + ['parameters', 'confederation', 'peers', asn])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' bgp router-id {router_id}', frrconfig)
+        self.assertIn(f' bgp confederation identifier {confed_id}', frrconfig)
+        self.assertIn(f' bgp confederation peers {confed_asns}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
