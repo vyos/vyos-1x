@@ -420,7 +420,7 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
  bgp confederation identifier {{ parameters.confederation.identifier }}
 {%     endif %}
 {%     if parameters.confederation.peers is defined and parameters.confederation.peers is not none %}
- bgp confederation peers {{ parameters.confederation.peers }}
+ bgp confederation peers {{ parameters.confederation.peers | join(' ') }}
 {%     endif %}
 {%   endif %}
 {%   if parameters.dampening is defined and parameters.dampening is defined and parameters.dampening.half_life is defined and parameters.dampening.half_life is not none %}

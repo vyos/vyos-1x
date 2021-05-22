@@ -1180,6 +1180,7 @@
             <constraint>
               <validator name="numeric" argument="--range 1-4294967294"/>
             </constraint>
+            <multi/>
           </properties>
         </leafNode>
       </children>
