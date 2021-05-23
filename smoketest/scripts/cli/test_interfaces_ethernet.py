@@ -116,7 +116,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.BaseTest):
         self.session.commit()
 
         for interface in self._interfaces:
-            cpus = read_file('/sys/class/net/eth1/queues/rx-0/rps_cpus')
+            cpus = read_file(f'/sys/class/net/{interface}/queues/rx-0/rps_cpus')
             # remove the nasty ',' separation on larger strings
             cpus = cpus.replace(',','')
             cpus = int(cpus, 16)
