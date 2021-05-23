@@ -470,8 +470,6 @@ class BasicInterfaceTest:
             if not self._test_qinq:
                 self.skipTest('not supported')
 
-            self.debug = True
-
             for interface in self._interfaces:
                 base = self._base_path + [interface]
                 for option in self._options.get(interface, []):
