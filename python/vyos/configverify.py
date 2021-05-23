@@ -45,6 +45,16 @@ def verify_mtu(config):
             raise ConfigError(f'Interface MTU too high, ' \
                               f'maximum supported MTU is {max_mtu}!')
 
+def verify_mtu_parent(config, parent):
+    if 'mtu' not in config or 'mtu' not in parent:
+        return
+    
+    mtu = int(config['mtu'])
+    parent_mtu = int(parent['mtu'])
+    if mtu > parent_mtu:
+        raise ConfigError(f'Interface MTU ({mtu}) too high, ' \
+                          f'parent interface MTU is {parent_mtu}!')
+
 def verify_mtu_ipv6(config):
     """
     Common helper function used by interface implementations to perform
@@ -222,6 +232,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
+        verify_mtu_parent(vlan, config)
 
     # 802.1ad (Q-in-Q) VLANs
     for s_vlan in config.get('vif_s', {}):
@@ -229,12 +240,15 @@ def verify_vlan_config(config):
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
+        verify_mtu_parent(s_vlan, config)
 
         for c_vlan in s_vlan.get('vif_c', {}):
             c_vlan = s_vlan['vif_c'][c_vlan]
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)
+            verify_mtu_parent(c_vlan, config)
+            verify_mtu_parent(c_vlan, s_vlan)
 
 def verify_accel_ppp_base_service(config):
     """
