@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,11 +23,20 @@ parser.add_argument("-e", "--exclude", type=str, help="Exclude specified device 
 args = parser.parse_args()
 
 disks = set()
-with open('/proc/partitions') as partitions_file:
-    for line in partitions_file:
-        fields = line.strip().split()
-        if len(fields) == 4 and fields[3].isalpha() and fields[3] != 'name':
-            disks.add(fields[3])
+with open('/proc/partitions') as f:
+  table = f.read()
+
+for line in table.splitlines()[1:]:
+    fields = line.strip().split()
+    # probably an empty line at the top
+    if len(fields) == 0:
+        continue
+    disks.add(fields[3])
+
+if 'loop0' in disks:
+    disks.remove('loop0')
+if 'sr0' in disks:
+    disks.remove('sr0')
 
 if args.exclude:
     disks.remove(args.exclude)
