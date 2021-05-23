@@ -53,18 +53,40 @@
               </node>
             </children>
           </node>
-          <node name="scsi">
+          <node name="storage">
             <properties>
-              <help>Show SCSI device information</help>
+              <help>Show system storage information</help>
             </properties>
-            <command>lsscsi</command>
             <children>
-              <node name="detail">
+              <leafNode name="nvme">
                 <properties>
-                  <help>Show detailed SCSI device information</help>
+                  <help>Show NVMe device information</help>
                 </properties>
-                <command>lsscsi -vvv</command>
+                <command>sudo nvme list</command>
+              </leafNode>
+              <node name="scsi">
+                <properties>
+                  <help>Show SCSI device information</help>
+                </properties>
+                <command>lsscsi</command>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detailed SCSI device information</help>
+                    </properties>
+                    <command>lsscsi -vvv</command>
+                  </node>
+                </children>
               </node>
+              <tagNode name="smart">
+                <properties>
+                  <help>Show S.M.A.R.T. device information</help>
+                  <completionHelp>
+                    <script>ls /dev | egrep '([hsv]d[a-z]|nvme[0-9]+n[0-9])$'</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo smartctl -a "/dev/$5" | sed 1,3d</command>
+              </tagNode>
             </children>
           </node>
           <node name="usb">
