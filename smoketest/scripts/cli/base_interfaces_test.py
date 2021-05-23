@@ -25,6 +25,7 @@ from netifaces import interfaces
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.util import read_file
@@ -305,7 +306,50 @@ class BasicInterfaceTest:
                         self.assertTrue(is_intf_addr_assigned(vif, address))
 
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
-        
+
+        def test_vif_8021q_mtu_limits(self):
+            # XXX: This testcase is not allowed to run as first testcase, reason
+            # is the Wireless test will first load the wifi kernel hwsim module
+            # which creates a wlan0 and wlan1 interface which will fail the
+            # tearDown() test in the end that no interface is allowed to survive!
+            if not self._test_vlan:
+                self.skipTest('not supported')
+
+            mtu_1500 = '1500'
+            mtu_9000 = '9000'
+
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                self.cli_set(base + ['mtu', mtu_1500])
+                for option in self._options.get(interface, []):
+                    self.cli_set(base + option.split())
+
+                for vlan in self._vlan_range:
+                    base = self._base_path + [interface, 'vif', vlan]
+                    self.cli_set(base + ['mtu', mtu_9000])
+
+            # check validate() - VIF MTU must not be larger the parent interface
+            # MTU size.
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            # Change MTU on base interface to be the same as on the VIF interface
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                self.cli_set(base + ['mtu', mtu_9000])
+
+            self.cli_commit()
+
+            # Verify MTU on base and VIF interfaces
+            for interface in self._interfaces:
+                tmp = get_interface_config(interface)
+                self.assertEqual(tmp['mtu'], int(mtu_9000))
+
+                for vlan in self._vlan_range:
+                    tmp = get_interface_config(f'{interface}.{vlan}')
+                    self.assertEqual(tmp['mtu'], int(mtu_9000))
+
+
         def test_vif_qos_change(self):
             # XXX: This testcase is not allowed to run as first testcase, reason
             # is the Wireless test will first load the wifi kernel hwsim module
