@@ -40,11 +40,14 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_interface_values = defaults(base + ['interface'])
-    # we deal with prefix defaults later on
+    # we deal with prefix, route defaults later on
     if 'prefix' in default_interface_values:
         del default_interface_values['prefix']
-
+    if 'route' in default_interface_values:
+        del default_interface_values['route']
+        
     default_prefix_values = defaults(base + ['interface', 'prefix'])
+    default_route_values = defaults(base + ['interface', 'route'])
 
     if 'interface' in rtradv:
         for interface in rtradv['interface']:
@@ -55,6 +58,11 @@ def get_config(config=None):
                 for prefix in rtradv['interface'][interface]['prefix']:
                     rtradv['interface'][interface]['prefix'][prefix] = dict_merge(
                         default_prefix_values, rtradv['interface'][interface]['prefix'][prefix])
+                        
+            if 'route' in rtradv['interface'][interface]:
+                for route in rtradv['interface'][interface]['route']:
+                    rtradv['interface'][interface]['route'][route] = dict_merge(
+                        default_route_values, rtradv['interface'][interface]['route'][route])
 
             if 'name_server' in rtradv['interface'][interface]:
                 # always use a list when dealing with nameservers - eases the template generation
