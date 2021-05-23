@@ -912,7 +912,7 @@
                   </leafNode>
                   <leafNode name="as-path-prepend">
                     <properties>
-                      <help>as-path-prepend_help</help>
+                      <help>Prepend string for a Border Gateway Protocol (BGP) AS-path attribute</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>BGP AS path prepend string (ex: "64501 64501")</description>
@@ -961,7 +961,7 @@
                   </node>
                   <leafNode name="community">
                     <properties>
-                      <help>community_help</help>
+                      <help>Border Gateway Protocl (BGP) community attribute</help>
                       <completionHelp>
                         <list>local-AS no-advertise no-export internet additive none</list>
                       </completionHelp>
@@ -1129,7 +1129,7 @@
                   </leafNode>
                   <leafNode name="origin">
                     <properties>
-                      <help>origin_help</help>
+                      <help>Border Gateway Protocl (BGP) origin code</help>
                       <completionHelp>
                         <list>igp egp incomplete</list>
                       </completionHelp>
