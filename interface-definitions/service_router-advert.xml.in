@@ -154,6 +154,72 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <tagNode name="route">
+                <properties>
+                  <help>IPv6 route to be advertised in Router Advertisements (RAs)</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 route to be advertized</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="valid-lifetime">
+                    <properties>
+                      <help>Time in seconds that the route will remain valid (default: 1800 seconds)</help>
+                      <completionHelp>
+                        <list>infinity</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>1-4294967295</format>
+                        <description>Time in seconds that the route will remain valid</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>infinity</format>
+                        <description>Route will remain preferred forever</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                        <regex>^(infinity)$</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1800</defaultValue>
+                  </leafNode>
+                  <leafNode name="route-preference">
+                    <properties>
+                      <help>Preference associated with the route,</help>
+                      <completionHelp>
+                        <list>low medium high</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>low</format>
+                        <description>Route has low preference</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>medium</format>
+                        <description>Route has medium preference (default)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>high</format>
+                        <description>Route has high preference</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(low|medium|high)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Route preference must be low, medium or high</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>medium</defaultValue>
+                  </leafNode>
+                  <leafNode name="no-remove-route">
+                    <properties>
+                      <help>Do not announce this route with a zero second lifetime upon shutdown</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
               <tagNode name="prefix">
                 <properties>
                   <help>IPv6 prefix to be advertised in Router Advertisements (RAs)</help>
