@@ -165,5 +165,36 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
                 route_map_name = route_map + level + afi
                 self.assertIn(f' default-information originate {afi} {level} always route-map {route_map_name} metric {metric}', tmp)
 
+
+    def test_isis_05_password(self):
+        password = 'foo'
+
+        self.isis_base_config()
+
+        self.cli_set(base_path + ['area-password', 'plaintext-password', password])
+        self.cli_set(base_path + ['area-password', 'md5', password])
+        self.cli_set(base_path + ['domain-password', 'plaintext-password', password])
+        self.cli_set(base_path + ['domain-password', 'md5', password])
+
+        # verify() - can not use both md5 and plaintext-password for area-password
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area-password', 'md5', password])
+
+        # verify() - can not use both md5 and plaintext-password for domain-password
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['domain-password', 'md5', password])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router isis {domain}')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' domain-password clear {password}', tmp)
+        self.assertIn(f' area-password clear {password}', tmp)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
