@@ -29,6 +29,13 @@ domain = 'VyOS'
 net = '49.0001.1921.6800.1002.00'
 
 class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._interfaces = Section.interfaces('ethernet')
+
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
+
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
@@ -36,21 +43,23 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def isis_base_config(self):
+        self.cli_set(base_path + ['net', net])
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface])
+
     def test_isis_01_redistribute(self):
         prefix_list = 'EXPORT-ISIS'
         route_map = 'EXPORT-ISIS'
         rule = '10'
+
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', rule, 'action', 'permit'])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', rule, 'prefix', '203.0.113.0/24'])
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'action', 'permit'])
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'match', 'ip', 'address', 'prefix-list', prefix_list])
 
-        self.cli_set(base_path + ['net', net])
+        self.isis_base_config()
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
-
-        interfaces = Section.interfaces('ethernet')
-        for interface in interfaces:
-            self.cli_set(base_path + ['interface', interface])
 
         # Commit all changes
         self.cli_commit()
@@ -60,7 +69,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' redistribute ipv4 connected level-2 route-map {route_map}', tmp)
 
-        for interface in interfaces:
+        for interface in self._interfaces:
             tmp = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f' ip router isis {domain}', tmp)
 
@@ -104,14 +113,10 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
 
-        self.cli_set(base_path + ['net', net])
+        self.isis_base_config()
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
-
-        interfaces = Section.interfaces('ethernet')
-        for interface in interfaces:
-            self.cli_set(base_path + ['interface', interface])
-
         self.cli_set(base_path + ['route-map', route_map])
+
         # commit changes
         self.cli_commit()
 
