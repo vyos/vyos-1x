@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 
 from base_interfaces_test import BasicInterfaceTest
@@ -29,10 +30,20 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
         cls._test_vlan = True
         cls._test_qinq = True
         cls._base_path = ['interfaces', 'pseudo-ethernet']
-        cls._options = {
-            'peth0': ['source-interface eth1'],
-            'peth1': ['source-interface eth1'],
-        }
+
+        cls._options = {}
+        # we need to filter out VLAN interfaces identified by a dot (.)
+        # in their name - just in case!
+        if 'TEST_ETH' in os.environ:
+            for tmp in os.environ['TEST_ETH'].split():
+                cls._options.update({f'p{tmp}' : [f'source-interface {tmp}']})
+
+        else:
+            for tmp in Section.interfaces('ethernet'):
+                if '.' in tmp:
+                    continue
+                cls._options.update({f'p{tmp}' : [f'source-interface {tmp}']})
+
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
         super(cls, cls).setUpClass()
