@@ -135,12 +135,18 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
             base = self._base_path + [interface]
             self.cli_set(base + ['enable-vlan'])
         super().test_vif_8021q_lower_up_down()
-    
-    def test_vif_qos_change(self):
+
+    def test_vif_8021q_qos_change(self):
         for interface in self._interfaces:
             base = self._base_path + [interface]
             self.cli_set(base + ['enable-vlan'])
-        super().test_vif_qos_change()
+        super().test_vif_8021q_qos_change()
+
+    def test_vif_8021q_mtu_limits(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['enable-vlan'])
+        super().test_vif_8021q_mtu_limits()
 
     def test_bridge_vlan_filter(self):
         vif_vlan = 2

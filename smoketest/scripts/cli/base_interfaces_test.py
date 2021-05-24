@@ -323,6 +323,10 @@ class BasicInterfaceTest:
                 self.cli_set(base + ['mtu', mtu_1500])
                 for option in self._options.get(interface, []):
                     self.cli_set(base + option.split())
+                    if 'source-interface' in option:
+                        iface = option.split()[-1]
+                        iface_type = Section.section(iface)
+                        self.cli_set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
@@ -350,7 +354,7 @@ class BasicInterfaceTest:
                     self.assertEqual(tmp['mtu'], int(mtu_9000))
 
 
-        def test_vif_qos_change(self):
+        def test_vif_8021q_qos_change(self):
             # XXX: This testcase is not allowed to run as first testcase, reason
             # is the Wireless test will first load the wifi kernel hwsim module
             # which creates a wlan0 and wlan1 interface which will fail the
