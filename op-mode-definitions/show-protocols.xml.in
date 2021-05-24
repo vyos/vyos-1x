@@ -8,6 +8,9 @@
         </properties>
         <children>
           <node name="bfd">
+            <properties>
+              <help>Show Bidirectional Forwarding Detection (BFD)</help>
+            </properties>
             <children>
               <node name="peer">
                 <properties>
@@ -46,6 +49,30 @@
                 </properties>
                 <command>vtysh -c "show bfd peers brief"</command>
               </leafNode>
+            </children>
+          </node>
+          <node name="static">
+            <properties>
+              <help>Show static protocol parameters</help>
+            </properties>
+            <children>
+              <node name="arp">
+                <properties>
+                  <help>Show Address Resolution Protocol (ARP) information</help>
+                </properties>
+                <command>/usr/sbin/arp -e -n</command>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py -b</script>
+                      </completionHelp>
+                    </properties>
+                    <command>/usr/sbin/arp -e -n -i "$6"</command>
+                  </tagNode>
+                </children>
+              </node>
             </children>
           </node>
         </children>
