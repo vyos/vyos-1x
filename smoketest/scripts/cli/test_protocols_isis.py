@@ -66,6 +66,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         self.isis_base_config()
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
+        self.cli_set(base_path + ['log-adjacency-changes'])
 
         # Commit all changes
         self.cli_commit()
@@ -73,6 +74,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         # Verify all changes
         tmp = self.getFRRconfig(f'router isis {domain}')
         self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' log-adjacency-changes', tmp)
         self.assertIn(f' redistribute ipv4 connected level-2 route-map {route_map}', tmp)
 
         for interface in self._interfaces:

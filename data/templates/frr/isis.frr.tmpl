@@ -20,6 +20,9 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  domain-password clear {{ domain_password.plaintext_password }}
 {%   endif %}
 {% endif %}
+{% if log_adjacency_changes is defined %}
+ log-adjacency-changes
+{% endif %}
 {% if lsp_gen_interval is defined and lsp_gen_interval is not none %}
  lsp-gen-interval {{ lsp_gen_interval }}
 {% endif %}

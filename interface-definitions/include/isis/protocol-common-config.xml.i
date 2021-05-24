@@ -108,6 +108,12 @@
     </constraint>
   </properties>
 </leafNode>
+<leafNode name="log-adjacency-changes">
+  <properties>
+    <help>Log adjacency state changes</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <leafNode name="lsp-gen-interval">
   <properties>
     <help>Minimum interval between regenerating same LSP</help>
