@@ -136,5 +136,28 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['policy', 'route-map', route_map])
 
+    def test_isis_04_default_information(self):
+        metric = '50'
+        route_map = 'default-foo-'
+
+        self.isis_base_config()
+        for afi in ['ipv4', 'ipv6']:
+            for level in ['level-1', 'level-2']:
+                self.cli_set(base_path + ['default-information', 'originate', afi, level, 'always'])
+                self.cli_set(base_path + ['default-information', 'originate', afi, level, 'metric', metric])
+                self.cli_set(base_path + ['default-information', 'originate', afi, level, 'route-map', route_map + level + afi])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router isis {domain}')
+        self.assertIn(f' net {net}', tmp)
+
+        for afi in ['ipv4', 'ipv6']:
+            for level in ['level-1', 'level-2']:
+                route_map_name = route_map + level + afi
+                self.assertIn(f' default-information originate {afi} {level} always route-map {route_map_name} metric {metric}', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
