@@ -24,6 +24,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
+from vyos.configverify import verify_mtu_parent
 from vyos.ifconfig import MACVLANIf
 from vyos import ConfigError
 
@@ -45,6 +46,9 @@ def get_config(config=None):
     mode = leaf_node_changed(conf, ['mode'])
     if mode: peth.update({'mode_old' : mode})
 
+    if 'source_interface' in peth:
+        peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
+                                            peth['source_interface'])
     return peth
 
 def verify(peth):
@@ -55,9 +59,10 @@ def verify(peth):
     verify_source_interface(peth)
     verify_vrf(peth)
     verify_address(peth)
-
+    verify_mtu_parent(peth, peth['parent'])
     # use common function to verify VLAN configuration
     verify_vlan_config(peth)
+
     return None
 
 def generate(peth):
