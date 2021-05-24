@@ -16,6 +16,7 @@
 
 import unittest
 
+from vyos.ifconfig import Section
 from base_interfaces_test import BasicInterfaceTest
 
 class PEthInterfaceTest(BasicInterfaceTest.BaseTest):
