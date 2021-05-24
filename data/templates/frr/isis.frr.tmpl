@@ -127,12 +127,10 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   endfor %}
 {% endif %}
 {% if level is defined and level is not none %}
-{%   if level == 'level-1' %}
- is-type level-1
-{%   elif level == 'level-2'  %}
+{%   if level == 'level-2'  %}
  is-type level-2-only
-{%   elif level == 'level-1-2'  %}
- is-type level-1-2
+{%   else %}
+ is-type {{ level }}
 {%   endif %}
 {% endif %}
 !
