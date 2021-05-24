@@ -141,6 +141,7 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   for iface, iface_config in interface.items() %}
 interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ip router isis VyOS
+ ipv6 router isis VyOS
 {%     if iface_config.bfd is defined %}
  isis bfd
 {%     endif %}

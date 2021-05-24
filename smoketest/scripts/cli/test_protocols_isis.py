@@ -80,6 +80,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             tmp = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f' ip router isis {domain}', tmp)
+            self.assertIn(f' ipv6 router isis {domain}', tmp)
 
         self.cli_delete(['policy', 'route-map', route_map])
         self.cli_delete(['policy', 'prefix-list', prefix_list])
