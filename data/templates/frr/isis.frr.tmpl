@@ -101,11 +101,10 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  area-password clear {{ area_password.plaintext_password }}
 {% endif %}
 {% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
-{%   for level in default_information.originate.ipv4 if default_information.originate.ipv4 is defined %}
- default-information originate ipv4 {{ level | replace('_', '-') }}
-{%   endfor %}
-{%   for level in default_information.originate.ipv6 if default_information.originate.ipv6 is defined %}
- default-information originate ipv6 {{ level | replace('_', '-') }} always
+{%   for afi, afi_config in default_information.originate.items() %}
+{%     for level, level_config in afi_config.items() %}
+ default-information originate {{ afi }} {{ level | replace('_', '-') }} {{ 'always' if level_config.always is defined }} {{ 'route-map ' ~ level_config.route_map if level_config.route_map is defined }} {{ 'metric ' ~ level_config.metric if level_config.metric is defined }}
+{%     endfor %}
 {%   endfor %}
 {% endif %}
 {% if redistribute is defined and redistribute.ipv4 is defined and redistribute.ipv4 is not none %}

@@ -39,18 +39,7 @@
             <help>Distribute default route for IPv4</help>
           </properties>
           <children>
-            <leafNode name="level-1">
-              <properties>
-                <help>Distribute default route into level-1</help>
-                <valueless/>
-              </properties>
-            </leafNode>
-            <leafNode name="level-2">
-              <properties>
-                <help>Distribute default route into level-2</help>
-                <valueless/>
-              </properties>
-            </leafNode>
+            #include <include/isis/default-information-level.xml.i>
           </children>
         </node>
         <node name="ipv6">
@@ -58,30 +47,7 @@
             <help>Distribute default route for IPv6</help>
           </properties>
           <children>
-            <leafNode name="level-1">
-              <properties>
-                <help>Distribute default route into level-1</help>
-                <completionHelp>
-                  <list>always</list>
-                </completionHelp>
-                <valueHelp>
-                  <format>always</format>
-                  <description>Always advertise default route</description>
-                </valueHelp>
-              </properties>
-            </leafNode>
-            <leafNode name="level-2">
-              <properties>
-                <help>Distribute default route into level-2</help>
-                <completionHelp>
-                  <list>always</list>
-                </completionHelp>
-                <valueHelp>
-                  <format>always</format>
-                  <description>Always advertise default route</description>
-                </valueHelp>
-              </properties>
-            </leafNode>
+            #include <include/isis/default-information-level.xml.i>
           </children>
         </node>
       </children>
@@ -677,18 +643,7 @@
         </constraint>
       </properties>
     </leafNode>
-    <leafNode name="metric">
-      <properties>
-        <help>Set default metric for circuit</help>
-        <valueHelp>
-          <format>u32:0-16777215</format>
-          <description>Default metric value</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-16777215"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/isis/metric.xml.i>
     <node name="network">
       <properties>
         <help>Set network type</help>
