@@ -1,0 +1,782 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nfirewall" owner="${vyos_conf_scripts_dir}/firewall.py">
+    <properties>
+      <priority>199</priority>
+      <help>Firewall</help>
+    </properties>
+    <children>
+      <leafNode name="all-ping">
+        <properties>
+          <help>Policy for handling of all IPv4 ICMP echo requests</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of all IPv4 ICMP echo requests</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of all IPv4 ICMP echo requests</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="broadcast-ping">
+        <properties>
+          <help>Policy for handling broadcast IPv4 ICMP echo and timestamp requests</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of broadcast IPv4 ICMP echo/timestamp requests</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of broadcast IPv4 ICMP echo/timestamp requests</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="config-trap">
+        <properties>
+          <help>SNMP trap generation on firewall configuration changes</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable sending SNMP trap on firewall configuration change</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable sending SNMP trap on firewall configuration change</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <node name="group">
+        <properties>
+          <help>Firewall group</help>
+        </properties>
+        <children>
+          <tagNode name="address-group">
+            <properties>
+              <help>Firewall address-group</help>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to match</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4range</format>
+                    <description>IPv4 range to match (e.g. 10.0.0.1-10.0.0.200)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv4-range"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/firewall/description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-address-group">
+            <properties>
+              <help>Firewall ipv6-address-group</help>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/firewall/description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-network-group">
+            <properties>
+              <help>Network-group member</help>
+            </properties>
+            <children>
+              #include <include/firewall/description.xml.i>
+              <leafNode name="network">
+                <properties>
+                  <help>Network-group member</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="network-group">
+            <properties>
+              <help>Firewall network-group</help>
+            </properties>
+            <children>
+              #include <include/firewall/description.xml.i>
+              <leafNode name="network">
+                <properties>
+                  <help>Network-group member</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 Subnet to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="port-group">
+            <properties>
+              <help>Firewall port-group</help>
+            </properties>
+            <children>
+              #include <include/firewall/description.xml.i>
+              <leafNode name="port">
+                <properties>
+                  <help>Port-group member</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Named port (any name in /etc/services, e.g., http)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Numbered port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Numbered port range (e.g. 1001-1050)</description>
+                  </valueHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <leafNode name="ip-src-route">
+        <properties>
+          <help>Policy for handling IPv4 packets with source route option</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of IPv4 packets with source route option</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of IPv4 packets with source route option</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <tagNode name="ipv6-name">
+        <properties>
+          <help>IPv6 firewall rule-set name</help>
+        </properties>
+        <children>
+          #include <include/firewall/name-default-action.xml.i>
+          #include <include/firewall/description.xml.i>
+          #include <include/firewall/name-default-log.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number (1-9999)</help>
+            </properties>
+            <children>
+              #include <include/firewall/action.xml.i>
+              #include <include/firewall/description.xml.i>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/firewall/common-rule.xml.i>
+              <node name="hop-limit">
+                <properties>
+                  <help>Hop Limit</help>
+                </properties>
+                <children>
+                  <leafNode name="eq">
+                    <properties>
+                      <help>Value to match a hop limit equal to it</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>Hop limit equal to value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="gt">
+                    <properties>
+                      <help>Value to match a hop limit greater than or equal to it</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>Hop limit greater than value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="lt">
+                    <properties>
+                      <help>Value to match a hop limit less than or equal to it</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>Hop limit less than value</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="icmpv6">
+                <properties>
+                  <help>ICMPv6 type and code information</help>
+                </properties>
+                <children>
+                  <leafNode name="type">
+                    <properties>
+                      <help>ICMP type-name</help>
+                      <completionHelp>
+                        <list>any echo-reply pong destination-unreachable network-unreachable host-unreachable protocol-unreachable port-unreachable fragmentation-needed source-route-failed network-unknown host-unknown network-prohibited host-prohibited TOS-network-unreachable TOS-host-unreachable communication-prohibited host-precedence-violation precedence-cutoff source-quench redirect network-redirect host-redirect TOS-network-redirect TOS host-redirect echo-request ping router-advertisement router-solicitation time-exceeded ttl-exceeded ttl-zero-during-transit ttl-zero-during-reassembly parameter-problem ip-header-bad required-option-missing timestamp-request timestamp-reply address-mask-request address-mask-reply</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>any</format>
+                        <description>Any ICMP type/code</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>echo-reply</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>pong</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>destination-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>network-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>host-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>protocol-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>port-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>fragmentation-needed</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>source-route-failed</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>network-unknown</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>host-unknown</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>network-prohibited</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>host-prohibited</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TOS-network-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TOS-host-unreachable</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>communication-prohibited</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>host-precedence-violation</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>precedence-cutoff</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>source-quench</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>redirect</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>network-redirect</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>host-redirect</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TOS-network-redirect</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>TOS host-redirect</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>echo-request</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ping</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>router-advertisement</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>router-solicitation</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>time-exceeded</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ttl-exceeded</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ttl-zero-during-transit</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ttl-zero-during-reassembly</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>parameter-problem</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ip-header-bad</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>required-option-missing</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>timestamp-request</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>timestamp-reply</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>address-mask-request</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>address-mask-reply</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(any|echo-reply|pong|destination-unreachable|network-unreachable|host-unreachable|protocol-unreachable|port-unreachable|fragmentation-needed|source-route-failed|network-unknown|host-unknown|network-prohibited|host-prohibited|TOS-network-unreachable|TOS-host-unreachable|communication-prohibited|host-precedence-violation|precedence-cutoff|source-quench|redirect|network-redirect|host-redirect|TOS-network-redirect|TOS host-redirect|echo-request|ping|router-advertisement|router-solicitation|time-exceeded|ttl-exceeded|ttl-zero-during-transit|ttl-zero-during-reassembly|parameter-problem|ip-header-bad|required-option-missing|timestamp-request|timestamp-reply|address-mask-request|address-mask-reply)$</regex>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="p2p">
+                <properties>
+                  <help>P2P application packets</help>
+                </properties>
+                <children>
+                  <leafNode name="all">
+                    <properties>
+                      <help>AppleJuice/BitTorrent/Direct Connect/eDonkey/eMule/Gnutella/KaZaA application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="applejuice">
+                    <properties>
+                      <help>AppleJuice application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="bittorrent">
+                    <properties>
+                      <help>BitTorrent application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="directconnect">
+                    <properties>
+                      <help>Direct Connect application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="edonkey">
+                    <properties>
+                      <help>eDonkey/eMule application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="gnutella">
+                    <properties>
+                      <help>Gnutella application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="kazaa">
+                    <properties>
+                      <help>KaZaA application packets</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <leafNode name="ipv6-receive-redirects">
+        <properties>
+          <help>Policy for handling received ICMPv6 redirect messages</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of received ICMPv6 redirect messages</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of received ICMPv6 redirect messages</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="ipv6-src-route">
+        <properties>
+          <help>Policy for handling IPv6 packets with routing extension header</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of IPv6 packets with routing header type 2</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of IPv6 packets with routing header</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="log-martians">
+        <properties>
+          <help>Policy for logging IPv4 packets with invalid addresses</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable logging of IPv4 packets with invalid addresses</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable logging of Ipv4 packets with invalid addresses</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <tagNode name="name">
+        <properties>
+          <help>IPv4 firewall rule-set name</help>
+        </properties>
+        <children>
+          #include <include/firewall/name-default-action.xml.i>
+          #include <include/firewall/description.xml.i>
+          #include <include/firewall/name-default-log.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number (1-9999)</help>
+            </properties>
+            <children>
+              #include <include/firewall/action.xml.i>
+              #include <include/firewall/description.xml.i>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/firewall/common-rule.xml.i>
+              <node name="icmp">
+                <properties>
+                  <help>ICMP type and code information</help>
+                </properties>
+                <children>
+                  <leafNode name="code">
+                    <properties>
+                      <help>ICMP code (0-255)</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>ICMP code (0-255)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="type">
+                    <properties>
+                      <help>ICMP type (0-255)</help>
+                      <valueHelp>
+                        <format>u32:0-255</format>
+                        <description>ICMP type (0-255)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  #include <include/firewall/icmp-type-name.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <leafNode name="receive-redirects">
+        <properties>
+          <help>Policy for handling received IPv4 ICMP redirect messages</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable processing of received IPv4 ICMP redirect messages</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable processing of received IPv4 ICMP redirect messages</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="send-redirects">
+        <properties>
+          <help>Policy for sending IPv4 ICMP redirect messages</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable sending IPv4 ICMP redirect messages</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable sending IPv4 ICMP redirect messages</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="source-validation">
+        <properties>
+          <help>Policy for source validation by reversed path, as specified in RFC3704</help>
+          <completionHelp>
+            <list>strict loose disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>strict</format>
+            <description>Enable Strict Reverse Path Forwarding as defined in RFC3704</description>
+          </valueHelp>
+          <valueHelp>
+            <format>loose</format>
+            <description>Enable Loose Reverse Path Forwarding as defined in RFC3704</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>No source validation</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(strict|loose|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <node name="state-policy">
+        <properties>
+          <help>Global firewall state-policy</help>
+        </properties>
+        <children>
+          <node name="established">
+            <properties>
+              <help>Global firewall policy for packets part of an established connection</help>
+            </properties>
+            <children>
+              #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
+            </children>
+          </node>
+          <node name="invalid">
+            <properties>
+              <help>Global firewall policy for packets part of an invalid connection</help>
+            </properties>
+            <children>
+              #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
+            </children>
+          </node>
+          <node name="related">
+            <properties>
+              <help>Global firewall policy for packets part of a related connection</help>
+            </properties>
+            <children>
+              #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+      <leafNode name="syn-cookies">
+        <properties>
+          <help>Policy for using TCP SYN cookies with IPv4</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable use of TCP SYN cookies with IPv4</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable use of TCP SYN cookies with IPv4</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+      <leafNode name="twa-hazards-protection">
+        <properties>
+          <help>RFC1337 TCP TIME-WAIT assasination hazards protection</help>
+          <completionHelp>
+            <list>enable disable</list>
+          </completionHelp>
+          <valueHelp>
+            <format>enable</format>
+            <description>Enable RFC1337 TIME-WAIT hazards protection</description>
+          </valueHelp>
+          <valueHelp>
+            <format>disable</format>
+            <description>Disable RFC1337 TIME-WAIT hazards protection</description>
+          </valueHelp>
+          <constraint>
+            <regex>^(enable|disable)$</regex>
+          </constraint>
+        </properties>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

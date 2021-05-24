@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+
+import sys
+import re
+from vyos.template import is_ipv6
+
+if __name__ == '__main__':
+    if len(sys.argv)>1:
+        ipv6_range = sys.argv[1]
+        # Regex for ipv6-ipv6 https://regexr.com/
+        if re.search('([a-f0-9:]+:+)+[a-f0-9]+-([a-f0-9:]+:+)+[a-f0-9]+', ipv6_range):
+            for tmp in ipv6_range.split('-'):
+                if not is_ipv6(tmp):
+                    sys.exit(1)
+
+    sys.exit(0)

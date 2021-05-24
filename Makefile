@@ -41,6 +41,7 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/firewall/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
+	rm -rf $(TMPL_DIR)/nfirewall
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
