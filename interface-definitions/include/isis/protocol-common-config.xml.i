@@ -540,7 +540,7 @@
         <help>Delay used while in LONG_WAIT</help>
         <valueHelp>
           <format>u32:0-60000</format>
-          <description>Delay used while in LONG_WAIT state (in ms)</description>
+          <description>Delay used while in LONG_WAIT state in ms</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-60000"/>
@@ -552,7 +552,7 @@
         <help>Time with no received IGP events before considering IGP stable</help>
         <valueHelp>
           <format>u32:0-60000</format>
-          <description>Time with no received IGP events before considering IGP stable (in ms)</description>
+          <description>Time with no received IGP events before considering IGP stable in ms</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-60000"/>
@@ -564,7 +564,7 @@
         <help>Maximum duration needed to learn all the events related to a single failure</help>
         <valueHelp>
           <format>u32:0-60000</format>
-          <description>Maximum duration needed to learn all the events related to a single failure (in ms)</description>
+          <description>Maximum duration needed to learn all the events related to a single failure in ms</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-60000"/>
@@ -578,7 +578,7 @@
     <help>Minimum interval between SPF calculations</help>
     <valueHelp>
       <format>u32:1-120</format>
-      <description>Minimum interval between consecutive SPFs in seconds</description>
+      <description>Interval in seconds</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-120"/>
@@ -692,10 +692,10 @@
     </leafNode>
     <leafNode name="psnp-interval">
       <properties>
-        <help>Set PSNP interval in seconds</help>
+        <help>Set PSNP interval</help>
         <valueHelp>
           <format>u32:0-127</format>
-          <description>Priority value</description>
+          <description>PSNP interval in seconds</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-127"/>
