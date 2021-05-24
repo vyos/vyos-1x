@@ -1,7 +1,7 @@
 <!-- include start from interface/interface-parameters-key.xml.i -->
 <leafNode name="key">
   <properties>
-    <help>Tunnel key</help>
+    <help>Tunnel key (only GRE tunnels)</help>
     <valueHelp>
       <format>u32</format>
       <description>Tunnel key</description>
