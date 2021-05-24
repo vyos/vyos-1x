@@ -58,6 +58,12 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'action', 'permit'])
         self.cli_set(['policy', 'route-map', route_map, 'rule', rule, 'match', 'ip', 'address', 'prefix-list', prefix_list])
 
+        self.cli_set(base_path)
+
+        # verify() - net id and interface are mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.isis_base_config()
         self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
 
