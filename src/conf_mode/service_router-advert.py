@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2019 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -45,7 +45,7 @@ def get_config(config=None):
         del default_interface_values['prefix']
     if 'route' in default_interface_values:
         del default_interface_values['route']
-        
+
     default_prefix_values = defaults(base + ['interface', 'prefix'])
     default_route_values = defaults(base + ['interface', 'route'])
 
@@ -58,7 +58,7 @@ def get_config(config=None):
                 for prefix in rtradv['interface'][interface]['prefix']:
                     rtradv['interface'][interface]['prefix'][prefix] = dict_merge(
                         default_prefix_values, rtradv['interface'][interface]['prefix'][prefix])
-                        
+
             if 'route' in rtradv['interface'][interface]:
                 for route in rtradv['interface'][interface]['route']:
                     rtradv['interface'][interface]['route'][route] = dict_merge(
