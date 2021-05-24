@@ -68,7 +68,6 @@
         </valueHelp>
       </properties>
     </leafNode>
-<!--
     <leafNode name="md5">
       <properties>
         <help>MD5 authentication type</help>
@@ -78,7 +77,6 @@
         </valueHelp>
       </properties>
     </leafNode>
--->
   </children>
 </node>
 <leafNode name="dynamic-hostname">

@@ -128,9 +128,11 @@ def verify(isis):
                 raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
 
     # If md5 and plaintext-password set at the same time
-    if 'area_password' in isis:
-        if {'md5', 'plaintext_password'} <= set(isis['encryption']):
-            raise ConfigError('Can not use both md5 and plaintext-password for ISIS area-password!')
+    for password in ['area_password', 'domain_password']:
+        if password in isis:
+            if {'md5', 'plaintext_password'} <= set(isis[password]):
+                tmp = password.replace('_', '-')
+                raise ConfigError(f'Can use either md5 or plaintext-password for {tmp}!')
 
     # If one param from delay set, but not set others
     if 'spf_delay_ietf' in isis:

@@ -13,8 +13,12 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if set_overload_bit is defined %}
  set-overload-bit
 {% endif %}
-{% if domain_password is defined and domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
+{% if domain_password is defined and domain_password is not none %}
+{%   if domain_password.md5 is defined and domain_password.md5 is not none %}
+ domain-password md5 {{ domain_password.plaintext_password }}
+{%   elif domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
  domain-password clear {{ domain_password.plaintext_password }}
+{%   endif %}
 {% endif %}
 {% if lsp_gen_interval is defined and lsp_gen_interval is not none %}
  lsp-gen-interval {{ lsp_gen_interval }}
@@ -95,10 +99,12 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
  spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
 {% endif %}
-{% if area_password is defined and area_password.md5 is defined and area_password.md5 is not none %}
+{% if area_password is defined and area_password is not none %}
+{%   if area_password.md5 is defined and area_password.md5 is not none %}
  area-password md5 {{ area_password.md5 }}
-{% elif area_password is defined and area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
+{%   elif area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
  area-password clear {{ area_password.plaintext_password }}
+{%   endif %}
 {% endif %}
 {% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
 {%   for afi, afi_config in default_information.originate.items() %}
