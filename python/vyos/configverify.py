@@ -1,4 +1,4 @@
-# Copyright 2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -48,7 +48,7 @@ def verify_mtu(config):
 def verify_mtu_parent(config, parent):
     if 'mtu' not in config or 'mtu' not in parent:
         return
-    
+
     mtu = int(config['mtu'])
     parent_mtu = int(parent['mtu'])
     if mtu > parent_mtu:
