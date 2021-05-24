@@ -227,7 +227,13 @@
                 <children>
                   <leafNode name="no-pmtu-discovery">
                     <properties>
-                      <help>Disable path MTU discovery</help>
+                      <help>Disable Path MTU Discovery on this tunnel</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ignore-df">
+                    <properties>
+                      <help>Enable IPv4 DF suppression on this tunnel</help>
                       <valueless/>
                     </properties>
                   </leafNode>

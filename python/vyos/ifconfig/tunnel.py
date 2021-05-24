@@ -62,6 +62,7 @@ class TunnelIf(Interface):
     mapping_ipv4 = {
         'parameters.ip.key'               : 'key',
         'parameters.ip.no_pmtu_discovery' : 'nopmtudisc',
+        'parameters.ip.ignore_df'         : 'ignore-df',
         'parameters.ip.tos'               : 'tos',
         'parameters.ip.ttl'               : 'ttl',
         'parameters.erspan.direction'     : 'erspan_dir',

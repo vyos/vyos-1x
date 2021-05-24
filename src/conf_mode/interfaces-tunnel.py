@@ -109,6 +109,14 @@ def verify(tunnel):
         if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
             raise ConfigError('Can not disable PMTU discovery for given encapsulation')
 
+    if dict_search('parameters.ip.ignore_df', tunnel) != None:
+        if tunnel['encapsulation'] not in ['gretap']:
+            raise ConfigError('Option ignore-df can only be used on GRETAP tunnels!')
+
+        if dict_search('parameters.ip.no_pmtu_discovery', tunnel) == None:
+            raise ConfigError('Option ignore-df path MTU discovery to be disabled!')
+
+
 def generate(tunnel):
     return None
 
