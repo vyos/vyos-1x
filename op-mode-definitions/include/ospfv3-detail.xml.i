@@ -4,6 +4,6 @@
     <help>Show detailed information</help>
   </properties>
   <!-- FRR uses ospf6 where we use ospfv3, thus alter the command -->
-  <command>vtysh -c "show ipv6 ospf6 ${@:4}"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <!-- included end -->
