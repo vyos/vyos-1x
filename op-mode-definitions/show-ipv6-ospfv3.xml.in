@@ -381,18 +381,34 @@
                 </properties>
                 <children>
                   #include <include/ospfv3-detail.xml.i>
-                  <node name="network">
+                  <tagNode name="network">
                     <properties>
-                      <help>Show linkstate Network information</help>
+                      <help>Show linkstate Network information (Router ID)</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
                     </properties>
-                    <command>vtysh -c "show ipv6 ospf6 linkstate network"</command>
-                  </node>
-                  <node name="router">
+                    <children>
+                      <tagNode name="link-state-id">
+                        <properties>
+                          <help>Specify Link state ID as IPv4 address notation</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 linkstate network $6 $8"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                  <tagNode name="router">
                     <properties>
                       <help>Show linkstate Router information</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
                     </properties>
-                    <command>vtysh -c "show ipv6 ospf6 linkstate router"</command>
-                  </node>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                  </tagNode>
                 </children>
               </node>
               <node name="neighbor">
