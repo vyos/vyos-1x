@@ -312,7 +312,7 @@ class BasicInterfaceTest:
                     if 'source-interface' in option:
                         iface = option.split()[-1]
                         iface_type = Section.section(iface)
-                        self.cli_set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
+                        self.session.set(['interfaces', iface_type, iface, 'mtu', mtu_9000])
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
