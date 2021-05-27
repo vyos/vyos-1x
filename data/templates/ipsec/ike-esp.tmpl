@@ -12,7 +12,7 @@
 {%      if "dead_peer_detection" in ike %}
     dpdaction = {{ ike.dead_peer_detection.action }}
     dpdtimeout = {{ ike.dead_peer_detection.timeout }}
-    dpdinterval = {{ ike.dead_peer_detection.interval }}
+    dpddelay = {{ ike.dead_peer_detection.interval }}
 {%      endif %}
 {%      if "key_exchange" in ike and ike.key_exchange == "ikev1" and "mode" in ike and ike.mode == "aggressive" %}
     aggressive = yes

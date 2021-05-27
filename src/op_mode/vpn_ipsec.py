@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,6 +20,7 @@ import re
 import struct
 import sys
 import argparse
+from subprocess import TimeoutExpired
 
 from vyos.util import ask_yes_no, call, cmd, process_named_running
 from Crypto.PublicKey.RSA import importKey
@@ -45,6 +46,8 @@ def migrate_to_vyatta_key(path):
 def find_rsa_keys():
     keys = []
     for path in RSA_KEY_PATHS:
+        if not os.path.exists(path):
+            continue
         for filename in os.listdir(path):
             full_path = os.path.join(path, filename)
             if os.path.isfile(full_path) and full_path.endswith(".key"):
@@ -96,34 +99,40 @@ def generate_x509_pair(name):
     print(f'CSR: {X509_PATH}{name}.csr')
     print(f'Private key: {X509_PATH}{name}.key')
 
-def get_peer_connection(peer, tunnel):
-    search = rf'^conn (site[\d]+) # peer:{peer}$'
+def get_peer_connections(peer, tunnel, return_all = False):
+    search = rf'^conn (peer-{peer}-(tunnel-[\d]+|vti))$'
+    matches = []
     with open(IPSEC_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
-                suffix = f't{tunnel}' if tunnel.isnumeric() else tunnel
-                return (result[1] + suffix)
-    return None
+                suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
+                if return_all or (result[2] == suffix):
+                    matches.append(result[1])
+    return matches
 
 def reset_peer(peer, tunnel):
     if not peer:
         print('Invalid peer, aborting')
         return
 
-    if not tunnel or tunnel == 'all':
-        tunnel = ''
+    conns = get_peer_connections(peer, tunnel, return_all = (not tunnel or tunnel == 'all'))
 
-    conn = get_peer_connection(peer, tunnel)
-
-    if not conn:
-        print('Peer not found, aborting')
+    if not conns:
+        print('Tunnel(s) not found, aborting')
         return
 
-    call(f'sudo /usr/sbin/ipsec down {conn}')
-    result = call(f'sudo /usr/sbin/ipsec up {conn}')
+    result = True
+    for conn in conns:
+        try:
+            call(f'sudo /usr/sbin/ipsec down {conn}', timeout = 10)
+            call(f'sudo /usr/sbin/ipsec up {conn}', timeout = 10)
+        except TimeoutExpired as e:
+            print(f'Timed out while resetting {conn}')
+            result = False
 
-    print('Peer reset result: ' + ('success' if result == 0 else 'failed'))
+
+    print('Peer reset result: ' + ('success' if result else 'failed'))
 
 def get_profile_connection(profile, tunnel = None):
     search = rf'(dmvpn-{profile}-[\w]+)' if tunnel == 'all' else rf'(dmvpn-{profile}-{tunnel})'

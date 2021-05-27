@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -75,6 +75,8 @@ DHCP_BASE = "/var/lib/dhcp/dhclient"
 LOCAL_KEY_PATHS = ['/config/auth/', '/config/ipsec.d/rsa-keys/']
 X509_PATH = '/config/auth/'
 
+conf = None
+
 def resync_l2tp(conf):
     if not conf.exists('vpn l2tp remote-access ipsec-settings '):
         return
@@ -90,13 +92,14 @@ def resync_nhrp(conf):
     run('/opt/vyatta/sbin/vyos-update-nhrp.pl --set_ipsec')
 
 def get_config(config=None):
+    global conf
     if config:
         conf = config
     else:
         conf = Config()
     base = ['vpn', 'ipsec']
     if not conf.exists(base):
-        return conf, None
+        return None
 
     # retrieve common dictionary keys
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
@@ -140,9 +143,9 @@ def get_config(config=None):
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
                 esp_ciphers[group] = ','.join(ciphers) + '!'
 
-    return conf, ipsec
+    return ipsec
 
-def verify(conf, ipsec):
+def verify(ipsec):
     if not ipsec:
         return None
 
@@ -201,13 +204,13 @@ def verify(conf, ipsec):
                     raise ConfigError(f"Private key not found on site-to-site peer {peer}")
 
             if peer_conf['authentication']['mode'] == 'rsa':
-                if not verify_rsa_local_key(conf):
+                if not verify_rsa_local_key():
                     raise ConfigError(f"Invalid key on rsa-keys local-key")
 
                 if 'rsa_key_name' not in peer_conf['authentication']:
                     raise ConfigError(f"Missing rsa-key-name on site-to-site peer {peer}")
 
-                if not verify_rsa_key(conf, peer_conf['authentication']['rsa_key_name']):
+                if not verify_rsa_key(peer_conf['authentication']['rsa_key_name']):
                     raise ConfigError(f"Invalid rsa-key-name on site-to-site peer {peer}")
 
             if 'local_address' not in peer_conf and 'dhcp_interface' not in peer_conf:
@@ -224,7 +227,7 @@ def verify(conf, ipsec):
 
                 if 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
-                    if not get_vti_interface(conf, vti_interface):
+                    if not get_vti_interface(vti_interface):
                         raise ConfigError(f'Invalid VTI interface on site-to-site peer {peer}')
 
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
@@ -235,21 +238,30 @@ def verify(conf, ipsec):
                     if 'esp_group' not in tunnel_conf and not has_default_esp:
                         raise ConfigError(f"Missing esp-group on tunnel {tunnel} for site-to-site peer {peer}")
 
-                    if 'local' not in tunnel_conf or 'prefix' not in tunnel_conf['local']:
-                        raise ConfigError(f"Missing local prefix on tunnel {tunnel} for site-to-site peer {peer}")
+                    esp_group_name = tunnel_conf['esp_group'] if 'esp_group' in tunnel_conf else peer_conf['default_esp_group']
 
-                    if 'remote' not in tunnel_conf or 'prefix' not in tunnel_conf['remote']:
-                        raise ConfigError(f"Missing local prefix on tunnel {tunnel} for site-to-site peer {peer}")
+                    if esp_group_name not in ipsec['esp_group']:
+                        raise ConfigError(f"Invalid esp-group on tunnel {tunnel} for site-to-site peer {peer}")
 
-def get_rsa_local_key(conf):
+                    esp_group = ipsec['esp_group'][esp_group_name]
+
+                    if 'mode' in esp_group and esp_group['mode'] == 'transport':
+                        if 'protocol' in tunnel_conf and ((peer in ['any', '0.0.0.0']) or ('local_address' not in peer_conf or peer_conf['local_address'] in ['any', '0.0.0.0'])):
+                            raise ConfigError(f"Fixed local-address or peer required when a protocol is defined with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
+
+                        if ('local' in tunnel_conf and 'prefix' in tunnel_conf['local']) or ('remote' in tunnel_conf and 'prefix' in tunnel_conf['remote']):
+                            raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
+
+def get_rsa_local_key():
+    global conf
     base = ['vpn', 'rsa-keys']
     if not conf.exists(base + ['local-key', 'file']):
         return False
 
     return conf.return_value(base + ['local-key', 'file'])
 
-def verify_rsa_local_key(conf):
-    file = get_rsa_local_key(conf)
+def verify_rsa_local_key():
+    file = get_rsa_local_key()
 
     if not file:
         return False
@@ -260,13 +272,14 @@ def verify_rsa_local_key(conf):
 
     return False
 
-def verify_rsa_key(conf, key_name):
+def verify_rsa_key(key_name):
+    global conf
     base = ['vpn', 'rsa-keys']
     if not conf.exists(base):
         return False
     return conf.exists(base + ['rsa-key-name', key_name, 'rsa-key'])
 
-def generate(conf, ipsec):
+def generate(ipsec):
     data = {}
 
     if ipsec:
@@ -301,6 +314,8 @@ def generate(conf, ipsec):
                     get_mark(vti_interface)
                 else:
                     for tunnel, tunnel_conf in peer_conf['tunnel'].items():
+                        if ('local' not in tunnel_conf or 'prefix' not in tunnel_conf['local']) or ('remote' not in tunnel_conf or 'prefix' not in tunnel_conf['remote']):
+                            continue
                         local_prefix = tunnel_conf['local']['prefix']
                         remote_prefix = tunnel_conf['remote']['prefix']
                         passthrough = cidr_fit(local_prefix, remote_prefix)
@@ -309,7 +324,7 @@ def generate(conf, ipsec):
         data['authby'] = authby_translate
         data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
         data['marks'] = marks
-        data['rsa_local_key'] = verify_rsa_local_key(conf)
+        data['rsa_local_key'] = verify_rsa_local_key()
         data['x509_path'] = X509_PATH
 
         if 'logging' in ipsec and 'log_modes' in ipsec['logging']:
@@ -324,7 +339,7 @@ def generate(conf, ipsec):
     render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
     render("/etc/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
 
-def apply(conf, ipsec):
+def apply(ipsec):
     if not ipsec:
         if conf.exists('vpn l2tp '):
             call('sudo /usr/sbin/ipsec rereadall')
@@ -332,7 +347,7 @@ def apply(conf, ipsec):
             call('sudo /usr/sbin/swanctl -q')
         else:
             call('sudo /usr/sbin/ipsec stop')
-        cleanup_vti_interfaces(conf)
+        cleanup_vti_interfaces()
         resync_l2tp(conf)
         resync_nhrp(conf)
         return
@@ -346,9 +361,9 @@ def apply(conf, ipsec):
     should_start = ('profile' in ipsec or ('site_to_site' in ipsec and 'peer' in ipsec['site_to_site']))
 
     if should_start:
-        apply_vti_interfaces(conf, ipsec)
+        apply_vti_interfaces(ipsec)
     else:
-        cleanup_vti_interfaces(conf)
+        cleanup_vti_interfaces()
 
     if not process_named_running('charon'):
         args = ''
@@ -373,13 +388,13 @@ def apply(conf, ipsec):
     resync_l2tp(conf)
     resync_nhrp(conf)
 
-def apply_vti_interfaces(conf, ipsec):
+def apply_vti_interfaces(ipsec):
     # While vyatta-vti-config.pl is still active, this interface will get deleted by cleanupVtiNotConfigured()
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
                 vti_interface = peer_conf['vti']['bind']
-                vti_conf = get_vti_interface(conf, vti_interface)
+                vti_conf = get_vti_interface(vti_interface)
                 if not vti_conf:
                     continue
                 vti_mtu = vti_conf['mtu'] if 'mtu' in vti_conf else 1500
@@ -406,14 +421,16 @@ def apply_vti_interfaces(conf, ipsec):
                     description = vti_conf['description']
                     call(f'sudo echo "{description}" > /sys/class/net/{vti_interface}/ifalias')
 
-def get_vti_interface(conf, vti_interface):
+def get_vti_interface(vti_interface):
+    global conf
     section = conf.get_config_dict(['interfaces', 'vti'], get_first_key=True)
     for interface, interface_conf in section.items():
         if interface == vti_interface:
             return interface_conf
     return None
 
-def cleanup_vti_interfaces(conf):
+def cleanup_vti_interfaces():
+    global conf
     section = conf.get_config_dict(['interfaces', 'vti'], get_first_key=True)
     for interface, interface_conf in section.items():
         call(f'sudo /usr/sbin/ip link delete {interface} type vti', stderr=DEVNULL)
@@ -435,10 +452,10 @@ def get_dhcp_address(interface):
 
 if __name__ == '__main__':
     try:
-        c, ipsec = get_config()
-        verify(c, ipsec)
-        generate(c, ipsec)
-        apply(c, ipsec)
+        ipsec = get_config()
+        verify(ipsec)
+        generate(ipsec)
+        apply(ipsec)
     except ConfigError as e:
         print(e)
         exit(1)
