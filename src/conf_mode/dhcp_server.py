@@ -18,6 +18,8 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
+from netaddr import IPAddress
+from netaddr import IPRange
 from sys import exit
 
 from vyos.config import Config
@@ -163,8 +165,7 @@ def verify(dhcp):
 
             # Check if DHCP address range is inside configured subnet declaration
             if 'range' in subnet_config:
-                range_start = []
-                range_stop = []
+                networks = []
                 for range, range_config in subnet_config['range'].items():
                     if not {'start', 'stop'} <= set(range_config):
                         raise ConfigError(f'DHCP range "{range}" start and stop address must be defined!')
@@ -179,18 +180,16 @@ def verify(dhcp):
                         raise ConfigError(f'DHCP range "{range}" stop address must be greater or equal\n' \
                                           'to the ranges start address!')
 
-                    # Range start address must be unique
-                    if range_config['start'] in range_start:
-                        raise ConfigError('Conflicting DHCP lease range: Pool start\n' \
-                                          'address "{start}" defined multipe times!'.format(range_config))
+                    for network in networks:
+                        start = range_config['start']
+                        stop = range_config['stop']
+                        if start in network:
+                            raise ConfigError(f'Range "{range}" start address "{start}" already part of another range!')
+                        if stop in network:
+                            raise ConfigError(f'Range "{range}" stop address "{stop}" already part of another range!')
 
-                    # Range stop address must be unique
-                    if range_config['stop'] in range_start:
-                        raise ConfigError('Conflicting DHCP lease range: Pool stop\n' \
-                                          'address "{stop}" defined multipe times!'.format(range_config))
-
-                    range_start.append(range_config['start'])
-                    range_stop.append(range_config['stop'])
+                    tmp = IPRange(range_config['start'], range_config['stop'])
+                    networks.append(tmp)
 
             if 'failover' in subnet_config:
                 for key in ['local_address', 'peer_address', 'name', 'status']:
