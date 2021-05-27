@@ -1,0 +1,67 @@
+[ req ]
+ default_bits           = 2048
+ default_keyfile        = privkey.pem
+ distinguished_name     = req_distinguished_name
+ string_mask            = utf8only
+ attributes             = req_attributes
+ dirstring_type         = nobmp
+# SHA-1 is deprecated, so use SHA-2 instead.
+ default_md             = sha256
+# Extension to add when the -x509 option is used.
+ x509_extensions        = v3_ca
+
+[ req_distinguished_name ]
+ countryName                    = Country Name (2 letter code)
+ countryName_min                = 2
+ countryName_max                = 2
+ ST             = State Name 
+ localityName                   = Locality Name (eg, city)
+ organizationName               = Organization Name (eg, company)
+ organizationalUnitName         = Organizational Unit Name (eg, department)
+ commonName                     = Common Name (eg, Device hostname)
+ commonName_max                 = 64
+ emailAddress                   = Email Address
+ emailAddress_max               = 40
+[ req_attributes ]
+ challengePassword              = A challenge password (optional)
+ challengePassword_min          = 4
+ challengePassword_max          = 20
+[ v3_ca ]
+ subjectKeyIdentifier=hash
+ authorityKeyIdentifier=keyid:always,issuer:always
+ basicConstraints = critical, CA:true
+ keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+[ v3_intermediate_ca ]
+# Extensions for a typical intermediate CA (`man x509v3_config`).
+ subjectKeyIdentifier = hash
+ authorityKeyIdentifier = keyid:always,issuer
+ basicConstraints = critical, CA:true, pathlen:0
+ keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+[ usr_cert ]
+# Extensions for client certificates (`man x509v3_config`).
+ basicConstraints = CA:FALSE
+ nsCertType = client, email
+ nsComment = "OpenSSL Generated Client Certificate"
+ subjectKeyIdentifier = hash
+ authorityKeyIdentifier = keyid,issuer
+ keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+ extendedKeyUsage = clientAuth, emailProtection
+[ server_cert ]
+# Extensions for server certificates (`man x509v3_config`).
+ basicConstraints = CA:FALSE
+ nsCertType = server
+ nsComment = "OpenSSL Generated Server Certificate"
+ subjectKeyIdentifier = hash
+ authorityKeyIdentifier = keyid,issuer:always
+ keyUsage = critical, digitalSignature, keyEncipherment
+ extendedKeyUsage = serverAuth
+[ crl_ext ]
+# Extension for CRLs (`man x509v3_config`).
+ authorityKeyIdentifier=keyid:always
+[ ocsp ]
+# Extension for OCSP signing certificates (`man ocsp`).
+ basicConstraints = CA:FALSE
+ subjectKeyIdentifier = hash
+ authorityKeyIdentifier = keyid,issuer
+ keyUsage = critical, digitalSignature
+ extendedKeyUsage = critical, OCSPSigning

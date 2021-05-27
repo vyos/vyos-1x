@@ -39,11 +39,7 @@ interface_definitions: $(config_xml_obj)
 
 	# XXX: delete top level node.def's that now live in other packages
 	rm -f $(TMPL_DIR)/firewall/node.def
-	rm -f $(TMPL_DIR)/vpn/node.def
-	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/nfirewall
-	rm -rf $(TMPL_DIR)/vpn/nipsec
-
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
@@ -62,12 +58,10 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
 	rm -f $(OP_TMPL_DIR)/monitor/node.def
-	rm -f $(OP_TMPL_DIR)/reset/vpn/node.def
 	rm -f $(OP_TMPL_DIR)/set/node.def
 	rm -f $(OP_TMPL_DIR)/show/interfaces/node.def
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
-	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself

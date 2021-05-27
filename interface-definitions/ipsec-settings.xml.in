@@ -7,6 +7,7 @@
           <node name="options" owner="${vyos_conf_scripts_dir}/ipsec-settings.py">
             <properties>
               <help>Global IPsec settings</help>
+              <priority>902</priority>
             </properties>
             <children>
               <leafNode name="disable-route-autoinstall">

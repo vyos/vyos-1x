@@ -1,10 +1,15 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="vpn">
+    <properties>
+      <help>Virtual Private Network (VPN)</help>
+      <priority>900</priority>
+    </properties>
     <children>
-      <node name="nipsec" owner="${vyos_conf_scripts_dir}/vpn_ipsec.py">
+      <node name="ipsec" owner="${vyos_conf_scripts_dir}/vpn_ipsec.py">
         <properties>
           <help>VPN IP security (IPsec) parameters</help>
+          <priority>901</priority>
         </properties>
         <children>
           <leafNode name="auto-update">
@@ -296,7 +301,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>yes</format>
-                    <description>Enable remote host re-autentication during an IKE rekey. Currently broken due to a strong swan bug</description>
+                    <description>Enable remote host re-authentication during an IKE rekey. Currently broken due to a strongswan bug</description>
                   </valueHelp>
                   <valueHelp>
                     <format>no</format>
@@ -386,6 +391,7 @@
                 </properties>
                 <children>
                   <leafNode name="dh-group">
+                    <defaultValue>2</defaultValue>
                     <properties>
                       <help>dh-grouphelp</help>
                       <completionHelp>
@@ -621,7 +627,7 @@
           </node>
           <node name="nat-networks">
             <properties>
-              <help>Network Address Translation (NAT) networks</help>
+              <help>Network Address Translation (NAT) networks (Obsolete)</help>
             </properties>
             <children>
               <tagNode name="allowed-network">
@@ -655,7 +661,7 @@
           </node>
           <leafNode name="nat-traversal">
             <properties>
-              <help>Network Address Translation (NAT) traversal</help>
+              <help>Network Address Translation (NAT) traversal (Obsolete)</help>
               <completionHelp>
                 <list>disable enable</list>
               </completionHelp>
@@ -695,19 +701,18 @@
                   <help>Authentication [REQUIRED]</help>
                 </properties>
                 <children>
-                  <node name="mode">
+                  <leafNode name="mode">
                     <properties>
                       <help>Authentication mode</help>
+                      <completionHelp>
+                        <list>pre-shared-secret</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>pre-shared-secret</format>
+                        <description>Use pre shared secret key</description>
+                      </valueHelp>
                     </properties>
-                    <children>
-                      <leafNode name="pre-shared-secret">
-                        <properties>
-                          <help>Use pre-shared secret key</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
+                  </leafNode>
                   <leafNode name="pre-shared-secret">
                     <properties>
                       <help>Pre-shared secret key</help>
@@ -724,17 +729,21 @@
                   <help>DMVPN crypto configuration</help>
                 </properties>
                 <children>
-                  <leafNode name="bind_child">
+                  <leafNode name="tunnel">
                     <properties>
-                      <help>bind_child_help</help>
-                      <valueless/>
+                      <help>Tunnel interface associated with this configuration profile</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Tunnel interface associated with this configuration profile</description>
+                      </valueHelp>
+                      <multi/>
                     </properties>
                   </leafNode>
                 </children>
               </node>
               <leafNode name="esp-group">
                 <properties>
-                  <help>Esp group name [REQUIRED]</help>
+                  <help>ESP group name [REQUIRED]</help>
                   <completionHelp>
                     <path>vpn ipsec esp-group</path>
                   </completionHelp>
@@ -742,7 +751,7 @@
               </leafNode>
               <leafNode name="ike-group">
                 <properties>
-                  <help>Ike group name [REQUIRED]</help>
+                  <help>IKE group name [REQUIRED]</help>
                   <completionHelp>
                     <path>vpn ipsec ike-group</path>
                   </completionHelp>
@@ -909,6 +918,9 @@
                   <leafNode name="default-esp-group">
                     <properties>
                       <help>Defult ESP group name</help>
+                      <completionHelp>
+                        <path>vpn ipsec esp-group</path>
+                      </completionHelp>
                     </properties>
                   </leafNode>
                   <leafNode name="description">
@@ -920,7 +932,9 @@
                   <leafNode name="dhcp-interface">
                     <properties>
                       <help>DHCP interface to listen on</help>
-                      <valueless/>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
                     </properties>
                   </leafNode>
                   <leafNode name="force-encapsulation">
@@ -1091,12 +1105,7 @@
                           </leafNode>
                         </children>
                       </node>
-                      <leafNode name="protocol">
-                        <properties>
-                          <help>Protocol to encrypt</help>
-                          <valueless/>
-                        </properties>
-                      </leafNode>
+                      #include <include/ip-protocol.xml.i>
                       <node name="remote">
                         <properties>
                           <help>Remote parameters for interesting traffic</help>
