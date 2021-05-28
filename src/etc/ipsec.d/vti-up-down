@@ -12,7 +12,8 @@ def get_config(config, base):
     if not config.exists(base):
         return None
 
-    return conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    return conf.get_config_dict(base, key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
 
 def get_dhcp_address(interface):
     addr = get_interface_address(interface)
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     print(f'vti-up-down: start: {verb} {connection} {interface}')
 
     if verb in ['up-client', 'up-host']:
-        call('sudo /usr/sbin/ip route delete default table 220')
+        call('sudo ip route delete default table 220')
 
     vti_base = ['interfaces', 'vti', interface]
     ipsec_base = ['vpn', 'ipsec', 'site-to-site']
@@ -72,11 +73,11 @@ if __name__ == '__main__':
         if not vti_link_up:
             if 'dhcp_interface' in peer_conf:
                 local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
-                call(f'sudo /usr/sbin/ip tunnel change {interface} local {local_ip}')
+                call(f'sudo ip tunnel change {interface} local {local_ip}')
             if child_sa_installed:
-                call(f'sudo /usr/sbin/ip link set {interface} up')
+                call(f'sudo ip link set {interface} up')
     elif verb in ['down-client', 'down-host']:
         if vti_link_up and not child_sa_installed:
-            call(f'sudo /usr/sbin/ip link set {interface} down')
+            call(f'sudo ip link set {interface} down')
 
     print('vti-up-down: finish')
