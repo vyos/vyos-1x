@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-import os
 
 from sys import exit
 
@@ -42,7 +40,7 @@ def get_config(config=None):
     return dummy
 
 def verify(dummy):
-    if 'deleted' in dummy.keys():
+    if 'deleted' in dummy:
         verify_bridge_delete(dummy)
         return None
 
@@ -58,7 +56,7 @@ def apply(dummy):
     d = DummyIf(dummy['ifname'])
 
     # Remove dummy interface
-    if 'deleted' in dummy.keys():
+    if 'deleted' in dummy:
         d.remove()
     else:
         d.update(dummy)
