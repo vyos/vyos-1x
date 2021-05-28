@@ -664,6 +664,16 @@ def get_interface_config(interface):
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
 
+def get_interface_address(interface):
+    """ Returns the used encapsulation protocol for given interface.
+        If interface does not exist, None is returned.
+    """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'ip -d -j addr show {interface}'))[0]
+    return tmp
+
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads
@@ -676,3 +686,35 @@ def get_all_vrfs():
         name = entry.pop('name')
         data[name] = entry
     return data
+
+def cidr_fit(cidr_a, cidr_b, both_directions = False):
+    """
+    Does CIDR A fit inside of CIDR B?
+
+    Credit: https://gist.github.com/magnetikonline/686fde8ee0bce4d4930ce8738908a009
+    """
+    def split_cidr(cidr):
+        part_list = cidr.split("/")
+        if len(part_list) == 1:
+            # if just an IP address, assume /32
+            part_list.append("32")
+
+        # return address and prefix size
+        return part_list[0].strip(), int(part_list[1])
+    def address_to_bits(address):
+        # convert each octet of IP address to binary
+        bit_list = [bin(int(part)) for part in address.split(".")]
+
+        # join binary parts together
+        # note: part[2:] to slice off the leading "0b" from bin() results
+        return "".join([part[2:].zfill(8) for part in bit_list])
+    def binary_network_prefix(cidr):
+        # return CIDR as bits, to the length of the prefix size only (drop the rest)
+        address, prefix_size = split_cidr(cidr)
+        return address_to_bits(address)[:prefix_size]
+
+    prefix_a = binary_network_prefix(cidr_a)
+    prefix_b = binary_network_prefix(cidr_b)
+    if both_directions:
+        return prefix_a.startswith(prefix_b) or prefix_b.startswith(prefix_a)
+    return prefix_a.startswith(prefix_b)
