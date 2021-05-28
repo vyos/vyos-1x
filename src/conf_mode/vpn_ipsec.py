@@ -132,7 +132,7 @@ def get_config(config=None):
 
             if pfs == 'enable':
                 pfs = default_ike_pfs
-            
+
             if 'proposal' in esp_conf:
                 ciphers = []
                 for i in esp_conf['proposal']:
@@ -360,9 +360,7 @@ def apply(ipsec):
 
     should_start = ('profile' in ipsec or ('site_to_site' in ipsec and 'peer' in ipsec['site_to_site']))
 
-    if should_start:
-        apply_vti_interfaces(ipsec)
-    else:
+    if not should_start:
         cleanup_vti_interfaces()
 
     if not process_named_running('charon'):
@@ -387,39 +385,6 @@ def apply(ipsec):
 
     resync_l2tp(conf)
     resync_nhrp(conf)
-
-def apply_vti_interfaces(ipsec):
-    # While vyatta-vti-config.pl is still active, this interface will get deleted by cleanupVtiNotConfigured()
-    if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
-        for peer, peer_conf in ipsec['site_to_site']['peer'].items():
-            if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
-                vti_interface = peer_conf['vti']['bind']
-                vti_conf = get_vti_interface(vti_interface)
-                if not vti_conf:
-                    continue
-                vti_mtu = vti_conf['mtu'] if 'mtu' in vti_conf else 1500
-                mark = get_mark(vti_interface)
-
-                local_ip = ''
-                if 'local_address' in peer_conf:
-                    local_ip = peer_conf['local_address']
-                elif 'dhcp_interface' in peer_conf:
-                    local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
-
-                call(f'sudo /usr/sbin/ip link delete {vti_interface} type vti', stderr=DEVNULL)
-                call(f'sudo /usr/sbin/ip link add {vti_interface} type vti local {local_ip} remote {peer} okey {mark} ikey {mark}')
-                call(f'sudo /usr/sbin/ip link set {vti_interface} mtu {vti_mtu}')
-                if 'address' in vti_conf:
-                    address = vti_conf['address']
-                    if isinstance(address, list):
-                        for addr in address:
-                            call(f'sudo /usr/sbin/ip addr add {addr} dev {vti_interface}')
-                    else:
-                        call(f'sudo /usr/sbin/ip addr add {address} dev {vti_interface}')
-
-                if 'description' in vti_conf:
-                    description = vti_conf['description']
-                    call(f'sudo echo "{description}" > /sys/class/net/{vti_interface}/ifalias')
 
 def get_vti_interface(vti_interface):
     global conf

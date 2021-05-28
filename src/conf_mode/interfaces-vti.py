@@ -19,6 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.ifconfig import VTIIf
+from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -34,6 +35,23 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'vti']
     vti = get_interface_dict(conf, base)
+
+    # VTI is more then an interface - we retrieve the "real" configuration from
+    # the IPsec peer configuration which binds this VTI
+    conf.set_level([])
+    tmp = conf.get_config_dict(['vpn', 'ipsec', 'site-to-site', 'peer'],
+                               key_mangling=('-', '_'), get_first_key=True,
+                               no_tag_node_value_mangle=True)
+
+    for peer, peer_config in tmp.items():
+        if dict_search('vti.bind', peer_config) == vti['ifname']:
+            vti['remote'] = peer
+            if 'local_address' in peer_config:
+                vti['source_address'] = peer_config['local_address']
+            # we also need to "calculate" a per vti individual key
+            base = 0x900000
+            vti['key'] = base + int(vti['ifname'].lstrip('vti'))
+
     return vti
 
 def verify(vti):
@@ -46,6 +64,11 @@ def generate(vti):
     return None
 
 def apply(vti):
+    tmp = VTIIf(**vti)
+    tmp.remove()
+    if 'deleted' not in vti:
+        tmp.update(vti)
+
     return None
 
 if __name__ == '__main__':
