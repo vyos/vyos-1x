@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="vti" owner="${vyos_conf_scripts_dir}/interfaces-vti.py">
+        <properties>
+          <help>Virtual Tunnel interface</help>
+          <priority>381</priority>
+          <constraint>
+            <regex>^vti[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>VTI interface must be named vtiN</constraintErrorMessage>
+          <valueHelp>
+            <format>vtiN</format>
+            <description>VTI interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="address">
+            <properties>
+              <help>IP address</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-host"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/interface-mtu-68-16000.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
