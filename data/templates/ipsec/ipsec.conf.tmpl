@@ -42,7 +42,7 @@ conn peer-{{ peer }}
 conn peer-{{ peer }}-vti
     also = peer-{{ peer }}
     leftsubnet = 0.0.0.0/0
-    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}"
     rightsubnet = 0.0.0.0/0
     mark = {{ marks[peer_conf.vti.bind] }}
 {{ ike_esp.conn(None, None, vti_esp, ciphers.esp[peer_conf.vti.esp_group] if vti_esp else None) }}

@@ -5,15 +5,7 @@
 import os
 import sys
 
-from vyos.config import Config
 from vyos.util import call, get_interface_config, get_interface_address
-
-def get_config(config, base):
-    if not config.exists(base):
-        return None
-
-    return conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
 
 def get_dhcp_address(interface):
     addr = get_interface_address(interface)
@@ -26,58 +18,30 @@ def get_dhcp_address(interface):
 if __name__ == '__main__':
     verb = os.getenv('PLUTO_VERB')
     connection = os.getenv('PLUTO_CONNECTION')
-    parent_conn = connection[:-3]
     interface = sys.argv[1]
+    dhcp_interface = sys.argv[2]
 
     print(f'vti-up-down: start: {verb} {connection} {interface}')
 
     if verb in ['up-client', 'up-host']:
         call('sudo ip route delete default table 220')
 
-    vti_base = ['interfaces', 'vti', interface]
-    ipsec_base = ['vpn', 'ipsec', 'site-to-site']
-
-    conf = Config()
-    vti_conf = get_config(conf, vti_base)
-    ipsec_conf = get_config(conf, ipsec_base)
-
-    if not vti_conf or 'disable' in vti_conf or not ipsec_conf or 'peer' not in ipsec_conf:
-        print('vti-up-down: exit: vti not found, disabled or no peers found')
-        sys.exit(0)
-
-    peer_conf = None
-
-    for peer, peer_tmp_conf in ipsec_conf['peer'].items():
-        if 'vti' in peer_tmp_conf and 'bind' in peer_tmp_conf['vti']:
-            bind = peer_tmp_conf['vti']['bind']
-            if isinstance(bind, str):
-                bind = [bind]
-            if interface in bind:
-                peer_conf = peer_tmp_conf
-                break
-
-    if not peer_conf:
-        print(f'vti-up-down: exit: No peer found for {interface}')
-        sys.exit(0)
-
     vti_link = get_interface_config(interface)
-    vti_link_up = vti_link['operstate'] == 'UP' if vti_link else False
 
-    child_sa_installed = False
-    try:
-        child_sa_installed = (call(f'sudo /usr/sbin/swanctl -l -r -i {connection} {parent_conn} | grep -s -q state=INSTALLED', timeout = 5) == 0)
-    except:
-        print('vti-up-down: child-sa check failed')
+    if not vti_link:
+        print('vti-up-down: interface not found')
+        sys.exit(0)
+
+    vti_link_up = (vti_link['operstate'] == 'UP' if 'operstate' in vti_link else False)
 
     if verb in ['up-client', 'up-host']:
         if not vti_link_up:
-            if 'dhcp_interface' in peer_conf:
-                local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
+            if dhcp_interface != 'no':
+                local_ip = get_dhcp_address(dhcp_interface)
                 call(f'sudo ip tunnel change {interface} local {local_ip}')
-            if child_sa_installed:
-                call(f'sudo ip link set {interface} up')
+            call(f'sudo ip link set {interface} up')
     elif verb in ['down-client', 'down-host']:
-        if vti_link_up and not child_sa_installed:
+        if vti_link_up:
             call(f'sudo ip link set {interface} down')
 
     print('vti-up-down: finish')
