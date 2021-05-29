@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from netifaces import interfaces
 from sys import exit
 
 from vyos.config import Config
@@ -64,9 +65,12 @@ def generate(vti):
     return None
 
 def apply(vti):
-    tmp = VTIIf(**vti)
-    tmp.remove()
+    if vti['ifname'] in interfaces():
+        # Always delete the VTI interface in advance
+        VTIIf(**vti).remove()
+
     if 'deleted' not in vti:
+        tmp = VTIIf(**vti)
         tmp.update(vti)
 
     return None
