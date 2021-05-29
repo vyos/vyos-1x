@@ -24,7 +24,11 @@ from time import sleep
 from vyos.config import Config
 from vyos.configdiff import ConfigDiff
 from vyos.template import render
-from vyos.util import call, get_interface_address, process_named_running, run, cidr_fit
+from vyos.util import call
+from vyos.util import get_interface_address
+from vyos.util import process_named_running
+from vyos.util import run
+from vyos.util import cidr_fit
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -230,8 +234,8 @@ def verify(ipsec):
 
                 if 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
-                    if not get_vti_interface(vti_interface):
-                        raise ConfigError(f'Invalid VTI interface on site-to-site peer {peer}')
+                    if not os.path.exists(f'/sys/class/net/{vti_interface}'):
+                        raise ConfigError(f'VTI interface {vti_interface} for site-to-site peer {peer} does not exist!')
 
             if 'vti' not in peer_conf and 'tunnel' not in peer_conf:
                 raise ConfigError(f"No vti or tunnels specified on site-to-site peer {peer}")
@@ -379,14 +383,6 @@ def apply(ipsec):
 
     resync_l2tp(conf)
     resync_nhrp(conf)
-
-def get_vti_interface(vti_interface):
-    global conf
-    section = conf.get_config_dict(['interfaces', 'vti'], get_first_key=True)
-    for interface, interface_conf in section.items():
-        if interface == vti_interface:
-            return interface_conf
-    return None
 
 def get_mark(vti_interface):
     vti_num = int(vti_interface.lstrip('vti'))
