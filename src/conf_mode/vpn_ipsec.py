@@ -347,7 +347,7 @@ def apply(ipsec):
             call('sudo /usr/sbin/swanctl -q')
         else:
             call('sudo /usr/sbin/ipsec stop')
-        cleanup_vti_interfaces()
+
         resync_l2tp(conf)
         resync_nhrp(conf)
         return
@@ -359,9 +359,6 @@ def apply(ipsec):
     interface_change = (old_if != new_if)
 
     should_start = ('profile' in ipsec or ('site_to_site' in ipsec and 'peer' in ipsec['site_to_site']))
-
-    if not should_start:
-        cleanup_vti_interfaces()
 
     if not process_named_running('charon'):
         args = ''
@@ -393,12 +390,6 @@ def get_vti_interface(vti_interface):
         if interface == vti_interface:
             return interface_conf
     return None
-
-def cleanup_vti_interfaces():
-    global conf
-    section = conf.get_config_dict(['interfaces', 'vti'], get_first_key=True)
-    for interface, interface_conf in section.items():
-        call(f'sudo /usr/sbin/ip link delete {interface} type vti', stderr=DEVNULL)
 
 def get_mark(vti_interface):
     global mark_base, mark_index
