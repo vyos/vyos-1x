@@ -60,15 +60,18 @@ pfs_translate = {
     'dh-group32': 'curve448'
 }
 
+any_log_modes = [
+    'dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl', 'net', 'asn',
+    'enc', 'lib', 'esp', 'tls', 'tnc', 'imc', 'imv', 'pts'
+]
+
 ike_ciphers = {}
 esp_ciphers = {}
 
-marks = {}
 mark_base = 0x900000
-mark_index = 1
 
-CA_PATH = "/etc/ipsec.d/cacerts"
-CRL_PATH = "/etc/ipsec.d/crls"
+CA_PATH = "/etc/ipsec.d/cacerts/"
+CRL_PATH = "/etc/ipsec.d/crls/"
 
 DHCP_BASE = "/var/lib/dhcp/dhclient"
 
@@ -284,22 +287,21 @@ def generate(ipsec):
 
     if ipsec:
         data = deepcopy(ipsec)
+        data['authby'] = authby_translate
+        data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
+        data['marks'] = {}
+        data['rsa_local_key'] = verify_rsa_local_key()
+        data['x509_path'] = X509_PATH
 
         if 'site_to_site' in data and 'peer' in data['site_to_site']:
             for peer, peer_conf in ipsec['site_to_site']['peer'].items():
                 if peer_conf['authentication']['mode'] == 'x509':
-                    ca_cert_file = peer_conf['authentication']['x509']['ca_cert_file']
-                    crl_file = peer_conf['authentication']['x509']['crl_file'] if 'crl_file' in peer_conf['authentication']['x509'] else None
+                    ca_cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['ca_cert_file'])
+                    call(f'cp -f {ca_cert_file} {CA_PATH}')
 
-                    if not ca_cert_file.startswith(X509_PATH):
-                        ca_cert_file = (X509_PATH + ca_cert_file)
-
-                    if crl_file and not crl_file.startswith(X509_PATH):
-                        crl_file = (X509_PATH + crl_file)
-
-                    call(f'cp -f {ca_cert_file} {CA_PATH}/')
-                    if crl_file:
-                        call(f'cp -f {crl_file} {CRL_PATH}/')
+                    if 'crl_file' in peer_conf['authentication']['x509']:
+                        crl_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['crl_file'])
+                        call(f'cp -f {crl_file} {CRL_PATH}')
 
                 local_ip = ''
                 if 'local_address' in peer_conf:
@@ -311,7 +313,7 @@ def generate(ipsec):
 
                 if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
-                    get_mark(vti_interface)
+                    data['marks'][vti_interface] = get_mark(vti_interface)
                 else:
                     for tunnel, tunnel_conf in peer_conf['tunnel'].items():
                         if ('local' not in tunnel_conf or 'prefix' not in tunnel_conf['local']) or ('remote' not in tunnel_conf or 'prefix' not in tunnel_conf['remote']):
@@ -321,18 +323,13 @@ def generate(ipsec):
                         passthrough = cidr_fit(local_prefix, remote_prefix)
                         data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
-        data['authby'] = authby_translate
-        data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
-        data['marks'] = marks
-        data['rsa_local_key'] = verify_rsa_local_key()
-        data['x509_path'] = X509_PATH
-
         if 'logging' in ipsec and 'log_modes' in ipsec['logging']:
             modes = ipsec['logging']['log_modes']
             level = ipsec['logging']['log_level'] if 'log_level' in ipsec['logging'] else '1'
-            if isinstance(modes, str): modes = [modes]
+            if isinstance(modes, str):
+                modes = [modes]
             if 'any' in modes:
-                modes = ['dmn', 'mgr', 'ike', 'chd', 'job', 'cfg', 'knl', 'net', 'asn', 'enc', 'lib', 'esp', 'tls', 'tnc', 'imc', 'imv', 'pts']
+                modes = any_log_modes
             data['charondebug'] = f' {level}, '.join(modes) + ' ' + level
 
     render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
@@ -392,11 +389,8 @@ def get_vti_interface(vti_interface):
     return None
 
 def get_mark(vti_interface):
-    global mark_base, mark_index
-    if vti_interface not in marks:
-        marks[vti_interface] = mark_base + mark_index
-        mark_index += 1
-    return marks[vti_interface]
+    vti_num = int(vti_interface.lstrip('vti'))
+    return mark_base + vti_num
 
 def get_dhcp_address(interface):
     addr = get_interface_address(interface)
