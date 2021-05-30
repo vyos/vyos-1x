@@ -88,6 +88,18 @@
     </constraint>
   </properties>
 </leafNode>
+<leafNode name="maximum-prefix-out">
+  <properties>
+    <help>Maximum number of prefixes to be sent to this peer</help>
+    <valueHelp>
+      <format>u32:1-4294967295</format>
+      <description>Prefix limit</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-4294967295"/>
+    </constraint>
+  </properties>
+</leafNode>
 #include <include/bgp/afi-nexthop-self.xml.i>
 <leafNode name="remove-private-as">
   <properties>

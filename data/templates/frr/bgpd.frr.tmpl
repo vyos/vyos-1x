@@ -173,6 +173,9 @@
 {%       if afi_config.maximum_prefix is defined and afi_config.maximum_prefix is not none %}
   neighbor {{ neighbor }} maximum-prefix {{ afi_config.maximum_prefix }}
 {%       endif %}
+{%       if afi_config.maximum_prefix_out is defined and afi_config.maximum_prefix_out is not none %}
+  neighbor {{ neighbor }} maximum-prefix-out {{ afi_config.maximum_prefix_out }}
+{%       endif %}
 {%       if afi_config.nexthop_self is defined %}
   neighbor {{ neighbor }} next-hop-self {{ 'force' if afi_config.nexthop_self.force is defined }}
 {%       endif %}
