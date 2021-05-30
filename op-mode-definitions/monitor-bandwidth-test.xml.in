@@ -9,8 +9,9 @@
         <children>
           <node name="accept">
             <properties>
-              <help>Wait for bandwidth test connections</help>
+              <help>Wait for bandwidth test connections (default: TCP)</help>
             </properties>
+            <command>/usr/bin/iperf -V -s</command>
             <children>
               <leafNode name="tcp">
                 <properties>
