@@ -56,8 +56,9 @@ def verify(conf):
 
 def get_local_key(local_key):
     for path in LOCAL_KEY_PATHS:
-        if os.path.exists(path + local_key):
-            return path + local_key
+        full_path = os.path.join(path, local_key)
+        if os.path.exists(full_path):
+            return full_path
     return False
 
 def generate(conf):
