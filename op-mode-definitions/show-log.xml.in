@@ -18,7 +18,7 @@
             <properties>
               <help>Show listing of authorization attempts</help>
             </properties>
-            <command>/bin/journalctl -q SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
+            <command>/bin/journalctl --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>
