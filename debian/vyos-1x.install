@@ -1,6 +1,7 @@
 etc/dhcp
 etc/ipsec.d
 etc/netplug
+etc/opennhrp
 etc/ppp
 etc/rsyslog.d
 etc/systemd

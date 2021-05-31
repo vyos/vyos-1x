@@ -39,6 +39,7 @@
 "protocols_igmp.py",
 "protocols_isis.py",
 "protocols_mpls.py",
+"protocols_nhrp.py",
 "protocols_ospf.py",
 "protocols_ospfv3.py",
 "protocols_pim.py",

@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="nhrp" owner="${vyos_conf_scripts_dir}/protocols_nhrp.py">
+        <properties>
+          <help>NHRP parameters</help>
+          <priority>680</priority>
+        </properties>
+        <children>
+          <tagNode name="tunnel">
+            <properties>
+              <help>Tunnel for NHRP [REQUIRED]</help>
+              <constraint>
+                <regex>^tun[0-9]+$</regex>
+              </constraint>
+              <valueHelp>
+                <format>tunN</format>
+                <description>NHRP tunnel name</description>
+              </valueHelp>
+            </properties>
+            <children>
+              <leafNode name="cisco-authentication">
+                <properties>
+                  <help>Pass phrase for cisco authentication</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Pass phrase for cisco authentication</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <tagNode name="dynamic-map">
+                <properties>
+                  <help>Set an HUB tunnel address</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>Set the IP address and prefix length</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  <leafNode name="nbma-domain-name">
+                    <properties>
+                      <help>Set HUB fqdn (nbma-address - fqdn) [REQUIRED]</help>
+                      <valueHelp>
+                        <format>&lt;fqdn&gt;</format>
+                        <description>Set the external HUB fqdn</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="holding-time">
+                <properties>
+                  <help>Holding time in seconds</help>
+                </properties>
+              </leafNode>
+              <tagNode name="map">
+                <properties>
+                  <help>Set an HUB tunnel address</help>
+                </properties>
+                <children>
+                  <leafNode name="cisco">
+                    <properties>
+                      <help>If the statically mapped peer is running Cisco IOS, specify this</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nbma-address">
+                    <properties>
+                      <help>Set HUB address (nbma-address - external hub address or fqdn) [REQUIRED]</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="register">
+                    <properties>
+                      <help>Specifies that Registration Request should be sent to this peer on startup</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="multicast">
+                <properties>
+                  <help>Set multicast for NHRP</help>
+                  <completionHelp>
+                    <list>dynamic nhs</list>
+                  </completionHelp>
+                  <constraint>
+                    <regex>^(dynamic|nhs)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="non-caching">
+                <properties>
+                  <help>This can be used to reduce memory consumption on big NBMA subnets</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="redirect">
+                <properties>
+                  <help>Enable sending of Cisco style NHRP Traffic Indication packets</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="shortcut-destination">
+                <properties>
+                  <help>This instructs opennhrp to reply with authorative answers on NHRP Resolution Requests destined to addresses in this interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <tagNode name="shortcut-target">
+                <properties>
+                  <help>Defines an off-NBMA network prefix for which the GRE interface will act as a gateway</help>
+                </properties>
+                <children>
+                  <leafNode name="holding-time">
+                    <properties>
+                      <help>Holding time in seconds</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="shortcut">
+                <properties>
+                  <help>Enable creation of shortcut routes. A received NHRP Traffic Indication will trigger the resolution and establishment of a shortcut route</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
