@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import exit
 
 from vyos.config import Config
@@ -21,6 +23,7 @@ from vyos.configdict import dict_merge
 from vyos.util import cmd
 from vyos.util import run
 from vyos.util import process_named_running
+from vyos.util import dict_search
 from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -29,6 +32,35 @@ airbag.enable()
 
 conntrack_config = r'/etc/modprobe.d/vyatta_nf_conntrack.conf'
 sysctl_file = r'/run/sysctl/10-vyos-conntrack.conf'
+
+# Every ALG (Application Layer Gateway) consists of either a Kernel Object
+# also called a Kernel Module/Driver or some rules present in iptables
+module_map = {
+    'ftp' : {
+        'ko' : ['nf_nat_ftp', 'nf_conntrack_ftp'],
+    },
+    'h323' : {
+        'ko' : ['nf_nat_h323', 'nf_conntrack_h323'],
+    },
+    'nfs' : {
+        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 111 --jump CT --helper rpc',
+                      'VYATTA_CT_HELPER --table raw --proto udp --dport 111 --jump CT --helper rpc'],
+    },
+    'pptp' : {
+        'ko' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
+     },
+    'sip' : {
+        'ko' : ['nf_nat_sip', 'nf_conntrack_sip'],
+     },
+    'sqlnet' : {
+        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 1521 --jump CT --helper tns',
+                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1525 --jump CT --helper tns',
+                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1536 --jump CT --helper tns'],
+    },
+    'tftp' : {
+        'ko' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
+     },
+}
 
 def resync_conntrackd():
     tmp = run('/usr/libexec/vyos/conf_mode/conntrack_sync.py')
@@ -62,6 +94,31 @@ def generate(conntrack):
     return None
 
 def apply(conntrack):
+    # Depending on the enable/disable state of the ALG (Application Layer Gateway)
+    # modules we need to either insmod or rmmod the helpers.
+    for module, module_config in module_map.items():
+        if dict_search(f'modules.{module}.disable', conntrack) != None:
+            if 'ko' in module_config:
+                for mod in module_config['ko']:
+                    # Only remove the module if it's loaded
+                    if os.path.exists(f'/sys/module/{mod}'):
+                        cmd(f'rmmod {mod}')
+            if 'iptables' in module_config:
+                for rule in module_config['iptables']:
+                    print(f'iptables --delete {rule}')
+                    cmd(f'iptables --delete {rule}')
+        else:
+            if 'ko' in module_config:
+                for mod in module_config['ko']:
+                    cmd(f'modprobe {mod}')
+            if 'iptables' in module_config:
+                for rule in module_config['iptables']:
+                    # Only install iptables rule if it does not exist
+                    tmp = run(f'iptables --check {rule}')
+                    if tmp > 0:
+                        cmd(f'iptables --insert {rule}')
+
+
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values
         resync_conntrackd()
