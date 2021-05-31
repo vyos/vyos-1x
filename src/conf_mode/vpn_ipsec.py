@@ -16,13 +16,13 @@
 
 import os
 
-from copy import deepcopy
-from subprocess import DEVNULL
 from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.configdiff import get_config_diff
+from vyos.configdict import leaf_node_changed
+from vyos.configverify import verify_interface_exists
+from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
@@ -96,6 +96,7 @@ def get_config(config=None):
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  get_first_key=True, no_tag_node_value_mangle=True)
 
+    ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces', 'interface'])
     ipsec['l2tp_exists'] = conf.exists('vpn l2tp remote-access ipsec-settings ')
     ipsec['nhrp_exists'] = conf.exists('protocols nhrp tunnel')
     ipsec['rsa_keys'] = conf.get_config_dict(['vpn', 'rsa-keys'], key_mangling=('-', '_'),
@@ -140,12 +141,6 @@ def get_config(config=None):
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
                 esp_ciphers[group] = ','.join(ciphers) + '!'
 
-    diff = get_config_diff(conf, key_mangling=('-', '_'))
-    diff.set_level(base)
-
-    new_if, old_if = diff.get_value_diff(['ipsec-interfaces', 'interface'])
-    ipsec['interface_change'] = (old_if != new_if)
-
     return ipsec
 
 def get_rsa_local_key(ipsec):
@@ -170,6 +165,14 @@ def verify_rsa_key(ipsec, key_name):
 def verify(ipsec):
     if not ipsec:
         return None
+
+    if 'ipsec_interfaces' in ipsec and 'interface' in ipsec['ipsec_interfaces']:
+        interfaces = ipsec['ipsec_interfaces']['interface']
+        if isinstance(interfaces, str):
+            interfaces = [interfaces]
+
+        for ifname in interfaces:
+            verify_interface_exists(ifname)
 
     if 'profile' in ipsec:
         for profile, profile_conf in ipsec['profile'].items():
@@ -243,10 +246,14 @@ def verify(ipsec):
 
             if 'dhcp_interface' in peer_conf:
                 dhcp_interface = peer_conf['dhcp_interface']
+
+                verify_interface_exists(dhcp_interface)
+
                 if not os.path.exists(f'{DHCP_BASE}_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
-                if not get_dhcp_address(dhcp_interface):
+                address = Interface(dhcp_interface).get_addr()
+                if not address:
                     raise ConfigError(f"Failed to get address from dhcp-interface on site-to-site peer {peer}")
 
             if 'vti' in peer_conf:
@@ -284,7 +291,7 @@ def generate(ipsec):
     data = {}
 
     if ipsec:
-        data = deepcopy(ipsec)
+        data = ipsec
         data['authby'] = authby_translate
         data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
         data['marks'] = {}
@@ -305,7 +312,7 @@ def generate(ipsec):
                 if 'local_address' in peer_conf:
                     local_ip = peer_conf['local_address']
                 elif 'dhcp_interface' in peer_conf:
-                    local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
+                    local_ip = Interface(peer_conf['dhcp_interface']).get_addr()
 
                 data['site_to_site']['peer'][peer]['local_address'] = local_ip
 
@@ -334,10 +341,11 @@ def generate(ipsec):
 
     render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
     render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
+    render("/etc/strongswan.d/interfaces_use.conf", "ipsec/interfaces_use.conf.tmpl", data)
     render("/etc/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
 
 def resync_l2tp(ipsec):
-    if not ipsec['l2tp_exists']:
+    if ipsec and not ipsec['l2tp_exists']:
         return
 
     tmp = run('/usr/libexec/vyos/conf_mode/ipsec-settings.py')
@@ -345,19 +353,14 @@ def resync_l2tp(ipsec):
         print('ERROR: failed to reapply L2TP IPSec settings!')
 
 def resync_nhrp(ipsec):
-    if not ipsec['nhrp_exists']:
+    if ipsec and not ipsec['nhrp_exists']:
         return
 
     run('/opt/vyatta/sbin/vyos-update-nhrp.pl --set_ipsec')
 
 def apply(ipsec):
     if not ipsec:
-        if ipsec['l2tp_exists']:
-            call('sudo /usr/sbin/ipsec rereadall')
-            call('sudo /usr/sbin/ipsec reload')
-            call('sudo /usr/sbin/swanctl -q')
-        else:
-            call('sudo /usr/sbin/ipsec stop')
+        call('sudo /usr/sbin/ipsec stop')
     else:
         should_start = ('profile' in ipsec or dict_search('site_to_site.peer', ipsec))
 
@@ -365,7 +368,7 @@ def apply(ipsec):
             args = f'--auto-update {ipsec["auto_update"]}' if 'auto_update' in ipsec else ''
             call(f'sudo /usr/sbin/ipsec start {args}')
         elif not should_start:
-            ipsec_stop()
+            call('sudo /usr/sbin/ipsec stop')
         elif ipsec['interface_change']:
             call('sudo /usr/sbin/ipsec restart')
         else:
@@ -382,16 +385,6 @@ def apply(ipsec):
 def get_mark(vti_interface):
     vti_num = int(vti_interface.lstrip('vti'))
     return mark_base + vti_num
-
-def get_dhcp_address(interface):
-    addr = get_interface_address(interface)
-    if not addr or 'addr_info' not in addr:
-        return None
-    if len(addr['addr_info']) == 0:
-        return None
-    if 'local' not in addr['addr_info'][0]:
-        return None
-    return addr['addr_info'][0]['local']
 
 if __name__ == '__main__':
     try:
