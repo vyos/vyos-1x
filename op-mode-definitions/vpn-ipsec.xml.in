@@ -124,7 +124,7 @@
                 <children>
                   <tagNode name="tunnel">
                     <properties>
-                      <help>Show debugging information for a peer's tunnel</help>
+                      <help>Show debug information for peer tunnel</help>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="vpn-debug" --name="$5" --tunnel="$7"</command>
                   </tagNode>
