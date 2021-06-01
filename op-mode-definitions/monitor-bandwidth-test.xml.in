@@ -7,21 +7,51 @@
           <help>Initiate or wait for bandwidth test</help>
         </properties>
         <children>
-          <leafNode name="accept">
+          <node name="accept">
             <properties>
-              <help>Wait for bandwidth test connections (port TCP/5001)</help>
+              <help>Wait for bandwidth test connections (default: TCP)</help>
             </properties>
             <command>/usr/bin/iperf -V -s</command>
-          </leafNode>
-          <tagNode name="initiate">
+            <children>
+              <leafNode name="tcp">
+                <properties>
+                  <help>Wait for bandwidth test connections (port TCP/5001)</help>
+                </properties>
+                <command>/usr/bin/iperf -V -s</command>
+              </leafNode>
+              <leafNode name="udp">
+                <properties>
+                  <help>Wait for bandwidth test connections (port UDP/5001)</help>
+                </properties>
+                <command>/usr/bin/iperf -V -s -u</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="initiate">
             <properties>
-              <help>Initiate a bandwidth test to specified host (port TCP/5001)</help>
-              <completionHelp>
-                <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
-              </completionHelp>
+              <help>Initiate a bandwidth test to specified host</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/monitor_bandwidth_test.sh "$4"</command>
-          </tagNode>
+            <children>
+              <tagNode name="tcp">
+                <properties>
+                  <help>Initiate a bandwidth test to specified host (port TCP/5001)</help>
+                  <completionHelp>
+                    <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/monitor_bandwidth_test.sh "$5"</command>
+              </tagNode>
+              <tagNode name="udp">
+                <properties>
+                  <help>Initiate a bandwidth test to specified host (port UDP/5001)</help>
+                  <completionHelp>
+                    <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/monitor_bandwidth_test.sh "$5" "-u"</command>
+              </tagNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
