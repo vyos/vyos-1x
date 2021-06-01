@@ -189,6 +189,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'no-pmtu-discovery'])
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
         self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
+        self.cli_set(self._base_path + [interface, 'parameters', 'ip', 'ttl', '0'])
 
         # Check if commit is ok
         self.cli_commit()
@@ -221,7 +222,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(64,           conf['linkinfo']['info_data']['ttl'])
 
         # Change remote ip address (inc host by 2
         new_remote = inc_ip(remote_ip4, 2)
@@ -258,7 +259,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(encapsulation,     conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v4,     conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,        conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(0,                 conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(64,               conf['linkinfo']['info_data']['ttl'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
         self.assertEqual(int(idx),          conf['linkinfo']['info_data']['erspan_index'])
@@ -314,7 +315,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(encapsulation,     conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v6,     conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip6,        conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(0,                 conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(64,               conf['linkinfo']['info_data']['ttl'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['ikey'])
         self.assertEqual(f'0.0.0.{ip_key}', conf['linkinfo']['info_data']['okey'])
         self.assertEqual(erspan_ver,        conf['linkinfo']['info_data']['erspan_ver'])
