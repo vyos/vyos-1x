@@ -174,6 +174,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         gre_key = '10'
         encapsulation = 'gre'
         tos = '20'
+        ttl = 0
 
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
         self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
@@ -181,6 +182,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
+        self.session.set(self._base_path + [interface, 'parameters', 'ip', 'ttl', str(ttl)])
 
         # Check if commit is ok
         self.session.commit()
@@ -191,7 +193,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(ttl,           conf['linkinfo']['info_data']['ttl'])
 
     def test_gretap_parameters_change(self):
         interface = f'tun1040'
@@ -212,11 +214,13 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual('gretap',      conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(0,             conf['linkinfo']['info_data']['ttl'])
+        # TTL uses a default value
+        self.assertEqual(64,            conf['linkinfo']['info_data']['ttl'])
 
         # Change remote ip address (inc host by 2
         new_remote = inc_ip(remote_ip4, 2)
         self.session.set(self._base_path + [interface, 'remote-ip', new_remote])
+
         # Check if commit is ok
         self.session.commit()
 

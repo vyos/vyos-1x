@@ -1,7 +1,7 @@
 <!-- include start from interface/interface-parameters-ttl.xml.i -->
 <leafNode name="ttl">
   <properties>
-    <help>Specifies TTL value to use in outgoing packets (default: 0)</help>
+    <help>Specifies TTL value to use in outgoing packets</help>
     <valueHelp>
       <format>0</format>
       <description>Copy value from original IP header</description>
