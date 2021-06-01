@@ -17,6 +17,10 @@ net-snmp
 {% if limits is defined %}
 connlimit
 {% endif %}
+{% if extended_scripts is defined %}
+sigchld
+pppd_compat
+{% endif %}
 
 [core]
 thread-count={{ thread_count }}
@@ -152,6 +156,16 @@ called-sid={{ authentication.radius.called_sid_format }}
 
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
+
+{% if extended_scripts is defined %}
+[pppd-compat]
+verbose=1
+radattr-prefix=/run/accel-pppd/radattr
+{% set script_name = {'on_up': 'ip-up', 'on_down': 'ip-down', 'on_change':'ip-change', 'on_pre_up':'ip-pre-up'} %}
+{%   for script in extended_scripts %}
+{{ script_name[script] }}={{ extended_scripts[script] }}
+{%   endfor %}
+{% endif %}
 
 [cli]
 tcp=127.0.0.1:2001
