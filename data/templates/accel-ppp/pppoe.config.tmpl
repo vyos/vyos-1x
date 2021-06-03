@@ -124,6 +124,9 @@ service-name={{ service_name | join(',') }}
 {%   endfor %}
 pado-delay={{ pado_delay_param.value }}
 {% endif %}
+{% if authentication.radius.called_sid_format is defined and authentication.radius.called_sid_format is not none %}
+called-sid={{ authentication.radius.called_sid_format }}
+{% endif %}
 
 {% if limits is defined %}
 [connlimit]
@@ -136,9 +139,6 @@ burst={{ limits.burst }}
 {%   if limits.timeout is defined and limits.timeout is not none %}
 timeout={{ limits.timeout }}
 {%   endif %}
-{% endif %}
-{% if authentication.radius.called_sid_format is defined and authentication.radius.called_sid_format is not none %}
-called-sid={{ authentication.radius.called_sid_format }}
 {% endif %}
 
 {# Common RADIUS shaper configuration #}
