@@ -43,7 +43,7 @@ uacctd_conf_path = '/etc/pmacct/uacctd.conf'
 iptables_nflog_table = 'raw'
 iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
 egress_iptables_nflog_table = 'mangle'
-egress_iptables_nflog_chain = 'POSTROUTING'
+egress_iptables_nflog_chain = 'FORWARD'
 
 # helper functions
 # check if node exists and return True if this is true
