@@ -40,11 +40,11 @@ def get_config(config=None):
     # VTI is more then an interface - we retrieve the "real" configuration from
     # the IPsec peer configuration which binds this VTI
     conf.set_level([])
-    tmp = conf.get_config_dict(['vpn', 'ipsec', 'site-to-site', 'peer'],
+    vti['ipsec'] = conf.get_config_dict(['vpn', 'ipsec', 'site-to-site', 'peer'],
                                key_mangling=('-', '_'), get_first_key=True,
                                no_tag_node_value_mangle=True)
 
-    for peer, peer_config in tmp.items():
+    for peer, peer_config in vti['ipsec'].items():
         if dict_search('vti.bind', peer_config) == vti['ifname']:
             vti['remote'] = peer
             if 'local_address' in peer_config:
@@ -58,6 +58,17 @@ def get_config(config=None):
 def verify(vti):
     if 'deleted' in vti:
         return None
+
+    ifname = vti['ifname']
+    found = False
+    for peer, peer_config in vti['ipsec'].items():
+        if dict_search('vti.bind', peer_config) == ifname:
+            found = True
+            # we can now stop processing the for loop
+            break
+    if not found:
+        tmp = vti['ifname']
+        raise ConfigError(f'Interface "{ifname}" not referenced in any VPN configuration!')
 
     return None
 
