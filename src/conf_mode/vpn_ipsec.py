@@ -321,8 +321,8 @@ def generate(ipsec):
                     data['marks'][vti_interface] = get_mark(vti_interface)
                 else:
                     for tunnel, tunnel_conf in peer_conf['tunnel'].items():
-                        local_prefix = dict_search('local.prefix', tunnel_conf['local']['prefix'])
-                        remote_prefix = dict_search('remote.prefix', tunnel_conf['remote']['prefix'])
+                        local_prefix = dict_search('local.prefix', tunnel_conf)
+                        remote_prefix = dict_search('remote.prefix', tunnel_conf)
 
                         if not local_prefix or not remote_prefix:
                             continue
