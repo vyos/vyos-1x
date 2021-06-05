@@ -3,7 +3,6 @@
   <node name="vpn">
     <properties>
       <help>Virtual Private Network (VPN)</help>
-      <priority>900</priority>
     </properties>
     <children>
       <node name="ipsec" owner="${vyos_conf_scripts_dir}/vpn_ipsec.py">

@@ -5,6 +5,7 @@
       <node name="pptp" owner="${vyos_conf_scripts_dir}/vpn_pptp.py">
         <properties>
           <help>Point to Point Tunneling Protocol (PPTP) Virtual Private Network (VPN)</help>
+          <priority>901</priority>
         </properties>
         <children>
           <node name="remote-access">

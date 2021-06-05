@@ -5,6 +5,7 @@
       <node name="rsa-keys" owner="${vyos_conf_scripts_dir}/vpn_rsa-keys.py">
         <properties>
           <help>RSA keys</help>
+          <priority>900</priority>
         </properties>
         <children>
           <node name="local-key">
