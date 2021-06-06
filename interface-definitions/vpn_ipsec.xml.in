@@ -624,59 +624,6 @@
               </leafNode>
             </children>
           </node>
-          <node name="nat-networks">
-            <properties>
-              <help>Network Address Translation (NAT) networks (Obsolete)</help>
-            </properties>
-            <children>
-              <tagNode name="allowed-network">
-                <properties>
-                  <help>NAT networks to allow</help>
-                  <valueHelp>
-                    <format>ipv4net</format>
-                    <description>NAT networks to allow</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ip-prefix"/>
-                  </constraint>
-                </properties>
-                <children>
-                  <leafNode name="exclude">
-                    <properties>
-                      <help>NAT networks to exclude from allowed-networks</help>
-                      <valueHelp>
-                        <format>ipv4net</format>
-                        <description>NAT networks to exclude from allowed-networks</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ip-prefix"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </tagNode>
-            </children>
-          </node>
-          <leafNode name="nat-traversal">
-            <properties>
-              <help>Network Address Translation (NAT) traversal (Obsolete)</help>
-              <completionHelp>
-                <list>disable enable</list>
-              </completionHelp>
-              <valueHelp>
-                <format>disable</format>
-                <description>Disable NAT-T</description>
-              </valueHelp>
-              <valueHelp>
-                <format>enable</format>
-                <description>Enable NAT-T</description>
-              </valueHelp>
-              <constraint>
-                <regex>^(disable|enable)$</regex>
-              </constraint>
-            </properties>
-          </leafNode>
           <node name="options">
             <properties>
               <help>Global IPsec settings</help>
