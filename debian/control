@@ -144,6 +144,7 @@ Depends:
   udp-broadcast-relay,
   usb-modeswitch,
   usbutils,
+  vyatta-cfg,
   vyos-http-api-tools,
   vyos-utils,
   wide-dhcpv6-client,
