@@ -131,6 +131,7 @@ Depends:
   udp-broadcast-relay,
   usb-modeswitch,
   usbutils,
+  vyatta-cfg,
   vyos-utils,
   wide-dhcpv6-client,
   wireguard-tools,
