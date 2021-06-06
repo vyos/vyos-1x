@@ -356,7 +356,9 @@ def resync_nhrp(ipsec):
     if ipsec and not ipsec['nhrp_exists']:
         return
 
-    run('/opt/vyatta/sbin/vyos-update-nhrp.pl --set_ipsec')
+    tmp = run('/usr/libexec/vyos/conf_mode/protocols_nhrp.py')
+    if tmp > 0:
+        print('ERROR: failed to reapply NHRP settings!')
 
 def apply(ipsec):
     if not ipsec:

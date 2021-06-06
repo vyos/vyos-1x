@@ -1,0 +1,41 @@
+# Created by VyOS - manual changes will be overwritten
+
+{%  if tunnel is defined %}
+{%      for name, tunnel_conf in tunnel.items() %}
+{%          set type = 'spoke' if 'map' in tunnel_conf or 'dynamic_map' in tunnel_conf else 'hub' %}
+{%          set profile_name = profile_map[name] if profile_map is defined and name in profile_map else '' %}
+interface {{ name }} #{{ type }} {{ profile_name }}
+{%          if 'map' in tunnel_conf %}
+{%              for map, map_conf in tunnel_conf.map.items() %}
+{%                  set cisco = ' cisco' if 'cisco' in map_conf else '' %}
+{%                  set register = ' register' if 'register' in map_conf else '' %}
+    map {{ map }} {{ map_conf.nbma_address }}{{ register }}{{ cisco }}
+{%              endfor %}
+{%          endif %}
+{%          if 'dynamic_map' in tunnel_conf %}
+{%              for map, map_conf in tunnel_conf.dynamic_map.items() %}
+    dynamic-map {{ map }} {{ map_conf.nbma_domain_name }}
+{%              endfor %}
+{%          endif %}
+{%          if 'cisco_authentication' in tunnel_conf %}
+    cisco-authentication {{ tunnel_conf.cisco_authentication }}
+{%          endif %}
+{%          if 'holding_time' in tunnel_conf %}
+    holding-time {{ tunnel_conf.holding_time }}
+{%          endif %}
+{%          if 'multicast' in tunnel_conf %}
+    multicast {{ tunnel_conf.multicast }}
+{%          endif %}
+{%          for key in ['non_caching', 'redirect', 'shortcut', 'shortcut_destination'] %}
+{%              if key in tunnel_conf %}
+    {{ key | replace("_", "-") }}
+{%              endif %}
+{%          endfor %}
+{%          if 'shortcut_target' in tunnel_conf %}
+{%              for target, shortcut_conf in tunnel_conf.shortcut_target.items() %}
+    shortcut-target {{ target }} {{ shortcut_conf.holding_time if 'holding_time' in shortcut_conf else '' }}
+{%              endfor %}
+{%          endif %}
+
+{%      endfor %}
+{%  endif %}
