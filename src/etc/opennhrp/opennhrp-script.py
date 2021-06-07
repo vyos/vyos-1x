@@ -23,7 +23,7 @@ import vici
 from vyos.util import cmd
 from vyos.util import process_named_running
 
-NHRP_CONFIG="/etc/opennhrp/opennhrp.conf"
+NHRP_CONFIG="/run/opennhrp/opennhrp.conf"
 
 def parse_type_ipsec(interface):
     with open(NHRP_CONFIG, 'r') as f:
