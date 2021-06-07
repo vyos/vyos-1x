@@ -44,6 +44,22 @@ for cli_node in ['nat-traversal', 'nat-networks']:
     if config.exists(base + [cli_node]):
         config.delete(base + [cli_node])
 
+# Remove options only valid in Openswan
+if config.exists(base + ['site-to-site', 'peer']):
+    for peer in config.list_nodes(base + ['site-to-site', 'peer']):
+        if not config.exists(base + ['site-to-site', 'peer', peer, 'tunnel']):
+            continue
+        for tunnel in config.list_nodes(base + ['site-to-site', 'peer', peer, 'tunnel']):
+            # allow-public-networks - Sets a value in ipsec.conf that was only ever valid in Openswan on kernel 2.6
+            nat_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-nat-networks']
+            if config.exists(nat_networks):
+                config.delete(nat_networks)
+
+            # allow-nat-networks - Also sets a value only valid in Openswan
+            public_networks = base + ['site-to-site', 'peer', peer, 'tunnel', tunnel, 'allow-public-networks']
+            if config.exists(public_networks):
+                config.delete(public_networks)
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
