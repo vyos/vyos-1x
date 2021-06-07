@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A VTI interface also requires an IPSec configuration - VyOS 1.2 supported
+# having a VTI interface in the CLI but no IPSec configuration - drop VTI
+# configuration if this is the case for VyOS 1.4
+
+import sys
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(sys.argv) < 1):
+        print("Must specify file name!")
+        sys.exit(1)
+
+    file_name = sys.argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    base = ['interfaces', 'vti']
+    if not config.exists(base):
+        # Nothing to do
+        sys.exit(0)
+
+    ipsec_base = ['vpn', 'ipsec', 'site-to-site', 'peer']
+    for interface in config.list_nodes(base):
+        found = False
+        if config.exists(ipsec_base):
+            for peer in config.list_nodes(ipsec_base):
+                if config.exists(ipsec_base + [peer, 'vti', 'bind']):
+                    tmp = config.return_value(ipsec_base + [peer, 'vti', 'bind'])
+                    if tmp == interface:
+                        # Interface was found and we no longer need to search
+                        # for it in our IPSec peers
+                        found = True
+                        break
+        if not found:
+            config.delete(base + [interface])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
