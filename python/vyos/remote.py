@@ -23,11 +23,13 @@ import tempfile
 import urllib.parse
 import urllib.request as urlreq
 
-from vyos.util import cmd, ask_yes_no
-from vyos.validate import is_ipv6
+from vyos.util import cmd
+from vyos.util import ask_yes_no
+from vyos.template import is_ipv6
 from vyos.version import get_version
-from paramiko import SSHClient, SSHException, MissingHostKeyPolicy
-
+from paramiko import SSHClient
+from paramiko import SSHException
+from paramiko import MissingHostKeyPolicy
 
 # This is a hardcoded path and no environment variable can change it.
 KNOWN_HOSTS_FILE = os.path.expanduser('~/.ssh/known_hosts')
