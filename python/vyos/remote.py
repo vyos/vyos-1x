@@ -24,9 +24,9 @@ import urllib.parse
 import urllib.request as urlreq
 
 from vyos.util import cmd, ask_yes_no
+from vyos.validate import is_ipv6
 from vyos.version import get_version
 from paramiko import SSHClient, SSHException, MissingHostKeyPolicy
-
 
 
 # This is a hardcoded path and no environment variable can change it.
@@ -42,7 +42,8 @@ class InteractivePolicy(MissingHostKeyPolicy):
         print_error(f"Host '{hostname}' not found in known hosts.")
         print_error('Fingerprint: ' + key.get_fingerprint().hex())
         if ask_yes_no('Do you wish to continue?'):
-            if client._host_keys_filename and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
+            if client._host_keys_filename\
+               and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
                 client._host_keys.add(hostname, key.get_name(), key)
                 client.save_host_keys(client._host_keys_filename)
         else:
@@ -180,7 +181,9 @@ def transfer_sftp(mode, local_path, hostname, remote_path,\
                   source=None, progressbar=False):
     sock = None
     if source:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Check if the given string is an IPv6 address.
+        address_family = socket.AF_INET6 if is_ipv6(source) else socket.AF_INET
+        sock = socket.socket(address_family, socket.SOCK_STREAM)
         sock.bind((source, 0))
         sock.connect((hostname, port))
     callback = make_progressbar() if progressbar else None
@@ -284,7 +287,7 @@ def get_http_file_size(urlstring, username=None, password=None):
             raise ValueError('Failed to receive file size from HTTP server.')
 
 
-# Dynamic dispatchers
+## Dynamic dispatchers
 def download(local_path, urlstring, source=None, progressbar=False):
     """
     Dispatch the appropriate download function for the given `urlstring` and save to `local_path`.
@@ -365,7 +368,6 @@ def get_remote_config(urlstring, source=None):
                 <interface>
                 <IP address>
     """
-    url = urllib.parse.urlparse(urlstring)
     temp = tempfile.NamedTemporaryFile(delete=False).name
     try:
         download(temp, urlstring, source)
