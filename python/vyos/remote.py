@@ -14,7 +14,6 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from ftplib import FTP
-import ipaddress
 import math
 import os
 import shutil
@@ -25,6 +24,7 @@ import urllib.parse
 import urllib.request as urlreq
 
 from vyos.util import cmd, ask_yes_no
+from vyos.validate import is_ipv6
 from vyos.version import get_version
 from paramiko import SSHClient, SSHException, MissingHostKeyPolicy
 
@@ -182,12 +182,7 @@ def transfer_sftp(mode, local_path, hostname, remote_path,\
     sock = None
     if source:
         # Check if the given string is an IPv6 address.
-        try:
-            ipaddress.IPv6Address(source)
-        except ipaddress.AddressValueError:
-            address_family = socket.AF_INET
-        else:
-            address_family = socket.AF_INET6
+        address_family = socket.AF_INET6 if is_ipv6(source) else socket.AF_INET
         sock = socket.socket(address_family, socket.SOCK_STREAM)
         sock.bind((source, 0))
         sock.connect((hostname, port))
