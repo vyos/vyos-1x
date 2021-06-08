@@ -60,6 +60,10 @@ interface_definitions: $(config_xml_obj)
 	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ip/node.def $(TMPL_DIR)/interfaces/vti/node.tag/ip
 	cp $(TMPL_DIR)/interfaces/ethernet/node.tag/ipv6/node.def $(TMPL_DIR)/interfaces/vti/node.tag/ipv6
 
+	# XXX: test if there are empty node.def files - this is not allowed as these
+	# could mask help strings or mandatory priority statements
+	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
 .PHONY: op_mode_definitions
 .ONESHELL:
 op_mode_definitions: $(op_xml_obj)
