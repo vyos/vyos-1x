@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
-<!--SSH configuration -->
 <interfaceDefinition>
   <node name="service">
+    <properties>
+      <help>System services</help>
+    </properties>
     <children>
       <node name="ssh" owner="${vyos_conf_scripts_dir}/ssh.py">
         <properties>
