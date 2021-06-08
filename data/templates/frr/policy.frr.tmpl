@@ -262,6 +262,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.local is defined and rule_config.set.ipv6_next_hop.local is not none %}
  set ipv6 next-hop local {{ rule_config.set.ipv6_next_hop.local }}
 {%           endif %}
+{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.prefer_global is defined %}
+ set ipv6 next-hop prefer-global
+{%           endif %}
 {%           if rule_config.set.large_community is defined and rule_config.set.large_community is not none %}
  set large-community {{ rule_config.set.large_community }}
 {%           endif %}

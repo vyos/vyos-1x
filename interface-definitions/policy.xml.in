@@ -1066,6 +1066,12 @@
                           </constraint>
                         </properties>
                       </leafNode>
+                      <leafNode name="prefer-global">
+                        <properties>
+                          <help>Prefer global address as the nexthop</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
                     </children>
                   </node>
                   <leafNode name="large-community">
