@@ -1,7 +1,4 @@
 <?xml version="1.0"?>
-
-<!-- Cron configuration -->
-
 <interfaceDefinition>
   <node name="system">
     <children>
