@@ -74,6 +74,7 @@ Depends:
   libstrongswan-standard-plugins (>=5.8),
   libstrongswan-extra-plugins (>=5.8),
   libcharon-extra-plugins (>=5.8),
+  libqmi-utils,
   libvyosconfig0,
   lldpd,
   lm-sensors,
