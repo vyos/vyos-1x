@@ -37,15 +37,15 @@ conn peer-{{ peer }}
     keylife = 3600s
     rekeymargin = 540s
 {{ ike_esp.conn(peer_ike, ciphers.ike[peer_conf.ike_group], peer_esp, ciphers.esp[peer_conf.default_esp_group] if peer_esp else None) }}
-{%     if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
+
+{%     if not peer_conf.tunnel is defined and peer_conf.vti is defined and peer_conf.vti.bind is defined %}
 {%       set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
 conn peer-{{ peer }}-vti
     also = peer-{{ peer }}
     leftsubnet = 0.0.0.0/0
-    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
     rightsubnet = 0.0.0.0/0
+    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
     mark = {{ marks[peer_conf.vti.bind] }}
-{{ ike_esp.conn(None, None, vti_esp, ciphers.esp[peer_conf.vti.esp_group] if vti_esp else None) }}
 {%       if peer[0:1] == '@' %}
     rekey = no
     auto = add
@@ -58,27 +58,31 @@ conn peer-{{ peer }}-vti
     auto = route
     keyingtries = 1
 {%         endif %}
+{{ ike_esp.conn(None, None, vti_esp, ciphers.esp[peer_conf.vti.esp_group] if vti_esp else None) }}
 {%       endif %}
 {%     elif peer_conf.tunnel is defined %}
 {%       for tunnel_id, tunnel_conf in peer_conf.tunnel.items() %}
 {%         set tunnel_esp_name = tunnel_conf.esp_group if "esp_group" in tunnel_conf else peer_conf.default_esp_group %}
 {%         set tunnel_esp = esp_group[tunnel_esp_name] %}
-{%         set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '%any' %}
+{%         set proto = tunnel_conf.protocol if tunnel_conf.protocol is defined else '%any' %}
+{%         set local_port = tunnel_conf.local.port if tunnel_conf.local is defined and tunnel_conf.local.port is defined else '%any' %}
+{%         set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '%any' %}
 conn peer-{{ peer }}-tunnel-{{tunnel_id}}
     also = peer-{{ peer }}
 {%         if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%           if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
-    leftsubnet = {{ tunnel_conf.local.prefix if tunnel_conf.local.prefix != 'any' else '0.0.0.0/0' }}[{{ proto }}/{{ tunnel_conf.local.port if "port" in tunnel_conf.local else '%any' }}]
+{%             set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0'] %}
+{%             set suffix = "[{0}/{1}]".format(proto, local_port) %}
+    leftsubnet = {{ local_prefix | join(suffix + ",") }}{{ suffix }}
 {%           endif %}
 {%           if tunnel_conf.remote is defined and tunnel_conf.remote.prefix is defined %}
-    rightsubnet = {{ tunnel_conf.remote.prefix if tunnel_conf.remote.prefix != 'any' else '0.0.0.0/0' }}[{{ proto }}/{{ tunnel_conf.remote.port if "port" in tunnel_conf.remote else '%any' }}]
+{%             set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0'] %}
+{%             set suffix = "[{0}/{1}]".format(proto, remote_port) %}
+    rightsubnet = {{ remote_prefix | join(suffix + ",") }}{{ suffix }}
 {%           endif %}
 {%         elif tunnel_esp.mode == 'transport' %}
-    leftsubnet = {{ peer_conf.local_address }}[{{ proto }}/{{ tunnel_conf.local.port if "local" in tunnel_conf and "port" in tunnel_conf.local else '%any' }}]
-    rightsubnet = {{ peer }}[{{ proto }}/{{ tunnel_conf.local.port if "local" in tunnel_conf and "port" in tunnel_conf.local else '%any' }}]
-{%         endif %}
-{%         if tunnel_conf.esp_group is defined %}
-{{ ike_esp.conn(None, None, tunnel_esp, ciphers.esp[tunnel_esp_name]) }}
+    leftsubnet = {{ peer_conf.local_address }}[{{ proto }}/{{ local_port }}]
+    rightsubnet = {{ peer }}[{{ proto }}/{{ remote_port }}]
 {%         endif %}
 {%         if peer[0:1] == '@' %}
     rekey = no
@@ -93,12 +97,20 @@ conn peer-{{ peer }}-tunnel-{{tunnel_id}}
     keyingtries = 1
 {%           endif %}
 {%         endif %}
-{%         if tunnel_conf.passthrough is defined and tunnel_conf.passthrough is not none %}
+{%         if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
+    leftupdown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
+    mark = {{ marks[peer_conf.vti.bind] }}
+{%         endif %}
+{%         if tunnel_conf.esp_group is defined %}
+{{ ike_esp.conn(None, None, tunnel_esp, ciphers.esp[tunnel_esp_name]) }}
+{%         endif %}
+
+{%         if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
 conn peer-{{ peer }}-tunnel-{{ tunnel_id }}-passthough
     left = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%defaultroute' }}
     right = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '%any' }}
-    leftsubnet = {{ tunnel_conf.local.prefix }}
-    rightsubnet = {{ tunnel_conf.local.prefix }}
+    leftsubnet = {{ tunnel_conf.local.prefix | join(",") }}
+    rightsubnet = {{ tunnel_conf.local.prefix | join(",") }}
     type = passthrough
     authby = never
     auto = route

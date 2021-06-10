@@ -319,15 +319,23 @@ def generate(ipsec):
                 if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
                     data['marks'][vti_interface] = get_mark(vti_interface)
-                else:
-                    for tunnel, tunnel_conf in peer_conf['tunnel'].items():
-                        local_prefix = dict_search('local.prefix', tunnel_conf)
-                        remote_prefix = dict_search('remote.prefix', tunnel_conf)
 
-                        if not local_prefix or not remote_prefix:
+                if 'tunnel' in peer_conf:
+                    for tunnel, tunnel_conf in peer_conf['tunnel'].items():
+                        local_prefixes = dict_search('local.prefix', tunnel_conf)
+                        remote_prefixes = dict_search('remote.prefix', tunnel_conf)
+
+                        if not local_prefixes or not remote_prefixes:
                             continue
 
-                        passthrough = cidr_fit(local_prefix, remote_prefix)
+                        passthrough = False
+
+                        for local_prefix in local_prefixes:
+                            for remote_prefix in remote_prefixes:
+                                if cidr_fit(local_prefix, remote_prefix):
+                                    passthrough = True
+                                    break
+                        
                         data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
         if 'logging' in ipsec and 'log_modes' in ipsec['logging']:

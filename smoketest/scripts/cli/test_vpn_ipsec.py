@@ -48,7 +48,13 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "ike-group", "MyIKEGroup"])
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "default-esp-group", "MyESPGroup"])
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "local-address", "192.0.2.10"])
-        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "protocol", "gre"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "protocol", "tcp"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "port", "443"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "port", "443"])
 
         self.cli_commit()
 
@@ -58,7 +64,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             'esp = aes128-sha1-modp1024!',
             'left = 192.0.2.10',
             'right = 203.0.113.45',
-            'type = tunnel'
+            'type = tunnel',
+            'leftsubnet = 172.16.10.0/24[tcp/443],172.16.11.0/24[tcp/443]',
+            'rightsubnet = 172.17.10.0/24[tcp/443],172.17.11.0/24[tcp/443]'
         ]
 
         ipsec_secrets_lines = [
