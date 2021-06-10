@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!--SSH configuration -->
 <interfaceDefinition>
   <node name="service">
     <properties>
@@ -14,9 +13,7 @@
         <children>
           <node name="access-control">
             <properties>
-              <help>SSH user/group access controls. Directives are processed
-                in the following order: deny-users, allow-users, deny-groups and
-                allow-groups.</help>
+              <help>SSH user/group access controls</help>
             </properties>
             <children>
               <node name="allow">
@@ -24,26 +21,8 @@
                   <help>Allow user/group SSH access</help>
                 </properties>
                 <children>
-                  <leafNode name="group">
-                    <properties>
-                      <help>Allow members of a group to login</help>
-                      <constraint>
-                        <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters or more than 32 characters</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="user">
-                    <properties>
-                      <help>Allow specific users to login</help>
-                      <constraint>
-                        <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters or more than 32 characters</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/ssh-group.xml.i>
+                  #include <include/ssh-user.xml.i>
                 </children>
               </node>
               <node name="deny">
@@ -51,26 +30,8 @@
                   <help>Deny user/group SSH access</help>
                 </properties>
                 <children>
-                  <leafNode name="group">
-                    <properties>
-                      <help>Disallow members of a group to login</help>
-                      <constraint>
-                        <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters or more than 32 characters</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="user">
-                    <properties>
-                      <help>Disallow specific users to login</help>
-                      <constraint>
-                        <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters or more than 32 characters</constraintErrorMessage>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/ssh-group.xml.i>
+                  #include <include/ssh-user.xml.i>
                 </children>
               </node>
             </children>
