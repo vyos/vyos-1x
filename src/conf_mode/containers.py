@@ -75,7 +75,7 @@ def get_config(config=None):
 
     base = ['container']
     container = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True)
+                                     get_first_key=True, no_tag_node_value_mangle=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
