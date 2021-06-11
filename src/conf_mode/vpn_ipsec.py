@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.ifconfig import Interface
+from vyos.template import ip_from_cidr
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
@@ -73,12 +74,16 @@ any_log_modes = [
 ike_ciphers = {}
 esp_ciphers = {}
 
+dhcp_wait_attempts = 2
+dhcp_wait_sleep = 1
+
 mark_base = 0x900000
 
 CA_PATH = "/etc/ipsec.d/cacerts/"
 CRL_PATH = "/etc/ipsec.d/crls/"
 
 DHCP_BASE = "/var/lib/dhcp/dhclient"
+DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
 
 LOCAL_KEY_PATHS = ['/config/auth/', '/config/ipsec.d/rsa-keys/']
 X509_PATH = '/config/auth/'
@@ -96,6 +101,7 @@ def get_config(config=None):
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  get_first_key=True, no_tag_node_value_mangle=True)
 
+    ipsec['dhcp_no_address'] = {}
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces', 'interface'])
     ipsec['l2tp_exists'] = conf.exists('vpn l2tp remote-access ipsec-settings ')
     ipsec['nhrp_exists'] = conf.exists('protocols nhrp tunnel')
@@ -161,6 +167,15 @@ def verify_rsa_local_key(ipsec):
 
 def verify_rsa_key(ipsec, key_name):
     return dict_search(f'rsa_key_name.{key_name}.rsa_key', ipsec['rsa_keys'])
+
+def get_dhcp_address(iface):
+    addresses = Interface(iface).get_addr()
+    if not addresses:
+        return None
+    for address in addresses:
+        if not address.startswith("fe80:"): # Skip link-local ipv6
+            return ip_from_cidr(address)
+    return None
 
 def verify(ipsec):
     if not ipsec:
@@ -252,9 +267,17 @@ def verify(ipsec):
                 if not os.path.exists(f'{DHCP_BASE}_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
-                address = Interface(dhcp_interface).get_addr()
+                address = get_dhcp_address(dhcp_interface)
+                count = 0
+                while not address and count < dhcp_wait_attempts:
+                    address = get_dhcp_address(dhcp_interface)
+                    count += 1
+                    sleep(dhcp_wait_sleep)
+
                 if not address:
-                    raise ConfigError(f"Failed to get address from dhcp-interface on site-to-site peer {peer}")
+                    ipsec['dhcp_no_address'][peer] = dhcp_interface
+                    print(f"Failed to get address from dhcp-interface on site-to-site peer {peer} -- skipped")
+                    continue
 
             if 'vti' in peer_conf:
                 if 'local_address' in peer_conf and 'dhcp_interface' in peer_conf:
@@ -291,6 +314,10 @@ def generate(ipsec):
     data = {}
 
     if ipsec:
+        if ipsec['dhcp_no_address']:
+            with open(DHCP_HOOK_IFLIST, 'w') as f:
+                f.write(" ".join(ipsec['dhcp_no_address'].values()))
+
         data = ipsec
         data['authby'] = authby_translate
         data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
@@ -300,6 +327,9 @@ def generate(ipsec):
 
         if 'site_to_site' in data and 'peer' in data['site_to_site']:
             for peer, peer_conf in ipsec['site_to_site']['peer'].items():
+                if peer in ipsec['dhcp_no_address']:
+                    continue
+
                 if peer_conf['authentication']['mode'] == 'x509':
                     ca_cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['ca_cert_file'])
                     call(f'cp -f {ca_cert_file} {CA_PATH}')
@@ -312,7 +342,7 @@ def generate(ipsec):
                 if 'local_address' in peer_conf:
                     local_ip = peer_conf['local_address']
                 elif 'dhcp_interface' in peer_conf:
-                    local_ip = Interface(peer_conf['dhcp_interface']).get_addr()
+                    local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
 
                 data['site_to_site']['peer'][peer]['local_address'] = local_ip
 
