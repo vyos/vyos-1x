@@ -312,7 +312,8 @@ def generate(ipsec):
                 if 'local_address' in peer_conf:
                     local_ip = peer_conf['local_address']
                 elif 'dhcp_interface' in peer_conf:
-                    local_ip = Interface(peer_conf['dhcp_interface']).get_addr()
+                    iface_address = Interface(peer_conf['dhcp_interface']).get_addr()[0]
+                    local_ip = iface_address.split("/")[0]
 
                 data['site_to_site']['peer'][peer]['local_address'] = local_ip
 
