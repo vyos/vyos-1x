@@ -1,0 +1,76 @@
+#!/bin/bash
+
+if [ "$reason" == "REBOOT" ] || [ "$reason" == "EXPIRE" ]; then
+    exit 0
+fi
+
+DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
+
+if [ -f $DHCP_HOOK_IFLIST ] && [ "$reason" == "BOUND" ]; then
+    if grep -qw $interface $DHCP_HOOK_IFLIST; then
+        sudo rm $DHCP_HOOK_IFLIST
+        sudo python3 /usr/libexec/vyos/conf_mode/vpn_ipsec.py
+        exit 0
+    fi
+fi
+
+if [ "$old_ip_address" == "$new_ip_address" ] && [ "$reason" == "BOUND" ]; then
+    exit 0
+fi
+
+python3 - <<PYEND
+import os
+import re
+from vyos.util import call
+from vyos.util import cmd
+
+IPSEC_CONF="/etc/ipsec.conf"
+IPSEC_SECRETS="/etc/ipsec.secrets"
+
+def getlines(file):
+    with open(file, 'r') as f:
+        return f.readlines()
+
+def writelines(file, lines):
+    with open(file, 'w') as f:
+        f.writelines(lines)
+
+def ipsec_down(ip_address):
+    # This prevents the need to restart ipsec and kill all active connections, only the stale connection is closed
+    status = cmd('sudo ipsec statusall')
+    connection_name = None
+    for line in status.split("\n"):
+        if line.find(ip_address) > 0:
+            regex_match = re.search(r'(peer-[^:\[]+)', line)
+            if regex_match:
+                connection_name = regex_match[1]
+                break
+    if connection_name:
+        call(f'sudo ipsec down {connection_name}')
+
+if __name__ == '__main__':
+    interface = os.getenv('interface')
+    new_ip = os.getenv('new_ip_address')
+    old_ip = os.getenv('old_ip_address')
+
+    conf_lines = getlines(IPSEC_CONF)
+    secrets_lines = getlines(IPSEC_SECRETS)
+    found = False
+    to_match = f'# dhcp:{interface}'
+
+    for i, line in enumerate(conf_lines):
+        if line.find(to_match) > 0:
+            conf_lines[i] = line.replace(old_ip, new_ip)
+            found = True
+
+    for i, line in enumerate(secrets_lines):
+        if line.find(to_match) > 0:
+            secrets_lines[i] = line.replace(old_ip, new_ip)
+
+    if found:
+        writelines(IPSEC_CONF, conf_lines)
+        writelines(IPSEC_SECRETS, secrets_lines)
+        ipsec_down(old_ip)
+        call('sudo /usr/sbin/ipsec rereadall')
+        call('sudo /usr/sbin/ipsec reload')
+PYEND

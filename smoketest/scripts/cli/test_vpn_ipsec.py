@@ -20,6 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.util import call, process_named_running, read_file
 
+ethernet_path = ['interfaces', 'ethernet']
 tunnel_path = ['interfaces', 'tunnel']
 nhrp_path = ['protocols', 'nhrp']
 base_path = ['vpn', 'ipsec']
@@ -29,7 +30,38 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
+        self.cli_delete(ethernet_path)
         self.cli_commit()
+
+    def test_dhcp_fail_handling(self):
+        self.cli_delete(ethernet_path)
+        self.cli_delete(base_path)
+
+        # Interface for dhcp-interface
+        self.cli_set(ethernet_path + ['eth0', 'address', 'dhcp'])
+
+        # Set IKE/ESP Groups
+        self.cli_set(base_path + ["esp-group", "MyESPGroup", "proposal", "1", "encryption", "aes128"])
+        self.cli_set(base_path + ["esp-group", "MyESPGroup", "proposal", "1", "hash", "sha1"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "dh-group", "2"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "encryption", "aes128"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "hash", "sha1"])
+
+        # Site to site
+        self.cli_set(base_path + ["ipsec-interfaces", "interface", "eth0"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "authentication", "mode", "pre-shared-secret"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "authentication", "pre-shared-secret", "MYSECRETKEY"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "ike-group", "MyIKEGroup"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "default-esp-group", "MyESPGroup"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "dhcp-interface", "eth0"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "protocol", "gre"])
+
+        self.cli_commit()
+
+        ipsec_dhcp_waiting = read_file('/tmp/ipsec_dhcp_waiting')
+
+        self.assertIn('eth0', ipsec_dhcp_waiting) # Ensure dhcp-failed interface was added for dhclient hook
+        self.assertTrue(process_named_running('charon')) # Commit should've still succeeded and launched charon
 
     def test_site_to_site(self):
         self.cli_delete(base_path)
