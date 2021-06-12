@@ -7,7 +7,7 @@ config setup
     uniqueids = {{ "no" if disable_uniqreqids is defined else "yes" }}
 
 {% if site_to_site is defined and site_to_site.peer is defined %}
-{%   for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address %}
+{%   for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address and peer_conf.disable is not defined %}
 {%     set peer_index = loop.index %}
 {%     set peer_ike = ike_group[peer_conf.ike_group] %}
 {%     set peer_esp = esp_group[peer_conf.default_esp_group] if peer_conf.default_esp_group is defined else None %}
@@ -60,7 +60,7 @@ conn peer-{{ peer }}-vti
 {%         endif %}
 {%       endif %}
 {%     elif peer_conf.tunnel is defined %}
-{%       for tunnel_id, tunnel_conf in peer_conf.tunnel.items() %}
+{%       for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
 {%         set tunnel_esp_name = tunnel_conf.esp_group if "esp_group" in tunnel_conf else peer_conf.default_esp_group %}
 {%         set tunnel_esp = esp_group[tunnel_esp_name] %}
 {%         set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '%any' %}

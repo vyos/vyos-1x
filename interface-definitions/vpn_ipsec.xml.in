@@ -642,6 +642,7 @@
               <help>VPN IPSec Profile</help>
             </properties>
             <children>
+              #include <include/generic-disable-node.xml.i>
               <node name="authentication">
                 <properties>
                   <help>Authentication [REQUIRED]</help>
@@ -731,6 +732,7 @@
                   </valueHelp>
                 </properties>
                 <children>
+                  #include <include/generic-disable-node.xml.i>
                   <node name="authentication">
                     <properties>
                       <help>Peer authentication [REQUIRED]</help>
