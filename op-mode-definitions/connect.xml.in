@@ -19,7 +19,7 @@
           <help>Bring up a connection-oriented network interface</help>
           <completionHelp>
             <path>interfaces pppoe</path>
-            <path>interfaces wirelessmodem</path>
+            <path>interfaces wwan</path>
           </completionHelp>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>

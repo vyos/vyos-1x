@@ -35,3 +35,4 @@ from vyos.ifconfig.tunnel import TunnelIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If
 from vyos.ifconfig.macsec import MACsecIf
+from vyos.ifconfig.wwan import WWANIf

@@ -26,7 +26,7 @@
 "interfaces-vxlan.py",
 "interfaces-wireguard.py",
 "interfaces-wireless.py",
-"interfaces-wirelessmodem.py",
+"interfaces-wwan.py",
 "ipsec-settings.py",
 "lldp.py",
 "nat.py",
