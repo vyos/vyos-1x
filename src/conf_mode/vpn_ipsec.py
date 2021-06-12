@@ -25,6 +25,7 @@ from vyos.configverify import verify_interface_exists
 from vyos.ifconfig import Interface
 from vyos.template import ip_from_cidr
 from vyos.template import render
+from vyos.validate import is_ipv6_link_local
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import get_interface_address
@@ -173,7 +174,7 @@ def get_dhcp_address(iface):
     if not addresses:
         return None
     for address in addresses:
-        if not address.startswith("fe80:"): # Skip link-local ipv6
+        if not is_ipv6_link_local(address):
             return ip_from_cidr(address)
     return None
 
