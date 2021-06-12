@@ -32,6 +32,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, StrictStr, validator
+from starlette.datastructures import FormData, MutableHeaders
+from starlette.formparsers import FormParser, MultiPartParser
+from multipart.multipart import parse_options_header
 
 import vyos.config
 
@@ -236,6 +239,35 @@ class MultipartRequest(Request):
     ERR_PATH_NOT_LIST_OF_STR = False
     offending_command = {}
     exception = None
+
+    @property
+    def orig_headers(self):
+        self._orig_headers = super().headers
+        return self._orig_headers
+
+    @property
+    def headers(self):
+        self._headers = super().headers.mutablecopy()
+        self._headers['content-type'] = 'application/json'
+        return self._headers
+
+    async def form(self) -> FormData:
+        if not hasattr(self, "_form"):
+            assert (
+                parse_options_header is not None
+            ), "The `python-multipart` library must be installed to use form parsing."
+            content_type_header = self.orig_headers.get("Content-Type")
+            content_type, options = parse_options_header(content_type_header)
+            if content_type == b"multipart/form-data":
+                multipart_parser = MultiPartParser(self.orig_headers, self.stream())
+                self._form = await multipart_parser.parse()
+            elif content_type == b"application/x-www-form-urlencoded":
+                form_parser = FormParser(self.orig_headers, self.stream())
+                self._form = await form_parser.parse()
+            else:
+                self._form = FormData()
+        return self._form
+
     async def body(self) -> bytes:
         if not hasattr(self, "_body"):
             forms = {}
