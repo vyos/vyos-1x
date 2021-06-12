@@ -123,6 +123,12 @@
               </tagNode>
             </children>
           </tagNode>
+          <leafNode name="kernel">
+            <properties>
+              <help>Show messages in kernel ring buffer</help>
+            </properties>
+            <command>sudo dmesg</command>
+          </leafNode>
           <leafNode name="lldp">
             <properties>
               <help>Show log for LLDP</help>
