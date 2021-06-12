@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if (len(argv) < 1):
+        print("Must specify file name!")
+        exit(1)
+
+    file_name = argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    base = ['interfaces', 'wirelessmodem']
+    if not config.exists(base):
+        # Nothing to do
+        exit(0)
+
+    new_base = ['interfaces', 'wwan']
+    config.set(new_base)
+    config.set_tag(new_base)
+    for interface in config.list_nodes(base):
+        # convert usb0b1.3p1.2 device identifier and extract 1.3 usb bus id
+        usb = config.return_value(base + [interface, 'device'])
+        device = usb.split('b')[-1]
+        busid = device.split('p')[0]
+        for wwan in os.listdir('/sys/class/net'):
+            # we are only interested in interfaces starting with wwan
+            if not wwan.startswith('wwan'):
+                continue
+            device = os.readlink(f'/sys/class/net/{wwan}/device')
+            device = device.split(':')[0]
+            if busid in device:
+                config.copy(base + [interface], new_base + [wwan])
+
+    config.delete(base)
+
+    # Now that we have copied the old wirelessmodem interfaces to wwan
+    # we can start to migrate also individual config items.
+    for interface in config.list_nodes(new_base):
+        # we do no longer need the USB device name
+        config.delete(new_base + [interface, 'device'])
+        # set/unset DNS configuration
+        dns = new_base + [interface, 'no-peer-dns']
+        if config.exists(dns):
+            config.delete(dns)
+        else:
+            config.set(['system', 'name-servers-dhcp'], value=interface, replace=False)
+
+        # the new wwan interface use regular IP addressing
+        config.set(new_base + [interface, 'address'], value='dhcp')
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        exit(1)

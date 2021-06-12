@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <tagNode name="wwan">
+            <properties>
+              <help>Show Wireless Wire Area Network (WWAN) interface information</help>
+              <completionHelp>
+                <path>interfaces wwan</path>
+                <script>cd /sys/class/net; ls -d wwan*</script>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <children>
+              <leafNode name="capabilities">
+                <properties>
+                  <help>Show WWAN module capabilities</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --capabilities</command>
+              </leafNode>
+              <leafNode name="firmware">
+                <properties>
+                  <help>Show WWAN module firmware</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --firmware</command>
+              </leafNode>
+              <leafNode name="imei">
+                <properties>
+                  <help>Show WWAN module IMEI/ESN/MEID</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imei</command>
+              </leafNode>
+              <leafNode name="imsi">
+                <properties>
+                  <help>Show WWAN module IMSI</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --imsi</command>
+              </leafNode>
+              <leafNode name="model">
+                <properties>
+                  <help>Show WWAN module manufacturer</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --model</command>
+              </leafNode>
+              <leafNode name="msisdn">
+                <properties>
+                  <help>Show WWAN module MSISDN</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --msisdn</command>
+              </leafNode>
+              <leafNode name="revision">
+                <properties>
+                  <help>Show WWAN module revision</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --revision</command>
+              </leafNode>
+              <leafNode name="signal">
+                <properties>
+                  <help>Show WWAN module RF signal info</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --signal</command>
+              </leafNode>
+              <leafNode name="sim">
+                <properties>
+                  <help>Show WWAN module connected SIM card information</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
+              </leafNode>
+              <leafNode name="summary">
+                <properties>
+                  <help>Show WWAN module information summary</help>
+                </properties>
+                <command>mmcli --modem ${4#wwan}</command>
+              </leafNode>
+              <leafNode name="log">
+                <properties>
+                  <help>Show interface log for specified interface</help>
+                </properties>
+                <command>echo not implemented</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="wwan">
+            <properties>
+              <help>Show Wireless Modem (WWAN) interface information</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wirelessmodem --action=show-brief</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed Wireless Modem (WWAN( interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wirelessmodem --action=show</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

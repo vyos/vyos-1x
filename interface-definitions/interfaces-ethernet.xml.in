@@ -6,14 +6,14 @@
         <properties>
           <help>Ethernet Interface</help>
           <priority>318</priority>
-          <constraint>
-            <regex>^((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$</regex>
-          </constraint>
-          <constraintErrorMessage>Invalid Ethernet interface name</constraintErrorMessage>
           <valueHelp>
             <format>ethN</format>
             <description>Ethernet interface name</description>
           </valueHelp>
+          <constraint>
+            <regex>^((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$</regex>
+          </constraint>
+          <constraintErrorMessage>Invalid Ethernet interface name</constraintErrorMessage>
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>

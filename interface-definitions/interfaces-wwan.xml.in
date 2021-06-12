@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="wwan" owner="${vyos_conf_scripts_dir}/interfaces-wwan.py">
+        <properties>
+          <help>Wireless Modem (WWAN) Interface</help>
+          <priority>350</priority>
+          <completionHelp>
+            <script>cd /sys/class/net; ls -d wwan*</script>
+          </completionHelp>
+          <constraint>
+            <regex>^wwan[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Wireless Modem interface must be named wwanN</constraintErrorMessage>
+          <valueHelp>
+            <format>wwanN</format>
+            <description>Wireless Wide Area Network interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
+          <leafNode name="apn">
+            <properties>
+              <help>Access Point Name (APN)</help>
+            </properties>
+          </leafNode>
+          #include <include/dhcp-options.xml.i>
+          #include <include/dhcpv6-options.xml.i>
+          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/interface-disable-link-detect.xml.i>
+          #include <include/interface/interface-mtu-68-1500.xml.i>
+          <leafNode name="mtu">
+            <defaultValue>1430</defaultValue>
+          </leafNode>
+          #include <include/interface/interface-ipv4-options.xml.i>
+          #include <include/interface/interface-ipv6-options.xml.i>
+          #include <include/interface/interface-dial-on-demand.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

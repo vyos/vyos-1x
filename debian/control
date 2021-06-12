@@ -72,6 +72,7 @@ Depends:
   lsscsi,
   mdns-repeater,
   minisign,
+  modemmanager,
   mtr-tiny,
   netplug,
   nftables (>= 0.9.3),

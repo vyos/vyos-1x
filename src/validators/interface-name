@@ -20,7 +20,7 @@ import re
 from sys import argv
 from sys import exit
 
-pattern = '^(bond|br|dum|en|ersp|eth|gnv|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|vti|vtun|vxlan|wg|wlan|wlm)[0-9]+(.\d+)?|lo$'
+pattern = '^(bond|br|dum|en|ersp|eth|gnv|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|vti|vtun|vxlan|wg|wlan|wwan)[0-9]+(.\d+)?|lo$'
 
 if __name__ == '__main__':
     if len(argv) != 2:
