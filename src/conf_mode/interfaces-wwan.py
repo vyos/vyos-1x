@@ -25,6 +25,7 @@ from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
 from vyos.util import cmd
+from vyos.util import dict_search
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -65,14 +66,25 @@ def apply(wwan):
     # we only need the modem number. wwan0 -> 0, wwan1 -> 1
     modem = wwan['ifname'].lstrip('wwan')
     base_cmd = f'mmcli --modem {modem}'
+    # Number of bearers is limited - always disconnect first
+    cmd(f'{base_cmd} --simple-disconnect')
 
     w = WWANIf(wwan['ifname'])
     if 'deleted' in wwan or 'disable' in wwan:
         w.remove()
-        cmd(f'{base_cmd} --simple-disconnect')
         return None
 
-    options = 'apn=' + wwan['apn']
+    ip_type = 'ipv4'
+    slaac = dict_search('ipv6.address.autoconf', wwan) != None
+    if 'address' in wwan:
+        if 'dhcp' in wwan['address'] and ('dhcpv6' in wwan['address'] or slaac):
+            ip_type = 'ipv4v6'
+        elif 'dhcpv6' in wwan['address'] or slaac:
+            ip_type = 'ipv6'
+        elif 'dhcp' in wwan['address']:
+            ip_type = 'ipv4'
+
+    options = f'ip-type={ip_type},apn=' + wwan['apn']
     if 'authentication' in wwan:
         options += ',user={user},password={password}'.format(**wwan['authentication'])
 
