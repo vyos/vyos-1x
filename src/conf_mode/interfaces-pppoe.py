@@ -22,6 +22,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_authentication
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
@@ -51,6 +52,7 @@ def verify(pppoe):
         return None
 
     verify_source_interface(pppoe)
+    verify_authentication(pppoe)
     verify_vrf(pppoe)
     verify_mtu_ipv6(pppoe)
 

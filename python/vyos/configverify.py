@@ -166,6 +166,19 @@ def verify_mirror(config):
                 raise ConfigError(f'Can not mirror "{direction}" traffic back ' \
                                    'the originating interface!')
 
+def verify_authentication(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of authentication for either PPPoE or WWAN interfaces.
+
+    If authentication CLI option is defined, both username and password must
+    be set!
+    """
+    if 'authentication' not in config:
+        return
+    if not {'user', 'password'} <= set(config['authentication']):
+        raise ConfigError('Authentication requires both username and ' \
+                          'password to be set!')
 
 def verify_address(config):
     """
