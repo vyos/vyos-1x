@@ -25,6 +25,7 @@
               <help>Access Point Name (APN)</help>
             </properties>
           </leafNode>
+          #include <include/interface/authentication.xml.i>
           #include <include/dhcp-options.xml.i>
           #include <include/dhcpv6-options.xml.i>
           #include <include/interface/interface-description.xml.i>

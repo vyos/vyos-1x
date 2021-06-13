@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
@@ -52,6 +53,7 @@ def verify(wwan):
         raise ConfigError(f'No APN configured for "{ifname}"!')
 
     verify_interface_exists(ifname)
+    verify_authentication(wwan)
     verify_vrf(wwan)
 
     return None
@@ -61,7 +63,7 @@ def generate(wwan):
 
 def apply(wwan):
     # we only need the modem number. wwan0 -> 0, wwan1 -> 1
-    modem = wwan['ifname'].replace('wwan','')
+    modem = wwan['ifname'].lstrip('wwan')
     base_cmd = f'mmcli --modem {modem}'
 
     w = WWANIf(wwan['ifname'])
@@ -70,7 +72,12 @@ def apply(wwan):
         cmd(f'{base_cmd} --simple-disconnect')
         return None
 
-    cmd(f'{base_cmd} --simple-connect=\"apn={wwan["apn"]}\"')
+    options = 'apn=' + wwan['apn']
+    if 'authentication' in wwan:
+        options += ',user={user},password={password}'.format(**wwan['authentication'])
+
+    command = f'{base_cmd} --simple-connect="{options}"'
+    cmd(command)
     w.update(wwan)
 
     return None
