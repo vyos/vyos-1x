@@ -25,23 +25,7 @@
               <constraintErrorMessage>Access concentrator name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
             </properties>
           </leafNode>
-          <node name="authentication">
-            <properties>
-              <help>Authentication settings</help>
-            </properties>
-            <children>
-              <leafNode name="user">
-                <properties>
-                  <help>User name</help>
-                </properties>
-              </leafNode>
-              <leafNode name="password">
-                <properties>
-                  <help>Password</help>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/interface/authentication.xml.i>
           #include <include/interface/interface-dial-on-demand.xml.i>
           <leafNode name="default-route">
             <properties>
