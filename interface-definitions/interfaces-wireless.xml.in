@@ -465,8 +465,8 @@
             </properties>
           </leafNode>
           #include <include/interface/interface-description.xml.i>
-          #include <include/dhcp-options.xml.i>
-          #include <include/dhcpv6-options.xml.i>
+          #include <include/interface/dhcp-options.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
           <leafNode name="disable-broadcast-ssid">
             <properties>
               <help>Disable broadcast of SSID from access-point</help>

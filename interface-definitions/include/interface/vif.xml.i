@@ -14,8 +14,8 @@
   <children>
     #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
     #include <include/interface/interface-description.xml.i>
-    #include <include/dhcp-options.xml.i>
-    #include <include/dhcpv6-options.xml.i>
+    #include <include/interface/dhcp-options.xml.i>
+    #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/interface-disable-link-detect.xml.i>
     #include <include/interface/interface-disable.xml.i>
     #include <include/interface/interface-vrf.xml.i>
