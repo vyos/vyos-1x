@@ -2,7 +2,7 @@
 
 {%  if profile is defined %}
 connections {
-{%      for name, profile_conf in profile.items() if "bind" in profile_conf and "tunnel" in profile_conf.bind %}
+{%      for name, profile_conf in profile.items() if profile_conf.disable is not defined and profile_conf.bind is defined and profile_conf.bind.tunnel is defined %}
 {%          set dmvpn_ike = ike_group[profile_conf.ike_group] %}
 {%          set dmvpn_esp = esp_group[profile_conf.esp_group] %}
 {%          for interface in profile_conf.bind.tunnel %}
@@ -41,7 +41,7 @@ connections {
 }
 
 secrets {
-{%      for name, profile_conf in profile.items() if "bind" in profile_conf and "tunnel" in profile_conf.bind %}
+{%      for name, profile_conf in profile.items() if profile_conf.disable is not defined and profile_conf.bind is defined and profile_conf.bind.tunnel is defined %}
 {%          if profile_conf.authentication.mode == 'pre-shared-secret' %}
 {%              for interface in profile_conf.bind.tunnel %}
     ike-dmvpn-{{ interface }} {
