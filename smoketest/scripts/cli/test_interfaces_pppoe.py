@@ -158,5 +158,19 @@ class PPPoEInterfaceTest(unittest.TestCase):
             tmp = re.findall(f'systemctl restart dhcp6c@{interface}.service', tmp)
             self.assertTrue(tmp)
 
+    def test_pppoe_authentication(self):
+        # When username or password is set - so must be the other
+        interface = 'pppoe0'
+        self.session.set(base_path + [interface, 'authentication', 'user', 'vyos'])
+        self.session.set(base_path + [interface, 'source-interface', self._source_interface])
+        self.session.set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+        # check validate() - if user is set, so must be the password
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        self.session.set(base_path + [interface, 'authentication', 'password', 'vyos'])
+        self.session.commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
