@@ -14,65 +14,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import argv
 from sys import exit
+
 from vyos.configtree import ConfigTree
 
-def migrate_ospf(config, path, interface):
-    path = path + ['ospf']
-    if config.exists(path):
-        new_base = ['protocols', 'ospf', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
+def replace_nat_interfaces(config, old, new):
+    if not config.exists(['nat']):
+        return
+    for direction in ['destination', 'source']:
+        conf_direction = ['nat', direction, 'rule']
+        if not config.exists(conf_direction):
+            return
+        for rule in config.list_nodes(conf_direction):
+            conf_rule = conf_direction + [rule]
+            if config.exists(conf_rule + ['inbound-interface']):
+                tmp = config.return_value(conf_rule + ['inbound-interface'])
+                if tmp == old:
+                    config.set(conf_rule + ['inbound-interface'], value=new)
+            if config.exists(conf_rule + ['outbound-interface']):
+                tmp = config.return_value(conf_rule + ['outbound-interface'])
+                if tmp == old:
+                    config.set(conf_rule + ['outbound-interface'], value=new)
 
-        # if "ip ospf" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_ospfv3(config, path, interface):
-    path = path + ['ospfv3']
-    if config.exists(path):
-        new_base = ['protocols', 'ospfv3', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ipv6 ospfv3" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_rip(config, path, interface):
-    path = path + ['rip']
-    if config.exists(path):
-        new_base = ['protocols', 'rip', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ip rip" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_ripng(config, path, interface):
-    path = path + ['ripng']
-    if config.exists(path):
-        new_base = ['protocols', 'ripng', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ipv6 ripng" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
 
 if __name__ == '__main__':
     if (len(argv) < 1):
@@ -80,62 +46,58 @@ if __name__ == '__main__':
         exit(1)
 
     file_name = argv[1]
+
     with open(file_name, 'r') as f:
         config_file = f.read()
 
     config = ConfigTree(config_file)
+    base = ['interfaces', 'wirelessmodem']
+    if not config.exists(base):
+        # Nothing to do
+        exit(0)
 
-    #
-    # Migrate "interface ethernet eth0 ip ospf" to "protocols ospf interface eth0"
-    #
-    for type in config.list_nodes(['interfaces']):
-        for interface in config.list_nodes(['interfaces', type]):
-            ip_base = ['interfaces', type, interface, 'ip']
-            ipv6_base = ['interfaces', type, interface, 'ipv6']
-            migrate_rip(config, ip_base, interface)
-            migrate_ripng(config, ipv6_base, interface)
-            migrate_ospf(config, ip_base, interface)
-            migrate_ospfv3(config, ipv6_base, interface)
+    new_base = ['interfaces', 'wwan']
+    config.set(new_base)
+    config.set_tag(new_base)
+    for old_interface in config.list_nodes(base):
+        # convert usb0b1.3p1.2 device identifier and extract 1.3 usb bus id
+        usb = config.return_value(base + [old_interface, 'device'])
+        device = usb.split('b')[-1]
+        busid = device.split('p')[0]
+        for new_interface in os.listdir('/sys/class/net'):
+            # we are only interested in interfaces starting with wwan
+            if not new_interface.startswith('wwan'):
+                continue
+            device = os.readlink(f'/sys/class/net/{new_interface}/device')
+            device = device.split(':')[0]
+            if busid in device:
+                config.copy(base + [old_interface], new_base + [new_interface])
+                replace_nat_interfaces(config, old_interface, new_interface)
 
-            vif_path = ['interfaces', type, interface, 'vif']
-            if config.exists(vif_path):
-                for vif in config.list_nodes(vif_path):
-                    vif_ip_base = vif_path + [vif, 'ip']
-                    vif_ipv6_base = vif_path + [vif, 'ipv6']
-                    ifname = f'{interface}.{vif}'
+    config.delete(base)
 
-                    migrate_rip(config, vif_ip_base, ifname)
-                    migrate_ripng(config, vif_ipv6_base, ifname)
-                    migrate_ospf(config, vif_ip_base, ifname)
-                    migrate_ospfv3(config, vif_ipv6_base, ifname)
+    # Now that we have copied the old wirelessmodem interfaces to wwan
+    # we can start to migrate also individual config items.
+    for interface in config.list_nodes(new_base):
+        # we do no longer need the USB device name
+        config.delete(new_base + [interface, 'device'])
+        # set/unset DNS configuration
+        dns = new_base + [interface, 'no-peer-dns']
+        if config.exists(dns):
+            config.delete(dns)
+        else:
+            config.set(['system', 'name-servers-dhcp'], value=interface, replace=False)
 
+        # Backup distance is now handled by DHCP option "default-route-distance"
+        distance = dns = new_base + [interface, 'backup', 'distance']
+        old_default_distance = '10'
+        if config.exists(distance):
+            old_default_distance = config.return_value(distance)
+            config.delete(distance)
+        config.set(new_base + [interface, 'dhcp-options', 'default-route-distance'], value=old_default_distance)
 
-            vif_s_path = ['interfaces', type, interface, 'vif-s']
-            if config.exists(vif_s_path):
-                for vif_s in config.list_nodes(vif_s_path):
-                    vif_s_ip_base = vif_s_path + [vif_s, 'ip']
-                    vif_s_ipv6_base = vif_s_path + [vif_s, 'ipv6']
-
-                    # vif-c interfaces MUST be migrated before their parent vif-s
-                    # interface as the migrate_*() functions delete the path!
-                    vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
-                    if config.exists(vif_c_path):
-                        for vif_c in config.list_nodes(vif_c_path):
-                            vif_c_ip_base = vif_c_path + [vif_c, 'ip']
-                            vif_c_ipv6_base = vif_c_path + [vif_c, 'ipv6']
-                            ifname = f'{interface}.{vif_s}.{vif_c}'
-
-                            migrate_rip(config, vif_c_ip_base, ifname)
-                            migrate_ripng(config, vif_c_ipv6_base, ifname)
-                            migrate_ospf(config, vif_c_ip_base, ifname)
-                            migrate_ospfv3(config, vif_c_ipv6_base, ifname)
-
-
-                    ifname = f'{interface}.{vif_s}'
-                    migrate_rip(config, vif_s_ip_base, ifname)
-                    migrate_ripng(config, vif_s_ipv6_base, ifname)
-                    migrate_ospf(config, vif_s_ip_base, ifname)
-                    migrate_ospfv3(config, vif_s_ipv6_base, ifname)
+        # the new wwan interface use regular IP addressing
+        config.set(new_base + [interface, 'address'], value='dhcp')
 
     try:
         with open(file_name, 'w') as f:

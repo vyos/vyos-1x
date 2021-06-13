@@ -14,94 +14,47 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+# A VTI interface also requires an IPSec configuration - VyOS 1.2 supported
+# having a VTI interface in the CLI but no IPSec configuration - drop VTI
+# configuration if this is the case for VyOS 1.4
 
-from sys import argv
-from sys import exit
-
+import sys
 from vyos.configtree import ConfigTree
 
-def replace_nat_interfaces(config, old, new):
-    if not config.exists(['nat']):
-        return
-    for direction in ['destination', 'source']:
-        conf_direction = ['nat', direction, 'rule']
-        if not config.exists(conf_direction):
-            return
-        for rule in config.list_nodes(conf_direction):
-            conf_rule = conf_direction + [rule]
-            if config.exists(conf_rule + ['inbound-interface']):
-                tmp = config.return_value(conf_rule + ['inbound-interface'])
-                if tmp == old:
-                    config.set(conf_rule + ['inbound-interface'], value=new)
-            if config.exists(conf_rule + ['outbound-interface']):
-                tmp = config.return_value(conf_rule + ['outbound-interface'])
-                if tmp == old:
-                    config.set(conf_rule + ['outbound-interface'], value=new)
-
-
 if __name__ == '__main__':
-    if (len(argv) < 1):
+    if (len(sys.argv) < 1):
         print("Must specify file name!")
-        exit(1)
+        sys.exit(1)
 
-    file_name = argv[1]
+    file_name = sys.argv[1]
 
     with open(file_name, 'r') as f:
         config_file = f.read()
 
     config = ConfigTree(config_file)
-    base = ['interfaces', 'wirelessmodem']
+    base = ['interfaces', 'vti']
     if not config.exists(base):
         # Nothing to do
-        exit(0)
+        sys.exit(0)
 
-    new_base = ['interfaces', 'wwan']
-    config.set(new_base)
-    config.set_tag(new_base)
-    for old_interface in config.list_nodes(base):
-        # convert usb0b1.3p1.2 device identifier and extract 1.3 usb bus id
-        usb = config.return_value(base + [old_interface, 'device'])
-        device = usb.split('b')[-1]
-        busid = device.split('p')[0]
-        for new_interface in os.listdir('/sys/class/net'):
-            # we are only interested in interfaces starting with wwan
-            if not new_interface.startswith('wwan'):
-                continue
-            device = os.readlink(f'/sys/class/net/{new_interface}/device')
-            device = device.split(':')[0]
-            if busid in device:
-                config.copy(base + [old_interface], new_base + [new_interface])
-                replace_nat_interfaces(config, old_interface, new_interface)
-
-    config.delete(base)
-
-    # Now that we have copied the old wirelessmodem interfaces to wwan
-    # we can start to migrate also individual config items.
-    for interface in config.list_nodes(new_base):
-        # we do no longer need the USB device name
-        config.delete(new_base + [interface, 'device'])
-        # set/unset DNS configuration
-        dns = new_base + [interface, 'no-peer-dns']
-        if config.exists(dns):
-            config.delete(dns)
-        else:
-            config.set(['system', 'name-servers-dhcp'], value=interface, replace=False)
-
-        # Backup distance is now handled by DHCP option "default-route-distance"
-        distance = dns = new_base + [interface, 'backup', 'distance']
-        old_default_distance = '10'
-        if config.exists(distance):
-            old_default_distance = config.return_value(distance)
-            config.delete(distance)
-        config.set(new_base + [interface, 'dhcp-options', 'default-route-distance'], value=old_default_distance)
-
-        # the new wwan interface use regular IP addressing
-        config.set(new_base + [interface, 'address'], value='dhcp')
+    ipsec_base = ['vpn', 'ipsec', 'site-to-site', 'peer']
+    for interface in config.list_nodes(base):
+        found = False
+        if config.exists(ipsec_base):
+            for peer in config.list_nodes(ipsec_base):
+                if config.exists(ipsec_base + [peer, 'vti', 'bind']):
+                    tmp = config.return_value(ipsec_base + [peer, 'vti', 'bind'])
+                    if tmp == interface:
+                        # Interface was found and we no longer need to search
+                        # for it in our IPSec peers
+                        found = True
+                        break
+        if not found:
+            config.delete(base + [interface])
 
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())
     except OSError as e:
         print("Failed to save the modified config: {}".format(e))
-        exit(1)
+        sys.exit(1)
