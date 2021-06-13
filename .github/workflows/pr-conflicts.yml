@@ -1,4 +1,4 @@
-ame: "PR Conflicts checker"
+name: "PR Conflicts checker"
 on:
   pull_request_target:
     types: [synchronize]
