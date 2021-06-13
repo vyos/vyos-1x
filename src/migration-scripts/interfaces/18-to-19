@@ -21,6 +21,25 @@ from sys import exit
 
 from vyos.configtree import ConfigTree
 
+def replace_nat_interfaces(config, old, new):
+    if not config.exists(['nat']):
+        return
+    for direction in ['destination', 'source']:
+        conf_direction = ['nat', direction, 'rule']
+        if not config.exists(conf_direction):
+            return
+        for rule in config.list_nodes(conf_direction):
+            conf_rule = conf_direction + [rule]
+            if config.exists(conf_rule + ['inbound-interface']):
+                tmp = config.return_value(conf_rule + ['inbound-interface'])
+                if tmp == old:
+                    config.set(conf_rule + ['inbound-interface'], value=new)
+            if config.exists(conf_rule + ['outbound-interface']):
+                tmp = config.return_value(conf_rule + ['outbound-interface'])
+                if tmp == old:
+                    config.set(conf_rule + ['outbound-interface'], value=new)
+
+
 if __name__ == '__main__':
     if (len(argv) < 1):
         print("Must specify file name!")
@@ -40,19 +59,20 @@ if __name__ == '__main__':
     new_base = ['interfaces', 'wwan']
     config.set(new_base)
     config.set_tag(new_base)
-    for interface in config.list_nodes(base):
+    for old_interface in config.list_nodes(base):
         # convert usb0b1.3p1.2 device identifier and extract 1.3 usb bus id
-        usb = config.return_value(base + [interface, 'device'])
+        usb = config.return_value(base + [old_interface, 'device'])
         device = usb.split('b')[-1]
         busid = device.split('p')[0]
-        for wwan in os.listdir('/sys/class/net'):
+        for new_interface in os.listdir('/sys/class/net'):
             # we are only interested in interfaces starting with wwan
-            if not wwan.startswith('wwan'):
+            if not new_interface.startswith('wwan'):
                 continue
-            device = os.readlink(f'/sys/class/net/{wwan}/device')
+            device = os.readlink(f'/sys/class/net/{new_interface}/device')
             device = device.split(':')[0]
             if busid in device:
-                config.copy(base + [interface], new_base + [wwan])
+                config.copy(base + [old_interface], new_base + [new_interface])
+                replace_nat_interfaces(config, old_interface, new_interface)
 
     config.delete(base)
 
