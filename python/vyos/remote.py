@@ -159,7 +159,7 @@ def transfer_sftp(mode, local_path, hostname, remote_path,\
                     return sftp.stat(remote_path).st_size
     finally:
         if sock:
-            sock.shutdown()
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
 
 def upload_sftp(*args, **kwargs):
