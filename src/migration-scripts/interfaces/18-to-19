@@ -68,6 +68,14 @@ if __name__ == '__main__':
         else:
             config.set(['system', 'name-servers-dhcp'], value=interface, replace=False)
 
+        # Backup distance is now handled by DHCP option "default-route-distance"
+        distance = dns = new_base + [interface, 'backup', 'distance']
+        old_default_distance = '10'
+        if config.exists(distance):
+            old_default_distance = config.return_value(distance)
+            config.delete(distance)
+        config.set(new_base + [interface, 'dhcp-options', 'default-route-distance'], value=old_default_distance)
+
         # the new wwan interface use regular IP addressing
         config.set(new_base + [interface, 'address'], value='dhcp')
 
