@@ -115,6 +115,11 @@
 {%                set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
 {%            endif %}
+{%            if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
+                mark_in = {{ marks[peer_conf.vti.bind] }}
+                mark_out = {{ marks[peer_conf.vti.bind] }}
+{%            endif %}
             }
 {%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
             peer_{{ name }}_tunnel_{{ tunnel_id }}_passthough {

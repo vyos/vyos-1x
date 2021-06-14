@@ -377,8 +377,8 @@ def generate(ipsec):
                 modes = any_log_modes
             data['charondebug'] = f' {level}, '.join(modes) + ' ' + level
 
-    # render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
-    # render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
+    render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
+    render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
     render("/etc/strongswan.d/interfaces_use.conf", "ipsec/interfaces_use.conf.tmpl", data)
     render("/etc/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
 
