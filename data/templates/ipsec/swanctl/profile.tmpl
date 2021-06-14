@@ -15,7 +15,7 @@
 {%    endif %}
         children {
             dmvpn {
-                esp_proposals = {{ ciphers.esp[profile_conf.esp_group][:-1] }}
+                esp_proposals = {{ ciphers.esp[profile_conf.esp_group] }}
                 rekey_time = {{ esp.lifetime if 'lifetime' in esp else '3600' }}s
                 rand_time = 540s
                 local_ts = dynamic[gre]

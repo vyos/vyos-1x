@@ -58,8 +58,8 @@
 {%        set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
             peer_{{ name }}_vti {
                 esp_proposals = {{ ciphers.esp[peer_conf.vti.esp_group] }}
-                local_ts = 0.0.0.0/0
-                remote_ts = 0.0.0.0/0
+                local_ts = 0.0.0.0/0,::/0
+                remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
                 mark_in = {{ marks[peer_conf.vti.bind] }}
                 mark_out = {{ marks[peer_conf.vti.bind] }}
@@ -82,20 +82,20 @@
 {%        for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
 {%            set tunnel_esp_name = tunnel_conf.esp_group if "esp_group" in tunnel_conf else peer_conf.default_esp_group %}
 {%            set tunnel_esp = esp_group[tunnel_esp_name] %}
-{%            set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '%any' %}
-{%            set local_port = tunnel_conf.local.port if tunnel_conf.local is defined and tunnel_conf.local.port is defined else '%any' %}
-{%            set local_suffix = '[{0}/{1}]'.format(proto, local_port) %}
-{%            set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '%any' %}
-{%            set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) %}
+{%            set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '' %}
+{%            set local_port = tunnel_conf.local.port if tunnel_conf.local is defined and tunnel_conf.local.port is defined else '' %}
+{%            set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
+{%            set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '' %}
+{%            set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
                 esp_proposals = {{ ciphers.esp[tunnel_esp_name] }}
 {%            if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%                if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
-{%                    set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0'] %}
+{%                    set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
 {%                endif %}
 {%                if tunnel_conf.remote is defined and tunnel_conf.remote.prefix is defined %}
-{%                    set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0'] %}
+{%                    set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
                 remote_ts = {{ remote_prefix | join(remote_suffix + ",") }}{{ remote_suffix }}
 {%                endif %}
 {%            elif tunnel_esp.mode == 'transport' %}
