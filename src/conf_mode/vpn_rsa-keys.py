@@ -29,7 +29,8 @@ from Crypto.PublicKey.RSA import construct
 airbag.enable()
 
 LOCAL_KEY_PATHS = ['/config/auth/', '/config/ipsec.d/rsa-keys/']
-LOCAL_OUTPUT = '/etc/ipsec.d/certs/localhost.pub'
+LOCAL_OUTPUT = '/etc/swanctl/pubkey/localhost.pub'
+LOCAL_KEY_OUTPUT = '/etc/swanctl/private/localhost.key'
 
 def get_config(config=None):
     if config:
@@ -68,6 +69,7 @@ def generate(conf):
     if 'local_key' in conf and 'file' in conf['local_key']:
         local_key = conf['local_key']['file']
         local_key_path = get_local_key(local_key)
+        call(f'sudo cp -f {local_key_path} {LOCAL_KEY_OUTPUT}')
         call(f'sudo /usr/bin/openssl rsa -in {local_key_path} -pubout -out {LOCAL_OUTPUT}')
 
     if 'rsa_key_name' in conf:
@@ -82,7 +84,7 @@ def generate(conf):
             else:
                 remote_key = bytes('-----BEGIN PUBLIC KEY-----\n' + remote_key + '\n-----END PUBLIC KEY-----\n', 'utf-8')
 
-            with open(f'/etc/ipsec.d/certs/{key_name}.pub', 'wb') as f:
+            with open(f'/etc/swanctl/pubkey/{key_name}.pub', 'wb') as f:
                 f.write(remote_key)
 
 def migrate_from_vyatta_key(data):

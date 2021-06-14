@@ -23,16 +23,19 @@ from vyos.util import call, process_named_running, read_file
 
 ethernet_path = ['interfaces', 'ethernet']
 tunnel_path = ['interfaces', 'tunnel']
+vti_path = ['interfaces', 'vti']
 nhrp_path = ['protocols', 'nhrp']
 base_path = ['vpn', 'ipsec']
 
 dhcp_waiting_file = '/tmp/ipsec_dhcp_waiting'
+swanctl_file = '/etc/swanctl/swanctl.conf'
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
+        self.cli_delete(vti_path)
         self.cli_delete(ethernet_path)
         self.cli_commit()
 
@@ -77,6 +80,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "dh-group", "2"])
         self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "encryption", "aes128"])
         self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "hash", "sha1"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "key-exchange", "ikev2"])
 
         # Site to site
         self.cli_set(base_path + ["ipsec-interfaces", "interface", "eth0"])
@@ -85,33 +89,104 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "ike-group", "MyIKEGroup"])
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "default-esp-group", "MyESPGroup"])
         self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "local-address", "192.0.2.10"])
-        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "protocol", "gre"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "protocol", "tcp"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "port", "443"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "port", "443"])
 
         self.cli_commit()
 
-        ipsec_conf_lines = [
-            'authby = secret',
-            'ike = aes128-sha1-modp1024!',
-            'esp = aes128-sha1-modp1024!',
-            'left = 192.0.2.10',
-            'right = 203.0.113.45',
-            'type = tunnel'
+        swanctl_conf_lines = [
+            'version = 2',
+            'auth = psk',
+            'proposals = aes128-sha1-modp1024',
+            'esp_proposals = aes128-sha1-modp1024',
+            'local_addrs = 192.0.2.10 # dhcp:no',
+            'remote_addrs = 203.0.113.45',
+            'mode = tunnel',
+            'local_ts = 172.16.10.0/24[tcp/443],172.16.11.0/24[tcp/443]',
+            'remote_ts = 172.17.10.0/24[tcp/443],172.17.11.0/24[tcp/443]'
         ]
 
-        ipsec_secrets_lines = [
-            '192.0.2.10 203.0.113.45 : PSK "MYSECRETKEY" # dhcp:no'
+        swanctl_secrets_lines = [
+            'id-local = 192.0.2.10 # dhcp:no',
+            'id-remote = 203.0.113.45',
+            'secret = "MYSECRETKEY"'
         ]
 
-        tmp_ipsec_conf = read_file('/etc/ipsec.conf')
+        tmp_swanctl_conf = read_file(swanctl_file)
 
-        for line in ipsec_conf_lines:
-            self.assertIn(line, tmp_ipsec_conf)
+        for line in swanctl_conf_lines:
+            self.assertIn(line, tmp_swanctl_conf)
 
-        call('sudo chmod 644 /etc/ipsec.secrets') # Needs to be readable
-        tmp_ipsec_secrets = read_file('/etc/ipsec.secrets')
+        for line in swanctl_secrets_lines:
+            self.assertIn(line, tmp_swanctl_conf)
 
-        for line in ipsec_secrets_lines:
-            self.assertIn(line, tmp_ipsec_secrets)
+        # Check for running process
+        self.assertTrue(process_named_running('charon'))
+
+    def test_site_to_site_vti(self):
+        self.cli_delete(base_path)
+        self.cli_delete(vti_path)
+
+        # VTI interface
+        self.cli_set(vti_path + ["vti10", "address", "10.1.1.1/24"])
+
+        # IKE/ESP Groups
+        self.cli_set(base_path + ["esp-group", "MyESPGroup", "proposal", "1", "encryption", "aes128"])
+        self.cli_set(base_path + ["esp-group", "MyESPGroup", "proposal", "1", "hash", "sha1"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "dh-group", "2"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "encryption", "aes128"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "proposal", "1", "hash", "sha1"])
+        self.cli_set(base_path + ["ike-group", "MyIKEGroup", "key-exchange", "ikev2"])
+
+        # Site to site
+        self.cli_set(base_path + ["ipsec-interfaces", "interface", "eth0"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "authentication", "mode", "pre-shared-secret"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "authentication", "pre-shared-secret", "MYSECRETKEY"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "ike-group", "MyIKEGroup"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "default-esp-group", "MyESPGroup"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "local-address", "192.0.2.10"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "local", "prefix", "172.16.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.10.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "tunnel", "1", "remote", "prefix", "172.17.11.0/24"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "vti", "bind", "vti10"])
+        self.cli_set(base_path + ["site-to-site", "peer", "203.0.113.45", "vti", "esp-group", "MyESPGroup"])
+
+        self.cli_commit()
+
+        swanctl_conf_lines = [
+            'version = 2',
+            'auth = psk',
+            'proposals = aes128-sha1-modp1024',
+            'esp_proposals = aes128-sha1-modp1024',
+            'local_addrs = 192.0.2.10 # dhcp:no',
+            'remote_addrs = 203.0.113.45',
+            'mode = tunnel',
+            'local_ts = 172.16.10.0/24,172.16.11.0/24',
+            'remote_ts = 172.17.10.0/24,172.17.11.0/24',
+            'mark_in = 9437194', # 0x900000 + (vti)10
+            'mark_out = 9437194',
+            'updown = "/etc/ipsec.d/vti-up-down vti10 no"'
+        ]
+
+        swanctl_secrets_lines = [
+            'id-local = 192.0.2.10 # dhcp:no',
+            'id-remote = 203.0.113.45',
+            'secret = "MYSECRETKEY"'
+        ]
+
+        tmp_swanctl_conf = read_file(swanctl_file)
+
+        for line in swanctl_conf_lines:
+            self.assertIn(line, tmp_swanctl_conf)
+
+        for line in swanctl_secrets_lines:
+            self.assertIn(line, tmp_swanctl_conf)
 
         # Check for running process
         self.assertTrue(process_named_running('charon'))

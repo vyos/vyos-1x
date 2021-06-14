@@ -1,4 +1,18 @@
 #!/bin/bash
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if [ "$reason" == "REBOOT" ] || [ "$reason" == "EXPIRE" ]; then
     exit 0
@@ -24,8 +38,7 @@ import re
 from vyos.util import call
 from vyos.util import cmd
 
-IPSEC_CONF="/etc/ipsec.conf"
-IPSEC_SECRETS="/etc/ipsec.secrets"
+SWANCTL_CONF="/etc/swanctl/swanctl.conf"
 
 def getlines(file):
     with open(file, 'r') as f:
@@ -41,7 +54,7 @@ def ipsec_down(ip_address):
     connection_name = None
     for line in status.split("\n"):
         if line.find(ip_address) > 0:
-            regex_match = re.search(r'(peer-[^:\[]+)', line)
+            regex_match = re.search(r'(peer_[^:\[]+)', line)
             if regex_match:
                 connection_name = regex_match[1]
                 break
@@ -53,8 +66,7 @@ if __name__ == '__main__':
     new_ip = os.getenv('new_ip_address')
     old_ip = os.getenv('old_ip_address')
 
-    conf_lines = getlines(IPSEC_CONF)
-    secrets_lines = getlines(IPSEC_SECRETS)
+    conf_lines = getlines(SWANCTL_CONF)
     found = False
     to_match = f'# dhcp:{interface}'
 
@@ -68,9 +80,9 @@ if __name__ == '__main__':
             secrets_lines[i] = line.replace(old_ip, new_ip)
 
     if found:
-        writelines(IPSEC_CONF, conf_lines)
-        writelines(IPSEC_SECRETS, secrets_lines)
+        writelines(SWANCTL_CONF, conf_lines)
         ipsec_down(old_ip)
-        call('sudo /usr/sbin/ipsec rereadall')
-        call('sudo /usr/sbin/ipsec reload')
+        call('sudo ipsec rereadall')
+        call('sudo ipsec reload')
+        call('sudo swanctl -q')
 PYEND

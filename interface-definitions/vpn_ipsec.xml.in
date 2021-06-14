@@ -969,44 +969,6 @@
                       </valueHelp>
                     </properties>
                     <children>
-                      <leafNode name="allow-nat-networks">
-                        <properties>
-                          <help>Option to allow NAT networks</help>
-                          <completionHelp>
-                            <list>enable disable</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>enable</format>
-                            <description>Enable NAT networks</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>disable</format>
-                            <description>Disable NAT networks (default)</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(enable|disable)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="allow-public-networks">
-                        <properties>
-                          <help>Option to allow public networks</help>
-                          <completionHelp>
-                            <list>enable disable</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>enable</format>
-                            <description>Enable public networks</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>disable</format>
-                            <description>Disable public networks (default)</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(enable|disable)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
                       #include <include/generic-disable-node.xml.i>
                       <leafNode name="esp-group">
                         <properties>
@@ -1049,6 +1011,7 @@
                                 <validator name="ipv4-prefix"/>
                                 <validator name="ipv6-prefix"/>
                               </constraint>
+                              <multi/>
                             </properties>
                           </leafNode>
                         </children>
@@ -1087,6 +1050,7 @@
                                 <validator name="ipv4-prefix"/>
                                 <validator name="ipv6-prefix"/>
                               </constraint>
+                              <multi/>
                             </properties>
                           </leafNode>
                         </children>

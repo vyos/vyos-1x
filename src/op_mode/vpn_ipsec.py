@@ -100,13 +100,13 @@ def generate_x509_pair(name):
     print(f'Private key: {X509_PATH}{name}.key')
 
 def get_peer_connections(peer, tunnel, return_all = False):
-    search = rf'^conn (peer-{peer}-(tunnel-[\d]+|vti))$'
+    search = rf'^[\s]*(peer_{peer}_(tunnel_[\d]+|vti)).*'
     matches = []
-    with open(IPSEC_CONF, 'r') as f:
+    with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
-                suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
+                suffix = f'tunnel_{tunnel}' if tunnel.isnumeric() else tunnel
                 if return_all or (result[2] == suffix):
                     matches.append(result[1])
     return matches
@@ -171,13 +171,14 @@ def debug_peer(peer, tunnel):
     if not tunnel or tunnel == 'all':
         tunnel = ''
 
-    conn = get_peer_connection(peer, tunnel)
+    conn = get_peer_connections(peer, tunnel)
 
-    if not conn:
+    if not conns:
         print('Peer not found, aborting')
         return
 
-    call(f'sudo /usr/sbin/ipsec statusall | grep {conn}')
+    for conn in conns:
+        call(f'sudo /usr/sbin/ipsec statusall | grep {conn}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
