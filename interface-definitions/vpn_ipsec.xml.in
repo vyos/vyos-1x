@@ -1049,6 +1049,7 @@
                                 <validator name="ipv4-prefix"/>
                                 <validator name="ipv6-prefix"/>
                               </constraint>
+                              <multi/>
                             </properties>
                           </leafNode>
                         </children>
@@ -1087,6 +1088,7 @@
                                 <validator name="ipv4-prefix"/>
                                 <validator name="ipv6-prefix"/>
                               </constraint>
+                              <multi/>
                             </properties>
                           </leafNode>
                         </children>
