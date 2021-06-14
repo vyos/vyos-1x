@@ -53,24 +53,10 @@
 {%    endif %}
         }
 
-        child-defaults {
-{%            if peer[0:1] == '@' %}
-            start_action = none
-{%            elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
-            start_action = start
-{%            elif peer_conf.connection_type == 'respond' %}
-            start_action = trap
-{%            endif %}
-{%            if "dead_peer_detection" in ike %}
-{%                set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
-            dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
-{%            endif %}
-        }
-
         children {
 {%    if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
 {%        set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
-            peer_{{ name }}_vti : connections.peer_{{ name }}.child-defaults {
+            peer_{{ name }}_vti {
                 esp_proposals = {{ ciphers.esp[peer_conf.vti.esp_group] }}
                 local_ts = 0.0.0.0/0
                 remote_ts = 0.0.0.0/0
@@ -79,6 +65,17 @@
                 mark_out = {{ marks[peer_conf.vti.bind] }}
                 ipcomp = {{ 'yes' if "compression" in vti_esp and vti_esp.compression == 'enable' else 'no' }}
                 mode = {{ vti_esp.mode if "mode" in vti_esp else "tunnel" }}
+{%        if peer[0:1] == '@' %}
+                start_action = none
+{%        elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
+                start_action = start
+{%        elif peer_conf.connection_type == 'respond' %}
+                start_action = trap
+{%        endif %}
+{%        if "dead_peer_detection" in ike %}
+{%            set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+                dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
+{%        endif %}
             }
 {%    endif %}
 {%    if peer_conf.tunnel is defined %}
@@ -90,7 +87,7 @@
 {%            set local_suffix = '[{0}/{1}]'.format(proto, local_port) %}
 {%            set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '%any' %}
 {%            set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) %}
-            peer_{{ name }}_tunnel_{{ tunnel_id }} : connections.peer_{{ name }}.child-defaults {
+            peer_{{ name }}_tunnel_{{ tunnel_id }} {
                 esp_proposals = {{ ciphers.esp[tunnel_esp_name] }}
 {%            if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%                if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
@@ -107,6 +104,17 @@
 {%            endif %}
                 ipcomp = {{ 'yes' if "compression" in tunnel_esp and tunnel_esp.compression == 'enable' else 'no' }}
                 mode = {{ tunnel_esp.mode if "mode" in tunnel_esp else "tunnel" }}
+{%            if peer[0:1] == '@' %}
+                start_action = none
+{%            elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
+                start_action = start
+{%            elif peer_conf.connection_type == 'respond' %}
+                start_action = trap
+{%            endif %}
+{%            if "dead_peer_detection" in ike %}
+{%                set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+                dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
+{%            endif %}
             }
 {%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
             peer_{{ name }}_tunnel_{{ tunnel_id }}_passthough {

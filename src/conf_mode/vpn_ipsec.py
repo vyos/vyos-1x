@@ -126,7 +126,7 @@ def get_config(config=None):
 
                     if enc and hash:
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                ike_ciphers[group] = ','.join(ciphers) + '!'
+                ike_ciphers[group] = ','.join(ciphers)
 
     if 'esp_group' in ipsec:
         for group, esp_conf in ipsec['esp_group'].items():
@@ -146,7 +146,7 @@ def get_config(config=None):
                     hash = proposal['hash'] if 'hash' in proposal else None
                     if enc and hash:
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                esp_ciphers[group] = ','.join(ciphers) + '!'
+                esp_ciphers[group] = ','.join(ciphers)
 
     return ipsec
 
