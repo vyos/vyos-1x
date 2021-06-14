@@ -110,8 +110,8 @@
             }
 {%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
             peer-{{ peer }}-tunnel-{{ tunnel_id }}-passthough {
-                local_ts = {{ peer_conf.local.prefix | join(",") }}
-                remote_ts = {{ peer_conf.local.prefix | join(",") }}
+                local_ts = {{ tunnel_conf.passthrough | join(",") }}
+                remote_ts = {{ tunnel_conf.passthrough | join(",") }}
                 start_action = trap
                 mode = pass
             }
