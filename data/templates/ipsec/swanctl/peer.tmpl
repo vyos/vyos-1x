@@ -1,5 +1,5 @@
-{% macro conn(peer, peer_conf, ike, esp, ciphers, auth_type, marks) -%}
-    peer-{{ peer }} {
+{% macro conn(name, peer, peer_conf, ike, esp, ciphers, esp_group, auth_type, marks) %}
+    peer_{{ name }} {
         proposals = {{ ciphers.ike[peer_conf.ike_group] }}
         version = {{ ike['key_exchange'][4:] if "key_exchange" in ike else "0" }}
         local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '0.0.0.0/0' }}
@@ -19,7 +19,7 @@
         keyingtries = 0
         rekey_time = 0
         reauth_time = 0
-{%    if peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate') %}
+{%    elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
         keyingtries = 0
 {%    elif peer_conf.connection_type is defined and peer_conf.connection_type == 'respond' %}
         keyingtries = 1
@@ -50,7 +50,7 @@
 {%    endif %}
 {%    if peer_conf.authentication.mode == 'rsa' %}
             pubkeys = {{ peer_conf.authentication.rsa_key_name }}.pub
-{%    endif}
+{%    endif %}
         }
 
         child-defaults {
@@ -70,7 +70,7 @@
         children {
 {%    if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
 {%        set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
-            peer-{{ peer }}-vti : connections.peer-{{ peer }}.child-defaults {
+            peer_{{ name }}_vti : connections.peer_{{ name }}.child-defaults {
                 esp_proposals = {{ ciphers.esp[peer_conf.vti.esp_group] }}
                 local_ts = 0.0.0.0/0
                 remote_ts = 0.0.0.0/0
@@ -90,7 +90,7 @@
 {%            set local_suffix = '[{0}/{1}]'.format(proto, local_port) %}
 {%            set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '%any' %}
 {%            set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) %}
-            peer-{{ peer }}-tunnel-{{tunnel_id}} : connections.peer-{{ peer }}.child-defaults {
+            peer_{{ name }}_tunnel_{{ tunnel_id }} : connections.peer_{{ name }}.child-defaults {
                 esp_proposals = {{ ciphers.esp[tunnel_esp_name] }}
 {%            if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%                if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
@@ -109,7 +109,7 @@
                 mode = {{ tunnel_esp.mode if "mode" in tunnel_esp else "tunnel" }}
             }
 {%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
-            peer-{{ peer }}-tunnel-{{ tunnel_id }}-passthough {
+            peer_{{ name }}_tunnel_{{ tunnel_id }}_passthough {
                 local_ts = {{ tunnel_conf.passthrough | join(",") }}
                 remote_ts = {{ tunnel_conf.passthrough | join(",") }}
                 start_action = trap
@@ -120,4 +120,4 @@
 {%    endif %}
         }
     }
-{% endmacro -%}
+{% endmacro %}

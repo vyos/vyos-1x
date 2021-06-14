@@ -1,4 +1,4 @@
-{% macro conn(name, profile_conf, ike, esp, ciphers) -%}
+{% macro conn(name, profile_conf, ike, esp, ciphers) %}
 {% for interface in profile_conf.bind.tunnel %}
     dmvpn-{{ name }}-{{ interface }} {
         proposals = {{ ciphers.ike[profile_conf.ike_group][:-1] }}
@@ -31,4 +31,4 @@
         }
     }
 {% endfor %}
-{% endmacro -%}
+{% endmacro %}

@@ -37,7 +37,7 @@ from vyos import airbag
 airbag.enable()
 
 authby_translate = {
-    'pre-shared-secret': 'secret',
+    'pre-shared-secret': 'psk',
     'rsa': 'rsasig',
     'x509': 'rsasig'
 }

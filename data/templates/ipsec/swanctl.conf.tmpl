@@ -12,14 +12,13 @@ connections {
 {{            profile_tmpl.conn(name, profile_conf, dmvpn_ike, dmvpn_esp, ciphers) }}
 {%        endfor %}
 {%    endif %}
-
 {%    if site_to_site is defined and site_to_site.peer is defined %}
 {%        for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address and peer_conf.disable is not defined %}
-{%            set peer_index = loop.index %}
+{%            set peer_conn_name = peer.replace(".", "-").replace("@", "") %}
 {%            set peer_ike = ike_group[peer_conf.ike_group] %}
 {%            set peer_esp = esp_group[peer_conf.default_esp_group] if peer_conf.default_esp_group is defined else None %}
 {%            set auth_type = authby[peer_conf.authentication.mode] %}
-{{            peer_tmpl.conn(peer, peer_conf, peer_ike, peer_esp, ciphers, auth_type, marks) }}
+{{            peer_tmpl.conn(peer_conn_name, peer, peer_conf, peer_ike, peer_esp, ciphers, esp_group, auth_type, marks) }}
 {%        endfor %}
 {%    endif %}
 }
