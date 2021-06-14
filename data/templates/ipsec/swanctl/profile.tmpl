@@ -1,0 +1,34 @@
+{% macro conn(name, profile_conf, ike, esp, ciphers) -%}
+{% for interface in profile_conf.bind.tunnel %}
+    dmvpn-{{ name }}-{{ interface }} {
+        proposals = {{ ciphers.ike[profile_conf.ike_group][:-1] }}
+        version = {{ ike.key_exchange[4:] if "key_exchange" in ike else "0" }}
+        rekey_time = {{ ike.lifetime if 'lifetime' in ike else '28800' }}s
+        keyingtries = 0
+{%    if profile_conf.authentication.mode == 'pre-shared-secret' %}
+        local {
+            auth = psk
+        }
+        remote {
+            auth = psk
+        }
+{%    endif %}
+        children {
+            dmvpn {
+                esp_proposals = {{ ciphers.esp[profile_conf.esp_group][:-1] }}
+                rekey_time = {{ esp.lifetime if 'lifetime' in esp else '3600' }}s
+                rand_time = 540s
+                local_ts = dynamic[gre]
+                remote_ts = dynamic[gre]
+                mode = {{ esp.mode if "mode" in esp else "transport" }}
+{%    if 'dead_peer_detection' in ike and 'action' in ike.dead_peer_detection %}
+                dpd_action = {{ ike.dead_peer_detection.action }}
+{%    endif %}
+{%    if 'compression' in esp and esp['compression'] == 'enable' %}
+                ipcomp = yes
+{%    endif %}
+            }
+        }
+    }
+{% endfor %}
+{% endmacro -%}
