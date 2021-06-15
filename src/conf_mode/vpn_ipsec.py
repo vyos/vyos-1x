@@ -28,7 +28,6 @@ from vyos.template import render
 from vyos.validate import is_ipv6_link_local
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import get_interface_address
 from vyos.util import process_named_running
 from vyos.util import run
 from vyos.util import cidr_fit
@@ -37,9 +36,9 @@ from vyos import airbag
 airbag.enable()
 
 authby_translate = {
-    'pre-shared-secret': 'secret',
-    'rsa': 'rsasig',
-    'x509': 'rsasig'
+    'pre-shared-secret': 'psk',
+    'rsa': 'pubkey',
+    'x509': 'pubkey'
 }
 default_pfs = 'dh-group2'
 pfs_translate = {
@@ -80,8 +79,10 @@ dhcp_wait_sleep = 1
 
 mark_base = 0x900000
 
-CA_PATH = "/etc/ipsec.d/cacerts/"
-CRL_PATH = "/etc/ipsec.d/crls/"
+CERT_PATH="/etc/swanctl/x509/"
+KEY_PATH="/etc/swanctl/private/"
+CA_PATH = "/etc/swanctl/x509ca/"
+CRL_PATH = "/etc/swanctl/x509crl/"
 
 DHCP_BASE = "/var/lib/dhcp/dhclient"
 DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
@@ -126,7 +127,7 @@ def get_config(config=None):
 
                     if enc and hash:
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                ike_ciphers[group] = ','.join(ciphers) + '!'
+                ike_ciphers[group] = ','.join(ciphers)
 
     if 'esp_group' in ipsec:
         for group, esp_conf in ipsec['esp_group'].items():
@@ -146,7 +147,7 @@ def get_config(config=None):
                     hash = proposal['hash'] if 'hash' in proposal else None
                     if enc and hash:
                         ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                esp_ciphers[group] = ','.join(ciphers) + '!'
+                esp_ciphers[group] = ','.join(ciphers)
 
     return ipsec
 
@@ -324,7 +325,6 @@ def generate(ipsec):
         data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
         data['marks'] = {}
         data['rsa_local_key'] = verify_rsa_local_key(ipsec)
-        data['x509_path'] = X509_PATH
 
         if 'site_to_site' in data and 'peer' in data['site_to_site']:
             for peer, peer_conf in ipsec['site_to_site']['peer'].items():
@@ -332,6 +332,12 @@ def generate(ipsec):
                     continue
 
                 if peer_conf['authentication']['mode'] == 'x509':
+                    cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['cert_file'])
+                    call(f'cp -f {cert_file} {CERT_PATH}')
+
+                    key_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['key']['file'])
+                    call(f'cp -f {key_file} {KEY_PATH}')
+
                     ca_cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['ca_cert_file'])
                     call(f'cp -f {ca_cert_file} {CA_PATH}')
 
@@ -350,15 +356,22 @@ def generate(ipsec):
                 if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
                     data['marks'][vti_interface] = get_mark(vti_interface)
-                else:
-                    for tunnel, tunnel_conf in peer_conf['tunnel'].items():
-                        local_prefix = dict_search('local.prefix', tunnel_conf)
-                        remote_prefix = dict_search('remote.prefix', tunnel_conf)
 
-                        if not local_prefix or not remote_prefix:
+                if 'tunnel' in peer_conf:
+                    for tunnel, tunnel_conf in peer_conf['tunnel'].items():
+                        local_prefixes = dict_search('local.prefix', tunnel_conf)
+                        remote_prefixes = dict_search('remote.prefix', tunnel_conf)
+
+                        if not local_prefixes or not remote_prefixes:
                             continue
 
-                        passthrough = cidr_fit(local_prefix, remote_prefix)
+                        passthrough = []
+
+                        for local_prefix in local_prefixes:
+                            for remote_prefix in remote_prefixes:
+                                if cidr_fit(local_prefix, remote_prefix):
+                                    passthrough.append(local_prefix)
+
                         data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
         if 'logging' in ipsec and 'log_modes' in ipsec['logging']:

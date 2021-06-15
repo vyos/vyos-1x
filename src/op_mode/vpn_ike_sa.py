@@ -36,9 +36,9 @@ def ike_sa(peer, nat):
     peers = []
     for conn in sas:
         for name, sa in conn.items():
-            if peer and not name.startswith('peer-' + peer):
+            if peer and not name.startswith('peer_' + peer):
                 continue
-            if name.startswith('peer-') and name in peers:
+            if name.startswith('peer_') and name in peers:
                 continue
             if nat and 'nat-local' not in sa:
                 continue
