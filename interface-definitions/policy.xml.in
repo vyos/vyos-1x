@@ -925,15 +925,6 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="bgp-extcommunity-rt">
-                    <properties>
-                      <help>Set route target value</help>
-                      <valueHelp>
-                        <format>&lt;aa:nn&gt;</format>
-                        <description>ExtCommunity in format: asn:value</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
                   <node name="comm-list">
                     <properties>
                       <help>Border Gateway Protocol (BGP) communities matching a community-list</help>
