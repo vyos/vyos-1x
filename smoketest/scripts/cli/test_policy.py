@@ -773,6 +773,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'as-path-prepend'     : '1234567890 987654321',
                             'atomic-aggregate'    : '',
                             'distance'            : '110',
+                            'extcommunity-bw'     : '20000',
                             'extcommunity-rt'     : '123:456',
                             'extcommunity-soo'    : '456:789',
                             'ipv6-next-hop-global': '2001::1',
@@ -787,6 +788,18 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'src'                 : '100.0.0.1',
                             'tag'                 : '65530',
                             'weight'              : '2',
+                        },
+                    },
+                },
+            },
+            'bandwidth-configuration' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'deny',
+                        'set' : {
+                            'as-path-prepend'     : '100 100',
+                            'distance'            : '200',
+                            'extcommunity-bw'     : 'num-multipaths',
                         },
                     },
                 },
@@ -898,6 +911,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'set', 'atomic-aggregate'])
                     if 'distance' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'distance', rule_config['set']['distance']])
+                    if 'extcommunity-bw' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'bandwidth', rule_config['set']['extcommunity-bw']])
                     if 'extcommunity-rt' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'rt', rule_config['set']['extcommunity-rt']])
                     if 'extcommunity-soo' in rule_config['set']:
@@ -1041,6 +1056,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'atomic-aggregate'
                     elif 'distance' in rule_config['set']:
                         tmp += 'distance ' + rule_config['set']['distance']
+                    elif 'extcommunity-bw' in rule_config['set']:
+                        tmp += 'extcommunity bandwidth' + rule_config['set']['extcommunity-bw']
                     elif 'extcommunity-rt' in rule_config['set']:
                         tmp += 'extcommunity rt' + rule_config['set']['extcommunity-rt']
                     elif 'extcommunity-soo' in rule_config['set']:

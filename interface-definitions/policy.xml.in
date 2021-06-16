@@ -1012,6 +1012,30 @@
                       <help>BGP extended community attribute</help>
                     </properties>
                     <children>
+                      <leafNode name="bandwidth">
+                        <properties>
+                          <help>Bandwidth value in Mbps</help>
+                          <completionHelp>
+                            <list>cumulative num-multipaths</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>u32:1-25600</format>
+                            <description>Bandwidth value in Mbps</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>cumulative</format>
+                            <description>Cumulative bandwidth of all multipaths (outbound-only)</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>num-multipaths</format>
+                            <description>Internally computed bandwidth based on number of multipaths (outbound-only)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-25600"/>
+                            <regex>^(cumulative|num-multipaths)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
                       <leafNode name="rt">
                         <properties>
                           <help>Set route target value</help>

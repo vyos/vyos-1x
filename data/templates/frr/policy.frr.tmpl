@@ -247,6 +247,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           if rule_config.set.distance is defined and rule_config.set.distance is not none %}
  set distance {{ rule_config.set.distance }}
 {%           endif %}
+{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.bandwidth is defined and rule_config.set.extcommunity.bandwidth is not none %}
+ set extcommunity bandwidth {{ rule_config.set.extcommunity.bandwidth }}
+{%           endif %}
 {%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.rt is defined and rule_config.set.extcommunity.rt is not none %}
  set extcommunity rt {{ rule_config.set.extcommunity.rt }}
 {%           endif %}
