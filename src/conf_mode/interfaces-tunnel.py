@@ -114,7 +114,7 @@ def verify(tunnel):
             raise ConfigError('Option ignore-df can only be used on GRETAP tunnels!')
 
         if dict_search('parameters.ip.no_pmtu_discovery', tunnel) == None:
-            raise ConfigError('Option ignore-df path MTU discovery to be disabled!')
+            raise ConfigError('Option ignore-df requires path MTU discovery to be disabled!')
 
 
 def generate(tunnel):
