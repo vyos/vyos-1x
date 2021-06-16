@@ -224,6 +224,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'graceful-shutdown'])
         self.cli_set(base_path + ['parameters', 'ebgp-requires-policy'])
 
+        self.cli_set(base_path + ['parameters', 'bestpath', 'as-path', 'multipath-relax'])
+        self.cli_set(base_path + ['parameters', 'bestpath', 'bandwidth', 'default-weight-for-missing'])
+        self.cli_set(base_path + ['parameters', 'bestpath', 'compare-routerid'])
+
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
@@ -242,6 +246,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
+        self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
+        self.assertIn(f' bgp bestpath bandwidth default-weight-for-missing', frrconfig)
+        self.assertIn(f' bgp bestpath compare-routerid', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')

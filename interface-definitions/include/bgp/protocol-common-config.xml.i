@@ -1114,6 +1114,29 @@
             </leafNode>
           </children>
         </node>
+        <leafNode name="bandwidth">
+          <properties>
+            <help>Link Bandwidth attribute</help>
+            <completionHelp>
+              <list>default-weight-for-missing ignore skip-missing</list>
+            </completionHelp>
+            <valueHelp>
+              <format>default-weight-for-missing</format>
+              <description>Assign low default weight (1) to paths not having link bandwidth</description>
+            </valueHelp>
+            <valueHelp>
+              <format>ignore</format>
+              <description>Ignore link bandwidth (do regular ECMP, not weighted)</description>
+            </valueHelp>
+            <valueHelp>
+              <format>skip-missing</format>
+              <description>Ignore paths without link bandwidth for ECMP (if other paths have it)</description>
+            </valueHelp>
+            <constraint>
+              <regex>^(default-weight-for-missing|ignore|skip-missing)$</regex>
+            </constraint>
+          </properties>
+        </leafNode>
         <leafNode name="compare-routerid">
           <properties>
             <help>Compare the router-id for identical EBGP paths</help>
