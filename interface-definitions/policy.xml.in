@@ -1007,24 +1007,31 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="extcommunity-rt">
+                  <node name="extcommunity">
                     <properties>
-                      <help>Set route target value</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>ASN:nn_or_IP_address:nn VPN extended community</description>
-                      </valueHelp>
+                      <help>BGP extended community attribute</help>
                     </properties>
-                  </leafNode>
-                  <leafNode name="extcommunity-soo">
-                    <properties>
-                      <help>Set Site of Origin value</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>ASN:nn_or_IP_address:nn VPN extended community</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
+                    <children>
+                      <leafNode name="rt">
+                        <properties>
+                          <help>Set route target value</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="soo">
+                        <properties>
+                          <help>Set Site of Origin value</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                   <leafNode name="ip-next-hop">
                     <properties>
                       <help>Nexthop IP address</help>

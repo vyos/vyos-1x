@@ -247,11 +247,11 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           if rule_config.set.distance is defined and rule_config.set.distance is not none %}
  set distance {{ rule_config.set.distance }}
 {%           endif %}
-{%           if rule_config.set.extcommunity_rt is defined and rule_config.set.extcommunity_rt is not none %}
- set extcommunity rt {{ rule_config.set.extcommunity_rt }}
+{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.rt is defined and rule_config.set.extcommunity.rt is not none %}
+ set extcommunity rt {{ rule_config.set.extcommunity.rt }}
 {%           endif %}
-{%           if rule_config.set.extcommunity_soo is defined and rule_config.set.extcommunity_soo is not none %}
- set extcommunity soo {{ rule_config.set.extcommunity_soo }}
+{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.soo is defined and rule_config.set.extcommunity.soo is not none %}
+ set extcommunity soo {{ rule_config.set.extcommunity.soo }}
 {%           endif %}
 {%           if rule_config.set.ip_next_hop is defined and rule_config.set.ip_next_hop is not none %}
  set ip next-hop {{ rule_config.set.ip_next_hop }}
