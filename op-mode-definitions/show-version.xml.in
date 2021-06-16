@@ -26,6 +26,12 @@
              </properties>
              <command>vtysh -c "show version"</command>
           </leafNode>
+          <leafNode name="kernel">
+             <properties>
+               <help>Show Linux Kernel version information</help>
+             </properties>
+             <command>uname -r</command>
+          </leafNode>
         </children>
       </node>
     </children>
