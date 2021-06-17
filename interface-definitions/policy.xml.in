@@ -1031,18 +1031,34 @@
                         <properties>
                           <help>Set route target value</help>
                           <valueHelp>
-                            <format>txt</format>
-                            <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                            <format>ASN:NN</format>
+                            <description>based on autonomous system number</description>
                           </valueHelp>
+                          <valueHelp>
+                            <format>IP:NN</format>
+                            <description>Based on a router-id IP address</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((?:[0-9]{1,3}\.){3}[0-9]{1,3}|\d+):\d+$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Should be in form: ASN:NN or IPADDR:NN where ASN is autonomous system number</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       <leafNode name="soo">
                         <properties>
                           <help>Set Site of Origin value</help>
                           <valueHelp>
-                            <format>txt</format>
-                            <description>ASN:nn_or_IP_address:nn VPN extended community</description>
+                            <format>ASN:NN</format>
+                            <description>based on autonomous system number</description>
                           </valueHelp>
+                          <valueHelp>
+                            <format>IP:NN</format>
+                            <description>Based on a router-id IP address</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^((?:[0-9]{1,3}\.){3}[0-9]{1,3}|\d+):\d+$</regex>
+                          </constraint>
+                          <constraintErrorMessage>Should be in form: ASN:NN or IPADDR:NN where ASN is autonomous system number</constraintErrorMessage>
                         </properties>
                       </leafNode>
                     </children>
