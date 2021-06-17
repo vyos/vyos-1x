@@ -34,6 +34,13 @@ policy {
                 local-preference 100
             }
         }
+        rule 40 {
+            action permit
+            set {
+                extcommunity-rt 192.0.2.100:100
+                extcommunity-soo 64500:100
+            }
+        }
     }
 }
 protocols {

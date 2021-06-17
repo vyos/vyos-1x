@@ -402,14 +402,17 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
  bgp always-compare-med
 {%   endif %}
 {%   if parameters.bestpath is defined and parameters.bestpath is not none %}
-{%     if parameters.bestpath.compare_routerid is defined %}
- bgp bestpath compare-routerid
-{%     endif %}
 {%     if parameters.bestpath.as_path is defined and parameters.bestpath.as_path is not none %}
 {%       for option in parameters.bestpath.as_path %}
 {# replace is required for multipath-relax option #}
  bgp bestpath as-path {{ option|replace('_', '-') }}
 {%       endfor %}
+{%     endif %}
+{%     if parameters.bestpath.bandwidth is defined and parameters.bestpath.bandwidth is not none %}
+ bgp bestpath bandwidth {{ parameters.bestpath.bandwidth }}
+{%     endif %}
+{%     if parameters.bestpath.compare_routerid is defined %}
+ bgp bestpath compare-routerid
 {%     endif %}
 {%     if parameters.bestpath.med is defined and parameters.bestpath.med is not none %}
  bgp bestpath med {{ 'confed' if parameters.bestpath.med.confed is defined }} {{ 'missing-as-worst' if parameters.bestpath.med.missing_as_worst is defined }}
