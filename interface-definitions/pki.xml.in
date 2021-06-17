@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="pki" owner="${vyos_conf_scripts_dir}/pki.py">
+    <properties>
+      <help>VyOS PKI configuration</help>
+    </properties>
+    <children>
+      <tagNode name="ca">
+        <properties>
+          <help>Certificate Authority</help>
+        </properties>
+        <children>
+          <leafNode name="certificate">
+            <properties>
+              <help>CA certificate in PEM format</help>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Description</help>
+            </properties>
+          </leafNode>
+          <node name="private">
+            <properties>
+              <help>CA private key in PEM format</help>
+            </properties>
+            <children>
+              <leafNode name="key">
+                <properties>
+                  <help>CA private key in PEM format</help>
+                </properties>
+              </leafNode>
+              <leafNode name="password-protected">
+                <properties>
+                  <help>CA private key is password protected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="crl">
+            <properties>
+              <help>Certificate revocation list in PEM format</help>
+              <multi/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <tagNode name="certificate">
+        <properties>
+          <help>Certificate</help>
+        </properties>
+        <children>
+          <leafNode name="certificate">
+            <properties>
+              <help>Certificate in PEM format</help>
+            </properties>
+          </leafNode>
+          <leafNode name="description">
+            <properties>
+              <help>Description</help>
+            </properties>
+          </leafNode>
+          <node name="private">
+            <properties>
+              <help>Certificate private key</help>
+            </properties>
+            <children>
+              <leafNode name="key">
+                <properties>
+                  <help>Certificate private key in PEM format</help>
+                </properties>
+              </leafNode>
+              <leafNode name="password-protected">
+                <properties>
+                  <help>Certificate private key is password protected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="revoke">
+            <properties>
+              <help>If CA is present, this certificate will be included in generated CRLs</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <tagNode name="dh">
+        <properties>
+          <help>Diffie-Hellman parameters</help>
+        </properties>
+        <children>
+          <leafNode name="parameters">
+            <properties>
+              <help>DH parameters in PEM format</help>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <tagNode name="key-pair">
+        <properties>
+          <help>Public and private keys</help>
+        </properties>
+        <children>
+          <node name="public">
+            <properties>
+              <help>Public key</help>
+            </properties>
+            <children>
+              <leafNode name="key">
+                <properties>
+                  <help>Public key in PEM format</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="private">
+            <properties>
+              <help>Private key</help>
+            </properties>
+            <children>
+              <leafNode name="key">
+                <properties>
+                  <help>Private key in PEM format</help>
+                </properties>
+              </leafNode>
+              <leafNode name="password-protected">
+                <properties>
+                  <help>Private key is password protected</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </tagNode>
+      <node name="openvpn">
+        <properties>
+          <help>OpenVPN keys</help>
+        </properties>
+        <children>
+          <tagNode name="tls-auth">
+            <properties>
+              <help>OpenVPN TLS auth key</help>
+            </properties>
+            <children>
+              <leafNode name="key">
+                <properties>
+                  <help>OpenVPN TLS auth key data</help>
+                </properties>
+              </leafNode>
+              <leafNode name="version">
+                <properties>
+                  <help>OpenVPN TLS auth key version</help>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+      <node name="x509">
+        <properties>
+          <help>X509 Settings</help>
+        </properties>
+        <children>
+          <node name="default">
+            <properties>
+              <help>X509 Default Values</help>
+            </properties>
+            <children>
+              <leafNode name="country">
+                <properties>
+                  <help>Default country</help>
+                </properties>
+                <defaultValue>GB</defaultValue>
+              </leafNode>
+              <leafNode name="state">
+                <properties>
+                  <help>Default state</help>
+                </properties>
+                <defaultValue>Some-State</defaultValue>
+              </leafNode>
+              <leafNode name="locality">
+                <properties>
+                  <help>Default locality</help>
+                </properties>
+                <defaultValue>Some-City</defaultValue>
+              </leafNode>
+              <leafNode name="organization">
+                <properties>
+                  <help>Default organization</help>
+                </properties>
+                <defaultValue>VyOS</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

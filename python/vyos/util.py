@@ -566,6 +566,25 @@ def wait_for_commit_lock():
     while commit_in_progress():
         sleep(1)
 
+def ask_input(question, default='', numeric_only=False, valid_responses=[]):
+    question_out = question
+    if default:
+        question_out += f' (Default: {default})'
+    response = ''
+    while True:
+        response = input(question_out + ' ').strip()
+        if not response and default:
+            return default
+        if numeric_only:
+            if not response.isnumeric():
+                print("Invalid value, try again.")
+                continue
+            response = int(response)
+        if valid_responses and response not in valid_responses:
+            print("Invalid value, try again.")
+            continue
+        break
+    return response
 
 def ask_yes_no(question, default=False) -> bool:
     """Ask a yes/no question via input() and return their answer."""
