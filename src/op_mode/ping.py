@@ -50,6 +50,11 @@ options = {
         'type': '<seconds>',
         'help': 'Number of seconds before ping exits'
     },
+    'do-not-fragment': {
+        'ping': '{command} -M dont',
+        'type': 'noarg',
+        'help': 'Set DF-bit flag to 1 for no fragmentation'
+    },
     'flood': {
         'ping': 'sudo {command} -f',
         'type': 'noarg',
@@ -227,4 +232,4 @@ if __name__ == '__main__':
 
     # print(f'{command} {host}')
     os.system(f'{command} {host}')
-
+    
