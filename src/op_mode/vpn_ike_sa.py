@@ -49,7 +49,9 @@ def ike_sa(peer, nat):
             print('%-39s %-39s' % (remote_str, local_str))
             state = 'up' if 'state' in sa and s(sa['state']) == 'ESTABLISHED' else 'down'
             version = 'IKEv' + s(sa['version'])
-            encryption = f'{s(sa["encr-alg"])}_{s(sa["encr-keysize"])}' if 'encr-alg' in sa else 'n/a'
+            encryption = f'{s(sa["encr-alg"])}' if 'encr-alg' in sa else 'n/a'
+            if 'encr-keysize' in sa:
+                encyption += '_' + s(sa["encr-keysize"])
             integrity = s(sa['integ-alg']) if 'integ-alg' in sa else 'n/a'
             dh_group = s(sa['dh-group']) if 'dh-group' in sa else 'n/a'
             natt = 'yes' if 'nat-local' in sa and s(sa['nat-local']) == 'yes' else 'no'
