@@ -16,10 +16,12 @@
 
 import os
 
+from json import loads
 from sys import exit
 from netifaces import ifaddresses, interfaces, AF_INET
 
 from vyos.config import Config
+from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.util import call
 from vyos import ConfigError
@@ -27,6 +29,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/etc/default/mdns-repeater'
+vrrp_running_file = '/run/mdns_vrrp_active'
 
 def get_config(config=None):
     if config:
@@ -35,6 +38,9 @@ def get_config(config=None):
         conf = Config()
     base = ['service', 'mdns', 'repeater']
     mdns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    if mdns:
+        mdns['vrrp_exists'] = conf.exists('high-availability vrrp')
     return mdns
 
 def verify(mdns):
@@ -60,6 +66,18 @@ def verify(mdns):
 
     return None
 
+# Get VRRP states from interfaces, returns only interfaces where state is MASTER
+def get_vrrp_master(interfaces):
+    json_data = loads(VRRP.collect('json'))
+    for group in json_data:
+        if 'data' in group:
+            if 'ifp_ifname' in group['data']:
+                iface = group['data']['ifp_ifname']
+                state = group['data']['state'] # 2 = Master
+                if iface in interfaces and state != 2:
+                    interfaces.remove(iface)
+    return interfaces
+
 def generate(mdns):
     if not mdns:
         return None
@@ -67,6 +85,12 @@ def generate(mdns):
     if 'disable' in mdns:
         print('Warning: mDNS repeater will be deactivated because it is disabled')
         return None
+
+    if mdns['vrrp_exists'] and 'vrrp_disable' in mdns:
+        mdns['interface'] = get_vrrp_master(mdns['interface'])
+
+        if len(mdns['interface']) < 2:
+            return None
 
     render(config_file, 'mdns-repeater/mdns-repeater.tmpl', mdns)
     return None
@@ -76,7 +100,21 @@ def apply(mdns):
         call('systemctl stop mdns-repeater.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
+
+        if os.path.exists(vrrp_running_file):
+            os.unlink(vrrp_running_file)
     else:
+        if 'vrrp_disable' not in mdns and os.path.exists(vrrp_running_file):
+            os.unlink(vrrp_running_file)
+        
+        if mdns['vrrp_exists'] and 'vrrp_disable' in mdns:
+            if not os.path.exists(vrrp_running_file):
+                os.mknod(vrrp_running_file) # vrrp script looks for this file to update mdns repeater
+
+            if len(mdns['interface']) < 2:
+                call('systemctl stop mdns-repeater.service')
+                return None
+
         call('systemctl restart mdns-repeater.service')
 
     return None

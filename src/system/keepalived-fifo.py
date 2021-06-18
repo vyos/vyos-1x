@@ -37,6 +37,8 @@ logs_handler_syslog.setFormatter(logs_format)
 logger.addHandler(logs_handler_syslog)
 logger.setLevel(logging.DEBUG)
 
+mdns_running_file = '/run/mdns_vrrp_active'
+mdns_update_command = 'sudo /usr/libexec/vyos/conf_mode/service_mdns-repeater.py'
 
 # class for all operations
 class KeepalivedFifo:
@@ -121,6 +123,9 @@ class KeepalivedFifo:
                         logger.info("{} {} changed state to {}".format(n_type, n_name, n_state))
                         # check and run commands for VRRP instances
                         if n_type == 'INSTANCE':
+                            if os.path.exists(mdns_running_file):
+                                cmd(mdns_update_command)
+
                             if n_name in self.vrrp_config['vrrp_groups'] and n_state in self.vrrp_config['vrrp_groups'][n_name]:
                                 n_script = self.vrrp_config['vrrp_groups'][n_name].get(n_state)
                                 if n_script:
@@ -128,6 +133,9 @@ class KeepalivedFifo:
                         # check and run commands for VRRP sync groups
                         # currently, this is not available in VyOS CLI
                         if n_type == 'GROUP':
+                            if os.path.exists(mdns_running_file):
+                                cmd(mdns_update_command)
+                            
                             if n_name in self.vrrp_config['sync_groups'] and n_state in self.vrrp_config['sync_groups'][n_name]:
                                 n_script = self.vrrp_config['sync_groups'][n_name].get(n_state)
                                 if n_script:
