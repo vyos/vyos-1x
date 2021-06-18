@@ -17,6 +17,7 @@ from ftplib import FTP
 import os
 import shutil
 import socket
+import stat
 import sys
 import tempfile
 import urllib.parse
@@ -152,7 +153,18 @@ def transfer_sftp(mode, local_path, hostname, remote_path,\
             ssh.connect(hostname, port, username, password, sock=sock)
             with ssh.open_sftp() as sftp:
                 if mode == 'upload':
-                    sftp.put(local_path, remote_path, callback=callback)
+                    try:
+                        # If the remote path is a directory, use the original filename.
+                        if stat.S_ISDIR(sftp.stat(remote_path).st_mode):
+                            path = os.path.join(remote_path, os.path.basename(local_path))
+                        # A file exists at this destination. We're simply going to clobber it.
+                        else:
+                            path = remote_path
+                    # This path doesn't point at any existing file. We can freely use this filename.
+                    except IOError:
+                        path = remote_path
+                    finally:
+                        sftp.put(local_path, path, callback=callback)
                 elif mode == 'download':
                     sftp.get(remote_path, local_path, callback=callback)
                 elif mode == 'size':
