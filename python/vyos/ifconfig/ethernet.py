@@ -55,6 +55,11 @@ class EthernetIf(Interface):
             'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
             # 'shellcmd': 'ethtool -K {ifname} gso {value}',
         },
+        'lro': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
+            # 'shellcmd': 'ethtool -K {ifname} lro {value}',
+        },
         'sg': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
@@ -238,6 +243,18 @@ class EthernetIf(Interface):
             raise ValueError("Value out of range")
         return self.set_interface('gso', 'on' if state else 'off')
 
+    def set_lro(self, state):
+        """
+        Enable Large Receive offload. State can be either True or False.
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_lro(True)
+        """
+        if not isinstance(state, bool):
+            raise ValueError("Value out of range")
+        return self.set_interface('lro', 'on' if state else 'off')
+
     def set_rps(self, state):
         if not isinstance(state, bool):
             raise ValueError("Value out of range")
@@ -327,6 +344,9 @@ class EthernetIf(Interface):
 
         # GSO (generic segmentation offload)
         self.set_gso(dict_search('offload.gso', config) != None)
+
+        # LRO (large receive offload)
+        self.set_lro(dict_search('offload.lro', config) != None)
 
         # RPS - Receive Packet Steering
         self.set_rps(dict_search('offload.rps', config) != None)
