@@ -375,3 +375,15 @@ def get_ipv4(interface):
     """ Get interface IPv4 addresses"""
     from vyos.ifconfig import Interface
     return Interface(interface).get_addr_v4()
+
+@register_filter('get_ipv6')
+def get_ipv6(interface):
+    """ Get interface IPv6 addresses"""
+    from vyos.ifconfig import Interface
+    return Interface(interface).get_addr_v6()
+
+@register_filter('get_ip')
+def get_ip(interface):
+    """ Get interface IP addresses"""
+    from vyos.ifconfig import Interface
+    return Interface(interface).get_addr()
