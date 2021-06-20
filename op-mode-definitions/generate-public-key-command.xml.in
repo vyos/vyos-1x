@@ -19,7 +19,7 @@
                 <properties>
                   <help>Local path or remote URL of OpenSSH public key</help>
                   <completionHelp>
-                    <list><![CDATA[<http[s]://[<username>:<password>@]<hostname>/<path-to-file>> <ftp://[<username>[:<password>]@]<hostname>/<path-to-file>> <tftp://<hostname>/<path-to-file>> <sftp://[<username>[:<password>]@]<hostname>/<path-to-file>> <scp://[<username>[:<password>]@]<hostname>/<path-to-file>> <[file://]/<path-to-file>>]]></list>
+                    <list>&lt;http[s]://[&lt;username&gt;:&lt;password&gt;@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;ftp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;tftp://&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;sftp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;scp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;[file://]/&lt;path-to-file&gt;&gt;</list>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/generate_public_key_command.py "$4" "$6"</command>
