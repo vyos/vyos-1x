@@ -23,6 +23,12 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="vrrp-disable">
+                <properties>
+                  <help>Disables mDNS repeater on VRRP interfaces not in MASTER state</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
         </children>
