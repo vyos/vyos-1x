@@ -120,6 +120,7 @@ debian/vyos-1x-vmware
 debian/vyos-1x-smoketest
 debian/*.postinst.debhelper
 debian/*.prerm.debhelper
+debian/*.postrm.debhelper
 debian/*.substvars
 
 # Sonar Cloud
