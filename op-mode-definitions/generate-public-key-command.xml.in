@@ -19,7 +19,8 @@
                 <properties>
                   <help>Local path or remote URL of OpenSSH public key</help>
                   <completionHelp>
-                    <list>&lt;http[s]://[&lt;username&gt;:&lt;password&gt;@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;ftp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;tftp://&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;sftp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;scp://[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;/&lt;path-to-file&gt;&gt; &lt;[file://]/&lt;path-to-file&gt;&gt;</list>
+		    <!-- TODO: Replace this mess with verbatim, readable text. Till then, may gods have mercy. -->
+                    <list>&lt;http[s]:&#47;&#47;[&lt;username&gt;:&lt;password&gt;@]&lt;hostname&gt;&#47;&lt;path-to-file&gt;&gt; &lt;ftp:&#47;&#47;[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;&#47;&lt;path-to-file&gt;&gt; &lt;tftp:&#47;&#47;&lt;hostname&gt;&#47;&lt;path-to-file&gt;&gt; &lt;sftp:&#47;&#47;[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;&#47;&lt;path-to-file&gt;&gt; &lt;scp:&#47;&#47;[&lt;username&gt;[:&lt;password&gt;]@]&lt;hostname&gt;&#47;&lt;path-to-file&gt;&gt; &lt;[file:&#47;&#47;]&#47;&lt;path-to-file&gt;&gt;</list>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/generate_public_key_command.py "$4" "$6"</command>
