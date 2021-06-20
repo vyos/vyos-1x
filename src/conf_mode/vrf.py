@@ -141,7 +141,7 @@ def apply(vrf):
 
     # set the default VRF global behaviour
     bind_all = '0'
-    if 'bind_to_all' in vrf:
+    if 'bind-to-all' in vrf:
         bind_all = '1'
     call(f'sysctl -wq net.ipv4.tcp_l3mdev_accept={bind_all}')
     call(f'sysctl -wq net.ipv4.udp_l3mdev_accept={bind_all}')
