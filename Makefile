@@ -26,7 +26,7 @@ op_xml_obj = $(op_xml_src:.xml.in=.xml)
 	# -P         Inhibit generation of linemarkers in the output from the
 	#            preprocessor
 	mkdir -p $(BUILD_DIR)/$(dir $@)
-	@$(CC) -x c-header -E -undef -nostdinc -P -I$(CURDIR)/$(dir $<) -o $(BUILD_DIR)/$@ -c $<
+	@$(CC) -x c-header -C -E -undef -nostdinc -P -I$(CURDIR)/$(dir $<) -o $(BUILD_DIR)/$@ -c $<
 
 .PHONY: interface_definitions
 .ONESHELL:
