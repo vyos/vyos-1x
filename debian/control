@@ -49,7 +49,6 @@ Depends:
   easy-rsa,
   etherwake,
   ethtool,
-  fastnetmon,
   file,
   frr (>= 7.5),
   frr-pythontools,
