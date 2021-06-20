@@ -125,6 +125,24 @@ class VRFTest(unittest.TestCase):
             self.assertTrue(is_intf_addr_assigned(vrf, '127.0.0.1'))
             self.assertTrue(is_intf_addr_assigned(vrf, '::1'))
 
+    def test_vrf_bind_all(self):
+        table = '2000'
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.session.set(base + ['table', str(table)])
+            table = str(int(table) + 1)
+
+        self.session.set(base_path +  ['bind-to-all'])
+
+        # commit changes
+        self.session.commit()
+
+        # Verify VRF configuration
+        tmp = read_file('/proc/sys/net/ipv4/tcp_l3mdev_accept')
+        self.assertIn(tmp, '1')
+        tmp = read_file('/proc/sys/net/ipv4/udp_l3mdev_accept')
+        self.assertIn(tmp, '1')
+
     def test_vrf_table_id_is_unalterable(self):
         # Linux Kernel prohibits the change of a VRF table  on the fly.
         # VRF must be deleted and recreated!
