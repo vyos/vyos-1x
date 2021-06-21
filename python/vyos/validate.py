@@ -49,7 +49,7 @@ def is_intf_addr_assigned(intf, addr):
         return _is_intf_addr_assigned(intf, ip, mask)
     return _is_intf_addr_assigned(intf, addr)
 
-def _is_intf_addr_assigned(intf, address, netmask=''):
+def _is_intf_addr_assigned(intf, address, netmask=None):
     """
     Verify if the given IPv4/IPv6 address is assigned to specific interface.
     It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
@@ -85,14 +85,14 @@ def _is_intf_addr_assigned(intf, address, netmask=''):
             continue
 
         # we do not have a netmask to compare against, they are the same
-        if netmask == '':
+        if not netmask:
             return True
 
         prefixlen = ''
         if is_ipv4(ip_addr):
             prefixlen = sum([bin(int(_)).count('1') for _ in ip['netmask'].split('.')])
         else:
-            prefixlen = sum([bin(int(_,16)).count('1') for _ in ip['netmask'].split(':') if _])
+            prefixlen = sum([bin(int(_,16)).count('1') for _ in ip['netmask'].split('/')[0].split(':') if _])
 
         if str(prefixlen) == netmask:
             return True

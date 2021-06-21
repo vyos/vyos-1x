@@ -779,9 +779,7 @@ class Interface(Control):
                 # Note that currently expanded netmasks are not supported. That means
                 # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
                 # see https://docs.python.org/3/library/ipaddress.html
-                bits = bin(
-                    int(v6_addr['netmask'].replace(':', ''), 16)).count('1')
-                prefix = '/' + str(bits)
+                prefix = '/' + v6_addr['netmask'].split('/')[-1]
 
                 # we alsoneed to remove the interface suffix on link local
                 # addresses
@@ -1345,14 +1343,14 @@ class Interface(Control):
 
         # create/update 802.1q VLAN interfaces
         for vif_id, vif_config in config.get('vif', {}).items():
-            
+
             vif_ifname = f'{ifname}.{vif_id}'
             vif_config['ifname'] = vif_ifname
-            
+
             tmp = deepcopy(VLANIf.get_config())
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
-            
+
             # We need to ensure that the string format is consistent, and we need to exclude redundant spaces.
             sep = ' '
             if 'egress_qos' in vif_config:
@@ -1360,14 +1358,14 @@ class Interface(Control):
                 egress_qos_array = vif_config['egress_qos'].split()
                 # The split array is spliced according to the fixed format
                 tmp['egress_qos'] = sep.join(egress_qos_array)
-                
+
             if 'ingress_qos' in vif_config:
                 # Unwrap strings into arrays
                 ingress_qos_array = vif_config['ingress_qos'].split()
                 # The split array is spliced according to the fixed format
                 tmp['ingress_qos'] = sep.join(ingress_qos_array)
-                
-            # Since setting the QoS control parameters in the later stage will 
+
+            # Since setting the QoS control parameters in the later stage will
             # not completely delete the old settings,
             # we still need to delete the VLAN encapsulation interface in order to
             # ensure that the changed settings are effective.
@@ -1382,7 +1380,7 @@ class Interface(Control):
                 if qos_str != tmp['ingress_qos']:
                     if self.exists(vif_ifname):
                         VLANIf(vif_ifname).remove()
-                    
+
             qos_str = ''
             tmp2 = dict_search('linkinfo.info_data.egress_qos', cur_cfg)
             if 'egress_qos' in tmp and tmp2:
