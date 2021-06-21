@@ -1,7 +1,7 @@
 # certbot_util -- adaptation of certbot_nginx name matching functions for VyOS
 # https://github.com/certbot/certbot/blob/master/LICENSE.txt
 
-from certbot_nginx import parser
+from certbot_nginx._internal import parser
 
 NAME_RANK = 0
 START_WILDCARD_RANK = 1
