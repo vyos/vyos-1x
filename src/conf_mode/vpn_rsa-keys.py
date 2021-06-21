@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.util import call
 from vyos import ConfigError
 from vyos import airbag
-from Crypto.PublicKey.RSA import construct
+from Cryptodome.PublicKey.RSA import construct
 
 airbag.enable()
 
