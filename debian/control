@@ -4,6 +4,7 @@ Priority: extra
 Maintainer: VyOS Package Maintainers <maintainers@vyos.net>
 Build-Depends:
   debhelper (>= 9),
+  dh-python,
   fakeroot,
   gcc-multilib [amd64],
   clang [amd64],
@@ -49,6 +50,7 @@ Depends:
   easy-rsa,
   etherwake,
   ethtool,
+  fdisk,
   file,
   frr (>= 7.5),
   frr-pythontools,
