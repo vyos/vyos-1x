@@ -42,7 +42,7 @@ def parse_file(filename):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        logger.critical('Must specify XML file!')
+        print('Must specify XML file!', file=sys.stderr)
         sys.exit(1)
     filename = sys.argv[1]
     directory = os.path.dirname(os.path.abspath(filename))
