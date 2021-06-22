@@ -136,6 +136,7 @@ Depends:
   smartmontools,
   snmp,
   snmpd,
+  squashfs-tools,
   squid,
   squidclient,
   squidguard,
