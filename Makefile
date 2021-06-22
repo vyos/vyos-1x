@@ -4,7 +4,6 @@ BUILD_DIR := build
 DATA_DIR := data
 SHIM_DIR := src/shim
 XDP_DIR := src/xdp
-CC := gcc
 LIBS := -lzmq
 CFLAGS :=
 
@@ -15,18 +14,8 @@ op_xml_obj = $(op_xml_src:.xml.in=.xml)
 
 %.xml: %.xml.in
 	@echo Generating $(BUILD_DIR)/$@ from $<
-	# -ansi      This turns off certain features of GCC that are incompatible
-	#            with ISO C90. Without this regexes containing '/' as in an URL
-	#            won't work
-	# -x c       By default GCC guesses the input language from its file extension,
-	#            thus XML is unknown. Force it to C language
-	# -E         Stop after the preprocessing stage
-	# -undef     Do not predefine any system-specific or GCC-specific macros.
-	# -nostdinc  Do not search the standard system directories for header files
-	# -P         Inhibit generation of linemarkers in the output from the
-	#            preprocessor
 	mkdir -p $(BUILD_DIR)/$(dir $@)
-	@$(CC) -x c-header -C -E -undef -nostdinc -P -I$(CURDIR)/$(dir $<) -o $(BUILD_DIR)/$@ -c $<
+	$(CURDIR)/scripts/transclude-template $< > $(BUILD_DIR)/$@
 
 .PHONY: interface_definitions
 .ONESHELL:

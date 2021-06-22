@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+#
+# transclude-template: preprocessor for XML interface definitions to
+# interpret #include statements to include nested XML fragments and
+# snippets in documents.
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+
+import os
+import re
+import sys
+
+regexp = re.compile(r'^ *#include <(.+)>$')
+
+def parse_file(filename):
+    lines = ""
+    with open(filename, 'r') as f:
+        while True:
+            line = f.readline()
+            if line:
+                result = regexp.match(line)
+                if result:
+                    lines += parse_file(os.path.join(directory, result.group(1)))
+                else:
+                    lines += line
+            else:
+                return lines
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Must specify XML file!', file=sys.stderr)
+        sys.exit(1)
+    filename = sys.argv[1]
+    directory = os.path.dirname(os.path.abspath(filename))
+    print(parse_file(filename))
+
