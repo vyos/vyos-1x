@@ -16,7 +16,10 @@
 
 import argparse
 import re
+import sys
 import vici
+
+from vyos.util import process_named_running
 
 ike_sa_peer_prefix = """\
 Peer ID / IP                            Local ID / IP               
@@ -66,5 +69,9 @@ if __name__ == '__main__':
     parser.add_argument('--nat', help='NAT Traversal', required=False)
 
     args = parser.parse_args()
+
+    if not process_named_running('charon'):
+        print("IPSec Process NOT Running")
+        sys.exit(0)
 
     ike_sa(args.peer, args.nat)
