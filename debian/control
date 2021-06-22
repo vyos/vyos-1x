@@ -34,6 +34,7 @@ Depends:
   beep,
   bmon,
   bsdmainutils,
+  bridge-utils,
   conntrack,
   conserver-client,
   conserver-server,
