@@ -57,7 +57,11 @@ class Ethtool:
             if ':' in line:
                 key, value = [s.strip() for s in line.strip().split(":", 1)]
                 key = key.lower().replace(' ', '_')
-                self.ring_buffers[key] = int(value)
+                # T3645: ethtool version used on Debian Bullseye changed the
+                # output format from 0 -> n/a. As we are only interested in the
+                # tx/rx keys we do not care about RX Mini/Jumbo.
+                if value.isdigit():
+                    self.ring_buffers[key] = int(value)
 
 
     def is_fixed_lro(self):
