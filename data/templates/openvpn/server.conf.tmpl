@@ -12,7 +12,6 @@ group {{ daemon_group }}
 dev-type {{ device_type }}
 dev {{ ifname }}
 persist-key
-iproute /usr/libexec/vyos/system/unpriv-ip
 {% if protocol == 'tcp-active' %}
 proto tcp-client
 {% elif protocol == 'tcp-passive' %}
