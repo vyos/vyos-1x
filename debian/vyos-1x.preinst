@@ -1,0 +1,1 @@
+dpkg-divert --package vyos-1x --add --rename /lib/systemd/system/lcdproc.service
