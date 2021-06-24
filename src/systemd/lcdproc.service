@@ -1,0 +1,13 @@
+[Unit]
+Description=LCDproc system status information viewer on %I
+Documentation=man:lcdproc(8) http://www.lcdproc.org/
+After=vyos-router.service LCDd.service
+Requires=LCDd.service
+
+[Service]
+User=root
+ExecStart=/usr/bin/lcdproc -f -c /run/lcdproc/lcdproc.conf
+PIDFile=/run/lcdproc/lcdproc.pid
+
+[Install]
+WantedBy=multi-user.target
