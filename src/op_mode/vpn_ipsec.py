@@ -33,7 +33,7 @@ X509_CONFIG_PATH = '/etc/ipsec.d/key-pair.template'
 X509_PATH = '/config/auth/'
 
 IPSEC_CONF = '/etc/ipsec.conf'
-SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
+SWANCTL_CONF = '/run/swanctl/swanctl.conf'
 
 def migrate_to_vyatta_key(path):
     with open(path, 'r') as f:
@@ -90,7 +90,7 @@ def generate_x509_pair(name):
             return
 
     result = os.system(f'openssl req -new -nodes -keyout {X509_PATH}{name}.key -out {X509_PATH}{name}.csr -config {X509_CONFIG_PATH}')
-    
+
     if result != 0:
         print(f'Could not generate x509 key-pair: {result}')
         return
