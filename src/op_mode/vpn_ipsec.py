@@ -33,7 +33,7 @@ X509_CONFIG_PATH = '/etc/ipsec.d/key-pair.template'
 X509_PATH = '/config/auth/'
 
 IPSEC_CONF = '/etc/ipsec.conf'
-SWANCTL_CONF = '/etc/swanctl.conf'
+SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
 
 def migrate_to_vyatta_key(path):
     with open(path, 'r') as f:
