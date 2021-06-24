@@ -225,6 +225,9 @@ def _format_node(inside, conf, xml):
                         else:
                             _fatal(constraint)
 
+                elif 'constraintGroup' in properties:
+                    properties.pop('constraintGroup')
+
                 elif 'constraintErrorMessage' in properties:
                     r[kw.error] = properties.pop('constraintErrorMessage')
 

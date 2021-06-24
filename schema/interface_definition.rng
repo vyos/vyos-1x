@@ -161,6 +161,9 @@
           <ref name="constraint"/>
         </optional>
         <zeroOrMore>
+          <ref name="constraintGroup"/>
+        </zeroOrMore>
+        <zeroOrMore>
           <ref name="valueHelp"/>
         </zeroOrMore>
         <optional>
@@ -234,6 +237,24 @@
   -->
   <define name="constraint">
     <element name="constraint">
+      <oneOrMore>
+        <choice>
+          <element name="regex">
+            <text/>
+          </element>
+          <ref name="validator"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <!--
+    Tag and leaf nodes may have constraintGroups on their names and
+    values (respectively).
+    When multiple constraints are listed within a group, they work as
+    logical AND
+  -->
+  <define name="constraintGroup">
+    <element name="constraintGroup">
       <oneOrMore>
         <choice>
           <element name="regex">
