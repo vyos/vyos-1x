@@ -33,7 +33,7 @@ if args.source or args.destination:
     tmp = cmd('sudo nft -j list table ip nat')
     tmp = json.loads(tmp)
     
-    format_nat66_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
+    format_nat_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
     print(format_nat_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
     print(format_nat_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
 
@@ -63,29 +63,49 @@ if args.source or args.destination:
         
         rule = int(''.join(list(filter(str.isdigit, comment))))
         chain = data['chain']
-        if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):
+        if not ((args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING')):
             continue
         interface = dict_search('match.right', data['expr'][0])
-        srcdest = dict_search('match.right.prefix.addr', data['expr'][1])
-        if srcdest:
-            addr_tmp = dict_search('match.right.prefix.len', data['expr'][1])
-            if addr_tmp:
-                srcdest = srcdest + '/' + str(addr_tmp)
-        else:
-            srcdest = dict_search('match.right', data['expr'][1])
-        tran_addr = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
-        if tran_addr:
-            addr_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
-            if addr_tmp:
-                srcdest = srcdest + '/' + str(addr_tmp)
+        srcdest = ''
+        for i in [1, 2]:
+            srcdest_json = dict_search('match.right', data['expr'][i])
+            if not srcdest_json:
+                continue
+
+            if isinstance(srcdest_json,str):
+                srcdest += srcdest_json + ' '
+            elif 'prefix' in srcdest_json:
+                addr_tmp = dict_search('match.right.prefix.addr', data['expr'][i])
+                len_tmp = dict_search('match.right.prefix.len', data['expr'][i])
+                if addr_tmp and len_tmp:
+                    srcdest = addr_tmp + '/' + str(len_tmp) + ' '
+            elif 'set' in srcdest_json:
+                if isinstance(srcdest_json['set'][0],str):
+                    srcdest += 'port ' + str(srcdest_json['set'][0]) + ' '
+                else:
+                    port_range = srcdest_json['set'][0]['range']
+                    srcdest += 'port ' + str(port_range[0]) + '-' + str(port_range[1]) + ' '
+
+        tran_addr = ''
+        tran_addr_json = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
+        if tran_addr_json:
+            if isinstance(tran_addr_json,str):
+                tran_addr = tran_addr_json
+            elif 'prefix' in tran_addr_json:
+                addr_tmp = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
+                len_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
+                if addr_tmp and len_tmp:
+                    tran_addr = addr_tmp + '/' + str(len_tmp)
         else:
             if 'masquerade' in data['expr'][3]:
                 tran_addr = 'masquerade'
             elif 'log' in data['expr'][3]:
                 continue
-            else:
-                tran_addr = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
-        
+
+        tran_port = dict_search('snat.port' if args.source else 'dnat.port', data['expr'][3])
+        if tran_port:
+            tran_addr += ' port ' + str(tran_port)
+
         print(format_nat_rule.format(rule, srcdest, tran_addr, interface))
     
     exit(0)

@@ -68,7 +68,7 @@ if args.source or args.destination:
         rule = comment.replace('SRC-NAT66-','')
         rule = rule.replace('DST-NAT66-','')
         chain = data['chain']
-        if not (args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING'):
+        if not ((args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING')):
             continue
         interface = dict_search('match.right', data['expr'][0])
         srcdest = dict_search('match.right.prefix.addr', data['expr'][2])
@@ -79,16 +79,19 @@ if args.source or args.destination:
         else:
             srcdest = dict_search('match.right', data['expr'][2])
         
-        tran_addr = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
-        if tran_addr:
-            addr_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
-            if addr_tmp:
-                srcdest = srcdest + '/' + str(addr_tmp)
+        tran_addr_json = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
+        if tran_addr_json:
+            if isinstance(srcdest_json,str):
+                tran_addr = tran_addr_json
+
+            if 'prefix' in tran_addr_json:
+                addr_tmp = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
+                len_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
+                if addr_tmp:
+                    tran_addr = addr_tmp + '/' + str(len_tmp)
         else:
             if 'masquerade' in data['expr'][3]:
                 tran_addr = 'masquerade'
-            else:
-                tran_addr = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
         
         print(format_nat66_rule.format(rule, srcdest, tran_addr, interface))
     
