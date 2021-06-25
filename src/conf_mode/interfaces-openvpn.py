@@ -92,12 +92,6 @@ def verify(openvpn):
     if 'mode' not in openvpn:
         raise ConfigError('Must specify OpenVPN operation mode!')
 
-    # Check if we have disabled ncp and at the same time specified ncp-ciphers
-    if 'encryption' in openvpn:
-        if {'disable_ncp', 'ncp_ciphers'} <= set(openvpn.get('encryption')):
-            raise ConfigError('Can not specify both "encryption disable-ncp" '\
-                              'and "encryption ncp-ciphers"')
-
     #
     # OpenVPN client mode - VERIFY
     #

@@ -76,15 +76,7 @@ class TestInterfacesOpenVPN(unittest.TestCase):
         interface = 'vtun2000'
         path = base_path + [interface]
         self.session.set(path + ['mode', 'client'])
-
-        # check validate() - cannot specify both "encryption disable-ncp" and
-        # "encryption ncp-ciphers" at the same time
-        self.session.set(path + ['encryption', 'disable-ncp'])
         self.session.set(path + ['encryption', 'ncp-ciphers', 'aes192gcm'])
-
-        with self.assertRaises(ConfigSessionError):
-            self.session.commit()
-        self.session.delete(path + ['encryption', 'ncp-ciphers'])
 
         # check validate() - cannot specify local-port in client mode
         self.session.set(path + ['local-port', '5000'])

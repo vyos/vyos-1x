@@ -163,12 +163,6 @@
                   <multi/>
                 </properties>
               </leafNode>
-              <leafNode name="disable-ncp">
-                <properties>
-                  <help>Disable support for ncp-ciphers</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
             </children>
           </node>
           #include <include/interface/interface-ipv6-options.xml.i>
