@@ -20,6 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.ifconfig import Section
 from vyos.util import process_named_running
+from vyos.util import cmd
 
 PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
@@ -195,11 +196,17 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
-        self.assertIn(f'router ospf', frrconfig)
-        self.assertIn(f' passive-interface default', frrconfig) # default
-        for interface in interfaces:
-            self.assertIn(f' no passive-interface {interface}', frrconfig) # default
-
+        try:
+            self.assertIn(f'router ospf', frrconfig)
+            self.assertIn(f' passive-interface default', frrconfig) # default
+            for interface in interfaces:
+                self.assertIn(f' no passive-interface {interface}', frrconfig) # default
+        except:
+            tmp = cmd('tail -n 250 /var/log/messages')
+            print(tmp)
+            tmp = cmd('vtysh -c "show run"')
+            print(tmp)
+            self.fail('Now we can hopefully see why OSPF fails')
 
     def test_ospf_08_redistribute(self):
         metric = '15'
