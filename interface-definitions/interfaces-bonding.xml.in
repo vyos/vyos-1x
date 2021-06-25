@@ -60,7 +60,7 @@
             <properties>
               <help>Bonding transmit hash policy</help>
               <completionHelp>
-                <list>layer2 layer2+3 layer3+4</list>
+                <list>layer2 layer2+3 layer3+4 encap2+3 encap3+4</list>
               </completionHelp>
               <valueHelp>
                 <format>layer2</format>
@@ -74,10 +74,18 @@
                 <format>layer3+4</format>
                 <description>combine IP address and port to make hash</description>
               </valueHelp>
+              <valueHelp>
+                <format>encap2+3</format>
+                <description>combine encapsulated MAC address and IP address to make hash</description>
+              </valueHelp>
+              <valueHelp>
+                <format>encap3+4</format>
+                <description>combine encapsulated IP address and port to make hash</description>
+              </valueHelp>
               <constraint>
-                <regex>^(layer2\+3|layer3\+4|layer2)$</regex>
+                <regex>^(layer2\+3|layer3\+4|layer2|encap2\+3|encap3\+4)$</regex>
               </constraint>
-              <constraintErrorMessage>hash-policy must be layer2 layer2+3 or layer3+4</constraintErrorMessage>
+              <constraintErrorMessage>hash-policy must be layer2 layer2+3 layer3+4 encap2+3 or encap3+4</constraintErrorMessage>
             </properties>
             <defaultValue>layer2</defaultValue>
           </leafNode>
