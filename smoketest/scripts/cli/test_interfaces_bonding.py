@@ -133,5 +133,22 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(0,         tmp['linkinfo']['info_data']['min_links'])
             self.assertEqual(lacp_rate, tmp['linkinfo']['info_data']['ad_lacp_rate'])
 
+    def test_bonding_hast_policy(self):
+        # Define available bonding hash policies
+        hash_policies = ['layer2', 'layer2+3', 'layer2+3', 'encap2+3', 'encap3+4']
+        for hash_policy in hash_policies:
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'hash-policy', hash_policy])
+
+            self.cli_commit()
+
+            # verify config
+            for interface in self._interfaces:
+                defined_policy = read_file(f'/sys/class/net/{interface}/bonding/xmit_hash_policy').split()
+                self.assertEqual(defined_policy[0], hash_policy)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
