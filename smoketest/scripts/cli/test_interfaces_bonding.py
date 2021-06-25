@@ -133,7 +133,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual(0,         tmp['linkinfo']['info_data']['min_links'])
             self.assertEqual(lacp_rate, tmp['linkinfo']['info_data']['ad_lacp_rate'])
 
-    def test_bonding_hast_policy(self):
+    def test_bonding_hash_policy(self):
         # Define available bonding hash policies
         hash_policies = ['layer2', 'layer2+3', 'layer2+3', 'encap2+3', 'encap3+4']
         for hash_policy in hash_policies:
