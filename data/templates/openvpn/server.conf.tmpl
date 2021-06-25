@@ -247,8 +247,6 @@ cipher aes-256-cbc
 {%       endif %}
 {%     endfor %}
 ncp-ciphers {{ cipher_list | join(':') }}:{{ cipher_list | join(':') | upper }}
-{%   elif encryption.disable_ncp is defined %}
-ncp-disable
 {%   endif %}
 {% endif %}
 
