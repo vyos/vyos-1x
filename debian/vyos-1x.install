@@ -4,6 +4,8 @@ etc/ipsec.d
 etc/netplug
 etc/opennhrp
 etc/rsyslog.d
+etc/securetty
+etc/security
 etc/sudoers.d
 etc/systemd
 etc/sysctl.d
