@@ -22,11 +22,11 @@ from vyos import airbag
 airbag.enable()
 
 motd="""
-The programs included with the Debian GNU/Linux system are free software;
+The programs included with the Debian/VyOS GNU/Linux system are free software;
 the exact distribution terms for each program are described in the
 individual files in /usr/share/doc/*/copyright.
 
-Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+Debian/VyOS GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
 permitted by applicable law.
 
 """
@@ -36,7 +36,7 @@ PRELOGIN_NET_FILE = r'/etc/issue.net'
 POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
-    'issue': 'Welcome to VyOS - \n \l\n',
+    'issue': 'Welcome to VyOS - \\n \\l\n',
     'issue_net': 'Welcome to VyOS\n',
     'motd': motd
 }
