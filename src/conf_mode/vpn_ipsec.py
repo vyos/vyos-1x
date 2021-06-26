@@ -40,30 +40,31 @@ authby_translate = {
     'rsa': 'pubkey',
     'x509': 'pubkey'
 }
+
 default_pfs = 'dh-group2'
 pfs_translate = {
-    'dh-group1': 'modp768',
-    'dh-group2': 'modp1024',
-    'dh-group5': 'modp1536',
-    'dh-group14': 'modp2048',
-    'dh-group15': 'modp3072',
-    'dh-group16': 'modp4096',
-    'dh-group17': 'modp6144',
-    'dh-group18': 'modp8192',
-    'dh-group19': 'ecp256',
-    'dh-group20': 'ecp384',
-    'dh-group21': 'ecp512',
-    'dh-group22': 'modp1024s160',
-    'dh-group23': 'modp2048s224',
-    'dh-group24': 'modp2048s256',
-    'dh-group25': 'ecp192',
-    'dh-group26': 'ecp224',
-    'dh-group27': 'ecp224bp',
-    'dh-group28': 'ecp256bp',
-    'dh-group29': 'ecp384bp',
-    'dh-group30': 'ecp512bp',
-    'dh-group31': 'curve25519',
-    'dh-group32': 'curve448'
+    'dh-group1'  : 'modp768',
+    'dh-group2'  : 'modp1024',
+    'dh-group5'  : 'modp1536',
+    'dh-group14' : 'modp2048',
+    'dh-group15' : 'modp3072',
+    'dh-group16' : 'modp4096',
+    'dh-group17' : 'modp6144',
+    'dh-group18' : 'modp8192',
+    'dh-group19' : 'ecp256',
+    'dh-group20' : 'ecp384',
+    'dh-group21' : 'ecp512',
+    'dh-group22' : 'modp1024s160',
+    'dh-group23' : 'modp2048s224',
+    'dh-group24' : 'modp2048s256',
+    'dh-group25' : 'ecp192',
+    'dh-group26' : 'ecp224',
+    'dh-group27' : 'ecp224bp',
+    'dh-group28' : 'ecp256bp',
+    'dh-group29' : 'ecp384bp',
+    'dh-group30' : 'ecp512bp',
+    'dh-group31' : 'curve25519',
+    'dh-group32' : 'curve448'
 }
 
 any_log_modes = [
@@ -79,13 +80,19 @@ dhcp_wait_sleep = 1
 
 mark_base = 0x900000
 
-CERT_PATH="/etc/swanctl/x509/"
-KEY_PATH="/etc/swanctl/private/"
-CA_PATH = "/etc/swanctl/x509ca/"
-CRL_PATH = "/etc/swanctl/x509crl/"
+swanctl_dir    = '/etc/swanctl'
+ipsec_conf     = '/etc/ipsec.conf'
+ipsec_secrets  = '/etc/ipsec.secrets'
+interface_conf = '/etc/strongswan.d/interfaces_use.conf'
+swanctl_conf   = f'{swanctl_dir}/swanctl.conf'
 
-DHCP_BASE = "/var/lib/dhcp/dhclient"
-DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
+CERT_PATH = f'{swanctl_dir}/x509/'
+KEY_PATH  = f'{swanctl_dir}/private/'
+CA_PATH   = f'{swanctl_dir}/x509ca/'
+CRL_PATH  = f'{swanctl_dir}/x509crl/'
+
+DHCP_BASE = '/var/lib/dhcp/dhclient'
+DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
 
 LOCAL_KEY_PATHS = ['/config/auth/', '/config/ipsec.d/rsa-keys/']
 X509_PATH = '/config/auth/'
@@ -105,8 +112,8 @@ def get_config(config=None):
 
     ipsec['dhcp_no_address'] = {}
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces', 'interface'])
-    ipsec['l2tp_exists'] = conf.exists('vpn l2tp remote-access ipsec-settings ')
-    ipsec['nhrp_exists'] = conf.exists('protocols nhrp tunnel')
+    ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access', 'ipsec-settings'])
+    ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
     ipsec['rsa_keys'] = conf.get_config_dict(['vpn', 'rsa-keys'], key_mangling=('-', '_'),
                                              get_first_key=True, no_tag_node_value_mangle=True)
 
@@ -383,10 +390,10 @@ def generate(ipsec):
                 modes = any_log_modes
             data['charondebug'] = f' {level}, '.join(modes) + ' ' + level
 
-    render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
-    render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
-    render("/etc/strongswan.d/interfaces_use.conf", "ipsec/interfaces_use.conf.tmpl", data)
-    render("/etc/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
+    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
+    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
+    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
+    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
 
 def resync_l2tp(ipsec):
     if ipsec and not ipsec['l2tp_exists']:
