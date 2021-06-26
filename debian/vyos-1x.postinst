@@ -85,10 +85,3 @@ if [ ! -x /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ]; then
 EOF
 fi
 
-# remove keys
-rm -f /etc/ipsec.secrets
-touch /etc/ipsec.secrets
-chown root:root /etc/ipsec.secrets
-chmod 600 /etc/ipsec.secrets
-rm -f /etc/ipsec.d/private/localhost.localdomainKey.pem
-rm -f /etc/ipsec.d/certs/localhost.localdomainCert.pem
