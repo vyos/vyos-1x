@@ -38,7 +38,7 @@ import re
 from vyos.util import call
 from vyos.util import cmd
 
-SWANCTL_CONF="/run/swanctl/swanctl.conf"
+SWANCTL_CONF="/etc/swanctl/swanctl.conf"
 
 def getlines(file):
     with open(file, 'r') as f:

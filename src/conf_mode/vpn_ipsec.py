@@ -386,7 +386,7 @@ def generate(ipsec):
     render("/etc/ipsec.conf", "ipsec/ipsec.conf.tmpl", data)
     render("/etc/ipsec.secrets", "ipsec/ipsec.secrets.tmpl", data)
     render("/etc/strongswan.d/interfaces_use.conf", "ipsec/interfaces_use.conf.tmpl", data)
-    render("/run/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
+    render("/etc/swanctl/swanctl.conf", "ipsec/swanctl.conf.tmpl", data)
 
 def resync_l2tp(ipsec):
     if ipsec and not ipsec['l2tp_exists']:

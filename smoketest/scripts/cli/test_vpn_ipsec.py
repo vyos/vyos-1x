@@ -28,7 +28,7 @@ nhrp_path = ['protocols', 'nhrp']
 base_path = ['vpn', 'ipsec']
 
 dhcp_waiting_file = '/tmp/ipsec_dhcp_waiting'
-swanctl_file = '/run/swanctl/swanctl.conf'
+swanctl_file = '/etc/swanctl/swanctl.conf'
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
@@ -250,7 +250,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             'secret = secret'
         ]
 
-        tmp_swanctl_conf = read_file(swanctl_file)
+        tmp_swanctl_conf = read_file('/etc/swanctl/swanctl.conf')
 
         for line in swanctl_lines:
             self.assertIn(line, tmp_swanctl_conf)
