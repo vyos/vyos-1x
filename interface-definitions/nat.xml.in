@@ -50,6 +50,7 @@
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
                 </children>
               </node>
             </children>
@@ -101,6 +102,7 @@
                     </properties>
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
+                  #include <include/nat-translation-options.xml.i>
                 </children>
               </node>
             </children>
