@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from vyos.util import mangle_dict_keys
+from vyos.util import *
 
 class TestVyOSUtil(TestCase):
     def test_key_mangline(self):
@@ -23,4 +23,10 @@ class TestVyOSUtil(TestCase):
         expected_data = {"foo_bar": {"baz_quux": None}}
         new_data = mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
+
+    def test_copy_file(self):
+        source = '/proc/cmdline'
+        destination = '/tmp/foo/cmdline'
+        copy_file(source, destination, True)
+        self.assertEqual(read_file(source), read_file(destination))
 
