@@ -73,8 +73,8 @@
 {%     set trns_addr = 'return' %}
 {%     set trns_port = '' %}
 {%   endif %}
-{#  T1083: NAT address and port translation options #}
-{%   if config.translation.options is defined and config.translation.options is not none %}
+{#   T1083: NAT address and port translation options #}
+{%   if config.translation is defined and config.translation.options is defined and config.translation.options is not none %}
 {%     if config.translation.options.address_mapping is defined and config.translation.options.address_mapping == "persistent" %}
 {%         set trns_opts_addr  = 'persistent' %}
 {%     endif %}
