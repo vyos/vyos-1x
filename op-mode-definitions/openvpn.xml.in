@@ -32,7 +32,7 @@
             fi
 
             echo "Generating OpenVPN key to $full_path"
-            sudo /usr/sbin/openvpn --genkey --secret "$full_path"
+            sudo /usr/sbin/openvpn --genkey secret "$full_path"
             result=$?
             if [ $result = 0 ]; then
               echo "Your new local OpenVPN key has been generated"
