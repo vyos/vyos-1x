@@ -72,11 +72,12 @@ for init in openswan ipsec setkey; do
 done
 
 # create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
-# this should be after 'mkdir -p /opt/vyatta/etc/config/scripts' above
-if [ ! -x /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ]; then
-    touch /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
-    chmod 755 /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
-    cat <<EOF >>/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+POSTCONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+if [ ! -x $POSTCONFIG_SCRIPT ]; then
+    mkdir -p $(dirname $POSTCONFIG_SCRIPT)
+    touch $POSTCONFIG_SCRIPT
+    chmod 755 $POSTCONFIG_SCRIPT
+    cat <<EOF >>$POSTCONFIG_SCRIPT
 #!/bin/sh
 # This script is executed at boot time after VyOS configuration is fully applied.
 # Any modifications required to work around unfixed bugs
