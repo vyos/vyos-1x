@@ -31,6 +31,7 @@ from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import run
 from vyos.util import cidr_fit
+from vyos.util import copy_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -340,17 +341,17 @@ def generate(ipsec):
 
                 if peer_conf['authentication']['mode'] == 'x509':
                     cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['cert_file'])
-                    call(f'cp -f {cert_file} {CERT_PATH}')
+                    copy_file(cert_file, CERT_PATH, True)
 
                     key_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['key']['file'])
-                    call(f'cp -f {key_file} {KEY_PATH}')
+                    copy_file(key_file, X509_PATH, True)
 
                     ca_cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['ca_cert_file'])
-                    call(f'cp -f {ca_cert_file} {CA_PATH}')
+                    copy_file(ca_cert_file, CA_PATH, True)
 
                     if 'crl_file' in peer_conf['authentication']['x509']:
                         crl_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['crl_file'])
-                        call(f'cp -f {crl_file} {CRL_PATH}')
+                        copy_file(crl_file, CRL_PATH, True)
 
                 local_ip = ''
                 if 'local_address' in peer_conf:
