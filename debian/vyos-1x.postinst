@@ -1,9 +1,4 @@
 #!/bin/sh -e
-if ! deb-systemd-helper --quiet was-enabled salt-minion.service; then
-    # Enables the unit on first installation, creates new
-    # symlinks on upgrades if the unit file has changed.
-    deb-systemd-helper disable salt-minion.service >/dev/null || true
-fi
 
 # Turn off Debian default for %sudo
 sed -i -e '/^%sudo/d' /etc/sudoers || true
