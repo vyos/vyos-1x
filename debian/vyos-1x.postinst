@@ -71,6 +71,20 @@ for init in openswan ipsec setkey; do
   update-rc.d -f ${init} remove >/dev/null
 done
 
+# create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+# this should be after 'mkdir -p /opt/vyatta/etc/config/scripts' above
+if [ ! -x /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ]; then
+    touch /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+    chmod 755 /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+    cat <<EOF >>/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
+#!/bin/sh
+# This script is executed at boot time after VyOS configuration is fully applied.
+# Any modifications required to work around unfixed bugs
+# or use services not available through the VyOS CLI system can be placed here.
+
+EOF
+fi
+
 # remove keys
 rm -f /etc/ipsec.secrets
 touch /etc/ipsec.secrets
