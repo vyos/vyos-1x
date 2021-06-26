@@ -5,10 +5,6 @@ if ! deb-systemd-helper --quiet was-enabled salt-minion.service; then
     deb-systemd-helper disable salt-minion.service >/dev/null || true
 fi
 
-if [ -x "/etc/init.d/salt-minion" ]; then
-    update-rc.d -f salt-minion remove >/dev/null
-fi
-
 # Turn off Debian default for %sudo
 sed -i -e '/^%sudo/d' /etc/sudoers || true
 
