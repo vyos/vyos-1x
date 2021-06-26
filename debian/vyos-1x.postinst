@@ -9,6 +9,9 @@ if [ -x "/etc/init.d/salt-minion" ]; then
     update-rc.d -f salt-minion remove >/dev/null
 fi
 
+# Turn off Debian default for %sudo
+sed -i -e '/^%sudo/d' /etc/sudoers || true
+
 # Add minion user for salt-minion
 if ! grep -q '^minion' /etc/passwd; then
     adduser --quiet --firstuid 100 --system --disabled-login --ingroup vyattacfg \

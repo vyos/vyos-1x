@@ -1,0 +1,53 @@
+#
+# VyOS modifications to sudo configuration
+#
+Defaults syslog_goodpri=info
+Defaults env_keep+=VYATTA_*
+
+#
+# Command groups allowed for operator users
+#
+Cmnd_Alias IPTABLES = /sbin/iptables --list -n,\
+		      /sbin/iptables -L -vn,\
+                      /sbin/iptables -L * -vn,\
+		      /sbin/iptables -t * -L *, \
+                      /sbin/iptables -Z *,\
+		      /sbin/iptables -Z -t nat, \
+                      /sbin/iptables -t * -Z *
+Cmnd_Alias IP6TABLES = /sbin/ip6tables -t * -Z *, \
+                       /sbin/ip6tables -t * -L *
+Cmnd_Alias CONNTRACK = /usr/sbin/conntrack -L *, \
+                       /usr/sbin/conntrack -G *, \
+		       /usr/sbin/conntrack -E *
+Cmnd_Alias IPFLUSH = /sbin/ip route flush cache, \
+		     /sbin/ip route flush cache *,\
+		     /sbin/ip neigh flush to *, \
+		     /sbin/ip neigh flush dev *, \
+                     /sbin/ip -f inet6 route flush cache, \
+		     /sbin/ip -f inet6 route flush cache *,\
+		     /sbin/ip -f inet6 neigh flush to *, \
+		     /sbin/ip -f inet6 neigh flush dev *
+Cmnd_Alias ETHTOOL = /sbin/ethtool -p *, \
+                     /sbin/ethtool -S *, \
+                     /sbin/ethtool -a *, \
+                     /sbin/ethtool -c *, \
+                     /sbin/ethtool -i *
+Cmnd_Alias DMIDECODE = /usr/sbin/dmidecode
+Cmnd_Alias DISK    = /usr/bin/lsof, /sbin/fdisk -l *, /sbin/sfdisk -d *
+Cmnd_Alias DATE    = /bin/date, /usr/sbin/ntpdate
+Cmnd_Alias PPPOE_CMDS = /sbin/pppd, /sbin/poff, /usr/sbin/pppstats
+Cmnd_Alias PCAPTURE = /usr/bin/tcpdump
+Cmnd_Alias HWINFO   = /usr/bin/lspci
+Cmnd_Alias FORCE_CLUSTER = /usr/share/heartbeat/hb_takeover, \
+                           /usr/share/heartbeat/hb_standby
+%operator ALL=NOPASSWD: DATE, IPTABLES, ETHTOOL, IPFLUSH, HWINFO, \
+			PPPOE_CMDS, PCAPTURE, /usr/sbin/wanpipemon, \
+                        DMIDECODE, DISK, CONNTRACK, IP6TABLES,  \
+                        FORCE_CLUSTER
+
+# Allow any user to run files in sudo-users
+%users ALL=NOPASSWD: /opt/vyatta/bin/sudo-users/
+
+# Allow members of group sudo to execute any command
+%sudo ALL=NOPASSWD: ALL
+
