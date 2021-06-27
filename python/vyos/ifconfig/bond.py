@@ -86,6 +86,9 @@ class BondIf(Interface):
     _sysfs_get = {**Interface._sysfs_get, **{
         'bond_arp_ip_target': {
             'location': '/sys/class/net/{ifname}/bonding/arp_ip_target',
+        },
+        'bond_mode': {
+            'location': '/sys/class/net/{ifname}/bonding/mode',
         }
     }}
 
@@ -316,6 +319,19 @@ class BondIf(Interface):
                     enslaved_ifs.append(directory.replace('lower_', ''))
 
         return enslaved_ifs
+
+    def get_mode(self):
+        """
+        Return bond operation mode.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').get_mode()
+        '802.3ad'
+        """
+        mode = self.get_interface('bond_mode')
+        # mode is now "802.3ad 4", we are only interested in "802.3ad"
+        return mode.split()[0]
 
     def set_primary(self, interface):
         """

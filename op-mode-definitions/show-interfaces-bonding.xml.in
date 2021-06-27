@@ -25,6 +25,12 @@
                 </properties>
                 <command>if [ -f "/proc/net/bonding/$4" ]; then cat "/proc/net/bonding/$4"; else echo "Interface $4 does not exist!"; fi</command>
               </leafNode>
+              <leafNode name="slaves">
+                <properties>
+                  <help>Show specified bonding interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show-bond.py --interface "$4"</command>
+              </leafNode>
               <tagNode name="vif">
                 <properties>
                   <help>Show specified virtual network interface (vif) information</help>
@@ -61,6 +67,12 @@
                   <help>Show detailed bonding interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bonding --action=show</command>
+              </leafNode>
+              <leafNode name="slaves">
+                <properties>
+                  <help>Show specified bonding interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show-bond.py --slaves</command>
               </leafNode>
             </children>
           </node>
