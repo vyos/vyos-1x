@@ -1,4 +1,4 @@
-{% macro conn(name, peer, peer_conf, ike, esp, ciphers, esp_group, auth_type, marks) %}
+{% macro conn(name, peer, peer_conf, ike, esp, ciphers, esp_group, auth_type) %}
     peer_{{ name }} {
         proposals = {{ ciphers.ike[peer_conf.ike_group] }}
         version = {{ ike['key_exchange'][4:] if "key_exchange" in ike else "0" }}
@@ -61,8 +61,8 @@
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                mark_in = {{ marks[peer_conf.vti.bind] }}
-                mark_out = {{ marks[peer_conf.vti.bind] }}
+                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
+                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
                 ipcomp = {{ 'yes' if "compression" in vti_esp and vti_esp.compression == 'enable' else 'no' }}
                 mode = {{ vti_esp.mode if "mode" in vti_esp else "tunnel" }}
 {%        if peer[0:1] == '@' %}
@@ -117,8 +117,8 @@
 {%            endif %}
 {%            if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                mark_in = {{ marks[peer_conf.vti.bind] }}
-                mark_out = {{ marks[peer_conf.vti.bind] }}
+                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
+                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
 {%            endif %}
             }
 {%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}

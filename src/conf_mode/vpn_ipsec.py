@@ -79,8 +79,6 @@ esp_ciphers = {}
 dhcp_wait_attempts = 2
 dhcp_wait_sleep = 1
 
-mark_base = 0x900000
-
 swanctl_dir    = '/etc/swanctl'
 ipsec_conf     = '/etc/ipsec.conf'
 ipsec_secrets  = '/etc/ipsec.secrets'
@@ -321,8 +319,13 @@ def verify(ipsec):
                             raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
 
 def generate(ipsec):
-    data = {}
+    if not ipsec:
+        for config_file in [ipsec_conf, ipsec_secrets, interface_conf, swanctl_conf]:
+            if os.path.isfile(config_file):
+                os.unlink(config_file)
+        return
 
+    data = {}
     if ipsec:
         if ipsec['dhcp_no_address']:
             with open(DHCP_HOOK_IFLIST, 'w') as f:
@@ -331,7 +334,6 @@ def generate(ipsec):
         data = ipsec
         data['authby'] = authby_translate
         data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
-        data['marks'] = {}
         data['rsa_local_key'] = verify_rsa_local_key(ipsec)
 
         if 'site_to_site' in data and 'peer' in data['site_to_site']:
@@ -360,10 +362,6 @@ def generate(ipsec):
                     local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
 
                 data['site_to_site']['peer'][peer]['local_address'] = local_ip
-
-                if 'vti' in peer_conf and 'bind' in peer_conf['vti']:
-                    vti_interface = peer_conf['vti']['bind']
-                    data['marks'][vti_interface] = get_mark(vti_interface)
 
                 if 'tunnel' in peer_conf:
                     for tunnel, tunnel_conf in peer_conf['tunnel'].items():
@@ -435,10 +433,6 @@ def apply(ipsec):
 
     resync_l2tp(ipsec)
     resync_nhrp(ipsec)
-
-def get_mark(vti_interface):
-    vti_num = int(vti_interface.lstrip('vti'))
-    return mark_base + vti_num
 
 if __name__ == '__main__':
     try:

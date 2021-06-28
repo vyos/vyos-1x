@@ -18,7 +18,7 @@ connections {
 {%            set peer_ike = ike_group[peer_conf.ike_group] %}
 {%            set peer_esp = esp_group[peer_conf.default_esp_group] if peer_conf.default_esp_group is defined else None %}
 {%            set auth_type = authby[peer_conf.authentication.mode] %}
-{{            peer_tmpl.conn(peer_conn_name, peer, peer_conf, peer_ike, peer_esp, ciphers, esp_group, auth_type, marks) }}
+{{            peer_tmpl.conn(peer_conn_name, peer, peer_conf, peer_ike, peer_esp, ciphers, esp_group, auth_type) }}
 {%        endfor %}
 {%    endif %}
 }

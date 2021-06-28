@@ -33,13 +33,11 @@ class VTIIf(Interface):
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         # - https://man7.org/linux/man-pages/man8/ip-tunnel.8.html
         mapping = {
-            'source_address'                  : 'local',
             'source_interface'                : 'dev',
-            'remote'                          : 'remote',
-            'key'                             : 'key',
         }
 
-        cmd = 'ip link add {ifname} type vti'
+        if_id = self.ifname.lstrip('vti')
+        cmd = f'ip link add {self.ifname} type xfrm if_id {if_id}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
