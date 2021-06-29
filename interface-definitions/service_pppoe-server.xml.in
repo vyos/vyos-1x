@@ -164,6 +164,7 @@
               #include <include/accel-ppp/ppp-mppe.xml.i>
               #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
               #include <include/accel-ppp/lcp-echo-timeout.xml.i>
+              #include <include/accel-ppp/ppp-interface-cache.xml.i>
               <leafNode name="ipv4">
                 <properties>
                   <help>IPv4 (IPCP) negotiation algorithm</help>

@@ -91,6 +91,9 @@ ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is defin
 {% endif %}
 {# MTU #}
 mtu={{ mtu }}
+{% if ppp_options.interface_cache is defined and ppp_options.interface_cache is not none %}
+unit-cache={{ ppp_options.interface_cache }}
+{% endif %}
 
 [pppoe]
 verbose=1
