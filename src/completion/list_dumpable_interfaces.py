@@ -7,6 +7,6 @@ import re
 from vyos.util import cmd
 
 if __name__ == '__main__':
-    out = cmd('/usr/sbin/tcpdump -D').split('\n')
+    out = cmd('tcpdump -D').split('\n')
     intfs = " ".join(map(lambda s: re.search(r'\d+\.(\S+)\s', s).group(1), out))
     print(intfs)
