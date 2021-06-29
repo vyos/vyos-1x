@@ -134,14 +134,14 @@
               <help>Generate OpenVPN keys</help>
             </properties>
             <children>
-              <node name="tls-auth">
+              <node name="shared-secret">
                 <properties>
-                  <help>Generate OpenVPN TLS key</help>
+                  <help>Generate OpenVPN shared secret key</help>
                 </properties>
                 <children>
                   <tagNode name="install">
                     <properties>
-                      <help>Commands for installing generated OpenVPN TLS key into running configuration</help>
+                      <help>Commands for installing generated OpenVPN shared secret key into running configuration</help>
                       <completionHelp>
                         <list>&lt;key name&gt;</list>
                       </completionHelp>

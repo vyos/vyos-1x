@@ -473,8 +473,8 @@ def generate_openvpn_key(name, install=False):
         key_version = version_search[1]
 
     print("Configure mode commands to install OpenVPN key:")
-    print("set pki openvpn tls-auth %s key '%s'" % (name, key_data))
-    print("set pki openvpn tls-auth %s version '%s'" % (name, key_version))
+    print("set pki openvpn shared-secret %s key '%s'" % (name, key_data))
+    print("set pki openvpn shared-secret %s version '%s'" % (name, key_version))
 
 def generate_wireguard_key(name, install=False):
     private_key = cmd('wg genkey')

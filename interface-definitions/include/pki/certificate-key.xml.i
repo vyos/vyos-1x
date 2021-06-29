@@ -1,17 +1,6 @@
 <!-- include start from pki/certificate-key.xml.i -->
-<leafNode name="certificate">
-  <properties>
-    <help>Certificate and private key in PKI configuration</help>
-    <valueHelp>
-      <format>cert name</format>
-      <description>Name of certificate in PKI configuration</description>
-    </valueHelp>
-    <completionHelp>
-      <path>pki certificate</path>
-    </completionHelp>
-  </properties>
-</leafNode>
-<leafNode name="private-key-passphrase">
+#include <include/pki/certificate.xml.i>
+<leafNode name="passphrase">
   <properties>
     <help>Private key passphrase</help>
     <valueHelp>

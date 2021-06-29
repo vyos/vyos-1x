@@ -141,19 +141,19 @@
           <help>OpenVPN keys</help>
         </properties>
         <children>
-          <tagNode name="tls-auth">
+          <tagNode name="shared-secret">
             <properties>
-              <help>OpenVPN TLS auth key</help>
+              <help>OpenVPN shared secret key</help>
             </properties>
             <children>
               <leafNode name="key">
                 <properties>
-                  <help>OpenVPN TLS auth key data</help>
+                  <help>OpenVPN shared secret key data</help>
                 </properties>
               </leafNode>
               <leafNode name="version">
                 <properties>
-                  <help>OpenVPN TLS auth key version</help>
+                  <help>OpenVPN shared secret key version</help>
                 </properties>
               </leafNode>
             </children>
