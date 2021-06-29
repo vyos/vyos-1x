@@ -91,6 +91,10 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         mru = '9000'
         self.set(['ppp-options', 'mru', mru])
 
+        # interface-cache
+        interface_cache = '128000'
+        self.set(['ppp-options', 'interface-cache', interface_cache])
+
         # commit changes
         self.cli_commit()
 
@@ -112,6 +116,9 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         # check other settings
         self.assertEqual(conf['connlimit']['limit'], '20/min')
+
+        # check interface-cache
+        self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
 
         # Check for running process
         self.assertTrue(process_named_running(self._process_name))
