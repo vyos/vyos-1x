@@ -674,5 +674,25 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp confederation identifier {confed_id}', frrconfig)
         self.assertIn(f' bgp confederation peers {confed_asns}', frrconfig)
 
+
+    def test_bgp_12_v6_link_local(self):
+        remote_asn = str(int(ASN) + 10)
+        interface = 'eth0'
+
+        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['neighbor', interface, 'address-family', 'ipv6-unicast'])
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'v6only', 'remote-as', remote_asn])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {interface} interface v6only remote-as {remote_asn}', frrconfig)
+        self.assertIn(f' address-family ipv6 unicast', frrconfig)
+        self.assertIn(f'  neighbor {interface} activate', frrconfig)
+        self.assertIn(f' exit-address-family', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
