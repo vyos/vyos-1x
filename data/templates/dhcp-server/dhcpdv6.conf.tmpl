@@ -107,6 +107,9 @@ shared-network {{ network | replace('_','-') }} {
 {%             if host_config.ipv6_address is defined and host_config.ipv6_address is not none %}
             fixed-address6 {{ host_config.ipv6_address }};
 {%             endif %}
+{%             if host_config.ipv6_prefix is defined and host_config.ipv6_prefix is not none %}
+            fixed-prefix6 {{ host_config.ipv6_prefix }};
+{%             endif %}
         }
 {%           endfor %}
 {%         endif %}
