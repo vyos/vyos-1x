@@ -360,6 +360,18 @@
                           </constraint>
                         </properties>
                       </leafNode>
+                      <leafNode name="ipv6-prefix">
+                        <properties>
+                          <help>Client IPv6 prefix for this static mapping</help>
+                          <valueHelp>
+                            <format>ipv6net</format>
+                            <description>IPv6 prefix for this static mapping</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv6-prefix"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
                     </children>
                   </tagNode>
                 </children>

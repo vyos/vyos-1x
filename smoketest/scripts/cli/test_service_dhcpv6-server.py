@@ -89,6 +89,7 @@ class TestServiceDHCPServer(unittest.TestCase):
             cid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{}'.format(client_base)
             self.session.set(pool + ['static-mapping', client, 'identifier', cid])
             self.session.set(pool + ['static-mapping', client, 'ipv6-address', inc_ip(subnet, client_base)])
+            self.session.set(pool + ['static-mapping', client, 'ipv6-prefix', inc_ip(subnet, client_base << 64) + '/64'])
             client_base += 1
 
         # commit changes
@@ -117,8 +118,10 @@ class TestServiceDHCPServer(unittest.TestCase):
         for client in ['client1', 'client2', 'client3']:
             cid = '00:01:00:01:12:34:56:78:aa:bb:cc:dd:ee:{}'.format(client_base)
             ip = inc_ip(subnet, client_base)
+            prefix = inc_ip(subnet, client_base << 64) + '/64'
             self.assertIn(f'host {shared_net_name}_{client}' + ' {', config)
             self.assertIn(f'fixed-address6 {ip};', config)
+            self.assertIn(f'fixed-prefix6 {prefix};', config)
             self.assertIn(f'host-identifier option dhcp6.client-id {cid};', config)
             client_base += 1
 
