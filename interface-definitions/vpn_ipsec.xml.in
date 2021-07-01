@@ -804,42 +804,8 @@
                           <help>X.509 certificate</help>
                         </properties>
                         <children>
-                          #include <include/certificate.xml.i>
-                          #include <include/certificate-ca.xml.i>
-                          <leafNode name="crl-file">
-                            <properties>
-                              <help>File containing the X.509 Certificate Revocation List (CRL)</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <node name="key">
-                            <properties>
-                              <help>Key file and password to open it</help>
-                            </properties>
-                            <children>
-                              <leafNode name="file">
-                                <properties>
-                                  <help>File containing the private key for the X.509 certificate for this host</help>
-                                  <valueHelp>
-                                    <format>txt</format>
-                                    <description>File in /config/auth</description>
-                                  </valueHelp>
-                                </properties>
-                              </leafNode>
-                              <leafNode name="password">
-                                <properties>
-                                  <help>Password that protects the private key</help>
-                                  <valueHelp>
-                                    <format>txt</format>
-                                    <description>Password that protects the private key</description>
-                                  </valueHelp>
-                                </properties>
-                              </leafNode>
-                            </children>
-                          </node>
+                          #include <include/pki/certificate-key.xml.i>
+                          #include <include/pki/ca-certificate.xml.i>
                         </children>
                       </node>
                     </children>

@@ -55,9 +55,9 @@ secrets {
     }
 {%            elif peer_conf.authentication.mode == 'x509' %}
     private_{{ peer_conn_name }} {
-        file = {{ peer_conf.authentication.x509.key.file }}
-{%                if "password" in peer_conf.authentication.x509.key and peer_conf.authentication.x509.key.password %}
-        secret = "{{ peer_conf.authentication.x509.key.password}}"
+        file = {{ peer_conf.authentication.x509.certificate }}.pem
+{%                if peer_conf.authentication.x509.passphrase is defined %}
+        secret = "{{ peer_conf.authentication.x509.passphrase }}"
 {%                endif %}
     }
 {%            elif peer_conf.authentication.mode == 'rsa' and not ns.local_key_set %}

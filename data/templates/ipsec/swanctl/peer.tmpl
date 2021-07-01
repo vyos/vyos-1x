@@ -35,7 +35,7 @@
             auth = {{ auth_type }}
 {%    endif %}
 {%    if peer_conf.authentication.mode == 'x509' %}
-            certs = {{ peer_conf.authentication.x509.cert_file }}
+            certs = {{ peer_conf.authentication.x509.certificate }}.pem
 {%    elif peer_conf.authentication.mode == 'rsa' %}
             pubkeys = localhost.pub
 {%    endif %}

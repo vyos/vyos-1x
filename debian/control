@@ -111,6 +111,7 @@ Depends:
   python3,
   python3-certbot-nginx,
   python3-crypt | python3-pycryptodome,
+  python3-cryptography,
   python3-flask,
   python3-hurry.filesize,
   python3-isc-dhcp-leases,

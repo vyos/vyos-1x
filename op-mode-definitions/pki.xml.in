@@ -1,0 +1,281 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="pki">
+        <properties>
+          <help>Generate PKI certificates and keys</help>
+        </properties>
+        <children>
+          <node name="ca">
+            <properties>
+              <help>Generate CA certificate</help>
+            </properties>
+            <children>
+              <tagNode name="install">
+                <properties>
+                  <help>Commands for installing generated certificate into running configuration</help>
+                  <completionHelp>
+                    <list>&lt;CA name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ca "$5" --install</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ca "noname"</command>
+          </node>
+          <node name="certificate">
+            <properties>
+              <help>Generate certificate request</help>
+            </properties>
+            <children>
+              <node name="self-signed">
+                <properties>
+                  <help>Generate self-signed certificate</help>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated self-signed certificate into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;certificate name&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "$6" --self-sign --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "noname" --self-sign</command>
+              </node>
+              <tagNode name="sign">
+                <properties>
+                  <help>Sign generated certificate with specified CA certificate</help>
+                  <completionHelp>
+                    <path>pki ca</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated certificate into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;certificate name&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "$7" --sign "$5" --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "noname" --sign "$5"</command>
+              </tagNode>
+              <tagNode name="install">
+                <properties>
+                  <help>Commands for installing generated certificate private key into running configuration</help>
+                  <completionHelp>
+                    <list>&lt;certificate name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "$5" --install</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --certificate "noname"</command>
+          </node>
+          <tagNode name="crl">
+            <properties>
+              <help>Generate CRL for specified CA certificate</help>
+              <completionHelp>
+                <path>pki ca</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="install">
+                <properties>
+                  <help>Commands for installing generated CRL into running configuration</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --crl "$4" --install</command>
+              </leafNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --crl "$4"</command>
+          </tagNode>
+          <node name="dh">
+            <properties>
+              <help>Generate DH parameters</help>
+            </properties>
+            <children>
+              <tagNode name="install">
+                <properties>
+                  <help>Commands for installing generated DH parameters into running configuration</help>
+                  <completionHelp>
+                    <list>&lt;DH name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --dh "$5" --install</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --dh "noname"</command>
+          </node>
+          <node name="key-pair">
+            <properties>
+              <help>Generate a key pair</help>
+            </properties>
+            <children>
+              <tagNode name="install">
+                <properties>
+                  <help>Commands for installing generated key pair into running configuration</help>
+                  <completionHelp>
+                    <list>&lt;key name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --keypair "$5" --install</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --keypair "noname"</command>
+          </node>
+          <node name="openvpn">
+            <properties>
+              <help>Generate OpenVPN keys</help>
+            </properties>
+            <children>
+              <node name="shared-secret">
+                <properties>
+                  <help>Generate OpenVPN shared secret key</help>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated OpenVPN shared secret key into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;key name&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --openvpn "$6" --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --openvpn "noname"</command>
+              </node>
+            </children>
+          </node>
+          <node name="ssh-key">
+            <properties>
+              <help>Generate SSH key</help>
+            </properties>
+            <children>
+              <tagNode name="install">
+                <properties>
+                  <help>Commands for installing generated SSH key into running configuration</help>
+                  <completionHelp>
+                    <list>&lt;key name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ssh "$5" --install</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ssh "noname"</command>
+          </node>
+          <node name="wireguard">
+            <properties>
+              <help>Generate Wireguard keys</help>
+            </properties>
+            <children>
+              <node name="key-pair">
+                <properties>
+                  <help>Generate Wireguard key pair for use with server or peer</help>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated Wireguard key into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;interface&gt; &lt;peer&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "$6" --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "noname"</command>
+              </node>
+              <node name="pre-shared-key">
+                <properties>
+                  <help>Generate pre-shared key for use with a Wireguard peer</help>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated Wireguard psk on specified peer into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;peer&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "$6" --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "noname"</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="pki">
+        <properties>
+          <help>Show PKI certificates</help>
+        </properties>
+        <children>
+          <node name="ca">
+            <properties>
+              <help>Show CA certificates</help>
+            </properties>
+            <children>
+              <leafNode name="name">
+                <properties>
+                  <help>Show CA certificate by name</help>
+                  <completionHelp>
+                    <path>pki ca</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$5"</command>
+              </leafNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
+          </node>
+          <node name="certificate">
+            <properties>
+              <help>Show certificates</help>
+            </properties>
+            <children>
+              <leafNode name="name">
+                <properties>
+                  <help>Show certificate by name</help>
+                  <completionHelp>
+                    <path>pki certificate</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$5"</command>
+              </leafNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
+          </node>
+          <node name="crl">
+            <properties>
+              <help>Show certificate revocation lists</help>
+            </properties>
+            <children>
+              <leafNode name="name">
+                <properties>
+                  <help>Show certificate revocation lists from specified CA</help>
+                  <completionHelp>
+                    <path>pki ca</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "$5"</command>
+              </leafNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "all"</command>
+          </node>
+        </children>
+        <command>sudo ${vyos_op_scripts_dir}/pki.py --action show</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
