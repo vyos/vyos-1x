@@ -231,8 +231,14 @@ def copy_file(source, destination, mkdstdir=False, user=None, group=None):
         dirname = os.path.dirname(destination)
         if not os.path.isdir(dirname):
             makedir(dirname, user, group)
-
-    shutil.copyfile(source, destination)
+    try:
+        filename = os.path.basename(source)
+        if not destination.endswith('/'):
+            destination + '/'
+        shutil.copyfile(source, destination + filename)
+    except shutil.SameFileError:
+        # We don't care if we copy the same file again
+        pass
     chown(destination, user, group)
 
 def read_json(fname, defaultonfailure=None):
