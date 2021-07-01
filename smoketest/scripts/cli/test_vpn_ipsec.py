@@ -86,12 +86,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
         # Site to site
+        local_address = '192.0.2.10'
         peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
+
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
         self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
         self.cli_set(peer_base_path + ['default-esp-group', esp_group])
-        self.cli_set(peer_base_path + ['local-address', '192.0.2.10'])
+        self.cli_set(peer_base_path + ['local-address', local_address])
         self.cli_set(peer_base_path + ['tunnel', '1', 'protocol', 'tcp'])
         self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
         self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.11.0/24'])
@@ -109,7 +111,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = psk',
             f'proposals = aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024',
-            f'local_addrs = 192.0.2.10 # dhcp:no',
+            f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
             f'mode = tunnel',
             f'local_ts = 172.16.10.0/24[tcp/443],172.16.11.0/24[tcp/443]',
@@ -119,7 +121,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
-            f'id-local = 192.0.2.10 # dhcp:no',
+            f'id-local = {local_address} # dhcp:no',
             f'id-remote = {peer_ip}',
             f'secret = "{secret}"'
         ]
@@ -128,10 +130,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
 
     def test_03_site_to_site_vti(self):
-        # VTI interface
+        local_address = '192.0.2.10'
         vti = 'vti10'
+        # VTI interface
         self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
-
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
         # Site to site
@@ -140,7 +142,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
         self.cli_set(peer_base_path + ['default-esp-group', esp_group])
-        self.cli_set(peer_base_path + ['local-address', '192.0.2.10'])
+        self.cli_set(peer_base_path + ['local-address', local_address])
         self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.10.0/24'])
         self.cli_set(peer_base_path + ['tunnel', '1', 'local', 'prefix', '172.16.11.0/24'])
         self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.10.0/24'])
@@ -156,7 +158,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'auth = psk',
             f'proposals = aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024',
-            f'local_addrs = 192.0.2.10 # dhcp:no',
+            f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
             f'mode = tunnel',
             f'local_ts = 172.16.10.0/24,172.16.11.0/24',
@@ -169,7 +171,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
-            f'id-local = 192.0.2.10 # dhcp:no',
+            f'id-local = {local_address} # dhcp:no',
             f'id-remote = {peer_ip}',
             f'secret = "{secret}"'
         ]
