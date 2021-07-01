@@ -41,7 +41,17 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         self.cli_set(base_path + ['ipsec-interfaces', 'interface', f'{interface}.{vif}'])
 
+        # Set IKE/ESP Groups
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'dh-group', '2'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes128'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha1'])
+
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running('charon'))
+
         self.cli_delete(base_path)
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
@@ -49,16 +59,12 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(ethernet_path)
         self.cli_commit()
 
-    def test_dhcp_fail_handling(self):
+        # Check for no longer running process
+        self.assertFalse(process_named_running('charon'))
+
+    def test_01_dhcp_fail_handling(self):
         # Interface for dhcp-interface
         self.cli_set(ethernet_path + [interface, 'vif', vif, 'address', 'dhcp']) # Use VLAN to avoid getting IP from qemu dhcp server
-
-        # Set IKE/ESP Groups
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'dh-group', '2'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha1'])
 
         # Site to site
         peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
@@ -76,17 +82,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         dhcp_waiting = read_file(dhcp_waiting_file)
         self.assertIn(f'{interface}.{vif}', dhcp_waiting) # Ensure dhcp-failed interface was added for dhclient hook
 
-        self.assertTrue(process_named_running('charon')) # Commit should've still succeeded and launched charon
-
-    def test_site_to_site(self):
-        self.cli_delete(base_path)
-
-        # IKE/ESP Groups
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'dh-group', '2'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha1'])
+    def test_02_site_to_site(self):
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
         # Site to site
@@ -106,6 +102,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        # Verify strongSwan configuration
+        swanctl_conf = read_file(swanctl_file)
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
@@ -117,36 +115,23 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'local_ts = 172.16.10.0/24[tcp/443],172.16.11.0/24[tcp/443]',
             f'remote_ts = 172.17.10.0/24[tcp/443],172.17.11.0/24[tcp/443]'
         ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
             f'id-local = 192.0.2.10 # dhcp:no',
             f'id-remote = {peer_ip}',
             f'secret = "{secret}"'
         ]
-
-        tmp_swanctl_conf = read_file(swanctl_file)
-
-        for line in swanctl_conf_lines:
-            self.assertIn(line, tmp_swanctl_conf)
-
         for line in swanctl_secrets_lines:
-            self.assertIn(line, tmp_swanctl_conf)
+            self.assertIn(line, swanctl_conf)
 
-        # Check for running process
-        self.assertTrue(process_named_running('charon'))
 
-    def test_site_to_site_vti(self):
-        vti = 'vti10'
-
+    def test_03_site_to_site_vti(self):
         # VTI interface
+        vti = 'vti10'
         self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
 
-        # IKE/ESP Groups
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'dh-group', '2'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes128'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha1'])
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
         # Site to site
@@ -165,6 +150,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        swanctl_conf = read_file(swanctl_file)
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
@@ -179,25 +165,19 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'if_id_out = {vti.lstrip("vti")}',
             f'updown = "/etc/ipsec.d/vti-up-down {vti} no"'
         ]
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
             f'id-local = 192.0.2.10 # dhcp:no',
             f'id-remote = {peer_ip}',
             f'secret = "{secret}"'
         ]
-
-        tmp_swanctl_conf = read_file(swanctl_file)
-
-        for line in swanctl_conf_lines:
-            self.assertIn(line, tmp_swanctl_conf)
-
         for line in swanctl_secrets_lines:
-            self.assertIn(line, tmp_swanctl_conf)
+            self.assertIn(line, swanctl_conf)
 
-        # Check for running process
-        self.assertTrue(process_named_running('charon'))
 
-    def test_dmvpn(self):
+    def test_04_dmvpn(self):
         tunnel_if = 'tun100'
         nhrp_secret = 'secret'
 
@@ -220,18 +200,16 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', '1800'])
         self.cli_set(base_path + ['esp-group', esp_group, 'mode', 'transport'])
         self.cli_set(base_path + ['esp-group', esp_group, 'pfs', 'dh-group2'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes256'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2', 'encryption', '3des'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2', 'hash', 'md5'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2', 'encryption', 'aes256'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2', 'hash', 'sha1'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3', 'encryption', '3des'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '3', 'hash', 'md5'])
+
         self.cli_set(base_path + ['ike-group', ike_group, 'ikev2-reauth', 'no'])
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev1'])
         self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', '3600'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'dh-group', '2'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'encryption', 'aes256'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1', 'hash', 'sha1'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'dh-group', '2'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'encryption', 'aes128'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'encryption', 'aes256'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'hash', 'sha1'])
 
         # Profile
@@ -243,23 +221,20 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
-            f'proposals = aes256-sha1-modp1024,aes128-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024,aes256-sha1-modp1024',
             f'version = 1',
             f'rekey_time = 3600s',
-            f'esp_proposals = aes256-sha1-modp1024,3des-md5-modp1024',
+            f'esp_proposals = aes128-sha1-modp1024,aes256-sha1-modp1024,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
             f'mode = transport',
             f'secret = {nhrp_secret}'
         ]
-
-        tmp_swanctl_conf = read_file('/etc/swanctl/swanctl.conf')
-
         for line in swanctl_lines:
-            self.assertIn(line, tmp_swanctl_conf)
+            self.assertIn(line, swanctl_conf)
 
-        self.assertTrue(process_named_running('charon'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
