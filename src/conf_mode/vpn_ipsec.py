@@ -35,7 +35,6 @@ from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import run
 from vyos.util import cidr_fit
-from vyos.util import copy_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

@@ -23,10 +23,3 @@ class TestVyOSUtil(TestCase):
         expected_data = {"foo_bar": {"baz_quux": None}}
         new_data = mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
-
-    def test_copy_file(self):
-        source = '/proc/cmdline'
-        destination = '/tmp/foo/cmdline'
-        copy_file(source, destination, True)
-        self.assertEqual(read_file(source), read_file(destination))
-

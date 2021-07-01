@@ -221,26 +221,6 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None):
             return defaultonfailure
         raise e
 
-def copy_file(source, destination, mkdstdir=False, user=None, group=None):
-    """
-    Copy file from source to destination. Can optionally create the destination
-    dir if it does not exist. Can optionally change the dir and file ownership.
-    """
-    import shutil
-    if mkdstdir:
-        dirname = os.path.dirname(destination)
-        if not os.path.isdir(dirname):
-            makedir(dirname, user, group)
-    try:
-        filename = os.path.basename(source)
-        if not destination.endswith('/'):
-            destination + '/'
-        shutil.copyfile(source, destination + filename)
-    except shutil.SameFileError:
-        # We don't care if we copy the same file again
-        pass
-    chown(destination, user, group)
-
 def read_json(fname, defaultonfailure=None):
     """
     read and json decode the content of a file
