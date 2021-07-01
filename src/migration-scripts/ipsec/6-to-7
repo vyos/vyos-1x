@@ -27,6 +27,7 @@ from vyos.pki import load_crl
 from vyos.pki import load_private_key
 from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
+from vyos.util import run
 
 if (len(argv) < 1):
     print("Must specify file name!")
@@ -69,13 +70,21 @@ if config.exists(ipsec_site_base):
             cert_path = os.path.join(AUTH_DIR, cert_file)
             cert = None
 
-            with open(cert_path, 'r') as f:
-                cert_data = f.read()
-                cert = load_certificate(cert_data, wrap_tags=False)
+            if os.path.isfile(cert_path):
+                if not os.access(cert_path, os.R_OK):
+                    run(f'sudo chmod 644 {cert_path}')
 
-            cert_pem = encode_certificate(cert)
-            config.set(pki_base + ['certificate', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
-            config.set(peer_x509_base + ['certificate'], value=pki_name)
+                with open(cert_path, 'r') as f:
+                    cert_data = f.read()
+                    cert = load_certificate(cert_data, wrap_tags=False)
+
+            if cert:
+                cert_pem = encode_certificate(cert)
+                config.set(pki_base + ['certificate', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+                config.set(peer_x509_base + ['certificate'], value=pki_name)
+            else:
+                print(f'Failed to migrate certificate on peer "{peer}"')
+
             config.delete(peer_x509_base + ['cert-file'])
 
         if config.exists(peer_x509_base + ['ca-cert-file']):
@@ -83,13 +92,21 @@ if config.exists(ipsec_site_base):
             ca_cert_path = os.path.join(AUTH_DIR, ca_cert_file)
             ca_cert = None
 
-            with open(ca_cert_path, 'r') as f:
-                ca_cert_data = f.read()
-                ca_cert = load_certificate(ca_cert_data, wrap_tags=False)
+            if os.path.isfile(ca_cert_path):
+                if not os.access(ca_cert_path, os.R_OK):
+                    run(f'sudo chmod 644 {ca_cert_path}')
 
-            ca_cert_pem = encode_certificate(ca_cert)
-            config.set(pki_base + ['ca', pki_name, 'certificate'], value=wrapped_pem_to_config_value(ca_cert_pem))
-            config.set(peer_x509_base + ['ca-certificate'], value=pki_name)
+                with open(ca_cert_path, 'r') as f:
+                    ca_cert_data = f.read()
+                    ca_cert = load_certificate(ca_cert_data, wrap_tags=False)
+
+            if ca_cert:
+                ca_cert_pem = encode_certificate(ca_cert)
+                config.set(pki_base + ['ca', pki_name, 'certificate'], value=wrapped_pem_to_config_value(ca_cert_pem))
+                config.set(peer_x509_base + ['ca-certificate'], value=pki_name)
+            else:
+                print(f'Failed to migrate CA certificate on peer "{peer}"')
+
             config.delete(peer_x509_base + ['ca-cert-file'])
 
         if config.exists(peer_x509_base + ['crl-file']):
@@ -97,12 +114,20 @@ if config.exists(ipsec_site_base):
             crl_path = os.path.join(AUTH_DIR, crl_file)
             crl = None
 
-            with open(crl_path, 'r') as f:
-                crl_data = f.read()
-                crl = load_crl(crl_data, wrap_tags=False)
+            if os.path.isfile(crl_path):
+                if not os.access(crl_path, os.R_OK):
+                    run(f'sudo chmod 644 {crl_path}')
 
-            crl_pem = encode_certificate(crl)
-            config.set(pki_base + ['ca', pki_name, 'crl'], value=wrapped_pem_to_config_value(crl_pem))
+                with open(crl_path, 'r') as f:
+                    crl_data = f.read()
+                    crl = load_crl(crl_data, wrap_tags=False)
+
+            if crl:
+                crl_pem = encode_certificate(crl)
+                config.set(pki_base + ['ca', pki_name, 'crl'], value=wrapped_pem_to_config_value(crl_pem))
+            else:
+                print(f'Failed to migrate CRL on peer "{peer}"')
+            
             config.delete(peer_x509_base + ['crl-file'])
 
         if config.exists(peer_x509_base + ['key', 'file']):
@@ -115,17 +140,24 @@ if config.exists(ipsec_site_base):
             key_path = os.path.join(AUTH_DIR, key_file)
             key = None
 
-            with open(key_path, 'r') as f:
-                key_data = f.read()
-                key = load_private_key(key_data, passphrase=key_passphrase, wrap_tags=False)
+            if os.path.isfile(key_path):
+                if not os.access(key_path, os.R_OK):
+                    run(f'sudo chmod 644 {key_path}')
 
-            key_pem = encode_private_key(key, passphrase=key_passphrase)
-            config.set(pki_base + ['certificate', pki_name, 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
+                with open(key_path, 'r') as f:
+                    key_data = f.read()
+                    key = load_private_key(key_data, passphrase=key_passphrase, wrap_tags=False)
 
-            if key_passphrase:
-                config.set(pki_base + ['certificate', pki_name, 'private', 'password-protected'])
-                config.set(peer_x509_base + ['private-key-passphrase'], value=key_passphrase)
-            
+            if key:
+                key_pem = encode_private_key(key, passphrase=key_passphrase)
+                config.set(pki_base + ['certificate', pki_name, 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
+
+                if key_passphrase:
+                    config.set(pki_base + ['certificate', pki_name, 'private', 'password-protected'])
+                    config.set(peer_x509_base + ['private-key-passphrase'], value=key_passphrase)
+            else:
+                print(f'Failed to migrate private key on peer "{peer}"')
+                
             config.delete(peer_x509_base + ['key'])
 
 if changes_made:
