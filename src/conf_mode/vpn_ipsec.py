@@ -342,17 +342,18 @@ def generate(ipsec):
                     continue
 
                 if peer_conf['authentication']['mode'] == 'x509':
-                    cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['cert_file'])
+                    cert_file = os.path.join(X509_PATH, dict_search('authentication.x509.cert_file', peer_conf))
                     copy_file(cert_file, CERT_PATH, True)
 
-                    key_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['key']['file'])
-                    copy_file(key_file, X509_PATH, True)
+                    key_file = os.path.join(X509_PATH, dict_search('authentication.x509.key.file', peer_conf))
+                    copy_file(key_file, KEY_PATH, True)
 
-                    ca_cert_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['ca_cert_file'])
+                    ca_cert_file = os.path.join(X509_PATH, dict_search('authentication.x509.ca_cert_file', peer_conf))
                     copy_file(ca_cert_file, CA_PATH, True)
 
-                    if 'crl_file' in peer_conf['authentication']['x509']:
-                        crl_file = os.path.join(X509_PATH, peer_conf['authentication']['x509']['crl_file'])
+                    crl = dict_search('authentication.x509.crl_file', peer_conf)
+                    if crl:
+                        crl_file = os.path.join(X509_PATH, crl)
                         copy_file(crl_file, CRL_PATH, True)
 
                 local_ip = ''
