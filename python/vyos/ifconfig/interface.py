@@ -732,6 +732,24 @@ class Interface(Control):
         """
         self.set_interface('proxy_arp_pvlan', enable)
 
+    def get_addr_v4(self):
+        """
+        Retrieve assigned IPv4 addresses from given interface.
+        This is done using the netifaces and ipaddress python modules.
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_addr_v4()
+        ['172.16.33.30/24']
+        """
+        ipv4 = []
+        if AF_INET in ifaddresses(self.config['ifname']):
+            for v4_addr in ifaddresses(self.config['ifname'])[AF_INET]:
+                # we need to manually assemble a list of IPv4 address/prefix
+                prefix = '/' + \
+                    str(IPv4Network('0.0.0.0/' + v4_addr['netmask']).prefixlen)
+                ipv4.append(v4_addr['addr'] + prefix)
+        return ipv4
+
     def get_addr(self):
         """
         Retrieve assigned IPv4 and IPv6 addresses from given interface.

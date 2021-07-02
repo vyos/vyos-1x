@@ -1,0 +1,164 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="conntrack-sync" owner="${vyos_conf_scripts_dir}/conntrack_sync.py">
+        <properties>
+          <help>Connection tracking synchronization</help>
+          <priority>995</priority>
+        </properties>
+        <children>
+          <leafNode name="accept-protocol">
+            <properties>
+              <help>Protocols for which local conntrack entries will be synced</help>
+              <completionHelp>
+                <list>tcp udp icmp icmp6 sctp dccp</list>
+              </completionHelp>
+              <valueHelp>
+                <format>tcp</format>
+                <description>Sync Transmission Control Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>udp</format>
+                <description>Sync User Datagram Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>icmp</format>
+                <description>Sync Internet Control Message Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>icmp6</format>
+                <description>Sync IPv6 Internet Control Message Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sctp</format>
+                <description>Sync Stream Control Transmission Protocol entries</description>
+              </valueHelp>
+              <valueHelp>
+                <format>dccp</format>
+                <description>Sync Datagram Congestion Control Protocol entries</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(tcp|udp|icmp|icmp6|sctp|dccp)$</regex>
+              </constraint>
+              <constraintErrorMessage>Allowed protocols: tcp udp icmp or sctp</constraintErrorMessage>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-external-cache">
+            <properties>
+              <help>Directly injects the flow-states into the in-kernel Connection Tracking System of the backup firewall.</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="event-listen-queue-size">
+            <properties>
+              <help>Queue size for local conntrack events</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Queue size in MB</description>
+              </valueHelp>
+            </properties>
+            <defaultValue>8</defaultValue>
+          </leafNode>
+          <leafNode name="expect-sync">
+            <properties>
+              <help>Protocol for which expect entries need to be synchronized</help>
+              <completionHelp>
+                <list>all ftp sip h323 nfs sqlnet</list>
+              </completionHelp>
+              <constraint>
+                <regex>^(all|ftp|sip|h323|nfs|sqlnet)$</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid protocol</constraintErrorMessage>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="failover-mechanism">
+            <properties>
+              <help>Failover mechanism to use for conntrack-sync</help>
+            </properties>
+            <children>
+              <node name="vrrp">
+                <properties>
+                  <help>VRRP as failover-mechanism to use for conntrack-sync</help>
+                </properties>
+                <children>
+                  <leafNode name="sync-group">
+                    <properties>
+                      <help>VRRP sync group</help>
+                      <completionHelp>
+                        <path>high-availability vrrp sync-group</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="ignore-address">
+            <properties>
+              <help>IP addresses for which local conntrack entries will not be synced</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 address to ignore</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 prefix to ignore</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address to ignore</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 prefix to ignore</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4"/>
+                <validator name="ipv6"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface to use for syncing conntrack entries</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="peer">
+                <properties>
+                  <help>IP address of the peer to send the UDP conntrack info too. This disable multicast.</help>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          #include <include/listen-address-ipv4.xml.i>
+          <leafNode name="mcast-group">
+            <properties>
+              <help>Multicast group to use for syncing conntrack entries</help>
+              <constraint>
+                <validator name="ipv4-multicast"/>
+              </constraint>
+            </properties>
+            <defaultValue>225.0.0.50</defaultValue>
+          </leafNode>
+          <leafNode name="sync-queue-size">
+            <properties>
+              <help>Queue size for syncing conntrack entries</help>
+              <valueHelp>
+                <format>u32</format>
+                <description>Queue size in MB</description>
+              </valueHelp>
+            </properties>
+            <defaultValue>1</defaultValue>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
