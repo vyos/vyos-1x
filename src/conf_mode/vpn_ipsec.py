@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import ipaddress
 import os
 
 from sys import exit
@@ -34,7 +35,6 @@ from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import run
-from vyos.util import cidr_fit
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -407,7 +407,9 @@ def generate(ipsec):
 
                         for local_prefix in local_prefixes:
                             for remote_prefix in remote_prefixes:
-                                if cidr_fit(local_prefix, remote_prefix):
+                                local_net = ipaddress.ip_network(local_prefix)
+                                remote_net = ipaddress.ip_network(remote_prefix)
+                                if local_net.overlaps(remote_net):
                                     passthrough.append(local_prefix)
 
                         data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
