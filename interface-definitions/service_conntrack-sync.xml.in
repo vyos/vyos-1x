@@ -142,6 +142,7 @@
                   </constraint>
                 </properties>
               </leafNode>
+              #include <include/port-number.xml.i>
             </children>
           </tagNode>
           #include <include/listen-address-ipv4.xml.i>
