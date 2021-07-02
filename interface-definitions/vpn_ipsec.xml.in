@@ -708,7 +708,7 @@
           </tagNode>
           <node name="site-to-site">
             <properties>
-              <help>Site to site VPN</help>
+              <help>Site-to-site VPN</help>
             </properties>
             <children>
               <tagNode name="peer">
@@ -837,12 +837,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
-                  <leafNode name="description">
-                    <properties>
-                      <help>VPN peer description</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-description.xml.i>
                   <leafNode name="dhcp-interface">
                     <properties>
                       <help>DHCP interface to listen on</help>

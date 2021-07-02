@@ -91,7 +91,7 @@
                   <multi/>
                 </properties>
               </leafNode>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
             </children>
           </tagNode>
           <tagNode name="ipv6-address-group">
@@ -112,7 +112,7 @@
                   <multi/>
                 </properties>
               </leafNode>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
             </children>
           </tagNode>
           <tagNode name="ipv6-network-group">
@@ -120,7 +120,7 @@
               <help>Network-group member</help>
             </properties>
             <children>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="network">
                 <properties>
                   <help>Network-group member</help>
@@ -141,7 +141,7 @@
               <help>Firewall network-group</help>
             </properties>
             <children>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="network">
                 <properties>
                   <help>Network-group member</help>
@@ -162,7 +162,7 @@
               <help>Firewall port-group</help>
             </properties>
             <children>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="port">
                 <properties>
                   <help>Port-group member</help>
@@ -210,15 +210,15 @@
         </properties>
         <children>
           #include <include/firewall/name-default-action.xml.i>
-          #include <include/firewall/description.xml.i>
           #include <include/firewall/name-default-log.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule number (1-9999)</help>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="destination">
                 <properties>
                   <help>Destination parameters</help>
@@ -578,15 +578,15 @@
         </properties>
         <children>
           #include <include/firewall/name-default-action.xml.i>
-          #include <include/firewall/description.xml.i>
           #include <include/firewall/name-default-log.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule number (1-9999)</help>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
-              #include <include/firewall/description.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="destination">
                 <properties>
                   <help>Destination parameters</help>
