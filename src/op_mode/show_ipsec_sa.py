@@ -26,7 +26,7 @@ import vyos.util
 def format_output(conns, sas):
     sa_data = []
 
-    for peer, parent_conn in conn.items():
+    for peer, parent_conn in conns.items():
         if peer not in sas:
             continue
 

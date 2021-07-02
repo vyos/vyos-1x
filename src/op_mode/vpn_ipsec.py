@@ -23,7 +23,7 @@ import argparse
 from subprocess import TimeoutExpired
 
 from vyos.util import ask_yes_no, call, cmd, process_named_running
-from Crypto.PublicKey.RSA import importKey
+from Cryptodome.PublicKey.RSA import importKey
 
 RSA_LOCAL_KEY_PATH = '/config/ipsec.d/rsa-keys/localhost.key'
 RSA_LOCAL_PUB_PATH = '/etc/ipsec.d/certs/localhost.pub'

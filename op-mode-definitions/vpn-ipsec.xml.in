@@ -101,7 +101,7 @@
         <properties>
           <help>Restart IPSec VPN</help>
         </properties>
-        <command>if pgrep charon >/dev/null ; then sudo /usr/sbin/ipsec restart ; else echo "IPSec process not running" ; fi</command>
+        <command>if pgrep charon >/dev/null ; then sudo ipsec restart ; sleep 3 ; sudo swanctl -q ; else echo "IPSec process not running" ; fi</command>
       </node>
     </children>
   </node>
