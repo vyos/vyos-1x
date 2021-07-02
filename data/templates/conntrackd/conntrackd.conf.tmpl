@@ -6,28 +6,31 @@ Sync {
         DisableExternalCache {{ 'on' if disable_external_cache is defined else 'off' }}
     }
 {% for iface, iface_config in interface.items() %}
-{%   if loop.first %}
-{%     if iface_config.peer is defined and iface_config.peer is not none %}
+{%   if iface_config.peer is defined and iface_config.peer is not none %}
     UDP {
-{%       if listen_address is defined and listen_address is not none %}
+{%     if listen_address is defined and listen_address is not none %}
         IPv4_address {{ listen_address }}
-{%       endif %}
+{%     endif %}
         IPv4_Destination_Address {{ iface_config.peer }}
         Port {{ iface_config.port if iface_config.port is defined else '3780' }}
-{%     else %}
-{%       set ip_address = iface | get_ipv4 %}
-    Multicast {
-        IPv4_address {{ mcast_group }}
-        Group {{ iface_config.port if iface_config.port is defined else '3780' }}
-        IPv4_interface {{ ip_address[0] | ip_from_cidr }}
-{%     endif %}
         Interface {{ iface }}
-{%   endif %}
-{% endfor %}
         SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
         RcvSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
         Checksum on
     }
+{%   else %}
+    Multicast {
+{%     set ip_address = iface | get_ipv4 %}
+        IPv4_address {{ mcast_group }}
+        Group {{ iface_config.port if iface_config.port is defined else '3780' }}
+        IPv4_interface {{ ip_address[0] | ip_from_cidr }}
+        Interface {{ iface }}
+        SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
+        RcvSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
+        Checksum on
+    }
+{%   endif %}
+{% endfor %}
 {% if expect_sync is defined and expect_sync is not none %}
     Options {
 {%   if 'all' in expect_sync %}

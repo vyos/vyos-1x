@@ -71,15 +71,26 @@ def verify(conntrack):
     if 'interface' not in conntrack:
         raise ConfigError('Interface not defined!')
 
-    for interface in conntrack['interface']:
+    has_peer = False
+    for interface, interface_config in conntrack['interface'].items():
         verify_interface_exists(interface)
         # Interface must not only exist, it must also carry an IP address
         if len(get_ipv4(interface)) < 1:
             raise ConfigError(f'Interface {interface} requires an IP address!')
+        if 'peer' in interface_config:
+            has_peer = True
+
+    # If one interface runs in unicast mode instead of multicast, so must all the
+    # others, else conntrackd will error out with: "cannot use UDP with other
+    # dedicated link protocols"
+    if has_peer:
+        for interface, interface_config in conntrack['interface'].items():
+            if 'peer' not in interface_config:
+                raise ConfigError('Can not mix unicast and multicast mode!')
 
     if 'expect_sync' in conntrack:
         if len(conntrack['expect_sync']) > 1 and 'all' in conntrack['expect_sync']:
-            raise ConfigError('Cannot configure all with other protocol')
+            raise ConfigError('Can not configure expect-sync "all" with other protocols!')
 
     if 'listen_address' in conntrack:
         address = conntrack['listen_address']
