@@ -133,6 +133,13 @@
               <leafNode name="peer">
                 <properties>
                   <help>IP address of the peer to send the UDP conntrack info too. This disable multicast.</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IP address to listen for incoming connections</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>
