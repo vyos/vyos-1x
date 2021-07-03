@@ -18,8 +18,9 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-
-from vyos.util import call, process_named_running, read_file
+from vyos.util import call
+from vyos.util import process_named_running
+from vyos.util import read_file
 
 ethernet_path = ['interfaces', 'ethernet']
 tunnel_path = ['interfaces', 'tunnel']

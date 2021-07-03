@@ -39,45 +39,10 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-authby_translate = {
-    'pre-shared-secret': 'psk',
-    'rsa': 'pubkey',
-    'x509': 'pubkey'
-}
-
-default_pfs = 'dh-group2'
-pfs_translate = {
-    'dh-group1'  : 'modp768',
-    'dh-group2'  : 'modp1024',
-    'dh-group5'  : 'modp1536',
-    'dh-group14' : 'modp2048',
-    'dh-group15' : 'modp3072',
-    'dh-group16' : 'modp4096',
-    'dh-group17' : 'modp6144',
-    'dh-group18' : 'modp8192',
-    'dh-group19' : 'ecp256',
-    'dh-group20' : 'ecp384',
-    'dh-group21' : 'ecp512',
-    'dh-group22' : 'modp1024s160',
-    'dh-group23' : 'modp2048s224',
-    'dh-group24' : 'modp2048s256',
-    'dh-group25' : 'ecp192',
-    'dh-group26' : 'ecp224',
-    'dh-group27' : 'ecp224bp',
-    'dh-group28' : 'ecp256bp',
-    'dh-group29' : 'ecp384bp',
-    'dh-group30' : 'ecp512bp',
-    'dh-group31' : 'curve25519',
-    'dh-group32' : 'curve448'
-}
-
 any_log_modes = [
     'dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl', 'net', 'asn',
     'enc', 'lib', 'esp', 'tls', 'tnc', 'imc', 'imv', 'pts'
 ]
-
-ike_ciphers = {}
-esp_ciphers = {}
 
 dhcp_wait_attempts = 2
 dhcp_wait_sleep = 1
@@ -113,52 +78,18 @@ def get_config(config=None):
                                  get_first_key=True, no_tag_node_value_mangle=True)
 
     ipsec['dhcp_no_address'] = {}
-    ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces', 'interface'])
-    ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access', 'ipsec-settings'])
+    ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
+                                                                'interface'])
+    ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access',
+                                        'ipsec-settings'])
     ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
     ipsec['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                             get_first_key=True, no_tag_node_value_mangle=True)
-    ipsec['rsa_keys'] = conf.get_config_dict(['vpn', 'rsa-keys'], key_mangling=('-', '_'),
-                                             get_first_key=True, no_tag_node_value_mangle=True)
-
-    default_ike_pfs = None
-
-    if 'ike_group' in ipsec:
-        for group, ike_conf in ipsec['ike_group'].items():
-            if 'proposal' in ike_conf:
-                ciphers = []
-                for i in ike_conf['proposal']:
-                    proposal = ike_conf['proposal'][i]
-                    enc = proposal['encryption'] if 'encryption' in proposal else None
-                    hash = proposal['hash'] if 'hash' in proposal else None
-                    pfs = ('dh-group' + proposal['dh_group']) if 'dh_group' in proposal else default_pfs
-
-                    if not default_ike_pfs:
-                        default_ike_pfs = pfs
-
-                    if enc and hash:
-                        ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                ike_ciphers[group] = ','.join(ciphers)
-
-    if 'esp_group' in ipsec:
-        for group, esp_conf in ipsec['esp_group'].items():
-            pfs = esp_conf['pfs'] if 'pfs' in esp_conf else 'enable'
-
-            if pfs == 'disable':
-                pfs = None
-
-            if pfs == 'enable':
-                pfs = default_ike_pfs
-
-            if 'proposal' in esp_conf:
-                ciphers = []
-                for i in esp_conf['proposal']:
-                    proposal = esp_conf['proposal'][i]
-                    enc = proposal['encryption'] if 'encryption' in proposal else None
-                    hash = proposal['hash'] if 'hash' in proposal else None
-                    if enc and hash:
-                        ciphers.append(f"{enc}-{hash}-{pfs_translate[pfs]}" if pfs else f"{enc}-{hash}")
-                esp_ciphers[group] = ','.join(ciphers)
+                                             get_first_key=True,
+                                             no_tag_node_value_mangle=True)
+    ipsec['rsa_keys'] = conf.get_config_dict(['vpn', 'rsa-keys'],
+                                             key_mangling=('-', '_'),
+                                             get_first_key=True,
+                                             no_tag_node_value_mangle=True)
 
     return ipsec
 
@@ -361,58 +292,54 @@ def generate(ipsec):
                 os.unlink(config_file)
         return
 
-    data = {}
-    if ipsec:
-        if ipsec['dhcp_no_address']:
-            with open(DHCP_HOOK_IFLIST, 'w') as f:
-                f.write(" ".join(ipsec['dhcp_no_address'].values()))
+    if ipsec['dhcp_no_address']:
+        with open(DHCP_HOOK_IFLIST, 'w') as f:
+            f.write(" ".join(ipsec['dhcp_no_address'].values()))
 
-        data = ipsec
-        data['authby'] = authby_translate
-        data['ciphers'] = {'ike': ike_ciphers, 'esp': esp_ciphers}
-        data['rsa_local_key'] = verify_rsa_local_key(ipsec)
+    data = ipsec
+    data['rsa_local_key'] = verify_rsa_local_key(ipsec)
 
-        for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH]:
-            if not os.path.exists(path):
-                os.mkdir(path, mode=0o755)
+    for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH]:
+        if not os.path.exists(path):
+            os.mkdir(path, mode=0o755)
 
-        if not os.path.exists(KEY_PATH):
-            os.mkdir(KEY_PATH, mode=0o700)
+    if not os.path.exists(KEY_PATH):
+        os.mkdir(KEY_PATH, mode=0o700)
 
-        if 'site_to_site' in data and 'peer' in data['site_to_site']:
-            for peer, peer_conf in ipsec['site_to_site']['peer'].items():
-                if peer in ipsec['dhcp_no_address']:
-                    continue
+    if 'site_to_site' in data and 'peer' in data['site_to_site']:
+        for peer, peer_conf in ipsec['site_to_site']['peer'].items():
+            if peer in ipsec['dhcp_no_address']:
+                continue
 
-                if peer_conf['authentication']['mode'] == 'x509':
-                    generate_pki_files(ipsec['pki'], peer_conf['authentication']['x509'])
+            if peer_conf['authentication']['mode'] == 'x509':
+                generate_pki_files(ipsec['pki'], peer_conf['authentication']['x509'])
 
-                local_ip = ''
-                if 'local_address' in peer_conf:
-                    local_ip = peer_conf['local_address']
-                elif 'dhcp_interface' in peer_conf:
-                    local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
+            local_ip = ''
+            if 'local_address' in peer_conf:
+                local_ip = peer_conf['local_address']
+            elif 'dhcp_interface' in peer_conf:
+                local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
 
-                data['site_to_site']['peer'][peer]['local_address'] = local_ip
+            data['site_to_site']['peer'][peer]['local_address'] = local_ip
 
-                if 'tunnel' in peer_conf:
-                    for tunnel, tunnel_conf in peer_conf['tunnel'].items():
-                        local_prefixes = dict_search('local.prefix', tunnel_conf)
-                        remote_prefixes = dict_search('remote.prefix', tunnel_conf)
+            if 'tunnel' in peer_conf:
+                for tunnel, tunnel_conf in peer_conf['tunnel'].items():
+                    local_prefixes = dict_search('local.prefix', tunnel_conf)
+                    remote_prefixes = dict_search('remote.prefix', tunnel_conf)
 
-                        if not local_prefixes or not remote_prefixes:
-                            continue
+                    if not local_prefixes or not remote_prefixes:
+                        continue
 
-                        passthrough = []
+                    passthrough = []
 
-                        for local_prefix in local_prefixes:
-                            for remote_prefix in remote_prefixes:
-                                local_net = ipaddress.ip_network(local_prefix)
-                                remote_net = ipaddress.ip_network(remote_prefix)
-                                if local_net.overlaps(remote_net):
-                                    passthrough.append(local_prefix)
+                    for local_prefix in local_prefixes:
+                        for remote_prefix in remote_prefixes:
+                            local_net = ipaddress.ip_network(local_prefix)
+                            remote_net = ipaddress.ip_network(remote_prefix)
+                            if local_net.overlaps(remote_net):
+                                passthrough.append(local_prefix)
 
-                        data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
+                    data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
         if 'logging' in ipsec and 'log_modes' in ipsec['logging']:
             modes = ipsec['logging']['log_modes']
@@ -448,7 +375,7 @@ def apply(ipsec):
     if not ipsec:
         call('sudo /usr/sbin/ipsec stop')
     else:
-        should_start = ('profile' in ipsec or dict_search('site_to_site.peer', ipsec))
+        should_start = 'profile' in ipsec or dict_search('site_to_site.peer', ipsec)
 
         if not process_named_running('charon') and should_start:
             args = f'--auto-update {ipsec["auto_update"]}' if 'auto_update' in ipsec else ''

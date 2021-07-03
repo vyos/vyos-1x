@@ -92,95 +92,95 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Enable PFS. Use ike-groups dh-group (default)</description>
+                    <description>Use Diffie-Hellman group 2 (modp1024) - default</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group1</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 1 (modp768)</description>
+                    <description>Use Diffie-Hellman group 1 (modp768)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group2</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 2 (modp1024)</description>
+                    <description>Use Diffie-Hellman group 2 (modp1024)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group5</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 5 (modp1536)</description>
+                    <description>Use Diffie-Hellman group 5 (modp1536)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group14</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 14 (modp2048)</description>
+                    <description>Use Diffie-Hellman group 14 (modp2048)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group15</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 15 (modp3072)</description>
+                    <description>Use Diffie-Hellman group 15 (modp3072)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group16</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 16 (modp4096)</description>
+                    <description>Use Diffie-Hellman group 16 (modp4096)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group17</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 17 (modp6144)</description>
+                    <description>Use Diffie-Hellman group 17 (modp6144)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group18</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 18 (modp8192)</description>
+                    <description>Use Diffie-Hellman group 18 (modp8192)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group19</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 19 (ecp256)</description>
+                    <description>Use Diffie-Hellman group 19 (ecp256)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group20</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 20 (ecp384)</description>
+                    <description>Use Diffie-Hellman group 20 (ecp384)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group21</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 21 (ecp521)</description>
+                    <description>Use Diffie-Hellman group 21 (ecp521)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group22</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 22 (modp1024s160)</description>
+                    <description>Use Diffie-Hellman group 22 (modp1024s160)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group23</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 23 (modp2048s224)</description>
+                    <description>Use Diffie-Hellman group 23 (modp2048s224)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group24</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 24 (modp2048s256)</description>
+                    <description>Use Diffie-Hellman group 24 (modp2048s256)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group25</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 25 (ecp192)</description>
+                    <description>Use Diffie-Hellman group 25 (ecp192)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group26</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 26 (ecp224)</description>
+                    <description>Use Diffie-Hellman group 26 (ecp224)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group27</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 27 (ecp224bp)</description>
+                    <description>Use Diffie-Hellman group 27 (ecp224bp)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group28</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 28 (ecp256bp)</description>
+                    <description>Use Diffie-Hellman group 28 (ecp256bp)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group29</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 29 (ecp384bp)</description>
+                    <description>Use Diffie-Hellman group 29 (ecp384bp)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group30</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 30 (ecp512bp)</description>
+                    <description>Use Diffie-Hellman group 30 (ecp512bp)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group31</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 31 (curve25519)</description>
+                    <description>Use Diffie-Hellman group 31 (curve25519)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group32</format>
-                    <description>Enable PFS. Use Diffie-Hellman group 32 (curve448)</description>
+                    <description>Use Diffie-Hellman group 32 (curve448)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>disable</format>
