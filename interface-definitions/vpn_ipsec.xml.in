@@ -737,15 +737,8 @@
                       <help>Peer authentication [REQUIRED]</help>
                     </properties>
                     <children>
-                      <leafNode name="id">
-                        <properties>
-                          <help>ID for peer authentication</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>ID used for peer authentication</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/authentication-id.xml.i>
+                      #include <include/ipsec/authentication-x509.xml.i>
                       <leafNode name="mode">
                         <properties>
                           <help>Authentication mode</help>
@@ -798,15 +791,6 @@
                           <valueless/>
                         </properties>
                       </leafNode>
-                      <node name="x509">
-                        <properties>
-                          <help>X.509 certificate</help>
-                        </properties>
-                        <children>
-                          #include <include/pki/certificate-key.xml.i>
-                          #include <include/pki/ca-certificate.xml.i>
-                        </children>
-                      </node>
                     </children>
                   </node>
                   <leafNode name="connection-type">

@@ -31,7 +31,7 @@
         encap = yes
 {%   endif %}
         local {
-{%   if peer_conf.authentication.id is defined and peer_conf.authentication.use_x509_id is not defined %}
+{%   if peer_conf.authentication is defined and peer_conf.authentication.id is defined and peer_conf.authentication.use_x509_id is not defined %}
             id = "{{ peer_conf.authentication.id }}"
 {%   endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
