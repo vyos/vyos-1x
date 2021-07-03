@@ -273,7 +273,7 @@ def generate_certificate_request(private_key=None, key_type=None, return_request
         return None
 
     print("Certificate request:")
-    print(encode_public_key(cert_req) + "\n")
+    print(encode_certificate(cert_req) + "\n")
     install_certificate(name, private_key=private_key, key_type=key_type, key_passphrase=passphrase, is_ca=False)
 
 def generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False):
