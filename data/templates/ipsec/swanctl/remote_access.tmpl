@@ -1,0 +1,37 @@
+{% macro conn(name, rw_conf, ike_group, esp_group) %}
+{#   peer needs to reference the global IKE configuration for certain values #}
+{%   set ike = ike_group[rw_conf.ike_group] %}
+{%   set esp = esp_group[rw_conf.esp_group] %}
+    ra-{{ name }} {
+        remote_addrs = %any
+        local_addrs = %any
+        proposals = {{ ike_group[rw_conf.ike_group] | get_esp_ike_cipher | join(',') }}
+        version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
+        send_certreq = no
+        rekey_time = {{ ike.lifetime }}s
+        keyingtries = 0
+        local {
+            auth = pubkey
+{%   if rw_conf.authentication is defined and rw_conf.authentication.id is defined and rw_conf.authentication.use_x509_id is not defined %}
+            id = "{{ rw_conf.authentication.id }}"
+{%   endif %}
+{%   if rw_conf.authentication is defined and rw_conf.authentication.x509 is defined and rw_conf.authentication.x509.certificate is defined %}
+            certs = {{ rw_conf.authentication.x509.certificate }}.pem
+{%   endif %}
+        }
+        remote {
+            auth = eap-mschapv2
+            id = %any
+            eap_id = %any
+        }
+        children {
+            ikev2-vpn  {
+                esp_proposals = {{ esp | get_esp_ike_cipher | join(',')  }}
+                rekey_time = {{ esp.lifetime }}s
+                rand_time = 540s
+                local_ts = 0.0.0.0/0
+                dpd_action = clear
+            }
+        }
+    }
+{% endmacro %}
