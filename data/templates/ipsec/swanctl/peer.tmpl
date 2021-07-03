@@ -63,7 +63,7 @@
                 if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
                 if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
                 ipcomp = {{ 'yes' if vti_esp.compression is defined and vti_esp.compression == 'enable' else 'no' }}
-                mode = {{ vti_esp.mode if vti_esp.mode is defined else "tunnel" }}
+                mode = {{ vti_esp.mode }}
 {%     if peer[0:1] == '@' %}
                 start_action = none
 {%     elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
@@ -101,7 +101,7 @@
                 remote_ts = {{ peer }}{{ remote_suffix }}
 {%       endif %}
                 ipcomp = {{ 'yes' if tunnel_esp.compression is defined and tunnel_esp.compression == 'enable' else 'no' }}
-                mode = {{ tunnel_esp.mode if tunnel_esp.mode is defined else "tunnel" }}
+                mode = {{ tunnel_esp.mode }}
 {%       if peer[0:1] == '@' %}
                 start_action = none
 {%       elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}

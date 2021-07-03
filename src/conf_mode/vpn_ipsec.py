@@ -23,6 +23,7 @@ from time import sleep
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
+from vyos.configdict import dict_merge
 from vyos.ifconfig import Interface
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_crl
@@ -35,6 +36,7 @@ from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import run
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -76,6 +78,19 @@ def get_config(config=None):
     # retrieve common dictionary keys
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  get_first_key=True, no_tag_node_value_mangle=True)
+
+    if 'esp_group' in ipsec:
+        default_values = defaults(base + ['esp-group'])
+        for group in ipsec['esp_group']:
+            ipsec['esp_group'][group] = dict_merge(default_values,
+                                                   ipsec['esp_group'][group])
+
+    if 'ike_group' in ipsec:
+        default_values = defaults(base + ['ike-group'])
+        for group in ipsec['ike_group']:
+            ipsec['ike_group'][group] = dict_merge(default_values,
+                                                   ipsec['ike_group'][group])
+
 
     ipsec['dhcp_no_address'] = {}
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',

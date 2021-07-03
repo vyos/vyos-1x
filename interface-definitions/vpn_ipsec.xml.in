@@ -64,6 +64,7 @@
                     <validator name="numeric" argument="--range 30-86400"/>
                   </constraint>
                 </properties>
+                <defaultValue>3600</defaultValue>
               </leafNode>
               <leafNode name="mode">
                 <properties>
@@ -83,6 +84,7 @@
                     <regex>^(tunnel|transport)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>tunnel</defaultValue>
               </leafNode>
               <leafNode name="pfs">
                 <properties>
@@ -190,6 +192,7 @@
                     <regex>^(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|disable)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>enable</defaultValue>
               </leafNode>
               <tagNode name="proposal">
                 <properties>
@@ -341,6 +344,7 @@
                     <validator name="numeric" argument="--range 30-86400"/>
                   </constraint>
                 </properties>
+                <defaultValue>28800</defaultValue>
               </leafNode>
               <leafNode name="mobike">
                 <properties>

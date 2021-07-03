@@ -7,7 +7,7 @@
     dmvpn-{{ name }}-{{ interface }} {
         proposals = {{ ike_group[profile_conf.ike_group] | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
-        rekey_time = {{ ike.lifetime if ike.lifetime is defined else '28800' }}s
+        rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
 {%       if profile_conf.authentication is defined and profile_conf.authentication.mode is defined and profile_conf.authentication.mode == 'pre-shared-secret' %}
         local {
@@ -20,11 +20,11 @@
         children {
             dmvpn {
                 esp_proposals = {{ esp | get_esp_ike_cipher | join(',')  }}
-                rekey_time = {{ esp.lifetime if esp.lifetime is defined else '3600' }}s
+                rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 local_ts = dynamic[gre]
                 remote_ts = dynamic[gre]
-                mode = {{ esp.mode if esp.mode is defined else 'transport' }}
+                mode = {{ esp.mode }}
 {%       if ike.dead_peer_detection is defined and ike.dead_peer_detection.action is defined %}
                 dpd_action = {{ ike.dead_peer_detection.action }}
 {%       endif %}
