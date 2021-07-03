@@ -387,3 +387,49 @@ def get_ip(interface):
     """ Get interface IP addresses"""
     from vyos.ifconfig import Interface
     return Interface(interface).get_addr()
+
+@register_filter('get_esp_ike_cipher')
+def get_esp_ike_cipher(group_config):
+    pfs_lut = {
+        'dh-group1'  : 'modp768',
+        'dh-group2'  : 'modp1024',
+        'dh-group5'  : 'modp1536',
+        'dh-group14' : 'modp2048',
+        'dh-group15' : 'modp3072',
+        'dh-group16' : 'modp4096',
+        'dh-group17' : 'modp6144',
+        'dh-group18' : 'modp8192',
+        'dh-group19' : 'ecp256',
+        'dh-group20' : 'ecp384',
+        'dh-group21' : 'ecp512',
+        'dh-group22' : 'modp1024s160',
+        'dh-group23' : 'modp2048s224',
+        'dh-group24' : 'modp2048s256',
+        'dh-group25' : 'ecp192',
+        'dh-group26' : 'ecp224',
+        'dh-group27' : 'ecp224bp',
+        'dh-group28' : 'ecp256bp',
+        'dh-group29' : 'ecp384bp',
+        'dh-group30' : 'ecp512bp',
+        'dh-group31' : 'curve25519',
+        'dh-group32' : 'curve448'
+    }
+
+    ciphers = []
+    if 'proposal' in group_config:
+        for priority, proposal in group_config['proposal'].items():
+            # both encryption and hash need to be specified for a proposal
+            if not {'encryption', 'hash'} <= set(proposal):
+                continue
+
+            tmp = '{encryption}-{hash}'.format(**proposal)
+            if 'dh_group' in proposal:
+                tmp += '-' + pfs_lut[ 'dh-group' +  proposal['dh_group'] ]
+            elif 'pfs' in group_config and group_config['pfs'] != 'disable':
+                group = group_config['pfs']
+                if group_config['pfs'] == 'enable':
+                    group = 'dh-group2'
+                tmp += '-' + pfs_lut[group]
+
+            ciphers.append(tmp)
+    return ciphers
