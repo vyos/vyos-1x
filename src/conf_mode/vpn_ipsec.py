@@ -316,8 +316,7 @@ def generate(ipsec):
         with open(DHCP_HOOK_IFLIST, 'w') as f:
             f.write(" ".join(ipsec['dhcp_no_address'].values()))
 
-    data = ipsec
-    data['rsa_local_key'] = verify_rsa_local_key(ipsec)
+    ipsec['rsa_local_key'] = verify_rsa_local_key(ipsec)
 
     for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH]:
         if not os.path.exists(path):
@@ -326,7 +325,7 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
-    if 'site_to_site' in data and 'peer' in data['site_to_site']:
+    if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             if peer in ipsec['dhcp_no_address']:
                 continue
@@ -340,7 +339,7 @@ def generate(ipsec):
             elif 'dhcp_interface' in peer_conf:
                 local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
 
-            data['site_to_site']['peer'][peer]['local_address'] = local_ip
+            ipsec['site_to_site']['peer'][peer]['local_address'] = local_ip
 
             if 'tunnel' in peer_conf:
                 for tunnel, tunnel_conf in peer_conf['tunnel'].items():
@@ -359,13 +358,13 @@ def generate(ipsec):
                             if local_net.overlaps(remote_net):
                                 passthrough.append(local_prefix)
 
-                    data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
+                    ipsec['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
 
-    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
-    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
-    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
-    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
+    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', ipsec)
+    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', ipsec)
+    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', ipsec)
+    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', ipsec)
 
 def resync_l2tp(ipsec):
     if ipsec and not ipsec['l2tp_exists']:
