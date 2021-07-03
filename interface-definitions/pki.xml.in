@@ -44,6 +44,12 @@
               <multi/>
             </properties>
           </leafNode>
+          <leafNode name="revoke">
+            <properties>
+              <help>If parent CA is present, this CA certificate will be included in generated CRLs</help>
+              <valueless/>
+            </properties>
+          </leafNode>
         </children>
       </tagNode>
       <tagNode name="certificate">
