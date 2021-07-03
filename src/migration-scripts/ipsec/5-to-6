@@ -60,6 +60,20 @@ if config.exists(base + ['site-to-site', 'peer']):
             if config.exists(public_networks):
                 config.delete(public_networks)
 
+# Rename "logging log-level" and "logging log-modes" to something more human friendly
+log = base + ['logging']
+if config.exists(log):
+    config.rename(log, 'log')
+    log = base + ['log']
+
+log_level = log + ['log-level']
+if config.exists(log_level):
+    config.rename(log_level, 'level')
+
+log_mode = log + ['log-modes']
+if config.exists(log_mode):
+    config.rename(log_mode, 'subsystem')
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

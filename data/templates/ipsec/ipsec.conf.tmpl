@@ -1,6 +1,15 @@
 # Created by VyOS - manual changes will be overwritten
 
 config setup
+{% set charondebug = '' %}
+{% if log is defined and log.subsystem is defined and log.subsystem is not none %}
+{%   set subsystem = log.subsystem %}
+{%   if 'any' in log.subsystem %}
+{%     set subsystem = ['dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl', 'net', 'asn',
+                        'enc', 'lib', 'esp', 'tls', 'tnc', 'imc', 'imv', 'pts'] %}
+{%   endif %}
+{%   set charondebug = subsystem | join (' ' ~ log.level ~ ', ') ~ ' ' ~ log.level %}
+{% endif %}
     charondebug = "{{ charondebug }}"
     uniqueids = {{ "no" if disable_uniqreqids is defined else "yes" }}
 

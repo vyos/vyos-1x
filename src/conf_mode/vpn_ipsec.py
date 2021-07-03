@@ -41,11 +41,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-any_log_modes = [
-    'dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl', 'net', 'asn',
-    'enc', 'lib', 'esp', 'tls', 'tnc', 'imc', 'imv', 'pts'
-]
-
 dhcp_wait_attempts = 2
 dhcp_wait_sleep = 1
 
@@ -79,6 +74,15 @@ def get_config(config=None):
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  get_first_key=True, no_tag_node_value_mangle=True)
 
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    # XXX: T2665: we must safely remove default values for tag nodes, those are
+    # added in a more fine grained way later on
+    del default_values['esp_group']
+    del default_values['ike_group']
+    ipsec = dict_merge(default_values, ipsec)
+
     if 'esp_group' in ipsec:
         default_values = defaults(base + ['esp-group'])
         for group in ipsec['esp_group']:
@@ -90,7 +94,6 @@ def get_config(config=None):
         for group in ipsec['ike_group']:
             ipsec['ike_group'][group] = dict_merge(default_values,
                                                    ipsec['ike_group'][group])
-
 
     ipsec['dhcp_no_address'] = {}
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
@@ -356,14 +359,6 @@ def generate(ipsec):
 
                     data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
-        if 'logging' in ipsec and 'log_modes' in ipsec['logging']:
-            modes = ipsec['logging']['log_modes']
-            level = ipsec['logging']['log_level'] if 'log_level' in ipsec['logging'] else '1'
-            if isinstance(modes, str):
-                modes = [modes]
-            if 'any' in modes:
-                modes = any_log_modes
-            data['charondebug'] = f' {level}, '.join(modes) + ' ' + level
 
     render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
     render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
