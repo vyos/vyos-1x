@@ -61,11 +61,6 @@ fi
 # ensure hte proxy user has a proper shell
 chsh -s /bin/sh proxy
 
-# vyatta-cfg-vpn migration
-for init in openswan ipsec setkey; do
-  update-rc.d -f ${init} remove >/dev/null
-done
-
 # create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
 POSTCONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
 if [ ! -x $POSTCONFIG_SCRIPT ]; then
