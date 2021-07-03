@@ -109,6 +109,8 @@ def get_config(config=None):
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
 
+    import pprint
+    pprint.pprint(ipsec)
     return ipsec
 
 def get_rsa_local_key(ipsec):

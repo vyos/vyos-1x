@@ -701,22 +701,8 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="esp-group">
-                <properties>
-                  <help>ESP group name [REQUIRED]</help>
-                  <completionHelp>
-                    <path>vpn ipsec esp-group</path>
-                  </completionHelp>
-                </properties>
-              </leafNode>
-              <leafNode name="ike-group">
-                <properties>
-                  <help>IKE group name [REQUIRED]</help>
-                  <completionHelp>
-                    <path>vpn ipsec ike-group</path>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/ipsec/esp-group.xml.i>
+              #include <include/ipsec/ike-group.xml.i>
             </children>
           </tagNode>
           <node name="site-to-site">
@@ -878,14 +864,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="ike-group">
-                    <properties>
-                      <help>Internet Key Exchange (IKE) group name [REQUIRED]</help>
-                      <completionHelp>
-                        <path>vpn ipsec ike-group</path>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/ike-group.xml.i>
                   <leafNode name="ikev2-reauth">
                     <properties>
                       <help>Re-authentication of the remote peer during an IKE re-key.  IKEv2 option only</help>
@@ -944,14 +923,7 @@
                     </properties>
                     <children>
                       #include <include/generic-disable-node.xml.i>
-                      <leafNode name="esp-group">
-                        <properties>
-                          <help>ESP group name</help>
-                          <completionHelp>
-                            <path>vpn ipsec esp-group</path>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/esp-group.xml.i>
                       <node name="local">
                         <properties>
                           <help>Local parameters for interesting traffic</help>
@@ -1041,14 +1013,7 @@
                           <help>VTI tunnel interface associated with this configuration [REQUIRED]</help>
                         </properties>
                       </leafNode>
-                      <leafNode name="esp-group">
-                        <properties>
-                          <help>ESP group name [REQUIRED]</help>
-                          <completionHelp>
-                            <path>vpn ipsec esp-group</path>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/esp-group.xml.i>
                     </children>
                   </node>
                 </children>
