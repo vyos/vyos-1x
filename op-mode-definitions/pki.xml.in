@@ -12,6 +12,26 @@
               <help>Generate CA certificate</help>
             </properties>
             <children>
+              <tagNode name="sign">
+                <properties>
+                  <help>Sign generated CA certificate with another specified CA certificate</help>
+                  <completionHelp>
+                    <path>pki ca</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="install">
+                    <properties>
+                      <help>Commands for installing generated certificate into running configuration</help>
+                      <completionHelp>
+                        <list>&lt;certificate name&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ca "$7" --sign "$5" --install</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --ca "noname" --sign "$5"</command>
+              </tagNode>
               <tagNode name="install">
                 <properties>
                   <help>Commands for installing generated certificate into running configuration</help>
