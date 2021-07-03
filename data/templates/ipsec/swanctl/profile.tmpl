@@ -1,34 +1,39 @@
-{% macro conn(name, profile_conf, ike, esp, ciphers) %}
-{% for interface in profile_conf.bind.tunnel %}
+{% macro conn(name, profile_conf, ike_group, esp_group) %}
+{#   peer needs to reference the global IKE configuration for certain values #}
+{%   set ike = ike_group[profile_conf.ike_group] %}
+{%   set esp = esp_group[profile_conf.esp_group] %}
+{%   if profile_conf.bind is defined and profile_conf.bind.tunnel is defined %}
+{%     for interface in profile_conf.bind.tunnel %}
     dmvpn-{{ name }}-{{ interface }} {
-        proposals = {{ ciphers.ike[profile_conf.ike_group] }}
-        version = {{ ike.key_exchange[4:] if "key_exchange" in ike else "0" }}
-        rekey_time = {{ ike.lifetime if 'lifetime' in ike else '28800' }}s
+        proposals = {{ ike_group[profile_conf.ike_group] | get_esp_ike_cipher | join(',') }}
+        version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
+        rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
-{%    if profile_conf.authentication.mode == 'pre-shared-secret' %}
+{%       if profile_conf.authentication is defined and profile_conf.authentication.mode is defined and profile_conf.authentication.mode == 'pre-shared-secret' %}
         local {
             auth = psk
         }
         remote {
             auth = psk
         }
-{%    endif %}
+{%       endif %}
         children {
             dmvpn {
-                esp_proposals = {{ ciphers.esp[profile_conf.esp_group] }}
-                rekey_time = {{ esp.lifetime if 'lifetime' in esp else '3600' }}s
+                esp_proposals = {{ esp | get_esp_ike_cipher | join(',')  }}
+                rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 local_ts = dynamic[gre]
                 remote_ts = dynamic[gre]
-                mode = {{ esp.mode if "mode" in esp else "transport" }}
-{%    if 'dead_peer_detection' in ike and 'action' in ike.dead_peer_detection %}
+                mode = {{ esp.mode }}
+{%       if ike.dead_peer_detection is defined and ike.dead_peer_detection.action is defined %}
                 dpd_action = {{ ike.dead_peer_detection.action }}
-{%    endif %}
-{%    if 'compression' in esp and esp['compression'] == 'enable' %}
+{%       endif %}
+{%       if esp.compression is defined and esp.compression == 'enable' %}
                 ipcomp = yes
-{%    endif %}
+{%       endif %}
             }
         }
     }
-{% endfor %}
+{%     endfor %}
+{%   endif %}
 {% endmacro %}

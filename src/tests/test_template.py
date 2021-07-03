@@ -122,3 +122,63 @@ class TestVyOSTemplate(TestCase):
         self.assertTrue(vyos.template.compare_netmask('2001:db8:1000::/48', '2001:db8:2000::/48'))
         self.assertTrue(vyos.template.compare_netmask('2001:db8:1000::/64', '2001:db8:2000::/64'))
         self.assertFalse(vyos.template.compare_netmask('2001:db8:1000::/48', '2001:db8:2000::/64'))
+
+    def test_cipher_to_string(self):
+        ESP_DEFAULT = 'aes256gcm128-sha256-ecp256,aes128ccm64-sha256-ecp256'
+        IKEv2_DEFAULT = 'aes256gcm128-sha256-ecp256,aes128ccm128-md5_128-modp1024'
+
+        data = {
+            'esp_group': {
+                'ESP_DEFAULT': {
+                    'compression': 'disable',
+                    'lifetime': '3600',
+                    'mode': 'tunnel',
+                    'pfs': 'dh-group19',
+                    'proposal': {
+                        '10': {
+                            'encryption': 'aes256gcm128',
+                            'hash': 'sha256',
+                        },
+                        '20': {
+                            'encryption': 'aes128ccm64',
+                            'hash': 'sha256',
+                        }
+                    }
+                }
+            },
+            'ike_group': {
+                'IKEv2_DEFAULT': {
+                    'close_action': 'none',
+                    'dead_peer_detection': {
+                        'action': 'hold',
+                        'interval': '30',
+                        'timeout': '120'
+                    },
+                    'ikev2_reauth': 'no',
+                    'key_exchange': 'ikev2',
+                    'lifetime': '10800',
+                    'mobike': 'disable',
+                    'proposal': {
+                        '10': {
+                            'dh_group': '19',
+                            'encryption': 'aes256gcm128',
+                            'hash': 'sha256'
+                        },
+                        '20': {
+                            'dh_group': '2',
+                            'encryption': 'aes128ccm128',
+                            'hash': 'md5_128'
+                        },
+                    }
+                }
+            },
+        }
+
+        for group_name, group_config in data['esp_group'].items():
+            ciphers = vyos.template.get_esp_ike_cipher(group_config)
+            self.assertIn(ESP_DEFAULT, ','.join(ciphers))
+
+        for group_name, group_config in data['ike_group'].items():
+            ciphers = vyos.template.get_esp_ike_cipher(group_config)
+            self.assertIn(IKEv2_DEFAULT, ','.join(ciphers))
+

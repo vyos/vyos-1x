@@ -1,136 +1,134 @@
-{% macro conn(name, peer, peer_conf, ike, esp, ciphers, esp_group, auth_type) %}
+{% macro conn(peer, peer_conf, ike_group, esp_group) %}
+{%   set name = peer.replace(".", "-").replace("@", "") %}
+{#   peer needs to reference the global IKE configuration for certain values #}
+{%   set ike = ike_group[peer_conf.ike_group] %}
     peer_{{ name }} {
-        proposals = {{ ciphers.ike[peer_conf.ike_group] }}
-        version = {{ ike['key_exchange'][4:] if "key_exchange" in ike else "0" }}
+        proposals = {{ ike | get_esp_ike_cipher | join(',') }}
+        version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
         local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '0.0.0.0/0' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
         remote_addrs = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '0.0.0.0/0' }}
-{%    if peer_conf.authentication.mode == 'x509' %}
+{%   if peer_conf.authentication is defined and peer_conf.authentication.mode is defined and peer_conf.authentication.mode == 'x509' %}
         send_cert = always
-{%    endif %}
-{%    if "dead_peer_detection" in ike %}
+{%   endif %}
+{%   if ike.dead_peer_detection is defined %}
         dpd_timeout = {{ ike.dead_peer_detection.timeout }}
         dpd_delay = {{ ike.dead_peer_detection.interval }}
-{%    endif %}
-{%    if "key_exchange" in ike and ike.key_exchange == "ikev1" and "mode" in ike and ike.mode == "aggressive" %}
+{%   endif %}
+{%   if ike.key_exchange is defined and ike.key_exchange == "ikev1" and ike.mode is defined and ike.mode == "aggressive" %}
         aggressive = yes
-{%    endif %}
-        mobike = {{ "yes" if "mobike" not in ike or ike.mobike == "enable" else "no" }}
-{%    if peer[0:1] == '@' %}
+{%   endif %}
+        mobike = {{ "yes" if ike.mobike is not defined or ike.mobike == "enable" else "no" }}
+{%   if peer[0:1] == '@' %}
         keyingtries = 0
         rekey_time = 0
         reauth_time = 0
-{%    elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
+{%   elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
         keyingtries = 0
-{%    elif peer_conf.connection_type is defined and peer_conf.connection_type == 'respond' %}
+{%   elif peer_conf.connection_type is defined and peer_conf.connection_type == 'respond' %}
         keyingtries = 1
-{%    endif %}
-{%    if peer_conf.force_encapsulation is defined and peer_conf.force_encapsulation == 'enable' %}
+{%   endif %}
+{%   if peer_conf.force_encapsulation is defined and peer_conf.force_encapsulation == 'enable' %}
         encap = yes
-{%    endif %}
+{%   endif %}
         local {
-{%    if peer_conf.authentication.id is defined and peer_conf.authentication.use_x509_id is not defined %}
+{%   if peer_conf.authentication.id is defined and peer_conf.authentication.use_x509_id is not defined %}
             id = "{{ peer_conf.authentication.id }}"
-{%    endif %}
-{%    if auth_type %}
-            auth = {{ auth_type }}
-{%    endif %}
-{%    if peer_conf.authentication.mode == 'x509' %}
+{%   endif %}
+            auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
+{%   if peer_conf.authentication.mode == 'x509' %}
             certs = {{ peer_conf.authentication.x509.certificate }}.pem
-{%    elif peer_conf.authentication.mode == 'rsa' %}
+{%   elif peer_conf.authentication.mode == 'rsa' %}
             pubkeys = localhost.pub
-{%    endif %}
+{%   endif %}
         }
         remote {
-{%    if peer_conf.authentication.remote_id is defined %}
+{%   if peer_conf.authentication.remote_id is defined %}
             id = "{{ peer_conf.authentication.remote_id }}"
-{%    elif peer[0:1] == '@' %}
+{%   elif peer[0:1] == '@' %}
             id = "{{ peer }}"
-{%    endif %}
-{%    if auth_type %}
-            auth = {{ auth_type }}
-{%    endif %}
-{%    if peer_conf.authentication.mode == 'rsa' %}
+{%   endif %}
+            auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
+{%   if peer_conf.authentication.mode == 'rsa' %}
             pubkeys = {{ peer_conf.authentication.rsa_key_name }}.pub
-{%    endif %}
+{%   endif %}
         }
         children {
-{%    if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
-{%        set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
+{%   if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
+{%     set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
             peer_{{ name }}_vti {
-                esp_proposals = {{ ciphers.esp[peer_conf.vti.esp_group] }}
+                esp_proposals = {{ vti_esp | get_esp_ike_cipher | join(',') }}
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
                 if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
                 if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
-                ipcomp = {{ 'yes' if "compression" in vti_esp and vti_esp.compression == 'enable' else 'no' }}
-                mode = {{ vti_esp.mode if "mode" in vti_esp else "tunnel" }}
-{%        if peer[0:1] == '@' %}
+                ipcomp = {{ 'yes' if vti_esp.compression is defined and vti_esp.compression == 'enable' else 'no' }}
+                mode = {{ vti_esp.mode }}
+{%     if peer[0:1] == '@' %}
                 start_action = none
-{%        elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
+{%     elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
                 start_action = start
-{%        elif peer_conf.connection_type == 'respond' %}
+{%     elif peer_conf.connection_type == 'respond' %}
                 start_action = trap
-{%        endif %}
-{%        if "dead_peer_detection" in ike %}
-{%            set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+{%     endif %}
+{%     if ike.dead_peer_detection is defined %}
+{%       set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
-{%        endif %}
+{%     endif %}
             }
-{%    endif %}
-{%    if peer_conf.tunnel is defined %}
-{%        for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
-{%            set tunnel_esp_name = tunnel_conf.esp_group if "esp_group" in tunnel_conf else peer_conf.default_esp_group %}
-{%            set tunnel_esp = esp_group[tunnel_esp_name] %}
-{%            set proto = tunnel_conf.protocol if "protocol" in tunnel_conf else '' %}
-{%            set local_port = tunnel_conf.local.port if tunnel_conf.local is defined and tunnel_conf.local.port is defined else '' %}
-{%            set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
-{%            set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '' %}
-{%            set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
+{%   elif peer_conf.tunnel is defined %}
+{%     for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
+{%       set tunnel_esp_name = tunnel_conf.esp_group if tunnel_conf.esp_group is defined else peer_conf.default_esp_group %}
+{%       set tunnel_esp = esp_group[tunnel_esp_name] %}
+{%       set proto = tunnel_conf.protocol if tunnel_conf.protocol is defined else '' %}
+{%       set local_port = tunnel_conf.local.port if tunnel_conf.local is defined and tunnel_conf.local.port is defined else '' %}
+{%       set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
+{%       set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '' %}
+{%       set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
-                esp_proposals = {{ ciphers.esp[tunnel_esp_name] }}
-{%            if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
-{%                if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
-{%                    set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
+                esp_proposals = {{ esp_group[peer_conf.default_esp_group] | get_esp_ike_cipher | join(',') }}
+{%       if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
+{%         if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
+{%           set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
-{%                endif %}
-{%                if tunnel_conf.remote is defined and tunnel_conf.remote.prefix is defined %}
-{%                    set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
+{%         endif %}
+{%         if tunnel_conf.remote is defined and tunnel_conf.remote.prefix is defined %}
+{%           set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
                 remote_ts = {{ remote_prefix | join(remote_suffix + ",") }}{{ remote_suffix }}
-{%                endif %}
-{%            elif tunnel_esp.mode == 'transport' %}
+{%         endif %}
+{%       elif tunnel_esp.mode == 'transport' %}
                 local_ts = {{ peer_conf.local_address }}{{ local_suffix }}
                 remote_ts = {{ peer }}{{ remote_suffix }}
-{%            endif %}
-                ipcomp = {{ 'yes' if "compression" in tunnel_esp and tunnel_esp.compression == 'enable' else 'no' }}
-                mode = {{ tunnel_esp.mode if "mode" in tunnel_esp else "tunnel" }}
-{%            if peer[0:1] == '@' %}
+{%       endif %}
+                ipcomp = {{ 'yes' if tunnel_esp.compression is defined and tunnel_esp.compression == 'enable' else 'no' }}
+                mode = {{ tunnel_esp.mode }}
+{%       if peer[0:1] == '@' %}
                 start_action = none
-{%            elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
+{%       elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
                 start_action = start
-{%            elif peer_conf.connection_type == 'respond' %}
+{%       elif peer_conf.connection_type == 'respond' %}
                 start_action = trap
-{%            endif %}
-{%            if "dead_peer_detection" in ike %}
-{%                set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+{%       endif %}
+{%       if ike.dead_peer_detection is defined %}
+{%         set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
-{%            endif %}
-{%            if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
+{%       endif %}
+{%       if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
                 if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
                 if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
-{%            endif %}
+{%       endif %}
             }
-{%            if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
+{%       if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}
             peer_{{ name }}_tunnel_{{ tunnel_id }}_passthough {
                 local_ts = {{ tunnel_conf.passthrough | join(",") }}
                 remote_ts = {{ tunnel_conf.passthrough | join(",") }}
                 start_action = trap
                 mode = pass
             }
-{%            endif %}
-{%        endfor %}
-{%    endif %}
+{%       endif %}
+{%     endfor %}
+{%   endif %}
         }
     }
 {% endmacro %}

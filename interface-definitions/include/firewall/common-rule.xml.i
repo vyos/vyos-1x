@@ -1,6 +1,6 @@
 <!-- include start from firewall/common-rule.xml.i -->
 #include <include/firewall/action.xml.i>
-#include <include/firewall/description.xml.i>
+#include <include/generic-description.xml.i>
 <leafNode name="disable">
   <properties>
     <help>Option to disable firewall rule</help>

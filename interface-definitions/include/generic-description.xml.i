@@ -1,4 +1,4 @@
-<!-- include start from firewall/description.xml.i -->
+<!-- include start from generic-description.xml.i -->
 <leafNode name="description">
   <properties>
     <help>Description</help>

@@ -27,7 +27,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this access-list</help>
@@ -41,7 +41,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="destination">
                 <properties>
                   <help>Destination network or address</help>
@@ -87,7 +87,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this access-list6</help>
@@ -101,7 +101,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="source">
                 <properties>
                   <help>Source IPv6 network to match</help>
@@ -146,7 +146,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this as-path-list</help>
@@ -160,7 +160,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against an AS path</help>
@@ -183,7 +183,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP community list</help>
@@ -197,7 +197,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against a community-list</help>
@@ -243,7 +243,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP extended community list</help>
@@ -257,7 +257,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against an extended community list</help>
@@ -288,7 +288,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this BGP extended community list</help>
@@ -302,7 +302,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="regex">
                 <properties>
                   <help>Regular expression to match against a large community list</help>
@@ -329,7 +329,7 @@
           <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this prefix-list</help>
@@ -343,7 +343,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="ge">
                 <properties>
                   <help>Prefix length to match a netmask greater than or equal to it</help>
@@ -397,7 +397,7 @@
           <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this prefix-list6</help>
@@ -411,7 +411,7 @@
             </properties>
             <children>
               #include <include/policy/action.xml.i>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="ge">
                 <properties>
                   <help>Prefix length to match a netmask greater than or equal to it</help>
@@ -465,7 +465,7 @@
           <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
         <children>
-          #include <include/policy/description.xml.i>
+          #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Rule for this route-map</help>
@@ -500,7 +500,7 @@
                   </valueHelp>
                 </properties>
               </leafNode>
-              #include <include/policy/description.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="match">
                 <properties>
                   <help>Route parameters to match</help>
