@@ -13,28 +13,6 @@ connections {
 {{     peer_tmpl.conn(peer, peer_conf, ike_group, esp_group) }}
 {%   endfor %}
 {%  endif %}
-{% if remote_access is defined and remote_access is not none %}
-{%   set ike = ike_group[peer_conf.ike_group] %}
-    road_warrior {
-        proposals = {{ ike | get_esp_ike_cipher | join(',') }}
-        version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
-        local_addrs  = 192.168.0.1
-        local {
-            auth = eap-peap
-            certs = moonCert.pem
-        }
-        remote {
-            auth = eap-peap
-        }
-        send_certreq = no
-        children {
-            net {
-                local_ts = 10.1.0.0/16
-                esp_proposals = {{ esp_group[peer_conf.default_esp_group] | get_esp_ike_cipher | join(',') }}
-            }
-        }
-    }
-{%  endif %}
 }
 
 secrets {
