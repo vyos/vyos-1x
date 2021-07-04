@@ -743,6 +743,132 @@
               #include <include/generic-disable-node.xml.i>
               #include <include/ipsec/esp-group.xml.i>
               #include <include/ipsec/ike-group.xml.i>
+              <leafNode name="local-address">
+                <properties>
+                  <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
+                  <completionHelp>
+                    <list>any</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address of a local interface for VPN</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address of a local interface for VPN</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>any</format>
+                    <description>Allow any IPv4 address present on the system to be used for VPN</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
+                    <regex>^(any)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="local-network">
+                <properties>
+                  <help>Local traffic selectors</help>
+                </properties>
+                <children>
+                  <leafNode name="port">
+                    <properties>
+                      <help>Any TCP or UDP port</help>
+                      <valueHelp>
+                        <format>port name</format>
+                        <description>Named port (any name in /etc/services, e.g., http)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Numbered port</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>Local IPv4 or IPv6 prefix</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="pool">
+                <properties>
+                  <help>IP address pool for remote-access users</help>
+                </properties>
+                <children>
+                  <leafNode name="exclude">
+                    <properties>
+                      <help>Local IPv4 or IPv6 pool prefix exclusions</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 pool prefix exclusion</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 pool prefix exclusion</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>Local IPv4 or IPv6 pool prefix</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 pool prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 pool prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="dns-server">
+                    <properties>
+                      <help>IPv4 or IPv6 DNS addresses for pool</help>
+                      <completionHelp>
+                        <list>any</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 DNS address for pool</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 DNS address for pool</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="timeout">
                 <properties>
                   <help>Timeout to close connection if no data is transmitted</help>

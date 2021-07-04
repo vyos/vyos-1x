@@ -21,6 +21,20 @@ connections {
 {% endif %}
 }
 
+pools {
+{%  if remote_access is defined %}
+{%    for ra, ra_conf in remote_access.items() if remote_access is defined %}
+    ra-{{ ra }} {
+        addrs = {{ ra_conf.pool.prefix }}
+        dns = {{ ra_conf.pool.dns_server | join(",") }}
+{%      if ra_conf.pool.exclude is defined %}
+        split_exclude = {{ ra_conf.pool.exclude | join(",") }}
+{%      endif %}
+    }
+{%    endfor %}
+{%  endif %}
+}
+
 secrets {
 {%  if profile is defined %}
 {%    for name, profile_conf in profile.items() if profile_conf.disable is not defined and profile_conf.bind is defined and profile_conf.bind.tunnel is defined %}
