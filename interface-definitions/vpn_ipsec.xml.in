@@ -743,31 +743,7 @@
               #include <include/generic-disable-node.xml.i>
               #include <include/ipsec/esp-group.xml.i>
               #include <include/ipsec/ike-group.xml.i>
-              <leafNode name="local-address">
-                <properties>
-                  <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
-                  <completionHelp>
-                    <list>any</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 address of a local interface for VPN</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address of a local interface for VPN</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>any</format>
-                    <description>Allow any IPv4 address present on the system to be used for VPN</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
-                    <regex>^(any)$</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/ipsec/local-address.xml.i>
               <node name="local-network">
                 <properties>
                   <help>Local traffic selectors</help>
@@ -1039,31 +1015,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="local-address">
-                    <properties>
-                      <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
-                      <completionHelp>
-                        <list>any</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address of a local interface for VPN</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of a local interface for VPN</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>any</format>
-                        <description>Allow any IPv4 address present on the system to be used for VPN</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                        <validator name="ipv6-address"/>
-                        <regex>^(any)$</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/local-address.xml.i>
                   <tagNode name="tunnel">
                     <properties>
                       <help>Peer tunnel [REQUIRED]</help>
