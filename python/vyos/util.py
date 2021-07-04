@@ -16,6 +16,9 @@
 import os
 import re
 import sys
+import time
+
+import inotify.adapters
 
 #
 # NOTE: Do not import full classes here, move your import to the function
@@ -506,6 +509,36 @@ def file_is_persistent(path):
     absolute = os.path.abspath(os.path.dirname(path))
     return re.match(location,absolute)
 
+def wait_for_inotify(file_path, event_type=None, timeout=None, sleep_interval=0.1):
+    """ Waits for an inotify event to occur """
+    if not os.path.dirname(file_path):
+        raise ValueError(
+          "File path {} does not have a directory part (required for inotify watching)".format(file_path))
+    if not os.path.basename(file_path):
+        raise ValueError(
+          "File path {} does not have a file part, do not know what to watch for".format(file_path))
+
+    time_start = time.time()
+
+    i = inotify.adapters.Inotify()
+    i.add_watch(os.path.dirname(file_path))
+
+    for event in i.event_gen(yield_nones=True):
+        if (timeout is not None) and ((time.time() - time_start) > timeout):
+            # If the function didn't return until this point,
+            # the file failed to have been written to and closed within the timeout
+            raise OSError("Waiting for file {} to be written has failed".format(file_path))
+
+        if event is not None:
+            (_, type_names, path, filename) = event
+            if filename == os.path.basename(file_path):
+                if event_type in type_names:
+                    return
+
+def wait_for_file_write_complete(file_path, timeout=None, sleep_interval=0.1):
+    """ Waits for a process to close a file after opening it in write mode. """
+    wait_for_inotify(file_path,
+      event_type='IN_CLOSE_WRITE', timeout=timeout, sleep_interval=sleep_interval)
 
 def commit_in_progress():
     """ Not to be used in normal op mode scripts! """
