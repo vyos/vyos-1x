@@ -692,9 +692,12 @@
                   <leafNode name="tunnel">
                     <properties>
                       <help>Tunnel interface associated with this configuration profile</help>
+                      <completionHelp>
+                        <path>interfaces tunnel</path>
+                      </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Tunnel interface associated with this configuration profile</description>
+                        <description>Associated interface to this configuration profile</description>
                       </valueHelp>
                       <multi/>
                     </properties>
@@ -703,6 +706,105 @@
               </node>
               #include <include/ipsec/esp-group.xml.i>
               #include <include/ipsec/ike-group.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="remote-access">
+            <properties>
+              <help>Remote access IKEv2 VPN </help>
+            </properties>
+            <children>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication for remote access</help>
+                </properties>
+                <children>
+                  #include <include/ipsec/authentication-id.xml.i>
+                  #include <include/ipsec/authentication-x509.xml.i>
+                  <node name="local-users">
+                    <properties>
+                      <help>Local user authentication for PPPoE server</help>
+                    </properties>
+                    <children>
+                      <tagNode name="username">
+                        <properties>
+                          <help>User name for authentication</help>
+                        </properties>
+                        <children>
+                          #include <include/generic-disable-node.xml.i>
+                          <leafNode name="password">
+                            <properties>
+                              <help>Password for authentication</help>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              #include <include/generic-description.xml.i>
+              #include <include/generic-disable-node.xml.i>
+              #include <include/ipsec/esp-group.xml.i>
+              #include <include/ipsec/ike-group.xml.i>
+              #include <include/ipsec/local-address.xml.i>
+              #include <include/ipsec/local-traffic-selector.xml.i>
+              <node name="pool">
+                <properties>
+                  <help>IP address pool for remote-access users</help>
+                </properties>
+                <children>
+                  <leafNode name="exclude">
+                    <properties>
+                      <help>Local IPv4 or IPv6 pool prefix exclusions</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 pool prefix exclusion</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 pool prefix exclusion</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>Local IPv4 or IPv6 pool prefix</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Local IPv4 pool prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Local IPv6 pool prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <!-- Include Accel-PPP definition here, maybe time for a rename? -->
+                  #include <include/accel-ppp/name-server.xml.i>
+                </children>
+              </node>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Timeout to close connection if no data is transmitted</help>
+                  <valueHelp>
+                    <format>u32:10-86400</format>
+                    <description>Timeout in seconds (default 28800)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 10-86400"/>
+                  </constraint>
+                </properties>
+                <defaultValue>28800</defaultValue>
+              </leafNode>
             </children>
           </tagNode>
           <node name="site-to-site">
@@ -872,31 +974,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="local-address">
-                    <properties>
-                      <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
-                      <completionHelp>
-                        <list>any</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address of a local interface for VPN</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of a local interface for VPN</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>any</format>
-                        <description>Allow any IPv4 address present on the system to be used for VPN</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                        <validator name="ipv6-address"/>
-                        <regex>^(any)$</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/local-address.xml.i>
                   <tagNode name="tunnel">
                     <properties>
                       <help>Peer tunnel [REQUIRED]</help>
@@ -908,63 +986,14 @@
                     <children>
                       #include <include/generic-disable-node.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
-                      <node name="local">
-                        <properties>
-                          <help>Local parameters for interesting traffic</help>
-                        </properties>
-                        <children>
-                          <leafNode name="port">
-                            <properties>
-                              <help>Any TCP or UDP port</help>
-                              <valueHelp>
-                                <format>port name</format>
-                                <description>Named port (any name in /etc/services, e.g., http)</description>
-                              </valueHelp>
-                              <valueHelp>
-                                <format>u32:1-65535</format>
-                                <description>Numbered port</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="prefix">
-                            <properties>
-                              <help>Local IPv4 or IPv6 prefix</help>
-                              <valueHelp>
-                                <format>ipv4</format>
-                                <description>Local IPv4 prefix</description>
-                              </valueHelp>
-                              <valueHelp>
-                                <format>ipv6</format>
-                                <description>Local IPv6 prefix</description>
-                              </valueHelp>
-                              <constraint>
-                                <validator name="ipv4-prefix"/>
-                                <validator name="ipv6-prefix"/>
-                              </constraint>
-                              <multi/>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
+                      #include <include/ipsec/local-traffic-selector.xml.i>
                       #include <include/ip-protocol.xml.i>
                       <node name="remote">
                         <properties>
                           <help>Remote parameters for interesting traffic</help>
                         </properties>
                         <children>
-                          <leafNode name="port">
-                            <properties>
-                              <help>Any TCP or UDP port</help>
-                              <valueHelp>
-                                <format>port name</format>
-                                <description>Named port (any name in /etc/services, e.g., http)</description>
-                              </valueHelp>
-                              <valueHelp>
-                                <format>u32:1-65535</format>
-                                <description>Numbered port</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
+                          #include <include/port-number.xml.i>
                           <leafNode name="prefix">
                             <properties>
                               <help>Remote IPv4 or IPv6 prefix</help>
@@ -994,7 +1023,10 @@
                     <children>
                       <leafNode name="bind">
                         <properties>
-                          <help>VTI tunnel interface associated with this configuration [REQUIRED]</help>
+                          <help>VTI tunnel interface associated with this configuration</help>
+                          <completionHelp>
+                            <path>interfaces vti</path>
+                          </completionHelp>
                         </properties>
                       </leafNode>
                       #include <include/ipsec/esp-group.xml.i>

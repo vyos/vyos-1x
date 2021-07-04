@@ -34,7 +34,6 @@ from vyos.template import render
 from vyos.validate import is_ipv6_link_local
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import process_named_running
 from vyos.util import run
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -81,6 +80,7 @@ def get_config(config=None):
     # added in a more fine grained way later on
     del default_values['esp_group']
     del default_values['ike_group']
+    del default_values['remote_access']
     ipsec = dict_merge(default_values, ipsec)
 
     if 'esp_group' in ipsec:
@@ -88,12 +88,16 @@ def get_config(config=None):
         for group in ipsec['esp_group']:
             ipsec['esp_group'][group] = dict_merge(default_values,
                                                    ipsec['esp_group'][group])
-
     if 'ike_group' in ipsec:
         default_values = defaults(base + ['ike-group'])
         for group in ipsec['ike_group']:
             ipsec['ike_group'][group] = dict_merge(default_values,
                                                    ipsec['ike_group'][group])
+    if 'remote_access' in ipsec:
+        default_values = defaults(base + ['remote-access'])
+        for rw in ipsec['remote_access']:
+            ipsec['remote_access'][rw] = dict_merge(default_values,
+                                                    ipsec['remote_access'][rw])
 
     ipsec['dhcp_no_address'] = {}
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
@@ -109,8 +113,6 @@ def get_config(config=None):
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
 
-    import pprint
-    pprint.pprint(ipsec)
     return ipsec
 
 def get_rsa_local_key(ipsec):
@@ -326,6 +328,11 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
+    if 'remote_access' in ipsec:
+        for rw, rw_conf in ipsec['remote_access'].items():
+            if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
+                generate_pki_files(ipsec['pki'], rw_conf['authentication']['x509'])
+
     if 'site_to_site' in data and 'peer' in data['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             if peer in ipsec['dhcp_no_address']:
@@ -385,24 +392,17 @@ def resync_nhrp(ipsec):
 
 def apply(ipsec):
     if not ipsec:
-        call('sudo /usr/sbin/ipsec stop')
+        call('sudo ipsec stop')
     else:
-        should_start = 'profile' in ipsec or dict_search('site_to_site.peer', ipsec)
+        args = ''
+        if 'auto_update' in ipsec:
+            args = '--auto-update ' + ipsec['auto_update']
+        call(f'sudo ipsec restart {args}')
+        call('sudo ipsec rereadall')
+        call('sudo ipsec reload')
 
-        if not process_named_running('charon') and should_start:
-            args = f'--auto-update {ipsec["auto_update"]}' if 'auto_update' in ipsec else ''
-            call(f'sudo /usr/sbin/ipsec start {args}')
-        elif not should_start:
-            call('sudo /usr/sbin/ipsec stop')
-        elif ipsec['interface_change']:
-            call('sudo /usr/sbin/ipsec restart')
-        else:
-            call('sudo /usr/sbin/ipsec rereadall')
-            call('sudo /usr/sbin/ipsec reload')
-
-        if should_start:
-            sleep(2) # Give charon enough time to start
-            call('sudo /usr/sbin/swanctl -q')
+        sleep(5) # Give charon enough time to start
+        call('sudo swanctl -q')
 
     resync_l2tp(ipsec)
     resync_nhrp(ipsec)
