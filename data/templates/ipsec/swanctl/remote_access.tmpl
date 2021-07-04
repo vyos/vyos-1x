@@ -30,8 +30,8 @@
                 rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 dpd_action = clear
-{%   set local_prefix = rw_conf.local_network.prefix if rw_conf.local_network is defined and rw_conf.local_network.prefix is defined else ['0.0.0.0/0', '::/0'] %}
-{%   set local_port = rw_conf.local_network.port if rw_conf.local_network is defined and rw_conf.local_network.port is defined else '' %}
+{%   set local_prefix = rw_conf.local.prefix if rw_conf.local is defined and rw_conf.local.prefix is defined else ['0.0.0.0/0', '::/0'] %}
+{%   set local_port = rw_conf.local.port if rw_conf.local is defined and rw_conf.local.port is defined else '' %}
 {%   set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
             }

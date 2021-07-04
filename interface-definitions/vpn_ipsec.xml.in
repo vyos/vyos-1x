@@ -744,32 +744,7 @@
               #include <include/ipsec/esp-group.xml.i>
               #include <include/ipsec/ike-group.xml.i>
               #include <include/ipsec/local-address.xml.i>
-              <node name="local-network">
-                <properties>
-                  <help>Local traffic selectors</help>
-                </properties>
-                <children>
-                  #include <include/port-number.xml.i>
-                  <leafNode name="prefix">
-                    <properties>
-                      <help>Local IPv4 or IPv6 prefix</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>Local IPv4 prefix</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>Local IPv6 prefix</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-prefix"/>
-                        <validator name="ipv6-prefix"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/ipsec/local-traffic-selector.xml.i>
               <node name="pool">
                 <properties>
                   <help>IP address pool for remote-access users</help>
@@ -1008,32 +983,7 @@
                     <children>
                       #include <include/generic-disable-node.xml.i>
                       #include <include/ipsec/esp-group.xml.i>
-                      <node name="local">
-                        <properties>
-                          <help>Local parameters for interesting traffic</help>
-                        </properties>
-                        <children>
-                          #include <include/port-number.xml.i>
-                          <leafNode name="prefix">
-                            <properties>
-                              <help>Local IPv4 or IPv6 prefix</help>
-                              <valueHelp>
-                                <format>ipv4</format>
-                                <description>Local IPv4 prefix</description>
-                              </valueHelp>
-                              <valueHelp>
-                                <format>ipv6</format>
-                                <description>Local IPv6 prefix</description>
-                              </valueHelp>
-                              <constraint>
-                                <validator name="ipv4-prefix"/>
-                                <validator name="ipv6-prefix"/>
-                              </constraint>
-                              <multi/>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
+                      #include <include/ipsec/local-traffic-selector.xml.i>
                       #include <include/ip-protocol.xml.i>
                       <node name="remote">
                         <properties>
