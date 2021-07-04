@@ -692,9 +692,12 @@
                   <leafNode name="tunnel">
                     <properties>
                       <help>Tunnel interface associated with this configuration profile</help>
+                      <completionHelp>
+                        <path>interfaces tunnel</path>
+                      </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Tunnel interface associated with this configuration profile</description>
+                        <description>Associated interface to this configuration profile</description>
                       </valueHelp>
                       <multi/>
                     </properties>
