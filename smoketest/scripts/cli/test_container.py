@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import unittest
 import json
 
@@ -75,6 +76,10 @@ class TesContainer(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(json_subnet, prefix)
         self.assertEqual(json_ip, cont_ip)
+    
+    def test_oci_runtime_exists(self):
+        self.assertTrue(os.path.exists('/usr/bin/runc'))
+            
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

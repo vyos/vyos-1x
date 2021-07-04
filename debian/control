@@ -134,6 +134,7 @@ Depends:
   python3-zmq,
   qrencode,
   radvd,
+  runc,
   salt-minion,
   sed,
   smartmontools,
