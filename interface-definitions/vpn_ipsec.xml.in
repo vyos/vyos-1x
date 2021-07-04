@@ -810,27 +810,8 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="dns-server">
-                    <properties>
-                      <help>IPv4 or IPv6 DNS addresses for pool</help>
-                      <completionHelp>
-                        <list>any</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 DNS address for pool</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 DNS address for pool</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  <!-- Include Accel-PPP definition here, maybe time for a rename? -->
+                  #include <include/accel-ppp/name-server.xml.i>
                 </children>
               </node>
               <leafNode name="timeout">

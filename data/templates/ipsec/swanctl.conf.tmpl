@@ -26,7 +26,7 @@ pools {
 {%    for ra, ra_conf in remote_access.items() if remote_access is defined %}
     ra-{{ ra }} {
         addrs = {{ ra_conf.pool.prefix }}
-        dns = {{ ra_conf.pool.dns_server | join(",") }}
+        dns = {{ ra_conf.pool.name_server | join(",") }}
 {%      if ra_conf.pool.exclude is defined %}
         split_exclude = {{ ra_conf.pool.exclude | join(",") }}
 {%      endif %}
