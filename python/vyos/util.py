@@ -16,9 +16,6 @@
 import os
 import re
 import sys
-import time
-
-import inotify.adapters
 
 #
 # NOTE: Do not import full classes here, move your import to the function
@@ -519,9 +516,12 @@ def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sl
         raise ValueError(
           "File path {} does not have a file part, do not know what to watch for".format(file_path))
 
-    time_start = time.time()
+    from inotify.adapters import Inotify
+    from time import time
 
-    i = inotify.adapters.Inotify()
+    time_start = time()
+
+    i = Inotify()
     i.add_watch(os.path.dirname(file_path))
 
     if pre_hook:
