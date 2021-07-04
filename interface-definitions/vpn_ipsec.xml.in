@@ -1089,7 +1089,10 @@
                     <children>
                       <leafNode name="bind">
                         <properties>
-                          <help>VTI tunnel interface associated with this configuration [REQUIRED]</help>
+                          <help>VTI tunnel interface associated with this configuration</help>
+                          <completionHelp>
+                            <path>interfaces vti</path>
+                          </completionHelp>
                         </properties>
                       </leafNode>
                       #include <include/ipsec/esp-group.xml.i>
