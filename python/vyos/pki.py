@@ -124,7 +124,14 @@ def create_certificate_request(subject, private_key):
         .subject_name(subject_obj) \
         .sign(private_key, hashes.SHA256())
 
-def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_type='server', is_ca=False):
+def add_key_identifier(ca_cert):
+    try:
+        ski_ext = ca_cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+        return x509.AuthorityKeyIdentifier.from_issuer_subject_key_identifier(ski_ext.value)
+    except:
+        return x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key())
+
+def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_type='server', is_ca=False, is_sub_ca=False):
     ext_key_usage = []
     if is_ca:
         ext_key_usage = [ExtendedKeyUsageOID.CLIENT_AUTH, ExtendedKeyUsageOID.SERVER_AUTH]
@@ -141,8 +148,7 @@ def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_t
         .not_valid_before(datetime.datetime.utcnow()) \
         .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=int(valid_days)))
 
-    builder = builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=None), critical=True)
-    builder = builder.add_extension(x509.ExtendedKeyUsage(ext_key_usage), critical=True)
+    builder = builder.add_extension(x509.BasicConstraints(ca=is_ca, path_length=0 if is_sub_ca else None), critical=True)
     builder = builder.add_extension(x509.KeyUsage(
         digital_signature=True,
         content_commitment=False,
@@ -153,6 +159,11 @@ def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_t
         crl_sign=is_ca,
         encipher_only=False,
         decipher_only=False), critical=True)
+    builder = builder.add_extension(x509.ExtendedKeyUsage(ext_key_usage), critical=False)
+    builder = builder.add_extension(x509.SubjectKeyIdentifier.from_public_key(cert_req.public_key()), critical=False)
+
+    if not is_ca or is_sub_ca:
+        builder = builder.add_extension(add_key_identifier(ca_cert), critical=False)
 
     for ext in cert_req.extensions:
         builder = builder.add_extension(ext, critical=False)
