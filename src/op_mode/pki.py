@@ -276,12 +276,12 @@ def generate_certificate_request(private_key=None, key_type=None, return_request
     print(encode_certificate(cert_req) + "\n")
     install_certificate(name, private_key=private_key, key_type=key_type, key_passphrase=passphrase, is_ca=False)
 
-def generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False):
+def generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False, is_sub_ca=False):
     valid_days = ask_input('Enter how many days certificate will be valid:', default='365' if not is_ca else '1825', numeric_only=True)
     cert_type = None
     if not is_ca:
         cert_type = ask_input('Enter certificate type: (client, server)', default='server', valid_responses=['client', 'server'])
-    return create_certificate(cert_req, ca_cert, ca_private_key, valid_days, cert_type, is_ca)
+    return create_certificate(cert_req, ca_cert, ca_private_key, valid_days, cert_type, is_ca, is_sub_ca)
 
 def generate_ca_certificate(name, install=False):
     private_key, key_type = generate_private_key()
@@ -347,7 +347,7 @@ def generate_ca_certificate_sign(name, ca_name, install=False):
         print("Invalid certificate request")
         return None
 
-    cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=True)
+    cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=True, is_sub_ca=True)
     passphrase = ask_passphrase()
 
     if not install:
