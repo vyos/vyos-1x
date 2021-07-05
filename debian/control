@@ -23,7 +23,6 @@ Build-Depends:
   python3-setuptools,
   python3-sphinx,
   python3-xmltodict,
-  python3-inotify,
   quilt,
   whois
 Standards-Version: 3.9.6
@@ -100,6 +99,7 @@ Depends:
   ${python3:Depends},
   python3-flask,
   python3-hurry.filesize,
+  python3-inotify,
   python3-isc-dhcp-leases,
   python3-jinja2,
   python3-jmespath,
