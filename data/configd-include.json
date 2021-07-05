@@ -27,7 +27,6 @@
 "interfaces-wireguard.py",
 "interfaces-wireless.py",
 "interfaces-wwan.py",
-"ipsec-settings.py",
 "lldp.py",
 "nat.py",
 "nat66.py",

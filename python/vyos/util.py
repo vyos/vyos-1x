@@ -440,7 +440,6 @@ def process_running(pid_file):
         pid = f.read().strip()
     return pid_exists(int(pid))
 
-
 def process_named_running(name):
     """ Checks if process with given name is running and returns its PID.
     If Process is not running, return None
@@ -450,7 +449,6 @@ def process_named_running(name):
         if name in p.name():
             return p.pid
     return None
-
 
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable

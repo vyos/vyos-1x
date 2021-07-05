@@ -19,6 +19,7 @@ import os
 
 from sys import exit
 from time import sleep
+from time import time
 
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
@@ -46,9 +47,14 @@ dhcp_wait_sleep = 1
 swanctl_dir    = '/etc/swanctl'
 ipsec_conf     = '/etc/ipsec.conf'
 ipsec_secrets  = '/etc/ipsec.secrets'
+charon_conf = '/etc/strongswan.d/charon.conf'
 charon_dhcp_conf = '/etc/strongswan.d/charon/dhcp.conf'
 interface_conf = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf   = f'{swanctl_dir}/swanctl.conf'
+
+default_install_routes = 'yes'
+
+vici_socket = '/var/run/charon.vici'
 
 CERT_PATH = f'{swanctl_dir}/x509/'
 KEY_PATH  = f'{swanctl_dir}/private/'
@@ -101,6 +107,7 @@ def get_config(config=None):
                                                     ipsec['remote_access'][rw])
 
     ipsec['dhcp_no_address'] = {}
+    ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
                                                                 'interface'])
     ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access',
@@ -352,9 +359,10 @@ def generate(ipsec):
     cleanup_pki_files()
 
     if not ipsec:
-        for config_file in [ipsec_conf, ipsec_secrets, interface_conf, swanctl_conf]:
+        for config_file in [ipsec_conf, ipsec_secrets, charon_dhcp_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
+        render(charon_conf, 'ipsec/charon.tmpl', {'install_routes': default_install_routes})
         return
 
     if ipsec['dhcp_no_address']:
@@ -371,7 +379,7 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
-    if 'remote_access' in ipsec:
+    if 'remote_access' in data:
         for rw, rw_conf in ipsec['remote_access'].items():
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
                 generate_pki_files(ipsec['pki'], rw_conf['authentication']['x509'])
@@ -414,6 +422,7 @@ def generate(ipsec):
 
     render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
     render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
+    render(charon_conf, 'ipsec/charon.tmpl', data)
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', data)
     render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
     render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
@@ -434,6 +443,17 @@ def resync_nhrp(ipsec):
     if tmp > 0:
         print('ERROR: failed to reapply NHRP settings!')
 
+def wait_for_vici_socket(timeout=5, sleep_interval=0.1):
+    start_time = time()
+    test_command = f'sudo socat -u OPEN:/dev/null UNIX-CONNECT:{vici_socket}'
+    while True:
+        if (start_time + timeout) < time():
+            return None
+        result = run(test_command)
+        if result == 0:
+            return True
+        sleep(sleep_interval)
+
 def apply(ipsec):
     if not ipsec:
         call('sudo ipsec stop')
@@ -445,8 +465,8 @@ def apply(ipsec):
         call('sudo ipsec rereadall')
         call('sudo ipsec reload')
 
-        sleep(5) # Give charon enough time to start
-        call('sudo swanctl -q')
+        if wait_for_vici_socket():
+            call('sudo swanctl -q')
 
     resync_l2tp(ipsec)
     resync_nhrp(ipsec)
