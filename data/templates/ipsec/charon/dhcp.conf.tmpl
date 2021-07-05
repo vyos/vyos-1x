@@ -1,0 +1,23 @@
+dhcp {
+    load = yes
+
+{% if options is defined and options.remote_access is defined and options.remote_access.dhcp_pool is defined %}
+{%   if options.remote_access.dhcp_pool.interface is defined %}
+    interface = {{ options.remote_access.dhcp_pool.interface }}
+{%   endif %}
+{%   if options.remote_access.dhcp_pool.server is defined %}
+    server = {{ options.remote_access.dhcp_pool.server }}
+{%   endif %}
+{% endif %}
+
+    # Always use the configured server address.
+    # force_server_address = no
+
+    # Derive user-defined MAC address from hash of IKE identity and send client
+    # identity DHCP option.
+    # identity_lease = no
+
+    # Use the DHCP server port (67) as source port when a unicast server address
+    # is configured.
+    # use_server_port = no
+}

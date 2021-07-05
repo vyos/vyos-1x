@@ -46,6 +46,7 @@ dhcp_wait_sleep = 1
 swanctl_dir    = '/etc/swanctl'
 ipsec_conf     = '/etc/ipsec.conf'
 ipsec_secrets  = '/etc/ipsec.secrets'
+charon_dhcp_conf = '/etc/strongswan.d/charon/dhcp.conf'
 interface_conf = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf   = f'{swanctl_dir}/swanctl.conf'
 
@@ -150,13 +151,13 @@ def verify_pki(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
     cert_name = x509_conf['certificate']
 
-    if not dict_search_args(ipsec['pki'], 'ca', ca_cert_name, 'certificate'):
+    if not dict_search_args(pki, 'ca', ca_cert_name, 'certificate'):
         raise ConfigError(f'Missing CA certificate on specified PKI CA certificate "{ca_cert_name}"')
 
-    if not dict_search_args(ipsec['pki'], 'certificate', cert_name, 'certificate'):
+    if not dict_search_args(pki, 'certificate', cert_name, 'certificate'):
         raise ConfigError(f'Missing certificate on specified PKI certificate "{cert_name}"')
 
-    if not dict_search_args(ipsec['pki'], 'certificate', cert_name, 'private', 'key'):
+    if not dict_search_args(pki, 'certificate', cert_name, 'private', 'key'):
         raise ConfigError(f'Missing private key on specified PKI certificate "{cert_name}"')
 
     return True
@@ -189,6 +190,37 @@ def verify(ipsec):
 
             if 'authentication' not in profile_conf:
                 raise ConfigError(f"Missing authentication on {profile} profile")
+
+    if 'remote_access' in ipsec:
+        for name, ra_conf in ipsec['remote_access'].items():
+            if 'esp_group' in ra_conf:
+                if 'esp_group' not in ipsec or ra_conf['esp_group'] not in ipsec['esp_group']:
+                    raise ConfigError(f"Invalid esp-group on {name} remote-access config")
+            else:
+                raise ConfigError(f"Missing esp-group on {name} remote-access config")
+
+            if 'ike_group' in ra_conf:
+                if 'ike_group' not in ipsec or ra_conf['ike_group'] not in ipsec['ike_group']:
+                    raise ConfigError(f"Invalid ike-group on {name} remote-access config")
+            else:
+                raise ConfigError(f"Missing ike-group on {name} remote-access config")
+
+            if 'authentication' not in ra_conf:
+                raise ConfigError(f"Missing authentication on {name} remote-access config")
+
+            if ra_conf['authentication']['server_mode'] == 'x509':
+                if 'x509' not in ra_conf['authentication']:
+                    raise ConfigError(f"Missing x509 settings on {name} remote-access config")
+
+                x509 = ra_conf['authentication']['x509']
+
+                if 'ca_certificate' not in x509 or 'certificate' not in x509:
+                    raise ConfigError(f"Missing x509 certificates on {name} remote-access config")
+
+                verify_pki(ipsec['pki'], x509)
+            elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
+                if 'pre_shared_secret' not in ra_conf['authentication']:
+                    raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
@@ -282,6 +314,15 @@ def verify(ipsec):
                         if ('local' in tunnel_conf and 'prefix' in tunnel_conf['local']) or ('remote' in tunnel_conf and 'prefix' in tunnel_conf['remote']):
                             raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
 
+def cleanup_pki_files():
+    for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH]:
+        if not os.path.exists(path):
+            continue
+        for file in os.listdir(path):
+            file_path = os.path.join(path, file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+
 def generate_pki_files(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
     ca_cert_data = dict_search_args(pki, 'ca', ca_cert_name, 'certificate')
@@ -308,6 +349,8 @@ def generate_pki_files(pki, x509_conf):
         f.write(wrap_private_key(key_data, protected))
 
 def generate(ipsec):
+    cleanup_pki_files()
+
     if not ipsec:
         for config_file in [ipsec_conf, ipsec_secrets, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
@@ -371,6 +414,7 @@ def generate(ipsec):
 
     render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
     render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
+    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', data)
     render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
     render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
 

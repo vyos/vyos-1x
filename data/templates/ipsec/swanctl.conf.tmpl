@@ -23,7 +23,7 @@ connections {
 
 pools {
 {%  if remote_access is defined %}
-{%    for ra, ra_conf in remote_access.items() if remote_access is defined %}
+{%    for ra, ra_conf in remote_access.items() if ra_conf.pool.dhcp_enable is not defined %}
     ra-{{ ra }} {
         addrs = {{ ra_conf.pool.prefix }}
         dns = {{ ra_conf.pool.name_server | join(",") }}
@@ -82,7 +82,17 @@ secrets {
 {%  endif %}
 {%  if remote_access is defined %}
 {%    for ra, ra_conf in remote_access.items() if remote_access is defined %}
-{%      if ra_conf.authentication is defined and ra_conf.authentication.local_users is defined and ra_conf.authentication.local_users.username is defined %}
+{%      if ra_conf.authentication.server_mode == 'pre-shared-secret' %}
+    ike_{{ ra }} {
+{%        if ra_conf.authentication.id is defined %}
+        id = "{{ ra_conf.authentication.id }}"
+{%        elif ra_conf.local_address is defined %}
+        id = "{{ ra_conf.local_address }}"
+{%        endif %}
+        secret = "{{ ra_conf.authentication.pre_shared_secret }}"
+    }
+{%      endif %}
+{%      if ra_conf.authentication.client_mode == 'eap-mschapv2' and ra_conf.authentication.local_users is defined and ra_conf.authentication.local_users.username is defined %}
 {%        for user, user_conf in ra_conf.authentication.local_users.username.items() if user_conf.disable is not defined %}
     eap-{{ ra }}-{{ user }} {
         secret = "{{ user_conf.password }}"

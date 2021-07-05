@@ -10,19 +10,27 @@
         send_certreq = no
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
+{%   if rw_conf.pool.dhcp_enable is defined %}
+        pools = dhcp
+{%   else %}
         pools = ra-{{ name }}
+{%   endif %}
         local {
-            auth = pubkey
-{%   if rw_conf.authentication is defined and rw_conf.authentication.id is defined and rw_conf.authentication.use_x509_id is not defined %}
+{%   if rw_conf.authentication.id is defined and rw_conf.authentication.use_x509_id is not defined %}
             id = "{{ rw_conf.authentication.id }}"
 {%   endif %}
-{%   if rw_conf.authentication is defined and rw_conf.authentication.x509 is defined and rw_conf.authentication.x509.certificate is defined %}
+{%   if rw_conf.authentication.server_mode == 'x509' %}
+            auth = pubkey
             certs = {{ rw_conf.authentication.x509.certificate }}.pem
+{%   elif rw_conf.authentication.server_mode == 'pre-shared-secret' %}
+            auth = psk
 {%   endif %}
         }
         remote {
-            auth = eap-mschapv2
+            auth = {{ rw_conf.authentication.client_mode }}
+{%   if rw_conf.authentication.client_mode.startswith("eap") %}
             eap_id = %any
+{%   endif %}
         }
         children {
             ikev2-vpn  {
