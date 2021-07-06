@@ -36,6 +36,8 @@ airbag.enable()
 config_containers_registry = '/etc/containers/registries.conf'
 config_containers_storage = '/etc/containers/storage.conf'
 
+runtime = '/usr/bin/runc'
+
 def _cmd(command):
     if os.path.exists('/tmp/vyos.container.debug'):
         print(command)
@@ -244,18 +246,18 @@ def apply(container):
                         volume += f' -v {svol}:{dvol}'
 
                 if 'allow_host_networks' in container_config:
-                    _cmd(f'podman run -dit --name {name} --net host {port} {volume} {env_opt} {image}')
+                    _cmd(f'podman --runtime {runtime} run -dit --name {name} --net host {port} {volume} {env_opt} {image}')
                 else:
                     for network in container_config['network']:
                         ipparam = ''
                         if 'address' in container_config['network'][network]:
                             ipparam = '--ip ' + container_config['network'][network]['address']
-                        _cmd(f'podman run --name {name} -dit --net {network} {ipparam} {port} {volume} {env_opt} {image}')
+                        _cmd(f'podman --runtime {runtime} run --name {name} -dit --net {network} {ipparam} {port} {volume} {env_opt} {image}')
 
             # Else container is already created. Just start it.
             # It's needed after reboot.
             elif container_status(name) != 'running':
-                _cmd(f'podman start {name}')
+                _cmd(f'podman --runtime {runtime} start {name}')
 
     return None
 
