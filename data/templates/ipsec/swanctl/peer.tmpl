@@ -38,7 +38,7 @@
 {%   if peer_conf.authentication.mode == 'x509' %}
             certs = {{ peer_conf.authentication.x509.certificate }}.pem
 {%   elif peer_conf.authentication.mode == 'rsa' %}
-            pubkeys = localhost.pub
+            pubkeys = {{ peer_conf.authentication.rsa.local_key }}.pem
 {%   endif %}
         }
         remote {
@@ -49,7 +49,7 @@
 {%   endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
 {%   if peer_conf.authentication.mode == 'rsa' %}
-            pubkeys = {{ peer_conf.authentication.rsa_key_name }}.pub
+            pubkeys = {{ peer_conf.authentication.rsa.remote_key }}.pem
 {%   endif %}
         }
         children {
