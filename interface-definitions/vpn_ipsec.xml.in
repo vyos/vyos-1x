@@ -648,6 +648,37 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="remote-access">
+                <properties>
+                  <help>remote-access global options</help>
+                </properties>
+                <children>
+                  <node name="dhcp-pool">
+                    <properties>
+                      <help>DHCP pool options for remote-access</help>
+                    </properties>
+                    <children>
+                      <leafNode name="interface">
+                        <properties>
+                          <help>Interface with DHCP server to use</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_interfaces.py</script>
+                          </completionHelp>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="server">
+                        <properties>
+                          <help>DHCP server address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address of the DHCP server</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
             </children>
           </node>
           <tagNode name="profile">
@@ -720,6 +751,26 @@
                 <children>
                   #include <include/ipsec/authentication-id.xml.i>
                   #include <include/ipsec/authentication-x509.xml.i>
+                  <leafNode name="client-mode">
+                    <properties>
+                      <help>Client authentication mode</help>
+                      <completionHelp>
+                        <list>eap-tls eap-mschapv2</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>eap-tls</format>
+                        <description>EAP-TLS</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>eap-mschapv2</format>
+                        <description>EAP-MSCHAPv2</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(eap-tls|eap-mschapv2)$</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>eap-mschapv2</defaultValue>
+                  </leafNode>
                   <node name="local-users">
                     <properties>
                       <help>Local user authentication for PPPoE server</help>
@@ -740,6 +791,31 @@
                       </tagNode>
                     </children>
                   </node>
+                  <leafNode name="server-mode">
+                    <properties>
+                      <help>Server authentication mode</help>
+                      <completionHelp>
+                        <list>pre-shared-secret x509</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>pre-shared-secret</format>
+                        <description>pre-shared-secret_description</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>x509</format>
+                        <description>x509_description</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(pre-shared-secret|x509)$</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>x509</defaultValue>
+                  </leafNode>
+                  <leafNode name="pre-shared-secret">
+                    <properties>
+                      <help>Pre-shared-secret used for server authentication</help>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               #include <include/generic-description.xml.i>
@@ -753,6 +829,12 @@
                   <help>IP address pool for remote-access users</help>
                 </properties>
                 <children>
+                  <leafNode name="dhcp-enable">
+                    <properties>
+                      <help>Enable DHCP pool for clients on this connection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="exclude">
                     <properties>
                       <help>Local IPv4 or IPv6 pool prefix exclusions</help>

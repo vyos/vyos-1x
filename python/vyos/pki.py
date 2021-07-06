@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import ipaddress
 
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
@@ -112,7 +113,7 @@ def create_private_key(key_type, key_size=None):
         private_key = ec.generate_private_key(curve)
     return private_key
 
-def create_certificate_request(subject, private_key):
+def create_certificate_request(subject, private_key, subject_alt_names=[]):
     subject_obj = x509.Name([
         x509.NameAttribute(NameOID.COUNTRY_NAME, subject['country']),
         x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, subject['state']),
@@ -120,9 +121,20 @@ def create_certificate_request(subject, private_key):
         x509.NameAttribute(NameOID.ORGANIZATION_NAME, subject['organization']),
         x509.NameAttribute(NameOID.COMMON_NAME, subject['common_name'])])
 
-    return x509.CertificateSigningRequestBuilder() \
-        .subject_name(subject_obj) \
-        .sign(private_key, hashes.SHA256())
+    builder = x509.CertificateSigningRequestBuilder() \
+        .subject_name(subject_obj)
+
+    if subject_alt_names:
+        alt_names = []
+        for obj in subject_alt_names:
+            if isinstance(obj, ipaddress.IPv4Address) or isinstance(obj, ipaddress.IPv6Address):
+                alt_names.append(x509.IPAddress(obj))
+            elif isinstance(obj, str):
+                alt_names.append(x509.DNSName(obj))
+        if alt_names:
+            builder = builder.add_extension(x509.SubjectAlternativeName(alt_names), critical=False)
+
+    return builder.sign(private_key, hashes.SHA256())
 
 def add_key_identifier(ca_cert):
     try:
@@ -166,7 +178,7 @@ def create_certificate(cert_req, ca_cert, ca_private_key, valid_days=365, cert_t
         builder = builder.add_extension(add_key_identifier(ca_cert), critical=False)
 
     for ext in cert_req.extensions:
-        builder = builder.add_extension(ext, critical=False)
+        builder = builder.add_extension(ext.value, critical=False)
 
     return builder.sign(ca_private_key, hashes.SHA256())
 

@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import ipaddress
 import os
 import re
 import sys
@@ -248,7 +249,24 @@ def generate_private_key():
 
     return create_private_key(key_type, size), key_type
 
-def generate_certificate_request(private_key=None, key_type=None, return_request=False, name=None, install=False):
+def parse_san_string(san_string):
+    if not san_string:
+        return None
+
+    output = []
+    san_split = san_string.strip().split(",")
+
+    for pair_str in san_split:
+        tag, value = pair_str.strip().split(":", 1)
+        if tag == 'ipv4':
+            output.append(ipaddress.IPv4Address(value))
+        elif tag == 'ipv6':
+            output.append(ipaddress.IPv6Address(value))
+        elif tag == 'dns':
+            output.append(value)
+    return output
+
+def generate_certificate_request(private_key=None, key_type=None, return_request=False, name=None, install=False, ask_san=True):
     if not private_key:
         private_key, key_type = generate_private_key()
 
@@ -259,8 +277,14 @@ def generate_certificate_request(private_key=None, key_type=None, return_request
     subject['locality'] = ask_input('Enter locality:', default=default_values['locality'])
     subject['organization'] = ask_input('Enter organization name:', default=default_values['organization'])
     subject['common_name'] = ask_input('Enter common name:', default='vyos.io')
+    subject_alt_names = None
 
-    cert_req = create_certificate_request(subject, private_key)
+    if ask_san and ask_yes_no('Do you want to configure Subject Alternative Names?'):
+        print("Enter alternative names in a comma separate list, example: ipv4:1.1.1.1,ipv6:fe80::1,dns:vyos.net")
+        san_string = ask_input('Enter Subject Alternative Names:')
+        subject_alt_names = parse_san_string(san_string)
+
+    cert_req = create_certificate_request(subject, private_key, subject_alt_names)
 
     if return_request:
         return cert_req
@@ -285,7 +309,7 @@ def generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False, is_sub_
 
 def generate_ca_certificate(name, install=False):
     private_key, key_type = generate_private_key()
-    cert_req = generate_certificate_request(private_key, key_type, return_request=True)
+    cert_req = generate_certificate_request(private_key, key_type, return_request=True, ask_san=False)
     cert = generate_certificate(cert_req, cert_req, private_key, is_ca=True)
     passphrase = ask_passphrase()
 
@@ -325,7 +349,7 @@ def generate_ca_certificate_sign(name, ca_name, install=False):
     cert_req = None
     if not ask_yes_no('Do you already have a certificate request?'):
         private_key, key_type = generate_private_key()
-        cert_req = generate_certificate_request(private_key, key_type, return_request=True)
+        cert_req = generate_certificate_request(private_key, key_type, return_request=True, ask_san=False)
     else:
         print("Paste certificate request and press enter:")
         lines = []

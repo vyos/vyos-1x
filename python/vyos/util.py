@@ -440,7 +440,6 @@ def process_running(pid_file):
         pid = f.read().strip()
     return pid_exists(int(pid))
 
-
 def process_named_running(name):
     """ Checks if process with given name is running and returns its PID.
     If Process is not running, return None
@@ -450,7 +449,6 @@ def process_named_running(name):
         if name in p.name():
             return p.pid
     return None
-
 
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
@@ -704,6 +702,19 @@ def dict_search(path, my_dict):
     for p in parts[:-1]:
         c = c.get(p, {})
     return c.get(parts[-1], None)
+
+def dict_search_args(dict_object, *path):
+    # Traverse dictionary using variable arguments
+    # Added due to above function not allowing for '.' in the key names
+    # Example: dict_search_args(some_dict, 'key', 'subkey', 'subsubkey', ...)
+    if not isinstance(dict_object, dict) or not path:
+        return None
+
+    for item in path:
+        if item not in dict_object:
+            return None
+        dict_object = dict_object[item]
+    return dict_object
 
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.

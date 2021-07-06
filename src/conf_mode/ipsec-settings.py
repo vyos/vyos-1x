@@ -29,7 +29,6 @@ from vyos import airbag
 airbag.enable()
 
 ra_conn_name = "remote-access"
-charon_conf_file = "/etc/strongswan.d/charon.conf"
 ipsec_secrets_file = "/etc/ipsec.secrets"
 ipsec_ra_conn_dir = "/etc/ipsec.d/tunnels/"
 ipsec_ra_conn_file = ipsec_ra_conn_dir + ra_conn_name
@@ -46,10 +45,6 @@ def get_config(config=None):
         config = config
     else:
         config = Config()
-    data = {"install_routes": "yes"}
-
-    if config.exists("vpn ipsec options disable-route-autoinstall"):
-        data["install_routes"] = "no"
 
     if config.exists("vpn ipsec ipsec-interfaces interface"):
         data["ipsec_interfaces"] = config.return_values("vpn ipsec ipsec-interfaces interface")
@@ -170,8 +165,6 @@ def verify(data):
            raise ConfigError("L2TP VPN configuration error: \"vpn ipsec ipsec-interfaces\" must be specified.")
 
 def generate(data):
-    render(charon_conf_file, 'ipsec/charon.tmpl', data)
-
     if data["ipsec_l2tp"]:
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
         # old_umask = os.umask(0o077)

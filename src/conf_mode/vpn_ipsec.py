@@ -19,6 +19,7 @@ import os
 
 from sys import exit
 from time import sleep
+from time import time
 
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
@@ -33,7 +34,7 @@ from vyos.template import ip_from_cidr
 from vyos.template import render
 from vyos.validate import is_ipv6_link_local
 from vyos.util import call
-from vyos.util import dict_search
+from vyos.util import dict_search_args
 from vyos.util import run
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -46,8 +47,14 @@ dhcp_wait_sleep = 1
 swanctl_dir    = '/etc/swanctl'
 ipsec_conf     = '/etc/ipsec.conf'
 ipsec_secrets  = '/etc/ipsec.secrets'
+charon_conf = '/etc/strongswan.d/charon.conf'
+charon_dhcp_conf = '/etc/strongswan.d/charon/dhcp.conf'
 interface_conf = '/etc/strongswan.d/interfaces_use.conf'
 swanctl_conf   = f'{swanctl_dir}/swanctl.conf'
+
+default_install_routes = 'yes'
+
+vici_socket = '/var/run/charon.vici'
 
 CERT_PATH = f'{swanctl_dir}/x509/'
 KEY_PATH  = f'{swanctl_dir}/private/'
@@ -100,6 +107,7 @@ def get_config(config=None):
                                                     ipsec['remote_access'][rw])
 
     ipsec['dhcp_no_address'] = {}
+    ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
                                                                 'interface'])
     ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access',
@@ -116,7 +124,7 @@ def get_config(config=None):
     return ipsec
 
 def get_rsa_local_key(ipsec):
-    return dict_search('local_key.file', ipsec['rsa_keys'])
+    return dict_search_args(ipsec['rsa_keys'], 'local_key', 'file')
 
 def verify_rsa_local_key(ipsec):
     file = get_rsa_local_key(ipsec)
@@ -132,7 +140,7 @@ def verify_rsa_local_key(ipsec):
     return False
 
 def verify_rsa_key(ipsec, key_name):
-    return dict_search(f'rsa_key_name.{key_name}.rsa_key', ipsec['rsa_keys'])
+    return dict_search_args(ipsec['rsa_keys'], 'rsa_key_name', key_name, 'rsa_key')
 
 def get_dhcp_address(iface):
     addresses = Interface(iface).get_addr()
@@ -150,13 +158,13 @@ def verify_pki(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
     cert_name = x509_conf['certificate']
 
-    if not dict_search(f'ca.{ca_cert_name}.certificate', ipsec['pki']):
+    if not dict_search_args(pki, 'ca', ca_cert_name, 'certificate'):
         raise ConfigError(f'Missing CA certificate on specified PKI CA certificate "{ca_cert_name}"')
 
-    if not dict_search(f'certificate.{cert_name}.certificate', ipsec['pki']):
+    if not dict_search_args(pki, 'certificate', cert_name, 'certificate'):
         raise ConfigError(f'Missing certificate on specified PKI certificate "{cert_name}"')
 
-    if not dict_search(f'certificate.{cert_name}.private.key', ipsec['pki']):
+    if not dict_search_args(pki, 'certificate', cert_name, 'private', 'key'):
         raise ConfigError(f'Missing private key on specified PKI certificate "{cert_name}"')
 
     return True
@@ -189,6 +197,37 @@ def verify(ipsec):
 
             if 'authentication' not in profile_conf:
                 raise ConfigError(f"Missing authentication on {profile} profile")
+
+    if 'remote_access' in ipsec:
+        for name, ra_conf in ipsec['remote_access'].items():
+            if 'esp_group' in ra_conf:
+                if 'esp_group' not in ipsec or ra_conf['esp_group'] not in ipsec['esp_group']:
+                    raise ConfigError(f"Invalid esp-group on {name} remote-access config")
+            else:
+                raise ConfigError(f"Missing esp-group on {name} remote-access config")
+
+            if 'ike_group' in ra_conf:
+                if 'ike_group' not in ipsec or ra_conf['ike_group'] not in ipsec['ike_group']:
+                    raise ConfigError(f"Invalid ike-group on {name} remote-access config")
+            else:
+                raise ConfigError(f"Missing ike-group on {name} remote-access config")
+
+            if 'authentication' not in ra_conf:
+                raise ConfigError(f"Missing authentication on {name} remote-access config")
+
+            if ra_conf['authentication']['server_mode'] == 'x509':
+                if 'x509' not in ra_conf['authentication']:
+                    raise ConfigError(f"Missing x509 settings on {name} remote-access config")
+
+                x509 = ra_conf['authentication']['x509']
+
+                if 'ca_certificate' not in x509 or 'certificate' not in x509:
+                    raise ConfigError(f"Missing x509 certificates on {name} remote-access config")
+
+                verify_pki(ipsec['pki'], x509)
+            elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
+                if 'pre_shared_secret' not in ra_conf['authentication']:
+                    raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
@@ -282,15 +321,24 @@ def verify(ipsec):
                         if ('local' in tunnel_conf and 'prefix' in tunnel_conf['local']) or ('remote' in tunnel_conf and 'prefix' in tunnel_conf['remote']):
                             raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
 
+def cleanup_pki_files():
+    for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH]:
+        if not os.path.exists(path):
+            continue
+        for file in os.listdir(path):
+            file_path = os.path.join(path, file)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+
 def generate_pki_files(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
-    ca_cert_data = dict_search(f'ca.{ca_cert_name}.certificate', pki)
-    ca_cert_crls = dict_search(f'ca.{ca_cert_name}.crl', pki) or []
+    ca_cert_data = dict_search_args(pki, 'ca', ca_cert_name, 'certificate')
+    ca_cert_crls = dict_search_args(pki, 'ca', ca_cert_name, 'crl') or []
     crl_index = 1
 
     cert_name = x509_conf['certificate']
-    cert_data = dict_search(f'certificate.{cert_name}.certificate', pki)
-    key_data = dict_search(f'certificate.{cert_name}.private.key', pki)
+    cert_data = dict_search_args(pki, 'certificate', cert_name, 'certificate')
+    key_data = dict_search_args(pki, 'certificate', cert_name, 'private', 'key')
     protected = 'passphrase' in x509_conf
 
     with open(os.path.join(CA_PATH, f'{ca_cert_name}.pem'), 'w') as f:
@@ -308,10 +356,13 @@ def generate_pki_files(pki, x509_conf):
         f.write(wrap_private_key(key_data, protected))
 
 def generate(ipsec):
+    cleanup_pki_files()
+
     if not ipsec:
-        for config_file in [ipsec_conf, ipsec_secrets, interface_conf, swanctl_conf]:
+        for config_file in [ipsec_conf, ipsec_secrets, charon_dhcp_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
+        render(charon_conf, 'ipsec/charon.tmpl', {'install_routes': default_install_routes})
         return
 
     if ipsec['dhcp_no_address']:
@@ -328,7 +379,7 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
-    if 'remote_access' in ipsec:
+    if 'remote_access' in data:
         for rw, rw_conf in ipsec['remote_access'].items():
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
                 generate_pki_files(ipsec['pki'], rw_conf['authentication']['x509'])
@@ -351,8 +402,8 @@ def generate(ipsec):
 
             if 'tunnel' in peer_conf:
                 for tunnel, tunnel_conf in peer_conf['tunnel'].items():
-                    local_prefixes = dict_search('local.prefix', tunnel_conf)
-                    remote_prefixes = dict_search('remote.prefix', tunnel_conf)
+                    local_prefixes = dict_search_args(tunnel_conf, 'local', 'prefix')
+                    remote_prefixes = dict_search_args(tunnel_conf, 'remote', 'prefix')
 
                     if not local_prefixes or not remote_prefixes:
                         continue
@@ -371,6 +422,8 @@ def generate(ipsec):
 
     render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
     render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
+    render(charon_conf, 'ipsec/charon.tmpl', data)
+    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', data)
     render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
     render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
 
@@ -390,6 +443,17 @@ def resync_nhrp(ipsec):
     if tmp > 0:
         print('ERROR: failed to reapply NHRP settings!')
 
+def wait_for_vici_socket(timeout=5, sleep_interval=0.1):
+    start_time = time()
+    test_command = f'sudo socat -u OPEN:/dev/null UNIX-CONNECT:{vici_socket}'
+    while True:
+        if (start_time + timeout) < time():
+            return None
+        result = run(test_command)
+        if result == 0:
+            return True
+        sleep(sleep_interval)
+
 def apply(ipsec):
     if not ipsec:
         call('sudo ipsec stop')
@@ -401,8 +465,8 @@ def apply(ipsec):
         call('sudo ipsec rereadall')
         call('sudo ipsec reload')
 
-        sleep(5) # Give charon enough time to start
-        call('sudo swanctl -q')
+        if wait_for_vici_socket():
+            call('sudo swanctl -q')
 
     resync_l2tp(ipsec)
     resync_nhrp(ipsec)
