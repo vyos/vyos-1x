@@ -48,7 +48,6 @@ secrets {
 {%    endfor %}
 {%  endif %}
 {%  if site_to_site is defined and site_to_site.peer is defined %}
-{%    set ns = namespace(local_key_set=False) %}
 {%    for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address and peer_conf.disable is not defined %}
 {%      set peer_name = peer.replace(".", "-").replace("@", "") %}
 {%      if peer_conf.authentication.mode == 'pre-shared-secret' %}
@@ -72,10 +71,12 @@ secrets {
         secret = "{{ peer_conf.authentication.x509.passphrase }}"
 {%        endif %}
     }
-{%      elif peer_conf.authentication.mode == 'rsa' and not ns.local_key_set %}
-{%        set ns.local_key_set = True %}
-    rsa_local {
-        file = {{ rsa_local_key }}
+{%      elif peer_conf.authentication.mode == 'rsa' %}
+    rsa_{{ peer_name }}_local {
+        file = {{ peer_conf.authentication.rsa.local_key }}.pem
+{%        if peer_conf.authentication.rsa.passphrase is defined %}
+        secret = "{{ peer_conf.authentication.rsa.passphrase }}"
+{%        endif %}
     }
 {%      endif %}
 {%    endfor %}

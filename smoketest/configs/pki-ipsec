@@ -85,6 +85,32 @@ vpn {
                     }
                 }
             }
+            peer 192.168.150.3 {
+                authentication {
+                    mode rsa
+                    pre-shared-secret MYSECRETKEY
+                    rsa-key-name peer2
+                }
+                default-esp-group MyESPGroup
+                ike-group MyIKEGroup
+                local-address 192.168.150.1
+                tunnel 0 {
+                    local {
+                        prefix 172.20.0.0/24
+                    }
+                    remote {
+                        prefix 172.22.0.0/24
+                    }
+                }
+            }
+        }
+    }
+    rsa-keys {
+        local-key {
+            file /config/auth/ovpn_test_server.key
+        }
+        rsa-key-name peer2 {
+            rsa-key 0sAwEAAbudt5WQZSW2plbixjpgx4yVN/WMHdYRIZhyypJWO4ujQ/UQS9j3oTBgV2+RLtQ0YQ7eocwIfkvJVUnnZVMyZ4asQMOarQgbQ5nFGliCcDOMtNXRxHlMsvmjLx4o6FWbGukwgoxsT2x915n0XMn4XJNNSIEQotxj2GWFhEfBSPHyOM++kODk0lkbE7mLeHMMFq02vQhoczzEPWxjUUoY3jywhmHMfb4PdAKLFyt9x40znmPCYh+NSMQmpBXtD3gjGtX62bgrqKuP3BJU44x1gLlv8rJAJ4SY74YKnFUZ8m5GSbnVapwPOrp65lJZFKOGs2XXjAp5leoR+wmSYyqbDJM=
         }
     }
 }

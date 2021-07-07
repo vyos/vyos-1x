@@ -1,49 +1,5 @@
 <?xml version="1.0"  encoding="UTF-8"?>
 <interfaceDefinition>
-  <node name="generate">
-    <children>
-      <node name="vpn">
-        <properties>
-          <help>VPN key generation utility</help>
-        </properties>
-        <children>
-          <node name="rsa-key">
-            <properties>
-              <help>Generate local RSA key (default: bits=2192)</help>
-            </properties>
-            <children>
-              <tagNode name="bits">
-                <properties>
-                  <help>Generate local RSA key with specified number of bits</help>
-                  <completionHelp>
-                    <list>&lt;16-4096&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="rsa-key" --bits="$5"</command>
-              </tagNode>
-            </children>
-            <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="rsa-key" --bits="2192"</command>
-          </node>
-          <node name="x509">
-            <properties>
-              <help>x509 key-pair generation tool</help>
-            </properties>
-            <children>
-              <tagNode name="key-pair">
-                <properties>
-                  <help>Generate x509 key-pair</help>
-                  <completionHelp>
-                    <list>&lt;common-name&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="x509" --name="$5"</command>
-              </tagNode>
-            </children>
-          </node>
-        </children>
-      </node>
-    </children>
-  </node>
   <node name="reset">
     <children>
       <node name="vpn">
@@ -139,12 +95,6 @@
               <help>Show Internet Key Exchange (IKE) information</help>
             </properties>
             <children>
-              <node name="rsa-keys">
-                <properties>
-                  <help>Show VPN RSA keys</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="rsa-key-show"</command>
-              </node>
               <node name="sa">
                 <properties>
                   <help>Show all currently active IKE Security Associations (SA)</help>

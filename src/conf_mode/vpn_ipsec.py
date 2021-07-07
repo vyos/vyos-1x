@@ -26,6 +26,8 @@ from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configdict import dict_merge
 from vyos.ifconfig import Interface
+from vyos.pki import encode_public_key
+from vyos.pki import load_private_key
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_crl
 from vyos.pki import wrap_public_key
@@ -57,15 +59,13 @@ default_install_routes = 'yes'
 vici_socket = '/var/run/charon.vici'
 
 CERT_PATH = f'{swanctl_dir}/x509/'
+PUBKEY_PATH = f'{swanctl_dir}/pubkey/'
 KEY_PATH  = f'{swanctl_dir}/private/'
 CA_PATH   = f'{swanctl_dir}/x509ca/'
 CRL_PATH  = f'{swanctl_dir}/x509crl/'
 
 DHCP_BASE = '/var/lib/dhcp/dhclient'
 DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
-
-LOCAL_KEY_PATHS = ['/config/auth/', '/config/ipsec.d/rsa-keys/']
-X509_PATH = '/config/auth/'
 
 def get_config(config=None):
     if config:
@@ -116,31 +116,8 @@ def get_config(config=None):
     ipsec['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
-    ipsec['rsa_keys'] = conf.get_config_dict(['vpn', 'rsa-keys'],
-                                             key_mangling=('-', '_'),
-                                             get_first_key=True,
-                                             no_tag_node_value_mangle=True)
 
     return ipsec
-
-def get_rsa_local_key(ipsec):
-    return dict_search_args(ipsec['rsa_keys'], 'local_key', 'file')
-
-def verify_rsa_local_key(ipsec):
-    file = get_rsa_local_key(ipsec)
-
-    if not file:
-        return False
-
-    for path in LOCAL_KEY_PATHS:
-        full_path = os.path.join(path, file)
-        if os.path.exists(full_path):
-            return full_path
-
-    return False
-
-def verify_rsa_key(ipsec, key_name):
-    return dict_search_args(ipsec['rsa_keys'], 'rsa_key_name', key_name, 'rsa_key')
 
 def get_dhcp_address(iface):
     addresses = Interface(iface).get_addr()
@@ -151,7 +128,7 @@ def get_dhcp_address(iface):
             return ip_from_cidr(address)
     return None
 
-def verify_pki(pki, x509_conf):
+def verify_pki_x509(pki, x509_conf):
     if not pki or 'ca' not in pki or 'certificate' not in pki:
         raise ConfigError(f'PKI is not configured')
 
@@ -166,6 +143,21 @@ def verify_pki(pki, x509_conf):
 
     if not dict_search_args(pki, 'certificate', cert_name, 'private', 'key'):
         raise ConfigError(f'Missing private key on specified PKI certificate "{cert_name}"')
+
+    return True
+
+def verify_pki_rsa(pki, rsa_conf):
+    if not pki or 'key_pair' not in pki:
+        raise ConfigError(f'PKI is not configured')
+
+    local_key = rsa_conf['local_key']
+    remote_key = rsa_conf['remote_key']
+
+    if not dict_search_args(pki, 'key_pair', local_key, 'private', 'key'):
+        raise ConfigError(f'Missing private key on specified local-key "{local_key}"')
+
+    if not dict_search_args(pki, 'key_pair', remote_key, 'public', 'key'):
+        raise ConfigError(f'Missing public key on specified remote-key "{remote_key}"')
 
     return True
 
@@ -224,7 +216,7 @@ def verify(ipsec):
                 if 'ca_certificate' not in x509 or 'certificate' not in x509:
                     raise ConfigError(f"Missing x509 certificates on {name} remote-access config")
 
-                verify_pki(ipsec['pki'], x509)
+                verify_pki_x509(ipsec['pki'], x509)
             elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
                 if 'pre_shared_secret' not in ra_conf['authentication']:
                     raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
@@ -255,17 +247,20 @@ def verify(ipsec):
                 if 'ca_certificate' not in x509 or 'certificate' not in x509:
                     raise ConfigError(f"Missing x509 certificates on site-to-site peer {peer}")
 
-                verify_pki(ipsec['pki'], x509)
+                verify_pki_x509(ipsec['pki'], x509)
+            elif peer_conf['authentication']['mode'] == 'rsa':
+                if 'rsa' not in peer_conf['authentication']:
+                    raise ConfigError(f"Missing RSA settings on site-to-site peer {peer}")
 
-            if peer_conf['authentication']['mode'] == 'rsa':
-                if not verify_rsa_local_key(ipsec):
-                    raise ConfigError(f"Invalid key on rsa-keys local-key")
+                rsa = peer_conf['authentication']['rsa']
 
-                if 'rsa_key_name' not in peer_conf['authentication']:
-                    raise ConfigError(f"Missing rsa-key-name on site-to-site peer {peer}")
+                if 'local_key' not in rsa:
+                    raise ConfigError(f"Missing RSA local-key on site-to-site peer {peer}")
 
-                if not verify_rsa_key(ipsec, peer_conf['authentication']['rsa_key_name']):
-                    raise ConfigError(f"Invalid rsa-key-name on site-to-site peer {peer}")
+                if 'remote_key' not in rsa:
+                    raise ConfigError(f"Missing RSA remote-key on site-to-site peer {peer}")
+
+                verify_pki_rsa(ipsec['pki'], rsa)
 
             if 'local_address' not in peer_conf and 'dhcp_interface' not in peer_conf:
                 raise ConfigError(f"Missing local-address or dhcp-interface on site-to-site peer {peer}")
@@ -322,7 +317,7 @@ def verify(ipsec):
                             raise ConfigError(f"Local/remote prefix cannot be used with ESP transport mode on tunnel {tunnel} for site-to-site peer {peer}")
 
 def cleanup_pki_files():
-    for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH]:
+    for path in [CERT_PATH, CA_PATH, CRL_PATH, KEY_PATH, PUBKEY_PATH]:
         if not os.path.exists(path):
             continue
         for file in os.listdir(path):
@@ -330,7 +325,7 @@ def cleanup_pki_files():
             if os.path.isfile(file_path):
                 os.unlink(file_path)
 
-def generate_pki_files(pki, x509_conf):
+def generate_pki_files_x509(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
     ca_cert_data = dict_search_args(pki, 'ca', ca_cert_name, 'certificate')
     ca_cert_crls = dict_search_args(pki, 'ca', ca_cert_name, 'crl') or []
@@ -352,8 +347,26 @@ def generate_pki_files(pki, x509_conf):
     with open(os.path.join(CERT_PATH, f'{cert_name}.pem'), 'w') as f:
         f.write(wrap_certificate(cert_data))
 
-    with open(os.path.join(KEY_PATH, f'{cert_name}.pem'), 'w') as f:
+    with open(os.path.join(KEY_PATH, f'x509_{cert_name}.pem'), 'w') as f:
         f.write(wrap_private_key(key_data, protected))
+
+def generate_pki_files_rsa(pki, rsa_conf):
+    local_key_name = rsa_conf['local_key']
+    local_key_data = dict_search_args(pki, 'key_pair', local_key_name, 'private', 'key')
+    protected = 'passphrase' in rsa_conf
+    remote_key_name = rsa_conf['remote_key']
+    remote_key_data = dict_search_args(pki, 'key_pair', remote_key_name, 'public', 'key')
+
+    local_key = load_private_key(local_key_data, rsa_conf['passphrase'] if protected else None)
+
+    with open(os.path.join(KEY_PATH, f'rsa_{local_key_name}.pem'), 'w') as f:
+        f.write(wrap_private_key(local_key_data, protected))
+
+    with open(os.path.join(PUBKEY_PATH, f'{local_key_name}.pem'), 'w') as f:
+        f.write(encode_public_key(local_key.public_key()))
+
+    with open(os.path.join(PUBKEY_PATH, f'{remote_key_name}.pem'), 'w') as f:
+        f.write(wrap_public_key(remote_key_data))
 
 def generate(ipsec):
     cleanup_pki_files()
@@ -369,28 +382,27 @@ def generate(ipsec):
         with open(DHCP_HOOK_IFLIST, 'w') as f:
             f.write(" ".join(ipsec['dhcp_no_address'].values()))
 
-    data = ipsec
-    data['rsa_local_key'] = verify_rsa_local_key(ipsec)
-
-    for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH]:
+    for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH, PUBKEY_PATH]:
         if not os.path.exists(path):
             os.mkdir(path, mode=0o755)
 
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
-    if 'remote_access' in data:
+    if 'remote_access' in ipsec:
         for rw, rw_conf in ipsec['remote_access'].items():
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
-                generate_pki_files(ipsec['pki'], rw_conf['authentication']['x509'])
+                generate_pki_files_x509(ipsec['pki'], rw_conf['authentication']['x509'])
 
-    if 'site_to_site' in data and 'peer' in data['site_to_site']:
+    if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             if peer in ipsec['dhcp_no_address']:
                 continue
 
             if peer_conf['authentication']['mode'] == 'x509':
-                generate_pki_files(ipsec['pki'], peer_conf['authentication']['x509'])
+                generate_pki_files_x509(ipsec['pki'], peer_conf['authentication']['x509'])
+            elif peer_conf['authentication']['mode'] == 'rsa':
+                generate_pki_files_rsa(ipsec['pki'], peer_conf['authentication']['rsa'])
 
             local_ip = ''
             if 'local_address' in peer_conf:
@@ -398,7 +410,7 @@ def generate(ipsec):
             elif 'dhcp_interface' in peer_conf:
                 local_ip = get_dhcp_address(peer_conf['dhcp_interface'])
 
-            data['site_to_site']['peer'][peer]['local_address'] = local_ip
+            ipsec['site_to_site']['peer'][peer]['local_address'] = local_ip
 
             if 'tunnel' in peer_conf:
                 for tunnel, tunnel_conf in peer_conf['tunnel'].items():
@@ -417,15 +429,15 @@ def generate(ipsec):
                             if local_net.overlaps(remote_net):
                                 passthrough.append(local_prefix)
 
-                    data['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
+                    ipsec['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
 
-    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', data)
-    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', data)
-    render(charon_conf, 'ipsec/charon.tmpl', data)
-    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', data)
-    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', data)
-    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', data)
+    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', ipsec)
+    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', ipsec)
+    render(charon_conf, 'ipsec/charon.tmpl', ipsec)
+    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', ipsec)
+    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', ipsec)
+    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', ipsec)
 
 def resync_l2tp(ipsec):
     if ipsec and not ipsec['l2tp_exists']:

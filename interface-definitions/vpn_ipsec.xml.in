@@ -922,6 +922,7 @@
                     </properties>
                     <children>
                       #include <include/ipsec/authentication-id.xml.i>
+                      #include <include/ipsec/authentication-rsa.xml.i>
                       #include <include/ipsec/authentication-x509.xml.i>
                       <leafNode name="mode">
                         <properties>
@@ -962,11 +963,6 @@
                             <format>txt</format>
                             <description>ID used for peer authentication</description>
                           </valueHelp>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="rsa-key-name">
-                        <properties>
-                          <help>RSA key name</help>
                         </properties>
                       </leafNode>
                       <leafNode name="use-x509-id">
