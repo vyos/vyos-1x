@@ -525,7 +525,7 @@ def wait_for_inotify(file_path, event_type=None, timeout=None, sleep_interval=0.
     i.add_watch(os.path.dirname(file_path))
 
     for event in i.event_gen(yield_nones=True):
-        if (timeout is not None) and ((time.time() - time_start) > timeout):
+        if (timeout is not None) and ((time() - time_start) > timeout):
             # If the function didn't return until this point,
             # the file failed to have been written to and closed within the timeout
             raise OSError("Waiting for file {} to be written has failed".format(file_path))
