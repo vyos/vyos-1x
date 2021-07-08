@@ -510,7 +510,7 @@ def file_is_persistent(path):
     absolute = os.path.abspath(os.path.dirname(path))
     return re.match(location,absolute)
 
-def wait_for_inotify(file_path, event_type=None, timeout=None, sleep_interval=0.1):
+def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sleep_interval=0.1):
     """ Waits for an inotify event to occur """
     if not os.path.dirname(file_path):
         raise ValueError(
@@ -524,6 +524,9 @@ def wait_for_inotify(file_path, event_type=None, timeout=None, sleep_interval=0.
     i = inotify.adapters.Inotify()
     i.add_watch(os.path.dirname(file_path))
 
+    if pre_hook:
+        pre_hook()
+
     for event in i.event_gen(yield_nones=True):
         if (timeout is not None) and ((time() - time_start) > timeout):
             # If the function didn't return until this point,
@@ -536,10 +539,10 @@ def wait_for_inotify(file_path, event_type=None, timeout=None, sleep_interval=0.
                 if event_type in type_names:
                     return
 
-def wait_for_file_write_complete(file_path, timeout=None, sleep_interval=0.1):
+def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_interval=0.1):
     """ Waits for a process to close a file after opening it in write mode. """
     wait_for_inotify(file_path,
-      event_type='IN_CLOSE_WRITE', timeout=timeout, sleep_interval=sleep_interval)
+      event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
 
 def commit_in_progress():
     """ Not to be used in normal op mode scripts! """
