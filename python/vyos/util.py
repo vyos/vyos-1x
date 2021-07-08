@@ -136,6 +136,43 @@ def file_is_persistent(path):
     else:
         return (True, None)
 
+def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sleep_interval=0.1):
+    """ Waits for an inotify event to occur """
+    if not os.path.dirname(file_path):
+        raise ValueError(
+          "File path {} does not have a directory part (required for inotify watching)".format(file_path))
+    if not os.path.basename(file_path):
+        raise ValueError(
+          "File path {} does not have a file part, do not know what to watch for".format(file_path))
+
+    from inotify.adapters import Inotify
+    from time import time
+
+    time_start = time()
+
+    i = Inotify()
+    i.add_watch(os.path.dirname(file_path))
+
+    if pre_hook:
+        pre_hook()
+
+    for event in i.event_gen(yield_nones=True):
+        if (timeout is not None) and ((time() - time_start) > timeout):
+            # If the function didn't return until this point,
+            # the file failed to have been written to and closed within the timeout
+            raise OSError("Waiting for file {} to be written has failed".format(file_path))
+
+        if event is not None:
+            (_, type_names, path, filename) = event
+            if filename == os.path.basename(file_path):
+                if event_type in type_names:
+                    return
+
+def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_interval=0.1):
+    """ Waits for a process to close a file after opening it in write mode. """
+    wait_for_inotify(file_path,
+      event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
+
 def commit_in_progress():
     """ Not to be used in normal op mode scripts! """
 

@@ -27,10 +27,9 @@ import vyos.util
 
 def print_summary():
     try:
-        vyos.keepalived.force_json_dump()
-        # Wait for keepalived to produce the data
-        # Replace with inotify or similar if it proves problematic
-        time.sleep(0.2)
+        json_data = vyos.util.wait_for_file_write_complete(vyos.keepalived.json_file,
+          pre_hook=(lambda: vyos.keepalived.force_json_dump()),
+          timeout=30)
         json_data = vyos.keepalived.get_json_data()
         vyos.keepalived.remove_vrrp_data("json")
     except:
@@ -60,8 +59,9 @@ def print_summary():
 
 def print_statistics():
     try:
-        vyos.keepalived.force_stats_dump()
-        time.sleep(0.2)
+        json_data = vyos.util.wait_for_file_write_complete(vyos.keepalived.stats_file,
+          pre_hook=(lambda: vyos.keepalived.force_stats_dump()),
+          timeout=30)
         output = vyos.keepalived.get_statistics()
         print(output)
         vyos.keepalived.remove_vrrp_data("stats")
@@ -71,8 +71,9 @@ def print_statistics():
 
 def print_state_data():
     try:
-        vyos.keepalived.force_state_data_dump()
-        time.sleep(0.2)
+        json_data = vyos.util.wait_for_file_write_complete(vyos.keepalived.state_file,
+          pre_hook=(lambda: vyos.keepalived.force_state_data_dump()),
+          timeout=30)
         output = vyos.keepalived.get_state_data()
         print(output)
         vyos.keepalived.remove_vrrp_data("state")
