@@ -34,7 +34,7 @@
             <properties>
               <help>Displays the multicast group database for the bridge</help>
             </properties>
-            <command>bridge -c fdb show dev $3</command>
+            <command>bridge -c mdb show dev $3</command>
           </leafNode>
           <leafNode name="fdb">
             <properties>
