@@ -2,17 +2,24 @@
 <interfaceDefinition>
   <node name="show">
     <children>
+      <node name="bridge">
+        <properties>
+          <help>Show bridging information</help>
+        </properties>
+        <children>
+          <leafNode name="vlan">
+            <properties>
+              <help>View the VLAN filter settings of the bridge</help>
+            </properties>
+            <command>bridge -c vlan show</command>
+          </leafNode>
+        </children>
+      </node>
       <leafNode name="bridge">
         <properties>
           <help>Show bridging information</help>
         </properties>
         <command>bridge -c link show</command>
-      </leafNode>
-      <leafNode name="vlan">
-        <properties>
-          <help>View the VLAN filter settings of the bridge</help>
-        </properties>
-        <command>bridge -c vlan show</command>
       </leafNode>
       <tagNode name="bridge">
         <properties>
@@ -27,7 +34,7 @@
             <properties>
               <help>Displays the multicast group database for the bridge</help>
             </properties>
-            <command>bridge -c fdb show dev $3</command>
+            <command>bridge -c mdb show dev $3</command>
           </leafNode>
           <leafNode name="fdb">
             <properties>
