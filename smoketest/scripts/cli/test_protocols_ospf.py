@@ -202,11 +202,9 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             for interface in interfaces:
                 self.assertIn(f' no passive-interface {interface}', frrconfig) # default
         except:
-            tmp = cmd('tail -n 250 /var/log/messages')
-            print(tmp)
-            tmp = cmd('vtysh -c "show run"')
-            print(tmp)
-            self.fail('Now we can hopefully see why OSPF fails')
+            tmp1 = cmd('tail -n 250 /var/log/messages')
+            tmp2 = cmd('vtysh -c "show run"')
+            self.fail(f'Now we can hopefully see why OSPF fails:\n{tmp1}\n\n{tmp2}')
 
     def test_ospf_08_redistribute(self):
         metric = '15'
