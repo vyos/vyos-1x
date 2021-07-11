@@ -46,6 +46,7 @@ def get_config(config=None):
     else:
         config = Config()
 
+    data = {}
     if config.exists("vpn ipsec ipsec-interfaces interface"):
         data["ipsec_interfaces"] = config.return_values("vpn ipsec ipsec-interfaces interface")
 
