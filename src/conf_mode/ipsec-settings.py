@@ -137,7 +137,7 @@ def check_cert_file_store(cert_name, file_path, dts_path):
 
 def verify(data):
     # l2tp ipsec check
-    if data["ipsec_l2tp"]:
+    if 'ipsec_l2tp' in data:
         # Checking dependecies for "authentication mode pre-shared-secret"
         if data.get("ipsec_l2tp_auth_mode") == "pre-shared-secret":
             if not data.get("ipsec_l2tp_secret"):
@@ -166,7 +166,7 @@ def verify(data):
            raise ConfigError("L2TP VPN configuration error: \"vpn ipsec ipsec-interfaces\" must be specified.")
 
 def generate(data):
-    if data["ipsec_l2tp"]:
+    if 'ipsec_l2tp' in data:
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
         # old_umask = os.umask(0o077)
         # render(ipsec_secrets_file, 'ipsec/ipsec.secrets.tmpl', data)
