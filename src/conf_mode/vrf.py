@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 from json import loads
+from tempfile import NamedTemporaryFile
 
 from vyos.config import Config
 from vyos.configdict import node_changed
@@ -26,6 +27,7 @@ from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import cmd
+from vyos.util import popen
 from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos import ConfigError
@@ -125,10 +127,16 @@ def verify(vrf):
 
     return None
 
+
 def generate(vrf):
     render(config_file, 'vrf/vrf.conf.tmpl', vrf)
     vrf['new_frr_config'] = render_to_string('frr/vrf.frr.tmpl', vrf)
+    # Render nftables zones config
+    vrf['nft_vrf_zones'] = NamedTemporaryFile().name
+    render(vrf['nft_vrf_zones'], 'firewall/nftables-vrf-zones.tmpl', vrf)
+
     return None
+
 
 def apply(vrf):
     # Documentation
@@ -151,8 +159,19 @@ def apply(vrf):
             call(f'ip -4 route del vrf {tmp} unreachable default metric 4278198272')
             call(f'ip -6 route del vrf {tmp} unreachable default metric 4278198272')
             call(f'ip link delete dev {tmp}')
+            # Remove nftables conntrack zone map item
+            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{tmp}" }}'
+            cmd(f'nft {nft_del_element}')
 
     if 'name' in vrf:
+        # Separate VRFs in conntrack table
+        # check if table already exists
+        _, err = popen('nft list table inet vrf_zones')
+        # If not, create a table
+        if err:
+            cmd(f'nft -f {vrf["nft_vrf_zones"]}')
+            os.unlink(vrf['nft_vrf_zones'])
+
         for name, config in vrf['name'].items():
             table = config['table']
 
@@ -182,6 +201,9 @@ def apply(vrf):
             # reconfiguration.
             state = 'down' if 'disable' in config else 'up'
             vrf_if.set_admin_state(state)
+            # Add nftables conntrack zone map item
+            nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
+            cmd(f'nft {nft_add_element}')
 
     # Linux routing uses rules to find tables - routing targets are then
     # looked up in those tables. If the lookup got a matching route, the
@@ -214,6 +236,8 @@ def apply(vrf):
             # clean out l3mdev-table rule if present
             if 1000 in [r.get('priority') for r in list_rules() if r.get('priority') == 1000]:
                 call(f'ip {af} rule del pref 1000')
+        # Remove VRF zones table from nftables
+        cmd('nft delete table inet vrf_zones')
 
     # add configuration to FRR
     frr_cfg = frr.FRRConfig()
