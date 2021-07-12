@@ -68,6 +68,21 @@ def migrate_route(config, base, path, route_route6):
                     if config.exists(vrf_path):
                         config.rename(vrf_path, 'vrf')
 
+            next_hop = base + path + [route, 'interface']
+            if config.exists(next_hop):
+                for interface in config.list_nodes(next_hop):
+                    # IPv4 routes calls it next-hop-interface, rename this to
+                    # interface instead so it's consitent with IPv6
+                    interface_path = next_hop + [interface, 'next-hop-interface']
+                    if config.exists(interface_path):
+                        config.rename(interface_path, 'interface')
+
+                    # When VRFs got introduced, I (c-po) named it next-hop-vrf,
+                    # we can also call it vrf which is simply shorter.
+                    vrf_path = next_hop + [interface, 'next-hop-vrf']
+                    if config.exists(vrf_path):
+                        config.rename(vrf_path, 'vrf')
+
 
 if (len(argv) < 2):
     print("Must specify file name!")
