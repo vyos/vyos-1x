@@ -20,12 +20,11 @@ from json import loads
 
 from vyos.util import cmd
 
-vrf_out_tmpl = """
-VRF name          state     mac address        flags                     interfaces
+vrf_out_tmpl = """VRF name          state     mac address        flags                     interfaces
 --------          -----     -----------        -----                     ----------
-{% for v in vrf %}
+{%- for v in vrf %}
 {{"%-16s"|format(v.ifname)}}  {{ "%-8s"|format(v.operstate | lower())}}  {{"%-17s"|format(v.address | lower())}}  {{ v.flags|join(',')|lower()}}  {{v.members|join(',')|lower()}}
-{% endfor %}
+{%- endfor %}
 
 """
 
