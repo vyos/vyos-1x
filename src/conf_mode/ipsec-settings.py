@@ -22,7 +22,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call
+from vyos.util import call, wait_for_file_write_complete
 from vyos.template import render
 
 from vyos import airbag
@@ -197,17 +197,16 @@ def generate(data):
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_file)
 
 def restart_ipsec():
-    call('ipsec restart >&/dev/null')
-    # counter for apply swanctl config
-    counter = 10
-    while counter <= 10:
-        if os.path.exists(charon_pidfile):
-            call('swanctl -q >&/dev/null')
-            break
-        counter -=1
-        sleep(1)
-        if counter == 0:
-            raise ConfigError('VPN configuration error: IPSec is not running.')
+    try:
+        wait_for_file_write_complete(charon_pidfile,
+          pre_hook=(lambda: call('ipsec restart >&/dev/null')),
+          timeout=10)
+
+        # Force configuration load
+        call('swanctl -q >&/dev/null')
+
+    except OSError:
+        raise ConfigError('VPN configuration error: IPSec process did not start.')
 
 def apply(data):
     # Restart IPSec daemon
