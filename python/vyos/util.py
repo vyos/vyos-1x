@@ -515,6 +515,7 @@ def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sl
 
     from inotify.adapters import Inotify
     from time import time
+    from time import sleep
 
     time_start = time()
 
@@ -530,11 +531,14 @@ def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sl
             # the file failed to have been written to and closed within the timeout
             raise OSError("Waiting for file {} to be written has failed".format(file_path))
 
+        # Most such events don't take much time, so it's better to check right away
+        # and sleep later.
         if event is not None:
             (_, type_names, path, filename) = event
             if filename == os.path.basename(file_path):
                 if event_type in type_names:
                     return
+        sleep(sleep_interval)
 
 def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_interval=0.1):
     """ Waits for a process to close a file after opening it in write mode. """
