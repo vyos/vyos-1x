@@ -92,8 +92,7 @@ class VRRP(object):
         try:
             # send signal to generate the configuration file
             pid = util.read_file(cls.location['pid'])
-            os.kill(int(pid), cls._signal[what])
-            util.wait_for_file_write_complete(vyos.keepalived.json_file,
+            util.wait_for_file_write_complete(fname,
               pre_hook=(lambda: os.kill(int(pid), cls._signal[what])),
               timeout=30)
 
