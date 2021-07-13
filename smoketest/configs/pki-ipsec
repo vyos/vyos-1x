@@ -105,6 +105,33 @@ vpn {
             }
         }
     }
+    l2tp {
+        remote-access {
+            authentication {
+                local-users {
+                    username alice {
+                        password notsecure
+                    }
+                }
+                mode local
+            }
+            client-ip-pool {
+                start 192.168.255.2
+                stop 192.168.255.254
+            }
+            ipsec-settings {
+                authentication {
+                    mode x509
+                    x509 {
+                        ca-cert-file /config/auth/ovpn_test_ca.pem
+                        server-cert-file /config/auth/ovpn_test_server.pem
+                        server-key-file /config/auth/ovpn_test_server.key
+                    }
+                }
+            }
+            outside-address 192.168.150.1
+        }
+    }
     rsa-keys {
         local-key {
             file /config/auth/ovpn_test_server.key

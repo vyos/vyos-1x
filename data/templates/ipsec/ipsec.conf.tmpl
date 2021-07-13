@@ -16,9 +16,3 @@ config setup
 {%  if include_ipsec_conf is defined %}
 include {{ include_ipsec_conf }}
 {%  endif %}
-
-{%  if delim_ipsec_l2tp_begin is defined %}
-{{delim_ipsec_l2tp_begin}}
-include {{ipsec_ra_conn_file}}
-{{delim_ipsec_l2tp_end}}
-{%  endif %}

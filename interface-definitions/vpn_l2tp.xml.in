@@ -75,46 +75,7 @@
                           <help>Pre-shared secret for IPsec</help>
                         </properties>
                       </leafNode>
-                      <node name="x509">
-                        <properties>
-                          <help>X.509 certificate</help>
-                        </properties>
-                        <children>
-                          #include <include/certificate-ca.xml.i>
-                          <leafNode name="crl-file">
-                            <properties>
-                              <help>File containing the X.509 Certificate Revocation List (CRL)</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="server-cert-file">
-                            <properties>
-                              <help>File containing the X.509 certificate for the remote access VPN server (this host)</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="server-key-file">
-                            <properties>
-                              <help>File containing the private key for the X.509 certificate for the remote access VPN server (this host)</help>
-                              <valueHelp>
-                                <format>txt</format>
-                                <description>File in /config/auth</description>
-                              </valueHelp>
-                            </properties>
-                          </leafNode>
-                          <leafNode name="server-key-password">
-                            <properties>
-                              <help>Password that protects the private key</help>
-                            </properties>
-                          </leafNode>
-                        </children>
-                      </node>
+                      #include <include/ipsec/authentication-x509.xml.i>
                     </children>
                   </node>
                   <leafNode name="ike-lifetime">
@@ -128,6 +89,7 @@
                         <validator name="numeric" argument="--range 30-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>3600</defaultValue>
                   </leafNode>
                    <leafNode name="lifetime">
                     <properties>
@@ -140,7 +102,10 @@
                         <validator name="numeric" argument="--range 30-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>3600</defaultValue>
                   </leafNode>
+                  #include <include/ipsec/esp-group.xml.i>
+                  #include <include/ipsec/ike-group.xml.i>
                 </children>
               </node>
               #include <include/accel-ppp/wins-server.xml.i>
