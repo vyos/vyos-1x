@@ -18,7 +18,6 @@ from datetime import datetime
 
 from vyos import debug
 from vyos.logger import syslog
-from vyos.version import get_version
 from vyos.version import get_full_version_data
 
 
@@ -78,7 +77,7 @@ def bug_report(dtype, value, trace):
     information.update({
         'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'trace': trace,
-        'instructions': COMMUNITY if 'rolling' in get_version() else SUPPORTED,
+        'instructions': INSTRUCTIONS,
         'note': note,
     })
 
@@ -162,20 +161,13 @@ When reporting problems, please include as much information as possible:
 
 """
 
-COMMUNITY = """\
-- Make sure you are running the latest version of the code available at
-  https://downloads.vyos.io/rolling/current/amd64/vyos-rolling-latest.iso
-- Consult the forum to see how to handle this issue
-  https://forum.vyos.io
-- Join our community on slack where our users exchange help and advice
-  https://vyos.slack.com
-""".strip()
-
-SUPPORTED = """\
-- Make sure you are running the latest stable version of VyOS
-  the code is available at https://downloads.vyos.io/?dir=release/current
-- Contact us using the online help desk
+INSTRUCTIONS = """\
+- Contact us using the online help desk if you have a subscription:
   https://support.vyos.io/
-- Join our community on slack where our users exchange help and advice
+- Make sure you are running the latest version of VyOS available at:
+  https://vyos.net/get/
+- Consult the community forum to see how to handle this issue:
+  https://forum.vyos.io
+- Join us on Slack where our users exchange help and advice:
   https://vyos.slack.com
 """.strip()
