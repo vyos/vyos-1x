@@ -124,11 +124,7 @@
                   <help>Description for L2TP remote-access settings</help>
                 </properties>
               </leafNode>
-              <leafNode name="dhcp-interface">
-                <properties>
-                  <help>DHCP interface to listen on</help>
-                </properties>
-              </leafNode>
+              #include <include/dhcp-interface.xml.i>
               <leafNode name="idle">
                 <properties>
                   <help>PPP idle timeout</help>

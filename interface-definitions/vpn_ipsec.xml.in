@@ -1001,14 +1001,7 @@
                     </properties>
                   </leafNode>
                   #include <include/generic-description.xml.i>
-                  <leafNode name="dhcp-interface">
-                    <properties>
-                      <help>DHCP interface to listen on</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp-interface.xml.i>
                   <leafNode name="force-encapsulation">
                     <properties>
                       <help>Force UDP Encapsulation for ESP Payloads</help>

@@ -61,21 +61,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="dhcp-interface">
-            <properties>
-              <help>dhcp interface</help>
-              <valueHelp>
-                <format>interface</format>
-                <description>DHCP interface that supplies the local IP address for this tunnel</description>
-              </valueHelp>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <constraint>
-                <regex>^(en|eth|br|bond|gnv|vxlan|wg|tun)[0-9]+$</regex>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/dhcp-interface.xml.i>
           <leafNode name="encapsulation">
             <properties>
               <help>Encapsulation of this tunnel interface</help>
