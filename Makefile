@@ -110,7 +110,7 @@ clean:
 
 .PHONY: test
 test:
-	set -e; python3 -m compileall -q .
+	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
 .PHONY: sonar
