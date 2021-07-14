@@ -70,11 +70,7 @@
                           </completionHelp>
                         </properties>
                       </leafNode>
-                      <leafNode name="pre-shared-secret">
-                        <properties>
-                          <help>Pre-shared secret for IPsec</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                       #include <include/ipsec/authentication-x509.xml.i>
                     </children>
                   </node>

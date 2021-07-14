@@ -704,15 +704,7 @@
                       </valueHelp>
                     </properties>
                   </leafNode>
-                  <leafNode name="pre-shared-secret">
-                    <properties>
-                      <help>Pre-shared secret key</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Pre-shared secret key</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                 </children>
               </node>
               <node name="bind">
@@ -811,11 +803,7 @@
                     </properties>
                     <defaultValue>x509</defaultValue>
                   </leafNode>
-                  <leafNode name="pre-shared-secret">
-                    <properties>
-                      <help>Pre-shared-secret used for server authentication</help>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                 </children>
               </node>
               #include <include/generic-description.xml.i>
@@ -947,15 +935,7 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="pre-shared-secret">
-                        <properties>
-                          <help>Pre-shared secret key</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Pre-shared secret key</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                       <leafNode name="remote-id">
                         <properties>
                           <help>ID for remote authentication</help>
