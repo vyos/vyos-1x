@@ -92,11 +92,14 @@ class VRRP(object):
         try:
             # send signal to generate the configuration file
             pid = util.read_file(cls.location['pid'])
-            os.kill(int(pid), cls._signal[what])
+            util.wait_for_file_write_complete(fname,
+              pre_hook=(lambda: os.kill(int(pid), cls._signal[what])),
+              timeout=30)
 
-            # should look for file size change?
-            sleep(0.2)
             return util.read_file(fname)
+        except OSError:
+            # raised by vyos.util.read_file
+            raise VRRPNoData("VRRP data is not available (wait time exceeded)")
         except FileNotFoundError:
             raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
         except Exception:

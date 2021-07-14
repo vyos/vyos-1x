@@ -20,7 +20,6 @@ import re
 from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
-from time import sleep
 
 from ipaddress import ip_network
 
