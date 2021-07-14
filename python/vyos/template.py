@@ -341,19 +341,21 @@ def get_dhcp_router(interface):
     """ Static routes can point to a router received by a DHCP reply. This
     helper is used to get the current default router from the DHCP reply.
 
-    Returns False of no router is found, returns the IP address as string if
+    Returns None if no router is found, returns the IP address as string if
     a router is found.
     """
-    interface = interface.replace('.', '_')
-    lease_file = f'/var/lib/dhcp/dhclient_{interface}.leases'
+    lease_file = f'/var/lib/dhcp/dhclient_{interface}.lease'
     if not os.path.exists(lease_file):
         return None
 
     from vyos.util import read_file
     for line in read_file(lease_file).splitlines():
-        if 'option routers' in line:
-            (_, _, address) = line.split()
-            return address.rstrip(';')
+        if line.startswith('new_routers='):
+            (_, routers, _) = line.split("'")
+            if routers:
+                return routers.split()[0]
+
+    return None
 
 @register_filter('natural_sort')
 def natural_sort(iterable):

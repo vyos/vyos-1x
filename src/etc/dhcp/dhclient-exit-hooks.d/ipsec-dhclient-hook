@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if [ "$reason" == "REBOOT" ] || [ "$reason" == "EXPIRE" ]; then
-    exit 0
+    return 0
 fi
 
 DHCP_HOOK_IFLIST="/tmp/ipsec_dhcp_waiting"
@@ -24,12 +24,12 @@ if [ -f $DHCP_HOOK_IFLIST ] && [ "$reason" == "BOUND" ]; then
     if grep -qw $interface $DHCP_HOOK_IFLIST; then
         sudo rm $DHCP_HOOK_IFLIST
         sudo python3 /usr/libexec/vyos/conf_mode/vpn_ipsec.py
-        exit 0
+        return 0
     fi
 fi
 
 if [ "$old_ip_address" == "$new_ip_address" ] && [ "$reason" == "BOUND" ]; then
-    exit 0
+    return 0
 fi
 
 python3 - <<PYEND
