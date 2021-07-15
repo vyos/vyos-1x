@@ -25,6 +25,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
+from vyos.template import is_ipv6
 from vyos.ifconfig import VXLANIf, Interface
 from vyos import ConfigError
 from vyos import airbag
@@ -78,6 +79,9 @@ def verify(vxlan):
 
 
 def generate(vxlan):
+    # For ipv6 VXLAN we need sub 20 bytes from default MTU 1450 XML value. T3683
+    if 'source_address' in vxlan and is_ipv6(vxlan['source_address']) and vxlan['mtu'] == '1450':
+        vxlan['mtu'] = (int(vxlan['mtu']) - 20)
     return None
 
 
