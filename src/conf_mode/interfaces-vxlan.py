@@ -25,7 +25,9 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
-from vyos.ifconfig import VXLANIf, Interface
+from vyos.ifconfig import Interface
+from vyos.ifconfig import VXLANIf
+from vyos.template import is_ipv6
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -65,12 +67,19 @@ def verify(vxlan):
         raise ConfigError('Must configure VNI for VXLAN')
 
     if 'source_interface' in vxlan:
-        # VXLAN adds a 50 byte overhead - we need to check the underlaying MTU
-        # if our configured MTU is at least 50 bytes less
+        # VXLAN adds at least an overhead of 50 byte - we need to check the
+        # underlaying device if our VXLAN package is not going to be fragmented!
+        vxlan_overhead = 50
+        if 'source_address' in vxlan and is_ipv6(vxlan['source_address']):
+            # IPv6 adds an extra 20 bytes overhead because the IPv6 header is 20
+            # bytes larger than the IPv4 header - assuming no extra options are
+            # in use.
+            vxlan_overhead += 20
+
         lower_mtu = Interface(vxlan['source_interface']).get_mtu()
-        if lower_mtu < (int(vxlan['mtu']) + 50):
-            raise ConfigError('VXLAN has a 50 byte overhead, underlaying device ' \
-                              f'MTU is to small ({lower_mtu} bytes)')
+        if lower_mtu < (int(vxlan['mtu']) + vxlan_overhead):
+            raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
+                              f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)')
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
