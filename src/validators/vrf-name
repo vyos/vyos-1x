@@ -33,8 +33,8 @@ if __name__ == '__main__':
     if vrf == "lo":
         exit(1)
 
-    pattern = "^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|" \
-              "vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wwan)\d+(\.\d+(v.+)?)?$).*$"
+    pattern = r'^(?!(bond|br|dum|eth|lan|eno|ens|enp|enx|gnv|ipoe|l2tp|l2tpeth|\
+       vtun|ppp|pppoe|peth|tun|vti|vxlan|wg|wlan|wwan|\d)\d*(\.\d+)?(v.+)?).*$'
     if not re.match(pattern, vrf):
         exit(1)
 

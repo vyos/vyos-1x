@@ -73,6 +73,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['vpn', 'ipsec']
+    l2tp_base = ['vpn', 'l2tp', 'remote-access', 'ipsec-settings']
     if not conf.exists(base):
         return None
 
@@ -108,14 +109,21 @@ def get_config(config=None):
 
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
-    ipsec['interface_change'] = leaf_node_changed(conf, base + ['ipsec-interfaces',
-                                                                'interface'])
-    ipsec['l2tp_exists'] = conf.exists(['vpn', 'l2tp', 'remote-access',
-                                        'ipsec-settings'])
+    ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
     ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
     ipsec['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
+
+    ipsec['l2tp'] = conf.get_config_dict(l2tp_base, key_mangling=('-', '_'),
+                                             get_first_key=True,
+                                             no_tag_node_value_mangle=True)
+    if ipsec['l2tp']:
+        l2tp_defaults = defaults(l2tp_base)
+        ipsec['l2tp'] = dict_merge(l2tp_defaults, ipsec['l2tp'])
+        ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
+        ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024'
+        ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
 
     return ipsec
 
@@ -165,13 +173,42 @@ def verify(ipsec):
     if not ipsec:
         return None
 
-    if 'ipsec_interfaces' in ipsec and 'interface' in ipsec['ipsec_interfaces']:
-        interfaces = ipsec['ipsec_interfaces']['interface']
-        if isinstance(interfaces, str):
-            interfaces = [interfaces]
-
-        for ifname in interfaces:
+    if 'interfaces' in ipsec :
+        for ifname in ipsec['interface']:
             verify_interface_exists(ifname)
+
+    if ipsec['l2tp']:
+        if 'esp_group' in ipsec['l2tp']:
+            if 'esp_group' not in ipsec or ipsec['l2tp']['esp_group'] not in ipsec['esp_group']:
+                raise ConfigError(f"Invalid esp-group on L2TP remote-access config")
+
+        if 'ike_group' in ipsec['l2tp']:
+            if 'ike_group' not in ipsec or ipsec['l2tp']['ike_group'] not in ipsec['ike_group']:
+                raise ConfigError(f"Invalid ike-group on L2TP remote-access config")
+
+        if 'authentication' not in ipsec['l2tp']:
+            raise ConfigError(f'Missing authentication settings on L2TP remote-access config')
+
+        if 'mode' not in ipsec['l2tp']['authentication']:
+            raise ConfigError(f'Missing authentication mode on L2TP remote-access config')
+
+        if not ipsec['l2tp_outside_address']:
+            raise ConfigError(f'Missing outside-address on L2TP remote-access config')
+
+        if ipsec['l2tp']['authentication']['mode'] == 'pre-shared-secret':
+            if 'pre_shared_secret' not in ipsec['l2tp']['authentication']:
+                raise ConfigError(f'Missing pre shared secret on L2TP remote-access config')
+
+        if ipsec['l2tp']['authentication']['mode'] == 'x509':
+            if 'x509' not in ipsec['l2tp']['authentication']:
+                raise ConfigError(f'Missing x509 settings on L2TP remote-access config')
+
+            x509 = ipsec['l2tp']['authentication']['x509']
+
+            if 'ca_certificate' not in x509 or 'certificate' not in x509:
+                raise ConfigError(f'Missing x509 certificates on L2TP remote-access config')
+
+            verify_pki_x509(ipsec['pki'], x509)
 
     if 'profile' in ipsec:
         for profile, profile_conf in ipsec['profile'].items():
@@ -389,6 +426,10 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
+    if ipsec['l2tp']:
+        if 'authentication' in ipsec['l2tp'] and 'x509' in ipsec['l2tp']['authentication']:
+            generate_pki_files_x509(ipsec['pki'], ipsec['l2tp']['authentication']['x509'])
+
     if 'remote_access' in ipsec:
         for rw, rw_conf in ipsec['remote_access'].items():
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
@@ -439,14 +480,6 @@ def generate(ipsec):
     render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', ipsec)
 
-def resync_l2tp(ipsec):
-    if ipsec and not ipsec['l2tp_exists']:
-        return
-
-    tmp = run('/usr/libexec/vyos/conf_mode/ipsec-settings.py')
-    if tmp > 0:
-        print('ERROR: failed to reapply L2TP IPSec settings!')
-
 def resync_nhrp(ipsec):
     if ipsec and not ipsec['nhrp_exists']:
         return
@@ -480,7 +513,6 @@ def apply(ipsec):
         if wait_for_vici_socket():
             call('sudo swanctl -q')
 
-    resync_l2tp(ipsec)
     resync_nhrp(ipsec)
 
 if __name__ == '__main__':

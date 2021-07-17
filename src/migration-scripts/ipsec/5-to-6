@@ -74,6 +74,12 @@ log_mode = log + ['log-modes']
 if config.exists(log_mode):
     config.rename(log_mode, 'subsystem')
 
+# Rename "ipsec-interfaces interface" to "interface"
+base_interfaces = base + ['ipsec-interfaces', 'interface']
+if config.exists(base_interfaces):
+    config.copy(base_interfaces, base + ['interface'])
+    config.delete(base_interfaces)
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

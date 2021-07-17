@@ -311,6 +311,28 @@ class Interface(Control):
         cmd = 'ip link del dev {ifname}'.format(**self.config)
         return self._cmd(cmd)
 
+    def _set_vrf_ct_zone(self, vrf):
+        """
+        Add/Remove rules in nftables to associate traffic in VRF to an
+        individual conntack zone
+        """
+        if vrf:
+            # Get routing table ID for VRF
+            vrf_table_id = get_interface_config(vrf).get('linkinfo', {}).get(
+                'info_data', {}).get('table')
+            # Add map element with interface and zone ID
+            if vrf_table_id:
+                self._cmd(
+                    f'nft add element inet vrf_zones ct_iface_map {{ "{self.ifname}" : {vrf_table_id} }}'
+                )
+        else:
+            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{self.ifname}" }}'
+            # Check if deleting is possible first to avoid raising errors
+            _, err = self._popen(f'nft -c {nft_del_element}')
+            if not err:
+                # Remove map element
+                self._cmd(f'nft {nft_del_element}')
+
     def get_min_mtu(self):
         """
         Get hardware minimum supported MTU
@@ -401,6 +423,7 @@ class Interface(Control):
         >>> Interface('eth0').set_vrf()
         """
         self.set_interface('vrf', vrf)
+        self._set_vrf_ct_zone(vrf)
 
     def set_arp_cache_tmo(self, tmo):
         """

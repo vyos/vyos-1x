@@ -52,6 +52,7 @@
                     <regex>^(disable|enable)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>disable</defaultValue>
               </leafNode>
               <leafNode name="lifetime">
                 <properties>
@@ -509,22 +510,15 @@
               <help>Sets to include an additional secrets file for strongSwan. Use an absolute path to specify the included file.</help>
             </properties>
           </leafNode>
-          <node name="ipsec-interfaces">
+          <leafNode name="interface">
             <properties>
-              <help>Interface to use for VPN [REQUIRED]</help>
+              <help>Onterface used for IPsec communication</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
             </properties>
-            <children>
-              <leafNode name="interface">
-                <properties>
-                  <help>IPsec interface [REQUIRED]</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          </leafNode>
           <node name="log">
             <properties>
               <help>IPsec logging</help>
@@ -704,15 +698,7 @@
                       </valueHelp>
                     </properties>
                   </leafNode>
-                  <leafNode name="pre-shared-secret">
-                    <properties>
-                      <help>Pre-shared secret key</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Pre-shared secret key</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                 </children>
               </node>
               <node name="bind">
@@ -811,11 +797,7 @@
                     </properties>
                     <defaultValue>x509</defaultValue>
                   </leafNode>
-                  <leafNode name="pre-shared-secret">
-                    <properties>
-                      <help>Pre-shared-secret used for server authentication</help>
-                    </properties>
-                  </leafNode>
+                  #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                 </children>
               </node>
               #include <include/generic-description.xml.i>
@@ -947,15 +929,7 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="pre-shared-secret">
-                        <properties>
-                          <help>Pre-shared secret key</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Pre-shared secret key</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                       <leafNode name="remote-id">
                         <properties>
                           <help>ID for remote authentication</help>
@@ -1001,14 +975,7 @@
                     </properties>
                   </leafNode>
                   #include <include/generic-description.xml.i>
-                  <leafNode name="dhcp-interface">
-                    <properties>
-                      <help>DHCP interface to listen on</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp-interface.xml.i>
                   <leafNode name="force-encapsulation">
                     <properties>
                       <help>Force UDP Encapsulation for ESP Payloads</help>

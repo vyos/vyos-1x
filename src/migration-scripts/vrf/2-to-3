@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Since connection tracking zones are int16, VRFs tables maximum value must
+# be limited to 65535
+# Also, interface names in nftables cannot start from numbers,
+# so VRF name should not start from a number
+
+from sys import argv
+from sys import exit
+from random import randrange
+from random import choice
+from string import ascii_lowercase
+from vyos.configtree import ConfigTree
+import re
+
+
+# Helper function to find all config items with a VRF name
+def _search_vrfs(config_commands, vrf_name):
+    vrf_values = []
+    # Regex to find path of config command with old VRF
+    regex_filter = re.compile(rf'^set (?P<cmd_path>[^\']+vrf) \'{vrf_name}\'$')
+    # Check each command for VRF value
+    for config_command in config_commands:
+        search_result = regex_filter.search(config_command)
+        if search_result:
+            # Append VRF command to a list
+            vrf_values.append(search_result.group('cmd_path').split())
+    if vrf_values:
+        return vrf_values
+    else:
+        return None
+
+
+# Helper function to find all config items with a table number
+def _search_tables(config_commands, table_num):
+    table_items = {'table_tags': [], 'table_values': []}
+    # Regex to find values and nodes with a table number
+    regex_tags = re.compile(rf'^set (?P<cmd_path>[^\']+table {table_num}) ?.*$')
+    regex_values = re.compile(
+        rf'^set (?P<cmd_path>[^\']+table) \'{table_num}\'$')
+    for config_command in config_commands:
+        # Search for tag nodes
+        search_result = regex_tags.search(config_command)
+        if search_result:
+            # Append table node path to a tag nodes list
+            cmd_path = search_result.group('cmd_path').split()
+            if cmd_path not in table_items['table_tags']:
+                table_items['table_tags'].append(cmd_path)
+        # Search for value nodes
+        search_result = regex_values.search(config_command)
+        if search_result:
+            # Append table node path to a value nodes list
+            table_items['table_values'].append(
+                search_result.group('cmd_path').split())
+    return table_items
+
+
+if (len(argv) < 2):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['vrf', 'name']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+# Get a list of all currently used VRFs and tables
+vrfs_current = {}
+for vrf in config.list_nodes(base):
+    vrfs_current[vrf] = int(config.return_value(base + [vrf, 'table']))
+
+# Check VRF names and table numbers
+name_regex = re.compile(r'^\d.*$')
+for vrf_name, vrf_table in vrfs_current.items():
+    # Check table number
+    if vrf_table > 65535:
+        # Find new unused table number
+        vrfs_current[vrf_name] = None
+        while not vrfs_current[vrf_name]:
+            table_random = randrange(100, 65535)
+            if table_random not in vrfs_current.values():
+                vrfs_current[vrf_name] = table_random
+        # Update number to a new one
+        config.set(['vrf', 'name', vrf_name, 'table'],
+                   vrfs_current[vrf_name],
+                   replace=True)
+        # Check config items with old table number and replace to new one
+        config_commands = config.to_commands().split('\n')
+        table_config_lines = _search_tables(config_commands, vrf_table)
+        # Rename table nodes
+        if table_config_lines.get('table_tags'):
+            for table_config_path in table_config_lines.get('table_tags'):
+                config.rename(table_config_path, f'{vrfs_current[vrf_name]}')
+        # Replace table values
+        if table_config_lines.get('table_values'):
+            for table_config_path in table_config_lines.get('table_values'):
+                config.set(table_config_path,
+                           f'{vrfs_current[vrf_name]}',
+                           replace=True)
+
+    # Check VRF name
+    if name_regex.match(vrf_name):
+        vrf_name_new = None
+        while not vrf_name_new:
+            vrf_name_rand = f'{choice(ascii_lowercase)}{vrf_name}'[:15]
+            if vrf_name_rand not in vrfs_current:
+                vrf_name_new = vrf_name_rand
+        # Update VRF name to a new one
+        config.rename(['vrf', 'name', vrf_name], vrf_name_new)
+        # Check config items with old VRF name and replace to new one
+        config_commands = config.to_commands().split('\n')
+        vrf_config_lines = _search_vrfs(config_commands, vrf_name)
+        # Rename VRF to a new name
+        if vrf_config_lines:
+            for vrf_value_path in vrf_config_lines:
+                config.set(vrf_value_path, vrf_name_new, replace=True)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
