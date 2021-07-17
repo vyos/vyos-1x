@@ -112,7 +112,7 @@ rgiyCHemtMepq57Pl1Nmj49eEA==
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
-        self.cli_set(base_path + ['ipsec-interfaces', 'interface', f'{interface}.{vif}'])
+        self.cli_set(base_path + ['interface', f'{interface}.{vif}'])
 
         # Set IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])

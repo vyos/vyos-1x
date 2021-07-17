@@ -1,6 +1,5 @@
-{%  if ipsec_interfaces is defined and 'interface' in ipsec_interfaces %}
-{%      set interfaces = ipsec_interfaces['interface'] %}
+{%  if interface is defined %}
 charon {
-    interfaces_use = {{ ', '.join(interfaces) if interfaces is not string else interfaces }}
+    interfaces_use = {{ ', '.join(interface) }}
 }
 {%  endif %}

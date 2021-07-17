@@ -68,7 +68,7 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(vpn_path + ["ike-group", "IKE-HUB", "proposal", "2", "hash", "sha1"])
 
         # Profile - Not doing full DMVPN checks here, just want to verify the profile name in the output
-        self.cli_set(vpn_path + ["ipsec-interfaces", "interface", "eth0"])
+        self.cli_set(vpn_path + ["interface", "eth0"])
         self.cli_set(vpn_path + ["profile", "NHRPVPN", "authentication", "mode", "pre-shared-secret"])
         self.cli_set(vpn_path + ["profile", "NHRPVPN", "authentication", "pre-shared-secret", "secret"])
         self.cli_set(vpn_path + ["profile", "NHRPVPN", "bind", "tunnel", "tun100"])
