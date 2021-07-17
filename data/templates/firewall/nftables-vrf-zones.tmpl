@@ -1,0 +1,17 @@
+table inet vrf_zones {
+  # Map of interfaces and connections tracking zones
+  map ct_iface_map {
+    typeof iifname : ct zone
+  }
+  # Assign unique zones for each VRF
+  # Chain for inbound traffic
+  chain vrf_zones_ct_in {
+    type filter hook prerouting priority raw; policy accept;
+    counter ct zone set iifname map @ct_iface_map
+  }
+  # Chain for locally-generated traffic
+  chain vrf_zones_ct_out {
+    type filter hook output priority raw; policy accept;
+    counter ct zone set oifname map @ct_iface_map
+  }
+}
