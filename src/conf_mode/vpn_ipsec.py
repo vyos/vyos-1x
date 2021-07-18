@@ -127,6 +127,33 @@ def get_config(config=None):
         ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
 
+    if 'remote_access' in ipsec:
+        for name, ra_conf in ipsec['remote_access'].items():
+            if 'pool' in ra_conf:
+                if 'name_server' in ra_conf['pool']:
+                    ns_v4 = []
+                    ns_v6 = []
+                    for ns in ra_conf['pool']['name_server']:
+                        if is_ipv4(ns): ns_v4.append(ns)
+                        else: ns_v6.append(ns)
+
+                    # Only update nameserver keys if there are address-family specific name-servers
+                    if ns_v4:
+                        ipsec['remote_access'][name]['pool'].update({'name_server_v4' : ns_v4})
+                    if ns_v6:
+                        ipsec['remote_access'][name]['pool'].update({'name_server_v6' : ns_v6})
+                    del ipsec['remote_access'][name]['pool']['name_server']
+
+                if 'exclude' in ra_conf['pool']:
+                    exclude_v4 = []
+                    exclude_v6 = []
+                    for exclude in ra_conf['pool']['exclude']:
+                        if is_ipv4(exclude): exclude_v4.append(exclude)
+                        else: exclude_v6.append(exclude)
+
+                    ipsec['remote_access'][name]['pool'].update({'exclude_v4' : ns_v4, 'exclude_v6' : ns_v6})
+                    del ipsec['remote_access'][name]['pool']['exclude']
+
     return ipsec
 
 def get_dhcp_address(iface):
@@ -261,16 +288,21 @@ def verify(ipsec):
                     raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
             if 'pool' in ra_conf:
-                if 'name_server' in ra_conf['pool']:
-                    dns_v4 = []
-                    dns_v6 = []
-                    for addr in ra_conf['pool']['name_server']:
-                        if is_ipv4(addr): dns_v4.append(addr)
-                        else: dns_v6.append(addr)
-                    if len(dns_v4) > 2:
-                        raise ConfigError(f'IPSec remote-access "{name}" supports only 2 IPv4 name-servers!')
-                    if len(dns_v6) > 2:
-                        raise ConfigError(f'IPSec remote-access "{name}" supports only 2 IPv6 name-servers!')
+                if 'name_server_ipv4' in ra_conf['pool'] and len(ra_conf['pool']['name_server_ipv4']) > 2:
+                    raise ConfigError(f'IPSec remote-access "{name}" supports only two IPv4 name-servers!')
+                if 'name_server_ipv6' in ra_conf['pool'] and len(ra_conf['pool']['name_server_ipv6']) > 2:
+                    raise ConfigError(f'IPSec remote-access "{name}" supports only two IPv6 name-servers!')
+
+                if 'prefix' in ra_conf['pool']:
+                    prefix_v4 = []
+                    prefix_v6 = []
+                    for prefix in ra_conf['pool']['prefix']:
+                        if is_ipv4(prefix): prefix_v4.append(prefix)
+                        else: prefix_v6.append(prefix)
+                    if len(prefix_v4) > 1:
+                        raise ConfigError(f'IPSec remote-access "{name}" supports only one IPv4 prefix!')
+                    if len(prefix_v6) > 1:
+                        raise ConfigError(f'IPSec remote-access "{name}" supports only one IPv6 prefix!')
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():

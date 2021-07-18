@@ -850,6 +850,7 @@
                         <validator name="ipv4-prefix"/>
                         <validator name="ipv6-prefix"/>
                       </constraint>
+                      <multi/>
                     </properties>
                   </leafNode>
                   <!-- Include Accel-PPP definition here, maybe time for a rename? -->
