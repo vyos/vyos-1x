@@ -115,10 +115,11 @@ def get_config(config=None):
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
 
-    ipsec['l2tp'] = conf.get_config_dict(l2tp_base, key_mangling=('-', '_'),
+    tmp = conf.get_config_dict(l2tp_base, key_mangling=('-', '_'),
                                              get_first_key=True,
                                              no_tag_node_value_mangle=True)
-    if ipsec['l2tp']:
+    if tmp:
+        ipsec['l2tp'] = tmp
         l2tp_defaults = defaults(l2tp_base)
         ipsec['l2tp'] = dict_merge(l2tp_defaults, ipsec['l2tp'])
         ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
@@ -177,7 +178,7 @@ def verify(ipsec):
         for ifname in ipsec['interface']:
             verify_interface_exists(ifname)
 
-    if ipsec['l2tp']:
+    if 'l2tp' in ipsec:
         if 'esp_group' in ipsec['l2tp']:
             if 'esp_group' not in ipsec or ipsec['l2tp']['esp_group'] not in ipsec['esp_group']:
                 raise ConfigError(f"Invalid esp-group on L2TP remote-access config")
@@ -426,7 +427,7 @@ def generate(ipsec):
     if not os.path.exists(KEY_PATH):
         os.mkdir(KEY_PATH, mode=0o700)
 
-    if ipsec['l2tp']:
+    if 'l2tp' in ipsec:
         if 'authentication' in ipsec['l2tp'] and 'x509' in ipsec['l2tp']['authentication']:
             generate_pki_files_x509(ipsec['pki'], ipsec['l2tp']['authentication']['x509'])
 
