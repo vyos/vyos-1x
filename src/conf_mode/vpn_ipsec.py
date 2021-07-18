@@ -33,6 +33,7 @@ from vyos.pki import wrap_crl
 from vyos.pki import wrap_public_key
 from vyos.pki import wrap_private_key
 from vyos.template import ip_from_cidr
+from vyos.template import is_ipv4
 from vyos.template import render
 from vyos.validate import is_ipv6_link_local
 from vyos.util import call
@@ -258,6 +259,18 @@ def verify(ipsec):
             elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
                 if 'pre_shared_secret' not in ra_conf['authentication']:
                     raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
+
+            if 'pool' in ra_conf:
+                if 'name_server' in ra_conf['pool']:
+                    dns_v4 = []
+                    dns_v6 = []
+                    for addr in ra_conf['pool']['name_server']:
+                        if is_ipv4(addr): dns_v4.append(addr)
+                        else: dns_v6.append(addr)
+                    if len(dns_v4) > 2:
+                        raise ConfigError(f'IPSec remote-access "{name}" supports only 2 IPv4 name-servers!')
+                    if len(dns_v6) > 2:
+                        raise ConfigError(f'IPSec remote-access "{name}" supports only 2 IPv6 name-servers!')
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
