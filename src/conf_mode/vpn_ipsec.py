@@ -34,9 +34,11 @@ from vyos.pki import wrap_public_key
 from vyos.pki import wrap_private_key
 from vyos.template import ip_from_cidr
 from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.validate import is_ipv6_link_local
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import run
 from vyos.xml import defaults
@@ -102,11 +104,11 @@ def get_config(config=None):
         for group in ipsec['ike_group']:
             ipsec['ike_group'][group] = dict_merge(default_values,
                                                    ipsec['ike_group'][group])
-    if 'remote_access' in ipsec:
-        default_values = defaults(base + ['remote-access'])
-        for rw in ipsec['remote_access']:
-            ipsec['remote_access'][rw] = dict_merge(default_values,
-                                                    ipsec['remote_access'][rw])
+    if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
+        default_values = defaults(base + ['remote-access', 'connection'])
+        for rw in ipsec['remote_access']['connection']:
+            ipsec['remote_access']['connection'][rw] = dict_merge(default_values,
+              ipsec['remote_access']['connection'][rw])
 
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
@@ -126,33 +128,6 @@ def get_config(config=None):
         ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
         ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
-
-    if 'remote_access' in ipsec:
-        for name, ra_conf in ipsec['remote_access'].items():
-            if 'pool' in ra_conf:
-                if 'name_server' in ra_conf['pool']:
-                    ns_v4 = []
-                    ns_v6 = []
-                    for ns in ra_conf['pool']['name_server']:
-                        if is_ipv4(ns): ns_v4.append(ns)
-                        else: ns_v6.append(ns)
-
-                    # Only update nameserver keys if there are address-family specific name-servers
-                    if ns_v4:
-                        ipsec['remote_access'][name]['pool'].update({'name_server_v4' : ns_v4})
-                    if ns_v6:
-                        ipsec['remote_access'][name]['pool'].update({'name_server_v6' : ns_v6})
-                    del ipsec['remote_access'][name]['pool']['name_server']
-
-                if 'exclude' in ra_conf['pool']:
-                    exclude_v4 = []
-                    exclude_v6 = []
-                    for exclude in ra_conf['pool']['exclude']:
-                        if is_ipv4(exclude): exclude_v4.append(exclude)
-                        else: exclude_v6.append(exclude)
-
-                    ipsec['remote_access'][name]['pool'].update({'exclude_v4' : ns_v4, 'exclude_v6' : ns_v6})
-                    del ipsec['remote_access'][name]['pool']['exclude']
 
     return ipsec
 
@@ -257,52 +232,71 @@ def verify(ipsec):
                 raise ConfigError(f"Missing authentication on {profile} profile")
 
     if 'remote_access' in ipsec:
-        for name, ra_conf in ipsec['remote_access'].items():
-            if 'esp_group' in ra_conf:
-                if 'esp_group' not in ipsec or ra_conf['esp_group'] not in ipsec['esp_group']:
-                    raise ConfigError(f"Invalid esp-group on {name} remote-access config")
-            else:
-                raise ConfigError(f"Missing esp-group on {name} remote-access config")
+        if 'connection' in ipsec['remote_access']:
+            for name, ra_conf in ipsec['remote_access']['connection'].items():
+                if 'esp_group' in ra_conf:
+                    if 'esp_group' not in ipsec or ra_conf['esp_group'] not in ipsec['esp_group']:
+                        raise ConfigError(f"Invalid esp-group on {name} remote-access config")
+                else:
+                    raise ConfigError(f"Missing esp-group on {name} remote-access config")
 
-            if 'ike_group' in ra_conf:
-                if 'ike_group' not in ipsec or ra_conf['ike_group'] not in ipsec['ike_group']:
-                    raise ConfigError(f"Invalid ike-group on {name} remote-access config")
-            else:
-                raise ConfigError(f"Missing ike-group on {name} remote-access config")
+                if 'ike_group' in ra_conf:
+                    if 'ike_group' not in ipsec or ra_conf['ike_group'] not in ipsec['ike_group']:
+                        raise ConfigError(f"Invalid ike-group on {name} remote-access config")
+                else:
+                    raise ConfigError(f"Missing ike-group on {name} remote-access config")
 
-            if 'authentication' not in ra_conf:
-                raise ConfigError(f"Missing authentication on {name} remote-access config")
+                if 'authentication' not in ra_conf:
+                    raise ConfigError(f"Missing authentication on {name} remote-access config")
 
-            if ra_conf['authentication']['server_mode'] == 'x509':
-                if 'x509' not in ra_conf['authentication']:
-                    raise ConfigError(f"Missing x509 settings on {name} remote-access config")
+                if ra_conf['authentication']['server_mode'] == 'x509':
+                    if 'x509' not in ra_conf['authentication']:
+                        raise ConfigError(f"Missing x509 settings on {name} remote-access config")
 
-                x509 = ra_conf['authentication']['x509']
+                    x509 = ra_conf['authentication']['x509']
 
-                if 'ca_certificate' not in x509 or 'certificate' not in x509:
-                    raise ConfigError(f"Missing x509 certificates on {name} remote-access config")
+                    if 'ca_certificate' not in x509 or 'certificate' not in x509:
+                        raise ConfigError(f"Missing x509 certificates on {name} remote-access config")
 
-                verify_pki_x509(ipsec['pki'], x509)
-            elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
-                if 'pre_shared_secret' not in ra_conf['authentication']:
-                    raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
+                    verify_pki_x509(ipsec['pki'], x509)
+                elif ra_conf['authentication']['server_mode'] == 'pre-shared-secret':
+                    if 'pre_shared_secret' not in ra_conf['authentication']:
+                        raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
-            if 'pool' in ra_conf:
-                if 'name_server_ipv4' in ra_conf['pool'] and len(ra_conf['pool']['name_server_ipv4']) > 2:
-                    raise ConfigError(f'IPSec remote-access "{name}" supports only two IPv4 name-servers!')
-                if 'name_server_ipv6' in ra_conf['pool'] and len(ra_conf['pool']['name_server_ipv6']) > 2:
-                    raise ConfigError(f'IPSec remote-access "{name}" supports only two IPv6 name-servers!')
+                if 'pool' in ra_conf:
+                    if 'dhcp' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
+                        raise ConfigError(f'Can not use both DHCP and a predefined address pool for "{name}"!')
 
-                if 'prefix' in ra_conf['pool']:
-                    prefix_v4 = []
-                    prefix_v6 = []
-                    for prefix in ra_conf['pool']['prefix']:
-                        if is_ipv4(prefix): prefix_v4.append(prefix)
-                        else: prefix_v6.append(prefix)
-                    if len(prefix_v4) > 1:
-                        raise ConfigError(f'IPSec remote-access "{name}" supports only one IPv4 prefix!')
-                    if len(prefix_v6) > 1:
-                        raise ConfigError(f'IPSec remote-access "{name}" supports only one IPv6 prefix!')
+                    for pool in ra_conf['pool']:
+                        if pool == 'dhcp':
+                            if dict_search('options.remote_access.dhcp.server', ipsec) == None:
+                                raise ConfigError('IPSec DHCP server is not configured!')
+
+                        elif 'pool' not in ipsec['remote_access'] or pool not in ipsec['remote_access']['pool']:
+                            raise ConfigError(f'Requested pool "{pool}" does not exist!')
+
+        if 'pool' in ipsec['remote_access']:
+            for pool, pool_config in ipsec['remote_access']['pool'].items():
+                if 'prefix' not in pool_config:
+                    raise ConfigError(f'Missing madatory prefix option for pool "{pool}"!')
+
+                if 'name_server' in pool_config:
+                    if len(pool_config['name_server']) > 2:
+                        raise ConfigError(f'Only two name-servers are supported for remote-access pool "{pool}"!')
+
+                    for ns in pool_config['name_server']:
+                        v4_addr_and_ns = is_ipv4(ns) and not is_ipv4(pool_config['prefix'])
+                        v6_addr_and_ns = is_ipv6(ns) and not is_ipv6(pool_config['prefix'])
+                        if v4_addr_and_ns or v6_addr_and_ns:
+                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix and name-server adresses!')
+
+                if 'exclude' in pool_config:
+                    for exclude in pool_config['exclude']:
+                        v4_addr_and_exclude = is_ipv4(exclude) and not is_ipv4(pool_config['prefix'])
+                        v6_addr_and_exclude = is_ipv6(exclude) and not is_ipv6(pool_config['prefix'])
+                        if v4_addr_and_exclude or v6_addr_and_exclude:
+                           raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix and exclude prefixes!')
+
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
@@ -476,8 +470,9 @@ def generate(ipsec):
         if 'authentication' in ipsec['l2tp'] and 'x509' in ipsec['l2tp']['authentication']:
             generate_pki_files_x509(ipsec['pki'], ipsec['l2tp']['authentication']['x509'])
 
-    if 'remote_access' in ipsec:
-        for rw, rw_conf in ipsec['remote_access'].items():
+    if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
+        for rw, rw_conf in ipsec['remote_access']['connection'].items():
+
             if 'authentication' in rw_conf and 'x509' in rw_conf['authentication']:
                 generate_pki_files_x509(ipsec['pki'], rw_conf['authentication']['x509'])
 

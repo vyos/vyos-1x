@@ -15,8 +15,8 @@ connections {
 {{     peer_tmpl.conn(peer, peer_conf, ike_group, esp_group) }}
 {%   endfor %}
 {%  endif %}
-{% if remote_access is defined and remote_access is not none %}
-{%   for rw, rw_conf in remote_access.items() if rw_conf.disable is not defined %}
+{% if remote_access is defined and remote_access.connection is defined and remote_access.connection is not none %}
+{%   for rw, rw_conf in remote_access.connection.items() if rw_conf.disable is not defined %}
 {{ remote_access_tmpl.conn(rw, rw_conf, ike_group, esp_group) }}
 {%   endfor %}
 {% endif %}
@@ -26,33 +26,19 @@ connections {
 }
 
 pools {
-{%  if remote_access is defined %}
-{%    for ra, ra_conf in remote_access.items() if ra_conf.pool.dhcp_enable is not defined %}
-{%      if ra_conf.pool is defined and ra_conf.pool.prefix is defined %}
-{%        for prefix in ra_conf.pool.prefix %}
-{%          if prefix | is_ipv4 %}
-    ra-{{ ra }}-ipv4 {
-        addrs = {{ prefix }}
-{%            if ra_conf.pool.name_server_v4 is defined and ra_conf.pool.name_server_v4 is not none %}
-        dns = {{ ra_conf.pool.name_server_v4 | join(',') }}
-{%            endif %}
-{%            if ra_conf.pool.exclude_v4 is defined and ra_conf.pool.exclude_v4 is not none %}
-        split_exclude = {{ ra_conf.pool.exclude_v4 | join(',') }}
-{%            endif %}
-    }
-{%          elif prefix | is_ipv6 %}
-    ra-{{ ra }}-ipv6 {
-        addrs = {{ prefix }}
-{%            if ra_conf.pool.name_server_v6 is defined and ra_conf.pool.name_server_v6 is not none %}
-        dns = {{ ra_conf.pool.name_server_v6 | join(',') }}
-{%            endif %}
-{%            if ra_conf.pool.exclude_v6 is defined and ra_conf.pool.exclude_v6 is not none %}
-        split_exclude = {{ ra_conf.pool.exclude_v6 | join(',') }}
-{%            endif %}
-    }
-{%          endif %}
-{%        endfor %}
+{%  if remote_access is defined and remote_access.pool is defined and remote_access.pool is not none %}
+{%    for pool, pool_config in remote_access.pool.items() %}
+    {{ pool }} {
+{%      if pool_config.prefix is defined and pool_config.prefix is not none %}
+        addrs = {{ pool_config.prefix }}
 {%      endif %}
+{%      if pool_config.name_server is defined and pool_config.name_server is not none %}
+        dns = {{ pool_config.name_server | join(',') }}
+{%      endif %}
+{%      if pool_config.exclude is defined and pool_config.exclude is not none %}
+        split_exclude = {{ pool_config.exclude | join(',') }}
+{%      endif %}
+    }
 {%    endfor %}
 {%  endif %}
 }
@@ -103,8 +89,8 @@ secrets {
 {%      endif %}
 {%    endfor %}
 {%  endif %}
-{%  if remote_access is defined %}
-{%    for ra, ra_conf in remote_access.items() if remote_access is defined %}
+{%  if remote_access is defined and remote_access.connection is defined and remote_access.connection is not none %}
+{%    for ra, ra_conf in remote_access.connection.items() if ra_conf.disable is not defined %}
 {%      if ra_conf.authentication.server_mode == 'pre-shared-secret' %}
     ike_{{ ra }} {
 {%        if ra_conf.authentication.id is defined %}

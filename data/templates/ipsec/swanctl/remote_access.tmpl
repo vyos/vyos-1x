@@ -10,18 +10,9 @@
         send_certreq = no
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
-{%   if rw_conf.pool is defined and rw_conf.pool.dhcp_enable is defined %}
-        pools = dhcp
-{%   elif rw_conf.pool is defined and rw_conf.pool.prefix is defined and rw_conf.pool.prefix is not none %}
-{%   set pool = namespace(name='')  %}
-{%     for prefix in rw_conf.pool.prefix %}
-{%       if not loop.first %}
-{%         set pool.name = pool.name ~ ',' %}
-{%       endif %}
-{%       set afi = '-ipv4' if prefix | is_ipv4 else '-ipv6' %}
-{%       set pool.name = pool.name + 'ra-' + name + afi %}
-{%     endfor %}
-        pools = {{ pool.name }}
+        unique = never
+{%   if rw_conf.pool is defined and rw_conf.pool is not none %}
+        pools = {{ rw_conf.pool | join(',') }}
 {%   endif %}
         local {
 {%   if rw_conf.authentication.id is defined and rw_conf.authentication.use_x509_id is not defined %}
@@ -42,7 +33,7 @@
         }
         children {
             ikev2-vpn  {
-                esp_proposals = {{ esp | get_esp_ike_cipher | join(',')  }}
+                esp_proposals = {{ esp | get_esp_ike_cipher | join(',') }}
                 rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 dpd_action = clear
