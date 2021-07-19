@@ -8,24 +8,6 @@
           <help>Generate Wireguard keys</help>
         </properties>
         <children>
-          <leafNode name="default-keypair">
-            <properties>
-              <help>Generate the default Wireguard keypair</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey</command>
-          </leafNode>
-          <leafNode name="preshared-key">
-            <properties>
-              <help>Generate a Wireguard preshared key</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/wireguard.py --genpsk</command>
-          </leafNode>
-          <tagNode name="named-keypairs">
-            <properties>
-              <help>Generate specified Wireguard keypairs</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --genkey --location "$4"</command>
-          </tagNode>
           <tagNode name="client-config">
             <properties>
               <help>Generate Client config QR code</help>
@@ -94,25 +76,20 @@
               <help>Show Wireguard keys</help>
             </properties>
             <children>
-              <tagNode name="pubkey">
+              <leafNode name="pubkey">
                 <properties>
-                  <help>Show specified Wireguard public key</help>
-                  <completionHelp>
-                    <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
-                  </completionHelp>
+                  <help>Show Wireguard public keys</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/wireguard.py --showpub --location "$5"</command>
-              </tagNode>
-              <tagNode name="privkey">
+                <command>${vyos_op_scripts_dir}/wireguard.py --showpub</command>
+              </leafNode>
+              <leafNode name="privkey">
                 <properties>
-                  <help>Show specified Wireguard private key</help>
-                  <completionHelp>
-                    <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
-                  </completionHelp>
+                  <help>Show Wireguard private keys</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/wireguard.py --showpriv --location "$5"</command>
-              </tagNode>
+                <command>${vyos_op_scripts_dir}/wireguard.py --showpriv</command>
+              </leafNode>
             </children>
+            <command>${vyos_op_scripts_dir}/wireguard.py --showpub --showpriv</command>
           </node>
         </children>
       </node>
