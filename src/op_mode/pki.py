@@ -215,7 +215,7 @@ def install_wireguard_key(name, private_key, public_key):
         print("")
         print("Public key for use on peer configuration: " + public_key)
     else:
-        print("set interfaces wireguard [INTERFACE] peer %s pubkey '%s'" % (name, public_key))
+        print("set interfaces wireguard [INTERFACE] peer %s public-key '%s'" % (name, public_key))
         print("")
         print("Private key for use on peer configuration: " + private_key)
 

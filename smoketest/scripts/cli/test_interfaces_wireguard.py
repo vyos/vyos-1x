@@ -21,11 +21,6 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 
-
-# Generate WireGuard default keypair
-if not os.path.isdir('/config/auth/wireguard/default'):
-    os.system('sudo /usr/libexec/vyos/op_mode/wireguard.py --genkey')
-
 base_path = ['interfaces', 'wireguard']
 
 class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
@@ -42,11 +37,14 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # Create WireGuard interfaces with associated peers
         for intf in self._interfaces:
             peer = 'foo-' + intf
+            privkey = '6ISOkASm6VhHOOSz/5iIxw+Q9adq9zA17iMM4X40dlc='
             psk = 'u2xdA70hkz0S1CG0dZlOh0aq2orwFXRIVrKo4DCvHgM='
             pubkey = 'n6ZZL7ph/QJUJSUUTyu19c77my1dRCDHkMzFQUO9Z3A='
 
             for addr in self._test_addr:
                 self.cli_set(base_path + [intf, 'address', addr])
+
+            self.cli_set(base_path + [intf, 'private-key', privkey])
 
             self.cli_set(base_path + [intf, 'peer', peer, 'address', '127.0.0.1'])
             self.cli_set(base_path + [intf, 'peer', peer, 'port', '1337'])
@@ -57,7 +55,7 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + [intf, 'peer', peer, 'allowed-ips', ip])
 
             self.cli_set(base_path + [intf, 'peer', peer, 'preshared-key', psk])
-            self.cli_set(base_path + [intf, 'peer', peer, 'pubkey', pubkey])
+            self.cli_set(base_path + [intf, 'peer', peer, 'public-key', pubkey])
             self.cli_commit()
 
             self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
@@ -68,17 +66,19 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         # Remove one of the configured peers.
         interface = 'wg0'
         port = '12345'
+        privkey = '6ISOkASm6VhHOOSz/5iIxw+Q9adq9zA17iMM4X40dlc='
         pubkey_1 = 'n1CUsmR0M2LUUsyicBd6blZICwUqqWWHbu4ifZ2/9gk='
         pubkey_2 = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
 
         self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'private-key', privkey])
 
-        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'pubkey', pubkey_1])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'public-key', pubkey_1])
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'port', port])
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
 
-        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'pubkey', pubkey_2])
+        self.cli_set(base_path + [interface, 'peer', 'PEER02', 'public-key', pubkey_2])
         self.cli_set(base_path + [interface, 'peer', 'PEER02', 'port', port])
         self.cli_set(base_path + [interface, 'peer', 'PEER02', 'allowed-ips', '10.205.212.11/32'])
         self.cli_set(base_path + [interface, 'peer', 'PEER02', 'address', '192.0.2.2'])

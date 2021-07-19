@@ -95,7 +95,7 @@ class WireGuardOperational(Operational):
 
         for peer in c.list_effective_nodes(["peer"]):
             if wgdump['peers']:
-                pubkey = c.return_effective_value(["peer", peer, "pubkey"])
+                pubkey = c.return_effective_value(["peer", peer, "public_key"])
                 if pubkey in wgdump['peers']:
                     wgpeer = wgdump['peers'][pubkey]
 
@@ -194,11 +194,15 @@ class WireGuardIf(Interface):
                 peer = config['peer_remove'][tmp]
                 peer['ifname'] = config['ifname']
 
-                cmd = 'wg set {ifname} peer {pubkey} remove'
+                cmd = 'wg set {ifname} peer {public_key} remove'
                 self._cmd(cmd.format(**peer))
 
+        config['private_key_file'] = '/tmp/tmp.wireguard.key'
+        with open(config['private_key_file'], 'w') as f:
+            f.write(config['private_key'])
+
         # Wireguard base command is identical for every peer
-        base_cmd  = 'wg set {ifname} private-key {private_key}'
+        base_cmd  = 'wg set {ifname} private-key {private_key_file}'
         if 'port' in config:
             base_cmd += ' listen-port {port}'
         if 'fwmark' in config:
@@ -210,7 +214,7 @@ class WireGuardIf(Interface):
             peer = config['peer'][tmp]
 
             # start of with a fresh 'wg' command
-            cmd = base_cmd + ' peer {pubkey}'
+            cmd = base_cmd + ' peer {public_key}'
 
             # If no PSK is given remove it by using /dev/null - passing keys via
             # the shell (usually bash) is considered insecure, thus we use a file
