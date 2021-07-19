@@ -42,12 +42,12 @@
           </leafNode>
           <leafNode name="private-key">
             <properties>
-              <help>Private key to use on that interface</help>
-              <completionHelp>
-                <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
-              </completionHelp>
+              <help>Base64 encoded private key</help>
+              <constraint>
+                <regex>[0-9a-zA-Z\+/]{43}=$</regex>
+              </constraint>
+              <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
             </properties>
-            <defaultValue>default</defaultValue>
           </leafNode>
           <tagNode name="peer">
             <properties>
@@ -59,7 +59,7 @@
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
-              <leafNode name="pubkey">
+              <leafNode name="public-key">
                 <properties>
                   <help>base64 encoded public key</help>
                   <constraint>

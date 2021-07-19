@@ -46,17 +46,14 @@ def get_config(config=None):
     base = ['interfaces', 'wireguard']
     wireguard = get_interface_dict(conf, base)
 
-    # Mangle private key - it has a default so its always valid
-    wireguard['private_key'] = '/config/auth/wireguard/{private_key}/private.key'.format(**wireguard)
-
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
     dict = {}
     tmp = node_changed(conf, ['peer'], key_mangling=('-', '_'))
     for peer in (tmp or []):
-        pubkey = leaf_node_changed(conf, ['peer', peer, 'pubkey'])
-        if pubkey:
-            dict = dict_merge({'peer_remove' : {peer : {'pubkey' : pubkey[0]}}}, dict)
+        public_key = leaf_node_changed(conf, ['peer', peer, 'public_key'])
+        if public_key:
+            dict = dict_merge({'peer_remove' : {peer : {'public_key' : public_key[0]}}}, dict)
             wireguard.update(dict)
 
     return wireguard
@@ -70,9 +67,8 @@ def verify(wireguard):
     verify_address(wireguard)
     verify_vrf(wireguard)
 
-    if not os.path.exists(wireguard['private_key']):
-        raise ConfigError('Wireguard private-key not found! Execute: ' \
-                          '"run generate wireguard [default-keypair|named-keypairs]"')
+    if 'private_key' not in wireguard:
+        raise ConfigError('Wireguard private-key not defined')
 
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
@@ -84,7 +80,7 @@ def verify(wireguard):
         if 'allowed_ips' not in peer:
             raise ConfigError(f'Wireguard allowed-ips required for peer "{tmp}"!')
 
-        if 'pubkey' not in peer:
+        if 'public_key' not in peer:
             raise ConfigError(f'Wireguard public-key required for peer "{tmp}"!')
 
         if ('address' in peer and 'port' not in peer) or ('port' in peer and 'address' not in peer):

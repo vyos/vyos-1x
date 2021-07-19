@@ -38,7 +38,7 @@ To enable this configuration on a VyOS router you can use the following commands
 {% for addr in address if address is defined %}
 set interfaces wireguard {{ interface }} peer {{ name }} allowed-ips '{{ addr }}'
 {% endfor %}
-set interfaces wireguard {{ interface }} peer {{ name }} pubkey '{{ pubkey }}'
+set interfaces wireguard {{ interface }} peer {{ name }} public-key '{{ pubkey }}'
 """
 
 client_config = """
