@@ -9,7 +9,7 @@
     <string>{{ rfqdn }}</string>
     <!-- A globally unique identifier, use uuidgen on Linux/Mac OS X to generate it -->
     <key>PayloadUUID</key>
-    <string>{{ 'random' | get_uuid }}</string>
+    <string>{{ '' | get_uuid }}</string>
     <key>PayloadType</key>
     <string>Configuration</string>
     <key>PayloadVersion</key>
@@ -23,7 +23,7 @@
             <string>{{ rfqdn }}.conf1</string>
             <!-- A globally unique identifier for this payload -->
             <key>PayloadUUID</key>
-            <string>{{ 'random' | get_uuid }}</string>
+            <string>{{ '' | get_uuid }}</string>
             <key>PayloadType</key>
             <string>com.apple.vpn.managed</string>
             <key>PayloadVersion</key>
@@ -94,7 +94,7 @@
             <key>PayloadIdentifier</key>
             <string>org.example.ca</string>
             <key>PayloadUUID</key>
-            <string>{{ 'random' | get_uuid }}</string>
+            <string>{{ '' | get_uuid }}</string>
             <key>PayloadType</key>
             <string>com.apple.security.root</string>
             <key>PayloadVersion</key>
