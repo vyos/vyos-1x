@@ -19,9 +19,11 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.xml import defaults
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.xml import defaults
 from vyos import ConfigError
 from crypt import crypt, mksalt, METHOD_SHA512
 
@@ -50,6 +52,10 @@ def get_config():
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
 
+    if ocserv:
+        ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     return ocserv
 
 def verify(ocserv):
@@ -72,13 +78,35 @@ def verify(ocserv):
         raise ConfigError('openconnect authentication credentials required')
 
     # Check ssl
-    if "ssl" in ocserv:
-        req_cert = ['cert_file', 'key_file']
-        for cert in req_cert:
-            if not cert in ocserv["ssl"]:
-                raise ConfigError('openconnect ssl {0} required'.format(cert.replace('_', '-')))
-    else:
+    if 'ssl' not in ocserv:
         raise ConfigError('openconnect ssl required')
+
+    if not ocserv['pki'] or 'certificate' not in ocserv['pki']:
+        raise ConfigError('PKI not configured')
+
+    ssl = ocserv['ssl']
+    if 'certificate' not in ssl:
+        raise ConfigError('openconnect ssl certificate required')
+
+    cert_name = ssl['certificate']
+
+    if cert_name not in ocserv['pki']['certificate']:
+        raise ConfigError('Invalid openconnect ssl certificate')
+
+    cert = ocserv['pki']['certificate'][cert_name]
+
+    if 'certificate' not in cert:
+        raise ConfigError('Missing certificate in PKI')
+
+    if 'private' not in cert or 'key' not in cert['private']:
+        raise ConfigError('Missing private key in PKI')
+
+    if 'ca_certificate' in ssl:
+        if 'ca' not in ocserv['pki']:
+            raise ConfigError('PKI not configured')
+
+        if ssl['ca_certificate'] not in ocserv['pki']['ca']:
+            raise ConfigError('Invalid openconnect ssl CA certificate')
 
     # Check network settings
     if "network_settings" in ocserv:
@@ -108,6 +136,29 @@ def generate(ocserv):
                 ocserv["authentication"]["local_users"]["username"][user]["hash"] = get_hash(ocserv["authentication"]["local_users"]["username"][user]["password"])
             # Render local users
             render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+
+    if "ssl" in ocserv:
+        cert_file_path = os.path.join(cfg_dir, 'cert.pem')
+        cert_key_path = os.path.join(cfg_dir, 'cert.key')
+        ca_cert_file_path = os.path.join(cfg_dir, 'ca.pem')
+
+        if 'certificate' in ocserv['ssl']:
+            cert_name = ocserv['ssl']['certificate']
+            pki_cert = ocserv['pki']['certificate'][cert_name]
+
+            with open(cert_file_path, 'w') as f:
+                f.write(wrap_certificate(pki_cert['certificate']))
+
+            if 'private' in pki_cert and 'key' in pki_cert['private']:
+                with open(cert_key_path, 'w') as f:
+                    f.write(wrap_private_key(pki_cert['private']['key']))
+
+        if 'ca_certificate' in ocserv['ssl']:
+            ca_name = ocserv['ssl']['ca_certificate']
+            pki_ca_cert = ocserv['pki']['ca'][ca_name]
+
+            with open(ca_cert_file_path, 'w') as f:
+                f.write(wrap_certificate(pki_ca_cert['certificate']))
 
     # Render config
     render(ocserv_conf, 'ocserv/ocserv_config.tmpl', ocserv)

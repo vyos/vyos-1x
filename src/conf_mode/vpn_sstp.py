@@ -21,6 +21,8 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_accel_ppp_base_service
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
@@ -28,6 +30,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+cfg_dir = '/run/accel-pppd'
 sstp_conf = '/run/accel-pppd/sstp.conf'
 sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
 
@@ -42,6 +45,11 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     sstp = get_accel_dict(conf, base, sstp_chap_secrets)
+
+    if sstp:
+        sstp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     return sstp
 
 def verify(sstp):
@@ -56,30 +64,58 @@ def verify(sstp):
     #
     # SSL certificate checks
     #
-    tmp = dict_search('ssl.ca_cert_file', sstp)
-    if not tmp:
-        raise ConfigError(f'SSL CA certificate file required!')
-    else:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL CA certificate "{tmp}" does not exist!')
+    if not sstp['pki']:
+        raise ConfigError('PKI is not configured')
 
-    tmp = dict_search('ssl.cert_file', sstp)
-    if not tmp:
-        raise ConfigError(f'SSL public key file required!')
-    else:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL public key "{tmp}" does not exist!')
+    if 'ssl' not in sstp:
+        raise ConfigError('SSL missing on SSTP config')
 
-    tmp = dict_search('ssl.key_file', sstp)
-    if not tmp:
-        raise ConfigError(f'SSL private key file required!')
-    else:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL private key "{tmp}" does not exist!')
+    ssl = sstp['ssl']
+
+    if 'ca_certificate' not in ssl:
+        raise ConfigError('SSL CA certificate missing on SSTP config')
+
+    if 'certificate' not in ssl:
+        raise ConfigError('SSL certificate missing on SSTP config')
+
+    cert_name = ssl['certificate']
+
+    if ssl['ca_certificate'] not in sstp['pki']['ca']:
+        raise ConfigError('Invalid CA certificate on SSTP config')
+
+    if cert_name not in sstp['pki']['certificate']:
+        raise ConfigError('Invalid certificate on SSTP config')
+
+    pki_cert = sstp['pki']['certificate'][cert_name]
+
+    if 'private' not in pki_cert or 'key' not in pki_cert['private']:
+        raise ConfigError('Missing private key for certificate on SSTP config')
+
+    if 'password_protected' in pki_cert['private']:
+        raise ConfigError('Encrypted private key is not supported on SSTP config')
 
 def generate(sstp):
     if not sstp:
         return None
+
+    cert_file_path = os.path.join(cfg_dir, 'sstp-cert.pem')
+    cert_key_path = os.path.join(cfg_dir, 'sstp-cert.key')
+    ca_cert_file_path = os.path.join(cfg_dir, 'sstp-ca.pem')
+
+    cert_name = sstp['ssl']['certificate']
+    pki_cert = sstp['pki']['certificate'][cert_name]
+
+    with open(cert_file_path, 'w') as f:
+        f.write(wrap_certificate(pki_cert['certificate']))
+
+    with open(cert_key_path, 'w') as f:
+        f.write(wrap_private_key(pki_cert['private']['key']))
+
+    ca_cert_name = sstp['ssl']['ca_certificate']
+    pki_ca = sstp['pki']['ca'][ca_cert_name]
+
+    with open(ca_cert_file_path, 'w') as f:
+        f.write(wrap_certificate(pki_ca['certificate']))
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
     render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp)
