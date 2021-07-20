@@ -14,9 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# A VTI interface also requires an IPSec configuration - VyOS 1.2 supported
-# having a VTI interface in the CLI but no IPSec configuration - drop VTI
-# configuration if this is the case for VyOS 1.4
+# Migrate Wireguard to store keys in CLI
 
 import os
 import sys
