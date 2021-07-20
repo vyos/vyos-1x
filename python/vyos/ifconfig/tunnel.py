@@ -136,7 +136,7 @@ class GRETapIf(_Tunnel):
 
     # no multicast, ttl or tos for gretap
     default = {'type': 'gretap'}
-    options = ['local', 'remote', 'ttl',]
+    options = ['local', 'remote', 'ttl', 'tos', 'key']
 
     _create_cmd = 'ip link add name {ifname} type {type}'
 
