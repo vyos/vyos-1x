@@ -19,9 +19,9 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.util import cmd
 
-ca_cert = '/tmp/ca.crt'
-ssl_cert = '/tmp/server.crt'
-ssl_key = '/tmp/server.key'
+pki_path = ['pki']
+cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
+key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
 
 class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
     def setUp(self):
@@ -31,28 +31,21 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         self._chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
         super().setUp()
 
+    def tearDown(self):
+        self.cli_delete(pki_path)
+        super().tearDown()
+
     def basic_config(self):
+        self.cli_delete(pki_path)
+        self.cli_set(pki_path + ['ca', 'sstp', 'certificate', cert_data])
+        self.cli_set(pki_path + ['certificate', 'sstp', 'certificate', cert_data])
+        self.cli_set(pki_path + ['certificate', 'sstp', 'private', 'key', key_data])
         # SSL is mandatory
-        self.set(['ssl', 'ca-cert-file', ca_cert])
-        self.set(['ssl', 'cert-file', ssl_cert])
-        self.set(['ssl', 'key-file', ssl_key])
+        self.set(['ssl', 'ca-certificate', 'sstp'])
+        self.set(['ssl', 'certificate', 'sstp'])
         self.set(['client-ip-pool', 'subnet', '192.0.2.0/24'])
 
         super().basic_config()
 
 if __name__ == '__main__':
-    # Our SSL certificates need a subject ...
-    subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
-              'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
-
-    # Generate mandatory SSL certificate
-    tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
-          f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-    cmd(tmp)
-
-    # Generate "CA"
-    tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} '\
-          f'-subj {subject}'
-    cmd(tmp)
-
     unittest.main(verbosity=2)

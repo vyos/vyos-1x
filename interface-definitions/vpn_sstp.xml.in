@@ -50,12 +50,11 @@
           </node>
           <node name="ssl">
             <properties>
-              <help>SSL Certificate, SSL Key and CA (/config/user-data/sstp)</help>
+              <help>SSL Certificate, SSL Key and CA</help>
             </properties>
             <children>
-              #include <include/certificate.xml.i>
-              #include <include/certificate-ca.xml.i>
-              #include <include/certificate-key.xml.i>
+              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/certificate.xml.i>
             </children>
           </node>
         </children>
