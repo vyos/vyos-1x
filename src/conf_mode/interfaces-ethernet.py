@@ -32,6 +32,8 @@ from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ethtool import Ethtool
 from vyos.ifconfig import EthernetIf
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
@@ -40,6 +42,7 @@ from vyos import airbag
 airbag.enable()
 
 # XXX: wpa_supplicant works on the source interface
+cfg_dir = '/run/wpa_supplicant'
 wpa_suppl_conf = '/run/wpa_supplicant/{ifname}.conf'
 
 def get_config(config=None):
@@ -52,7 +55,14 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'ethernet']
+
+    tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     ethernet = get_interface_dict(conf, base)
+
+    if 'deleted' not in ethernet:
+        ethernet['pki'] = tmp_pki
 
     return ethernet
 
@@ -126,6 +136,27 @@ def generate(ethernet):
     if 'eapol' in ethernet:
         render(wpa_suppl_conf.format(**ethernet),
                'ethernet/wpa_supplicant.conf.tmpl', ethernet)
+        
+        ifname = ethernet['ifname']
+        cert_file_path = os.path.join(cfg_dir, f'{ifname}_cert.pem')
+        cert_key_path = os.path.join(cfg_dir, f'{ifname}_cert.key')
+
+        cert_name = ethernet['eapol']['certificate']
+        pki_cert = ethernet['pki']['certificate'][cert_name]
+
+        with open(cert_file_path, 'w') as f:
+            f.write(wrap_certificate(pki_cert['certificate']))
+
+        with open(cert_key_path, 'w') as f:
+            f.write(wrap_private_key(pki_cert['private']['key']))
+
+        if 'ca_certificate' in ethernet['eapol']:
+            ca_cert_file_path = os.path.join(cfg_dir, f'{ifname}_ca.pem')
+            ca_cert_name = ethernet['eapol']['ca_certificate']
+            pki_ca_cert = ethernet['pki']['ca'][cert_name]
+
+            with open(ca_cert_file_path, 'w') as f:
+                f.write(wrap_certificate(pki_ca_cert['certificate']))
     else:
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**ethernet)):
