@@ -25,9 +25,9 @@ from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 
-ca_cert  = '/config/auth/eapol_test_ca.pem'
-ssl_cert = '/config/auth/eapol_test_server.pem'
-ssl_key  = '/config/auth/eapol_test_server.key'
+pki_path = ['pki']
+cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
+key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
 
 def get_wpa_supplicant_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
@@ -66,6 +66,8 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
 
     def tearDown(self):
+        self.cli_delete(pki_path)
+
         for interface in self._interfaces:
             # when using a dedicated interface to test via TEST_ETH environment
             # variable only this one will be cleared in the end - usable to test
@@ -149,11 +151,14 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
 
     def test_eapol_support(self):
+        self.cli_set(pki_path + ['ca', 'eapol', 'certificate', cert_data])
+        self.cli_set(pki_path + ['certificate', 'eapol', 'certificate', cert_data])
+        self.cli_set(pki_path + ['certificate', 'eapol', 'private', 'key', key_data])
+
         for interface in self._interfaces:
             # Enable EAPoL
-            self.cli_set(self._base_path + [interface, 'eapol', 'ca-cert-file', ca_cert])
-            self.cli_set(self._base_path + [interface, 'eapol', 'cert-file', ssl_cert])
-            self.cli_set(self._base_path + [interface, 'eapol', 'key-file', ssl_key])
+            self.cli_set(self._base_path + [interface, 'eapol', 'ca-certificate', 'eapol'])
+            self.cli_set(self._base_path + [interface, 'eapol', 'certificate', 'eapol'])
 
         self.cli_commit()
 
@@ -172,35 +177,17 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.assertEqual('0', tmp)
 
             tmp = get_wpa_supplicant_value(interface, 'ca_cert')
-            self.assertEqual(f'"{ca_cert}"', tmp)
+            self.assertEqual(f'"/run/wpa_supplicant/{interface}_ca.pem"', tmp)
 
             tmp = get_wpa_supplicant_value(interface, 'client_cert')
-            self.assertEqual(f'"{ssl_cert}"', tmp)
+            self.assertEqual(f'"/run/wpa_supplicant/{interface}_cert.pem"', tmp)
 
             tmp = get_wpa_supplicant_value(interface, 'private_key')
-            self.assertEqual(f'"{ssl_key}"', tmp)
+            self.assertEqual(f'"/run/wpa_supplicant/{interface}_cert.key"', tmp)
 
             mac = read_file(f'/sys/class/net/{interface}/address')
             tmp = get_wpa_supplicant_value(interface, 'identity')
             self.assertEqual(f'"{mac}"', tmp)
 
 if __name__ == '__main__':
-    # Our SSL certificates need a subject ...
-    subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
-              'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
-
-    if not (os.path.isfile(ssl_key) and os.path.isfile(ssl_cert)):
-        # Generate mandatory SSL certificate
-        tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
-              f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-        cmd(tmp)
-
-    if not os.path.isfile(ca_cert):
-        # Generate "CA"
-        tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
-        cmd(tmp)
-
-    for file in [ca_cert, ssl_cert, ssl_key]:
-        cmd(f'sudo chown radius_priv_user:vyattacfg {file}')
-
     unittest.main(verbosity=2)
