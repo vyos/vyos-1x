@@ -439,3 +439,32 @@ def get_uuid(interface):
     """ Get interface IP addresses"""
     from uuid import uuid1
     return uuid1()
+
+openvpn_translate = {
+    'des': 'des-cbc',
+    '3des': 'des-ede3-cbc',
+    'bf128': 'bf-cbc',
+    'bf256': 'bf-cbc',
+    'aes128gcm': 'aes-128-gcm',
+    'aes128': 'aes-128-cbc',
+    'aes192gcm': 'aes-192-gcm',
+    'aes192': 'aes-192-cbc',
+    'aes256gcm': 'aes-256-gcm',
+    'aes256': 'aes-256-cbc'
+}
+
+@register_filter('openvpn_cipher')
+def get_openvpn_cipher(cipher):
+    if cipher in openvpn_translate:
+        return openvpn_translate[cipher].upper()
+    return cipher.upper()
+
+@register_filter('openvpn_ncp_ciphers')
+def get_openvpn_ncp_ciphers(ciphers):
+    out = []
+    for cipher in ciphers:
+        if cipher in openvpn_translate:
+            out.append(openvpn_translate[cipher])
+        else:
+            out.append(cipher)
+    return ':'.join(out).upper()

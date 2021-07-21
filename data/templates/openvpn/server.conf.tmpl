@@ -36,8 +36,8 @@ rport {{ remote_port }}
 remote {{ remote }}
 {%   endfor %}
 {% endif %}
-{% if shared_secret_key_file is defined and shared_secret_key_file is not none %}
-secret {{ shared_secret_key_file }}
+{% if shared_secret_key is defined and shared_secret_key is not none %}
+secret /run/openvpn/{{ ifname }}_shared.key
 {% endif %}
 {% if persistent_tunnel is defined %}
 persist-tun
@@ -157,32 +157,32 @@ ifconfig-ipv6 {{ laddr }} {{ raddr }}
 
 {% if tls is defined and tls is not none %}
 # TLS options
-{%   if tls.ca_cert_file is defined and tls.ca_cert_file is not none %}
-ca {{ tls.ca_cert_file }}
+{%   if tls.ca_certificate is defined and tls.ca_certificate is not none %}
+ca /run/openvpn/{{ ifname }}_ca.pem
 {%   endif %}
-{%   if tls.cert_file is defined and tls.cert_file is not none %}
-cert {{ tls.cert_file }}
+{%   if tls.certificate is defined and tls.certificate is not none %}
+cert /run/openvpn/{{ ifname }}_cert.pem
 {%   endif %}
-{%   if tls.key_file is defined and tls.key_file is not none %}
-key {{ tls.key_file }}
+{%   if tls.private_key is defined %}
+key /run/openvpn/{{ ifname }}_cert.key
 {%   endif %}
-{%   if tls.crypt_file is defined and tls.crypt_file is not none %}
-tls-crypt {{ tls.crypt_file }}
+{%   if tls.crypt_key is defined and tls.crypt_key is not none %}
+tls-crypt /run/openvpn/{{ ifname }}_crypt.key
 {%   endif %}
-{%   if tls.crl_file is defined and tls.crl_file is not none %}
-crl-verify {{ tls.crl_file }}
+{%   if tls.crl is defined %}
+crl-verify /run/openvpn/{{ ifname }}_crl.pem
 {%   endif %}
 {%   if tls.tls_version_min is defined and tls.tls_version_min is not none %}
 tls-version-min {{ tls.tls_version_min }}
 {%   endif %}
-{%   if tls.dh_file is defined and tls.dh_file is not none %}
-dh {{ tls.dh_file }}
+{%   if tls.dh_params is defined and tls.dh_params is not none %}
+dh /run/openvpn/{{ ifname }}_dh.pem
 {%   endif %}
-{%   if tls.auth_file is defined and tls.auth_file is not none %}
+{%   if tls.auth_key is defined and tls.auth_key is not none %}
 {%     if mode == 'client' %}
-tls-auth {{ tls.auth_file }} 1
+tls-auth /run/openvpn/{{ ifname }}_auth.key 1
 {%     elif mode == 'server' %}
-tls-auth {{ tls.auth_file }} 0
+tls-auth /run/openvpn/{{ ifname }}_auth.key 0
 {%     endif %}
 {%   endif %}
 {%   if tls.role is defined and tls.role is not none %}
@@ -197,56 +197,15 @@ tls-server
 # Encryption options
 {% if encryption is defined and encryption is not none %}
 {%   if encryption.cipher is defined and encryption.cipher is not none %}
-{%     if encryption.cipher == 'none' %}
-cipher none
-{%     elif encryption.cipher == 'des' %}
-cipher des-cbc
-{%     elif encryption.cipher == '3des' %}
-cipher des-ede3-cbc
-{%     elif encryption.cipher == 'bf128' %}
-cipher bf-cbc
+cipher {{ encryption.cipher | openvpn_cipher }}
+{%     if encryption.cipher == 'bf128' %}
 keysize 128
 {%     elif encryption.cipher == 'bf256' %}
-cipher bf-cbc
-keysize 25
-{%     elif encryption.cipher == 'aes128gcm' %}
-cipher aes-128-gcm
-{%     elif encryption.cipher == 'aes128' %}
-cipher aes-128-cbc
-{%     elif encryption.cipher == 'aes192gcm' %}
-cipher aes-192-gcm
-{%     elif encryption.cipher == 'aes192' %}
-cipher aes-192-cbc
-{%     elif encryption.cipher == 'aes256gcm' %}
-cipher aes-256-gcm
-{%     elif encryption.cipher == 'aes256' %}
-cipher aes-256-cbc
+keysize 256
 {%     endif %}
 {%   endif %}
 {%   if encryption.ncp_ciphers is defined and encryption.ncp_ciphers is not none %}
-{%     set cipher_list = [] %}
-{%     for cipher in encryption.ncp_ciphers %}
-{%       if cipher == 'none' %}
-{%         set cipher_list = cipher_list.append('none') %}
-{%       elif cipher == 'des' %}
-{%         set cipher_list = cipher_list.append('des-cbc') %}
-{%       elif cipher == '3des' %}
-{%         set cipher_list = cipher_list.append('des-ede3-cbc') %}
-{%       elif cipher == 'aes128' %}
-{%         set cipher_list = cipher_list.append('aes-128-cbc') %}
-{%       elif cipher == 'aes128gcm' %}
-{%         set cipher_list = cipher_list.append('aes-128-gcm') %}
-{%       elif cipher == 'aes192' %}
-{%         set cipher_list = cipher_list.append('aes-192-cbc') %}
-{%       elif cipher == 'aes192gcm' %}
-{%         set cipher_list = cipher_list.append('aes-192-gcm') %}
-{%       elif cipher == 'aes256' %}
-{%         set cipher_list = cipher_list.append('aes-256-cbc') %}
-{%       elif cipher == 'aes256gcm' %}
-{%         set cipher_list = cipher_list.append('aes-256-gcm') %}
-{%       endif %}
-{%     endfor %}
-ncp-ciphers {{ cipher_list | join(':') }}:{{ cipher_list | join(':') | upper }}
+data-ciphers {{ encryption.ncp_ciphers | openvpn_ncp_ciphers }}
 {%   endif %}
 {% endif %}
 

@@ -17,6 +17,7 @@
 import os
 import re
 
+from cryptography.hazmat.primitives.asymmetric import ec
 from glob import glob
 from sys import exit
 from ipaddress import IPv4Address
@@ -31,8 +32,14 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
-from vyos.configverify import verify_diffie_hellman_length
 from vyos.ifconfig import VTunIf
+from vyos.pki import load_dh_parameters
+from vyos.pki import load_private_key
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_crl
+from vyos.pki import wrap_dh_parameters
+from vyos.pki import wrap_openvpn_key
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -40,6 +47,7 @@ from vyos.util import call
 from vyos.util import chown
 from vyos.util import chmod_600
 from vyos.util import dict_search
+from vyos.util import dict_search_args
 from vyos.validate import is_addr_assigned
 
 from vyos import ConfigError
@@ -49,22 +57,8 @@ airbag.enable()
 user = 'openvpn'
 group = 'openvpn'
 
+cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
-
-def checkCertHeader(header, filename):
-    """
-    Verify if filename contains specified header.
-    Returns True if match is found, False if no match or file is not found
-    """
-    if not os.path.isfile(filename):
-        return False
-
-    with open(filename, 'r') as f:
-        for line in f:
-            if re.match(header, line):
-                return True
-
-    return False
 
 def get_config(config=None):
     """
@@ -76,13 +70,104 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'openvpn']
+
+    tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     openvpn = get_interface_dict(conf, base)
+
+    if 'deleted' not in openvpn:
+        openvpn['pki'] = tmp_pki
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
     openvpn['daemon_user'] = user
     openvpn['daemon_group'] = group
 
     return openvpn
+
+def is_ec_private_key(pki, cert_name):
+    if not pki or 'certificate' not in pki:
+        return False
+    if cert_name not in pki['certificate']:
+        return False
+
+    pki_cert = pki['certificate'][cert_name]
+    if 'private' not in pki_cert or 'key' not in pki_cert['private']:
+        return False
+
+    key = load_private_key(pki_cert['private']['key'])
+    return isinstance(key, ec.EllipticCurvePrivateKey)
+
+def verify_pki(openvpn):
+    pki = openvpn['pki']
+    interface = openvpn['ifname']
+    mode = openvpn['mode']
+    shared_secret_key = dict_search_args(openvpn, 'shared_secret_key')
+    tls = dict_search_args(openvpn, 'tls')
+
+    if not bool(shared_secret_key) ^ bool(tls): #  xor check if only one is set
+        raise ConfigError('Must specify only one of "shared-secret-key" and "tls"')
+
+    if mode in ['server', 'client'] and not tls:
+        raise ConfigError('Must specify "tls" for server and client modes')
+
+    if not pki:
+        raise ConfigError('PKI is not configured')
+
+    if shared_secret_key:
+        if not dict_search_args(pki, 'openvpn', 'shared_secret'):
+            raise ConfigError('There are no openvpn shared-secrets in PKI configuration')
+
+        if shared_secret_key not in pki['openvpn']['shared_secret']:
+            raise ConfigError(f'Invalid shared-secret on openvpn interface {interface}')
+
+    if tls:
+        if 'ca_certificate' not in tls:
+            raise ConfigError(f'Must specify "tls ca-certificate" on openvpn interface {interface}')
+
+        if tls['ca_certificate'] not in pki['ca']:
+            raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
+
+        if not (mode == 'client' and 'auth_key' in tls):
+            if 'certificate' not in tls:
+                raise ConfigError(f'Missing "tls certificate" on openvpn interface {interface}')
+
+        if 'certificate' in tls:
+            if tls['certificate'] not in pki['certificate']:
+                raise ConfigError(f'Invalid certificate on openvpn interface {interface}')
+
+            if dict_search_args(pki, 'certificate', tls['certificate'], 'private', 'password_protected'):
+                raise ConfigError(f'Cannot use encrypted private key on openvpn interface {interface}')
+
+            if mode == 'server' and 'dh_params' not in tls and not is_ec_private_key(pki, tls['certificate']):
+                raise ConfigError('Must specify "tls dh-params" when not using EC keys in server mode')
+
+        if 'dh_params' in tls:
+            if 'dh' not in pki:
+                raise ConfigError('There are no DH parameters in PKI configuration')
+
+            if tls['dh_params'] not in pki['dh']:
+                raise ConfigError(f'Invalid dh-params on openvpn interface {interface}')
+
+            pki_dh = pki['dh'][tls['dh_params']]
+            dh_params = load_dh_parameters(pki_dh['parameters'])
+            dh_numbers = dh_params.parameter_numbers()
+            dh_bits = dh_numbers.p.bit_length()
+
+            if dh_bits < 2048:
+                raise ConfigError(f'Minimum DH key-size is 2048 bits')
+
+        if 'auth_key' in tls or 'crypt_key' in tls:
+            if not dict_search_args(pki, 'openvpn', 'shared_secret'):
+                raise ConfigError('There are no openvpn shared-secrets in PKI configuration')
+
+        if 'auth_key' in tls:
+            if tls['auth_key'] not in pki['openvpn']['shared_secret']:
+                raise ConfigError(f'Invalid auth-key on openvpn interface {interface}')
+
+        if 'crypt_key' in tls:
+            if tls['crypt_key'] not in pki['openvpn']['shared_secret']:
+                raise ConfigError(f'Invalid crypt-key on openvpn interface {interface}')
 
 def verify(openvpn):
     if 'deleted' in openvpn:
@@ -108,8 +193,8 @@ def verify(openvpn):
         if openvpn['protocol'] == 'tcp-passive':
             raise ConfigError('Protocol "tcp-passive" is not valid in client mode')
 
-        if dict_search('tls.dh_file', openvpn):
-            raise ConfigError('Cannot specify "tls dh-file" in client mode')
+        if dict_search('tls.dh_params', openvpn):
+            raise ConfigError('Cannot specify "tls dh-params" in client mode')
 
     #
     # OpenVPN site-to-site - VERIFY
@@ -193,11 +278,6 @@ def verify(openvpn):
 
         if 'remote_host' in openvpn:
             raise ConfigError('Cannot specify "remote-host" in server mode')
-
-        if 'tls' in openvpn:
-            if 'dh_file' not in openvpn['tls']:
-                if 'key_file' in openvpn['tls'] and not checkCertHeader('-----BEGIN EC PRIVATE KEY-----', openvpn['tls']['key_file']):
-                    raise ConfigError('Must specify "tls dh-file" when not using EC keys in server mode')
 
         tmp = dict_search('server.subnet', openvpn)
         if tmp:
@@ -306,103 +386,48 @@ def verify(openvpn):
         if 'remote_host' not in openvpn:
             raise ConfigError('Must specify "remote-host" with "tcp-active"')
 
-    # shared secret and TLS
-    if not ('shared_secret_key_file' in openvpn or 'tls' in openvpn):
-        raise ConfigError('Must specify one of "shared-secret-key-file" and "tls"')
-
-    if {'shared_secret_key_file', 'tls'} <= set(openvpn):
-        raise ConfigError('Can only specify one of "shared-secret-key-file" and "tls"')
-
-    if openvpn['mode'] in ['client', 'server']:
-        if 'tls' not in openvpn:
-            raise ConfigError('Must specify "tls" for server and client mode')
-
     #
     # TLS/encryption
     #
-    if 'shared_secret_key_file' in openvpn:
+    if 'shared_secret_key' in openvpn:
         if dict_search('encryption.cipher', openvpn) in ['aes128gcm', 'aes192gcm', 'aes256gcm']:
-            raise ConfigError('GCM encryption with shared-secret-key-file not supported')
-
-        file = dict_search('shared_secret_key_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', file):
-            raise ConfigError(f'Specified shared-secret-key-file "{file}" is not valid')
+            raise ConfigError('GCM encryption with shared-secret-key not supported')
 
     if 'tls' in openvpn:
-        if 'ca_cert_file' not in openvpn['tls']:
-            raise ConfigError('Must specify "tls ca-cert-file"')
-
-        if not (openvpn['mode'] == 'client' and 'auth_file' in openvpn['tls']):
-            if 'cert_file' not in openvpn['tls']:
-                raise ConfigError('Missing "tls cert-file"')
-
-            if 'key_file' not in openvpn['tls']:
-                raise ConfigError('Missing "tls key-file"')
-
-        if {'auth_file', 'crypt_file'} <= set(openvpn['tls']):
-            raise ConfigError('TLS auth and crypt are mutually exclusive')
-
-        file = dict_search('tls.ca_cert_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN CERTIFICATE-----', file):
-            raise ConfigError(f'Specified ca-cert-file "{file}" is invalid')
-
-        file = dict_search('tls.auth_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', file):
-            raise ConfigError(f'Specified auth-file "{file}" is invalid')
-
-        file = dict_search('tls.cert_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN CERTIFICATE-----', file):
-            raise ConfigError(f'Specified cert-file "{file}" is invalid')
-
-        file = dict_search('tls.key_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN (?:RSA |EC )?PRIVATE KEY-----', file):
-            raise ConfigError(f'Specified key-file "{file}" is not valid')
-
-        file = dict_search('tls.crypt_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN OpenVPN Static key V1-----', file):
-            raise ConfigError(f'Specified TLS crypt-file "{file}" is invalid')
-
-        file = dict_search('tls.crl_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN X509 CRL-----', file):
-            raise ConfigError(f'Specified crl-file "{file} not valid')
-
-        file = dict_search('tls.dh_file', openvpn)
-        if file and not checkCertHeader('-----BEGIN DH PARAMETERS-----', file):
-            raise ConfigError(f'Specified dh-file "{file}" is not valid')
-
-        if file and not verify_diffie_hellman_length(file, 2048):
-            raise ConfigError(f'Minimum DH key-size is 2048 bits')
+        if {'auth_key', 'crypt_key'} <= set(openvpn['tls']):
+            raise ConfigError('TLS auth and crypt keys are mutually exclusive')
 
         tmp = dict_search('tls.role', openvpn)
         if tmp:
             if openvpn['mode'] in ['client', 'server']:
-                if not dict_search('tls.auth_file', openvpn):
+                if not dict_search('tls.auth_key', openvpn):
                     raise ConfigError('Cannot specify "tls role" in client-server mode')
 
             if tmp == 'active':
                 if openvpn['protocol'] == 'tcp-passive':
                     raise ConfigError('Cannot specify "tcp-passive" when "tls role" is "active"')
 
-                if dict_search('tls.dh_file', openvpn):
-                    raise ConfigError('Cannot specify "tls dh-file" when "tls role" is "active"')
+                if dict_search('tls.dh_params', openvpn):
+                    raise ConfigError('Cannot specify "tls dh-params" when "tls role" is "active"')
 
             elif tmp == 'passive':
                 if openvpn['protocol'] == 'tcp-active':
                     raise ConfigError('Cannot specify "tcp-active" when "tls role" is "passive"')
 
-                if not dict_search('tls.dh_file', openvpn):
-                    raise ConfigError('Must specify "tls dh-file" when "tls role" is "passive"')
+                if not dict_search('tls.dh_params', openvpn):
+                    raise ConfigError('Must specify "tls dh-params" when "tls role" is "passive"')
 
-        file = dict_search('tls.key_file', openvpn)
-        if file and checkCertHeader('-----BEGIN EC PRIVATE KEY-----', file):
-            if dict_search('tls.dh_file', openvpn):
-                print('Warning: using dh-file and EC keys simultaneously will ' \
+        if 'certificate' in openvpn['tls'] and is_ec_private_key(openvpn['pki'], openvpn['tls']['certificate']):
+            if 'dh_params' in openvpn['tls']:
+                print('Warning: using dh-params and EC keys simultaneously will ' \
                       'lead to DH ciphers being used instead of ECDH')
 
     if dict_search('encryption.cipher', openvpn) == 'none':
         print('Warning: "encryption none" was specified!')
         print('No encryption will be performed and data is transmitted in ' \
               'plain text over the network!')
+
+    verify_pki(openvpn)
 
     #
     # Auth user/pass
@@ -418,6 +443,110 @@ def verify(openvpn):
     verify_vrf(openvpn)
 
     return None
+
+def generate_pki_files(openvpn):
+    pki = openvpn['pki']
+
+    if not pki:
+        return None
+
+    interface = openvpn['ifname']
+    shared_secret_key = dict_search_args(openvpn, 'shared_secret_key')
+    tls = dict_search_args(openvpn, 'tls')
+
+    files = []
+
+    if shared_secret_key:
+        pki_key = pki['openvpn']['shared_secret'][shared_secret_key]
+        key_path = os.path.join(cfg_dir, f'{interface}_shared.key')
+
+        with open(key_path, 'w') as f:
+            f.write(wrap_openvpn_key(pki_key['key']))
+
+        files.append(key_path)
+
+    if tls:
+        if 'ca_certificate' in tls:
+            cert_name = tls['ca_certificate']
+            pki_ca = pki['ca'][cert_name]
+
+            if 'certificate' in pki_ca:
+                cert_path = os.path.join(cfg_dir, f'{interface}_ca.pem')
+
+                with open(cert_path, 'w') as f:
+                    f.write(wrap_certificate(pki_ca['certificate']))
+
+                files.append(cert_path)
+
+            if 'crl' in pki_ca:
+                for crl in pki_ca['crl']:
+                    crl_path = os.path.join(cfg_dir, f'{interface}_crl.pem')
+
+                    with open(crl_path, 'w') as f:
+                        f.write(wrap_crl(crl))
+
+                    files.append(crl_path)
+                openvpn['tls']['crl'] = True
+
+        if 'certificate' in tls:
+            cert_name = tls['certificate']
+            pki_cert = pki['certificate'][cert_name]
+
+            if 'certificate' in pki_cert:
+                cert_path = os.path.join(cfg_dir, f'{interface}_cert.pem')
+
+                with open(cert_path, 'w') as f:
+                    f.write(wrap_certificate(pki_cert['certificate']))
+
+                files.append(cert_path)
+
+            if 'private' in pki_cert and 'key' in pki_cert['private']:
+                key_path = os.path.join(cfg_dir, f'{interface}_cert.key')
+
+                with open(key_path, 'w') as f:
+                    f.write(wrap_private_key(pki_cert['private']['key']))
+
+                files.append(key_path)
+                openvpn['tls']['private_key'] = True
+
+        if 'dh_params' in tls:
+            dh_name = tls['dh_params']
+            pki_dh = pki['dh'][dh_name]
+
+            if 'parameters' in pki_dh:
+                dh_path = os.path.join(cfg_dir, f'{interface}_dh.pem')
+
+                with open(dh_path, 'w') as f:
+                    f.write(wrap_dh_parameters(pki_dh['parameters']))
+
+                files.append(dh_path)
+
+        if 'auth_key' in tls:
+            key_name = tls['auth_key']
+            pki_key = pki['openvpn']['shared_secret'][key_name]
+
+            if 'key' in pki_key:
+                key_path = os.path.join(cfg_dir, f'{interface}_auth.key')
+
+                with open(key_path, 'w') as f:
+                    f.write(wrap_openvpn_key(pki_key['key']))
+
+                files.append(key_path)
+
+        if 'crypt_key' in tls:
+            key_name = tls['crypt_key']
+            pki_key = pki['openvpn']['shared_secret'][key_name]
+
+            if 'key' in pki_key:
+                key_path = os.path.join(cfg_dir, f'{interface}_crypt.key')
+
+                with open(key_path, 'w') as f:
+                    f.write(wrap_openvpn_key(pki_key['key']))
+
+                files.append(key_path)
+
+    return files
+
 
 def generate(openvpn):
     interface = openvpn['ifname']
@@ -438,13 +567,7 @@ def generate(openvpn):
         chown(ccd_dir, user, group)
 
     # Fix file permissons for keys
-    fix_permissions = []
-
-    tmp = dict_search('shared_secret_key_file', openvpn)
-    if tmp: fix_permissions.append(openvpn['shared_secret_key_file'])
-
-    tmp = dict_search('tls.key_file', openvpn)
-    if tmp: fix_permissions.append(tmp)
+    fix_permissions = generate_pki_files(openvpn)
 
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
@@ -456,8 +579,9 @@ def generate(openvpn):
             os.remove(openvpn['auth_user_pass_file'])
 
     # Generate client specific configuration
-    if dict_search('server.client', openvpn):
-        for client, client_config in dict_search('server.client', openvpn).items():
+    server_client = dict_search_args(openvpn, 'server', 'client')
+    if server_client:
+        for client, client_config in server_client.items():
             client_file = os.path.join(ccd_dir, client)
 
             # Our client need's to know its subnet mask ...
