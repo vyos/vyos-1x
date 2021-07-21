@@ -332,14 +332,7 @@ def verify(openvpn):
         if 'ca_cert_file' not in openvpn['tls']:
             raise ConfigError('Must specify "tls ca-cert-file"')
 
-        # determine alternative authentication methods defined via openvpn-option or authentication
-        option_flags = [option.partition(" ")[0] for option in openvpn.get("openvpn_option", [])]
-        pkcs12_file = "--pkcs12" in option_flags
-        pkcs11_providers = "--pkcs11-providers" in option_flags
-        auth_user_pass = dict_search('authentication.username', openvpn) and dict_search('authentication.password', openvpn)
-
-        # tls cert-file and key-file must be defined, unless alternative auth methods are configured
-        if not any([pkcs12_file, pkcs11_providers, auth_user_pass]):
+        if not (openvpn['mode'] == 'client' and 'auth_file' in openvpn['tls']):
             if 'cert_file' not in openvpn['tls']:
                 raise ConfigError('Missing "tls cert-file"')
 
