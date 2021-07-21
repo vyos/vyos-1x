@@ -332,7 +332,7 @@ def verify(openvpn):
         if 'ca_cert_file' not in openvpn['tls']:
             raise ConfigError('Must specify "tls ca-cert-file"')
 
-        if not (openvpn['mode'] == 'client' and 'auth_file' in openvpn['tls']):
+        if not (openvpn['mode'] == 'client' and 'authentication' in openvpn):
             if 'cert_file' not in openvpn['tls']:
                 raise ConfigError('Missing "tls cert-file"')
 
