@@ -79,8 +79,9 @@ class VXLANIf(Interface):
             cmdline.append('remote')
 
         if self.config['group'] or self.config['source_interface']:
-            if self.config['group'] and self.config['source_interface']:
+            if self.config['group']:
                 cmdline.append('group')
+            if self.config['source_interface']:
                 cmdline.append('source_interface')
             else:
                 ifname = self.config['ifname']
