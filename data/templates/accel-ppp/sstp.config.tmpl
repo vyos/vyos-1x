@@ -29,9 +29,9 @@ disable
 verbose=1
 ifname=sstp%d
 accept=ssl
-ssl-ca-file={{ ssl.ca_cert_file }}
-ssl-pemfile={{ ssl.cert_file }}
-ssl-keyfile={{ ssl.key_file }}
+ssl-ca-file=/run/accel-pppd/sstp-ca.pem
+ssl-pemfile=/run/accel-pppd/sstp-cert.pem
+ssl-keyfile=/run/accel-pppd/sstp-cert.key
 
 {# Common IP pool definitions #}
 {% include 'accel-ppp/config_ip_pool.j2' %}

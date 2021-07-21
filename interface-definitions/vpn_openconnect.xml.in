@@ -75,7 +75,7 @@
           </node>
           <node name="listen-ports">
             <properties>
-              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+              <help>Specify custom ports to use for client connections</help>
             </properties>
             <children>
               <leafNode name="tcp">
@@ -108,12 +108,11 @@
           </node>
           <node name="ssl">
             <properties>
-              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+              <help>SSL Certificate, SSL Key and CA</help>
             </properties>
             <children>
-              #include <include/certificate.xml.i>
-              #include <include/certificate-ca.xml.i>
-              #include <include/certificate-key.xml.i>
+              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/certificate-key.xml.i>
             </children>
           </node>
           <node name="network-settings">

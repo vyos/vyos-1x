@@ -12,16 +12,16 @@ auth = "radius [config=/run/ocserv/radiusclient.conf]"
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}
 
-{% if ssl.cert_file %}
-server-cert = {{  ssl.cert_file }}
+{% if ssl.certificate is defined %}
+server-cert = /run/ocserv/cert.pem
+server-key = /run/ocserv/cert.key
+{% if ssl.passphrase is defined %}
+key-pin = {{ ssl.passphrase }}
+{% endif %}
 {% endif %}
 
-{% if ssl.key_file %}
-server-key = {{  ssl.key_file }}
-{% endif %}
-
-{% if ssl.ca_cert_file %}
-ca-cert = {{  ssl.ca_cert_file }}
+{% if ssl.ca_certificate is defined %}
+ca-cert = /run/ocserv/ca.pem
 {% endif %}
 
 socket-file = /run/ocserv/ocserv.socket

@@ -27,9 +27,10 @@ from vyos.template import render
 from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import cmd
-from vyos.util import popen
 from vyos.util import dict_search
 from vyos.util import get_interface_config
+from vyos.util import popen
+from vyos.util import run
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -237,7 +238,9 @@ def apply(vrf):
             if 1000 in [r.get('priority') for r in list_rules() if r.get('priority') == 1000]:
                 call(f'ip {af} rule del pref 1000')
         # Remove VRF zones table from nftables
-        cmd('nft delete table inet vrf_zones')
+        tmp = run('nft list table inet vrf_zones')
+        if tmp == 0:
+            cmd('nft delete table inet vrf_zones')
 
     # add configuration to FRR
     frr_cfg = frr.FRRConfig()

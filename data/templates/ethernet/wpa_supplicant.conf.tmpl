@@ -32,11 +32,11 @@ fast_reauth=1
 
 network={
 {%  if eapol is defined and eapol is not none %}
-{%    if eapol.ca_cert_file is defined and eapol.ca_cert_file is not none %}
-    ca_cert="{{ eapol.ca_cert_file }}"
+{%    if eapol.ca_certificate is defined and eapol.ca_certificate is not none %}
+    ca_cert="/run/wpa_supplicant/{{ ifname }}_ca.pem"
 {%    endif %}
-    client_cert="{{ eapol.cert_file }}"
-    private_key="{{ eapol.key_file }}"
+    client_cert="/run/wpa_supplicant/{{ ifname }}_cert.pem"
+    private_key="/run/wpa_supplicant/{{ ifname }}_cert.key"
 {%  endif %}
 
     # list of accepted authenticated key management protocols

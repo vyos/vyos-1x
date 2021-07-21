@@ -433,3 +433,9 @@ def get_esp_ike_cipher(group_config):
 
             ciphers.append(tmp)
     return ciphers
+
+@register_filter('get_uuid')
+def get_uuid(interface):
+    """ Get interface IP addresses"""
+    from uuid import uuid1
+    return uuid1()

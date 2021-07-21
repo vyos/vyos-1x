@@ -647,7 +647,7 @@
                   <help>remote-access global options</help>
                 </properties>
                 <children>
-                  <node name="dhcp-pool">
+                  <node name="dhcp">
                     <properties>
                       <help>DHCP pool options for remote-access</help>
                     </properties>
@@ -665,8 +665,11 @@
                           <help>DHCP server address</help>
                           <valueHelp>
                             <format>ipv4</format>
-                            <description>IPv4 address of the DHCP server</description>
+                            <description>DHCP server IPv4 address</description>
                           </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                     </children>
@@ -725,98 +728,149 @@
               #include <include/ipsec/ike-group.xml.i>
             </children>
           </tagNode>
-          <tagNode name="remote-access">
+          <node name="remote-access">
             <properties>
-              <help>Remote access IKEv2 VPN </help>
+              <help>IKEv2 remote access VPN</help>
             </properties>
             <children>
-              <node name="authentication">
+              <tagNode name="connection">
                 <properties>
-                  <help>Authentication for remote access</help>
+                  <help>IKEv2 VPN connection name</help>
                 </properties>
                 <children>
-                  #include <include/ipsec/authentication-id.xml.i>
-                  #include <include/ipsec/authentication-x509.xml.i>
-                  <leafNode name="client-mode">
+                  <node name="authentication">
                     <properties>
-                      <help>Client authentication mode</help>
-                      <completionHelp>
-                        <list>eap-tls eap-mschapv2</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>eap-tls</format>
-                        <description>EAP-TLS</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>eap-mschapv2</format>
-                        <description>EAP-MSCHAPv2</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(eap-tls|eap-mschapv2)$</regex>
-                      </constraint>
-                    </properties>
-                    <defaultValue>eap-mschapv2</defaultValue>
-                  </leafNode>
-                  <node name="local-users">
-                    <properties>
-                      <help>Local user authentication for PPPoE server</help>
+                      <help>Authentication for remote access</help>
                     </properties>
                     <children>
-                      <tagNode name="username">
+                      #include <include/ipsec/authentication-id.xml.i>
+                      #include <include/ipsec/authentication-x509.xml.i>
+                      <leafNode name="client-mode">
                         <properties>
-                          <help>User name for authentication</help>
+                          <help>Client authentication mode</help>
+                          <completionHelp>
+                            <list>eap-tls eap-mschapv2</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>eap-tls</format>
+                            <description>EAP-TLS</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>eap-mschapv2</format>
+                            <description>EAP-MSCHAPv2</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(eap-tls|eap-mschapv2)$</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>eap-mschapv2</defaultValue>
+                      </leafNode>
+                      <node name="local-users">
+                        <properties>
+                          <help>Local user authentication for PPPoE server</help>
                         </properties>
                         <children>
-                          #include <include/generic-disable-node.xml.i>
-                          <leafNode name="password">
+                          <tagNode name="username">
                             <properties>
-                              <help>Password for authentication</help>
+                              <help>User name for authentication</help>
                             </properties>
-                          </leafNode>
+                            <children>
+                              #include <include/generic-disable-node.xml.i>
+                              <leafNode name="password">
+                                <properties>
+                                  <help>Password for authentication</help>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </tagNode>
                         </children>
-                      </tagNode>
+                      </node>
+                      <leafNode name="server-mode">
+                        <properties>
+                          <help>Server authentication mode</help>
+                          <completionHelp>
+                            <list>pre-shared-secret x509</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>pre-shared-secret</format>
+                            <description>pre-shared-secret_description</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>x509</format>
+                            <description>x509_description</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(pre-shared-secret|x509)$</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>x509</defaultValue>
+                      </leafNode>
+                      #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                     </children>
                   </node>
-                  <leafNode name="server-mode">
+                  #include <include/generic-description.xml.i>
+                  #include <include/generic-disable-node.xml.i>
+                  #include <include/ipsec/esp-group.xml.i>
+                  #include <include/ipsec/ike-group.xml.i>
+                  #include <include/ipsec/local-address.xml.i>
+                  #include <include/ipsec/local-traffic-selector.xml.i>
+                  <leafNode name="timeout">
                     <properties>
-                      <help>Server authentication mode</help>
-                      <completionHelp>
-                        <list>pre-shared-secret x509</list>
-                      </completionHelp>
+                      <help>Timeout to close connection if no data is transmitted</help>
                       <valueHelp>
-                        <format>pre-shared-secret</format>
-                        <description>pre-shared-secret_description</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>x509</format>
-                        <description>x509_description</description>
+                        <format>u32:10-86400</format>
+                        <description>Timeout in seconds (default 28800)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(pre-shared-secret|x509)$</regex>
+                        <validator name="numeric" argument="--range 10-86400"/>
                       </constraint>
                     </properties>
-                    <defaultValue>x509</defaultValue>
+                    <defaultValue>28800</defaultValue>
                   </leafNode>
-                  #include <include/ipsec/authentication-pre-shared-secret.xml.i>
+                  <leafNode name="pool">
+                    <properties>
+                      <help>Pool name used for IP address assignments</help>
+                      <completionHelp>
+                        <path>vpn ipsec remote-access pool</path>
+                        <list>dhcp</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Pool name</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="unique">
+                    <properties>
+                      <help>Connection uniqueness policy to enforce</help>
+                      <completionHelp>
+                        <list>never keep replace</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>never</format>
+                        <description>Never enforce connection uniqueness policy</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>keep</format>
+                        <description>Rejects new connection attempts if the same user already has an active connection</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>replace</format>
+                        <description>Delete any existing connection if a new one for the same user gets established</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(never|keep|replace)$</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                 </children>
-              </node>
-              #include <include/generic-description.xml.i>
-              #include <include/generic-disable-node.xml.i>
-              #include <include/ipsec/esp-group.xml.i>
-              #include <include/ipsec/ike-group.xml.i>
-              #include <include/ipsec/local-address.xml.i>
-              #include <include/ipsec/local-traffic-selector.xml.i>
-              <node name="pool">
+              </tagNode>
+              <tagNode name="pool">
                 <properties>
                   <help>IP address pool for remote-access users</help>
                 </properties>
                 <children>
-                  <leafNode name="dhcp-enable">
-                    <properties>
-                      <help>Enable DHCP pool for clients on this connection</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
                   <leafNode name="exclude">
                     <properties>
                       <help>Local IPv4 or IPv6 pool prefix exclusions</help>
@@ -855,22 +909,9 @@
                   <!-- Include Accel-PPP definition here, maybe time for a rename? -->
                   #include <include/accel-ppp/name-server.xml.i>
                 </children>
-              </node>
-              <leafNode name="timeout">
-                <properties>
-                  <help>Timeout to close connection if no data is transmitted</help>
-                  <valueHelp>
-                    <format>u32:10-86400</format>
-                    <description>Timeout in seconds (default 28800)</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 10-86400"/>
-                  </constraint>
-                </properties>
-                <defaultValue>28800</defaultValue>
-              </leafNode>
+              </tagNode>
             </children>
-          </tagNode>
+          </node>
           <node name="site-to-site">
             <properties>
               <help>Site-to-site VPN</help>

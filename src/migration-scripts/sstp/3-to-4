@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - Update SSL to use PKI configuration
+
+import os
+
+from sys import argv
+from sys import exit
+from vyos.configtree import ConfigTree
+from vyos.pki import load_certificate
+from vyos.pki import load_crl
+from vyos.pki import load_private_key
+from vyos.pki import encode_certificate
+from vyos.pki import encode_private_key
+from vyos.util import run
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['vpn', 'sstp']
+pki_base = ['pki']
+
+if not config.exists(base):
+    exit(0)
+
+AUTH_DIR = '/config/auth'
+
+def wrapped_pem_to_config_value(pem):
+    return "".join(pem.strip().split("\n")[1:-1])
+
+if not config.exists(base + ['ssl']):
+    exit(0)
+
+x509_base = base + ['ssl']
+pki_name = 'sstp'
+
+if not config.exists(pki_base + ['ca']):
+    config.set(pki_base + ['ca'])
+    config.set_tag(pki_base + ['ca'])
+
+if not config.exists(pki_base + ['certificate']):
+    config.set(pki_base + ['certificate'])
+    config.set_tag(pki_base + ['certificate'])
+
+if config.exists(x509_base + ['ca-cert-file']):
+    cert_file = config.return_value(x509_base + ['ca-cert-file'])
+    cert_path = os.path.join(AUTH_DIR, cert_file)
+    cert = None
+
+    if os.path.isfile(cert_path):
+        if not os.access(cert_path, os.R_OK):
+            run(f'sudo chmod 644 {cert_path}')
+
+        with open(cert_path, 'r') as f:
+            cert_data = f.read()
+            cert = load_certificate(cert_data, wrap_tags=False)
+
+    if cert:
+        cert_pem = encode_certificate(cert)
+        config.set(pki_base + ['ca', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+        config.set(x509_base + ['ca-certificate'], value=pki_name)
+    else:
+        print(f'Failed to migrate CA certificate on sstp config')
+
+    config.delete(x509_base + ['ca-cert-file'])
+
+if config.exists(x509_base + ['cert-file']):
+    cert_file = config.return_value(x509_base + ['cert-file'])
+    cert_path = os.path.join(AUTH_DIR, cert_file)
+    cert = None
+
+    if os.path.isfile(cert_path):
+        if not os.access(cert_path, os.R_OK):
+            run(f'sudo chmod 644 {cert_path}')
+
+        with open(cert_path, 'r') as f:
+            cert_data = f.read()
+            cert = load_certificate(cert_data, wrap_tags=False)
+
+    if cert:
+        cert_pem = encode_certificate(cert)
+        config.set(pki_base + ['certificate', pki_name, 'certificate'], value=wrapped_pem_to_config_value(cert_pem))
+        config.set(x509_base + ['certificate'], value=pki_name)
+    else:
+        print(f'Failed to migrate certificate on sstp config')
+
+    config.delete(x509_base + ['cert-file'])
+
+if config.exists(x509_base + ['key-file']):
+    key_file = config.return_value(x509_base + ['key-file'])
+    key_path = os.path.join(AUTH_DIR, key_file)
+    key = None
+
+    if os.path.isfile(key_path):
+        if not os.access(key_path, os.R_OK):
+            run(f'sudo chmod 644 {key_path}')
+
+        with open(key_path, 'r') as f:
+            key_data = f.read()
+            key = load_private_key(key_data, passphrase=None, wrap_tags=False)
+
+    if key:
+        key_pem = encode_private_key(key, passphrase=None)
+        config.set(pki_base + ['certificate', pki_name, 'private', 'key'], value=wrapped_pem_to_config_value(key_pem))
+    else:
+        print(f'Failed to migrate private key on sstp config')
+        
+    config.delete(x509_base + ['key-file'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

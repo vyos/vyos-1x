@@ -4,9 +4,8 @@
      <help>Extensible Authentication Protocol over Local Area Network</help>
   </properties>
   <children>
-    #include <include/certificate.xml.i>
-    #include <include/certificate-ca.xml.i>
-    #include <include/certificate-key.xml.i>
+    #include <include/pki/ca-certificate.xml.i>
+    #include <include/pki/certificate-key.xml.i>
   </children>
 </node>
 <!-- include end -->

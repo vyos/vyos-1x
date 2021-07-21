@@ -149,9 +149,38 @@ def verify_eapol(config):
     recurring validation of EAPoL configuration.
     """
     if 'eapol' in config:
-        if not {'cert_file', 'key_file'} <= set(config['eapol']):
-            raise ConfigError('Both cert and key-file must be specified '\
-                              'when using EAPoL!')
+        if 'certificate' not in config['eapol']:
+            raise ConfigError('Certificate must be specified when using EAPoL!')
+
+        if 'certificate' not in config['pki']:
+            raise ConfigError('Invalid certificate specified for EAPoL')
+
+        cert_name = config['eapol']['certificate']
+
+        if cert_name not in config['pki']['certificate']:
+            raise ConfigError('Invalid certificate specified for EAPoL')
+
+        cert = config['pki']['certificate'][cert_name]
+
+        if 'certificate' not in cert or 'private' not in cert or 'key' not in cert['private']:
+            raise ConfigError('Invalid certificate/private key specified for EAPoL')
+
+        if 'password_protected' in cert['private']:
+            raise ConfigError('Encrypted private key cannot be used for EAPoL')
+
+        if 'ca_certificate' in config['eapol']:
+            if 'ca' not in config['pki']:
+                raise ConfigError('Invalid CA certificate specified for EAPoL')
+
+            ca_cert_name = config['eapol']['ca_certificate']
+
+            if ca_cert_name not in config['pki']['ca']:
+                raise ConfigError('Invalid CA certificate specified for EAPoL')
+
+            ca_cert = config['pki']['ca'][cert_name]
+
+            if 'certificate' not in ca_cert:
+                raise ConfigError('Invalid CA certificate specified for EAPoL')
 
 def verify_mirror(config):
     """
