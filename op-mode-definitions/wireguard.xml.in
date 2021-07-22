@@ -93,59 +93,6 @@
           </node>
         </children>
       </node>
-      <node name="interfaces">
-        <children>
-          <tagNode name="wireguard">
-            <properties>
-              <help>Show Wireguard interface information</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
-              </completionHelp>
-            </properties>
-	        <command>sudo ${vyos_op_scripts_dir}/wireguard.py --showinterface "$4"</command>
-            <children>
-              <leafNode name="allowed-ips">
-                <properties>
-                  <help>Show all IP addresses allowed for the specified interface</help>
-                </properties>
-                <command>sudo wg show "$4" allowed-ips</command>
-              </leafNode>
-              <leafNode name="endpoints">
-                <properties>
-                  <help>Show all endpoints for the specified interface</help>
-                </properties>
-                <command>sudo wg show "$4" endpoints</command>
-              </leafNode>
-              <leafNode name="peers">
-                <properties>
-                  <help>Show all peer IDs for the specified interface</help>
-                </properties>
-                <command>sudo wg show "$4" peers</command>
-              </leafNode>
-              <leafNode name="summary">
-                <properties>
-                  <help>Shows current configuration and device information</help>
-                </properties>
-                <command>sudo wg show "$4"</command>
-              </leafNode>
-            </children>
-          </tagNode>
-          <node name="wireguard">
-            <properties>
-              <help>Show Wireguard interface information</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show-brief</command>
-            <children>
-              <leafNode name="detail">
-                <properties>
-                  <help>Show detailed Wireguard interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show</command>
-              </leafNode>
-            </children>
-          </node>
-        </children>
-      </node>
     </children>
   </node>
   <node name="delete">
