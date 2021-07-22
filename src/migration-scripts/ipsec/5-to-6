@@ -80,6 +80,11 @@ if config.exists(base_interfaces):
     config.copy(base_interfaces, base + ['interface'])
     config.delete(base_interfaces)
 
+# Remove deprecated "auto-update" option
+tmp = base + ['auto-update']
+if config.exists(tmp):
+    config.delete(tmp)
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

@@ -307,6 +307,7 @@ system {
 }
 vpn {
     ipsec {
+        auto-update 120
         esp-group ESP-AZURE {
             compression disable
             lifetime 27000

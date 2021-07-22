@@ -544,10 +544,7 @@ def apply(ipsec):
     if not ipsec:
         call('sudo ipsec stop')
     else:
-        args = ''
-        if 'auto_update' in ipsec:
-            args = '--auto-update ' + ipsec['auto_update']
-        call(f'sudo ipsec restart {args}')
+        call('sudo ipsec restart')
         call('sudo ipsec rereadall')
         call('sudo ipsec reload')
 
