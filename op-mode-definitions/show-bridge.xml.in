@@ -28,7 +28,7 @@
             <script>${vyos_completion_dir}/list_interfaces.py --type bridge</script>
           </completionHelp>
         </properties>
-        <command>bridge -c link show br $3</command>
+        <command>bridge -c link show | grep "master $3"</command>
         <children>
           <leafNode name="mdb">
             <properties>
