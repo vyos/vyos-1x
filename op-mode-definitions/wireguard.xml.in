@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!-- Wireguard key management -->
 <interfaceDefinition>
   <node name="generate">
     <children>
@@ -91,26 +90,6 @@
             </children>
             <command>${vyos_op_scripts_dir}/wireguard.py --showpub --showpriv</command>
           </node>
-        </children>
-      </node>
-    </children>
-  </node>
-  <node name="delete">
-    <children>
-      <node name="wireguard">
-        <properties>
-          <help>Delete Wireguard properties</help>
-        </properties>
-        <children>
-          <tagNode name="keypair">
-            <properties>
-              <help>Delete a Wireguard keypair</help>
-              <completionHelp>
-                <script>${vyos_op_scripts_dir}/wireguard.py --listkdir</script>
-              </completionHelp>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/wireguard.py --delkdir --location "$4"</command>
-          </tagNode>
         </children>
       </node>
     </children>
