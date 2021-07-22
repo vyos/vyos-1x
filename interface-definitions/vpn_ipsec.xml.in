@@ -765,26 +765,7 @@
                         </properties>
                         <defaultValue>eap-mschapv2</defaultValue>
                       </leafNode>
-                      <node name="local-users">
-                        <properties>
-                          <help>Local user authentication for PPPoE server</help>
-                        </properties>
-                        <children>
-                          <tagNode name="username">
-                            <properties>
-                              <help>User name for authentication</help>
-                            </properties>
-                            <children>
-                              #include <include/generic-disable-node.xml.i>
-                              <leafNode name="password">
-                                <properties>
-                                  <help>Password for authentication</help>
-                                </properties>
-                              </leafNode>
-                            </children>
-                          </tagNode>
-                        </children>
-                      </node>
+                      #include <include/auth-local-users.xml.i>
                       <leafNode name="server-mode">
                         <properties>
                           <help>Server authentication mode</help>
