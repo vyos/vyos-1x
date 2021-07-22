@@ -63,35 +63,4 @@
       </node>
     </children>
   </node>
-  <node name="show">
-    <children>
-      <node name="wireguard">
-        <properties>
-          <help>Show Wireguard properties</help>
-        </properties>
-        <children>
-          <node name="keypairs">
-            <properties>
-              <help>Show Wireguard keys</help>
-            </properties>
-            <children>
-              <leafNode name="pubkey">
-                <properties>
-                  <help>Show Wireguard public keys</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/wireguard.py --showpub</command>
-              </leafNode>
-              <leafNode name="privkey">
-                <properties>
-                  <help>Show Wireguard private keys</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/wireguard.py --showpriv</command>
-              </leafNode>
-            </children>
-            <command>${vyos_op_scripts_dir}/wireguard.py --showpub --showpriv</command>
-          </node>
-        </children>
-      </node>
-    </children>
-  </node>
 </interfaceDefinition>
