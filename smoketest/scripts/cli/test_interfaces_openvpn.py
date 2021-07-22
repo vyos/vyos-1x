@@ -37,12 +37,11 @@ from vyos.template import netmask_from_cidr
 PROCESS_NAME = 'openvpn'
 
 base_path = ['interfaces', 'openvpn']
-ca_cert  = '/config/auth/ovpn_test_ca.pem'
-ssl_cert = '/config/auth/ovpn_test_server.pem'
-ssl_key  = '/config/auth/ovpn_test_server.key'
-dh_pem   = '/config/auth/ovpn_test_dh.pem'
-s2s_key  = '/config/auth/ovpn_test_site2site.key'
-auth_key = '/config/auth/ovpn_test_tls_auth.key'
+
+cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
+key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
+dh_data = 'MIIBCAKCAQEApzGAPcQlLJiOyfGZgl1qxNgufXkdpjG7lMaOrO4TGr1giFe3jIFOFxJNC/G9Dn+KSukaWssVVR+Jwr/JesZFPawihS03wC7cZsccykNRIjiteqJDwYJZUHieOxyCuCeY4pqOUCl1uswRGjLvIFtwynpnXKKuz2YtjNifma90PEgv/vVWKix+Q0TAbdbzJzO5xp8UVn9DuYfSr10k3LbDqDM7w5ezHZxFk24S5pN/yoOpdbxB8TS67q3IYXxR3F+RseKu4J3AvkxXSP1j7COXddPpLnvbJT/SW8NrjuC/n0eKGvmeyqNv108Y89jnT79MxMMRQk66iwlsd1m4pa/OYwIBAg=='
+ovpn_key_data = '443f2a710ac411c36894b2531e62c4550b079b8f3f08997f4be57c64abfdaaa431d2396b01ecec3a2c0618959e8186d99f489742d25673ffb3268841ebb2e7042a2daabe584e79d51d2b1d7409bf8840f7e42efa3e660a521719b04ee88b9043e6315ae12da7c9abd55f67eeed71a9ee8c6e163b5d2661fc332cf90cb45658b4adf892f79537d37d3a3d90da283ce885adf325ffd2b5be92067cdf0345c7712c9d36b642c170351b6d9ce9f6230c7a2617b0c181121bce7d5373404fb68e65210b36e6d40ef2769cf8990503859f6f2db3c85ba74420430a6250d6a74ca51ece4b85124bfdfec0c8a530cefa7350378d81a4539f74bed832a902ae4798142e4a'
 
 remote_port = '1194'
 protocol = 'udp'
@@ -64,6 +63,12 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
         self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+
+        self.cli_set(['pki', 'ca', 'ovpn_test', 'certificate', cert_data])
+        self.cli_set(['pki', 'certificate', 'ovpn_test', 'certificate', cert_data])
+        self.cli_set(['pki', 'certificate', 'ovpn_test', 'private', 'key', key_data])
+        self.cli_set(['pki', 'dh', 'ovpn_test', 'parameters', dh_data])
+        self.cli_set(['pki', 'openvpn', 'shared-secret', 'ovpn_test', 'key', ovpn_key_data])
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -101,25 +106,24 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_set(path + ['remote-host', '192.0.9.9'])
 
-        # check validate() - cannot specify "tls dh-file" in client mode
-        self.cli_set(path + ['tls', 'dh-file', dh_pem])
+        # check validate() - cannot specify "tls dh-params" in client mode
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(path + ['tls'])
 
-        # check validate() - must specify one of "shared-secret-key-file" and "tls"
+        # check validate() - must specify one of "shared-secret-key" and "tls"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['shared-secret-key-file', s2s_key])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
 
-        # check validate() - must specify one of "shared-secret-key-file" and "tls"
+        # check validate() - must specify one of "shared-secret-key" and "tls"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_delete(path + ['shared-secret-key-file', s2s_key])
+        self.cli_delete(path + ['shared-secret-key', 'ovpn_test'])
 
-        self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
-        self.cli_set(path + ['tls', 'cert-file', ssl_cert])
-        self.cli_set(path + ['tls', 'key-file', ssl_key])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
 
         # check validate() - can not have auth username without a password
         self.cli_set(path + ['authentication', 'username', 'vyos'])
@@ -152,9 +156,8 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['protocol', protocol])
             self.cli_set(path + ['remote-host', remote_host])
             self.cli_set(path + ['remote-port', remote_port])
-            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
-            self.cli_set(path + ['tls', 'key-file', ssl_key])
+            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
             self.cli_set(path + ['vrf', vrf_name])
             self.cli_set(path + ['authentication', 'username', interface+'user'])
             self.cli_set(path + ['authentication', 'password', interface+'secretpw'])
@@ -176,12 +179,12 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'remote {remote_host}', config)
             self.assertIn(f'persist-tun', config)
             self.assertIn(f'auth {auth_hash}', config)
-            self.assertIn(f'cipher aes-256-cbc', config)
+            self.assertIn(f'cipher AES-256-CBC', config)
 
             # TLS options
-            self.assertIn(f'ca {ca_cert}', config)
-            self.assertIn(f'cert {ssl_cert}', config)
-            self.assertIn(f'key {ssl_key}', config)
+            self.assertIn(f'ca /run/openvpn/{interface}_ca.pem', config)
+            self.assertIn(f'cert /run/openvpn/{interface}_cert.pem', config)
+            self.assertIn(f'key /run/openvpn/{interface}_cert.key', config)
 
             self.assertTrue(process_named_running(PROCESS_NAME))
             self.assertEqual(get_vrf(interface), vrf_name)
@@ -228,11 +231,11 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['remote-host'])
 
-        # check validate() - must specify "tls dh-file" when not using EC keys
+        # check validate() - must specify "tls dh-params" when not using EC keys
         # in server mode
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['tls', 'dh-file', dh_pem])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
         # check validate() - must specify "server subnet" or add interface to
         # bridge in server mode
@@ -251,20 +254,15 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['server', 'subnet', '100.64.0.0/10'])
 
-        # check validate() - must specify "tls ca-cert-file"
+        # check validate() - must specify "tls ca-certificate"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
 
-        # check validate() - must specify "tls cert-file"
+        # check validate() - must specify "tls certificate"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['tls', 'cert-file', ssl_cert])
-
-        # check validate() - must specify "tls key-file"
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_set(path + ['tls', 'key-file', ssl_key])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
 
         # check validate() - cannot specify "tls role" in client-server mode'
         self.cli_set(path + ['tls', 'role', 'active'])
@@ -272,7 +270,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         # check validate() - cannot specify "tls role" in client-server mode'
-        self.cli_set(path + ['tls', 'auth-file', auth_key])
+        self.cli_set(path + ['tls', 'auth-key', 'ovpn_test'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
@@ -282,11 +280,11 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['protocol'])
 
-        # check validate() - cannot specify "tls dh-file" when "tls role" is "active"
-        self.cli_set(path + ['tls', 'dh-file', dh_pem])
+        # check validate() - cannot specify "tls dh-params" when "tls role" is "active"
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_delete(path + ['tls', 'dh-file'])
+        self.cli_delete(path + ['tls', 'dh-params'])
 
         # Now test the other path with tls role passive
         self.cli_set(path + ['tls', 'role', 'passive'])
@@ -297,10 +295,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(path + ['protocol'])
 
 
-        # check validate() - must specify "tls dh-file" when "tls role" is "passive"
+        # check validate() - must specify "tls dh-params" when "tls role" is "passive"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['tls', 'dh-file', dh_pem])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
         self.cli_commit()
 
@@ -338,10 +336,9 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(path + ['server', 'client', 'client1', 'subnet', route])
 
             self.cli_set(path + ['replace-default-route'])
-            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
-            self.cli_set(path + ['tls', 'key-file', ssl_key])
-            self.cli_set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
             self.cli_set(path + ['vrf', vrf_name])
 
         self.cli_commit()
@@ -367,17 +364,17 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'persist-key', config)
             self.assertIn(f'proto udp', config) # default protocol
             self.assertIn(f'auth {auth_hash}', config)
-            self.assertIn(f'cipher aes-192-cbc', config)
+            self.assertIn(f'cipher AES-192-CBC', config)
             self.assertIn(f'topology subnet', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'push "redirect-gateway def1"', config)
             self.assertIn(f'keepalive 5 25', config)
 
             # TLS options
-            self.assertIn(f'ca {ca_cert}', config)
-            self.assertIn(f'cert {ssl_cert}', config)
-            self.assertIn(f'key {ssl_key}', config)
-            self.assertIn(f'dh {dh_pem}', config)
+            self.assertIn(f'ca /run/openvpn/{interface}_ca.pem', config)
+            self.assertIn(f'cert /run/openvpn/{interface}_cert.pem', config)
+            self.assertIn(f'key /run/openvpn/{interface}_cert.key', config)
+            self.assertIn(f'dh /run/openvpn/{interface}_dh.pem', config)
 
             # IP pool configuration
             netmask = IPv4Network(subnet).netmask
@@ -425,10 +422,9 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['replace-default-route'])
             self.cli_set(path + ['keep-alive', 'failure-count', '10'])
             self.cli_set(path + ['keep-alive', 'interval', '5'])
-            self.cli_set(path + ['tls', 'ca-cert-file', ca_cert])
-            self.cli_set(path + ['tls', 'cert-file', ssl_cert])
-            self.cli_set(path + ['tls', 'key-file', ssl_key])
-            self.cli_set(path + ['tls', 'dh-file', dh_pem])
+            self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+            self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
             self.cli_set(path + ['vrf', vrf_name])
 
         self.cli_commit()
@@ -448,17 +444,17 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'persist-key', config)
             self.assertIn(f'proto udp', config) # default protocol
             self.assertIn(f'auth {auth_hash}', config)
-            self.assertIn(f'cipher aes-192-cbc', config)
+            self.assertIn(f'cipher AES-192-CBC', config)
             self.assertIn(f'topology net30', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'push "redirect-gateway def1"', config)
             self.assertIn(f'keepalive 5 50', config)
 
             # TLS options
-            self.assertIn(f'ca {ca_cert}', config)
-            self.assertIn(f'cert {ssl_cert}', config)
-            self.assertIn(f'key {ssl_key}', config)
-            self.assertIn(f'dh {dh_pem}', config)
+            self.assertIn(f'ca /run/openvpn/{interface}_ca.pem', config)
+            self.assertIn(f'cert /run/openvpn/{interface}_cert.pem', config)
+            self.assertIn(f'key /run/openvpn/{interface}_cert.key', config)
+            self.assertIn(f'dh /run/openvpn/{interface}_dh.pem', config)
 
             # IP pool configuration
             netmask = IPv4Network(subnet).netmask
@@ -530,10 +526,10 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['remote-address', '2001:db8:ffff::2'])
 
-        # check validate() - Must specify one of "shared-secret-key-file" and "tls"
+        # check validate() - Must specify one of "shared-secret-key" and "tls"
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(path + ['shared-secret-key-file', s2s_key])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
 
         self.cli_commit()
 
@@ -565,7 +561,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['mode', 'site-to-site'])
             self.cli_set(path + ['local-port', port])
             self.cli_set(path + ['remote-port', port])
-            self.cli_set(path + ['shared-secret-key-file', s2s_key])
+            self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
             self.cli_set(path + ['remote-address', remote_address])
             self.cli_set(path + ['vrf', vrf_name])
 
@@ -589,7 +585,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'ifconfig {local_address} {local_address_subnet}', config)
 
             self.assertIn(f'dev {interface}', config)
-            self.assertIn(f'secret {s2s_key}', config)
+            self.assertIn(f'secret /run/openvpn/{interface}_shared.key', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'rport {port}', config)
 
@@ -609,37 +605,4 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    # Our SSL certificates need a subject ...
-    subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
-              'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
-
-    if not (os.path.isfile(ssl_key) and os.path.isfile(ssl_cert)):
-        # Generate mandatory SSL certificate
-        tmp = f'openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 '\
-              f'-keyout {ssl_key} -out {ssl_cert} -subj {subject}'
-        cmd(tmp)
-
-    if not os.path.isfile(ca_cert):
-        # Generate "CA"
-        tmp = f'openssl req -new -x509 -key {ssl_key} -out {ca_cert} -subj {subject}'
-        cmd(tmp)
-
-    if not os.path.isfile(dh_pem):
-        # Generate "DH" key
-        tmp = f'openssl dhparam -out {dh_pem} 2048'
-        cmd(tmp)
-
-    if not os.path.isfile(s2s_key):
-        # Generate site-2-site key
-        tmp = f'openvpn --genkey --secret {s2s_key}'
-        cmd(tmp)
-
-    if not os.path.isfile(auth_key):
-        # Generate TLS auth key
-        tmp = f'openvpn --genkey --secret {auth_key}'
-        cmd(tmp)
-
-    for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
-        cmd(f'sudo chown openvpn:openvpn {file}')
-
     unittest.main(verbosity=2)

@@ -637,16 +637,12 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="shared-secret-key-file">
+          <leafNode name="shared-secret-key">
             <properties>
-              <help>File containing the secret key shared with remote end of tunnel</help>
-              <valueHelp>
-                <format>filename</format>
-                <description>File in /config/auth directory</description>
-              </valueHelp>
-              <constraint>
-                <validator name="file-exists" argument="--directory /config/auth"/>
-              </constraint>
+              <help>Secret key shared with remote end of tunnel</help>
+              <completionHelp>
+                <path>pki openvpn shared-secret</path>
+              </completionHelp>
             </properties>
           </leafNode>
           <node name="tls">
@@ -654,55 +650,30 @@
               <help>Transport Layer Security (TLS) options</help>
             </properties>
             <children>
-              <leafNode name="auth-file">
+              <leafNode name="auth-key">
                 <properties>
-                  <help>File containing tls static key for tls-auth</help>
-                  <valueHelp>
-                    <format>filename</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
+                  <help>TLS shared secret key for tls-auth</help>
+                  <completionHelp>
+                    <path>pki openvpn shared-secret</path>
+                  </completionHelp>
                 </properties>
               </leafNode>
-              #include <include/certificate.xml.i>
-              #include <include/certificate-ca.xml.i>
-              <leafNode name="crl-file">
+              #include <include/pki/certificate.xml.i>
+              #include <include/pki/ca-certificate.xml.i>
+              <leafNode name="dh-params">
                 <properties>
-                  <help>File containing certificate revocation list (CRL) for this host</help>
-                  <valueHelp>
-                    <format>filename</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
+                  <help>Diffie Hellman parameters (server only)</help>
+                  <completionHelp>
+                    <path>pki dh</path>
+                  </completionHelp>
                 </properties>
               </leafNode>
-              <leafNode name="dh-file">
+              <leafNode name="crypt-key">
                 <properties>
-                  <help>File containing Diffie Hellman parameters (server only)</help>
-                  <valueHelp>
-                    <format>filename</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-              #include <include/certificate-key.xml.i>
-              <leafNode name="crypt-file">
-                <properties>
-                  <help>File containing encryption key to authenticate control channel</help>
-                  <valueHelp>
-                    <format>filename</format>
-                    <description>File in /config/auth directory</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="file-exists" argument="--directory /config/auth"/>
-                  </constraint>
+                  <help>Static key to use to authenticate control channel</help>
+                  <completionHelp>
+                    <path>pki openvpn shared-secret</path>
+                  </completionHelp>
                 </properties>
               </leafNode>
               <leafNode name="tls-version-min">

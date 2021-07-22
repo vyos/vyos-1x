@@ -43,6 +43,8 @@ CSR_BEGIN='-----BEGIN CERTIFICATE REQUEST-----\n'
 CSR_END='\n-----END CERTIFICATE REQUEST-----'
 DH_BEGIN='-----BEGIN DH PARAMETERS-----\n'
 DH_END='\n-----END DH PARAMETERS-----'
+OVPN_BEGIN = '-----BEGIN OpenVPN Static key V{0}-----\n'
+OVPN_END = '\n-----END OpenVPN Static key V{0}-----'
 
 # Print functions
 
@@ -226,6 +228,9 @@ def wrap_crl(raw_data):
 
 def wrap_dh_parameters(raw_data):
     return DH_BEGIN + raw_data + DH_END
+
+def wrap_openvpn_key(raw_data, version='1'):
+    return OVPN_BEGIN.format(version) + raw_data + OVPN_END.format(version)
 
 # Load functions
 
