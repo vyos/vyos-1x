@@ -69,6 +69,5 @@
 "vpn_pptp.py",
 "vpn_sstp.py",
 "vrf.py",
-"vrrp.py",
-"vyos_cert.py"
+"vrrp.py"
 ]

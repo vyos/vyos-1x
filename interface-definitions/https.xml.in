@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- HTTPS configuration -->
 <interfaceDefinition>
-  <syntaxVersion component='https' version='2'></syntaxVersion>
+  <syntaxVersion component='https' version='3'></syntaxVersion>
   <node name="service">
     <children>
       <node name="https" owner="${vyos_conf_scripts_dir}/https.py">
@@ -123,22 +123,7 @@
               <help>TLS certificates</help>
             </properties>
             <children>
-              <node name="system-generated-certificate" owner="${vyos_conf_scripts_dir}/vyos_cert.py">
-                <properties>
-                  <help>Use an automatically generated self-signed certificate</help>
-                </properties>
-                <children>
-                  <leafNode name="lifetime">
-                    <properties>
-                      <help>Lifetime in days; default is 365</help>
-                      <valueHelp>
-                        <format>1-65535</format>
-                        <description>Number of days</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/pki/certificate.xml.i>
               <node name="certbot" owner="${vyos_conf_scripts_dir}/le_cert.py">
                 <properties>
                   <help>Request or apply a letsencrypt certificate for domain-name</help>

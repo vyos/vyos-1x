@@ -22,14 +22,20 @@ from vyos.util import run
 
 base_path = ['service', 'https']
 
+pki_base = ['pki']
+cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
+key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
+
 class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         self.cli_delete(base_path)
+        self.cli_delete(pki_base)
 
     def tearDown(self):
         self.cli_delete(base_path)
+        self.cli_delete(pki_base)
         self.cli_commit()
 
     def test_default(self):
@@ -50,6 +56,17 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.cli_set(test_path + ['listen-address', address])
         self.cli_set(test_path + ['listen-port', port])
         self.cli_set(test_path + ['server-name', name])
+
+        self.cli_commit()
+
+        ret = run('sudo /usr/sbin/nginx -t')
+        self.assertEqual(ret, 0)
+
+    def test_certificate(self):
+        self.cli_set(pki_base + ['certificate', 'test_https', 'certificate', cert_data])
+        self.cli_set(pki_base + ['certificate', 'test_https', 'private', 'key', key_data])
+
+        self.cli_set(base_path + ['certificates', 'certificate', 'test_https'])
 
         self.cli_commit()
 
