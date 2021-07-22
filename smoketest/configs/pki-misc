@@ -3,6 +3,15 @@ interfaces {
         address 192.168.150.1/24
     }
 }
+service {
+    https {
+        certificates {
+            system-generated-certificate {
+                lifetime 365
+            }
+        }
+    }
+}
 system {
     config-management {
         commit-revisions 100
