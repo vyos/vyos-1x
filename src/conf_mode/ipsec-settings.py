@@ -214,16 +214,22 @@ def restart_ipsec():
     except OSError:
         raise ConfigError('VPN configuration error: IPSec process did not start.')
 
-def apply(data):
-    # Restart IPSec daemon
-    restart_ipsec()
+def apply(data, config):
+    if config.exists("vpn ipsec site-to-site peer") or \
+       config.exists("vpn ipsec profile") or \
+       config.exists("vpn l2tp remote-access ipsec-settings"):
+        # Restart IPSec daemon
+        restart_ipsec()
+    else:
+        print()
 
 if __name__ == '__main__':
     try:
-        c = get_config()
+        vyos_config = Config()
+        c = get_config(vyos_config)
         verify(c)
         generate(c)
-        apply(c)
+        apply(c, vyos_config)
     except ConfigError as e:
         print(e)
         exit(1)
