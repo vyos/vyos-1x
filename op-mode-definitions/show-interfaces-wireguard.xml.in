@@ -31,6 +31,12 @@
                 </properties>
                 <command>sudo wg show "$4" peers</command>
               </leafNode>
+              <leafNode name="public-key">
+                <properties>
+                  <help>Show interface public-key</help>
+                </properties>
+                <command>sudo wg show "$4" public-key</command>
+              </leafNode>
               <leafNode name="summary">
                 <properties>
                   <help>Shows current configuration and device information</help>
