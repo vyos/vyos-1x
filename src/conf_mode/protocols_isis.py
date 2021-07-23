@@ -232,15 +232,6 @@ def apply(isis):
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['frr_isisd_config'])
     frr_cfg.commit_configuration(isis_daemon)
 
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if isis['frr_isisd_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(isis_daemon)
-    if isis['frr_zebra_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(zebra_daemon)
-
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
 

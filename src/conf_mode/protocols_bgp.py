@@ -271,15 +271,6 @@ def apply(bgp):
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['frr_bgpd_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
-    # If FRR config is blank, re-run the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if bgp['frr_bgpd_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(bgp_daemon)
-    if bgp['frr_zebra_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(zebra_daemon)
-
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
 

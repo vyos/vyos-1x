@@ -90,12 +90,6 @@ def apply(rpki):
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rpki['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
-    # If FRR config is blank, re-run the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if rpki['new_frr_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
-
     return None
 
 if __name__ == '__main__':

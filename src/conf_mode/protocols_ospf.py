@@ -211,15 +211,6 @@ def apply(ospf):
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospf['frr_ospfd_config'])
     frr_cfg.commit_configuration(ospf_daemon)
 
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if ospf['frr_ospfd_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(ospf_daemon)
-    if ospf['frr_zebra_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(zebra_daemon)
-
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
 
