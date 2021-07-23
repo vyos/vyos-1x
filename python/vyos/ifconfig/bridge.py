@@ -320,6 +320,11 @@ class BridgeIf(Interface):
                 tmp = dict_search('isolated', interface_config)
                 value = 'on' if (tmp != None) else 'off'
                 lower.set_port_isolation(value)
+                
+                # Set VLAN tunnel info
+                tmp = dict_search('vlan_tunnel', interface_config)
+                value = 'on' if (tmp != None) else 'off'
+                lower.bridge_port_vlan_tunnel(value)
 
                 # set bridge port path cost
                 if 'cost' in interface_config:
@@ -335,12 +340,17 @@ class BridgeIf(Interface):
                     add_vlan = []
                     native_vlan_id = None
                     allowed_vlan_ids= []
+                    vlan_tunnel = {}
                     cur_vlan_ids = get_vlan_ids(interface)
 
                     if 'native_vlan' in interface_config:
                         vlan_id = interface_config['native_vlan']
                         add_vlan.append(vlan_id)
                         native_vlan_id = vlan_id
+                    
+                    if 'vlan_tunnel' in interface_config:
+                        for tunnel_id, tunnel_mapping_config in interface_config['vlan_tunnel'].items():
+                            vlan_tunnel.update({tunnel_id: tunnel_mapping_config})
 
                     if 'allowed_vlan' in interface_config:
                         for vlan in interface_config['allowed_vlan']:
@@ -365,5 +375,25 @@ class BridgeIf(Interface):
                     if native_vlan_id:
                         cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
                         self._cmd(cmd)
+                    
+                    for tunnel_id, tunnel_mapping_config in vlan_tunnel.items():
+                        vlan_id = tunnel_mapping_config['vlan']
+                        cmd = f'bridge vlan add dev {interface} vid {vlan_id} master;bridge vlan add dev {interface} vid {vlan_id} tunnel_info id {tunnel_id} master'
+                        self._cmd(cmd)
+                        
+                        # Set the default FDB forwarding address for VLAN tunnel mapping
+                        cmd = f'bridge fdb del 00:00:00:00:00:00:00 dev {interface} vni {tunnel_id} src_vni {tunnel_id} self permanent'
+                        self._popen(cmd)
+                        
+                        dst = tunnel_mapping_config['remote']
+                        cmd = f'bridge fdb add 00:00:00:00:00:00:00 dev {interface} vni {tunnel_id} src_vni {tunnel_id} dst {dst} '
+                        if 'port' in tunnel_mapping_config:
+                            port = tunnel_mapping_config['port']
+                            if int(port) != 8472:
+                                cmd += f'port {port} '
+                        
+                        cmd += 'self permanent'
+                        self._cmd(cmd)
+                    
 
         super().update(config)

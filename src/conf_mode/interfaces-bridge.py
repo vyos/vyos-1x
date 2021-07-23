@@ -138,9 +138,18 @@ def verify(bridge):
                 if 'wlan' in interface:
                     raise ConfigError(error_msg + 'VLAN aware cannot be set!')
             else:
-                for option in ['allowed_vlan', 'native_vlan']:
+                for option in ['allowed_vlan', 'native_vlan', 'vlan_tunnel']:
                     if option in interface_config:
                         raise ConfigError('Can not use VLAN options on non VLAN aware bridge')
+            
+            if 'vlan_tunnel' in interface_config:
+                for tunnel_id, tunnel_mapping_config in interface_config['vlan_tunnel'].items():
+                    for option in ['vlan', 'remote']:
+                        if option not in tunnel_mapping_config:
+                            raise ConfigError(f'vlan-tunnel mapping configuration is incomplete. {option} options must be set')
+                # VLAN tunnel mapping can only be applied to vxlan tunnels
+                if 'vxlan' not in interface:
+                    raise ConfigError(error_msg + 'VLAN Tunnel Mapping cannot be set!')
 
     if 'enable_vlan' in bridge:
         if dict_search('vif.1', bridge):

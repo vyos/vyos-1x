@@ -63,9 +63,10 @@ class VXLANIf(Interface):
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
             'parameters.nolearning'      : 'nolearning',
+            'vni'                        : 'id'
         }
 
-        cmd = 'ip link add {ifname} type {type} id {vni} dstport {port}'
+        cmd = 'ip link add {ifname} type {type} dstport {port}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence
@@ -75,6 +76,9 @@ class VXLANIf(Interface):
                 cmd += f' {iproute2_key}'
             elif tmp != None:
                 cmd += f' {iproute2_key} {tmp}'
+        
+        if 'external' in self.config:
+            cmd += ' external'
 
         self._cmd(cmd.format(**self.config))
         # interface is always A/D down. It needs to be enabled explicitly

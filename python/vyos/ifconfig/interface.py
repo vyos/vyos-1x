@@ -122,6 +122,10 @@ class Interface(Control):
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'shellcmd': 'bridge link set dev {ifname} isolated {value}',
         },
+        'bridge_port_vlan_tunnel': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'shellcmd': 'bridge link set dev {ifname} vlan_tunnel {value}',
+        },
         'mac': {
             'validate': assert_mac,
             'shellcmd': 'ip link set dev {ifname} address {value}',
@@ -815,6 +819,19 @@ class Interface(Control):
         >>> Interface('eth1').set_port_isolation('on')
         """
         self.set_interface('bridge_port_isolation', on_or_off)
+    
+    def bridge_port_vlan_tunnel(self, on_or_off):
+        """
+        The control enable VLAN tunnel conversion function is used to 
+        convert VLAN tunnel ID to VLAN ID.
+
+        Use enable=1 to enable or enable=0 to disable
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').bridge_port_vlan_tunnel('on')
+        """
+        self.set_interface('bridge_port_vlan_tunnel', on_or_off)
 
     def set_proxy_arp(self, enable):
         """
@@ -1041,15 +1058,27 @@ class Interface(Control):
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
             if int(bridge_vlan_filter):
+                
+                # Set VLAN tunnel info
+                tmp = dict_search('vlan_tunnel', bridge_config)
+                value = 'on' if (tmp != None) else 'off'
+                self.bridge_port_vlan_tunnel(value)
+                
                 cur_vlan_ids = get_vlan_ids(ifname)
                 add_vlan = []
                 native_vlan_id = None
+                vlan_tunnel = {}
                 allowed_vlan_ids= []
 
                 if 'native_vlan' in bridge_config:
                     vlan_id = bridge_config['native_vlan']
                     add_vlan.append(vlan_id)
                     native_vlan_id = vlan_id
+                
+                if 'vlan_tunnel' in bridge_config:
+                    for tunnel_id, tunnel_mapping_config in bridge_config['vlan_tunnel'].items():
+                        vlan_id = tunnel_mapping_config['vlan']
+                        vlan_tunnel.update({tunnel_id: tunnel_mapping_config})
 
                 if 'allowed_vlan' in bridge_config:
                     for vlan in bridge_config['allowed_vlan']:
@@ -1073,6 +1102,25 @@ class Interface(Control):
                 # Setting native VLAN to system
                 if native_vlan_id:
                     cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
+                    self._cmd(cmd)
+                
+                for tunnel_id, tunnel_mapping_config in vlan_tunnel.items():
+                    vlan_id = tunnel_mapping_config['vlan']
+                    dst = tunnel_mapping_config['remote']
+                    cmd = f'bridge vlan add dev {ifname} vid {vlan_id} master;bridge vlan add dev {ifname} vid {vlan_id} tunnel_info id {tunnel_id} master'
+                    self._cmd(cmd)
+                    
+                    # Set the default FDB forwarding address for VLAN tunnel mapping
+                    cmd = f'bridge fdb del 00:00:00:00:00:00:00 dev {ifname} vni {tunnel_id} src_vni {tunnel_id} self permanent'
+                    self._popen(cmd)
+                    
+                    cmd = f'bridge fdb add 00:00:00:00:00:00:00 dev {ifname} vni {tunnel_id} src_vni {tunnel_id} dst {dst} '
+                    if 'port' in tunnel_mapping_config:
+                        port = tunnel_mapping_config['port']
+                        if int(port) != 8472:
+                            cmd += f'port {port} '
+
+                    cmd += 'self permanent'
                     self._cmd(cmd)
 
     def set_dhcp(self, enable):

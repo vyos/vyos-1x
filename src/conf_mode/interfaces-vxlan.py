@@ -43,6 +43,9 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
+    
+    if 'port' not in vxlan:
+        vxlan['port'] = '8472'
 
     return vxlan
 
@@ -63,8 +66,11 @@ def verify(vxlan):
     if not any(tmp in ['group', 'remote', 'source_address'] for tmp in vxlan):
         raise ConfigError('Group, remote or source-address must be configured')
 
-    if 'vni' not in vxlan:
-        raise ConfigError('Must configure VNI for VXLAN')
+    if 'external' not in vxlan and 'vni' not in vxlan:
+        raise ConfigError('VNI must be configured for vxlan or the external flag must be turned on')
+    
+    if 'external' in vxlan and 'vni' in vxlan:
+        raise ConfigError('You can only turn on the external flag or configure VNI for vxlan. The two options cannot exist at the same time')
 
     if 'source_interface' in vxlan:
         # VXLAN adds at least an overhead of 50 byte - we need to check the

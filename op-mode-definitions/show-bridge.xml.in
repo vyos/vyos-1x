@@ -13,13 +13,19 @@
             </properties>
             <command>bridge -c vlan show</command>
           </leafNode>
+          <leafNode name="vlan-tunnel">
+            <properties>
+              <help>View the VLAN Tunnel Info settings of the bridge</help>
+            </properties>
+            <command>bridge -c vlan tunnelshow</command>
+          </leafNode>
         </children>
       </node>
       <leafNode name="bridge">
         <properties>
           <help>Show bridging information</help>
         </properties>
-        <command>bridge -c link show</command>
+        <command>bridge -c -d link show</command>
       </leafNode>
       <tagNode name="bridge">
         <properties>

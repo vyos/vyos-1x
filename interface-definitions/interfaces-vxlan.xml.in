@@ -82,8 +82,9 @@
           </leafNode>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/source-interface.xml.i>
-          #include <include/interface/tunnel-remote.xml.i>
+          #include <include/interface/vxlan-endpoint.xml.i>
           #include <include/interface/vrf.xml.i>
+          #include <include/interface/tunnel-external.xml.i>
           #include <include/vni.xml.i>
         </children>
       </tagNode>
