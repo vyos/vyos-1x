@@ -43,12 +43,11 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 def get_local_users():
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
-    for p in getpwall():
-        username = p[0]
-        uid = getpwnam(username).pw_uid
+    for s_user in getpwall():
+        uid = getpwnam(s_user.pw_name).pw_uid
         if uid in range(1000, 29999):
-            if username not in ['radius_user', 'radius_priv_user']:
-                local_users.append(username)
+            if s_user.pw_name not in ['radius_user', 'radius_priv_user']:
+                local_users.append(s_user.pw_name)
 
     return local_users
 
@@ -104,7 +103,14 @@ def verify(login):
             raise ConfigError(f'Attempting to delete current user: {cur_user}')
 
     if 'user' in login:
+        system_users = getpwall()
         for user, user_config in login['user'].items():
+            # Linux system users range up until UID 1000, we can not create a
+            # VyOS CLI user which already exists as system user
+            for s_user in system_users:
+                if s_user.pw_name == user and s_user.pw_uid < 1000:
+                    raise ConfigError(f'User "{user}" can not be created, conflict with local system account!')
+
             for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
                 if 'type' not in pubkey_options:
                     raise ConfigError(f'Missing type for public-key "{pubkey}"!')

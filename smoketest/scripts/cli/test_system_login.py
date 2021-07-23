@@ -44,6 +44,17 @@ class TestSystemLogin(unittest.TestCase):
         self.session.commit()
         del self.session
 
+    def test_add_linux_system_user(self):
+        system_user = 'backup'
+        self.session.set(base_path + ['user', system_user, 'authentication', 'plaintext-password', system_user])
+
+        # check validate() - can not add username which exists on the Debian
+        # base system (UID < 1000)
+        with self.assertRaises(ConfigSessionError):
+            self.session.commit()
+
+        self.session.delete(base_path + ['user', system_user])
+
     def test_system_login_user(self):
         # Check if user can be created and we can SSH to localhost
         self.session.set(['service', 'ssh', 'port', '22'])
