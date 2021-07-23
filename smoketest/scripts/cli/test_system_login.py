@@ -41,6 +41,17 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+    def test_add_linux_system_user(self):
+        system_user = 'backup'
+        self.cli_set(base_path + ['user', system_user, 'authentication', 'plaintext-password', system_user])
+
+        # check validate() - can not add username which exists on the Debian
+        # base system (UID < 1000)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(base_path + ['user', system_user])
+
     def test_system_login_user(self):
         # Check if user can be created and we can SSH to localhost
         self.cli_set(['service', 'ssh', 'port', '22'])
