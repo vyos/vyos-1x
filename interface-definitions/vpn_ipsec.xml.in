@@ -630,40 +630,6 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <node name="remote-access">
-                <properties>
-                  <help>remote-access global options</help>
-                </properties>
-                <children>
-                  <node name="dhcp">
-                    <properties>
-                      <help>DHCP pool options for remote-access</help>
-                    </properties>
-                    <children>
-                      <leafNode name="interface">
-                        <properties>
-                          <help>Interface with DHCP server to use</help>
-                          <completionHelp>
-                            <script>${vyos_completion_dir}/list_interfaces.py</script>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="server">
-                        <properties>
-                          <help>DHCP server address</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>DHCP server IPv4 address</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
-                </children>
-              </node>
             </children>
           </node>
           <tagNode name="profile">
@@ -835,6 +801,33 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <node name="dhcp">
+                <properties>
+                  <help>DHCP pool options for remote-access</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Interface with DHCP server to use</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="server">
+                    <properties>
+                      <help>DHCP server address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>DHCP server IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <tagNode name="pool">
                 <properties>
                   <help>IP address pool for remote-access users</help>

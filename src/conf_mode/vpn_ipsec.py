@@ -269,7 +269,7 @@ def verify(ipsec):
 
                     for pool in ra_conf['pool']:
                         if pool == 'dhcp':
-                            if dict_search('options.remote_access.dhcp.server', ipsec) == None:
+                            if dict_search('remote_access.dhcp.server', ipsec) == None:
                                 raise ConfigError('IPSec DHCP server is not configured!')
 
                         elif 'pool' not in ipsec['remote_access'] or pool not in ipsec['remote_access']['pool']:

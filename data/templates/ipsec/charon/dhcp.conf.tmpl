@@ -1,11 +1,11 @@
 dhcp {
     load = yes
-{% if options is defined and options.remote_access is defined and options.remote_access.dhcp is defined %}
-{%   if options.remote_access.dhcp.interface is defined %}
-    interface = {{ options.remote_access.dhcp.interface }}
+{% if remote_access is defined and remote_access.dhcp is defined %}
+{%   if remote_access.dhcp.interface is defined %}
+    interface = {{ remote_access.dhcp.interface }}
 {%   endif %}
-{%   if options.remote_access.dhcp.server is defined %}
-    server = {{ options.remote_access.dhcp.server }}
+{%   if remote_access.dhcp.server is defined %}
+    server = {{ remote_access.dhcp.server }}
 {%   endif %}
 {% endif %}
 
