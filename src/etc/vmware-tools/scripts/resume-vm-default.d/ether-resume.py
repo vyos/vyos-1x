@@ -25,9 +25,8 @@ def get_config():
     c = Config()
     interfaces = dict()
     for intf in c.list_effective_nodes('interfaces ethernet'):
-        # skip interfaces that are disabled or is configured for dhcp
+        # skip interfaces that are disabled
         check_disable = f'interfaces ethernet {intf} disable'
-        check_dhcp = f'interfaces ethernet {intf} address dhcp'
         if c.exists_effective(check_disable):
             continue
 
@@ -49,10 +48,10 @@ def apply(config):
 
         # add configured addresses to interface
         for addr in addresses:
-            if addr == 'dhcp':
-                cmd = ['dhclient', intf]
-            else:
-                cmd = f'ip address add {addr} dev {intf}'
+            # dhcp is handled by netplug
+            if addr in ['dhcp', 'dhcpv6']:
+                continue
+            cmd = f'ip address add {addr} dev {intf}'
             syslog.syslog(cmd)
             run(cmd)
 
