@@ -46,6 +46,14 @@ def get_config(config=None):
         config = config
     else:
         config = Config()
+
+    # IPsec isn't configured enough to warrant starting StrongSWAN for it,
+    # it's just some incomplete or leftover options.
+    if config.exists("vpn ipsec site-to-site peer") or \
+       config.exists("vpn ipsec profile") or \
+       config.exists("vpn l2tp remote-access ipsec-settings"):
+        return {}
+
     data = {"install_routes": "yes"}
 
     if config.exists("vpn ipsec options disable-route-autoinstall"):
@@ -204,6 +212,10 @@ def generate(data):
 
 def restart_ipsec():
     try:
+        # Restart the IPsec daemon when it's running.
+        # Since it's started by the legacy ipsec.pl in VyOS 1.3,
+        # there's a chance that this script will run before charon is up,
+        # so we can't assume it's running and have to check and wait if needed.
         wait_for_file_write_complete(charon_pidfile,
           pre_hook=(lambda: call('ipsec restart >&/dev/null')),
           timeout=10)
@@ -214,22 +226,18 @@ def restart_ipsec():
     except OSError:
         raise ConfigError('VPN configuration error: IPSec process did not start.')
 
-def apply(data, config):
-    if config.exists("vpn ipsec site-to-site peer") or \
-       config.exists("vpn ipsec profile") or \
-       config.exists("vpn l2tp remote-access ipsec-settings"):
-        # Restart IPSec daemon
+def apply(data):
+    if data:
         restart_ipsec()
     else:
-        print()
+        print("Note: the IPsec process will not start until you configure some tunnels, profiles, or L2TP/IPsec settings")
 
 if __name__ == '__main__':
     try:
-        vyos_config = Config()
-        c = get_config(vyos_config)
+        c = get_config()
         verify(c)
         generate(c)
-        apply(c, vyos_config)
+        apply(c)
     except ConfigError as e:
         print(e)
         exit(1)
