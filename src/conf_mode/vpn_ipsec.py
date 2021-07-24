@@ -49,13 +49,14 @@ airbag.enable()
 dhcp_wait_attempts = 2
 dhcp_wait_sleep = 1
 
-swanctl_dir    = '/etc/swanctl'
-ipsec_conf     = '/etc/ipsec.conf'
-ipsec_secrets  = '/etc/ipsec.secrets'
-charon_conf = '/etc/strongswan.d/charon.conf'
-charon_dhcp_conf = '/etc/strongswan.d/charon/dhcp.conf'
-interface_conf = '/etc/strongswan.d/interfaces_use.conf'
-swanctl_conf   = f'{swanctl_dir}/swanctl.conf'
+swanctl_dir        = '/etc/swanctl'
+ipsec_conf         = '/etc/ipsec.conf'
+ipsec_secrets      = '/etc/ipsec.secrets'
+charon_conf        = '/etc/strongswan.d/charon.conf'
+charon_dhcp_conf   = '/etc/strongswan.d/charon/dhcp.conf'
+charon_radius_conf = '/etc/strongswan.d/charon/eap-radius.conf'
+interface_conf     = '/etc/strongswan.d/interfaces_use.conf'
+swanctl_conf       = f'{swanctl_dir}/swanctl.conf'
 
 default_install_routes = 'yes'
 
@@ -109,6 +110,12 @@ def get_config(config=None):
         for rw in ipsec['remote_access']['connection']:
             ipsec['remote_access']['connection'][rw] = dict_merge(default_values,
               ipsec['remote_access']['connection'][rw])
+
+    if 'remote_access' in ipsec and 'radius' in ipsec['remote_access'] and 'server' in ipsec['remote_access']['radius']:
+        default_values = defaults(base + ['remote-access', 'radius', 'server'])
+        for server in ipsec['remote_access']['radius']['server']:
+            ipsec['remote_access']['radius']['server'][server] = dict_merge(default_values,
+                ipsec['remote_access']['radius']['server'][server])
 
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
@@ -263,6 +270,12 @@ def verify(ipsec):
                     if 'pre_shared_secret' not in ra_conf['authentication']:
                         raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
+
+                if 'client_mode' in ra_conf['authentication']:
+                    if ra_conf['authentication']['client_mode'] == 'eap-radius':
+                        if 'radius' not in ipsec['remote_access'] or 'server' not in ipsec['remote_access']['radius'] or len(ipsec['remote_access']['radius']['server']) == 0:
+                            raise ConfigError('RADIUS authentication requires at least one server')
+
                 if 'pool' in ra_conf:
                     if 'dhcp' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
                         raise ConfigError(f'Can not use both DHCP and a predefined address pool for "{name}"!')
@@ -297,6 +310,10 @@ def verify(ipsec):
                         if v4_addr_and_exclude or v6_addr_and_exclude:
                            raise ConfigError('Must use both IPv4 or IPv6 addresses for pool prefix and exclude prefixes!')
 
+        if 'radius' in ipsec['remote_access'] and 'server' in ipsec['remote_access']['radius']:
+            for server, server_config in ipsec['remote_access']['radius']['server'].items():
+                if 'key' not in server_config:
+                    raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
@@ -449,7 +466,8 @@ def generate(ipsec):
     cleanup_pki_files()
 
     if not ipsec:
-        for config_file in [ipsec_conf, ipsec_secrets, charon_dhcp_conf, interface_conf, swanctl_conf]:
+        for config_file in [ipsec_conf, ipsec_secrets, charon_dhcp_conf,
+                            charon_radius_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
         render(charon_conf, 'ipsec/charon.tmpl', {'install_routes': default_install_routes})
@@ -518,6 +536,7 @@ def generate(ipsec):
     render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', ipsec)
     render(charon_conf, 'ipsec/charon.tmpl', ipsec)
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', ipsec)
+    render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.tmpl', ipsec)
     render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', ipsec)
     render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', ipsec)
 

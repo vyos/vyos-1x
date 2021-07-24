@@ -27,7 +27,10 @@ interface_definitions: $(config_xml_obj)
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
-	rm -f $(TMPL_DIR)/firewall/node.def
+	# IPSec VPN EAP-RADIUS does not support source-address
+	rm -rf $(TMPL_DIR)/vpn/ipsec/remote-access/radius/source-address
+	# T3568: firewall is yet not migrated to XML and Python - this is only a dummy
+	rm -rf $(TMPL_DIR)/firewall/node.def
 	rm -rf $(TMPL_DIR)/nfirewall
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements

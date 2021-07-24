@@ -703,18 +703,22 @@
                         <properties>
                           <help>Client authentication mode</help>
                           <completionHelp>
-                            <list>eap-tls eap-mschapv2</list>
+                            <list>eap-tls eap-mschapv2 eap-radius</list>
                           </completionHelp>
                           <valueHelp>
                             <format>eap-tls</format>
-                            <description>EAP-TLS</description>
+                            <description>Client uses EAP-TLS authentication</description>
                           </valueHelp>
                           <valueHelp>
                             <format>eap-mschapv2</format>
-                            <description>EAP-MSCHAPv2</description>
+                            <description>Client uses EAP-MSCHAPv2 authentication</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>eap-radius</format>
+                            <description>Client uses EAP-RADIUS authentication</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(eap-tls|eap-mschapv2)$</regex>
+                            <regex>^(eap-tls|eap-mschapv2|eap-radius)$</regex>
                           </constraint>
                         </properties>
                         <defaultValue>eap-mschapv2</defaultValue>
@@ -872,6 +876,17 @@
                   #include <include/accel-ppp/name-server.xml.i>
                 </children>
               </tagNode>
+              #include <include/radius-server-ipv4.xml.i>
+              <node name="radius">
+                <children>
+                  #include <include/radius-nas-identifier.xml.i>
+                  <tagNode name="server">
+                    <children>
+                      #include <include/accel-ppp/radius-additions-disable-accounting.xml.i>
+                    </children>
+                 </tagNode>
+                </children>
+              </node>
             </children>
           </node>
           <node name="site-to-site">
