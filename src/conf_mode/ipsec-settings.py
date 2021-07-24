@@ -49,9 +49,9 @@ def get_config(config=None):
 
     # IPsec isn't configured enough to warrant starting StrongSWAN for it,
     # it's just some incomplete or leftover options.
-    if config.exists("vpn ipsec site-to-site peer") or \
-       config.exists("vpn ipsec profile") or \
-       config.exists("vpn l2tp remote-access ipsec-settings"):
+    if config.exists_effective("vpn ipsec site-to-site peer") or \
+       config.exists_effective("vpn ipsec profile") or \
+       config.exists_effective("vpn l2tp remote-access ipsec-settings"):
         return {}
 
     data = {"install_routes": "yes"}
@@ -148,6 +148,9 @@ def check_cert_file_store(cert_name, file_path, dts_path):
          raise ConfigError("L2TP VPN configuration error: Cannot copy "+file_path)
 
 def verify(data):
+    if not data:
+        return
+
     # l2tp ipsec check
     if data["ipsec_l2tp"]:
         # Checking dependecies for "authentication mode pre-shared-secret"
@@ -178,6 +181,9 @@ def verify(data):
            raise ConfigError("L2TP VPN configuration error: \"vpn ipsec ipsec-interfaces\" must be specified.")
 
 def generate(data):
+    if not data:
+        return
+
     render(charon_conf_file, 'ipsec/charon.tmpl', data)
 
     if data["ipsec_l2tp"]:
