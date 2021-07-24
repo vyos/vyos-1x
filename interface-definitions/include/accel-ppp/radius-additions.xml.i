@@ -88,11 +88,7 @@
       </properties>
       <defaultValue>3</defaultValue>
     </leafNode>
-    <leafNode name="nas-identifier">
-      <properties>
-        <help>NAS-Identifier attribute sent to RADIUS</help>
-      </properties>
-    </leafNode>
+    #include <include/radius-nas-identifier.xml.i>
     <leafNode name="nas-ip-address">
       <properties>
         <help>NAS-IP-Address attribute sent to RADIUS</help>

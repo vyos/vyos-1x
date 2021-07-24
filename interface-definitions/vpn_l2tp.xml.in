@@ -205,11 +205,7 @@
                           <help>Maximum number of tries to send Access-Request/Accounting-Request queries</help>
                         </properties>
                       </leafNode>
-                      <leafNode name="nas-identifier">
-                        <properties>
-                          <help>Value to send to RADIUS server in NAS-Identifier attribute and to be matched in DM/CoA requests.</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/radius-nas-identifier.xml.i>
                       <node name="dae-server">
                         <properties>
                           <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
