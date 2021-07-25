@@ -45,8 +45,8 @@ def generate(loopback):
     return None
 
 def apply(loopback):
-    l = LoopbackIf(loopback['ifname'])
-    if 'deleted' in loopback.keys():
+    l = LoopbackIf(**loopback)
+    if 'deleted' in loopback:
         l.remove()
     else:
         l.update(loopback)
