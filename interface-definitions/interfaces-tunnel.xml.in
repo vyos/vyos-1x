@@ -139,6 +139,18 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
+                  <leafNode name="no-pmtu-discovery">
+                    <properties>
+                      <help>Disable Path MTU Discovery on this tunnel</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ignore-df">
+                    <properties>
+                      <help>Enable IPv4 DF suppression on this tunnel</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   #include <include/interface/interface-parameters-key.xml.i>
                   #include <include/interface/interface-parameters-tos.xml.i>
                   #include <include/interface/interface-parameters-ttl.xml.i>
