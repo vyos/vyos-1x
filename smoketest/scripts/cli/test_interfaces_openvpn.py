@@ -631,12 +631,12 @@ if __name__ == '__main__':
 
     if not os.path.isfile(s2s_key):
         # Generate site-2-site key
-        tmp = f'openvpn --genkey --secret {s2s_key}'
+        tmp = f'openvpn --genkey secret {s2s_key}'
         print(cmd(tmp))
 
     if not os.path.isfile(auth_key):
         # Generate TLS auth key
-        tmp = f'openvpn --genkey --secret {auth_key}'
+        tmp = f'openvpn --genkey secret {auth_key}'
         print(cmd(tmp))
 
     for file in [ca_cert, ssl_cert, ssl_key, dh_pem, s2s_key, auth_key]:
