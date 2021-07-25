@@ -39,8 +39,8 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         cls.local_v4 = '192.0.2.1'
         cls.local_v6 = '2001:db8::1'
         cls._options = {
-            'tun10': ['encapsulation ipip', 'remote-ip 192.0.2.10', 'local-ip ' + cls.local_v4],
-            'tun20': ['encapsulation gre',  'remote-ip 192.0.2.20', 'local-ip ' + cls.local_v4],
+            'tun10': ['encapsulation ipip', 'remote 192.0.2.10', 'source-address ' + cls.local_v4],
+            'tun20': ['encapsulation gre',  'remote 192.0.2.20', 'source-address ' + cls.local_v4],
         }
         cls._interfaces = list(cls._options)
 
@@ -60,26 +60,26 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         interface = f'tun1000'
         local_if_addr = f'10.10.200.1/24'
-        for encapsulation in ['ipip', 'sit', 'gre', 'gre-bridge']:
+        for encapsulation in ['ipip', 'sit', 'gre', 'gretap']:
             self.session.set(self._base_path + [interface, 'address', local_if_addr])
             self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-            self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
-            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip6])
+            self.session.set(self._base_path + [interface, 'source-address', self.local_v6])
+            self.session.set(self._base_path + [interface, 'remote', remote_ip6])
 
-            # Encapsulation mode requires IPv4 local-ip
+            # Encapsulation mode requires IPv4 source-address
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
-            self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
+            self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
 
-            # Encapsulation mode requires IPv4 local-ip
+            # Encapsulation mode requires IPv4 remote address
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
-            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+            self.session.set(self._base_path + [interface, 'remote', remote_ip4])
 
             self.session.set(self._base_path + [interface, 'source-interface', source_if])
 
-            # Source interface can not be used with sit and gre-bridge
-            if encapsulation in ['sit', 'gre-bridge']:
+            # Source interface can not be used with sit and gretap
+            if encapsulation in ['sit', 'gretap']:
                 with self.assertRaises(ConfigSessionError):
                     self.session.commit()
                 self.session.delete(self._base_path + [interface, 'source-interface'])
@@ -88,7 +88,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
             self.session.commit()
 
             conf = get_interface_config(interface)
-            if encapsulation not in ['sit', 'gre-bridge']:
+            if encapsulation not in ['sit', 'gretap']:
                 self.assertEqual(source_if, conf['link'])
 
             self.assertEqual(interface, conf['ifname'])
@@ -109,18 +109,18 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         for encapsulation in ['ipip6', 'ip6ip6', 'ip6gre']:
             self.session.set(self._base_path + [interface, 'address', local_if_addr])
             self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-            self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
-            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+            self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
+            self.session.set(self._base_path + [interface, 'remote', remote_ip4])
 
-            # Encapsulation mode requires IPv6 local-ip
+            # Encapsulation mode requires IPv6 source-address
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
-            self.session.set(self._base_path + [interface, 'local-ip', self.local_v6])
+            self.session.set(self._base_path + [interface, 'source-address', self.local_v6])
 
-            # Encapsulation mode requires IPv6 local-ip
+            # Encapsulation mode requires IPv6 remote address
             with self.assertRaises(ConfigSessionError):
                 self.session.commit()
-            self.session.set(self._base_path + [interface, 'remote-ip', remote_ip6])
+            self.session.set(self._base_path + [interface, 'remote', remote_ip6])
 
             # Configure Tunnel Source interface
             self.session.set(self._base_path + [interface, 'source-interface', source_if])
@@ -157,11 +157,11 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         self.session.set(self._base_path + [interface, 'address', local_if_addr])
         self.session.set(self._base_path + [interface, 'encapsulation', 'gre'])
-        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
-        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+        self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote', remote_ip4])
         self.session.set(self._base_path + [interface, 'dhcp-interface', 'eth0'])
 
-        # local-ip and dhcp-interface can not be used at the same time
+        # source-address and dhcp-interface can not be used at the same time
         with self.assertRaises(ConfigSessionError):
             self.session.commit()
         self.session.delete(self._base_path + [interface, 'dhcp-interface'])
@@ -177,8 +177,8 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         ttl = 0
 
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
-        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+        self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote', remote_ip4])
 
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'key', gre_key])
         self.session.set(self._base_path + [interface, 'parameters', 'ip', 'tos', tos])
@@ -198,12 +198,12 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
     def test_gretap_parameters_change(self):
         interface = f'tun1040'
         gre_key = '10'
-        encapsulation = 'gre-bridge'
+        encapsulation = 'gretap'
         tos = '20'
 
         self.session.set(self._base_path + [interface, 'encapsulation', encapsulation])
-        self.session.set(self._base_path + [interface, 'local-ip', self.local_v4])
-        self.session.set(self._base_path + [interface, 'remote-ip', remote_ip4])
+        self.session.set(self._base_path + [interface, 'source-address', self.local_v4])
+        self.session.set(self._base_path + [interface, 'remote', remote_ip4])
 
         # Check if commit is ok
         self.session.commit()
@@ -219,7 +219,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
 
         # Change remote ip address (inc host by 2
         new_remote = inc_ip(remote_ip4, 2)
-        self.session.set(self._base_path + [interface, 'remote-ip', new_remote])
+        self.session.set(self._base_path + [interface, 'remote', new_remote])
 
         # Check if commit is ok
         self.session.commit()
@@ -228,4 +228,4 @@ class TunnelInterfaceTest(BasicInterfaceTest.BaseTest):
         self.assertEqual(new_remote,    conf['linkinfo']['info_data']['remote'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

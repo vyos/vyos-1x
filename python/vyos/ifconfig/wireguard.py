@@ -149,17 +149,7 @@ class WireGuardOperational(Operational):
 class WireGuardIf(Interface):
     OperationalClass = WireGuardOperational
 
-    default = {
-        'type': 'wireguard',
-        'port': 0,
-        'private_key': None,
-        'pubkey': None,
-        'psk': '',
-        'allowed_ips': [],
-        'fwmark': 0x00,
-        'endpoint': None,
-        'keepalive': 0
-    }
+    iftype = 'wireguard'
     definition = {
         **Interface.definition,
         **{

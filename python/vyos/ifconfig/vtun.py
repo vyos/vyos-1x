@@ -17,10 +17,7 @@ from vyos.ifconfig.interface import Interface
 
 @Interface.register
 class VTunIf(Interface):
-    default = {
-        'type': 'vtun',
-        'device_type': 'tun',
-    }
+    iftype = 'vtun'
     definition = {
         **Interface.definition,
         **{

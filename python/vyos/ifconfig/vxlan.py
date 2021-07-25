@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,7 +14,8 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos import ConfigError
-from vyos.ifconfig.interface import Interface
+from vyos.ifconfig import Interface
+from vyos.util import dict_search
 
 @Interface.register
 class VXLANIf(Interface):
@@ -38,17 +39,7 @@ class VXLANIf(Interface):
     https://www.kernel.org/doc/Documentation/networking/vxlan.txt
     """
 
-    default = {
-        'type': 'vxlan',
-        'group': '',
-        'port': 8472,   # The Linux implementation of VXLAN pre-dates
-                        # the IANA's selection of a standard destination port
-        'remote': '',
-        'source_address': '',
-        'source_interface': '',
-        'vni': 0,
-        'ttl': '16',
-    }
+    iftype = 'vxlan'
     definition = {
         **Interface.definition,
         **{
@@ -57,43 +48,34 @@ class VXLANIf(Interface):
             'bridgeable': True,
         }
     }
-    options = Interface.options + ['group', 'remote', 'source_interface',
-                                   'port', 'vni', 'source_address', 'ttl']
-
-    mapping = {
-        'ifname': 'add',
-        'vni':    'id',
-        'port':   'dstport',
-        'source_address': 'local',
-        'source_interface': 'dev',
-        'ttl': 'ttl',
-    }
 
     def _create(self):
-        cmdline = ['ifname', 'type', 'vni', 'port', 'ttl']
+        # This table represents a mapping from VyOS internal config dict to
+        # arguments used by iproute2. For more information please refer to:
+        # - https://man7.org/linux/man-pages/man8/ip-link.8.html
+        mapping = {
+            'source_address'             : 'local',
+            'source_interface'           : 'dev',
+            'remote'                     : 'remote',
+            'group'                      : 'group',
+            'parameters.ip.dont_fragment': 'df set',
+            'parameters.ip.tos'          : 'tos',
+            'parameters.ip.ttl'          : 'ttl',
+            'parameters.ipv6.flowlabel'  : 'flowlabel',
+            'parameters.nolearning'      : 'nolearning',
+        }
 
-        if self.config['source_address']:
-            cmdline.append('source_address')
+        cmd = 'ip link add {ifname} type {type} id {vni} dstport {port}'
+        for vyos_key, iproute2_key in mapping.items():
+            # dict_search will return an empty dict "{}" for valueless nodes like
+            # "parameters.nolearning" - thus we need to test the nodes existence
+            # by using isinstance()
+            tmp = dict_search(vyos_key, self.config)
+            if isinstance(tmp, dict):
+                cmd += f' {iproute2_key}'
+            elif tmp != None:
+                cmd += f' {iproute2_key} {tmp}'
 
-        if self.config['remote']:
-            cmdline.append('remote')
-
-        if self.config['group'] or self.config['source_interface']:
-            if self.config['group']:
-                cmdline.append('group')
-            if self.config['source_interface']:
-                cmdline.append('source_interface')
-            else:
-                ifname = self.config['ifname']
-                raise ConfigError(
-                    f'VXLAN "{ifname}" is missing mandatory underlay multicast'
-                     'group or source interface for a multicast network.')
-
-        cmd = 'ip link'
-        for key in cmdline:
-            value = self.config.get(key, '')
-            if not value:
-                continue
-            cmd += ' {} {}'.format(self.mapping.get(key, key), value)
-
-        self._cmd(cmd)
+        self._cmd(cmd.format(**self.config))
+        # interface is always A/D down. It needs to be enabled explicitly
+        self.set_admin_state('down')

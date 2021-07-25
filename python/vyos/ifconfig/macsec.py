@@ -28,11 +28,7 @@ class MACsecIf(Interface):
     those solutions are used for their own specific use cases.
     """
 
-    default = {
-        'type': 'macsec',
-        'security_cipher': '',
-        'source_interface': ''
-    }
+    iftype = 'macsec'
     definition = {
         **Interface.definition,
         **{

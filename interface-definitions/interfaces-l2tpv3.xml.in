@@ -55,22 +55,7 @@
           </leafNode>
           #include <include/interface/interface-ipv4-options.xml.i>
           #include <include/interface/interface-ipv6-options.xml.i>
-          <leafNode name="local-ip">
-            <properties>
-              <help>Local IP address for L2TPv3 tunnel</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>Local IPv4 address of tunnel</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>Local IPv6 address of tunnel</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ip-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/interface/interface-mtu-68-16000.xml.i>
           <leafNode name="mtu">
             <defaultValue>1488</defaultValue>
@@ -99,22 +84,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="remote-ip">
-            <properties>
-              <help>Remote IP address for L2TPv3 tunnel</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>Remote IPv4 address of tunnel</description>
-              </valueHelp>
-              <valueHelp>
-                <format>ipv6</format>
-                <description>Remote IPv6 address of tunnel</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ip-address"/>
-              </constraint>
-            </properties>
-          </leafNode>
+          #include <include/tunnel-remote.xml.i>
           <leafNode name="session-id">
             <properties>
               <help>Session identifier</help>

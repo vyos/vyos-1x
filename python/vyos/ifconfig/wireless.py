@@ -21,10 +21,7 @@ class WiFiIf(Interface):
     Handle WIFI/WLAN interfaces.
     """
 
-    default = {
-        'type': 'wifi',
-        'phy': 'phy0'
-    }
+    iftype = 'wifi'
     definition = {
         **Interface.definition,
         **{

@@ -34,7 +34,6 @@ airbag.enable()
 
 k_mod = ['l2tp_eth', 'l2tp_netlink', 'l2tp_ip', 'l2tp_ip6']
 
-
 def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -65,15 +64,15 @@ def verify(l2tpv3):
 
     interface = l2tpv3['ifname']
 
-    for key in ['local_ip', 'remote_ip', 'tunnel_id', 'peer_tunnel_id',
+    for key in ['source_address', 'remote', 'tunnel_id', 'peer_tunnel_id',
                 'session_id', 'peer_session_id']:
         if key not in l2tpv3:
             tmp = key.replace('_', '-')
-            raise ConfigError(f'L2TPv3 {tmp} must be configured!')
+            raise ConfigError(f'Missing mandatory L2TPv3 option: "{tmp}"!')
 
-    if not is_addr_assigned(l2tpv3['local_ip']):
-        raise ConfigError('L2TPv3 local-ip address '
-                          '"{local_ip}" is not configured!'.format(**l2tpv3))
+    if not is_addr_assigned(l2tpv3['source_address']):
+        raise ConfigError('L2TPv3 source-address address "{source_address}" '
+                          'not configured on any interface!'.format(**l2tpv3))
 
     verify_mtu_ipv6(l2tpv3)
     verify_address(l2tpv3)
@@ -83,34 +82,16 @@ def generate(l2tpv3):
     return None
 
 def apply(l2tpv3):
-    # This is a special type of interface which needs additional parameters
-    # when created using iproute2. Instead of passing a ton of arguments,
-    # use a dictionary provided by the interface class which holds all the
-    # options necessary.
-    conf = L2TPv3If.get_config()
-
     # Check if L2TPv3 interface already exists
     if l2tpv3['ifname'] in interfaces():
         # L2TPv3 is picky when changing tunnels/sessions, thus we can simply
         # always delete it first.
-        conf['session_id'] = l2tpv3['session_id']
-        conf['tunnel_id'] = l2tpv3['tunnel_id']
-        l = L2TPv3If(l2tpv3['ifname'], **conf)
+        l = L2TPv3If(**l2tpv3)
         l.remove()
 
     if 'deleted' not in l2tpv3:
-        conf['peer_tunnel_id'] = l2tpv3['peer_tunnel_id']
-        conf['local_port'] = l2tpv3['source_port']
-        conf['remote_port'] = l2tpv3['destination_port']
-        conf['encapsulation'] = l2tpv3['encapsulation']
-        conf['local_address'] = l2tpv3['local_ip']
-        conf['remote_address'] = l2tpv3['remote_ip']
-        conf['session_id'] = l2tpv3['session_id']
-        conf['tunnel_id'] = l2tpv3['tunnel_id']
-        conf['peer_session_id'] = l2tpv3['peer_session_id']
-
         # Finally create the new interface
-        l = L2TPv3If(l2tpv3['ifname'], **conf)
+        l = L2TPv3If(**l2tpv3)
         l.update(l2tpv3)
 
     return None

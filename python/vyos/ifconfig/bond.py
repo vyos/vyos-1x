@@ -31,9 +31,7 @@ class BondIf(Interface):
     monitoring may be performed.
     """
 
-    default = {
-        'type': 'bond',
-    }
+    iftype = 'bond'
     definition = {
         **Interface.definition,
         ** {

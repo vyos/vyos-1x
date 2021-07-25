@@ -34,9 +34,7 @@ class BridgeIf(Interface):
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
 
-    default = {
-        'type': 'bridge',
-    }
+    iftype = 'bridge'
     definition = {
         **Interface.definition,
         **{

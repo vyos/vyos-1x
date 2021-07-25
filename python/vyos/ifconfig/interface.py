@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -61,7 +61,6 @@ class Interface(Control):
     options = ['debug', 'create']
     required = []
     default = {
-        'type': '',
         'debug': True,
         'create': True,
     }
@@ -114,6 +113,10 @@ class Interface(Control):
         'alias': {
             'convert': lambda name: name if name else '',
             'shellcmd': 'ip link set dev {ifname} alias "{value}"',
+        },
+        'bridge_port_isolation': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'shellcmd': 'bridge link set dev {ifname} isolated {value}',
         },
         'mac': {
             'validate': assert_mac,
@@ -233,26 +236,21 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> i = Interface('eth0')
         """
+        self.config = deepcopy(kargs)
+        self.config['ifname'] = self.ifname = ifname
 
-        self.config = deepcopy(self.default)
-        for k in self.options:
-            if k in kargs:
-                self.config[k] = kargs[k]
-
-        # make sure the ifname is the first argument and not from the dict
-        self.config['ifname'] = ifname
         self._admin_state_down_cnt = 0
 
         # we must have updated config before initialising the Interface
         super().__init__(**kargs)
-        self.ifname = ifname
 
         if not self.exists(ifname):
-            # Any instance of Interface, such as Interface('eth0')
-            # can be used safely to access the generic function in this class
-            # as 'type' is unset, the class can not be created
-            if not self.config['type']:
+            # Any instance of Interface, such as Interface('eth0') can be used
+            # safely to access the generic function in this class as 'type' is
+            # unset, the class can not be created
+            if not self.iftype:
                 raise Exception(f'interface "{ifname}" not found')
+            self.config['type'] = self.iftype
 
             # Should an Instance of a child class (EthernetIf, DummyIf, ..)
             # be required, then create should be set to False to not accidentally create it.
@@ -696,6 +694,20 @@ class Interface(Control):
         """
         self.set_interface('path_priority', priority)
 
+    def set_port_isolation(self, on_or_off):
+        """
+        Controls whether a given port will be isolated, which means it will be
+        able to communicate with non-isolated ports only. By default this flag
+        is off.
+
+        Use enable=1 to enable or enable=0 to disable
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth1').set_port_isolation('on')
+        """
+        self.set_interface('bridge_port_isolation', on_or_off)
+
     def set_proxy_arp(self, enable):
         """
         Set per interface proxy ARP configuration
@@ -736,6 +748,7 @@ class Interface(Control):
         """
         Retrieve assigned IPv4 addresses from given interface.
         This is done using the netifaces and ipaddress python modules.
+
         Example:
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').get_addr_v4()
@@ -750,28 +763,18 @@ class Interface(Control):
                 ipv4.append(v4_addr['addr'] + prefix)
         return ipv4
 
-    def get_addr(self):
+    def get_addr_v6(self):
         """
-        Retrieve assigned IPv4 and IPv6 addresses from given interface.
+        Retrieve assigned IPv6 addresses from given interface.
         This is done using the netifaces and ipaddress python modules.
 
         Example:
         >>> from vyos.ifconfig import Interface
-        >>> Interface('eth0').get_addrs()
-        ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
+        >>> Interface('eth0').get_addr_v6()
+        ['fe80::20c:29ff:fe11:a174/64']
         """
-
-        ipv4 = []
         ipv6 = []
-
-        if AF_INET in ifaddresses(self.config['ifname']).keys():
-            for v4_addr in ifaddresses(self.config['ifname'])[AF_INET]:
-                # we need to manually assemble a list of IPv4 address/prefix
-                prefix = '/' + \
-                    str(IPv4Network('0.0.0.0/' + v4_addr['netmask']).prefixlen)
-                ipv4.append(v4_addr['addr'] + prefix)
-
-        if AF_INET6 in ifaddresses(self.config['ifname']).keys():
+        if AF_INET6 in ifaddresses(self.config['ifname']):
             for v6_addr in ifaddresses(self.config['ifname'])[AF_INET6]:
                 # Note that currently expanded netmasks are not supported. That means
                 # 2001:db00::0/24 is a valid argument while 2001:db00::0/ffff:ff00:: not.
@@ -784,8 +787,18 @@ class Interface(Control):
                 # addresses
                 v6_addr['addr'] = v6_addr['addr'].split('%')[0]
                 ipv6.append(v6_addr['addr'] + prefix)
+        return ipv6
 
-        return ipv4 + ipv6
+    def get_addr(self):
+        """
+        Retrieve assigned IPv4 and IPv6 addresses from given interface.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_addr()
+        ['172.16.33.30/24', 'fe80::20c:29ff:fe11:a174/64']
+        """
+        return self.get_addr_v4() + self.get_addr_v6()
 
     def add_addr(self, addr):
         """
@@ -919,49 +932,42 @@ class Interface(Control):
             if 'priority' in bridge_config:
                 self.set_path_cost(bridge_config['priority'])
 
-            vlan_filter = 0
-            vlan_add = set()
-
-            del_ifname_vlan_ids = get_vlan_ids(ifname)
             bridge_vlan_filter = Section.klass(bridge)(bridge, create=True).get_vlan_filter()
 
-            if bridge_vlan_filter:
-                if 1 in del_ifname_vlan_ids:
-                    del_ifname_vlan_ids.remove(1)
-                vlan_filter = 1
+            if int(bridge_vlan_filter):
+                cur_vlan_ids = get_vlan_ids(ifname)
+                add_vlan = []
+                native_vlan_id = None
+                allowed_vlan_ids= []
 
-            for vlan in del_ifname_vlan_ids:
-                cmd = f'bridge vlan del dev {ifname} vid {vlan}'
-                self._cmd(cmd)
+                if 'native_vlan' in bridge_config:
+                    vlan_id = bridge_config['native_vlan']
+                    add_vlan.append(vlan_id)
+                    native_vlan_id = vlan_id
 
-            if 'native_vlan' in bridge_config:
-                vlan_filter = 1
-                cmd = f'bridge vlan del dev {self.ifname} vid 1'
-                self._cmd(cmd)
-                vlan_id = bridge_config['native_vlan']
-                cmd = f'bridge vlan add dev {self.ifname} vid {vlan_id} pvid untagged master'
-                self._cmd(cmd)
-                vlan_add.add(vlan_id)
+                if 'allowed_vlan' in bridge_config:
+                    for vlan in bridge_config['allowed_vlan']:
+                        vlan_range = vlan.split('-')
+                        if len(vlan_range) == 2:
+                            for vlan_add in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
+                                add_vlan.append(str(vlan_add))
+                                allowed_vlan_ids.append(str(vlan_add))
+                        else:
+                            add_vlan.append(vlan)
+                            allowed_vlan_ids.append(vlan)
 
-            if 'allowed_vlan' in bridge_config:
-                vlan_filter = 1
-                if 'native_vlan' not in bridge_config:
-                    cmd = f'bridge vlan del dev {self.ifname} vid 1'
-                    self._cmd(cmd)
-                for vlan in bridge_config['allowed_vlan']:
-                    cmd = f'bridge vlan add dev {self.ifname} vid {vlan} master'
-                    self._cmd(cmd)
-                    vlan_add.add(vlan)
-
-            if vlan_filter:
-                # Setting VLAN ID for the bridge
-                for vlan in vlan_add:
-                    cmd = f'bridge vlan add dev {bridge} vid {vlan} self'
+                # Remove redundant VLANs from the system
+                for vlan in list_diff(cur_vlan_ids, add_vlan):
+                    cmd = f'bridge vlan del dev {ifname} vid {vlan} master'
                     self._cmd(cmd)
 
-                # enable/disable Vlan Filter
-                # When the VLAN aware option is not detected, the setting of `bridge` should not be overwritten
-                Section.klass(bridge)(bridge, create=True).set_vlan_filter(vlan_filter)
+                for vlan in allowed_vlan_ids:
+                    cmd = f'bridge vlan add dev {ifname} vid {vlan} master'
+                    self._cmd(cmd)
+                # Setting native VLAN to system
+                if native_vlan_id:
+                    cmd = f'bridge vlan add dev {ifname} vid {native_vlan_id} pvid untagged master'
+                    self._cmd(cmd)
 
     def set_dhcp(self, enable):
         """
@@ -1042,9 +1048,11 @@ class Interface(Control):
             source_if = next(iter(self._config['is_mirror_intf']))
             config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
+        # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
         # Remove existing mirroring rules
-        delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress; '
-        delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio'
+        delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
+        delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
+        delete_tc_cmd += 'set $?=0'
         self._popen(delete_tc_cmd)
 
         # Bail out early if nothing needs to be configured
@@ -1067,7 +1075,6 @@ class Interface(Control):
             # Export the mirrored traffic to the interface
             mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {mirror_if}'
             self._popen(mirror_cmd)
-
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -1306,29 +1313,62 @@ class Interface(Control):
 
         # create/update 802.1q VLAN interfaces
         for vif_id, vif_config in config.get('vif', {}).items():
+
+            vif_ifname = f'{ifname}.{vif_id}'
+            vif_config['ifname'] = vif_ifname
+
             tmp = deepcopy(VLANIf.get_config())
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
 
-            vif_ifname = f'{ifname}.{vif_id}'
-            vif_config['ifname'] = vif_ifname
+            # We need to ensure that the string format is consistent, and we need to exclude redundant spaces.
+            sep = ' '
+            if 'egress_qos' in vif_config:
+                # Unwrap strings into arrays
+                egress_qos_array = vif_config['egress_qos'].split()
+                # The split array is spliced according to the fixed format
+                tmp['egress_qos'] = sep.join(egress_qos_array)
+
+            if 'ingress_qos' in vif_config:
+                # Unwrap strings into arrays
+                ingress_qos_array = vif_config['ingress_qos'].split()
+                # The split array is spliced according to the fixed format
+                tmp['ingress_qos'] = sep.join(ingress_qos_array)
+
+            # Since setting the QoS control parameters in the later stage will
+            # not completely delete the old settings,
+            # we still need to delete the VLAN encapsulation interface in order to
+            # ensure that the changed settings are effective.
+            cur_cfg = get_interface_config(vif_ifname)
+            qos_str = ''
+            tmp2 = dict_search('linkinfo.info_data.ingress_qos', cur_cfg)
+            if 'ingress_qos' in tmp and tmp2:
+                for item in tmp2:
+                    from_key = item['from']
+                    to_key = item['to']
+                    qos_str += f'{from_key}:{to_key} '
+                if qos_str != tmp['ingress_qos']:
+                    if self.exists(vif_ifname):
+                        VLANIf(vif_ifname).remove()
+
+            qos_str = ''
+            tmp2 = dict_search('linkinfo.info_data.egress_qos', cur_cfg)
+            if 'egress_qos' in tmp and tmp2:
+                for item in tmp2:
+                    from_key = item['from']
+                    to_key = item['to']
+                    qos_str += f'{from_key}:{to_key} '
+                if qos_str != tmp['egress_qos']:
+                    if self.exists(vif_ifname):
+                        VLANIf(vif_ifname).remove()
+
             vlan = VLANIf(vif_ifname, **tmp)
             vlan.update(vif_config)
 
 
 class VLANIf(Interface):
     """ Specific class which abstracts 802.1q and 802.1ad (Q-in-Q) VLAN interfaces """
-    default = {
-        'type': 'vlan',
-        'source_interface': '',
-        'vlan_id': '',
-        'protocol': '',
-        'ingress_qos': '',
-        'egress_qos': '',
-    }
-
-    options = Interface.options + \
-        ['source_interface', 'vlan_id', 'protocol', 'ingress_qos', 'egress_qos']
+    iftype = 'vlan'
 
     def _create(self):
         # bail out early if interface already exists
@@ -1336,11 +1376,11 @@ class VLANIf(Interface):
             return
 
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
-        if self.config['protocol']:
+        if 'protocol' in self.config:
             cmd += ' protocol {protocol}'
-        if self.config['ingress_qos']:
+        if 'ingress_qos' in self.config:
             cmd += ' ingress-qos-map {ingress_qos}'
-        if self.config['egress_qos']:
+        if 'egress_qos' in self.config:
             cmd += ' egress-qos-map {egress_qos}'
 
         self._cmd(cmd.format(**self.config))

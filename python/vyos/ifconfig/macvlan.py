@@ -21,12 +21,7 @@ class MACVLANIf(Interface):
     Abstraction of a Linux MACvlan interface
     """
 
-    default = {
-        'type': 'macvlan',
-        'address': '',
-        'source_interface': '',
-        'mode': '',
-    }
+    iftype = 'macvlan'
     definition = {
         **Interface.definition,
         **{

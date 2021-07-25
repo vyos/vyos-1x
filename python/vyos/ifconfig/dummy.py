@@ -23,9 +23,7 @@ class DummyIf(Interface):
     packets through without actually transmitting them.
     """
 
-    default = {
-        'type': 'dummy',
-    }
+    iftype = 'dummy'
     definition = {
         **Interface.definition,
         **{

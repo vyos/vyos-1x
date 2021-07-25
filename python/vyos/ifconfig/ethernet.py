@@ -27,9 +27,7 @@ class EthernetIf(Interface):
     Abstraction of a Linux Ethernet Interface
     """
 
-    default = {
-        'type': 'ethernet',
-    }
+    iftype = 'ethernet'
     definition = {
         **Interface.definition,
         **{

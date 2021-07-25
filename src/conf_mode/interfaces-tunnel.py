@@ -29,15 +29,9 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
-from vyos.ifconfig import GREIf
-from vyos.ifconfig import GRETapIf
-from vyos.ifconfig import IPIPIf
-from vyos.ifconfig import IP6GREIf
-from vyos.ifconfig import IPIP6If
-from vyos.ifconfig import IP6IP6If
-from vyos.ifconfig import SitIf
-from vyos.ifconfig import Sit6RDIf
+from vyos.ifconfig import TunnelIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import get_interface_config
@@ -78,48 +72,30 @@ def verify(tunnel):
 
         return None
 
-    if 'encapsulation' not in tunnel:
-        raise ConfigError('Must configure the tunnel encapsulation for '\
-                          '{ifname}!'.format(**tunnel))
+    verify_tunnel(tunnel)
 
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
 
-    if 'local_ip' not in tunnel and 'dhcp_interface' not in tunnel:
-        raise ConfigError('local-ip is mandatory for tunnel')
-
-    if 'remote_ip' not in tunnel and tunnel['encapsulation'] != 'gre':
-        raise ConfigError('remote-ip is mandatory for tunnel')
-
-    if {'local_ip', 'dhcp_interface'} <= set(tunnel):
-        raise ConfigError('Can not use both local-ip and dhcp-interface')
-
-    if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
-        error_ipv6 = 'Encapsulation mode requires IPv6'
-        if 'local_ip' in tunnel and not is_ipv6(tunnel['local_ip']):
-            raise ConfigError(f'{error_ipv6} local-ip')
-
-        if 'remote_ip' in tunnel and not is_ipv6(tunnel['remote_ip']):
-            raise ConfigError(f'{error_ipv6} remote-ip')
-    else:
-        error_ipv4 = 'Encapsulation mode requires IPv4'
-        if 'local_ip' in tunnel and not is_ipv4(tunnel['local_ip']):
-            raise ConfigError(f'{error_ipv4} local-ip')
-
-        if 'remote_ip' in tunnel and not is_ipv4(tunnel['remote_ip']):
-            raise ConfigError(f'{error_ipv4} remote-ip')
-
-    if tunnel['encapsulation'] in ['sit', 'gre-bridge']:
-        if 'source_interface' in tunnel:
-            raise ConfigError('Option source-interface can not be used with ' \
-                              'encapsulation "sit" or "gre-bridge"')
-    elif tunnel['encapsulation'] == 'gre':
-        if 'local_ip' in tunnel and is_ipv6(tunnel['local_ip']):
-            raise ConfigError('Can not use local IPv6 address is for mGRE tunnels')
-
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])
+
+    # TTL != 0 and nopmtudisc are incompatible, parameters and ip use default
+    # values, thus the keys are always present.
+    if dict_search('parameters.ip.no_pmtu_discovery', tunnel) != None:
+        if dict_search('parameters.ip.ttl', tunnel) != '0':
+            raise ConfigError('Disabled PMTU requires TTL set to "0"!')
+        if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
+            raise ConfigError('Can not disable PMTU discovery for given encapsulation')
+
+    if dict_search('parameters.ip.ignore_df', tunnel) != None:
+        if tunnel['encapsulation'] not in ['gretap']:
+            raise ConfigError('Option ignore-df can only be used on GRETAP tunnels!')
+
+        if dict_search('parameters.ip.no_pmtu_discovery', tunnel) == None:
+            raise ConfigError('Option ignore-df requires path MTU discovery to be disabled!')
+
 
 def generate(tunnel):
     return None
@@ -136,60 +112,15 @@ def apply(tunnel):
         encap = dict_search('linkinfo.info_kind', tmp)
         remote = dict_search('linkinfo.info_data.remote', tmp)
 
-    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or
-        encap in ['gretap', 'ip6gretap'] or remote in ['any']):
+    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in
+        ['gretap', 'ip6gretap'] or remote in ['any']):
         if interface in interfaces():
             tmp = Interface(interface)
             tmp.remove()
         if 'deleted' in tunnel:
             return None
 
-    dispatch = {
-        'gre': GREIf,
-        'gre-bridge': GRETapIf,
-        'ipip': IPIPIf,
-        'ipip6': IPIP6If,
-        'ip6ip6': IP6IP6If,
-        'ip6gre': IP6GREIf,
-        'sit': SitIf,
-    }
-
-    # We need to re-map the tunnel encapsulation proto to a valid interface class
-    encap = tunnel['encapsulation']
-    klass = dispatch[encap]
-
-    # This is a special type of interface which needs additional parameters
-    # when created using iproute2. Instead of passing a ton of arguments,
-    # use a dictionary provided by the interface class which holds all the
-    # options necessary.
-    conf = klass.get_config()
-
-    # Copy/re-assign our dictionary values to values understood by the
-    # derived _Tunnel classes
-    mapping = {
-        # this                       :  get_config()
-        'local_ip'                   : 'local',
-        'remote_ip'                  : 'remote',
-        'source_interface'           : 'dev',
-        'parameters.ip.ttl'          : 'ttl',
-        'parameters.ip.tos'          : 'tos',
-        'parameters.ip.key'          : 'key',
-    }
-
-    # Add additional IPv6 options if tunnel is IPv6 aware
-    if tunnel['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
-        mappingv6 = {
-            # this                       :  get_config()
-            'parameters.ipv6.encaplimit' : 'encaplimit'
-        }
-        mapping.update(mappingv6)
-
-    for our_key, their_key in mapping.items():
-        if dict_search(our_key, tunnel) and their_key in conf:
-            conf[their_key] = dict_search(our_key, tunnel)
-
-    tun = klass(interface, **conf)
-    tun.change_options()
+    tun = TunnelIf(**tunnel)
     tun.update(tunnel)
 
     return None

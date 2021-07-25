@@ -27,11 +27,7 @@ class GeneveIf(Interface):
     https://lwn.net/Articles/644938/
     """
 
-    default = {
-        'type': 'geneve',
-        'vni': 0,
-        'remote': '',
-    }
+    iftype = 'geneve'
     options = Interface.options + \
         ['vni', 'remote']
     definition = {

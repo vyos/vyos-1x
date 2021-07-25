@@ -22,9 +22,7 @@ class LoopbackIf(Interface):
     uses to communicate with itself.
     """
     _persistent_addresses = ['127.0.0.1/8', '::1/128']
-    default = {
-        'type': 'loopback',
-    }
+    iftype = 'loopback'
     definition = {
         **Interface.definition,
         **{
