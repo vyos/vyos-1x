@@ -18,62 +18,6 @@ from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
 
-def migrate_ospf(config, path, interface):
-    path = path + ['ospf']
-    if config.exists(path):
-        new_base = ['protocols', 'ospf', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ip ospf" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_ospfv3(config, path, interface):
-    path = path + ['ospfv3']
-    if config.exists(path):
-        new_base = ['protocols', 'ospfv3', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ipv6 ospfv3" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_rip(config, path, interface):
-    path = path + ['rip']
-    if config.exists(path):
-        new_base = ['protocols', 'rip', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ip rip" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
-def migrate_ripng(config, path, interface):
-    path = path + ['ripng']
-    if config.exists(path):
-        new_base = ['protocols', 'ripng', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
-
-        # if "ipv6 ripng" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
-
 if __name__ == '__main__':
     if (len(argv) < 1):
         print("Must specify file name!")
@@ -85,57 +29,29 @@ if __name__ == '__main__':
 
     config = ConfigTree(config_file)
 
-    #
-    # Migrate "interface ethernet eth0 ip ospf" to "protocols ospf interface eth0"
-    #
-    for type in config.list_nodes(['interfaces']):
-        for interface in config.list_nodes(['interfaces', type]):
-            ip_base = ['interfaces', type, interface, 'ip']
-            ipv6_base = ['interfaces', type, interface, 'ipv6']
-            migrate_rip(config, ip_base, interface)
-            migrate_ripng(config, ipv6_base, interface)
-            migrate_ospf(config, ip_base, interface)
-            migrate_ospfv3(config, ipv6_base, interface)
+    for type in ['tunnel', 'l2tpv3']:
+        base = ['interfaces', type]
+        if not config.exists(base):
+            # Nothing to do
+            continue
 
-            vif_path = ['interfaces', type, interface, 'vif']
-            if config.exists(vif_path):
-                for vif in config.list_nodes(vif_path):
-                    vif_ip_base = vif_path + [vif, 'ip']
-                    vif_ipv6_base = vif_path + [vif, 'ipv6']
-                    ifname = f'{interface}.{vif}'
+        for interface in config.list_nodes(base):
+            # Migrate "interface tunnel <tunX> encapsulation gre-bridge" to gretap
+            encap_path = base + [interface, 'encapsulation']
+            if type == 'tunnel' and config.exists(encap_path):
+                tmp = config.return_value(encap_path)
+                if tmp == 'gre-bridge':
+                    config.set(encap_path, value='gretap')
 
-                    migrate_rip(config, vif_ip_base, ifname)
-                    migrate_ripng(config, vif_ipv6_base, ifname)
-                    migrate_ospf(config, vif_ip_base, ifname)
-                    migrate_ospfv3(config, vif_ipv6_base, ifname)
+            # Migrate "interface tunnel|l2tpv3 <interface> local-ip" to source-address
+            # Migrate "interface tunnel|l2tpv3 <interface> remote-ip" to remote
+            local_ip_path = base + [interface, 'local-ip']
+            if config.exists(local_ip_path):
+                config.rename(local_ip_path, 'source-address')
 
-
-            vif_s_path = ['interfaces', type, interface, 'vif-s']
-            if config.exists(vif_s_path):
-                for vif_s in config.list_nodes(vif_s_path):
-                    vif_s_ip_base = vif_s_path + [vif_s, 'ip']
-                    vif_s_ipv6_base = vif_s_path + [vif_s, 'ipv6']
-
-                    # vif-c interfaces MUST be migrated before their parent vif-s
-                    # interface as the migrate_*() functions delete the path!
-                    vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
-                    if config.exists(vif_c_path):
-                        for vif_c in config.list_nodes(vif_c_path):
-                            vif_c_ip_base = vif_c_path + [vif_c, 'ip']
-                            vif_c_ipv6_base = vif_c_path + [vif_c, 'ipv6']
-                            ifname = f'{interface}.{vif_s}.{vif_c}'
-
-                            migrate_rip(config, vif_c_ip_base, ifname)
-                            migrate_ripng(config, vif_c_ipv6_base, ifname)
-                            migrate_ospf(config, vif_c_ip_base, ifname)
-                            migrate_ospfv3(config, vif_c_ipv6_base, ifname)
-
-
-                    ifname = f'{interface}.{vif_s}'
-                    migrate_rip(config, vif_s_ip_base, ifname)
-                    migrate_ripng(config, vif_s_ipv6_base, ifname)
-                    migrate_ospf(config, vif_s_ip_base, ifname)
-                    migrate_ospfv3(config, vif_s_ipv6_base, ifname)
+            remote_ip_path = base + [interface, 'remote-ip']
+            if config.exists(remote_ip_path):
+                config.rename(remote_ip_path, 'remote')
 
     try:
         with open(file_name, 'w') as f:
