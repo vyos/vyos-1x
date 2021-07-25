@@ -29,14 +29,7 @@
           #include <include/interface/interface-ipv6-options.xml.i>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
-          <leafNode name="source-interface">
-            <properties>
-              <help>Physical Interface used for underlaying traffic</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/source-interface.xml.i>
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>
