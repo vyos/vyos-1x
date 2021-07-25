@@ -675,18 +675,20 @@ def find_device_file(device):
 
     return None
 
-def dict_search(path, dict):
-    """ Traverse Python dictionary (dict) delimited by dot (.).
+def dict_search(path, my_dict):
+    """ Traverse Python dictionary (my_dict) delimited by dot (.).
     Return value of key if found, None otherwise.
+    This is faster implementation then jmespath.search('foo.bar', my_dict)"""
+    if not isinstance(my_dict, dict) or not path:
+        return None
 
-    This is faster implementation then jmespath.search('foo.bar', dict)"""
     parts = path.split('.')
     inside = parts[:-1]
     if not inside:
-        if path not in dict:
+        if path not in my_dict:
             return None
-        return dict[path]
-    c = dict
+        return my_dict[path]
+    c = my_dict
     for p in parts[:-1]:
         c = c.get(p, {})
     return c.get(parts[-1], None)
