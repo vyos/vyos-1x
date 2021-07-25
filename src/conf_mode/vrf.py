@@ -24,6 +24,7 @@ from vyos.configdict import node_changed
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
+from vyos.util import cmd
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
