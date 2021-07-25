@@ -116,18 +116,33 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-{% if redistribute is defined and redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
-{%   for protocol in redistribute.ipv4 %}
-{%     for level, level_config in redistribute.ipv4[protocol].items() %}
-{%       if level_config.metric is defined and level_config.metric is not none %}
+{% if redistribute is defined %} 
+{%   if redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
+{%     for protocol, protocol_options in redistribute.ipv4.items() %}
+{%       for level, level_config in redistribute.ipv4.protocol.items() %}
+{%         if level_config.metric is defined and level_config.metric is not none %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
-{%       elif level_config.route_map is defined and level_config.route_map is not none %}
+{%         elif level_config.route_map is defined and level_config.route_map is not none %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
-{%       else %}
+{%         else %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
-{%       endif %}
+{%         endif %}
+{%       endfor %}
 {%     endfor %}
-{%   endfor %}
+{%   endif %}
+{%   if redistribute.ipv6 is defined and redistribute.ipv6 is not none %}
+{%     for protocol, protocol_options in redistribute.ipv6.items() %}
+{%       for level, level_config in redistribute.ipv6.protocol.items() %}
+{%         if level_config.metric is defined and level_config.metric is not none %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
+{%         elif level_config.route_map is defined and level_config.route_map is not none %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
+{%         else %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }}
+{%         endif %}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
 {% endif %}
 {% if level is defined and level is not none %}
 {%   if level == 'level-2'  %}
