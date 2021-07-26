@@ -250,6 +250,11 @@ def verify(ipsec):
                 if 'ike_group' in ra_conf:
                     if 'ike_group' not in ipsec or ra_conf['ike_group'] not in ipsec['ike_group']:
                         raise ConfigError(f"Invalid ike-group on {name} remote-access config")
+
+                    ike = ra_conf['ike_group']
+                    if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
+                        raise ConfigError('IPSec remote-access connections requires IKEv2!')
+
                 else:
                     raise ConfigError(f"Missing ike-group on {name} remote-access config")
 
