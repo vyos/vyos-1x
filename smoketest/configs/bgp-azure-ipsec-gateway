@@ -1,0 +1,436 @@
+firewall {
+    all-ping enable
+    broadcast-ping disable
+    config-trap disable
+    ipv6-receive-redirects disable
+    ipv6-src-route disable
+    ip-src-route disable
+    log-martians disable
+    options {
+        interface vti31 {
+            adjust-mss 1350
+        }
+        interface vti32 {
+            adjust-mss 1350
+        }
+        interface vti41 {
+            adjust-mss 1350
+        }
+        interface vti42 {
+            adjust-mss 1350
+        }
+        interface vti51 {
+            adjust-mss 1350
+        }
+        interface vti52 {
+            adjust-mss 1350
+        }
+    }
+    receive-redirects disable
+    send-redirects enable
+    source-validation disable
+    syn-cookies enable
+    twa-hazards-protection disable
+}
+high-availability {
+    vrrp {
+        group DMZ-VLAN-3962 {
+            interface eth1
+            preempt-delay 180
+            priority 200
+            virtual-address 192.168.34.36/27
+            vrid 62
+        }
+    }
+}
+interfaces {
+    ethernet eth0 {
+        address 192.0.2.189/27
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+    ethernet eth1 {
+        address 192.168.34.37/27
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+    loopback lo {
+    }
+    vti vti31 {
+    }
+    vti vti32 {
+    }
+    vti vti41 {
+    }
+    vti vti42 {
+    }
+    vti vti51 {
+    }
+    vti vti52 {
+    }
+}
+policy {
+    prefix-list AZURE-BGP-IPv4-in {
+        description "Prefixes received from Azure"
+        rule 100 {
+            action permit
+            le 32
+            prefix 100.64.0.0/10
+        }
+    }
+    prefix-list ONPREM-BGP-IPv4-out {
+        description "Prefixes allowed to be announced into Azure"
+        rule 100 {
+            action permit
+            prefix 10.0.0.0/8
+        }
+        rule 200 {
+            action permit
+            prefix 172.16.0.0/12
+        }
+        rule 300 {
+            action permit
+            prefix 192.168.0.0/16
+        }
+    }
+}
+protocols {
+    bgp 65522 {
+        address-family {
+            ipv4-unicast {
+                network 10.0.0.0/8 {
+                }
+                network 172.16.0.0/12 {
+                }
+                network 192.168.0.0/16 {
+                }
+            }
+        }
+        neighbor 100.66.8.36 {
+            peer-group AZURE
+            remote-as 64517
+        }
+        neighbor 100.66.8.37 {
+            peer-group AZURE
+            remote-as 64517
+        }
+        neighbor 100.66.24.36 {
+            peer-group AZURE
+            remote-as 64513
+        }
+        neighbor 100.66.24.37 {
+            peer-group AZURE
+            remote-as 64513
+        }
+        neighbor 100.66.40.36 {
+            peer-group AZURE
+            remote-as 64515
+        }
+        neighbor 100.66.40.37 {
+            peer-group AZURE
+            remote-as 64515
+        }
+        neighbor 192.168.34.38 {
+            address-family {
+                ipv4-unicast {
+                    nexthop-self
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            capability {
+                dynamic
+            }
+            password VyOSR0xx123
+            remote-as 65522
+            update-source eth1
+        }
+        peer-group AZURE {
+            address-family {
+                ipv4-unicast {
+                    maximum-prefix 50
+                    prefix-list {
+                        export ONPREM-BGP-IPv4-out
+                        import AZURE-BGP-IPv4-in
+                    }
+                }
+            }
+            ebgp-multihop 2
+            update-source eth1
+        }
+        timers {
+            holdtime 30
+            keepalive 5
+        }
+    }
+    static {
+        interface-route 100.66.8.36/32 {
+            next-hop-interface vti31 {
+            }
+            next-hop-interface vti32 {
+            }
+        }
+        interface-route 100.66.8.37/32 {
+            next-hop-interface vti31 {
+            }
+            next-hop-interface vti32 {
+            }
+        }
+        interface-route 100.66.24.36/32 {
+            next-hop-interface vti41 {
+            }
+            next-hop-interface vti42 {
+            }
+        }
+        interface-route 100.66.24.37/32 {
+            next-hop-interface vti41 {
+            }
+            next-hop-interface vti42 {
+            }
+        }
+        interface-route 100.66.40.36/32 {
+            next-hop-interface vti51 {
+            }
+            next-hop-interface vti52 {
+            }
+        }
+        interface-route 100.66.40.37/32 {
+            next-hop-interface vti51 {
+            }
+            next-hop-interface vti52 {
+            }
+        }
+        route 0.0.0.0/0 {
+            next-hop 192.168.34.33 {
+            }
+        }
+        route 51.105.0.0/16 {
+            next-hop 192.0.2.161 {
+            }
+        }
+        route 52.143.0.0/16 {
+            next-hop 192.0.2.161 {
+            }
+        }
+        route 195.137.175.0/24 {
+            next-hop 192.0.2.161 {
+            }
+        }
+        route 212.23.159.0/26 {
+            next-hop 192.0.2.161 {
+            }
+        }
+    }
+}
+service {
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    flow-accounting {
+        interface eth1
+        interface vti31
+        interface vti32
+        interface vti41
+        interface vti42
+        interface vti51
+        interface vti52
+        netflow {
+            server 10.0.1.1 {
+                port 2055
+            }
+            source-ip 192.168.34.37
+            version 10
+        }
+        syslog-facility daemon
+    }
+    host-name azure-gw-01
+    login {
+        radius-server 192.0.2.253 {
+            port 1812
+            secret secret1234
+            timeout 2
+        }
+        radius-server 192.0.2.254 {
+            port 1812
+            secret secret1234
+            timeout 2
+        }
+        radius-source-address 192.168.34.37
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 192.0.2.254
+    ntp {
+        server 192.0.2.254 {
+        }
+    }
+    syslog {
+        global {
+            archive {
+                file 10
+                size 20480
+            }
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+        host 10.0.9.188 {
+            facility all {
+                level info
+                protocol udp
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+vpn {
+    ipsec {
+        auto-update 120
+        esp-group ESP-AZURE {
+            compression disable
+            lifetime 27000
+            mode tunnel
+            pfs disable
+            proposal 1 {
+                encryption aes256
+                hash sha1
+            }
+        }
+        ike-group IKE-AZURE {
+            close-action none
+            dead-peer-detection {
+                action restart
+                interval 2
+                timeout 15
+            }
+            ikev2-reauth no
+            key-exchange ikev2
+            lifetime 27000
+            proposal 1 {
+                dh-group 2
+                encryption aes256
+                hash sha1
+            }
+        }
+        ipsec-interfaces {
+            interface eth0
+        }
+        logging {
+            log-level 2
+            log-modes ike
+        }
+        site-to-site {
+            peer 51.105.0.1 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                default-esp-group ESP-AZURE
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti51
+                }
+            }
+            peer 51.105.0.2 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                default-esp-group ESP-AZURE
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti52
+                }
+            }
+            peer 51.105.0.3 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti32
+                    esp-group ESP-AZURE
+                }
+            }
+            peer 51.105.0.4 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti31
+                    esp-group ESP-AZURE
+                }
+            }
+            peer 51.105.0.5 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti42
+                    esp-group ESP-AZURE
+                }
+            }
+            peer 51.105.0.6 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti41
+                    esp-group ESP-AZURE
+                }
+            }
+        }
+    }
+}
+
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@9:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.5 */
