@@ -342,35 +342,35 @@ vpn {
             log-modes ike
         }
         site-to-site {
+            peer 51.105.0.1 {
+                authentication {
+                    mode pre-shared-secret
+                    pre-shared-secret averysecretpsktowardsazure
+                }
+                connection-type respond
+                default-esp-group ESP-AZURE
+                ike-group IKE-AZURE
+                ikev2-reauth inherit
+                local-address 192.0.2.189
+                vti {
+                    bind vti51
+                }
+            }
             peer 51.105.0.2 {
                 authentication {
                     mode pre-shared-secret
                     pre-shared-secret averysecretpsktowardsazure
                 }
                 connection-type respond
-                ike-group IKE-AZURE
-                ikev2-reauth inherit
-                local-address 192.0.2.189
-                vti {
-                    bind vti51
-                    esp-group ESP-AZURE
-                }
-            }
-            peer 51.105.0.3 {
-                authentication {
-                    mode pre-shared-secret
-                    pre-shared-secret averysecretpsktowardsazure
-                }
-                connection-type respond
+                default-esp-group ESP-AZURE
                 ike-group IKE-AZURE
                 ikev2-reauth inherit
                 local-address 192.0.2.189
                 vti {
                     bind vti52
-                    esp-group ESP-AZURE
                 }
             }
-            peer 51.105.0.246 {
+            peer 51.105.0.3 {
                 authentication {
                     mode pre-shared-secret
                     pre-shared-secret averysecretpsktowardsazure
@@ -384,7 +384,7 @@ vpn {
                     esp-group ESP-AZURE
                 }
             }
-            peer 51.105.0.247 {
+            peer 51.105.0.4 {
                 authentication {
                     mode pre-shared-secret
                     pre-shared-secret averysecretpsktowardsazure
@@ -398,7 +398,7 @@ vpn {
                     esp-group ESP-AZURE
                 }
             }
-            peer 51.105.0.18 {
+            peer 51.105.0.5 {
                 authentication {
                     mode pre-shared-secret
                     pre-shared-secret averysecretpsktowardsazure
@@ -412,7 +412,7 @@ vpn {
                     esp-group ESP-AZURE
                 }
             }
-            peer 51.105.0.19 {
+            peer 51.105.0.6 {
                 authentication {
                     mode pre-shared-secret
                     pre-shared-secret averysecretpsktowardsazure
