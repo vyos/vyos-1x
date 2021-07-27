@@ -691,5 +691,58 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(tmp, original)
 
+    # Test set table for fwmark
+    def test_fwmark_table_id(self):
+        path = base_path + ['local-route']
+
+        fwmk = '24'
+        rule = '101'
+        table = '154'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        # Check generated configuration
+
+        # Expected values
+        original = """
+        101:    from all fwmark 0x18 lookup 154
+        """
+        tmp = cmd('ip rule show prio 101')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
+
+    # Test set table for sources with fwmark
+    def test_fwmark_sources_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.11', '203.0.113.12']
+        fwmk = '23'
+        rule = '100'
+        table = '150'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        # Check generated configuration
+
+        # Expected values
+        original = """
+        100:	from 203.0.113.11 fwmark 0x17 lookup 150
+        100:	from 203.0.113.12 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
