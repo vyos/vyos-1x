@@ -54,7 +54,7 @@
         }
         children {
 {%   if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
-{%     set vti_esp = esp_group[peer_conf.vti.esp_group] if peer_conf.vti.esp_group is defined else None %}
+{%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is defined else esp_group[ peer_conf.default_esp_group ] %}
             peer_{{ name }}_vti {
                 esp_proposals = {{ vti_esp | get_esp_ike_cipher | join(',') }}
                 local_ts = 0.0.0.0/0,::/0
