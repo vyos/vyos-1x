@@ -222,9 +222,14 @@ def restart_ipsec():
         # Since it's started by the legacy ipsec.pl in VyOS 1.3,
         # there's a chance that this script will run before charon is up,
         # so we can't assume it's running and have to check and wait if needed.
+
+        # First, wait for charon to get started by the old ipsec.pl script.
+        wait_for_file_write_complete(charon_pidfile, timeout=120)
+
+        # Now actually restart the daemon
         wait_for_file_write_complete(charon_pidfile,
           pre_hook=(lambda: call('ipsec restart >&/dev/null')),
-          timeout=10)
+          timeout=120)
 
         # Force configuration load
         call('swanctl -q >&/dev/null')
