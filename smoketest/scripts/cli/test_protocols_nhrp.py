@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.firewall import find_nftables_rule
 from vyos.util import call, process_named_running, read_file
 
 tunnel_path = ['interfaces', 'tunnel']
@@ -91,6 +92,14 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         for line in opennhrp_lines:
             self.assertIn(line, tmp_opennhrp_conf)
 
+        firewall_matches = [
+            'ip protocol gre',
+            'ip saddr 192.0.2.1',
+            'ip daddr 224.0.0.0/4',
+            'comment "VYOS_NHRP_tun100"'
+        ]
+
+        self.assertTrue(find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', firewall_matches) is not None)
         self.assertTrue(process_named_running('opennhrp'))
 
 if __name__ == '__main__':

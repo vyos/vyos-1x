@@ -572,11 +572,11 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                base_options = f'-A FORWARD -o {interface} -p tcp -m tcp --tcp-flags SYN,RST SYN'
-                out = cmd('sudo iptables-save -t mangle')
+                base_options = f'oifname "{interface}"'
+                out = cmd('sudo nft list chain raw VYOS_TCP_MSS')
                 for line in out.splitlines():
                     if line.startswith(base_options):
-                        self.assertIn(f'--set-mss {mss}', line)
+                        self.assertIn(f'tcp option maxseg size set {mss}', line)
 
                 tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
                 self.assertEqual(tmp, str((int(arp_tmo) * 1000))) # tmo value is in milli seconds
@@ -627,11 +627,11 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                base_options = f'-A FORWARD -o {interface} -p tcp -m tcp --tcp-flags SYN,RST SYN'
-                out = cmd('sudo ip6tables-save -t mangle')
+                base_options = f'oifname "{interface}"'
+                out = cmd('sudo nft list chain ip6 raw VYOS_TCP_MSS')
                 for line in out.splitlines():
                     if line.startswith(base_options):
-                        self.assertIn(f'--set-mss {mss}', line)
+                        self.assertIn(f'tcp option maxseg size set {mss}', line)
 
                 proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
 

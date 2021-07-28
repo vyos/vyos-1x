@@ -1,0 +1,292 @@
+#!/usr/sbin/nft -f
+
+{% if cleanup_commands is defined %}
+{%   for command in cleanup_commands %}
+{{ command }}
+{%   endfor %}
+{% endif %}
+
+{% if group is defined %}
+{%   if group.address_group is defined %}
+{%     for group_name, group_conf in group.address_group.items() %}
+define A_{{ group_name }} = {
+    {{ group_conf.address | join(",") }}
+}
+{%     endfor %}
+{%   endif %}
+{%   if group.ipv6_address_group is defined %}
+{%     for group_name, group_conf in group.ipv6_address_group.items() %}
+define A6_{{ group_name }} = {
+    {{ group_conf.address | join(",") }}
+}
+{%     endfor %}
+{%   endif %}
+{%   if group.network_group is defined %}
+{%     for group_name, group_conf in group.network_group.items() %}
+define N_{{ group_name }} = {
+    {{ group_conf.network | join(",") }}
+}
+{%     endfor %}
+{%   endif %}
+{%   if group.ipv6_network_group is defined %}
+{%     for group_name, group_conf in group.ipv6_network_group.items() %}
+define N6_{{ group_name }} = {
+    {{ group_conf.network | join(",") }}
+}
+{%     endfor %}
+{%   endif %}
+{%   if group.port_group is defined %}
+{%     for group_name, group_conf in group.port_group.items() %}
+define P_{{ group_name }} = {
+    {{ group_conf.port | join(",") }}
+}
+{%     endfor %}
+{%   endif %}
+{% endif %}
+
+table ip filter {
+{% if first_install is defined %}
+    chain VYOS_FW_IN {
+        type filter hook forward priority 0; policy accept;
+    }
+    chain VYOS_FW_OUT {
+        type filter hook forward priority 1; policy accept;
+        jump VYOS_POST_FW
+    }
+    chain VYOS_FW_LOCAL {
+        type filter hook input priority 0; policy accept;
+        jump VYOS_POST_FW
+    }
+    chain VYOS_FW_OUTPUT {
+        type filter hook output priority 0; policy accept;
+        jump VYOS_POST_FW
+    }
+    chain VYOS_POST_FW {
+        return
+    }
+    chain VYOS_FRAG_MARK {
+        type filter hook prerouting priority -450; policy accept;
+        ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
+    }
+{% endif %}
+{% if name is defined %}
+{%   for name_text, conf in name.items() %}
+{%     set default_log = 'log' if 'enable_default_log' in conf else '' %}
+    chain {{ name_text }} {
+{%     if conf.rule is defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+        {{ rule_conf | nft_rule(name_text, rule_id) }}
+{%       endfor %}
+{%     endif %}
+{%     if conf.default_action is defined %}
+        counter {{ default_log }} {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
+{%     else %}
+        return
+{%     endif %}
+    }
+{%   endfor %}
+{% endif %}
+{% if state_policy is defined %}
+    chain VYOS_STATE_POLICY {
+{%   if state_policy.established is defined %}
+        {{ state_policy.established | nft_state_policy('established') }}
+{%   endif %}
+{%   if state_policy.invalid is defined %}
+        {{ state_policy.invalid | nft_state_policy('invalid') }}
+{%   endif %}
+{%   if state_policy.related is defined %}
+        {{ state_policy.related | nft_state_policy('related') }}
+{%   endif %}
+        return
+    }
+{% endif %}
+}
+
+table ip6 filter {
+{% if first_install is defined %}
+    chain VYOS_FW6_IN {
+        type filter hook forward priority 0; policy accept;
+    }
+    chain VYOS_FW6_OUT {
+        type filter hook forward priority 1; policy accept;
+        jump VYOS_POST_FW6
+    }
+    chain VYOS_FW6_LOCAL {
+        type filter hook input priority 0; policy accept;
+        jump VYOS_POST_FW6
+    }
+    chain VYOS_FW6_OUTPUT {
+        type filter hook output priority 0; policy accept;
+        jump VYOS_POST_FW6
+    }
+    chain VYOS_POST_FW6 {
+        return
+    }
+    chain VYOS_FRAG6_MARK {
+        type filter hook prerouting priority -450; policy accept;
+        exthdr frag exists meta mark set 0xffff1 return
+    }
+{% endif %}
+{% if ipv6_name is defined %}
+{%   for name_text, conf in ipv6_name.items() %}
+{%     set default_log = 'log' if 'enable_default_log' in conf else '' %}
+    chain {{ name_text }} {
+{%     if conf.rule is defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+        {{ rule_conf | nft_rule(name_text, rule_id, 'ip6') }}
+{%       endfor %}
+{%     endif %}
+{%     if conf.default_action is defined %}
+        counter {{ default_log }} {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
+{%     else %}
+        return
+{%     endif %}
+    }
+{%   endfor %}
+{% endif %}
+{% if state_policy is defined %}
+    chain VYOS_STATE_POLICY6 {
+{%   if state_policy.established is defined %}
+        {{ state_policy.established | nft_state_policy('established') }}
+{%   endif %}
+{%   if state_policy.invalid is defined %}
+        {{ state_policy.invalid | nft_state_policy('invalid') }}
+{%   endif %}
+{%   if state_policy.related is defined %}
+        {{ state_policy.related | nft_state_policy('related') }}
+{%   endif %}
+        return
+    }
+{% endif %}
+}
+
+{% if first_install is defined %}
+table ip nat {
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+        counter jump VYOS_PRE_DNAT_HOOK
+    }
+
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+        counter jump VYOS_PRE_SNAT_HOOK
+    }
+
+    chain VYOS_PRE_DNAT_HOOK {
+        return
+    }
+
+    chain VYOS_PRE_SNAT_HOOK {
+        return
+    }
+}
+
+table ip6 nat {
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+        counter jump VYOS_DNPT_HOOK
+    }
+
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+        counter jump VYOS_SNPT_HOOK
+    }
+
+    chain VYOS_DNPT_HOOK {
+        return
+    }
+
+    chain VYOS_SNPT_HOOK {
+        return
+    }
+}
+
+table inet mangle {
+    chain FORWARD {
+        type filter hook forward priority -150; policy accept;
+    }
+}
+
+table raw {
+    chain VYOS_TCP_MSS {
+        type filter hook forward priority -300; policy accept;
+    }
+
+    chain PREROUTING {
+        type filter hook prerouting priority -200; policy accept;
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump VYOS_CT_PREROUTING_HOOK
+        notrack
+    }
+
+    chain OUTPUT {
+        type filter hook output priority -200; policy accept;
+        counter jump VYOS_CT_IGNORE
+        counter jump VYOS_CT_TIMEOUT
+        counter jump VYOS_CT_OUTPUT_HOOK
+        notrack
+    }
+
+    ct helper rpc_tcp {
+        type "rpc" protocol tcp;
+    }
+
+    ct helper rpc_udp {
+        type "rpc" protocol udp;
+    }
+
+    ct helper tns_tcp {
+        type "tns" protocol tcp;
+    }
+
+    chain VYOS_CT_HELPER {
+        ct helper set "rpc_tcp" tcp dport {111} return
+        ct helper set "rpc_udp" udp dport {111} return
+        ct helper set "tns_tcp" tcp dport {1521,1525,1536} return
+        return
+    }
+
+    chain VYOS_CT_IGNORE {
+        return
+    }
+
+    chain VYOS_CT_TIMEOUT {
+        return
+    }
+
+    chain VYOS_CT_PREROUTING_HOOK {
+        return
+    }
+
+    chain VYOS_CT_OUTPUT_HOOK {
+        return
+    }
+}
+
+table ip6 raw {
+    chain VYOS_TCP_MSS {
+        type filter hook forward priority -300; policy accept;
+    }
+
+    chain PREROUTING {
+        type filter hook prerouting priority -300; policy accept;
+        counter jump VYOS_CT_PREROUTING_HOOK
+        notrack
+    }
+
+    chain OUTPUT {
+        type filter hook output priority -300; policy accept;
+        counter jump VYOS_CT_OUTPUT_HOOK
+        notrack
+    }
+
+    chain VYOS_CT_PREROUTING_HOOK {
+        return
+    }
+
+    chain VYOS_CT_OUTPUT_HOOK {
+        return
+    }
+}
+{% endif %}

@@ -15,11 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.firewall import find_nftables_rule
+from vyos.firewall import remove_nftables_rule
 from vyos.util import cmd
 from vyos.util import run
 from vyos.util import process_named_running
@@ -43,8 +46,8 @@ module_map = {
         'ko' : ['nf_nat_h323', 'nf_conntrack_h323'],
     },
     'nfs' : {
-        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 111 --jump CT --helper rpc',
-                      'VYATTA_CT_HELPER --table raw --proto udp --dport 111 --jump CT --helper rpc'],
+        'nftables' : ['ct helper set "rpc_tcp" tcp dport "{111}" return',
+                      'ct helper set "rpc_udp" udp dport "{111}" return']
     },
     'pptp' : {
         'ko' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
@@ -53,9 +56,7 @@ module_map = {
         'ko' : ['nf_nat_sip', 'nf_conntrack_sip'],
      },
     'sqlnet' : {
-        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 1521 --jump CT --helper tns',
-                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1525 --jump CT --helper tns',
-                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1536 --jump CT --helper tns'],
+        'nftables' : ['ct helper set "tns_tcp" tcp dport "{1521,1525,1536}" return']
     },
     'tftp' : {
         'ko' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
@@ -93,6 +94,17 @@ def generate(conntrack):
 
     return None
 
+def find_nftables_ct_rule(rule):
+    helper_search = re.search('ct helper set "(\w+)"', rule)
+    if helper_search:
+        rule = helper_search[1]
+    return find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule])
+
+def find_remove_rule(rule):
+    handle = find_nftables_ct_rule(rule)
+    if handle:
+        remove_nftables_rule('raw', 'VYOS_CT_HELPER', handle)
+
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
     # modules we need to either insmod or rmmod the helpers.
@@ -103,20 +115,17 @@ def apply(conntrack):
                     # Only remove the module if it's loaded
                     if os.path.exists(f'/sys/module/{mod}'):
                         cmd(f'rmmod {mod}')
-            if 'iptables' in module_config:
-                for rule in module_config['iptables']:
-                    # Only install iptables rule if it does not exist
-                    tmp = run(f'iptables --check {rule}')
-                    if tmp == 0: cmd(f'iptables --delete {rule}')
+            if 'nftables' in module_config:
+                for rule in module_config['nftables']:
+                    find_remove_rule(rule)
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     cmd(f'modprobe {mod}')
-            if 'iptables' in module_config:
-                for rule in module_config['iptables']:
-                    # Only install iptables rule if it does not exist
-                    tmp = run(f'iptables --check {rule}')
-                    if tmp > 0: cmd(f'iptables --insert {rule}')
+            if 'nftables' in module_config:
+                for rule in module_config['nftables']:
+                    if not find_nftables_ct_rule(rule):
+                        cmd(f'nft insert rule ip raw VYOS_CT_HELPER {rule}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values

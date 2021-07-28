@@ -16,6 +16,8 @@
 
 from vyos.config import Config
 from vyos.configdict import node_changed
+from vyos.firewall import find_nftables_rule
+from vyos.firewall import remove_nftables_rule
 from vyos.template import render
 from vyos.util import process_named_running
 from vyos.util import run
@@ -88,24 +90,19 @@ def generate(nhrp):
 def apply(nhrp):
     if 'tunnel' in nhrp:
         for tunnel, tunnel_conf in nhrp['tunnel'].items():
-            if 'source_address' in tunnel_conf:
-                chain = f'VYOS_NHRP_{tunnel}_OUT_HOOK'
-                source_address = tunnel_conf['source_address']
+            if 'source_address' in nhrp['if_tunnel'][tunnel]:
+                comment = f'VYOS_NHRP_{tunnel}'
+                source_address = nhrp['if_tunnel'][tunnel]['source_address']
 
-                chain_exists = run(f'sudo iptables --check {chain} -j RETURN') == 0
-                if not chain_exists:
-                    run(f'sudo iptables --new {chain}')
-                    run(f'sudo iptables --append {chain} -p gre -s {source_address} -d 224.0.0.0/4 -j DROP')
-                    run(f'sudo iptables --append {chain} -j RETURN')
-                    run(f'sudo iptables --insert OUTPUT 2 -j {chain}')
+                rule_handle = find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', ['ip protocol gre', f'ip saddr {source_address}', 'ip daddr 224.0.0.0/4'])
+                if not rule_handle:
+                    run(f'sudo nft insert rule ip filter VYOS_FW_OUTPUT ip protocol gre ip saddr {source_address} ip daddr 224.0.0.0/4 counter drop comment "{comment}"')
 
     for tunnel in nhrp['del_tunnels']:
-        chain = f'VYOS_NHRP_{tunnel}_OUT_HOOK'
-        chain_exists = run(f'sudo iptables --check {chain} -j RETURN') == 0
-        if chain_exists:
-            run(f'sudo iptables --delete OUTPUT -j {chain}')
-            run(f'sudo iptables --flush {chain}')
-            run(f'sudo iptables --delete-chain {chain}')
+        comment = f'VYOS_NHRP_{tunnel}'
+        rule_handle = find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', [f'comment "{comment}"'])
+        if rule_handle:
+            remove_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', rule_handle)
 
     action = 'restart' if nhrp and 'tunnel' in nhrp else 'stop'
     run(f'systemctl {action} opennhrp')

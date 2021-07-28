@@ -30,6 +30,7 @@
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
           #include <include/source-interface.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>

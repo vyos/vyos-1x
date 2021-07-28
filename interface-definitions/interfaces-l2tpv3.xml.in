@@ -32,6 +32,7 @@
             <defaultValue>5000</defaultValue>
           </leafNode>
           #include <include/interface/disable.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
           <leafNode name="encapsulation">
             <properties>
               <help>Encapsulation type (default: UDP)</help>

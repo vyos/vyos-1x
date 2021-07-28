@@ -1,4 +1,4 @@
-<!-- include start from firewall/source-destination-group.xml.i -->
+<!-- include start from firewall/source-destination-group-ipv6.xml.i -->
 <node name="group">
   <properties>
     <help>Group</help>
@@ -8,7 +8,7 @@
       <properties>
         <help>Group of addresses</help>
         <completionHelp>
-          <path>firewall group address-group</path>
+          <path>firewall group ipv6-address-group</path>
         </completionHelp>
       </properties>
     </leafNode>
@@ -16,7 +16,7 @@
       <properties>
         <help>Group of networks</help>
         <completionHelp>
-          <path>firewall group network-group</path>
+          <path>firewall group ipv6-network-group</path>
         </completionHelp>
       </properties>
     </leafNode>

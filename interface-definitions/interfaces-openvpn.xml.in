@@ -34,6 +34,7 @@
             </children>
           </node>
           #include <include/interface/description.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
           <leafNode name="device-type">
             <properties>
               <help>OpenVPN interface device-type (default: tun)</help>

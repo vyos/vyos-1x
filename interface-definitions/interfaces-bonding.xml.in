@@ -56,6 +56,7 @@
           #include <include/interface/disable.xml.i>
           #include <include/interface/vrf.xml.i>
           #include <include/interface/mirror.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
           <leafNode name="hash-policy">
             <properties>
               <help>Bonding transmit hash policy</help>

@@ -544,6 +544,15 @@ class Interface(Control):
             return None
         return self.set_interface('arp_cache_tmo', tmo)
 
+    def _cleanup_mss_rules(self, table, ifname):
+        commands = []
+        results = self._cmd(f'nft -a list chain {table} VYOS_TCP_MSS').split("\n")
+        for line in results:
+            if f'oifname "{ifname}"' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    self._cmd(f'nft delete rule {table} VYOS_TCP_MSS handle {handle_search[1]}')
+
     def set_tcp_ipv4_mss(self, mss):
         """
         Set IPv4 TCP MSS value advertised when TCP SYN packets leave this
@@ -555,22 +564,14 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_tcp_ipv4_mss(1340)
         """
-        iptables_bin = 'iptables'
-        base_options = f'-A FORWARD -o {self.ifname} -p tcp -m tcp --tcp-flags SYN,RST SYN'
-        out = self._cmd(f'{iptables_bin}-save -t mangle')
-        for line in out.splitlines():
-            if line.startswith(base_options):
-                # remove OLD MSS mangling configuration
-                line = line.replace('-A FORWARD', '-D FORWARD')
-                self._cmd(f'{iptables_bin} -t mangle {line}')
-
-        cmd_mss = f'{iptables_bin} -t mangle {base_options} --jump TCPMSS'
+        self._cleanup_mss_rules('raw', self.ifname)
+        nft_prefix = 'nft add rule raw VYOS_TCP_MSS'
+        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
-            self._cmd(f'{cmd_mss} --clamp-mss-to-pmtu')
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
         elif int(mss) > 0:
-            # probably add option to clamp only if bigger:
             low_mss = str(int(mss) + 1)
-            self._cmd(f'{cmd_mss} -m tcpmss --mss {low_mss}:65535 --set-mss {mss}')
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
 
     def set_tcp_ipv6_mss(self, mss):
         """
@@ -583,22 +584,14 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_tcp_mss(1320)
         """
-        iptables_bin = 'ip6tables'
-        base_options = f'-A FORWARD -o {self.ifname} -p tcp -m tcp --tcp-flags SYN,RST SYN'
-        out = self._cmd(f'{iptables_bin}-save -t mangle')
-        for line in out.splitlines():
-            if line.startswith(base_options):
-                # remove OLD MSS mangling configuration
-                line = line.replace('-A FORWARD', '-D FORWARD')
-                self._cmd(f'{iptables_bin} -t mangle {line}')
-
-        cmd_mss = f'{iptables_bin} -t mangle {base_options} --jump TCPMSS'
+        self._cleanup_mss_rules('ip6 raw', self.ifname)
+        nft_prefix = 'nft add rule ip6 raw VYOS_TCP_MSS'
+        base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
         if mss == 'clamp-mss-to-pmtu':
-            self._cmd(f'{cmd_mss} --clamp-mss-to-pmtu')
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size set rt mtu'")
         elif int(mss) > 0:
-            # probably add option to clamp only if bigger:
             low_mss = str(int(mss) + 1)
-            self._cmd(f'{cmd_mss} -m tcpmss --mss {low_mss}:65535 --set-mss {mss}')
+            self._cmd(f"{nft_prefix} '{base_cmd} tcp option maxseg size {low_mss}-65535 tcp option maxseg size set {mss}'")
 
     def set_arp_filter(self, arp_filter):
         """

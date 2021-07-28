@@ -18,6 +18,7 @@
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
     #include <include/interface/disable.xml.i>
+    #include <include/interface/interface-firewall-vif.xml.i>
     <leafNode name="protocol">
       <properties>
         <help>Protocol used for service VLAN (default: 802.1ad)</help>
@@ -63,6 +64,7 @@
         #include <include/interface/mac.xml.i>
         #include <include/interface/mtu-68-16000.xml.i>
         #include <include/interface/vrf.xml.i>
+        #include <include/interface/interface-firewall-vif-c.xml.i>
       </children>
     </tagNode>
     #include <include/interface/vrf.xml.i>

@@ -19,6 +19,7 @@
           #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/dial-on-demand.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
           <leafNode name="default-route">
             <properties>
               <help>Default route insertion behaviour (default: auto)</help>
