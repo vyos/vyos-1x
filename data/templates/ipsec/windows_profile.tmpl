@@ -1,0 +1,4 @@
+Remove-VpnConnection -Name "{{ vpn_name }}" -Force -PassThru
+
+Add-VpnConnection -Name "{{ vpn_name }}" -ServerAddress "{{ remote }}" -TunnelType "Ikev2"
+Set-VpnConnectionIPsecConfiguration -ConnectionName "{{ vpn_name }}" -AuthenticationTransformConstants {{ ike_encryption.encryption }} -CipherTransformConstants {{ ike_encryption.encryption }} -EncryptionMethod {{ esp_encryption.encryption }} -IntegrityCheckMethod {{ esp_encryption.hash }} -PfsGroup None -DHGroup "Group{{ ike_encryption.dh_group }}" -PassThru -Force
