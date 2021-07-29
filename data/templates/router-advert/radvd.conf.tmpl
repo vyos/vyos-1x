@@ -55,6 +55,10 @@ interface {{ iface }} {
     RDNSS {{ interface[iface].name_server | join(" ") }} {
     };
 {%     endif %}
+{%     if interface[iface].dnssl is defined %}
+    DNSSL {{ interface[iface].dnssl | join(" ") }} {
+    };
+{%     endif %}
 };
 {%   endfor %}
 {% endif %}
