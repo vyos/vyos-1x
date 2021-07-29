@@ -120,6 +120,7 @@ Depends:
   radvd,
   salt-minion,
   sed,
+  sipcalc,
   smartmontools,
   snmp,
   snmpd,
