@@ -1038,6 +1038,12 @@
     </leafNode>
     #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
+    <leafNode name="solo">
+      <properties>
+        <help>Do not send back prefixes learned from the neighbor</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="strict-capability-match">
       <properties>
         <help>Enable strict capability negotiation</help>

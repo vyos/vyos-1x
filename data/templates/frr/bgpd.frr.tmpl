@@ -65,6 +65,9 @@
 {%   if config.shutdown is defined %}
  neighbor {{ neighbor }} shutdown
 {%   endif %}
+{%   if config.solo is defined %}
+ neighbor {{ neighbor }} solo
+{%   endif %}
 {%   if config.strict_capability_match is defined %}
  neighbor {{ neighbor }} strict-capability-match
 {%   endif %}
