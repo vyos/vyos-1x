@@ -43,11 +43,10 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_single(self):
+    def test_common(self):
         self.cli_set(base_path + ['prefix', '::/64', 'no-on-link-flag'])
         self.cli_set(base_path + ['prefix', '::/64', 'no-autonomous-flag'])
         self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
-        self.cli_set(base_path + ['dnssl', '2001:db8::1234'])
         self.cli_set(base_path + ['other-config-flag'])
 
         # commit changes
@@ -91,6 +90,29 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running('radvd'))
+
+    def test_dns(self):
+        nameserver = ['2001:db8::1', '2001:db8::2']
+        dnssl = ['vyos.net', 'vyos.io']
+
+        self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['other-config-flag'])
+
+        for ns in nameserver:
+            self.cli_set(base_path + ['name-server', ns])
+        for sl in dnssl:
+            self.cli_set(base_path + ['dnssl', sl])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = 'RDNSS ' + ' '.join(nameserver) + ' {'
+        self.assertIn(tmp, config)
+
+        tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
+        self.assertIn(tmp, config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
