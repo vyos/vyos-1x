@@ -24,6 +24,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import cmd
+from vyos.util import is_systemd_service_running
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -114,7 +115,7 @@ def apply(options):
     if 'performance' in options:
         cmd('systemctl restart tuned.service')
         # wait until daemon has started before sending configuration
-        while (int(os.system('systemctl is-active --quiet tuned.service')) != 0):
+        while (not is_systemd_service_running('tuned.service')):
             sleep(0.250)
         cmd('tuned-adm profile network-{performance}'.format(**options))
     else:

@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.util import cmd
 from vyos.util import call
+from vyos.util import is_systemd_service_running
 
 from vyos import airbag
 airbag.enable()
@@ -87,8 +88,7 @@ def generate(cert):
 
     # certbot will attempt to reload nginx, even with 'certonly';
     # start nginx if not active
-    ret = call('systemctl is-active --quiet nginx.service')
-    if ret:
+    if not is_systemd_service_running('nginx.service'):
         call('systemctl start nginx.service')
 
     request_certbot(cert)

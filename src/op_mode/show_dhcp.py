@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,8 +27,7 @@ from datetime import datetime
 from isc_dhcp_leases import Lease, IscDhcpLeases
 
 from vyos.config import Config
-from vyos.util import call
-
+from vyos.util import is_systemd_service_running
 
 lease_file = "/config/dhcpd.leases"
 pool_key = "shared-networkname"
@@ -217,7 +216,7 @@ if __name__ == '__main__':
         exit(0)
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
-    if call('systemctl -q is-active isc-dhcp-server.service') != 0:
+    if not is_systemd_service_running('isc-dhcp-server.service'):
         print("WARNING: DHCP server is configured but not started. Data may be stale.")
 
     if args.leases:

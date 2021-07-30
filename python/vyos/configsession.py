@@ -10,14 +10,14 @@
 # See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
-# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os
 import re
 import sys
 import subprocess
 
-from vyos.util import call
+from vyos.util import is_systemd_service_running
 
 CLI_SHELL_API = '/bin/cli-shell-api'
 SET = '/opt/vyatta/sbin/my_set'
@@ -73,8 +73,7 @@ def inject_vyos_env(env):
     env['vyos_validators_dir'] = '/usr/libexec/vyos/validators'
 
     # if running the vyos-configd daemon, inject the vyshim env var
-    ret = call('systemctl is-active --quiet vyos-configd.service')
-    if not ret:
+    if is_systemd_service_running('vyos-configd.service'):
         env['vyshim'] = '/usr/sbin/vyshim'
 
     return env
