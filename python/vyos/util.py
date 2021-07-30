@@ -804,3 +804,9 @@ def make_incremental_progressbar(increment: float):
     # Ignore further calls.
     while True:
         yield
+
+def is_systemd_service_running(service):
+    """ Test is a specified systemd service is actually running.
+    Returns True if service is running, false otherwise. """
+    tmp = run(f'systemctl is-active --quiet {service}')
+    return bool((tmp == 0))
