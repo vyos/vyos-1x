@@ -184,6 +184,14 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="backup-port">
+                    <properties>
+                      <help>If the port loses carrier all traffic will be redirected to the configured backup port</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

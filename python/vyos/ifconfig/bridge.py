@@ -296,10 +296,10 @@ class BridgeIf(Interface):
             cmd = f'bridge vlan add dev {ifname} vid 1 pvid untagged self'
             self._cmd(cmd)
 
-        tmp = dict_search('member.interface', config)
-        if tmp:
+        member_intf = dict_search('member.interface', config)
+        if member_intf:
 
-            for interface, interface_config in tmp.items():
+            for interface, interface_config in member_intf.items():
                 # if interface does yet not exist bail out early and
                 # add it later
                 if interface not in interfaces():
@@ -365,6 +365,21 @@ class BridgeIf(Interface):
                     if native_vlan_id:
                         cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
                         self._cmd(cmd)
+            
+            # When the bridge port is initialized, set the standby port now.
+            # This reports an error if the bridge did not complete the member
+            # port addition before setting the standby port
+            for interface, interface_config in member_intf.items():
+                if interface not in interfaces():
+                    continue
+                
+                if 'backup_port' in interface_config:
+                    value = interface_config.get('backup_port')
+                    cmd = f'bridge link set dev {interface} backup_port {value}'
+                    self._cmd(cmd)
+                else:
+                    cmd = f'bridge link set dev {interface} nobackup_port'
+                    self._cmd(cmd)
 
         # call base class first
         super().update(config)

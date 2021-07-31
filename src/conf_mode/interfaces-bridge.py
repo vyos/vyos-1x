@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from sys import exit
 from netifaces import interfaces
@@ -84,6 +85,12 @@ def get_config(config=None):
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
             if tmp: bridge['member']['interface'][interface].update({'is_bond_member' : tmp})
+            
+            if 'backup_port' in interface_config:
+                backup_port = interface_config['backup_port']
+                # Check if member interface is already member of a bridge
+                if backup_port in bridge['member']['interface']:
+                    bridge['member']['interface'][interface].update({'backup_port_exist' : tmp})
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
@@ -123,6 +130,14 @@ def verify(bridge):
             if 'is_bond_member' in interface_config:
                 tmp = next(iter(interface_config['is_bond_member']))
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
+            
+            if 'backup_port' in interface_config and 'backup_port_exist' not in interface_config:
+                tmp = interface_config['backup_port']
+                raise ConfigError(error_msg + f'Device {tmp} is not a bridge member and cannot be used as an alternate port!')
+            
+            if 'backup_port' in interface_config and 'backup_port_exist' in interface_config:
+                if not re.search('^((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$', interface):
+                    raise ConfigError(error_msg + f'Device {tmp} is not a ethernet interface and cannot be used as an alternate port!')
 
             if 'is_source_interface' in interface_config:
                 tmp = interface_config['is_source_interface']
