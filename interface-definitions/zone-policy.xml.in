@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="zone-policy" owner="${vyos_conf_scripts_dir}/zone_policy.py">
+    <properties>
+      <help>Configure zone-policy</help>
+      <priority>250</priority>
+    </properties>
+    <children>
+      <tagNode name="zone">
+        <properties>
+          <help>Zone name</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Zone name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          <leafNode name="default-action">
+            <properties>
+              <help>Default-action for traffic coming into this zone</help>
+              <completionHelp>
+                <list>drop reject</list>
+              </completionHelp>
+              <valueHelp>
+                <format>drop</format>
+                <description>Drop silently (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>reject</format>
+                <description>Drop and notify source</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(drop|reject)$</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <tagNode name="from">
+            <properties>
+              <help>Zone from which to filter traffic</help>
+              <completionHelp>
+                <path>zone-policy zone</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="firewall">
+                <properties>
+                  <help>Firewall options</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <leafNode name="interface">
+            <properties>
+              <help>Interface associated with zone</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface associated with zone</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="local-zone">
+            <properties>
+              <help>Zone to be local-zone</help>
+              <valueless/>
+            </properties>
+          </leafNode> 
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
