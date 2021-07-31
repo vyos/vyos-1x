@@ -57,6 +57,11 @@ def get_config(config=None):
 
     if not conf.exists(base):
         bgp.update({'deleted' : ''})
+        if not vrf:
+            # We are running in the default VRF context, thus we can not delete
+            # our main BGP instance if there are dependent BGP VRF instances.
+            bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
+                key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
         return bgp
 
     # We also need some additional information from the config, prefix-lists
@@ -96,6 +101,11 @@ def verify_remote_as(peer_config, bgp_config):
 
 def verify(bgp):
     if not bgp or 'deleted' in bgp:
+        if 'dependent_vrfs' in bgp:
+            for vrf, vrf_options in bgp['dependent_vrfs'].items():
+                if dict_search('protocols.bgp', vrf_options) != None:
+                    raise ConfigError('Cannot delete default BGP instance, ' \
+                                      'dependent VRF instance(s) exist!')
         return None
 
     if 'local_as' not in bgp:
