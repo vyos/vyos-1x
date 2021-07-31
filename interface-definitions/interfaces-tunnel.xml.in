@@ -31,6 +31,7 @@
           #include <include/interface/tunnel-remote.xml.i>
           #include <include/source-interface.xml.i>
           #include <include/interface/interface-firewall.xml.i>
+          #include <include/interface/interface-policy.xml.i>
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>

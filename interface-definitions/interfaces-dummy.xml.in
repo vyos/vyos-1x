@@ -20,6 +20,7 @@
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/interface-firewall.xml.i>
+          #include <include/interface/interface-policy.xml.i>
           <node name="ip">
             <properties>
               <help>IPv4 routing parameters</help>

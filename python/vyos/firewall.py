@@ -150,7 +150,11 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if tcp_flags:
         output.append(parse_tcp_flags(tcp_flags))
 
+
     output.append('counter')
+
+    if 'set' in rule_conf:
+        output.append(parse_policy_set(rule_conf['set'], def_suffix))
 
     if 'action' in rule_conf:
         output.append(nft_action(rule_conf['action']))
@@ -191,4 +195,23 @@ def parse_time(time):
         days = time['weekdays'].split(",")
         out_days = [f'"{day}"' for day in days if day[0] != '!']
         out.append(f'day {{{",".join(out_days)}}}')
+    return " ".join(out)
+
+def parse_policy_set(set_conf, def_suffix):
+    out = []
+    if 'dscp' in set_conf:
+        dscp = set_conf['dscp']
+        out.append(f'ip{def_suffix} dscp set {dscp}')
+    if 'mark' in set_conf:
+        mark = set_conf['mark']
+        out.append(f'meta mark set {mark}')
+    if 'table' in set_conf:
+        table = set_conf['table']
+        if table == 'main':
+            table = '254'
+        mark = 0x7FFFFFFF - int(set_conf['table'])
+        out.append(f'meta mark set {mark}')
+    if 'tcp_mss' in set_conf:
+        mss = set_conf['tcp_mss']
+        out.append(f'tcp option maxseg size set {mss}')
     return " ".join(out)
