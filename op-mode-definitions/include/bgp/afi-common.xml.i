@@ -31,10 +31,25 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </leafNode>
-<leafNode name="summary">
+<node name="summary">
   <properties>
     <help>Summary of BGP neighbor status</help>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</leafNode>
+  <children>
+    <leafNode name="established">
+      <properties>
+        <help>Show only sessions in Established state</help>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </leafNode>
+    <leafNode name="failed">
+      <properties>
+        <help>Show only sessions not in Established state</help>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </leafNode>
+  </children>
+</node>
+#include <include/vtysh-generic-wide.xml.i>
 <!-- included end -->
