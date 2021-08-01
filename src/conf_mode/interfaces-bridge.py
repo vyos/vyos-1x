@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from sys import exit
 from netifaces import interfaces
@@ -134,10 +133,6 @@ def verify(bridge):
             if 'backup_port' in interface_config and 'backup_port_exist' not in interface_config:
                 tmp = interface_config['backup_port']
                 raise ConfigError(error_msg + f'Device {tmp} is not a bridge member and cannot be used as an alternate port!')
-            
-            if 'backup_port' in interface_config and 'backup_port_exist' in interface_config:
-                if not re.search('^((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$', interface):
-                    raise ConfigError(error_msg + f'Device {tmp} is not a ethernet interface and cannot be used as an alternate port!')
 
             if 'is_source_interface' in interface_config:
                 tmp = interface_config['is_source_interface']

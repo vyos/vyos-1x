@@ -190,6 +190,10 @@
                       <completionHelp>
                         <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
                       </completionHelp>
+                      <constraint>
+                        <validator name="interface-name-eth"/>
+                      </constraint>
+                      <constraintErrorMessage>Device is not a ethernet interface and cannot be used as an alternate port!</constraintErrorMessage>
                     </properties>
                   </leafNode>
                 </children>
