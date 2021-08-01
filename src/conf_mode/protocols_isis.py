@@ -149,7 +149,7 @@ def verify(isis):
     # If Redistribute set, but level don't set
     if 'redistribute' in isis:
         proc_level = isis.get('level','').replace('-','_')
-        for afi in ['ipv4']:
+        for afi in ['ipv4', 'ipv6']:
             if afi not in isis['redistribute']:
                 continue
 

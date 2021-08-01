@@ -492,6 +492,61 @@
         </node>
       </children>
     </node>
+    <node name="ipv6">
+      <properties>
+        <help>Redistribute IPv6 routes</help>
+      </properties>
+      <children>
+        <node name="bgp">
+          <properties>
+            <help>Redistribute BGP routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+        <node name="connected">
+          <properties>
+            <help>Redistribute connected routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+        <node name="kernel">
+          <properties>
+            <help>Redistribute kernel routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+        <node name="ospf6">
+          <properties>
+            <help>Redistribute OSPFv3 routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+        <node name="ripng">
+          <properties>
+            <help>Redistribute RIPng routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+        <node name="static">
+          <properties>
+            <help>Redistribute static routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-ipv6.xml.i>
+          </children>
+        </node>
+      </children>
+    </node>
   </children>
 </node>
 <leafNode name="set-attached-bit">
