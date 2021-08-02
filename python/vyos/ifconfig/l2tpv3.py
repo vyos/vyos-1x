@@ -13,7 +13,27 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from time import sleep
+from time import time
+from vyos.util import run
 from vyos.ifconfig.interface import Interface
+
+def wait_for_add_l2tpv3(timeout=10, sleep_interval=1, cmd=None):
+    '''
+    In some cases, we need to wait until local address is assigned.
+    And only then can the l2tpv3 tunnel be configured.
+    For example when ipv6 address in tentative state
+    or we wait for some routing daemon for remote address.
+    '''
+    start_time = time()
+    test_command = cmd
+    while True:
+        if (start_time + timeout) < time():
+            return None
+        result = run(test_command)
+        if result == 0:
+            return True
+        sleep(sleep_interval)
 
 @Interface.register
 class L2TPv3If(Interface):
@@ -43,7 +63,9 @@ class L2TPv3If(Interface):
         cmd += ' encap {encapsulation}'
         cmd += ' local {source_address}'
         cmd += ' remote {remote}'
-        self._cmd(cmd.format(**self.config))
+        c = cmd.format(**self.config)
+        # wait until the local/remote address is available, but no more 10 sec.
+        wait_for_add_l2tpv3(cmd=c)
 
         # setup session
         cmd = 'ip l2tp add session name {ifname}'
