@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="bgp">
+        <properties>
+          <help>BGP information</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        <children>
+          <node name="cidr-only">
+            <properties>
+              <help>Display only routes with non-natural netmasks</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/vtysh-generic-wide.xml.i>
+            </children>
+          </node>
+          #include <include/bgp/show-bgp-common.xml.i>
+          <node name="mac">
+            <properties>
+              <help>MAC address</help>
+            </properties>
+            <children>
+              <leafNode name="hash">
+                <properties>
+                  <help>MAC address database</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+          <node name="martian">
+            <properties>
+              <help>martian next-hops</help>
+            </properties>
+            <children>
+              <leafNode name="next-hop">
+                <properties>
+                  <help>martian next-hop database</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="memory">
+            <properties>
+              <help>Global BGP memory statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          <node name="nexthop">
+            <properties>
+              <help>Show BGP nexthop table</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/vtysh-generic-detail.xml.i>
+            </children>
+          </node>
+          <tagNode name="nexthop">
+            <properties>
+              <help>IPv4/IPv6 nexthop address</help>
+              <completionHelp>
+                <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            <children>
+              #include <include/vtysh-generic-detail.xml.i>
+            </children>
+          </tagNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>BGP RIB advertisement statistics</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          <leafNode name="statistics-all">
+            <properties>
+              <help>Display number of prefixes for all afi/safi</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+          #include <include/vtysh-generic-wide.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

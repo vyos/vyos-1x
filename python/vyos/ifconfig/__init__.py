@@ -30,6 +30,8 @@ from vyos.ifconfig.vxlan import VXLANIf
 from vyos.ifconfig.wireguard import WireGuardIf
 from vyos.ifconfig.vtun import VTunIf
 from vyos.ifconfig.tunnel import TunnelIf
+from vyos.ifconfig.vti import VTIIf
+from vyos.ifconfig.pppoe import PPPoEIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If
 from vyos.ifconfig.macsec import MACsecIf

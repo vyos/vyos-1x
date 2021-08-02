@@ -220,6 +220,8 @@ if __name__ == '__main__':
 
     try:
         ip = socket.gethostbyname(host)
+    except UnicodeError:
+        sys.exit(f'ping: Unknown host: {host}')
     except socket.gaierror:
         ip = host
 
