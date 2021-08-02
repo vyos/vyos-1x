@@ -224,12 +224,18 @@ def restart_ipsec():
         # so we can't assume it's running and have to check and wait if needed.
 
         # First, wait for charon to get started by the old ipsec.pl script.
-        wait_for_file_write_complete(charon_pidfile, timeout=120)
-
-        # Now actually restart the daemon
-        wait_for_file_write_complete(charon_pidfile,
-          pre_hook=(lambda: call('ipsec restart >&/dev/null')),
-          timeout=120)
+        from time import sleep, time
+        from os import system
+        now = time()
+        while True:
+            if (time() - now) > 60:
+                raise OSError("Timeout waiting for the IPsec process to become responsive")
+            # There's no oficial "no-op" stroke,
+            # so we use memusage to check if charon is alive and responsive
+            res = system("ipsec stroke memusage >&/dev/null")
+            if res == 0:
+                break
+            sleep(5)
 
         # Force configuration load
         call('swanctl -q >&/dev/null')
