@@ -20,7 +20,7 @@ settings from op mode, and execution of arbitrary op mode commands.
 
 from subprocess import STDOUT
 from vyos.util import popen
-
+from vyos.configtree import ConfigTree
 
 class ConfigQueryError(Exception):
     pass
@@ -69,6 +69,26 @@ class CliShellApiConfigQuery(GenericConfigQuery):
         if err:
             raise ConfigQueryError('No values for given path')
         return out
+
+class ConfigTreeActiveQuery(GenericConfigQuery):
+    def __init__(self):
+        super().__init__()
+
+        with open('/config/config.boot') as f:
+            config_file = f.read()
+        self.configtree = ConfigTree(config_file)
+
+    def exists(self, path: list):
+        return self.configtree.exists(path)
+
+    def value(self, path: list):
+        return self.configtree.return_value(path)
+
+    def values(self, path: list):
+        return self.configtree.return_values(path)
+
+    def list_nodes(self, path: list):
+        return self.configtree.list_nodes(path)
 
 class VbashOpRun(GenericOpRun):
     def __init__(self):
