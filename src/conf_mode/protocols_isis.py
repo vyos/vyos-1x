@@ -126,7 +126,7 @@ def generate(isis):
     process = list(isis.keys())[0]
     isis[process]['process'] = process
 
-    isis['new_frr_config'] = render_to_string('frr/isis.frr.tmpl',
+    isis['new_frr_config'] = render_to_string('frr/isisd.frr.tmpl',
                                               isis[process])
 
     return None
