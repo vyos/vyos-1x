@@ -20,6 +20,7 @@ settings from op mode, and execution of arbitrary op mode commands.
 
 import re
 import json
+from copy import deepcopy
 from subprocess import STDOUT
 
 import vyos.util
@@ -62,14 +63,14 @@ class CliShellApiConfigQuery(GenericConfigQuery):
 
     def value(self, path: list):
         cmd = ' '.join(path)
-        (out, err) = popen(f'cli-shell-api returnActiveValue {cmd}')
+        (out, err) = vyos.util.popen(f'cli-shell-api returnActiveValue {cmd}')
         if err:
             raise ConfigQueryError('No value for given path')
         return out
 
     def values(self, path: list):
         cmd = ' '.join(path)
-        (out, err) = popen(f'cli-shell-api returnActiveValues {cmd}')
+        (out, err) = vyos.util.popen(f'cli-shell-api returnActiveValues {cmd}')
         if err:
             raise ConfigQueryError('No values for given path')
         return out
@@ -136,7 +137,7 @@ class ConfigTreeActiveQuery(GenericConfigQuery):
             return conf_dict
 
         if no_multi_convert is False:
-            conf_dict = multi_to_list(xmlpath, conf_dict)
+            conf_dict = vyos.xml.multi_to_list(xmlpath, conf_dict)
 
         if not (isinstance(key_mangling, tuple) and \
                 (len(key_mangling) == 2) and \
@@ -154,7 +155,7 @@ class VbashOpRun(GenericOpRun):
 
     def run(self, path: list, **kwargs):
         cmd = ' '.join(path)
-        (out, err) = popen(f'.  /opt/vyatta/share/vyatta-op/functions/interpreter/vyatta-op-run; _vyatta_op_run {cmd}', stderr=STDOUT, **kwargs)
+        (out, err) = vyos.util.popen(f'.  /opt/vyatta/share/vyatta-op/functions/interpreter/vyatta-op-run; _vyatta_op_run {cmd}', stderr=STDOUT, **kwargs)
         if err:
             raise ConfigQueryError(out)
         return out
