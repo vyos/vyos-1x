@@ -102,9 +102,20 @@ def get_config(config=None):
                                                    ipsec['esp_group'][group])
     if 'ike_group' in ipsec:
         default_values = defaults(base + ['ike-group'])
+        # proposal is a tag node which may come with individual defaults per node
+        if 'proposal' in default_values:
+            del default_values['proposal']
+
         for group in ipsec['ike_group']:
             ipsec['ike_group'][group] = dict_merge(default_values,
                                                    ipsec['ike_group'][group])
+
+            if 'proposal' in ipsec['ike_group'][group]:
+                default_values = defaults(base + ['ike-group', 'proposal'])
+                for proposal in ipsec['ike_group'][group]['proposal']:
+                    ipsec['ike_group'][group]['proposal'][proposal] = dict_merge(default_values,
+                        ipsec['ike_group'][group]['proposal'][proposal])
+
     if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
         default_values = defaults(base + ['remote-access', 'connection'])
         for rw in ipsec['remote_access']['connection']:

@@ -383,7 +383,6 @@
                 </properties>
                 <children>
                   <leafNode name="dh-group">
-                    <defaultValue>2</defaultValue>
                     <properties>
                       <help>dh-grouphelp</help>
                       <completionHelp>
@@ -481,6 +480,7 @@
                         <regex>^(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32)$</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>2</defaultValue>
                   </leafNode>
                   #include <include/vpn-ipsec-encryption.xml.i>
                   #include <include/vpn-ipsec-hash.xml.i>
