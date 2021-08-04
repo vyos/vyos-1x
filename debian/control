@@ -51,7 +51,7 @@ Depends:
   etherwake,
   ethtool,
   fdisk,
-  fastnetmon,
+  fastnetmon [amd64],
   file,
   frr (>= 7.5),
   frr-pythontools,
