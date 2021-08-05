@@ -29,13 +29,17 @@ _FILTERS = {}
 
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
-def _get_environment():
+def _get_environment(location=None):
+    if location is None:
+        loc_loader=FileSystemLoader(directories["templates"])
+    else:
+        loc_loader=FileSystemLoader(location)
     env = Environment(
         # Don't check if template files were modified upon re-rendering
         auto_reload=False,
         # Cache up to this number of templates for quick re-rendering
         cache_size=100,
-        loader=FileSystemLoader(directories["templates"]),
+        loader=loc_loader,
         trim_blocks=True,
     )
     env.filters.update(_FILTERS)
@@ -63,7 +67,7 @@ def register_filter(name, func=None):
     return func
 
 
-def render_to_string(template, content, formater=None):
+def render_to_string(template, content, formater=None, location=None):
     """Render a template from the template directory, raise on any errors.
 
     :param template: the path to the template relative to the template folder
@@ -78,7 +82,7 @@ def render_to_string(template, content, formater=None):
     package is build (recovering the load time and overhead caused by having the
     file out of the code).
     """
-    template = _get_environment().get_template(template)
+    template = _get_environment(location).get_template(template)
     rendered = template.render(content)
     if formater is not None:
         rendered = formater(rendered)
@@ -93,6 +97,7 @@ def render(
     permission=None,
     user=None,
     group=None,
+    location=None,
 ):
     """Render a template from the template directory to a file, raise on any errors.
 
@@ -109,7 +114,7 @@ def render(
 
     # As we are opening the file with 'w', we are performing the rendering before
     # calling open() to not accidentally erase the file if rendering fails
-    rendered = render_to_string(template, content, formater)
+    rendered = render_to_string(template, content, formater, location)
 
     # Write to file
     with open(destination, "w") as file:
