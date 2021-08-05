@@ -249,12 +249,6 @@ def apply(vrf):
     frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if vrf['new_frr_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(frr_daemon)
-
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
 
