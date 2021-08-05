@@ -51,7 +51,7 @@ options = {
         'help': 'Number of seconds before ping exits'
     },
     'do-not-fragment': {
-        'ping': '{command} -M dont',
+        'ping': '{command} -M do',
         'type': 'noarg',
         'help': 'Set DF-bit flag to 1 for no fragmentation'
     },
