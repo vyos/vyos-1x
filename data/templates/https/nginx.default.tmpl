@@ -41,7 +41,7 @@ server {
 {% endif %}
 
         # proxy settings for HTTP API, if enabled; 503, if not
-        location ~ /(retrieve|configure|config-file|image|generate|show|docs|openapi.json|redoc) {
+        location ~ /(retrieve|configure|config-file|image|generate|show|docs|openapi.json|redoc|graphql) {
 {% if server.api %}
                 proxy_pass http://localhost:{{ server.api.port }};
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
