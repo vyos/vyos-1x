@@ -242,15 +242,20 @@ def apply(vrf):
         if tmp == 0:
             cmd('nft delete table inet vrf_zones')
 
-    # add configuration to FRR
-    frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'^vrf [a-zA-Z-]*$', '')
-    frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
-
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
+    #   T3694: Somehow we hit a priority inversion here as we need to remove the
+    #   VRF assigned VNI before we can remove a BGP bound VRF instance. Maybe
+    #   move this to an individual helper script that set's up the VNI for the
+    #   given VRF after any routing protocol.
+    #
+    #   # add configuration to FRR
+    #   frr_cfg = frr.FRRConfig()
+    #   frr_cfg.load_configuration(frr_daemon)
+    #   frr_cfg.modify_section(f'^vrf [a-zA-Z-]*$', '')
+    #   frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
+    #   frr_cfg.commit_configuration(frr_daemon)
+    #
+    #   # Save configuration to /run/frr/config/frr.conf
+    #   frr.save_configuration()
 
     return None
 
