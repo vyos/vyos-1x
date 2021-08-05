@@ -1,0 +1,35 @@
+input dhcpServerConfigInput {
+    sharedNetworkName: String
+    subnet: String
+    defaultRouter: String
+    dnsServer: String
+    domainName: String
+    lease: Int
+    range: Int
+    start: String
+    stop: String
+    dnsForwardingAllowFrom: String
+    dnsForwardingCacheSize: Int
+    dnsForwardingListenAddress: String
+}
+
+type dhcpServerConfig {
+    sharedNetworkName: String
+    subnet: String
+    defaultRouter: String
+    dnsServer: String
+    domainName: String
+    lease: Int
+    range: Int
+    start: String
+    stop: String
+    dnsForwardingAllowFrom: String
+    dnsForwardingCacheSize: Int
+    dnsForwardingListenAddress: String
+}
+
+type createDhcpServerResult {
+    data: dhcpServerConfig
+    success: Boolean!
+    errors: [String]
+}
