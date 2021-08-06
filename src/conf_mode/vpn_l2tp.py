@@ -291,6 +291,8 @@ def get_config(config=None):
     # LNS secret
     if conf.exists(['lns', 'shared-secret']):
         l2tp['lns_shared_secret'] = conf.return_value(['lns', 'shared-secret'])
+    if conf.exists(['lns', 'host-name']):
+        l2tp['lns_host_name'] = conf.return_value(['lns', 'host-name'])
 
     if conf.exists(['ccp-disable']):
         l2tp['ccp_disable'] = True
