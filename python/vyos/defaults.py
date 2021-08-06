@@ -22,10 +22,7 @@ directories = {
   "migrate": "/opt/vyatta/etc/config-migrate/migrate",
   "log": "/var/log/vyatta",
   "templates": "/usr/share/vyos/templates/",
-  "certbot": "/config/auth/letsencrypt",
-  "api_schema": "/usr/libexec/vyos/services/api/graphql/graphql/schema/",
-  "api_templates": "/usr/libexec/vyos/services/api/graphql/recipes/templates/"
-
+  "certbot": "/config/auth/letsencrypt"
 }
 
 cfg_group = 'vyattacfg'
