@@ -34,6 +34,11 @@
                       <help>Tunnel password used to authenticate the client (LAC)</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="host-name">
+                    <properties>
+                      <help>Sent to the client (LAC) in the Host-Name attribute</help>
+                    </properties>
+                  </leafNode>
                 </children>
               </node>
               <leafNode name="ccp-disable">
