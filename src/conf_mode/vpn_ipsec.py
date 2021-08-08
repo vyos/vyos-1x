@@ -144,7 +144,7 @@ def get_config(config=None):
         l2tp_defaults = defaults(l2tp_base)
         ipsec['l2tp'] = dict_merge(l2tp_defaults, ipsec['l2tp'])
         ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
-        ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024,3des-sha1-modp1024'
+        ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'
 
     return ipsec
