@@ -59,6 +59,12 @@
               </tagNode>
             </children>
           </tagNode>
+          <leafNode name="key-pair">
+            <properties>
+              <help>Generate Wireguard key pair for use with server or peer</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "noname"</command>
+          </leafNode>
         </children>
       </node>
     </children>
