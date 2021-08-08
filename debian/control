@@ -90,6 +90,7 @@ Depends:
   minisign,
   modemmanager,
   mtr-tiny,
+  ndisc6,
   ndppd,
   netplug,
   nftables (>= 0.9.3),
