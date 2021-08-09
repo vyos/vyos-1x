@@ -139,6 +139,13 @@ def address_from_cidr(prefix):
     from ipaddress import ip_network
     return str(ip_network(prefix).network_address)
 
+@register_filter('bracketize_ipv6')
+def bracketize_ipv6(address):
+    """ Place a passed IPv6 address into [] brackets, do nothing for IPv4 """
+    if is_ipv6(address):
+        return f'[{address}]'
+    return address
+
 @register_filter('netmask_from_cidr')
 def netmask_from_cidr(prefix):
     """ Take CIDR prefix and convert the prefix length to a "subnet mask".
