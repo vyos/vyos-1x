@@ -138,7 +138,7 @@ def apply(ocserv):
         call('systemctl restart ocserv.service')
         sleep(1)
         if not is_systemd_service_running("ocserv.service"):
-            raise ConfigError('openconnect is not started. Check log output')
+            raise ConfigError('openconnect failed to start, check the logs for details')
 
 
 if __name__ == '__main__':
