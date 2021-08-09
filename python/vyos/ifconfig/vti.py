@@ -33,7 +33,7 @@ class VTIIf(Interface):
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         # - https://man7.org/linux/man-pages/man8/ip-tunnel.8.html
         mapping = {
-            'source_interface'                : 'dev',
+            'source_interface' : 'dev',
         }
 
         if_id = self.ifname.lstrip('vti')
@@ -50,8 +50,3 @@ class VTIIf(Interface):
 
         self._cmd(cmd.format(**self.config))
         self.set_interface('admin_state', 'down')
-
-    def set_admin_state(self, state):
-        # function is not implemented for VTI interfaces as this is entirely
-        # handled by the ipsec up/down scripts
-        pass
