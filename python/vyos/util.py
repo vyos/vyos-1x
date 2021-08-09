@@ -702,3 +702,9 @@ def get_interface_config(interface):
     from json import loads
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
+
+def is_systemd_service_running(service):
+    """ Test is a specified systemd service is actually running.
+    Returns True if service is running, false otherwise. """
+    tmp = run(f'systemctl is-active --quiet {service}')
+    return bool((tmp == 0))
