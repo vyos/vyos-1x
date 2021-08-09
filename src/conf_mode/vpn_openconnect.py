@@ -21,9 +21,10 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.xml import defaults
 from vyos.template import render
-from vyos.util import call
+from vyos.util import call, is_systemd_service_running
 from vyos import ConfigError
 from crypt import crypt, mksalt, METHOD_SHA512
+from time import sleep
 
 from vyos import airbag
 airbag.enable()
@@ -82,6 +83,20 @@ def verify(ocserv):
 
     # Check network settings
     if "network_settings" in ocserv:
+        # IPv4 or IPv6 pool must be defined
+        ipv4_net_conf = 0
+        if "client_ip_settings" in ocserv["network_settings"]:
+             if "subnet" in ocserv["network_settings"]["client_ip_settings"]:
+                ipv4_net_conf = 1
+
+        ipv6_net_conf = 0
+        if 'client_ipv6_pool' in ocserv["network_settings"]:
+            if 'prefix' in ocserv["network_settings"]["client_ipv6_pool"]:
+                ipv6_net_conf = 1
+
+        if not ipv4_net_conf and not ipv6_net_conf:
+            raise ConfigError('openconnect client-ip-settings or client-ipv6-pool required')
+
         if "push_route" in ocserv["network_settings"]:
             # Replace default route
             if "0.0.0.0/0" in ocserv["network_settings"]["push_route"]:
@@ -121,6 +136,9 @@ def apply(ocserv):
                 os.unlink(file)
     else:
         call('systemctl restart ocserv.service')
+        sleep(1)
+        if not is_systemd_service_running("ocserv.service"):
+            raise ConfigError('openconnect is not started. Check log output')
 
 
 if __name__ == '__main__':
