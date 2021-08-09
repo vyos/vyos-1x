@@ -48,7 +48,7 @@ def verify(pppoe):
     if not pppoe:
         return None
 
-    verify_accel_ppp_base_service(pppoe)
+    verify_accel_ppp_base_service(pppoe, 'PPPoE')
 
     if 'wins_server' in pppoe and len(pppoe['wins_server']) > 2:
         raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')

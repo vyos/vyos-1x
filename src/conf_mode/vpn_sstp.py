@@ -48,7 +48,7 @@ def verify(sstp):
     if not sstp:
         return None
 
-    verify_accel_ppp_base_service(sstp)
+    verify_accel_ppp_base_service(sstp, 'SSTP')
 
     if not sstp['client_ip_pool']:
         raise ConfigError('Client IP subnet required')

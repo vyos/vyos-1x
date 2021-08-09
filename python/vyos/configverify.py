@@ -307,7 +307,7 @@ def verify_vlan_config(config):
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
 
-def verify_accel_ppp_base_service(config):
+def verify_accel_ppp_base_service(config, vpn_type):
     """
     Common helper function which must be used by all Accel-PPP services based
     on get_config_dict()
@@ -315,7 +315,7 @@ def verify_accel_ppp_base_service(config):
     # vertify auth settings
     if dict_search('authentication.mode', config) == 'local':
         if not dict_search('authentication.local_users', config):
-            raise ConfigError('PPPoE local auth mode requires local users to be configured!')
+            raise ConfigError(vpn_type + ' local auth mode requires local users to be configured!')
 
         for user in dict_search('authentication.local_users.username', config):
             user_config = config['authentication']['local_users']['username'][user]
@@ -339,7 +339,7 @@ def verify_accel_ppp_base_service(config):
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
     if 'gateway_address' not in config:
-        raise ConfigError('PPPoE server requires gateway-address to be configured!')
+        raise ConfigError(vpn_type + ' server requires gateway-address to be configured!')
 
     if 'name_server_ipv4' in config:
         if len(config['name_server_ipv4']) > 2:
