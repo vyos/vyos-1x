@@ -86,7 +86,7 @@
 {%       set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '' %}
 {%       set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
-                esp_proposals = {{ esp_group[peer_conf.default_esp_group] | get_esp_ike_cipher | join(',') }}
+                esp_proposals = {{ tunnel_esp | get_esp_ike_cipher | join(',') }}
 {%       if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%         if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
 {%           set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
