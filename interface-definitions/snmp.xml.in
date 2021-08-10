@@ -129,6 +129,26 @@
               <constraintErrorMessage>Location is limited to 255 characters or less</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="oid-enable">
+            <properties>
+              <help>Enable specific oids</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Enable specific oids</description>
+              </valueHelp>
+              <valueHelp>
+                <format>route-table</format>
+                <description>Enable route table oids (ipCidrRouteTable inetCidrRouteTable)</description>
+              </valueHelp>
+              <completionHelp>
+                <list>route-table</list>
+              </completionHelp>
+              <constraint>
+                <regex>^(route-table)$</regex>
+              </constraint>
+              <constraintErrorMessage>Oid must be 'route-table'</constraintErrorMessage>
+            </properties>
+          </leafNode>
           <leafNode name="smux-peer">
             <properties>
               <help>Register a subtree for SMUX-based processing</help>
