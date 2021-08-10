@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -54,6 +54,7 @@ default_config_data = {
     'location' : '',
     'description' : '',
     'contact' : '',
+    'route_table': 'False',
     'trap_source': '',
     'trap_targets': [],
     'vyos_user': '',
@@ -185,6 +186,9 @@ def get_config():
             }
 
             snmp['script_ext'].append(extension)
+
+    if conf.exists('oid-enable route-table'):
+        snmp['route_table'] = True
 
     if conf.exists('vrf'):
         # Append key to dict but don't place it in the default dictionary.
