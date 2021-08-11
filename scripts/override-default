@@ -27,6 +27,7 @@
 import sys
 import glob
 import logging
+from copy import deepcopy
 from lxml import etree
 
 debug = False
@@ -60,6 +61,28 @@ def override_element(l: list):
     for el in parents:
         el.getparent().remove(el)
 
+def merge_remaining(l: list, elementtree):
+    """
+    Merge (now) single leaf node containing 'defaultValue' with leaf nodes
+    of same path and no 'defaultValue'.
+    """
+    for p in l:
+        p = p.split()
+        path_str = f'/interfaceDefinition/*'
+        path_list = []
+        for i in range(len(p)):
+            path_list.append(f'[@name="{p[i]}"]')
+        path_str += '/children/*'.join(path_list)
+        rp = elementtree.xpath(path_str)
+        if len(rp) > 1:
+            for el in rp[1:]:
+                # in practice there will only be one child of the path,
+                # either defaultValue or Properties, since
+                # override_element() has already run
+                for child in el:
+                    rp[0].append(deepcopy(child))
+                el.getparent().remove(el)
+
 def collect_and_override(dir_name):
     """
     Collect elements with defaultValue tag into dictionary indexed by name
@@ -83,6 +106,9 @@ def collect_and_override(dir_name):
             if len(v) > 1:
                 logger.info(f"overridding default in path '{k}'")
                 override_element(v)
+
+        to_merge = list(defv)
+        merge_remaining(to_merge, tree)
 
         revised_str = etree.tostring(root, encoding='unicode', pretty_print=True)
 
