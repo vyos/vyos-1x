@@ -372,18 +372,7 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="rd">
-              <properties>
-                <help>Route Distinguisher</help>
-                <valueHelp>
-                  <format>txt</format>
-                  <description>Route Distinguisher, asn:xxx</description>
-                </valueHelp>
-                <constraint>
-                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/route-distinguisher.xml.i>
             <leafNode name="label">
               <properties>
                 <help>MPLS label value assigned to route</help>
@@ -772,18 +761,7 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="rd">
-              <properties>
-                <help>Route Distinguisher</help>
-                <valueHelp>
-                  <format>txt</format>
-                  <description>Route Distinguisher, asn:xxx</description>
-                </valueHelp>
-                <constraint>
-                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/route-distinguisher.xml.i>
             <leafNode name="label">
               <properties>
                 <help>MPLS label value assigned to route</help>
