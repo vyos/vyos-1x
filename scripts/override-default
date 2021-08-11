@@ -62,26 +62,26 @@ def override_element(l: list):
 
 def collect_and_override(dir_name):
     """
-    Collect elements with defaultValue tag into dictionary indexed by tuple
-    of (name: str, ancestor path: str).
+    Collect elements with defaultValue tag into dictionary indexed by name
+    attributes of ancestor path.
     """
     for fname in glob.glob(f'{dir_name}/*.xml'):
         tree = etree.parse(fname)
         root = tree.getroot()
         defv = {}
 
-        xpath_str = f'//defaultValue'
+        xpath_str = '//defaultValue'
         xp = tree.xpath(xpath_str)
 
         for element in xp:
             ap = element.xpath('ancestor::*[@name]')
             ap_name = [el.get("name") for el in ap]
-            ap_path_str = ' '.join(ap_name[:-1])
-            defv.setdefault((ap_name[-1], ap_path_str), []).append(element)
+            ap_path_str = ' '.join(ap_name)
+            defv.setdefault(ap_path_str, []).append(element)
 
         for k, v in defv.items():
             if len(v) > 1:
-                logger.info(f"overridding default in {k[0]}, path '{k[1]}'")
+                logger.info(f"overridding default in path '{k}'")
                 override_element(v)
 
         revised_str = etree.tostring(root, encoding='unicode', pretty_print=True)
