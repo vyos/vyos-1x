@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+import sys
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -26,6 +28,8 @@ PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
 
 route_map = 'foo-bar-baz10'
+
+log = logging.getLogger('TestProtocolsOSPF')
 
 class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
@@ -202,10 +206,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             for interface in interfaces:
                 self.assertIn(f' no passive-interface {interface}', frrconfig) # default
         except:
-            tmp1 = cmd('sudo dmesg')
-            tmp2 = cmd('tail -n 250 /var/log/messages')
-            tmp3 = cmd('vtysh -c "show run"')
-            self.fail(f'Now we can hopefully see why OSPF fails:\n{tmp1}\n\n{tmp2}\n\n{tmp3}')
+            log.debug(frrconfig)
+            log.debug(cmd('sudo dmesg'))
+            log.debug(cmd('sudo cat /var/log/messages'))
+            log.debug(cmd('vtysh -c "show run"'))
+            self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_08_redistribute(self):
         metric = '15'
@@ -345,4 +350,5 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(zebra_route_map, frrconfig)
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     unittest.main(verbosity=2)
