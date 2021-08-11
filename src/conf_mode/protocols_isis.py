@@ -113,9 +113,13 @@ def verify(isis):
         # Interface MTU must be >= configured lsp-mtu
         mtu = Interface(interface).get_mtu()
         area_mtu = isis['lsp_mtu']
-        if mtu < int(area_mtu):
-            raise ConfigError(f'Interface {interface} has MTU {mtu}, minimum ' \
-                              f'area MTU is {area_mtu}!')
+        # Recommended maximum PDU size = interface MTU - 3 bytes
+        recom_area_mtu = mtu - 3
+        if mtu < int(area_mtu) or int(area_mtu) > recom_area_mtu:
+            raise ConfigError(f'Interface {interface} has MTU {mtu}, ' \
+                              f'current area MTU is {area_mtu}! \n' \
+                              f'Recommended area lsp-mtu {recom_area_mtu} or less ' \
+                              '(calculated on MTU size).')
 
         if 'vrf' in isis:
             # If interface specific options are set, we must ensure that the
