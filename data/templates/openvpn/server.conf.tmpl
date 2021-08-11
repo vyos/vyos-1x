@@ -225,7 +225,7 @@ auth-retry nointeract
 {%   for option in openvpn_option %}
 {%     for argument in option.split('--') %}
 {%       if argument is defined and argument != '' %}
---{{ argument }}
+{{ argument }}
 {%       endif %}
 {%     endfor %}
 {%   endfor %}
