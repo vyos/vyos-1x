@@ -93,6 +93,7 @@ properties = element properties
 {
     help? &
     constraint? &
+    constraintGroup* &
     valueHelp* &
     (element constraintErrorMessage { text })? &
     completionHelp* &
@@ -135,6 +136,16 @@ ownerAttr = attribute owner
 # (respectively).
 # When multiple constraints are listed, they work as logical OR
 constraint = element constraint
+{
+    ( (element regex { text }) |
+      validator )+
+}
+
+# Tag and leaf nodes may have constraintGroups on their names and
+# values (respectively).
+# When multiple constraints are listed within a group, they work as
+# logical AND
+constraintGroup = element constraintGroup
 {
     ( (element regex { text }) |
       validator )+
