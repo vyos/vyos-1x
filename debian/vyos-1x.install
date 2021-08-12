@@ -5,6 +5,7 @@ etc/rsyslog.d
 etc/systemd
 etc/sysctl.d
 etc/udev
+etc/update-motd.d
 etc/vyos
 lib/
 opt/
