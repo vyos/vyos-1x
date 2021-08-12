@@ -3,7 +3,6 @@
 # Conntrack syntax version 3
 # Enables all conntrack modules (previous default behaviour) and omits manually disabled modules.
 
-import os
 import sys
 
 from vyos.configtree import ConfigTree
@@ -18,11 +17,10 @@ filename = sys.argv[1]
 with open(filename, 'r') as f:
     config = ConfigTree(f.read())
 
-# Get all conntrack modules supported through the CLI.
-module_templates_dir = '/opt/vyatta/share/vyatta-cfg/templates/system/conntrack/modules'
 module_path = ['system', 'conntrack', 'modules']
 
-for module in [f.name for f in os.scandir(module_templates_dir) if f.is_dir()]:
+# Go over all conntrack modules available as of v1.3.0.
+for module in ['ftp', 'h323', 'nfs', 'pptp', 'sip', 'sqlnet', 'tftp']:
     # 'disable' is being phased out.
     if config.exists(module_path + [module, 'disable']):
         config.delete(module_path + [module])
