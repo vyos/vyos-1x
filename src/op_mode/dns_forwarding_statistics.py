@@ -11,7 +11,7 @@ PDNS_CMD='/usr/bin/rec_control --socket-dir=/run/powerdns'
 OUT_TMPL_SRC = """
 DNS forwarding statistics:
 
-Cache entries: {{ cache_entries -}}
+Cache entries: {{ cache_entries }}
 Cache size: {{ cache_size }} kbytes
 
 """
