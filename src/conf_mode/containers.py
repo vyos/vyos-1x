@@ -142,9 +142,9 @@ def verify(container):
 
     # Add new network
     if 'network' in container:
-        v4_prefix = 0
-        v6_prefix = 0
         for network, network_config in container['network'].items():
+            v4_prefix = 0
+            v6_prefix = 0
             # If ipv4-prefix not defined for user-defined network
             if 'prefix' not in network_config:
                 raise ConfigError(f'prefix for network "{net}" must be defined!')
