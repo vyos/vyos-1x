@@ -49,9 +49,9 @@ def get_config(config=None):
 
     # IPsec isn't configured enough to warrant starting StrongSWAN for it,
     # it's just some incomplete or leftover options.
-    if not (config.exists_effective("vpn ipsec site-to-site peer") or \
-       config.exists_effective("vpn ipsec profile") or \
-       config.exists_effective("vpn l2tp remote-access ipsec-settings")):
+    if not (config.exists("vpn ipsec site-to-site peer") or \
+       config.exists("vpn ipsec profile") or \
+       config.exists("vpn l2tp remote-access ipsec-settings")):
         return {}
 
     data = {"install_routes": "yes"}
