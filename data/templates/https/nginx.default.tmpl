@@ -17,7 +17,7 @@ server {
         listen {{ server.port }} ssl;
         listen [::]:{{ server.port }} ssl;
 {% else %}
-        listen {{ server.address }}:{{ server.port }} ssl;
+        listen {{ server.address | bracketize_ipv6 }}:{{ server.port }} ssl;
 {% endif %}
 
 {% for name in server.name %}
