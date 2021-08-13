@@ -813,7 +813,7 @@ if __name__ == '__main__':
                 elif args.self_sign:
                     generate_certificate_selfsign(args.certificate, install=args.install, file=args.file)
                 else:
-                    generate_certificate_request(name=args.certificate, install=args.install)
+                    generate_certificate_request(name=args.certificate, install=args.install, file=args.file)
             elif args.crl:
                 generate_certificate_revocation_list(args.crl, install=args.install, file=args.file)
             elif args.ssh:
