@@ -115,7 +115,12 @@ def _format_nodes(inside, conf, xml):
             nodetype = 'tagNode'
             nodename = kw.tagNode
         elif 'syntaxVersion' in conf.keys():
-            conf.pop('syntaxVersion')
+            sv = conf.pop('syntaxVersion')
+            if isinstance(sv, list):
+                for v in sv:
+                    xml[kw.component_version][v['@component']] = v['@version']
+            else:
+                xml[kw.component_version][sv['@component']] = sv['@version']
             continue
         else:
             _fatal(conf.keys())
