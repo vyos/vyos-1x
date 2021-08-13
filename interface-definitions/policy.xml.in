@@ -1124,6 +1124,18 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
+                  <leafNode name="large-comm-list-delete">
+                    <properties>
+                      <help>Delete BGP communities matching the large community-list</help>
+                      <completionHelp>
+                        <path>policy large-community-list</path>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>BGP large community-list</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
                   <leafNode name="local-preference">
                     <properties>
                       <help>Border Gateway Protocol (BGP) local preference attribute</help>
