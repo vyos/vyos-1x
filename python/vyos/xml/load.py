@@ -125,14 +125,20 @@ def _format_nodes(inside, conf, xml):
             for node in nodes:
                 name = node.pop('@name')
                 into = inside + [name]
-                r[name] = _format_node(into, node, xml)
+                if name in r:
+                    r[name].update(_format_node(into, node, xml))
+                else:
+                    r[name] = _format_node(into, node, xml)
                 r[name][kw.node] = nodename
                 xml[kw.tags].append(' '.join(into))
         else:
             node = nodes
             name = node.pop('@name')
             into = inside + [name]
-            r[name] = _format_node(inside + [name], node, xml)
+            if name in r:
+                r[name].update(_format_node(inside + [name], node, xml))
+            else:
+                r[name] = _format_node(inside + [name], node, xml)
             r[name][kw.node] = nodename
             xml[kw.tags].append(' '.join(into))
     return r
