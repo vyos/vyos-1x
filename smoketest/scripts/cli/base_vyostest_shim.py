@@ -20,7 +20,9 @@ from time import sleep
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos import ConfigError
+from vyos.defaults import commit_lock
 from vyos.util import cmd
+from vyos.util import run
 
 save_config = '/tmp/vyos-smoketest-save'
 
@@ -70,6 +72,9 @@ class VyOSUnitTestSHIM:
 
         def cli_commit(self):
             self._session.commit()
+            # during a commit there is a process opening commit_lock, and run() returns 0
+            while run(f'sudo lsof | grep -q {commit_lock}') == 0:
+                sleep(0.250)
 
         def getFRRconfig(self, string, end='$'):
             """ Retrieve current "running configuration" from FRR """
