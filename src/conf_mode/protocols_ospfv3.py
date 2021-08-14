@@ -65,7 +65,7 @@ def verify(ospfv3):
             if 'ifmtu' in if_config:
                 mtu = Interface(ifname).get_mtu()
                 if int(if_config['ifmtu']) > int(mtu):
-                    raise ConfigError(f'OSPFv3 ifmtu cannot go beyond physical MTU of "{mtu}"')
+                    raise ConfigError(f'OSPFv3 ifmtu can not exceed physical MTU of "{mtu}"')
 
     return None
 
@@ -74,7 +74,7 @@ def generate(ospfv3):
         ospfv3['new_frr_config'] = ''
         return None
 
-    ospfv3['new_frr_config'] = render_to_string('frr/ospfv3.frr.tmpl', ospfv3)
+    ospfv3['new_frr_config'] = render_to_string('frr/ospf6d.frr.tmpl', ospfv3)
     return None
 
 def apply(ospfv3):

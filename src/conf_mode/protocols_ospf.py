@@ -177,7 +177,7 @@ def generate(ospf):
 
     ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.tmpl
     ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', ospf)
-    ospf['frr_ospfd_config']   = render_to_string('frr/ospf.frr.tmpl', ospf)
+    ospf['frr_ospfd_config'] = render_to_string('frr/ospfd.frr.tmpl', ospf)
     return None
 
 def apply(ospf):

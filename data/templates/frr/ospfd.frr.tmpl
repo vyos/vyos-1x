@@ -155,8 +155,8 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ospf router-id {{ parameters.router_id }}
 {%   endif %}
 {% endif %}
-{% for interface in passive_interface if passive_interface is defined %}
- passive-interface {{ interface }}
+{% for interface in passive_interface if passive_interface is defined and passive_interface == 'default' %}
+ passive-interface default
 {% endfor %}
 {% for interface in passive_interface_exclude if passive_interface_exclude is defined %}
 {%   if interface.startswith('vlink') %}
