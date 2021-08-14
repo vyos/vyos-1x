@@ -140,6 +140,12 @@
                 </properties>
                 <command>sudo ip xfrm policy list</command>
               </node>
+              <leafNode name="remote-access">
+                 <properties>
+                   <help>Show active VPN server sessions</help>
+                 </properties>
+                <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command>
+              </leafNode>
               <node name="sa">
                 <properties>
                   <help>Show all active IPSec Security Associations (SA)</help>
