@@ -74,17 +74,9 @@ class VyOSUnitTestSHIM:
         def getFRRconfig(self, string, end='$'):
             """ Retrieve current "running configuration" from FRR """
             command = f'vtysh -c "show run" | sed -n "/^{string}{end}/,/^!/p"'
-
-            count = 0
-            tmp = ''
-            while count < 10 and tmp == '':
-                # Let FRR settle after a config change first before harassing it again
-                sleep(1)
-                tmp = cmd(command)
-                count += 1
-
-            if self.debug or tmp == '':
+            out = cmd(command)
+            if self.debug:
                 import pprint
                 print(f'\n\ncommand "{command}" returned:\n')
-                pprint.pprint(tmp)
-            return tmp
+                pprint.pprint(out)
+            return out
