@@ -49,37 +49,37 @@
               <node name="h323">
                 <properties>
                   <help>H.323 connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
               <node name="nfs">
                 <properties>
                   <help>NFS connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
               <node name="pptp">
                 <properties>
                   <help>PPTP connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
               <node name="sip">
                 <properties>
                   <help>SIP connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
               <node name="sqlnet">
                 <properties>
                   <help>SQLnet connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
               <node name="tftp">
                 <properties>
                   <help>TFTP connection tracking</help>
-		  <valueless/>
+                  <valueless/>
                 </properties>
               </node>
             </children>
