@@ -25,9 +25,8 @@ for module in ['ftp', 'h323', 'nfs', 'pptp', 'sip', 'sqlnet', 'tftp']:
     if config.exists(module_path + [module, 'disable']):
         config.delete(module_path + [module])
     # If it wasn't manually 'disable'd, it was enabled by default.
-    # So we 'enable' it in the new syntax.
     else:
-        config.set(module_path + [module, 'enable'])
+        config.set(module_path + [module])
 
 try:
     if config.exists(module_path):
