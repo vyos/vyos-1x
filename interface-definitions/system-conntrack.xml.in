@@ -45,7 +45,7 @@
                   <help>FTP connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="h323">
@@ -53,7 +53,7 @@
                   <help>H.323 connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="nfs">
@@ -61,7 +61,7 @@
                   <help>NFS connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="pptp">
@@ -69,7 +69,7 @@
                   <help>PPTP connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="sip">
@@ -77,7 +77,7 @@
                   <help>SIP connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="sqlnet">
@@ -85,7 +85,7 @@
                   <help>SQLnet connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
               <node name="tftp">
@@ -93,7 +93,7 @@
                   <help>TFTP connection tracking settings</help>
                 </properties>
                 <children>
-                  #include <include/conntrack-module-disable.xml.i>
+                  #include <include/conntrack-module-enable.xml.i>
                 </children>
               </node>
             </children>
