@@ -23,6 +23,11 @@ import hurry.filesize
 
 import vyos.util
 
+def convert(text):
+    return int(text) if text.isdigit() else text.lower()
+
+def alphanum_key(key):
+    return [convert(c) for c in re.split('([0-9]+)', str(key))]
 
 try:
     session = vici.Session()
@@ -109,6 +114,6 @@ for sa in sas:
                 sa_data.append(data)
 
 headers = ["Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out", "Remote address", "Remote ID", "Proposal"]
-sa_data = sorted(sa_data, key=lambda peer: peer[0])
+sa_data = sorted(sa_data, key=alphanum_key)
 output = tabulate.tabulate(sa_data, headers)
 print(output)
