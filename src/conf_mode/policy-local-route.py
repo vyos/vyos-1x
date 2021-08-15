@@ -114,15 +114,15 @@ def apply(pbr):
             # Only fwmark in the rule
             # set policy local-route rule 101 fwmark '23'
             if 'fwmark' in pbr['rule'][rule] and not 'source' in pbr['rule'][rule]:
-                for fwmk in pbr['rule'][rule]['fwmark']:
-                    call(f'ip rule add prio {rule} from all fwmark {fwmk} lookup {table}')
+                fwmk = pbr['rule'][rule]['fwmark']
+                call(f'ip rule add prio {rule} from all fwmark {fwmk} lookup {table}')
             # Source and fwmark in the rule
             # set policy local-route rule 100 source '203.0.113.1'
             # set policy local-route rule 100 fwmark '23'
             if 'source' in pbr['rule'][rule] and 'fwmark' in pbr['rule'][rule]:
+                fwmk = pbr['rule'][rule]['fwmark']
                 for src in pbr['rule'][rule]['source']:
-                    for fwmk in pbr['rule'][rule]['fwmark']:
-                        call(f'ip rule add prio {rule} from {src} fwmark {fwmk} lookup {table}')
+                    call(f'ip rule add prio {rule} from {src} fwmark {fwmk} lookup {table}')
 
     return None
 
