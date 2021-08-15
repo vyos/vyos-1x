@@ -97,7 +97,7 @@ def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
     # modules we need to either insmod or rmmod the helpers.
     for module, module_config in module_map.items():
-        if dict_search(f'modules.{module}.disable', conntrack) != None:
+        if dict_search(f'modules.{module}', conntrack) is None:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     # Only remove the module if it's loaded
