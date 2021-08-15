@@ -148,7 +148,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
 
     def test_conntrack_module_disable(self):
-        # Some features are disabled by onloading the kernel helper module(s)
+        # conntrack helper modules are disabled by default
         modules = {
             'ftp' : {
                 'driver' : ['nf_nat_ftp', 'nf_conntrack_ftp'],
@@ -176,30 +176,14 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
              },
         }
 
+        # load modules
         for module in modules:
-            self.cli_set(base_path + ['modules', module, 'disable'])
+            self.cli_set(base_path + ['modules', module])
 
         # commit changes
         self.cli_commit()
 
-        # verify modules are no longer loaded on the system
-        for module, module_options in modules.items():
-            if 'driver' in module_options:
-                for driver in module_options['driver']:
-                    self.assertFalse(os.path.isdir(f'/sys/module/{driver}'))
-            if 'iptables' in module_options:
-                rules = cmd('sudo iptables-save -t raw')
-                for ruleset in module_options['iptables']:
-                    self.assertNotIn(ruleset, rules)
-
-        # reload modules
-        for module in modules:
-            self.cli_delete(base_path + ['modules', module, 'disable'])
-
-        # commit changes
-        self.cli_commit()
-
-        # verify modules are again loaded on the system
+        # verify modules are loaded on the system
         for module, module_options in modules.items():
             if 'driver' in module_options:
                 for driver in module_options['driver']:
@@ -208,6 +192,23 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                 rules = cmd('sudo iptables-save -t raw')
                 for ruleset in module_options['iptables']:
                     self.assertIn(ruleset, rules)
+
+        # unload modules
+        for module in modules:
+            self.cli_delete(base_path + ['modules', module])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify modules are not loaded on the system
+        for module, module_options in modules.items():
+            if 'driver' in module_options:
+                for driver in module_options['driver']:
+                    self.assertFalse(os.path.isdir(f'/sys/module/{driver}'))
+            if 'iptables' in module_options:
+                rules = cmd('sudo iptables-save -t raw')
+                for ruleset in module_options['iptables']:
+                    self.assertNotIn(ruleset, rules)
 
     def test_conntrack_hash_size(self):
         hash_size = '65536'
