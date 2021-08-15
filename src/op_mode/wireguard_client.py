@@ -39,10 +39,11 @@ To enable this configuration on a VyOS router you can use the following commands
 set interfaces wireguard {{ interface }} peer {{ name }} allowed-ips '{{ addr }}'
 {% endfor %}
 set interfaces wireguard {{ interface }} peer {{ name }} pubkey '{{ pubkey }}'
+
+=== RoadWarrior (client) configuration ===
 """
 
 client_config = """
-=== RoadWarrior (client) configuration ===
 
 [Interface]
 PrivateKey = {{ privkey }}
