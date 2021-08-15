@@ -267,7 +267,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' network {network} area {area}', frrconfig)
 
 
-    def test_ospf_10_interface_configureation(self):
+    def test_ospf_10_interface_configuration(self):
         interfaces = Section.interfaces('ethernet')
         password = 'vyos1234'
         bandwidth = '10000'
