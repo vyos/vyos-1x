@@ -158,15 +158,19 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ospf router-id {{ parameters.router_id }}
 {%   endif %}
 {% endif %}
-{% for interface in passive_interface if passive_interface is defined and passive_interface == 'default' %}
- passive-interface default
-{% endfor %}
-{% for interface in passive_interface_exclude if passive_interface_exclude is defined %}
-{%   if interface.startswith('vlink') %}
+{% if passive_interface is defined and passive_interface is not none %}
+{%   for interface in passive_interface %}
+ passive-interface {{ interface }}
+{%   endfor %}
+{% endif %}
+{% if passive_interface_exclude is defined and passive_interface_exclude is not none %}
+{%   for interface in passive_interface_exclude if passive_interface_exclude is defined %}
+{%     if interface.startswith('vlink') %}
 {%     set interface = interface.upper() %}
-{%   endif %}
+{%     endif %}
  no passive-interface {{ interface }}
-{% endfor %}
+{%   endfor %}
+{% endif %}
 {% if redistribute is defined and redistribute is not none %}
 {%   for protocol, options in redistribute.items() %}
  redistribute {{ protocol }} {{ 'metric ' + options.metric if options.metric is defined }} {{ 'metric-type ' + options.metric_type if options.metric_type is defined }} {{ 'route-map ' + options.route_map if options.route_map is defined }}
