@@ -67,46 +67,54 @@ if args.source or args.destination:
             continue
         interface = dict_search('match.right', data['expr'][0])
         srcdest = ''
-        for i in [1, 2]:
-            srcdest_json = dict_search('match.right', data['expr'][i])
-            if not srcdest_json:
-                continue
-
-            if isinstance(srcdest_json,str):
-                srcdest += srcdest_json + ' '
-            elif 'prefix' in srcdest_json:
-                addr_tmp = dict_search('match.right.prefix.addr', data['expr'][i])
-                len_tmp = dict_search('match.right.prefix.len', data['expr'][i])
-                if addr_tmp and len_tmp:
-                    srcdest = addr_tmp + '/' + str(len_tmp) + ' '
-            elif 'set' in srcdest_json:
-                if isinstance(srcdest_json['set'][0],str):
-                    srcdest += 'port ' + str(srcdest_json['set'][0]) + ' '
-                else:
-                    port_range = srcdest_json['set'][0]['range']
-                    srcdest += 'port ' + str(port_range[0]) + '-' + str(port_range[1]) + ' '
-
+        srcdests = []
         tran_addr = ''
-        tran_addr_json = dict_search('snat.addr' if args.source else 'dnat.addr', data['expr'][3])
-        if tran_addr_json:
-            if isinstance(tran_addr_json,str):
-                tran_addr = tran_addr_json
-            elif 'prefix' in tran_addr_json:
-                addr_tmp = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
-                len_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
-                if addr_tmp and len_tmp:
-                    tran_addr = addr_tmp + '/' + str(len_tmp)
-        else:
-            if 'masquerade' in data['expr'][3]:
-                tran_addr = 'masquerade'
-            elif 'log' in data['expr'][3]:
-                continue
+        for i in range(1,len(data['expr']) + 1):
+            srcdest_json = dict_search('match.right', data['expr'][i])
+            if srcdest_json:
+                if isinstance(srcdest_json,str):
+                    if srcdest != '':
+                        srcdests.append(srcdest)
+                        srcdest = ''
+                    srcdest = srcdest_json + ' '
+                elif 'prefix' in srcdest_json:
+                    addr_tmp = dict_search('match.right.prefix.addr', data['expr'][i])
+                    len_tmp = dict_search('match.right.prefix.len', data['expr'][i])
+                    if addr_tmp and len_tmp:
+                        srcdest = addr_tmp + '/' + str(len_tmp) + ' '
+                elif 'set' in srcdest_json:
+                    if isinstance(srcdest_json['set'][0],int):
+                        srcdest += 'port ' + str(srcdest_json['set'][0]) + ' '
+                    else:
+                        port_range = srcdest_json['set'][0]['range']
+                        srcdest += 'port ' + str(port_range[0]) + '-' + str(port_range[1]) + ' '
+            
+            tran_addr_json = dict_search('snat' if args.source else 'dnat', data['expr'][i])
+            if tran_addr_json:
+                if isinstance(tran_addr_json['addr'],str):
+                    tran_addr += tran_addr_json['addr'] + ' '
+                elif 'prefix' in tran_addr_json['addr']:
+                    addr_tmp = dict_search('snat.addr.prefix.addr' if args.source else 'dnat.addr.prefix.addr', data['expr'][3])
+                    len_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
+                    if addr_tmp and len_tmp:
+                        tran_addr += addr_tmp + '/' + str(len_tmp) + ' '
+            
+                if isinstance(tran_addr_json['port'],int):
+                    tran_addr += 'port ' + tran_addr_json['port']
+            
+            else:
+                if 'masquerade' in data['expr'][i]:
+                    tran_addr = 'masquerade'
+                elif 'log' in data['expr'][i]:
+                    continue
 
-        tran_port = dict_search('snat.port' if args.source else 'dnat.port', data['expr'][3])
-        if tran_port:
-            tran_addr += ' port ' + str(tran_port)
-
-        print(format_nat_rule.format(rule, srcdest, tran_addr, interface))
+        if srcdest != '':
+            srcdests.append(srcdest)
+            srcdest = ''
+        print(format_nat_rule.format(rule, srcdests[0], tran_addr, interface))
+        
+        for i in range(1, list(srcdest)):
+            print(format_nat_rule.format(' ', srcdests[i], ' ', ' '))
     
     exit(0)
 else:
