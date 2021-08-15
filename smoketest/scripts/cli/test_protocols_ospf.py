@@ -20,6 +20,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import process_named_running
 from vyos.util import cmd
@@ -348,6 +349,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # Verify FRR configuration
         frrconfig = self.getFRRconfig(zebra_route_map)
         self.assertNotIn(zebra_route_map, frrconfig)
+
+    def test_ospf_13_interface_area(self):
+        area = '0'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['area', area, 'network', '10.0.0.0/8'])
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'area', area])
+
+        # we can not have bot area network and interface area set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area', area, 'network'])
+
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+
+        for interface in interfaces:
+            config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf area {area}', config)
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
