@@ -157,6 +157,15 @@ def verify(ospf):
                 raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
                                   f'concurrently for {interface}!')
 
+            # One can not use the "network <prefix> area <id>" command and an
+            # per interface area assignment at the same time. FRR will error
+            # out using: "Please remove all network commands first."
+            if 'area' in ospf:
+                for area, area_config in ospf['area'].items():
+                    if 'network' in area_config:
+                        raise ConfigError('Can not use OSPF interface area and area ' \
+                                          'network configuration at the same time!')
+
             if 'vrf' in ospf:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS

@@ -361,6 +361,23 @@
     </constraint>
   </properties>
   <children>
+    <leafNode name="area">
+      <properties>
+        <help>Enable OSPF on this interface</help>
+        <valueHelp>
+          <format>u32</format>
+          <description>OSPF area ID as decimal notation</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv4</format>
+          <description>OSPF area ID in IP address notation</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+          <validator name="ip-address"/>
+        </constraint>
+      </properties>
+    </leafNode>
     #include <include/ospf/authentication.xml.i>
     #include <include/ospf/intervals.xml.i>
     #include <include/ospf/interface-common.xml.i>

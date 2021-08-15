@@ -14,6 +14,12 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%         endif %}
 {%       endif %}
 {%     endif %}
+{%     if iface_config.area is defined and iface_config.area is not none %}
+ ip ospf area {{ iface_config.area }}
+{%     endif %}
+{%     if iface_config.bandwidth is defined and iface_config.bandwidth is not none %}
+ bandwidth {{ iface_config.bandwidth }}
+{%     endif %}
 {%     if iface_config.cost is defined and iface_config.cost is not none %}
  ip ospf cost {{ iface_config.cost }}
 {%     endif %}
@@ -42,9 +48,6 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     endif %}
 {%     if iface_config.network is defined and iface_config.network is not none %}
  ip ospf network {{ iface_config.network }}
-{%     endif %}
-{%     if iface_config.bandwidth is defined and iface_config.bandwidth is not none %}
- bandwidth {{ iface_config.bandwidth }}
 {%     endif %}
 !
 {%   endfor %}
