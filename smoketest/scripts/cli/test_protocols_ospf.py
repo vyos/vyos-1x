@@ -229,13 +229,19 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
-        self.assertIn(f'router ospf', frrconfig)
-        for protocol in redistribute:
-            if protocol in ['kernel', 'static']:
-                self.assertIn(f' redistribute {protocol} metric {metric} route-map {route_map}', frrconfig)
-            else:
-                self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
-
+        try:
+            self.assertIn(f'router ospf', frrconfig)
+            for protocol in redistribute:
+                if protocol in ['kernel', 'static']:
+                    self.assertIn(f' redistribute {protocol} metric {metric} route-map {route_map}', frrconfig)
+                else:
+                    self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+        except:
+            log.debug(frrconfig)
+            log.debug(cmd('sudo dmesg'))
+            log.debug(cmd('sudo cat /var/log/messages'))
+            log.debug(cmd('vtysh -c "show run"'))
+            self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_09_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
