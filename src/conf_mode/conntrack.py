@@ -105,7 +105,6 @@ def apply(conntrack):
                         cmd(f'rmmod {mod}')
             if 'iptables' in module_config:
                 for rule in module_config['iptables']:
-                    print(f'iptables --delete {rule}')
                     cmd(f'iptables --delete {rule}')
         else:
             if 'ko' in module_config:
