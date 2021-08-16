@@ -105,7 +105,9 @@ def apply(conntrack):
                         cmd(f'rmmod {mod}')
             if 'iptables' in module_config:
                 for rule in module_config['iptables']:
-                    cmd(f'iptables --delete {rule}')
+                    # Only install iptables rule if it does not exist
+                    tmp = run(f'iptables --check {rule}')
+                    if tmp == 0: cmd(f'iptables --delete {rule}')
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
@@ -114,9 +116,7 @@ def apply(conntrack):
                 for rule in module_config['iptables']:
                     # Only install iptables rule if it does not exist
                     tmp = run(f'iptables --check {rule}')
-                    if tmp > 0:
-                        cmd(f'iptables --insert {rule}')
-
+                    if tmp > 0: cmd(f'iptables --insert {rule}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values
