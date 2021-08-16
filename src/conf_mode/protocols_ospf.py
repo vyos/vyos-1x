@@ -149,18 +149,18 @@ def verify(ospf):
     if route_map_name: verify_route_map(route_map_name, ospf)
 
     if 'interface' in ospf:
-        for interface in ospf['interface']:
+        for interface, interface_config in ospf['interface'].items():
             verify_interface_exists(interface)
             # One can not use dead-interval and hello-multiplier at the same
             # time. FRR will only activate the last option set via CLI.
-            if {'hello_multiplier', 'dead_interval'} <= set(ospf['interface'][interface]):
+            if {'hello_multiplier', 'dead_interval'} <= set(interface_config):
                 raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
                                   f'concurrently for {interface}!')
 
             # One can not use the "network <prefix> area <id>" command and an
             # per interface area assignment at the same time. FRR will error
             # out using: "Please remove all network commands first."
-            if 'area' in ospf:
+            if 'area' in ospf and 'area' in interface_config:
                 for area, area_config in ospf['area'].items():
                     if 'network' in area_config:
                         raise ConfigError('Can not use OSPF interface area and area ' \
