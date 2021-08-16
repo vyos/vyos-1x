@@ -147,7 +147,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(get_sysctl(f'{parameter}'), parameter_config['default_value'])
 
 
-    def test_conntrack_module_disable(self):
+    def test_conntrack_module_enable(self):
         # conntrack helper modules are disabled by default
         modules = {
             'ftp' : {
