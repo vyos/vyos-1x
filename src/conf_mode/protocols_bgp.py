@@ -221,27 +221,22 @@ def verify(bgp):
             raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
 
     # Throw an error if the global administrative distance parameters aren't all filled out.
-    if dict_search('parameters.distance', bgp) == None:
-        pass
-    else:
-        if dict_search('parameters.distance.global', bgp):
-            for key in ['external', 'internal', 'local']:
-                if dict_search(f'parameters.distance.global.{key}', bgp) == None:
-                    raise ConfigError('Missing mandatory configuration option for '\
-                                     f'global administrative distance {key}!')
+    if dict_search('parameters.distance.global', bgp) != None:
+        for key in ['external', 'internal', 'local']:
+            if dict_search(f'parameters.distance.global.{key}', bgp) == None:
+                raise ConfigError('Missing mandatory configuration option for '\
+                                 f'global administrative distance {key}!')
 
-    # Throw an error if the address family specific administrative distance parameters aren't all filled out.
-    if dict_search('address_family', bgp) == None:
-        pass
-    else:
-        for address_family_name in dict_search('address_family', bgp):
-            if dict_search(f'address_family.{address_family_name}.distance', bgp) == None:
-                pass
-            else:
+    # Address Family specific validation
+    if 'address_family' in bgp:
+        for afi, afi_config in bgp['address_family'].items():
+            if 'distance' in afi_config:
+                # Throw an error if the address family specific administrative
+                # distance parameters aren't all filled out.
                 for key in ['external', 'internal', 'local']:
-                    if dict_search(f'address_family.{address_family_name}.distance.{key}', bgp) == None:
+                    if key not in afi_config['distance']:
                         raise ConfigError('Missing mandatory configuration option for '\
-                                         f'{address_family_name} administrative distance {key}!')
+                                         f'{afi} administrative distance {key}!')
 
     return None
 
