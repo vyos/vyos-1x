@@ -628,6 +628,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # templates and Jinja2 FRR template.
         table = '1000'
 
+        self.cli_set(base_path + ['local-as', ASN])
+        # testing only one AFI is sufficient as it's generic code
+
         for vrf in vrfs:
             vrf_base = ['vrf', 'name', vrf]
             self.cli_set(vrf_base + ['table', table])
@@ -636,15 +639,26 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(vrf_base + ['protocols', 'bgp', 'route-map', route_map_in])
             table = str(int(table) + 1000)
 
+            # import VRF routes do main RIB
+            self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'import', 'vrf', vrf])
+
         self.cli_commit()
 
-        for vrf in vrfs:
-            # Verify FRR bgpd configuration
-            frrconfig = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
-            self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
-            self.assertIn(f' bgp router-id {router_id}', frrconfig)
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family ipv6 unicast', frrconfig)
 
-            # CCC: Currently this is not working as FRR() class does not support
+
+        for vrf in vrfs:
+            self.assertIn(f'  import vrf {vrf}', frrconfig)
+
+            # Verify FRR bgpd configuration
+            frr_vrf_config = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
+            self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
+            self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
+
+            # XXX: Currently this is not working as FRR() class does not support
             # route-maps for multiple vrfs because the modify_section() only works
             # on lines and not text blocks.
             #
@@ -694,6 +708,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  neighbor {interface} activate', frrconfig)
         self.assertIn(f' exit-address-family', frrconfig)
 
+
     def test_bgp_13_solo(self):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.55'
@@ -710,9 +725,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' neighbor {neighbor} solo', frrconfig)
 
+
     def test_bgp_14_vpn(self):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.55'
+        vrf_name = 'red'
 
         self.cli_set(base_path + ['local-as', ASN])
         # testing only one AFI is sufficient as it's generic code

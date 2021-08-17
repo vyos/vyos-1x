@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_prefix_list
 from vyos.configverify import verify_route_map
+from vyos.configverify import verify_vrf
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
@@ -238,6 +239,16 @@ def verify(bgp):
                         raise ConfigError('Missing mandatory configuration option for '\
                                          f'{afi} administrative distance {key}!')
 
+            if afi in ['ipv4_unicast', 'ipv6_unicast']:
+                if 'import' in afi_config and 'vrf' in afi_config['import']:
+                    # Check if VRF exists
+                    verify_vrf(afi_config['import']['vrf'])
+
+                    # FRR error: please unconfigure vpn to vrf commands before
+                    # using import vrf commands
+                    if 'vpn' in afi_config['import'] or dict_search('export.vpn', afi_config) != None:
+                        raise ConfigError('Please unconfigure VPN to VRF commands before '\
+                                          'using "import vrf" commands!')
     return None
 
 def generate(bgp):

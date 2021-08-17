@@ -23,6 +23,19 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="vrf">
+      <properties>
+        <help>VRF to import from</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>VRF instance name</description>
+        </valueHelp>
+        <completionHelp>
+          <path>vrf name</path>
+        </completionHelp>
+        <multi/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->

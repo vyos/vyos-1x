@@ -311,8 +311,15 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     if afi_config.export is defined and afi_config.export.vpn is defined %}
  export vpn
 {%     endif %}
-{%     if afi_config.import is defined and afi_config.import.vpn is defined %}
+{%     if afi_config.import is defined and afi_config.import is not none %}
+{%       if afi_config.import.vpn is defined %}
  import vpn
+{%       endif %}
+{%       if afi_config.import.vrf is defined and afi_config.import.vrf is not none %}
+{%         for vrf in afi_config.import.vrf %}
+ import vrf {{ vrf }}
+{%         endfor %}
+{%       endif %}
 {%     endif %}
 {%     if afi_config.local_install is defined and afi_config.local_install is not none %}
 {%       for interface in afi_config.local_install.interface %}
