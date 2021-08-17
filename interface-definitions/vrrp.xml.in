@@ -45,7 +45,7 @@
                     <properties>
                       <help>VRRP password</help>
                       <valueHelp>
-                        <format>text</format>
+                        <format>txt</format>
                         <description>Password string (up to 8 characters)</description>
                       </valueHelp>
                       <constraint>
@@ -282,7 +282,7 @@
                   <multi/>
                   <help>Sync group member</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>VRRP group name</description>
                   </valueHelp>
                   <completionHelp>
