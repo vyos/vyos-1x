@@ -83,17 +83,8 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  #include <include/port-number.xml.i>
                   <leafNode name="port">
-                    <properties>
-                      <help>LDAP server port to use (default: 389)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Port number to use</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
                     <defaultValue>389</defaultValue>
                   </leafNode>
                   <leafNode name="server">
