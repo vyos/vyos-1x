@@ -19,6 +19,9 @@
     </completionHelp>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <children>
+    #include <include/bgp/exact-match.xml.i>
+  </children>
 </tagNode>
 <leafNode name="statistics">
   <properties>
