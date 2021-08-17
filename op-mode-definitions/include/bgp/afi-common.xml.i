@@ -13,7 +13,7 @@
 </tagNode>
 <tagNode name="large-community">
   <properties>
-    <help>List of large-community numbers</help>
+    <help>Display routes matching the large-communities</help>
     <completionHelp>
       <list>AA:BB:CC</list>
     </completionHelp>
