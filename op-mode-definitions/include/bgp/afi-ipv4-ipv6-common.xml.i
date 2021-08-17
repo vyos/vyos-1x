@@ -22,12 +22,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
-    <leafNode name="exact-match">
-      <properties>
-        <help>Exact match of the communities</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/bgp/exact-match.xml.i>
     <leafNode name="graceful-shutdown">
       <properties>
         <help>Graceful shutdown (well-known community)</help>
@@ -105,12 +100,7 @@
     </completionHelp>
   </properties>
   <children>
-    <leafNode name="exact-match">
-      <properties>
-        <help>Show BGP routes exactly matching specified community list</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/bgp/exact-match.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
