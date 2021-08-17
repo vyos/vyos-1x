@@ -49,18 +49,7 @@
                   <multi/>
                 </properties>
               </leafNode>
-              <leafNode name="port">
-                <properties>
-                  <help>Destination or source port to listen and retransmit on [REQUIRED]</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>UDP port to listen on</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/port-number.xml.i>
             </children>
           </tagNode>
         </children>
