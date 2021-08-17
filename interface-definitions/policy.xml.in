@@ -139,7 +139,7 @@
       </tagNode>
       <tagNode name="as-path-list">
         <properties>
-          <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <help>Add a BGP autonomous system path filter</help>
           <valueHelp>
             <format>txt</format>
             <description>AS path list name</description>
@@ -176,10 +176,10 @@
       </tagNode>
       <tagNode name="community-list">
         <properties>
-          <help>Border Gateway Protocol (BGP) autonomous system path filter</help>
+          <help>Add a BGP community list entry</help>
           <valueHelp>
             <format>txt</format>
-            <description>Border Gateway Protocol (BGP) community-list filter</description>
+            <description>BGP community-list name</description>
           </valueHelp>
         </properties>
         <children>
@@ -236,10 +236,10 @@
       </tagNode>
       <tagNode name="extcommunity-list">
         <properties>
-          <help>Border Gateway Protocol (BGP) extended community-list filter</help>
+          <help>Add a BGP extended community list entry</help>
           <valueHelp>
             <format>txt</format>
-            <description>Border Gateway Protocol (BGP) extended community-list filter</description>
+            <description>BGP extended community-list name</description>
           </valueHelp>
         </properties>
         <children>
@@ -281,10 +281,10 @@
       </tagNode>
       <tagNode name="large-community-list">
         <properties>
-          <help>Border Gateway Protocol (BGP) large-community-list filter</help>
+          <help>Add a BGP large community list entry</help>
           <valueHelp>
             <format>txt</format>
-            <description>Border Gateway Protocol (BGP) large-community-list filter</description>
+            <description>BGP large-community-list name</description>
           </valueHelp>
         </properties>
         <children>
@@ -770,7 +770,7 @@
                   </leafNode>
                   <leafNode name="origin">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) origin code to match</help>
+                      <help>BGP origin code to match</help>
                       <completionHelp>
                         <list>egp igp incomplete</list>
                       </completionHelp>
@@ -872,7 +872,7 @@
                 <children>
                   <node name="aggregator">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) aggregator attribute</help>
+                      <help>BGP aggregator attribute</help>
                     </properties>
                     <children>
                       <leafNode name="as">
@@ -921,13 +921,13 @@
                   </leafNode>
                   <leafNode name="atomic-aggregate">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) atomic aggregate attribute</help>
+                      <help>BGP atomic aggregate attribute</help>
                       <valueless/>
                     </properties>
                   </leafNode>
                   <node name="comm-list">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) communities matching a community-list</help>
+                      <help>BGP communities matching a community-list</help>
                     </properties>
                     <children>
                       <leafNode name="comm-list">
@@ -1138,7 +1138,7 @@
                   </leafNode>
                   <leafNode name="local-preference">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) local preference attribute</help>
+                      <help>BGP local preference attribute</help>
                       <valueHelp>
                         <format>u32:0-4294967295</format>
                         <description>Local preference value</description>
@@ -1208,7 +1208,7 @@
                   </leafNode>
                   <leafNode name="originator-id">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) originator ID attribute</help>
+                      <help>BGP originator ID attribute</help>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>Orignator IP address</description>
@@ -1261,7 +1261,7 @@
                   </leafNode>
                   <leafNode name="weight">
                     <properties>
-                      <help>Border Gateway Protocol (BGP) weight attribute</help>
+                      <help>BGP weight attribute</help>
                       <valueHelp>
                         <format>u32:0-4294967295</format>
                         <description>BGP weight</description>
