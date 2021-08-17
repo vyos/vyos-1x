@@ -242,7 +242,7 @@
             <description>BGP extended community-list name</description>
           </valueHelp>
           <constraint>
-            <regex>^[a-zA-Z0-9]+$</regex>
+            <regex>^[-_a-zA-Z0-9]+$</regex>
           </constraint>
           <constraintErrorMessage>Should be an alphanumeric name</constraintErrorMessage>
         </properties>
