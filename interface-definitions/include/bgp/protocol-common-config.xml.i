@@ -478,6 +478,7 @@
             </tagNode>
           </children>
         </node>
+        #include <include/bgp/afi-export-import.xml.i>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -638,6 +639,7 @@
             </tagNode>
           </children>
         </node>
+        #include <include/bgp/afi-export-import.xml.i>
         <tagNode name="network">
           <properties>
             <help>Import BGP network/prefix into multicast IPv6 RIB</help>
