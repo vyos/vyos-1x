@@ -315,9 +315,17 @@
                 <properties>
                   <help>Regular expression to match against a large community list</help>
                   <valueHelp>
-                    <format>&lt;aa:nn:nn&gt;</format>
-                    <description>Large Community value</description>
+                    <format>ASN:NN:NN</format>
+                    <description>BGP large-community-list filter</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>IP:NN:NN</format>
+                    <description>BGP large-community-list filter (IPv4 address format)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="large-community-list"/>
+                  </constraint>
+                  <constraintErrorMessage>Malformed large-community-list</constraintErrorMessage>
                 </properties>
               </leafNode>
             </children>
