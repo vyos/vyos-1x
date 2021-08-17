@@ -23,6 +23,18 @@
     #include <include/bgp/exact-match.xml.i>
   </children>
 </tagNode>
+<tagNode name="large-community-list">
+  <properties>
+    <help>Display routes matching the large-community-list</help>
+    <completionHelp>
+      <path>policy large-community-list</path>
+    </completionHelp>
+  </properties>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <children>
+    #include <include/bgp/exact-match.xml.i>
+  </children>
+</tagNode>
 <leafNode name="statistics">
   <properties>
     <help>RIB advertisement statistics</help>
