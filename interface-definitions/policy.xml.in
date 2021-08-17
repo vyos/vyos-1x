@@ -241,6 +241,10 @@
             <format>txt</format>
             <description>BGP extended community-list name</description>
           </valueHelp>
+          <constraint>
+            <regex>^[a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Should be an alphanumeric name</constraintErrorMessage>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
@@ -286,6 +290,10 @@
             <format>txt</format>
             <description>BGP large-community-list name</description>
           </valueHelp>
+          <constraint>
+            <regex>^[a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Should be an alphanumeric name</constraintErrorMessage>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
