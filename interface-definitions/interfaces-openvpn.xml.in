@@ -635,6 +635,53 @@
                 </properties>
                 <defaultValue>net30</defaultValue>
               </leafNode>
+              <node name="2fa">
+                <properties>
+                  <help>2-factor authentication</help>
+                </properties>
+                <children>
+                  <node name="totp">
+                    <properties>
+                      <help>Time-based One-Time Passwords</help>
+                    </properties>
+                    <children>
+                      <leafNode name="slop">
+                        <properties>
+                          <help>Maximum allowed clock slop in seconds (default: 180)</help>
+                        </properties>
+                        <defaultValue>180</defaultValue>
+                      </leafNode>
+                      <leafNode name="t0">
+                        <properties>
+                          <help>time drift in seconds (default: 0)</help>
+                        </properties>
+                        <defaultValue>0</defaultValue>
+                      </leafNode>
+                      <leafNode name="step">
+                        <properties>
+                          <help>Step value for TOTP in seconds (default: 30)</help>
+                        </properties>
+                        <defaultValue>30</defaultValue>
+                      </leafNode>
+                      <leafNode name="digits">
+                        <properties>
+                          <help>Number of digits to use from TOTP hash (default: 6)</help>
+                        </properties>
+                        <defaultValue>6</defaultValue>
+                      </leafNode>
+                      <leafNode name="challenge">
+                        <properties>
+                          <help>expect password as result of a challenge response protocol (default: enabled)</help>
+                          <constraint>
+                            <regex>^(enable|disable)$</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>enable</defaultValue>
+                      </leafNode>
+                   </children>
+                  </node>
+               </children>
+              </node>
             </children>
           </node>
           <leafNode name="shared-secret-key">

@@ -25,7 +25,9 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Address
 from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
+from pathlib import Path
 from netifaces import interfaces
+from secrets import SystemRandom
 from shutil import rmtree
 
 from vyos.config import Config
@@ -309,9 +311,9 @@ def verify(openvpn):
                 raise ConfigError('Must specify "server subnet" or add interface to bridge in server mode')
 
 
-        for client in (dict_search('client', openvpn) or []):
-            if len(client['ip']) > 1 or len(client['ipv6_ip']) > 1:
-                raise ConfigError(f'Server client "{client["name"]}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
+        for client_k, client_v in (dict_search('server.client', openvpn).items() or []):
+            if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
+                raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
 
         if dict_search('server.client_ip_pool', openvpn):
             if not (dict_search('server.client_ip_pool.start', openvpn) and dict_search('server.client_ip_pool.stop', openvpn)):
@@ -358,6 +360,23 @@ def verify(openvpn):
                             for v6PoolNet in v6PoolNets:
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
+
+        if dict_search('server.2fa.totp', openvpn):
+            if not Path(otp_file).is_file():
+                Path(otp_file).touch()
+            for client in (dict_search('server.client', openvpn) or []):
+                with open(otp_file, "r+") as f:
+                    users = f.readlines()
+                    exists = None
+                    for user in users:
+                        if re.search('^' + client + ' ', user):
+                            exists = 'true'
+
+                    if not exists:
+                        random = SystemRandom()
+                        totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
+                        f.write("{0} otp totp:sha1:base32:{1}::xxx *\n".format(client, totp_secret))
+
 
     else:
         # checks for both client and site-to-site go here
