@@ -12,5 +12,14 @@
   </properties>
 </leafNode>
 #include <include/bgp/route-distinguisher.xml.i>
-#include <include/bgp/route-target.xml.i>
+<node name="route-target">
+  <properties>
+    <help>Route Target</help>
+  </properties>
+  <children>
+    #include <include/bgp/route-target-both.xml.i>
+    #include <include/bgp/route-target-export.xml.i>
+    #include <include/bgp/route-target-import.xml.i>
+  </children>
+</node>
 <!-- include end -->
