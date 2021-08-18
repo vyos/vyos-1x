@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -55,7 +55,7 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    
+
     base = ['nat66']
     nat = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
@@ -90,7 +90,7 @@ def get_config(config=None):
     # be done only once
     if not get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK'):
         nat['helper_functions'] = 'add'
-        
+
         # Retrieve current table handler positions
         nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_IGNORE')
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
@@ -109,7 +109,7 @@ def verify(nat):
     if 'helper_functions' in nat and nat['helper_functions'] != 'has':
         if not (nat['pre_ct_conntrack'] or nat['out_ct_conntrack']):
             raise Exception('could not determine nftable ruleset handlers')
-    
+
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
             err_msg = f'Source NAT66 configuration error in rule {rule}:'
@@ -145,7 +145,7 @@ def verify(nat):
 
 def generate(nat):
     render(iptables_nat_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
-    render(ndppd_config, 'proxy-ndp/ndppd.conf.tmpl', nat, permission=0o755)
+    render(ndppd_config, 'ndppd/ndppd.conf.tmpl', nat, permission=0o755)
     return None
 
 def apply(nat):
