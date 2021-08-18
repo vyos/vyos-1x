@@ -731,6 +731,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         neighbor = '192.0.2.55'
         vrf_name = 'red'
         label = 'auto'
+        rd = f'{neighbor}:{ASN}'
 
         self.cli_set(base_path + ['local-as', ASN])
         # testing only one AFI is sufficient as it's generic code
@@ -739,16 +740,23 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['address-family', afi, 'import', 'vpn'])
             self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
 
+        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'rd', 'vpn', 'export', rd])
+
         # commit changes
         self.cli_commit()
 
         # Verify FRR bgpd configuration
         frrconfig = self.getFRRconfig(f'router bgp {ASN}')
         self.assertIn(f'router bgp {ASN}', frrconfig)
-        self.assertIn(f' address-family ipv6 unicast', frrconfig)
-        self.assertIn(f'  export vpn', frrconfig)
-        self.assertIn(f'  import vpn', frrconfig)
-        self.assertIn(f' exit-address-family', frrconfig)
+        for afi in ['ipv4', 'ipv6']:
+            self.assertIn(f' address-family {afi} unicast', frrconfig)
+            self.assertIn(f'  export vpn', frrconfig)
+            self.assertIn(f'  import vpn', frrconfig)
+            self.assertIn(f'  label vpn export {label}', frrconfig)
+            self.assertIn(f' exit-address-family', frrconfig)
+
+        self.assertIn(f' address-family ipv4 unicast', frrconfig)
+        self.assertIn(f'  rd vpn export {rd}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -257,6 +257,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
  address-family ipv6 flowspec
 {%     elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
+{%     if afi_config.rd is defined and afi_config.rd is not none %}
+  rd {{ afi_config.rd }}
+{%     endif %}
 {%     endif %}
 {%     if afi_config.aggregate_address is defined and afi_config.aggregate_address is not none %}
 {%       for ip in afi_config.aggregate_address %}
@@ -350,8 +353,8 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     if afi_config.flooding is defined and afi_config.flooding.head_end_replication is defined %}
   flooding head-end-replication
 {%     endif %}
-{%     if afi_config.rd is defined and afi_config.rd is not none %}
- rd {{ afi_config.rd }}
+{%     if afi_config.rd is defined and afi_config.rd.vpn is defined and afi_config.rd.vpn.export is defined %}
+  rd vpn export {{ afi_config.rd.vpn.export }}
 {%     endif %}
 {%     if afi_config.route_target is defined and afi_config.route_target is not none %}
 {%       if afi_config.route_target.both is defined and afi_config.route_target.both is not none %}
