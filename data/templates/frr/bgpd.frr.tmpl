@@ -370,13 +370,13 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%         endif %}
 {%       endif %}
 {%       if afi_config.route_target.both is defined and afi_config.route_target.both is not none %}
- route-target both {{ afi_config.route_target.both }}
+  route-target both {{ afi_config.route_target.both }}
 {%       else %}
 {%         if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
- route-target export {{ afi_config.route_target.export }}
+  route-target export {{ afi_config.route_target.export }}
 {%         endif %}
 {%         if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
- route-target import {{ afi_config.route_target.import }}
+  route-target import {{ afi_config.route_target.import }}
 {%         endif %}
 {%       endif %}
 {%     endif %}
