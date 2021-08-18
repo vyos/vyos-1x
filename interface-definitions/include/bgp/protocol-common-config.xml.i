@@ -118,6 +118,23 @@
           </children>
         </tagNode>
         #include <include/bgp/afi-rd.xml.i>
+        <node name="route-target">
+          <properties>
+            <help>Specify route distinguisher</help>
+          </properties>
+          <children>
+            <node name="vpn">
+              <properties>
+                <help>Between current address-family and VPN</help>
+              </properties>
+              <children>
+                #include <include/bgp/route-target-both.xml.i>
+                #include <include/bgp/route-target-export.xml.i>
+                #include <include/bgp/route-target-import.xml.i>
+              </children>
+            </node>
+          </children>
+        </node>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>

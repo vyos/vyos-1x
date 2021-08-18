@@ -357,14 +357,27 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
   rd vpn export {{ afi_config.rd.vpn.export }}
 {%     endif %}
 {%     if afi_config.route_target is defined and afi_config.route_target is not none %}
+{%       if afi_config.route_target.vpn is defined and afi_config.route_target.vpn is not none %}
+{%         if afi_config.route_target.vpn.both is defined and afi_config.route_target.vpn.both is not none %}
+  route-target vpn both {{ afi_config.route_target.vpn.both }}
+{%         else %}
+{%           if afi_config.route_target.vpn.export is defined and afi_config.route_target.vpn.export is not none %}
+  route-target vpn export {{ afi_config.route_target.vpn.export }}
+{%           endif %}
+{%           if afi_config.route_target.vpn.import is defined and afi_config.route_target.vpn.import is not none %}
+  route-target vpn import {{ afi_config.route_target.vpn.import }}
+{%           endif %}
+{%         endif %}
+{%       endif %}
 {%       if afi_config.route_target.both is defined and afi_config.route_target.both is not none %}
  route-target both {{ afi_config.route_target.both }}
-{%       endif %}
-{%       if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
+{%       else %}
+{%         if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
  route-target export {{ afi_config.route_target.export }}
-{%       endif %}
-{%       if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
+{%         endif %}
+{%         if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
  route-target import {{ afi_config.route_target.import }}
+{%         endif %}
 {%       endif %}
 {%     endif %}
 {%     if afi_config.vni is defined and afi_config.vni is not none %}

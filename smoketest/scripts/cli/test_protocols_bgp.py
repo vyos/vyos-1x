@@ -732,6 +732,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         vrf_name = 'red'
         label = 'auto'
         rd = f'{neighbor}:{ASN}'
+        rt_export = f'{neighbor}:1002'
+        rt_import = f'{neighbor}:1003'
 
         self.cli_set(base_path + ['local-as', ASN])
         # testing only one AFI is sufficient as it's generic code
@@ -741,6 +743,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
 
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'rd', 'vpn', 'export', rd])
+        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'export', rt_export])
+        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'import', rt_import])
 
         # commit changes
         self.cli_commit()
@@ -757,6 +761,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.assertIn(f' address-family ipv4 unicast', frrconfig)
         self.assertIn(f'  rd vpn export {rd}', frrconfig)
+        self.assertIn(f'  rt vpn export {rt_export}', frrconfig)
+        self.assertIn(f'  rt vpn import {rt_import}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
