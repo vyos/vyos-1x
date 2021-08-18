@@ -249,6 +249,16 @@ def verify(bgp):
                     if 'vpn' in afi_config['import'] or dict_search('export.vpn', afi_config) != None:
                         raise ConfigError('Please unconfigure VPN to VRF commands before '\
                                           'using "import vrf" commands!')
+
+            if afi in ['l2vpn_evpn'] and 'vrf' not in bgp:
+                # Some L2VPN EVPN AFI options are only supported under VRF
+                if 'vni' in afi_config:
+                    for vni, vni_config in afi_config['vni'].items():
+                        if 'rd' in vni_config:
+                            raise ConfigError('VNI route-distinguisher is only supported under EVPN VRF')
+                        if 'route_target' in vni_config:
+                            raise ConfigError('VNI route-target is only supported under EVPN VRF')
+
     return None
 
 def generate(bgp):
