@@ -321,6 +321,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%         endfor %}
 {%       endif %}
 {%     endif %}
+{%     if afi_config.label is defined and afi_config.label.vpn is defined and afi_config.label.vpn.export is defined and afi_config.label.vpn.export is not none %}
+ label vpn export {{ afi_config.label.vpn.export }}
+{%     endif %}
 {%     if afi_config.local_install is defined and afi_config.local_install is not none %}
 {%       for interface in afi_config.local_install.interface %}
  local-install {{ interface }}

@@ -94,6 +94,8 @@
           </children>
         </node>
         #include <include/bgp/afi-export-import.xml.i>
+        #include <include/bgp/afi-label.xml.i>
+        #include <include/bgp/afi-maximum-paths.xml.i>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -115,7 +117,6 @@
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
-        #include <include/bgp/afi-maximum-paths.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>
@@ -480,6 +481,8 @@
           </children>
         </node>
         #include <include/bgp/afi-export-import.xml.i>
+        #include <include/bgp/afi-label.xml.i>
+        #include <include/bgp/afi-maximum-paths.xml.i>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -496,7 +499,6 @@
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
-        #include <include/bgp/afi-maximum-paths.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>

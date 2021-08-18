@@ -730,11 +730,14 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.55'
         vrf_name = 'red'
+        label = 'auto'
 
         self.cli_set(base_path + ['local-as', ASN])
         # testing only one AFI is sufficient as it's generic code
-        self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'export', 'vpn'])
-        self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'import', 'vpn'])
+        for afi in ['ipv4-unicast', 'ipv6-unicast']:
+            self.cli_set(base_path + ['address-family', afi, 'export', 'vpn'])
+            self.cli_set(base_path + ['address-family', afi, 'import', 'vpn'])
+            self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
 
         # commit changes
         self.cli_commit()
