@@ -6,10 +6,10 @@
 #   interface.
 #
 #   For some services, such as nat66, because it runs
-#    stateless, it needs to rely on NDP Proxy to respond 
+#    stateless, it needs to rely on NDP Proxy to respond
 #   to NDP requests.
 #
-#   When using nat66 source rules, NDP Proxy needs 
+#   When using nat66 source rules, NDP Proxy needs
 #   to be enabled
 #
 ########################################################
@@ -21,7 +21,7 @@
 {%         if config.outbound_interface not in global.ndppd_interfaces %}
 {%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.outbound_interface] %}
 {%         endif   %}
-{%         if config.translation.address is defined and config.translation.address | is_ip_network  %}
+{%         if config.translation is defined and config.translation.address is defined and config.translation.address | is_ip_network %}
 {%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.outbound_interface,'rule':config.translation.address}] %}
 {%         endif    %}
 {%     endif    %}
@@ -41,4 +41,4 @@ proxy {{ interface }} {
 {%     endif  %}
 {%  endfor   %}
 }
-{% endfor %} 
+{% endfor %}
