@@ -6,7 +6,7 @@
   <children>
     <node name="vpn">
       <properties>
-        <help>Between current address-family and vpn</help>
+        <help>Between current address-family and VPN</help>
       </properties>
       <children>
         <leafNode name="export">
