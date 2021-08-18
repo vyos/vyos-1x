@@ -294,17 +294,17 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     if afi_config.advertise is defined and afi_config.advertise is not none %}
 {%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
 {%         if adv_afi_config.unicast is defined and adv_afi_config.unicast is not none %}
- advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
+  advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.distance is defined and afi_config.distance is not none %}
 {%       if afi_config.distance is defined and afi_config.distance.external is defined and afi_config.distance.internal is defined and afi_config.distance.local is defined %}
- distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
+  distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
 {%       endif %}
 {%       if afi_config.distance.prefix is defined and afi_config.distance.prefix is not none %}
 {%         for prefix in afi_config.distance.prefix %}
- distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
+  distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
 {%         endfor %}
 {%       endif %}
 {%     endif %}
@@ -326,7 +326,7 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%     if afi_config.local_install is defined and afi_config.local_install is not none %}
 {%       for interface in afi_config.local_install.interface %}
- local-install {{ interface }}
+  local-install {{ interface }}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.advertise_all_vni is defined %}
@@ -342,13 +342,13 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
   advertise-svi-ip
 {%     endif %}
 {%     if afi_config.rt_auto_derive is defined %}
- autort rfc8365-compatible
+  autort rfc8365-compatible
 {%     endif %}
 {%     if afi_config.flooding is defined and afi_config.flooding.disable is defined %}
- flooding disable
+  flooding disable
 {%     endif %}
 {%     if afi_config.flooding is defined and afi_config.flooding.head_end_replication is defined %}
- flooding head-end-replication
+  flooding head-end-replication
 {%     endif %}
 {%     if afi_config.rd is defined and afi_config.rd is not none %}
  rd {{ afi_config.rd }}
