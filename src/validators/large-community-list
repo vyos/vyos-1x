@@ -29,13 +29,8 @@ if __name__ == '__main__':
     if not len(value) == 3:
         sys.exit(1)
 
-    # Check if the first string is an IPv4 address
-    if is_ipv4(value[0]):
-        if value[1].isdigit() and value[2].isdigit():
-            sys.exit(0)
-    # If first string is not an IP address it must be a number
-    else:
-        if value[0].isdigit() and value[1].isdigit() and value[2].isdigit():
-            sys.exit(0)
+    if not (re.match(pattern, sys.argv[1]) and
+           (is_ipv4(value[0]) or value[0].isdigit()) and value[1].isdigit()):
+        sys.exit(1)
 
-    sys.exit(1)
+    sys.exit(0)
