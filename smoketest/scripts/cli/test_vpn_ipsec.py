@@ -182,8 +182,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
+            f'rekey_time = 28800s', # default value
             f'proposals = aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024',
+            f'life_time = 3600s', # default value
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
             f'mode = tunnel',
@@ -255,6 +257,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def test_04_dmvpn(self):
         tunnel_if = 'tun100'
         nhrp_secret = 'secret'
+        ike_lifetime = '3600'
+        esp_lifetime = '1800'
 
         # Tunnel
         self.cli_set(tunnel_path + [tunnel_if, 'address', '172.16.253.134/29'])
@@ -272,7 +276,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         # IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'compression', 'disable'])
-        self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', '1800'])
+        self.cli_set(base_path + ['esp-group', esp_group, 'lifetime', esp_lifetime])
         self.cli_set(base_path + ['esp-group', esp_group, 'mode', 'transport'])
         self.cli_set(base_path + ['esp-group', esp_group, 'pfs', 'dh-group2'])
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '2', 'encryption', 'aes256'])
@@ -282,7 +286,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['ike-group', ike_group, 'ikev2-reauth', 'no'])
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev1'])
-        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', '3600'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'lifetime', ike_lifetime])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'dh-group', '2'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'encryption', 'aes256'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'hash', 'sha1'])
@@ -300,7 +304,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_lines = [
             f'proposals = aes128-sha1-modp1024,aes256-sha1-modp1024',
             f'version = 1',
-            f'rekey_time = 3600s',
+            f'life_time = {ike_lifetime}s',
+            f'rekey_time = {esp_lifetime}s',
             f'esp_proposals = aes128-sha1-modp1024,aes256-sha1-modp1024,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
             f'remote_ts = dynamic[gre]',
