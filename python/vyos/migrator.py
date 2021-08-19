@@ -15,6 +15,7 @@
 
 import sys
 import os
+import json
 import subprocess
 import vyos.version
 import vyos.defaults
@@ -165,6 +166,14 @@ class Migrator(object):
                                                     versions_string,
                                                     os_version_string)
 
+    def save_json_record(self, component_versions: dict):
+        """
+        Write component versions to a json file
+        """
+        version_file = vyos.defaults.component_version_json
+        with open(version_file, 'w') as f:
+            f.write(json.dumps(component_versions, indent=2, sort_keys=True))
+
     def run(self):
         """
         Gather component versions from config file and system.
@@ -181,6 +190,9 @@ class Migrator(object):
             cfg_versions = {}
 
         sys_versions = systemversions.get_system_versions()
+
+        # save system component versions in json file for easy reference
+        self.save_json_record(sys_versions)
 
         rev_versions = self.run_migration_scripts(cfg_versions, sys_versions)
 

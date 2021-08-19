@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 
 directories = {
   "data": "/usr/share/vyos/",
@@ -30,6 +31,8 @@ cfg_group = 'vyattacfg'
 cfg_vintage = 'vyos'
 
 commit_lock = '/opt/vyatta/config/.lock'
+
+component_version_json = os.path.join(directories['data'], 'component-versions.json')
 
 https_data = {
     'listen_addresses' : { '*': ['_'] }
