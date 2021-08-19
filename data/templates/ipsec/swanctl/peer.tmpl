@@ -17,10 +17,10 @@
 {%   if ike.key_exchange is defined and ike.key_exchange == "ikev1" and ike.mode is defined and ike.mode == "aggressive" %}
         aggressive = yes
 {%   endif %}
+        rekey_time = {{ ike.lifetime }}
         mobike = {{ "yes" if ike.mobike is not defined or ike.mobike == "enable" else "no" }}
 {%   if peer[0:1] == '@' %}
         keyingtries = 0
-        rekey_time = 0
         reauth_time = 0
 {%   elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
         keyingtries = 0
@@ -57,6 +57,7 @@
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is defined else esp_group[ peer_conf.default_esp_group ] %}
             peer_{{ name }}_vti {
                 esp_proposals = {{ vti_esp | get_esp_ike_cipher | join(',') }}
+                life_time = {{ vti_esp.lifetime }}
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
@@ -87,6 +88,7 @@
 {%       set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
                 esp_proposals = {{ tunnel_esp | get_esp_ike_cipher | join(',') }}
+                life_time = {{ tunnel_esp.lifetime }}
 {%       if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%         if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
 {%           set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
