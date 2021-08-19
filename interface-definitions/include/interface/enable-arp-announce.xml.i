@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-enable-arp-announce.xml.i -->
+<!-- include start from interface/enable-arp-announce.xml.i -->
 <leafNode name="enable-arp-announce">
   <properties>
     <help>Enable ARP announce on this interface</help>

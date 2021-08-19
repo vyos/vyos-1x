@@ -27,7 +27,7 @@
               </constraint>
             </properties>
             <children>
-              #include <include/interface/interface-description.xml.i>
+              #include <include/interface/description.xml.i>
               <leafNode name="speed">
                 <properties>
                   <help>Serial port baud rate</help>

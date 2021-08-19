@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-disable.xml.i -->
+<!-- include start from interface/disable.xml.i -->
 <leafNode name="disable">
   <properties>
     <help>Administratively disable interface</help>

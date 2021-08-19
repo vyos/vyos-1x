@@ -1,15 +1,15 @@
-<!-- include start from interface/interface-mtu-68-1500.xml.i -->
+<!-- include start from interface/mtu-1200-16000.xml.i -->
 <leafNode name="mtu">
   <properties>
     <help>Maximum Transmission Unit (MTU)</help>
     <valueHelp>
-      <format>68-1500</format>
+      <format>1200-16000</format>
       <description>Maximum Transmission Unit in byte</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 68-1500"/>
+      <validator name="numeric" argument="--range 1200-16000"/>
     </constraint>
-    <constraintErrorMessage>MTU must be between 68 and 1500</constraintErrorMessage>
+    <constraintErrorMessage>MTU must be between 1200 and 16000</constraintErrorMessage>
   </properties>
   <defaultValue>1500</defaultValue>
 </leafNode>

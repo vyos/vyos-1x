@@ -33,7 +33,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/description.xml.i>
           <leafNode name="device-type">
             <properties>
               <help>OpenVPN interface device-type (default: tun)</help>
@@ -54,7 +54,7 @@
             </properties>
             <defaultValue>tun</defaultValue>
           </leafNode>
-          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/disable.xml.i>
           <node name="encryption">
             <properties>
               <help>Data Encryption settings</help>
@@ -165,7 +165,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-ipv6-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
           <leafNode name="hash">
             <properties>
               <help>Hashing Algorithm</help>
@@ -740,7 +740,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

@@ -1,7 +1,7 @@
-<!-- include start from interface/interface-hw-id.xml.i -->
-<leafNode name="hw-id">
+<!-- include start from interface/mac.xml.i -->
+<leafNode name="mac">
   <properties>
-    <help>Associate Ethernet Interface with given Media Access Control (MAC) address</help>
+    <help>Media Access Control (MAC) address</help>
     <valueHelp>
       <format>macaddr</format>
       <description>Hardware (MAC) address</description>

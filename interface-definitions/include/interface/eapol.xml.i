@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-eapol.xml.i -->
+<!-- include start from interface/eapol.xml.i -->
 <node name="eapol">
   <properties>
      <help>Extensible Authentication Protocol over Local Area Network</help>

@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-mirror.xml.i -->
+<!-- include start from interface/mirror.xml.i -->
 <node name="mirror">
   <properties>
     <help>Incoming/outgoing packet mirroring destination</help>

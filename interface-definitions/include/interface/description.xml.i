@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-description.xml.i -->
+<!-- include start from interface/description.xml.i -->
 <leafNode name="description">
   <properties>
     <help>Interface specific description</help>

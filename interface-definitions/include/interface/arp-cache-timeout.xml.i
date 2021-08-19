@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-arp-cache-timeout.xml.i -->
+<!-- include start from interface/arp-cache-timeout.xml.i -->
 <leafNode name="arp-cache-timeout">
   <properties>
     <help>ARP cache entry timeout in seconds</help>

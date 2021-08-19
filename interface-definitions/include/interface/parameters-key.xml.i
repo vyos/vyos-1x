@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-parameters-key.xml.i -->
+<!-- include start from interface/parameters-key.xml.i -->
 <leafNode name="key">
   <properties>
     <help>Tunnel key (only GRE tunnels)</help>

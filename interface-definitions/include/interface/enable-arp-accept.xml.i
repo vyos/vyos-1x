@@ -1,4 +1,4 @@
-<!-- include start from interface/interface-enable-arp-accept.xml.i -->
+<!-- include start from interface/enable-arp-accept.xml.i -->
 <leafNode name="enable-arp-accept">
   <properties>
     <help>Enable ARP accept on this interface</help>
