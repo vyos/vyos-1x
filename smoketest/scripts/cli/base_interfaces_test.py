@@ -556,13 +556,16 @@ class BasicInterfaceTest:
             if not self._test_ip:
                 self.skipTest('not supported')
 
+            arp_tmo = '300'
+            mss = '1420'
+
             for interface in self._interfaces:
-                arp_tmo = '300'
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
                     self.cli_set(path + option.split())
 
                 # Options
+                self.cli_set(path + ['ip', 'adjust-mss', mss])
                 self.cli_set(path + ['ip', 'arp-cache-timeout', arp_tmo])
                 self.cli_set(path + ['ip', 'disable-arp-filter'])
                 self.cli_set(path + ['ip', 'disable-forwarding'])
@@ -576,6 +579,12 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
+                base_options = f'-A FORWARD -o {interface} -p tcp -m tcp --tcp-flags SYN,RST SYN'
+                out = cmd('sudo iptables-save -t mangle')
+                for line in out.splitlines():
+                    if line.startswith(base_options):
+                        self.assertIn(f'--set-mss {mss}', line)
+
                 tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
                 self.assertEqual(tmp, str((int(arp_tmo) * 1000))) # tmo value is in milli seconds
 
@@ -607,19 +616,28 @@ class BasicInterfaceTest:
             if not self._test_ipv6:
                 self.skipTest('not supported')
 
+            mss = '1400'
+            dad_transmits = '10'
+
             for interface in self._interfaces:
-                dad_transmits = '10'
                 path = self._base_path + [interface]
                 for option in self._options.get(interface, []):
                     self.cli_set(path + option.split())
 
                 # Options
+                self.cli_set(path + ['ipv6', 'adjust-mss', mss])
                 self.cli_set(path + ['ipv6', 'disable-forwarding'])
                 self.cli_set(path + ['ipv6', 'dup-addr-detect-transmits', dad_transmits])
 
             self.cli_commit()
 
             for interface in self._interfaces:
+                base_options = f'-A FORWARD -o {interface} -p tcp -m tcp --tcp-flags SYN,RST SYN'
+                out = cmd('sudo ip6tables-save -t mangle')
+                for line in out.splitlines():
+                    if line.startswith(base_options):
+                        self.assertIn(f'--set-mss {mss}', line)
+
                 tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/forwarding')
                 self.assertEqual('0', tmp)
 

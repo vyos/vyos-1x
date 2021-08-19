@@ -70,6 +70,7 @@
               <help>IPv4 routing parameters</help>
             </properties>
             <children>
+              #include <include/interface/adjust-mss.xml.i>
               #include <include/interface/source-validation.xml.i>
             </children>
           </node>
@@ -86,6 +87,7 @@
                   #include <include/interface/ipv6-address-autoconf.xml.i>
                 </children>
               </node>
+              #include <include/interface/adjust-mss.xml.i>
             </children>
           </node>
           <leafNode name="source-interface">

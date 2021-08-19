@@ -4,6 +4,7 @@
     <help>IPv4 routing parameters</help>
   </properties>
   <children>
+    #include <include/interface/adjust-mss.xml.i>
     #include <include/interface/arp-cache-timeout.xml.i>
     #include <include/interface/disable-arp-filter.xml.i>
     #include <include/interface/disable-forwarding.xml.i>

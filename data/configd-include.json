@@ -6,7 +6,6 @@
 "dhcpv6_relay.py",
 "dns_forwarding.py",
 "dynamic_dns.py",
-"firewall_options.py",
 "host_name.py",
 "https.py",
 "igmp_proxy.py",

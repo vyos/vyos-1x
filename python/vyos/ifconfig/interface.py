@@ -436,6 +436,62 @@ class Interface(Control):
         """
         return self.set_interface('arp_cache_tmo', tmo)
 
+    def set_tcp_ipv4_mss(self, mss):
+        """
+        Set IPv4 TCP MSS value advertised when TCP SYN packets leave this
+        interface. Value is in bytes.
+
+        A value of 0 will disable the MSS adjustment
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_tcp_ipv4_mss(1340)
+        """
+        iptables_bin = 'iptables'
+        base_options = f'-A FORWARD -o {self.ifname} -p tcp -m tcp --tcp-flags SYN,RST SYN'
+        out = self._cmd(f'{iptables_bin}-save -t mangle')
+        for line in out.splitlines():
+            if line.startswith(base_options):
+                # remove OLD MSS mangling configuration
+                line = line.replace('-A FORWARD', '-D FORWARD')
+                self._cmd(f'{iptables_bin} -t mangle {line}')
+
+        cmd_mss = f'{iptables_bin} -t mangle {base_options} --jump TCPMSS'
+        if mss == 'clamp-mss-to-pmtu':
+            self._cmd(f'{cmd_mss} --clamp-mss-to-pmtu')
+        elif int(mss) > 0:
+            # probably add option to clamp only if bigger:
+            low_mss = str(int(mss) + 1)
+            self._cmd(f'{cmd_mss} -m tcpmss --mss {low_mss}:65535 --set-mss {mss}')
+
+    def set_tcp_ipv6_mss(self, mss):
+        """
+        Set IPv6 TCP MSS value advertised when TCP SYN packets leave this
+        interface. Value is in bytes.
+
+        A value of 0 will disable the MSS adjustment
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_tcp_mss(1320)
+        """
+        iptables_bin = 'ip6tables'
+        base_options = f'-A FORWARD -o {self.ifname} -p tcp -m tcp --tcp-flags SYN,RST SYN'
+        out = self._cmd(f'{iptables_bin}-save -t mangle')
+        for line in out.splitlines():
+            if line.startswith(base_options):
+                # remove OLD MSS mangling configuration
+                line = line.replace('-A FORWARD', '-D FORWARD')
+                self._cmd(f'{iptables_bin} -t mangle {line}')
+
+        cmd_mss = f'{iptables_bin} -t mangle {base_options} --jump TCPMSS'
+        if mss == 'clamp-mss-to-pmtu':
+            self._cmd(f'{cmd_mss} --clamp-mss-to-pmtu')
+        elif int(mss) > 0:
+            # probably add option to clamp only if bigger:
+            low_mss = str(int(mss) + 1)
+            self._cmd(f'{cmd_mss} -m tcpmss --mss {low_mss}:65535 --set-mss {mss}')
+
     def set_arp_filter(self, arp_filter):
         """
         Filter ARP requests
@@ -1201,6 +1257,16 @@ class Interface(Control):
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
             self.set_vrf(config.get('vrf', ''))
+
+        # Configure MSS value for IPv4 TCP connections
+        tmp = dict_search('ip.adjust_mss', config)
+        value = tmp if (tmp != None) else '0'
+        self.set_tcp_ipv4_mss(value)
+
+        # Configure MSS value for IPv6 TCP connections
+        tmp = dict_search('ipv6.adjust_mss', config)
+        value = tmp if (tmp != None) else '0'
+        self.set_tcp_ipv6_mss(value)
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
