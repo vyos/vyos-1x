@@ -5,8 +5,8 @@
   </properties>
   <children>
     #include <include/interface/adjust-mss.xml.i>
+    #include <include/interface/disable-forwarding.xml.i>
     #include <include/interface/ipv6-address.xml.i>
-    #include <include/interface/ipv6-disable-forwarding.xml.i>
     #include <include/interface/ipv6-dup-addr-detect-transmits.xml.i>
   </children>
 </node>
