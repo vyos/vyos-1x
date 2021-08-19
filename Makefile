@@ -89,17 +89,12 @@ op_mode_definitions: $(op_xml_obj)
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
 
-.PHONY: component_versions
-.ONESHELL:
-component_versions: interface_definitions
-	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
-
 .PHONY: vyshim
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim
+all: clean interface_definitions op_mode_definitions vyshim
 
 .PHONY: clean
 clean:
