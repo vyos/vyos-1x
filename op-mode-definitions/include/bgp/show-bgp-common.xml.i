@@ -20,6 +20,7 @@
   <children>
     #include <include/bgp/afi-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
+    #include <include/bgp/afi-ipv4-ipv6-vpn.xml.i>
   </children>
 </node>
 <tagNode name="ipv6">
@@ -41,6 +42,7 @@
   <children>
     #include <include/bgp/afi-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
+    #include <include/bgp/afi-ipv4-ipv6-vpn.xml.i>
   </children>
 </node>
 <node name="l2vpn">
