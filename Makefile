@@ -63,11 +63,6 @@ op_mode_definitions: $(op_xml_obj)
 	# could mask help strings or mandatory priority statements
 	#find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
-.PHONY: component_versions
-.ONESHELL:
-component_versions: interface_definitions
-	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
-
 .PHONY: vyshim
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
@@ -77,7 +72,7 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim
+all: clean interface_definitions op_mode_definitions vyshim
 
 .PHONY: clean
 clean:
