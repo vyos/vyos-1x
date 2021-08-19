@@ -34,8 +34,6 @@ cfg_vintage = 'vyos'
 
 commit_lock = '/opt/vyatta/config/.lock'
 
-version_file = '/usr/share/vyos/component-versions.json'
-
 https_data = {
     'listen_addresses' : { '*': ['_'] }
 }
