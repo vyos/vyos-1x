@@ -7,7 +7,7 @@
     dmvpn-{{ name }}-{{ interface }} {
         proposals = {{ ike_group[profile_conf.ike_group] | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
-        rekey_time = {{ ike.lifetime }}s
+        life_time = {{ ike.lifetime }}s
         keyingtries = 0
 {%       if profile_conf.authentication is defined and profile_conf.authentication.mode is defined and profile_conf.authentication.mode == 'pre-shared-secret' %}
         local {
