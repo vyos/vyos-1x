@@ -78,6 +78,7 @@ neighbor_config = {
         'cap_over'     : '',
         'ttl_security' : '5',
         'local_as'     : '300',
+        'solo'         : '',
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
         'no_send_comm_std' : '',
@@ -173,6 +174,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} password {peer_config["password"]}', frrconfig)
         if 'remote_as' in peer_config:
             self.assertIn(f' neighbor {peer} remote-as {peer_config["remote_as"]}', frrconfig)
+        if 'solo' in peer_config:
+            self.assertIn(f' neighbor {peer} solo', frrconfig)
         if 'shutdown' in peer_config:
             self.assertIn(f' neighbor {peer} shutdown', frrconfig)
         if 'ttl_security' in peer_config:
@@ -296,6 +299,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'strict-capability-match'])
             if 'shutdown' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'shutdown'])
+            if 'solo' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'solo'])
             if 'ttl_security' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'ttl-security', 'hops', peer_config["ttl_security"]])
             if 'update_src' in peer_config:
@@ -709,24 +714,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' exit-address-family', frrconfig)
 
 
-    def test_bgp_13_solo(self):
-        remote_asn = str(int(ASN) + 150)
-        neighbor = '192.0.2.55'
-
-        self.cli_set(base_path + ['local-as', ASN])
-        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
-        self.cli_set(base_path + ['neighbor', neighbor, 'solo'])
-
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
-        self.assertIn(f'router bgp {ASN}', frrconfig)
-        self.assertIn(f' neighbor {neighbor} solo', frrconfig)
-
-
-    def test_bgp_14_vpn(self):
+    def test_bgp_13_vpn(self):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.55'
         vrf_name = 'red'
