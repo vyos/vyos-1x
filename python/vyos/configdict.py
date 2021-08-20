@@ -108,7 +108,9 @@ def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return a list containing the old
-    value(s). If nothing has been changed, None is returned
+    value(s). If nothing has been changed, None is returned.
+
+    NOTE: path must use the real CLI node name (e.g. with a hyphen!)
     """
     from vyos.configdiff import get_config_diff
     D = get_config_diff(conf, key_mangling=('-', '_'))
