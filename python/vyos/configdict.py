@@ -117,9 +117,11 @@ def leaf_node_changed(conf, path):
     D.set_level(conf.get_level())
     (new, old) = D.get_value_diff(path)
     if new != old:
+        if old is None:
+            return ['']
         if isinstance(old, str):
             return [old]
-        elif isinstance(old, list):
+        if isinstance(old, list):
             if isinstance(new, str):
                 new = [new]
             elif isinstance(new, type(None)):
