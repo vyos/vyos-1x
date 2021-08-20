@@ -18,6 +18,10 @@ DEB_TARGET_ARCH := $(shell dpkg-architecture -qDEB_TARGET_ARCH)
 %:
 	dh $@ --with python3, --with quilt
 
+# Skip dh_strip_nondeterminism - this is very time consuming
+# and we have no non deterministic output (yet)
+override_dh_strip_nondeterminism:
+
 override_dh_gencontrol:
 	dh_gencontrol -- -v$(shell (git describe --tags --long --match 'vyos/*' --dirty 2>/dev/null || echo 0.0-no.git.tag) | sed -E 's%vyos/%%' | sed -E 's%-dirty%+dirty%')
 
