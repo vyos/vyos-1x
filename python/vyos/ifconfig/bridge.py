@@ -366,5 +366,4 @@ class BridgeIf(Interface):
         self.set_vlan_filter(vlan_filter)
 
 
-        # call base class first
         super().update(config)
