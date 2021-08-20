@@ -250,6 +250,11 @@ def verify(bgp):
                         raise ConfigError('Please unconfigure VPN to VRF commands before '\
                                           'using "import vrf" commands!')
 
+                # Verify that the export/import route-maps do exist
+                for export_import in ['export', 'import']:
+                    tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
+                    if tmp: verify_route_map(tmp, bgp)
+
             if afi in ['l2vpn_evpn'] and 'vrf' not in bgp:
                 # Some L2VPN EVPN AFI options are only supported under VRF
                 if 'vni' in afi_config:

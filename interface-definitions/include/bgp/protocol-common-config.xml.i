@@ -118,6 +118,7 @@
           </children>
         </tagNode>
         #include <include/bgp/afi-rd.xml.i>
+        #include <include/bgp/afi-route-map-vpn.xml.i>
         <node name="route-target">
           <properties>
             <help>Specify route distinguisher</help>
@@ -518,6 +519,7 @@
           </children>
         </tagNode>
         #include <include/bgp/afi-rd.xml.i>
+        #include <include/bgp/afi-route-map-vpn.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>

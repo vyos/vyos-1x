@@ -380,6 +380,14 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%         endif %}
 {%       endif %}
 {%     endif %}
+{%     if afi_config.route_map is defined and afi_config.route_map.vpn is defined and afi_config.route_map.vpn is not none %}
+{%       if afi_config.route_map.vpn.export is defined and afi_config.route_map.vpn.export is not none %}
+  route-map vpn export {{ afi_config.route_map.vpn.export }}
+{%       endif %}
+{%       if afi_config.route_map.vpn.import is defined and afi_config.route_map.vpn.import is not none %}
+  route-map vpn import {{ afi_config.route_map.vpn.import }}
+{%       endif %}
+{%     endif %}
 {%     if afi_config.vni is defined and afi_config.vni is not none %}
 {%       for vni, vni_config in afi_config.vni.items() %}
   vni {{ vni }}
