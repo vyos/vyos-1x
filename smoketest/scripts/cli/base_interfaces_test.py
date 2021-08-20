@@ -588,28 +588,30 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
                 self.assertEqual(tmp, str((int(arp_tmo) * 1000))) # tmo value is in milli seconds
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_filter')
+                proc_base = f'/proc/sys/net/ipv4/conf/{interface}'
+
+                tmp = read_file(f'{proc_base}/arp_filter')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_accept')
+                tmp = read_file(f'{proc_base}/arp_accept')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_announce')
+                tmp = read_file(f'{proc_base}/arp_announce')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_ignore')
+                tmp = read_file(f'{proc_base}/arp_ignore')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/forwarding')
+                tmp = read_file(f'{proc_base}/forwarding')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp')
+                tmp = read_file(f'{proc_base}/proxy_arp')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp_pvlan')
+                tmp = read_file(f'{proc_base}/proxy_arp_pvlan')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/rp_filter')
+                tmp = read_file(f'{proc_base}/rp_filter')
                 self.assertEqual('2', tmp)
 
         def test_interface_ipv6_options(self):
@@ -638,10 +640,12 @@ class BasicInterfaceTest:
                     if line.startswith(base_options):
                         self.assertIn(f'--set-mss {mss}', line)
 
-                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/forwarding')
+                proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
+
+                tmp = read_file(f'{proc_base}/forwarding')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
+                tmp = read_file(f'{proc_base}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
         def test_dhcpv6_client_options(self):
