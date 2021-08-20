@@ -30,7 +30,7 @@ connect /bin/true
 noauth
 
 # Don't try to proxy ARP for the remote endpoint. User can set proxy
-# arp entries up manually if they wish.  More importantly, having
+# arp entries up manually if they wish. More importantly, having
 # the "proxyarp" parameter set disables the "defaultroute" option.
 noproxyarp
 
@@ -71,8 +71,14 @@ demand
 # passed to the ip-up.d/ip-down.s scripts which is required for VRF support.
 {%   if 'auto' in default_route %}
 defaultroute
+{{ 'defaultroute6' if ipv6 is defined }}
 {%   elif 'force' in default_route %}
 defaultroute
 replacedefaultroute
+{{ 'defaultroute6' if ipv6 is defined }}
 {%   endif %}
+{% else %}
+nodefaultroute
+noreplacedefaultroute
+{{ 'nodefaultroute6' if ipv6 is defined }}
 {% endif %}

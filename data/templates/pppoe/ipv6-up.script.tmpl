@@ -7,43 +7,6 @@ if [ "$6" != "{{ ifname }}" ]; then
     exit
 fi
 
-{% if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
-# add some info to syslog
-DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
-logger -t pppd[$DIALER_PID] "executing $0"
-logger -t pppd[$DIALER_PID] "configuring interface {{ ifname }} via {{ source_interface }}"
-
-# Configure interface-specific Host/Router behaviour.
-# Note: It is recommended to have the same setting on all interfaces; mixed
-# router/host scenarios are rather uncommon. Possible values are:
-#
-# 0  Forwarding disabled
-# 1  Forwarding enabled
-#
-echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/forwarding
-
-# Accept Router Advertisements; autoconfigure using them.
-#
-# It also determines whether or not to transmit Router
-# Solicitations. If and only if the functional setting is to
-# accept Router Advertisements, Router Solicitations will be
-# transmitted. Possible values are:
-#
-# 0  Do not accept Router Advertisements.
-# 1  Accept Router Advertisements if forwarding is disabled.
-# 2  Overrule forwarding behaviour. Accept Router Advertisements
-#    even if forwarding is enabled.
-#
-echo 2 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra
-
-# Autoconfigure addresses using Prefix Information in Router Advertisements.
-echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/autoconf
-{% endif %}
-
-{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
-# Start wide dhcpv6 client
-systemctl restart dhcp6c@{{ ifname }}.service
-{% endif %}
 
 {% if default_route != 'none' %}
 # See https://phabricator.vyos.net/T2248 & T2220. Determine if we are enslaved
