@@ -741,8 +741,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['address-family', afi, 'export', 'vpn'])
             self.cli_set(base_path + ['address-family', afi, 'import', 'vpn'])
             self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
+            self.cli_set(base_path + ['address-family', afi, 'rd', 'vpn', 'export', rd])
+            self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'export', route_map_out])
+            self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'import', route_map_in])
 
-        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'rd', 'vpn', 'export', rd])
+
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'export', rt_export])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'import', rt_import])
 
@@ -752,17 +755,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # Verify FRR bgpd configuration
         frrconfig = self.getFRRconfig(f'router bgp {ASN}')
         self.assertIn(f'router bgp {ASN}', frrconfig)
-        for afi in ['ipv4', 'ipv6']:
-            self.assertIn(f' address-family {afi} unicast', frrconfig)
-            self.assertIn(f'  export vpn', frrconfig)
-            self.assertIn(f'  import vpn', frrconfig)
-            self.assertIn(f'  label vpn export {label}', frrconfig)
-            self.assertIn(f' exit-address-family', frrconfig)
 
-        self.assertIn(f' address-family ipv4 unicast', frrconfig)
-        self.assertIn(f'  rd vpn export {rd}', frrconfig)
-        self.assertIn(f'  rt vpn export {rt_export}', frrconfig)
-        self.assertIn(f'  rt vpn import {rt_import}', frrconfig)
+        for afi in ['ipv4', 'ipv6']:
+            afi_config = self.getFRRconfig(f' address-family {afi} unicast', endsection='exit-address-family', daemon='bgpd')
+            self.assertIn(f'address-family {afi} unicast', afi_config)
+            self.assertIn(f'  export vpn', afi_config)
+            self.assertIn(f'  import vpn', afi_config)
+            self.assertIn(f'  label vpn export {label}', afi_config)
+            self.assertIn(f'  rd vpn export {rd}', afi_config)
+            self.assertIn(f' exit-address-family', afi_config)
+
+        afi_config = self.getFRRconfig(f' address-family ipv4 unicast', endsection='exit-address-family', daemon='bgpd')
+        self.assertIn(f'address-family ipv4 unicast', afi_config)
+        self.assertIn(f'  rt vpn export {rt_export}', afi_config)
+        self.assertIn(f'  rt vpn import {rt_import}', afi_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
