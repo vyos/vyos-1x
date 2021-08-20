@@ -10,7 +10,9 @@
         send_certreq = no
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
+{%   if rw_conf.unique is defined and rw_conf.unique is not none %}        
         unique = {{ rw_conf.unique }}
+{%   endif %}
 {%   if rw_conf.pool is defined and rw_conf.pool is not none %}
         pools = {{ rw_conf.pool | join(',') }}
 {%   endif %}
