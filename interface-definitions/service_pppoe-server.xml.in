@@ -8,14 +8,8 @@
           <priority>900</priority>
         </properties>
         <children>
+          #include <include/pppoe-access-concentrator.xml.i>
           <leafNode name="access-concentrator">
-            <properties>
-              <help>Access concentrator name</help>
-              <constraint>
-                <regex>[a-zA-Z0-9]{1,100}</regex>
-              </constraint>
-              <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
-            </properties>
             <defaultValue>vyos-ac</defaultValue>
           </leafNode>
           <node name="authentication">
@@ -129,7 +123,7 @@
               <constraint>
                 <regex>[a-zA-Z0-9\-]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>servicename can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
+              <constraintErrorMessage>Service-name can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
               <multi/>
             </properties>
           </leafNode>
