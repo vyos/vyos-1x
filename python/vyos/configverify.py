@@ -208,8 +208,8 @@ def verify_interface_exists(ifname):
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists.
     """
-    from netifaces import interfaces
-    if ifname not in interfaces():
+    import os
+    if not os.path.exists(f'/sys/class/net/{ifname}'):
         raise ConfigError(f'Interface "{ifname}" does not exist!')
 
 def verify_source_interface(config):
