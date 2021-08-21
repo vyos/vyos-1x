@@ -16,15 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="access-concentrator">
-            <properties>
-              <help>Access concentrator name (only connect to this concentrator)</help>
-              <constraint>
-                <regex>[a-zA-Z0-9]+$</regex>
-              </constraint>
-              <constraintErrorMessage>Access concentrator name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/dial-on-demand.xml.i>
           <leafNode name="default-route">
@@ -136,7 +128,7 @@
               <constraint>
                 <regex>[a-zA-Z0-9]+$</regex>
               </constraint>
-              <constraintErrorMessage>Service name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
+              <constraintErrorMessage>Service name must be alphanumeric only</constraintErrorMessage>
             </properties>
           </leafNode>
         </children>
