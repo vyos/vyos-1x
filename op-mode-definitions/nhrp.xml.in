@@ -50,13 +50,13 @@
             <properties>
               <help>Show NHRP interface connection information</help>
             </properties>
-            <command>if [ -f /var/run/opennhrp.pid ]; then sudo opennhrpctl interface show; else echo OpenNHRP is not running.; fi</command>
+            <command>if pgrep opennhrp >/dev/null; then sudo opennhrpctl interface show; else echo OpenNHRP is not running; fi</command>
           </leafNode>
           <leafNode name="tunnel">
             <properties>
               <help>Show NHRP tunnel connection information</help>
             </properties>
-            <command>if [ -f /var/run/opennhrp.pid ]; then sudo opennhrpctl show ; else echo OpenNHRP is not running.; fi</command>
+            <command>if pgrep opennhrp >/dev/null; then sudo opennhrpctl show ; else echo OpenNHRP is not running; fi</command>
           </leafNode>
         </children>
       </node>
