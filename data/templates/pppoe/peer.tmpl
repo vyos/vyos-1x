@@ -58,10 +58,9 @@ mru {{ mtu }}
 {{ "usepeerdns" if no_peer_dns is not defined }}
 
 {% if ipv6 is defined %}
-+ipv6
-{%   if ipv6.address is defined and ipv6.address.autoconf is defined %}
-ipv6cp-use-ipaddr
-{%   endif %}
++ipv6 {{ 'ipv6cp-use-ipaddr' if ipv6.address is defined and ipv6.address.autoconf is defined }}
+{% else %}
+noipv6
 {% endif %}
 
 {% if connect_on_demand is defined %}
