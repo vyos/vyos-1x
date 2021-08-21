@@ -34,7 +34,7 @@ noproxyarp
 # Unlimited connection attempts
 maxfail 0
 
-plugin rp-pppoe.so
+plugin rp-pppoe.so {{ source_interface }}
 {% if access_concentrator is defined and access_concentrator is not none %}
 rp_pppoe_ac '{{ access_concentrator }}'
 {% endif %}
@@ -42,7 +42,6 @@ rp_pppoe_ac '{{ access_concentrator }}'
 rp_pppoe_service '{{ service_name }}'
 {% endif %}
 
-{{ source_interface }}
 persist
 ifname {{ ifname }}
 ipparam {{ ifname }}
