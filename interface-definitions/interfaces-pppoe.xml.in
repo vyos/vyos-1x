@@ -5,7 +5,7 @@
       <tagNode name="pppoe" owner="${vyos_conf_scripts_dir}/interfaces-pppoe.py">
         <properties>
           <help>Point-to-Point Protocol over Ethernet (PPPoE)</help>
-          <priority>321</priority>
+          <priority>322</priority>
           <constraint>
             <regex>^pppoe[0-9]+$</regex>
           </constraint>
@@ -52,9 +52,13 @@
             <properties>
               <help>Delay before disconnecting idle session (in seconds)</help>
               <valueHelp>
-                <format>n</format>
+                <format>u32:0-86400</format>
                 <description>Idle timeout in seconds</description>
               </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-86400"/>
+              </constraint>
+              <constraintErrorMessage>Timeout must be in range 0 to 86400</constraintErrorMessage>
             </properties>
           </leafNode>
           <node name="ip">
@@ -84,14 +88,7 @@
               #include <include/interface/disable-forwarding.xml.i>
             </children>
           </node>
-          <leafNode name="source-interface">
-            <properties>
-              <help>Physical Interface used for this PPPoE session</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/source-interface.xml.i>
           <leafNode name="local-address">
             <properties>
               <help>IPv4 address of local end of the PPPoE link</help>
