@@ -170,9 +170,15 @@ class Migrator(object):
         """
         Write component versions to a json file
         """
+        mask = os.umask(0o113)
         version_file = vyos.defaults.component_version_json
-        with open(version_file, 'w') as f:
-            f.write(json.dumps(component_versions, indent=2, sort_keys=True))
+        try:
+            with open(version_file, 'w') as f:
+                f.write(json.dumps(component_versions, indent=2, sort_keys=True))
+        except OSError:
+            pass
+        finally:
+            os.umask(mask)
 
     def run(self):
         """
