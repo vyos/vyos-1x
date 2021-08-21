@@ -52,6 +52,10 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
 
+from netaddr import EUI
+from netaddr import mac_unix_expanded
+from random import getrandbits
+
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -366,6 +370,31 @@ class Interface(Control):
         '00:50:ab:cd:ef:00'
         """
         return self.get_interface('mac')
+
+    def get_mac_synthetic(self):
+        """
+        Get a synthetic MAC address. This is a common method which can be called
+        from derived classes to overwrite the get_mac() call in a generic way.
+
+        NOTE: Tunnel interfaces have no "MAC" address by default. The content
+              of the 'address' file in /sys/class/net/device contains the
+              local-ip thus we generate a random MAC address instead
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_mac()
+        '00:50:ab:cd:ef:00'
+        """
+        # we choose 40 random bytes for the MAC address, this gives
+        # us e.g. EUI('00-EA-EE-D6-A3-C8') or EUI('00-41-B9-0D-F2-2A')
+        tmp = EUI(getrandbits(48)).value
+        # set locally administered bit in MAC address
+        tmp |= 0xf20000000000
+        # convert integer to "real" MAC address representation
+        mac = EUI(hex(tmp).split('x')[-1])
+        # change dialect to use : as delimiter instead of -
+        mac.dialect = mac_unix_expanded
+        return str(mac)
 
     def set_mac(self, mac):
         """
