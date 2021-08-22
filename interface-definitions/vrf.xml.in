@@ -39,8 +39,8 @@
               <constraintErrorMessage>VRF routing table must be in range from 100 to 2147483647</constraintErrorMessage>
             </properties>
           </leafNode>
-          #include <include/interface/interface-description.xml.i>
-          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/description.xml.i>
+          #include <include/interface/disable.xml.i>
         </children>
       </tagNode>
     </children>

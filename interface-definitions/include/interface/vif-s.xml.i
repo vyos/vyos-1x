@@ -9,11 +9,11 @@
   </properties>
   <children>
     #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-    #include <include/interface/interface-description.xml.i>
+    #include <include/interface/description.xml.i>
     #include <include/interface/dhcp-options.xml.i>
     #include <include/interface/dhcpv6-options.xml.i>
-    #include <include/interface/interface-disable-link-detect.xml.i>
-    #include <include/interface/interface-disable.xml.i>
+    #include <include/interface/disable-link-detect.xml.i>
+    #include <include/interface/disable.xml.i>
     <leafNode name="protocol">
       <properties>
         <help>Protocol used for service VLAN (default: 802.1ad)</help>
@@ -35,10 +35,10 @@
       </properties>
       <defaultValue>802.1ad</defaultValue>
     </leafNode>
-    #include <include/interface/interface-ipv4-options.xml.i>
-    #include <include/interface/interface-ipv6-options.xml.i>
-    #include <include/interface/interface-mac.xml.i>
-    #include <include/interface/interface-mtu-68-16000.xml.i>
+    #include <include/interface/ipv4-options.xml.i>
+    #include <include/interface/ipv6-options.xml.i>
+    #include <include/interface/mac.xml.i>
+    #include <include/interface/mtu-68-16000.xml.i>
     <tagNode name="vif-c">
       <properties>
         <help>QinQ TAG-C Virtual Local Area Network (VLAN) ID</help>
@@ -49,19 +49,19 @@
       </properties>
       <children>
         #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-        #include <include/interface/interface-description.xml.i>
+        #include <include/interface/description.xml.i>
         #include <include/interface/dhcp-options.xml.i>
         #include <include/interface/dhcpv6-options.xml.i>
-        #include <include/interface/interface-disable-link-detect.xml.i>
-        #include <include/interface/interface-disable.xml.i>
-        #include <include/interface/interface-ipv4-options.xml.i>
-        #include <include/interface/interface-ipv6-options.xml.i>
-        #include <include/interface/interface-mac.xml.i>
-        #include <include/interface/interface-mtu-68-16000.xml.i>
-        #include <include/interface/interface-vrf.xml.i>
+        #include <include/interface/disable-link-detect.xml.i>
+        #include <include/interface/disable.xml.i>
+        #include <include/interface/ipv4-options.xml.i>
+        #include <include/interface/ipv6-options.xml.i>
+        #include <include/interface/mac.xml.i>
+        #include <include/interface/mtu-68-16000.xml.i>
+        #include <include/interface/vrf.xml.i>
       </children>
     </tagNode>
-    #include <include/interface/interface-vrf.xml.i>
+    #include <include/interface/vrf.xml.i>
   </children>
 </tagNode>
 <!-- include end -->
