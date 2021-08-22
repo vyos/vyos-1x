@@ -89,6 +89,10 @@ op_mode_definitions: $(op_xml_obj)
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
 
+	# XXX: test if there are empty node.def files - this is not allowed as these
+	# could mask help strings or mandatory priority statements
+	find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
 .PHONY: vyshim
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
