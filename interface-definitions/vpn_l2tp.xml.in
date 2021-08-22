@@ -5,6 +5,7 @@
       <node name="l2tp" owner="${vyos_conf_scripts_dir}/vpn_l2tp.py">
         <properties>
           <help>L2TP Virtual Private Network (VPN)</help>
+          <priority>902</priority>
         </properties>
         <children>
           <node name="remote-access">
