@@ -61,6 +61,15 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --image</command>
           </leafNode>
+          <tagNode name="log">
+            <properties>
+              <help>Show logs from a given container</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --names "$4"</command>
+          </tagNode>
           <leafNode name="network">
             <properties>
               <help>Show available container networks</help>
