@@ -3,6 +3,9 @@
   <node name="reset">
     <children>
       <node name="openvpn">
+        <properties>
+          <help>Reset OpenVPN client/server connections</help>
+        </properties>
         <children>
           <tagNode name="client">
             <properties>
