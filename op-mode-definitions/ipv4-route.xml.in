@@ -20,11 +20,7 @@
       </node>
     </children>
   </node>
-
   <node name="reset">
-    <properties>
-      <help>Reset a service</help>
-    </properties>
     <children>
       <node name="ip">
         <properties>
@@ -56,7 +52,6 @@
               </tagNode>
             </children>
           </node>
-
           <node name="route">
             <properties>
               <help>Reset IP route</help>
@@ -68,7 +63,6 @@
                 </properties>
                 <command>sudo ip route flush cache</command>
               </leafNode>
-
               <tagNode name="cache">
                 <properties>
                   <help>Flush the kernel route cache for a given route</help>

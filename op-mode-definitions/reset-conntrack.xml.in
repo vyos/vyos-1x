@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="reset">
-    <properties>
-      <help>Reset a service</help>
-    </properties>
     <children>
       <node name="conntrack">
         <properties>
