@@ -69,6 +69,19 @@
           </leafNode>
         </children>
       </node>
+      <node name="log">
+        <children>
+          <tagNode name="container">
+            <properties>
+              <help>Show logs from a given container</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --names "$4"</command>
+          </tagNode>
+        </children>
+      </node>
     </children>
   </node>
   <node name="restart">
