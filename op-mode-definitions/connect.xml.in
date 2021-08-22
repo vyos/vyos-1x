@@ -24,6 +24,15 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/connect_disconnect.py --connect "$3"</command>
       </tagNode>
+      <tagNode name="container">
+        <properties>
+          <help>Attach to a running container</help>
+          <completionHelp>
+            <path>container name</path>
+          </completionHelp>
+        </properties>
+        <command>echo "Use Ctrl+p and Ctrl+q to detach"; sudo podman attach "$3"</command>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
