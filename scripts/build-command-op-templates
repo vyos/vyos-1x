@@ -54,7 +54,7 @@ debug = args.debug
 try:
     xml = ET.parse(input_file)
 except Exception as e:
-    print("Failed to load interface definition file {0}".format(input_file))
+    print(f"Failed to load interface definition file {input_file}")
     print(e)
     sys.exit(1)
 
@@ -64,15 +64,15 @@ try:
 
     if not validator.validate(xml):
         print(validator.error_log)
-        print("Interface definition file {0} does not match the schema!".format(input_file))
+        print(f"Interface definition file {input_file} does not match the schema!")
         sys.exit(1)
 except Exception as e:
-    print("Failed to load the XML schema {0}".format(schema_file))
+    print(f"Failed to load the XML schema {schema_file}")
     print(e)
     sys.exit(1)
 
 if not os.access(output_dir, os.W_OK):
-    print("The output directory {0} is not writeable".format(output_dir))
+    print(f"The output directory {output_dir} is not writeable")
     sys.exit(1)
 
 ## If we got this far, everything must be ok and we can convert the file
@@ -160,14 +160,14 @@ def process_node(n, tmpl_dir):
     my_tmpl_dir.append(name)
 
     if debug:
-        print("Name of the node: {};\n Created directory: ".format(name), end="")
+        print(f"Name of the node: {name};\n Created directory: ", end="")
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
     props = get_properties(props_elem)
 
     if node_type == "node":
         if debug:
-          print("Processing node {}".format(name))
+          print(f"Processing node {name}")
 
         nodedef_path = os.path.join(make_path(my_tmpl_dir), "node.def")
         # Only create the "node.def" file if it exists but is empty, or if it
@@ -180,9 +180,10 @@ def process_node(n, tmpl_dir):
             inner_nodes = children.iterfind("*")
             for inner_n in inner_nodes:
                 process_node(inner_n, my_tmpl_dir)
+
     if node_type == "tagNode":
         if debug:
-          print("Processing tag node {}".format(name))
+          print(f"Processing tagNode {name}")
 
         os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
@@ -211,7 +212,7 @@ def process_node(n, tmpl_dir):
     else:
         # This is a leaf node
         if debug:
-            print("Processing leaf node {}".format(name))
+            print(f"Processing leaf node {name}")
 
         with open(os.path.join(make_path(my_tmpl_dir), "node.def"), "w") as f:
             f.write(make_node_def(props, command))
