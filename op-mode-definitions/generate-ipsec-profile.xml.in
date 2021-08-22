@@ -100,37 +100,6 @@
                           </completionHelp>
                         </properties>
                         <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7" --name "$9"</command>
-                        <children>
-                          <tagNode name="profile">
-                            <properties>
-                              <help>Profile name as seen under system profiles</help>
-                              <completionHelp>
-                                <list>&lt;name&gt;</list>
-                              </completionHelp>
-                            </properties>
-                            <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7" --name "$9" --profile "${11}"</command>
-                          </tagNode>
-                        </children>
-                      </tagNode>
-                      <tagNode name="profile">
-                        <properties>
-                          <help>Profile name as seen under system profiles</help>
-                          <completionHelp>
-                            <list>&lt;name&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7" --profile "$9"</command>
-                        <children>
-                          <tagNode name="name">
-                            <properties>
-                              <help>Connection name as seen in the VPN application</help>
-                              <completionHelp>
-                                <list>&lt;name&gt;</list>
-                              </completionHelp>
-                            </properties>
-                            <command>${vyos_op_scripts_dir}/ikev2_profile_generator.py --os windows --connection "$5" --remote "$7" --profile "$9" --name "${11}"</command>
-                          </tagNode>
-                        </children>
                       </tagNode>
                     </children>
                   </tagNode>
