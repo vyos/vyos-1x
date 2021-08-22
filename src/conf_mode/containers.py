@@ -16,6 +16,7 @@
 
 import os
 import json
+import re
 
 from ipaddress import ip_address
 from ipaddress import ip_network
@@ -205,6 +206,17 @@ def apply(container):
                     if is_ipv6(prefix):
                       tmp += ' --ipv6'
                 _cmd(tmp)
+
+                # disable masquerading and use traditional bridging so VyOS can control firewalling/NAT/etc on the cni-podmanX interface
+                if 'enable_bridging' in network_config:
+                    # podman doesn't expose these options
+                    # this is the easiest way to change properties in the network config
+                    with open('/etc/cni/net.d/%s.conflist' % network, 'r') as sources:
+                        lines = sources.readlines()
+                    with open('/etc/cni/net.d/%s.conflist' % network, 'w') as sources:
+                        for line in lines:
+                            line = re.sub(r'"ipMasq": true', '"ipMasq": false', line)
+                            sources.write(line)
 
     # Add container
     if 'name' in container:
