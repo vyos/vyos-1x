@@ -40,7 +40,6 @@
         </properties>
         <command>builtin $3</command>
       </tagNode>
-
       <node name="console">
         <properties>
           <help>Control console behaviors</help>
@@ -54,13 +53,11 @@
           </leafNode>
         </children>
       </node>
-
       <node name="terminal">
         <properties>
           <help>Control terminal behaviors</help>
         </properties>
         <children>
-
           <node name="key">
             <properties>
               <help>Set key behaviors</help>
@@ -77,7 +74,6 @@
               </tagNode>
             </children>
           </node>
-
           <node name="pager">
             <properties>
               <help>Set terminal pager to default (less)</help>
@@ -93,7 +89,6 @@
             </properties>
             <command>VYATTA_PAGER=$4</command>
           </tagNode>
-
           <tagNode name="length">
             <properties>
               <help>Set terminal to given number of rows (0 disables paging)</help>
@@ -103,7 +98,6 @@
             </properties>
             <command>if [ "$4" -eq 0 ]; then VYATTA_PAGER=cat; else VYATTA_PAGER=${_vyatta_default_pager}; stty rows $4; fi</command>
           </tagNode>
-
           <tagNode name="width">
             <properties>
               <help>Set terminal to given number of columns</help>
@@ -117,6 +111,4 @@
       </node>
     </children>
   </node>
-
-
 </interfaceDefinition>
