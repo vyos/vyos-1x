@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@ from vyos.validate import assert_positive
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.configdict import get_vlan_ids
+from vyos.configdict import list_diff
 
 @Interface.register
 class BridgeIf(Interface):
@@ -33,7 +34,6 @@ class BridgeIf(Interface):
 
     The Linux bridge code implements a subset of the ANSI/IEEE 802.1d standard.
     """
-
     iftype = 'bridge'
     definition = {
         **Interface.definition,
@@ -267,21 +267,37 @@ class BridgeIf(Interface):
         for member in (tmp or []):
             if member in interfaces():
                 self.del_port(member)
-        vlan_filter = 0
 
-        vlan_del = set()
-        vlan_add = set()
+        # enable/disable Vlan Filter
+        vlan_filter = '1' if 'enable_vlan' in config else '0'
+        self.set_vlan_filter(vlan_filter)
 
         ifname = config['ifname']
+        if int(vlan_filter):
+            add_vlan = []
+            cur_vlan_ids = get_vlan_ids(ifname)
+
+            tmp = dict_search('vif', config)
+            if tmp:
+                for vif, vif_config in tmp.items():
+                    add_vlan.append(vif)
+
+            # Remove redundant VLANs from the system
+            for vlan in list_diff(cur_vlan_ids, add_vlan):
+                cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
+                self._cmd(cmd)
+
+            for vlan in add_vlan:
+                cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
+                self._cmd(cmd)
+
+            # VLAN of bridge parent interface is always 1
+            # VLAN 1 is the default VLAN for all unlabeled packets
+            cmd = f'bridge vlan add dev {ifname} vid 1 pvid untagged self'
+            self._cmd(cmd)
+
         tmp = dict_search('member.interface', config)
         if tmp:
-            if self.get_vlan_filter():
-                bridge_vlan_ids = get_vlan_ids(ifname)
-                # Delete VLAN ID for the bridge
-                if 1 in bridge_vlan_ids:
-                    bridge_vlan_ids.remove(1)
-                for vlan in bridge_vlan_ids:
-                    vlan_del.add(str(vlan))
 
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and
@@ -296,8 +312,14 @@ class BridgeIf(Interface):
                 # not have any addresses configured by CLI so just flush any
                 # remaining ones
                 lower.flush_addrs()
+
                 # enslave interface port to bridge
                 self.add_port(interface)
+
+                # always set private-vlan/port isolation
+                tmp = dict_search('isolated', interface_config)
+                value = 'on' if (tmp != None) else 'off'
+                lower.set_port_isolation(value)
 
                 # set bridge port path cost
                 if 'cost' in interface_config:
@@ -309,61 +331,39 @@ class BridgeIf(Interface):
                     value = interface_config.get('priority')
                     lower.set_path_priority(value)
 
-                tmp = dict_search('native_vlan_removed', interface_config)
+                if int(vlan_filter):
+                    add_vlan = []
+                    native_vlan_id = None
+                    allowed_vlan_ids= []
+                    cur_vlan_ids = get_vlan_ids(interface)
 
-                for vlan_id in (tmp or []):
-                    cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
-                    self._cmd(cmd)
-                    cmd = f'bridge vlan add dev {interface} vid 1 pvid untagged master'
-                    self._cmd(cmd)
-                    vlan_del.add(vlan_id)
-                    vlan_add.add(1)
+                    if 'native_vlan' in interface_config:
+                        vlan_id = interface_config['native_vlan']
+                        add_vlan.append(vlan_id)
+                        native_vlan_id = vlan_id
 
-                tmp = dict_search('allowed_vlan_removed', interface_config)
+                    if 'allowed_vlan' in interface_config:
+                        for vlan in interface_config['allowed_vlan']:
+                            vlan_range = vlan.split('-')
+                            if len(vlan_range) == 2:
+                                for vlan_add in range(int(vlan_range[0]),int(vlan_range[1]) + 1):
+                                    add_vlan.append(str(vlan_add))
+                                    allowed_vlan_ids.append(str(vlan_add))
+                            else:
+                                add_vlan.append(vlan)
+                                allowed_vlan_ids.append(vlan)
 
-                for vlan_id in (tmp or []):
-                    cmd = f'bridge vlan del dev {interface} vid {vlan_id}'
-                    self._cmd(cmd)
-                    vlan_del.add(vlan_id)
-
-                if 'native_vlan' in interface_config:
-                    vlan_filter = 1
-                    cmd = f'bridge vlan del dev {interface} vid 1'
-                    self._cmd(cmd)
-                    vlan_id = interface_config['native_vlan']
-                    if int(vlan_id) != 1:
-                        if 1 in vlan_add:
-                            vlan_add.remove(1)
-                        vlan_del.add(1)
-                    cmd = f'bridge vlan add dev {interface} vid {vlan_id} pvid untagged master'
-                    self._cmd(cmd)
-                    vlan_add.add(vlan_id)
-                    if vlan_id in vlan_del:
-                        vlan_del.remove(vlan_id)
-
-                if 'allowed_vlan' in interface_config:
-                    vlan_filter = 1
-                    if 'native_vlan' not in interface_config:
-                        cmd = f'bridge vlan del dev {interface} vid 1'
+                    # Remove redundant VLANs from the system
+                    for vlan in list_diff(cur_vlan_ids, add_vlan):
+                        cmd = f'bridge vlan del dev {interface} vid {vlan} master'
                         self._cmd(cmd)
-                        vlan_del.add(1)
-                    for vlan in interface_config['allowed_vlan']:
+
+                    for vlan in allowed_vlan_ids:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
-                        vlan_add.add(vlan)
-                        if vlan in vlan_del:
-                            vlan_del.remove(vlan)
-
-        for vlan in vlan_del:
-            cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-            self._cmd(cmd)
-
-        for vlan in vlan_add:
-            cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
-            self._cmd(cmd)
-
-        # enable/disable Vlan Filter
-        self.set_vlan_filter(vlan_filter)
-
+                    # Setting native VLAN to system
+                    if native_vlan_id:
+                        cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
+                        self._cmd(cmd)
 
         super().update(config)

@@ -63,6 +63,32 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
 
         super().tearDown()
 
+    def test_isolated_interfaces(self):
+        # Add member interfaces to bridge and set STP cost/priority
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['stp'])
+
+            # assign members to bridge interface
+            for member in self._members:
+                base_member = base + ['member', 'interface', member]
+                self.cli_set(base_member + ['isolated'])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            tmp = get_interface_config(interface)
+            # STP must be enabled as configured above
+            self.assertEqual(1, tmp['linkinfo']['info_data']['stp_state'])
+
+            # validate member interface configuration
+            for member in self._members:
+                tmp = get_interface_config(member)
+                # Isolated must be enabled as configured above
+                self.assertTrue(tmp['linkinfo']['info_slave_data']['isolated'])
+
+
     def test_add_remove_bridge_member(self):
         # Add member interfaces to bridge and set STP cost/priority
         for interface in self._interfaces:
@@ -97,12 +123,34 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
                 cost += 1
                 priority += 1
 
+
+    def test_vif_8021q_interfaces(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['enable-vlan'])
+        super().test_vif_8021q_interfaces()
+
+    def test_vif_8021q_lower_up_down(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['enable-vlan'])
+        super().test_vif_8021q_lower_up_down()
+
+    def test_vif_8021q_mtu_limits(self):
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['enable-vlan'])
+        super().test_vif_8021q_mtu_limits()
+
     def test_bridge_vlan_filter(self):
+        vif_vlan = 2
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
             base = self._base_path + [interface]
-            self.cli_set(base + ['vif', '1', 'address', '192.0.2.1/24'])
-            self.cli_set(base + ['vif', '2', 'address', '192.0.3.1/24'])
+            self.cli_set(base + ['enable-vlan'])
+            self.cli_set(base + ['address', '192.0.2.1/24'])
+            self.cli_set(base + ['vif', str(vif_vlan), 'address', '192.0.3.1/24'])
+            self.cli_set(base + ['vif', str(vif_vlan), 'mtu', self._mtu])
 
             vlan_id = 101
             allowed_vlan = 2
@@ -173,6 +221,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         # delete all members
         for interface in self._interfaces:
             self.cli_delete(self._base_path + [interface, 'member'])
+
 
     def test_bridge_vlan_members(self):
         # T2945: ensure that VIFs are not dropped from bridge
