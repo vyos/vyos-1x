@@ -17,6 +17,19 @@
       </node>
     </children>
   </node>
+  <node name="connect">
+    <children>
+      <tagNode name="container">
+        <properties>
+          <help>Attach to a running container</help>
+          <completionHelp>
+            <path>container name</path>
+          </completionHelp>
+        </properties>
+        <command>echo "Use Ctrl+p and Ctrl+q to detach"; sudo podman attach "$3"</command>
+      </tagNode>
+    </children>
+  </node>
   <node name="delete">
     <children>
       <node name="container">
