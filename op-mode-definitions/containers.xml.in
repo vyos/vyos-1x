@@ -71,4 +71,17 @@
       </node>
     </children>
   </node>
+  <node name="restart">
+    <children>
+      <tagNode name="container">
+        <properties>
+          <help>Restart a given container</help>
+          <completionHelp>
+            <path>container name</path>
+          </completionHelp>
+        </properties>
+        <command>sudo podman restart "$3"</command>
+      </tagNode>
+    </children>
+  </node>
 </interfaceDefinition>
