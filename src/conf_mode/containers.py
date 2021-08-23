@@ -237,12 +237,14 @@ def apply(container):
             # Bind volume
             volume = ''
             if 'volume' in container_config:
-                for vol, vol_config in container_config['volume']:
+                for vol, vol_config in container_config['volume'].items():
                     svol = vol_config['source']
                     dvol = vol_config['destination']
                     volume += f' -v {svol}:{dvol}'
 
-            container_base_cmd = f'podman run --detach --interactive --tty --replace --memory {memory}m --restart {restart} --name {name} {port} {volume} {env_opt}'
+            container_base_cmd = f'podman run --detach --interactive --tty --replace ' \
+                                 f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
+                                 f'--name {name} {port} {volume} {env_opt}'
             if 'allow_host_networks' in container_config:
                 _cmd(f'{container_base_cmd} --net host {image}')
             else:
