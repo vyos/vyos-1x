@@ -21,11 +21,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Container description</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-description.xml.i>
           <tagNode name="environment">
             <properties>
               <help>Add custom environment variables</help>
