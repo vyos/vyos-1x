@@ -24,7 +24,7 @@ import tabulate
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
-from vyos.config import Config
+from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import dict_merge
 from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
 from vyos.pki import create_certificate, create_certificate_request, create_certificate_revocation_list
@@ -41,10 +41,10 @@ CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
 
 # Helper Functions
-
+conf = ConfigTreeQuery()
 def get_default_values():
     # Fetch default x509 values
-    conf = Config()
+
     base = ['pki', 'x509', 'default']
     x509_defaults = conf.get_config_dict(base, key_mangling=('-', '_'),
                                      get_first_key=True, no_tag_node_value_mangle=True)
@@ -53,9 +53,7 @@ def get_default_values():
 
 def get_config_ca_certificate(name=None):
     # Fetch ca certificates from config
-    conf = Config()
     base = ['pki', 'ca']
-
     if not conf.exists(base):
         return False
 
@@ -69,9 +67,7 @@ def get_config_ca_certificate(name=None):
 
 def get_config_certificate(name=None):
     # Get certificates from config
-    conf = Config()
     base = ['pki', 'certificate']
-
     if not conf.exists(base):
         return False
 
@@ -100,7 +96,6 @@ def get_certificate_ca(cert, ca_certs):
 
 def get_config_revoked_certificates():
     # Fetch revoked certificates from config
-    conf = Config()
     ca_base = ['pki', 'ca']
     cert_base = ['pki', 'certificate']
 
@@ -464,7 +459,7 @@ def generate_certificate_sign(name, ca_name, install=False, file=False):
     if not cert_req:
         print("Invalid certificate request")
         return None
-        
+
     cert = generate_certificate(cert_req, ca_cert, ca_private_key, is_ca=False)
     passphrase = ask_passphrase()
 
