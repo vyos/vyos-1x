@@ -22,6 +22,7 @@
             </properties>
           </leafNode>
           #include <include/generic-description.xml.i>
+          #include <include/generic-disable-node.xml.i>
           <tagNode name="environment">
             <properties>
               <help>Add custom environment variables</help>

@@ -214,8 +214,15 @@ def apply(container):
     # Add container
     if 'name' in container:
         for name, container_config in container['name'].items():
-            # Check if the container has already been created
             image = container_config['image']
+
+            if 'disable' in container_config:
+                # check if there is a container by that name running
+                tmp = _cmd('podman ps -a --format "{{.Names}}"')
+                if name in tmp:
+                    _cmd(f'podman stop {name}')
+                continue
+
             memory = container_config['memory']
             restart = container_config['restart']
 
