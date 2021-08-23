@@ -53,7 +53,7 @@
           </leafNode>
           <leafNode name="memory">
             <properties>
-              <help>Constrain the memory available to a container (default: 256MB)</help>
+              <help>Constrain the memory available to a container (default: 512MB)</help>
               <valueHelp>
                 <format>u32:0</format>
                 <description>Unlimited</description>
@@ -67,7 +67,7 @@
               </constraint>
               <constraintErrorMessage>Container memory must be in range 0 to 16384 MB</constraintErrorMessage>
             </properties>
-            <defaultValue>256</defaultValue>
+            <defaultValue>512</defaultValue>
           </leafNode>
           <tagNode name="network">
             <properties>
