@@ -26,7 +26,7 @@
             <path>container name</path>
           </completionHelp>
         </properties>
-        <command>echo "Use Ctrl+p and Ctrl+q to detach"; sudo podman attach "$3"</command>
+        <command>sudo podman exec --interactive --tty "$3" /bin/sh</command>
       </tagNode>
     </children>
   </node>
