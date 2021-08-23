@@ -221,8 +221,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for protocol in redistribute:
             self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
-            if protocol not in ['kernel', 'static']:
-                self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
+            self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
         # commit changes
         self.cli_commit()
@@ -232,10 +231,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         try:
             self.assertIn(f'router ospf', frrconfig)
             for protocol in redistribute:
-                if protocol in ['kernel', 'static']:
-                    self.assertIn(f' redistribute {protocol} metric {metric} route-map {route_map}', frrconfig)
-                else:
-                    self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+                self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
         except:
             log.debug(frrconfig)
             log.debug(cmd('sudo dmesg'))
