@@ -60,7 +60,7 @@
                   <help>Set IPv4 static address to container (optional)</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IPv4 address (x.x.x.1 reserved)</description>
+                    <description>IPv4 address</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>

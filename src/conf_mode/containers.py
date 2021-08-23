@@ -124,7 +124,8 @@ def verify(container):
 
                     # We can not use the first IP address of a network prefix as this is used by podman
                     if ip_address(address) == ip_network(network)[1]:
-                        raise ConfigError(f'Address "{address}" reserved for the container engine!')
+                        raise ConfigError(f'IP address "{address}" can not be used for a container, '\
+                                          'reserved for the container engine!')
 
             if 'environment' in container_config:
                 for var, cfg in container_config['environment'].items():
