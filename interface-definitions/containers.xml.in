@@ -9,6 +9,10 @@
       <tagNode name="name">
         <properties>
           <help>Container name</help>
+          <constraint>
+            <regex>^[-a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Container name must be alphanumeric and can contain hyphens</constraintErrorMessage>
         </properties>
         <children>
           <leafNode name="allow-host-networks">
