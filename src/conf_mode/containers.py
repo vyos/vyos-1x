@@ -233,8 +233,8 @@ def apply(container):
                 # Check/set environment options "-e foo=bar"
                 env_opt = ''
                 if 'environment' in container_config:
-                    env_opt = '-e '
-                    env_opt += " -e ".join(f"{k}={v['value']}" for k, v in container_config['environment'].items())
+                    for k, v in container_config['environment'].items():
+                        env_opt += f" -e \"{k}={v['value']}\""
 
                 # Publish ports
                 port = ''
@@ -258,15 +258,15 @@ def apply(container):
                         dvol = vol_config['destination']
                         volume += f' -v {svol}:{dvol}'
 
-                container_base_cmd = f'podman run -dit --name {name} --memory {memory} --restart {restart} {port} {volume} {env_opt} {image}'
+                container_base_cmd = f'podman run -dit --name {name} --memory {memory}m --restart {restart} {port} {volume} {env_opt}'
                 if 'allow_host_networks' in container_config:
-                    _cmd(f'{container_base_cmd} --net host')
+                    _cmd(f'{container_base_cmd} --net host {image}')
                 else:
                     for network in container_config['network']:
                         ipparam = ''
                         if 'address' in container_config['network'][network]:
                             ipparam = '--ip ' + container_config['network'][network]['address']
-                        _cmd(f'{container_base_cmd} --net {network} {ipparam}')
+                        _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
 
             # Else container is already created. Just start it.
             # It's needed after reboot.
