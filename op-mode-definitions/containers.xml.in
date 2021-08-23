@@ -40,6 +40,9 @@
           <tagNode name="image">
             <properties>
               <help>Delete container image</help>
+              <completionHelp>
+                <script>sudo podman image ls -q</script>
+              </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --remove "${4}"</command>
           </tagNode>
