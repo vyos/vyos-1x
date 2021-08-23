@@ -47,6 +47,24 @@
               <help>Image name in the hub-registry</help>
             </properties>
           </leafNode>
+          <leafNode name="memory">
+            <properties>
+              <help>Constrain the memory available to a container (default: 256MB)</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>u32:1-16384</format>
+                <description>Container memory in megabytes (MB)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16384"/>
+              </constraint>
+              <constraintErrorMessage>Container memory must be in range 0 to 16384 MB</constraintErrorMessage>
+            </properties>
+            <defaultValue>256</defaultValue>
+          </leafNode>
           <tagNode name="network">
             <properties>
               <help>Attach user defined network to container</help>
@@ -119,6 +137,30 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="restart">
+            <properties>
+              <help>Mount a volume into the container</help>
+              <completionHelp>
+                <list>no on-failure always</list>
+              </completionHelp>
+              <valueHelp>
+                <format>no</format>
+                <description>Do not restart containers on exit</description>
+              </valueHelp>
+              <valueHelp>
+                <format>on-failure</format>
+                <description>Restart containers when they exit with a non-zero exit code, retrying indefinitely (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>always</format>
+                <description>Restart containers when they exit, regardless of status, retrying indefinitely</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(no|on-failure|always)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>on-failure</defaultValue>
+          </leafNode>
           <tagNode name="volume">
             <properties>
               <help>Mount a volume into the container</help>

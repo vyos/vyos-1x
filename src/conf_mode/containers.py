@@ -79,7 +79,16 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
+    # container base default values can not be merged here - remove and add them later
+    if 'name' in default_values:
+        del default_values['name']
     container = dict_merge(default_values, container)
+
+    # Merge per-container default values
+    if 'name' in container:
+        default_values = defaults(base + ['name'])
+        for name in container['name']:
+            container['name'][name] = dict_merge(default_values, container['name'][name])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, ['container', 'network'])
@@ -216,6 +225,8 @@ def apply(container):
             # Check if the container has already been created
             if not container_exists(name):
                 image = container_config['image']
+                memory = container_config['memory']
+                restart = container_config['restart']
                 # Currently the best way to run a command and immediately print stdout
                 print(os.system(f'podman pull {image}'))
 
@@ -242,19 +253,20 @@ def apply(container):
                 # Bind volume
                 volume = ''
                 if 'volume' in container_config:
-                    for vol in container_config['volume']:
-                        svol = container_config['volume'][vol]['source']
-                        dvol = container_config['volume'][vol]['destination']
+                    for vol, vol_config in container_config['volume']:
+                        svol = vol_config['source']
+                        dvol = vol_config['destination']
                         volume += f' -v {svol}:{dvol}'
 
+                container_base_cmd = f'podman run -dit --name {name} --memory {memory} --restart {restart} {port} {volume} {env_opt} {image}'
                 if 'allow_host_networks' in container_config:
-                    _cmd(f'podman run -dit --name {name} --net host {port} {volume} {env_opt} {image}')
+                    _cmd(f'{container_base_cmd} --net host')
                 else:
                     for network in container_config['network']:
                         ipparam = ''
                         if 'address' in container_config['network'][network]:
                             ipparam = '--ip ' + container_config['network'][network]['address']
-                        _cmd(f'podman run --name {name} -dit --net {network} {ipparam} {port} {volume} {env_opt} {image}')
+                        _cmd(f'{container_base_cmd} --net {network} {ipparam}')
 
             # Else container is already created. Just start it.
             # It's needed after reboot.
