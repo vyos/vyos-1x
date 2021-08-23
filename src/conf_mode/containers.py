@@ -102,7 +102,6 @@ def verify(container):
                 if len(container_config['network']) > 1:
                     raise ConfigError(f'Only one network can be specified for container "{name}"!')
 
-
                 # Check if the specified container network exists
                 network_name = list(container_config['network'])[0]
                 if network_name not in container['network']:
@@ -127,6 +126,10 @@ def verify(container):
                     if ip_address(address) == ip_network(network)[1]:
                         raise ConfigError(f'Address "{address}" reserved for the container engine!')
 
+            if 'environment' in container_config:
+                for var, cfg in container_config['environment'].items():
+                    if 'value' not in cfg:
+                        raise ConfigError(f'Environment variable {var} has no value assigned!')
 
             # Container image is a mandatory option
             if 'image' not in container_config:
