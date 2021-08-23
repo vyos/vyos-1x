@@ -26,6 +26,8 @@ from vyos.configdict import node_changed
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import run
+from vyos.util import read_file
+from vyos.util import write_file
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -42,7 +44,7 @@ def _cmd(command):
         print(command)
     return cmd(command)
 
-def ctnr_network_exists(name):
+def network_exists(name):
     # Check explicit name for network, returns True if network exists
     c = _cmd(f'podman network ls --quiet --filter name=^{name}$')
     return bool(c)
@@ -201,7 +203,7 @@ def apply(container):
     if 'network' in container:
         for network, network_config in container['network'].items():
             # Check if the network has already been created
-            if not ctnr_network_exists(network) and 'prefix' in network_config:
+            if not network_exists(network) and 'prefix' in network_config:
                 tmp = f'podman network create {network}'
                 # we can not use list comprehension here as the --ipv6 option
                 # must immediately follow the specified subnet!!!
@@ -210,6 +212,18 @@ def apply(container):
                     if is_ipv6(prefix):
                       tmp += ' --ipv6'
                 _cmd(tmp)
+
+                # Disable masquerading and use traditional bridging so VyOS
+                # can control firewalling/NAT by the real VyOS CLI
+                cni_network_config = f'/etc/cni/net.d/{network}.conflist'
+                tmp = read_file(cni_network_config)
+                config = json.loads(tmp)
+                if 'plugins' in config:
+                    for count in range(0, len(config['plugins'])):
+                        if 'ipMasq' in config['plugins'][count]:
+                            config['plugins'][count]['ipMasq'] = False
+
+                write_file(cni_network_config, json.dumps(config, indent=4))
 
     # Add container
     if 'name' in container:
