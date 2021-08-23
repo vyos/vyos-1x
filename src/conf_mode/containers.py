@@ -23,8 +23,9 @@ from ipaddress import ip_network
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.util import call
 from vyos.util import cmd
-from vyos.util import popen
+from vyos.util import run
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -40,26 +41,6 @@ def _cmd(command):
     if os.path.exists('/tmp/vyos.container.debug'):
         print(command)
     return cmd(command)
-
-# Container management functions
-def container_exists(name):
-    '''
-    https://docs.podman.io/en/latest/_static/api.html#operation/ContainerExistsLibpod
-    Check if container exists. Response codes.
-    204 - container exists
-    404 - no such container
-    '''
-    tmp = _cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/exists'")
-    # If container exists it return status code "0" - code can not be displayed
-    return (tmp == "")
-
-def container_status(name):
-    '''
-    https://docs.podman.io/en/latest/_static/api.html#operation/ContainerInspectLibpod
-    '''
-    tmp = _cmd(f"curl --unix-socket /run/podman/podman.sock 'http://d/v3.0.0/libpod/containers/{name}/json'")
-    data = json.loads(tmp)
-    return data['State']['Status']
 
 def ctnr_network_exists(name):
     # Check explicit name for network, returns True if network exists
@@ -92,7 +73,7 @@ def get_config(config=None):
 
     # Delete container network, delete containers
     tmp = node_changed(conf, ['container', 'network'])
-    if tmp: container.update({'net_remove' : tmp})
+    if tmp: container.update({'network_remove' : tmp})
 
     tmp = node_changed(conf, ['container', 'name'])
     if tmp: container.update({'container_remove' : tmp})
@@ -173,8 +154,8 @@ def verify(container):
 
 
     # A network attached to a container can not be deleted
-    if {'net_remove', 'name'} <= set(container):
-        for network in container['net_remove']:
+    if {'network_remove', 'name'} <= set(container):
+        for network in container['network_remove']:
             for container, container_config in container['name'].items():
                 if 'network' in container_config and network in container_config['network']:
                     raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
@@ -196,14 +177,13 @@ def apply(container):
     # Option "--force" allows to delete containers with any status
     if 'container_remove' in container:
         for name in container['container_remove']:
-            if container_status(name) == 'running':
-                _cmd(f'podman stop {name}')
-            _cmd(f'podman rm --force {name}')
+            call(f'podman stop {name}')
+            call(f'podman rm --force {name}')
 
     # Delete old networks if needed
-    if 'net_remove' in container:
-        for network in container['net_remove']:
-            _cmd(f'podman network rm {network}')
+    if 'network_remove' in container:
+        for network in container['network_remove']:
+            call(f'podman network rm --force {network}')
 
     # Add network
     if 'network' in container:
@@ -223,55 +203,54 @@ def apply(container):
     if 'name' in container:
         for name, container_config in container['name'].items():
             # Check if the container has already been created
-            if not container_exists(name):
-                image = container_config['image']
-                memory = container_config['memory']
-                restart = container_config['restart']
-                # Currently the best way to run a command and immediately print stdout
-                print(os.system(f'podman pull {image}'))
+            image = container_config['image']
+            memory = container_config['memory']
+            restart = container_config['restart']
 
-                # Check/set environment options "-e foo=bar"
-                env_opt = ''
-                if 'environment' in container_config:
-                    for k, v in container_config['environment'].items():
-                        env_opt += f" -e \"{k}={v['value']}\""
+            # Check if requested container image exists locally. If it does not, we
+            # pull it. print() is the best way to have a good response from the
+            # polling process to the user to display progress. If the image exists
+            # locally, a user can update it running `update container image <name>`
+            tmp = run(f'podman image exists {image}')
+            if tmp != 0: print(os.system(f'podman pull {image}'))
 
-                # Publish ports
-                port = ''
-                if 'port' in container_config:
-                    protocol = ''
-                    for portmap in container_config['port']:
-                        if 'protocol' in container_config['port'][portmap]:
-                            protocol = container_config['port'][portmap]['protocol']
-                            protocol = f'/{protocol}'
-                        else:
-                            protocol = '/tcp'
-                        sport = container_config['port'][portmap]['source']
-                        dport = container_config['port'][portmap]['destination']
-                        port += f' -p {sport}:{dport}{protocol}'
+            # Check/set environment options "-e foo=bar"
+            env_opt = ''
+            if 'environment' in container_config:
+                for k, v in container_config['environment'].items():
+                    env_opt += f" -e \"{k}={v['value']}\""
 
-                # Bind volume
-                volume = ''
-                if 'volume' in container_config:
-                    for vol, vol_config in container_config['volume']:
-                        svol = vol_config['source']
-                        dvol = vol_config['destination']
-                        volume += f' -v {svol}:{dvol}'
+            # Publish ports
+            port = ''
+            if 'port' in container_config:
+                protocol = ''
+                for portmap in container_config['port']:
+                    if 'protocol' in container_config['port'][portmap]:
+                        protocol = container_config['port'][portmap]['protocol']
+                        protocol = f'/{protocol}'
+                    else:
+                        protocol = '/tcp'
+                    sport = container_config['port'][portmap]['source']
+                    dport = container_config['port'][portmap]['destination']
+                    port += f' -p {sport}:{dport}{protocol}'
 
-                container_base_cmd = f'podman run -dit --name {name} --memory {memory}m --restart {restart} {port} {volume} {env_opt}'
-                if 'allow_host_networks' in container_config:
-                    _cmd(f'{container_base_cmd} --net host {image}')
-                else:
-                    for network in container_config['network']:
-                        ipparam = ''
-                        if 'address' in container_config['network'][network]:
-                            ipparam = '--ip ' + container_config['network'][network]['address']
-                        _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
+            # Bind volume
+            volume = ''
+            if 'volume' in container_config:
+                for vol, vol_config in container_config['volume']:
+                    svol = vol_config['source']
+                    dvol = vol_config['destination']
+                    volume += f' -v {svol}:{dvol}'
 
-            # Else container is already created. Just start it.
-            # It's needed after reboot.
-            elif container_status(name) != 'running':
-                _cmd(f'podman start {name}')
+            container_base_cmd = f'podman run --detach --interactive --tty --replace --memory {memory}m --restart {restart} --name {name} {port} {volume} {env_opt}'
+            if 'allow_host_networks' in container_config:
+                _cmd(f'{container_base_cmd} --net host {image}')
+            else:
+                for network in container_config['network']:
+                    ipparam = ''
+                    if 'address' in container_config['network'][network]:
+                        ipparam = '--ip ' + container_config['network'][network]['address']
+                    _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
 
     return None
 
