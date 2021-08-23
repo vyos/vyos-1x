@@ -48,6 +48,11 @@
               <help>Image name in the hub-registry</help>
             </properties>
           </leafNode>
+          <leafNode name="containerfile">
+            <properties>
+              <help>Dockerfile/Containerfile to use to build this container</help>
+             </properties>
+          </leafNode>
           <leafNode name="memory">
             <properties>
               <help>Constrain the memory available to a container (default: 512MB)</help>

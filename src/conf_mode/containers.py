@@ -245,7 +245,16 @@ def apply(container):
             # polling process to the user to display progress. If the image exists
             # locally, a user can update it running `update container image <name>`
             tmp = run(f'podman image exists {image}')
-            if tmp != 0: print(os.system(f'podman pull {image}'))
+            if tmp != 0:
+                if "containerfile" in container_config:
+                    # do a build from a Containerfile/Dockerfile
+                    path = container_config['containerfile']
+                    # image name becomes the container name here
+                    print(os.system(f'podman build -f {path} -t {image}'))
+                else:
+                    # Currently the best way to run a command and immediately print stdout
+                    print(os.system(f'podman pull {image}'))
+
 
             # Check/set environment options "-e foo=bar"
             env_opt = ''
