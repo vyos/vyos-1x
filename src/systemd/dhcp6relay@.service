@@ -1,0 +1,20 @@
+[Unit]
+Description=Wide DHCP IPv6 relay on %i
+Documentation=man:dhcp6relay(8)
+Wants=network-online.target
+RequiresMountsFor=/run
+ConditionPathExists=/run/dhcp-relay/dhcp6relay.%i.conf
+After=vyos-router.service
+
+[Service]
+Type=forking
+WorkingDirectory=/run/dhcp-relay
+RuntimeDirectory=dhcp-relay
+RuntimeDirectoryPreserve=yes
+EnvironmentFile=/run/dhcp-relay/dhcp6relay.%i.conf
+PIDFile=/run/dhcp-relay/dhcp6relay.%i.pid
+ExecStart=/usr/sbin/dhcp6relay -p /run/dhcp-relay/dhcp6relay.%i.pid $OPTIONS
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

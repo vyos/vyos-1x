@@ -1,0 +1,22 @@
+{% set option = namespace(value='')  %}
+
+{% if dhcpv6_options is defined and dhcpv6_options.dhcp6relay is defined %}
+{%    if dhcpv6_options.dhcp6relay.upstream_address is defined %}
+{%      set option.value = option.value + '-s ' + dhcpv6_options.dhcp6relay.upstream_address + ' ' %}
+{%    endif  %}
+{%    if dhcpv6_options.dhcp6relay.boundaddr is defined %}
+{%      for addr in dhcpv6_options.dhcp6relay.boundaddr %}
+{%        set option.value = option.value + '-b ' + addr + ' ' %}
+{%      endfor %}
+{%    endif  %}
+{%    if dhcpv6_options.dhcp6relay.max_hop_count is defined %}
+{%      set option.value = option.value + '-H ' + dhcpv6_options.dhcp6relay.max_hop_count + ' ' %}
+{%    endif  %}
+{%    if dhcpv6_options.dhcp6relay.interface is defined %}
+{%      for intf in dhcpv6_options.dhcp6relay.interface %}
+{%        set option.value = option.value + intf + ' ' %}
+{%      endfor %}
+{%    endif  %}
+{% endif %}
+
+OPTIONS="-r {{ ifname }} {{ option.value }}"

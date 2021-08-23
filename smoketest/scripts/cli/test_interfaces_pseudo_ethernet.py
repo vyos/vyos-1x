@@ -27,6 +27,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
+        cls._test_ipv6_dhcp6_relay = True
         cls._test_ipv6_dhcpc6 = True
         cls._test_mtu = True
         cls._test_vlan = True

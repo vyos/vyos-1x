@@ -63,6 +63,7 @@ class BasicInterfaceTest:
         _test_qinq = False
         _test_ipv6 = False
         _test_ipv6_pd = False
+        _test_ipv6_dhcp6_relay = False
         _test_ipv6_dhcpc6 = False
         _test_mirror = False
         _base_path = []
@@ -874,3 +875,84 @@ class BasicInterfaceTest:
                 # as until commit() is called, nothing happens
                 section = Section.section(delegatee)
                 self.cli_delete(['interfaces', section, delegatee])
+
+        def test_dhcpv6_relay_no_addr(self):
+            if not self._test_ipv6_dhcp6_relay:
+                self.skipTest('not supported')
+
+            relay_intf_lists = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
+
+            for interface in self._interfaces:
+                path = self._base_path + [interface]
+                dhcp6relay_base = path + ['dhcpv6-options', 'dhcp6relay']
+                for option in self._options.get(interface, []):
+                    self.cli_set(path + option.split())
+
+                i = 0
+                for intf in relay_intf_lists:
+                    section = Section.section(intf)
+                    self.cli_set(['interfaces', section, intf])
+                    self.cli_set(['interfaces', section, intf, 'address', f'fc0{i}::1/64'])
+                    self.cli_set(dhcp6relay_base + ['interface', intf])
+                    i += 1
+
+            self.cli_commit()
+
+            dhcp6relay_config = read_file(f'/run/dhcp-relay/dhcp6relay.{interface}.conf')
+            self.assertIn(f'-r {interface}', dhcp6relay_config)
+            self.assertIn('-H 10', dhcp6relay_config)
+            for intf in relay_intf_lists:
+                self.assertIn(f'{intf}', dhcp6relay_config)
+
+            # Check for running process
+            self.assertTrue(process_named_running('dhcp6relay'))
+
+            for intf in relay_intf_lists:
+                # we can already cleanup the test intf interface here
+                # as until commit() is called, nothing happens
+                section = Section.section(intf)
+                self.cli_delete(['interfaces', section, intf])
+
+        def test_dhcpv6_relay(self):
+            if not self._test_ipv6_dhcp6_relay:
+                self.skipTest('not supported')
+
+            relay_intf_lists = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
+
+            for interface in self._interfaces:
+                path = self._base_path + [interface]
+                dhcp6relay_base = path + ['dhcpv6-options', 'dhcp6relay']
+                for option in self._options.get(interface, []):
+                    self.cli_set(path + option.split())
+
+                i = 0
+                self.cli_set(dhcp6relay_base + ['upstream-address', 'ff05::1:3'])
+                for intf in relay_intf_lists:
+                    section = Section.section(intf)
+                    self.cli_set(['interfaces', section, intf])
+                    self.cli_set(['interfaces', section, intf, 'address', f'fc0{i}::1/64'])
+                    self.cli_set(dhcp6relay_base + ['interface', intf])
+                    self.cli_set(dhcp6relay_base + ['boundaddr', f'fc0{i}::1'])
+                    i += 1
+
+            self.cli_commit()
+
+            dhcp6relay_config = read_file(f'/run/dhcp-relay/dhcp6relay.{interface}.conf')
+            self.assertIn(f'-r {interface}', dhcp6relay_config)
+
+            i = 0
+            self.assertIn('-s ff05::1:3', dhcp6relay_config)
+            self.assertIn('-H 10', dhcp6relay_config)
+            for intf in relay_intf_lists:
+                self.assertIn(f'-b fc0{i}::1', dhcp6relay_config)
+                self.assertIn(f'{intf}', dhcp6relay_config)
+                i +=1
+
+            # Check for running process
+            self.assertTrue(process_named_running('dhcp6relay'))
+
+            for intf in relay_intf_lists:
+                # we can already cleanup the test intf interface here
+                # as until commit() is called, nothing happens
+                section = Section.section(intf)
+                self.cli_delete(['interfaces', section, intf])

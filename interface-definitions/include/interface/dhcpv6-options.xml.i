@@ -22,6 +22,61 @@
         <valueless/>
       </properties>
     </leafNode>
+    <node name="dhcp6relay">
+      <properties>
+        <help>DHCPv6 relay agent interface statement</help>
+      </properties>
+      <children>
+        <leafNode name="upstream-address">
+          <properties>
+            <help>Address for DHCPv6 Relay Agent to listen for requests</help>
+            <valueHelp>
+              <format>ipv6</format>
+              <description>Address for DHCPv6 Relay Agent to listen for requests</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-address"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="boundaddr">
+          <properties>
+            <help>Specifies the source address to relay packets to servers (or other agents)</help>
+            <valueHelp>
+              <format>ipv6</format>
+              <description>Specifies the source address to relay packets to servers</description>
+            </valueHelp>
+            <constraint>
+              <validator name="ipv6-address"/>
+            </constraint>
+            <multi />
+          </properties>
+        </leafNode>
+        <leafNode name="max-hop-count">
+          <properties>
+            <help>Maximum hop count for which requests will be processed</help>
+            <valueHelp>
+              <format>1-255</format>
+              <description>Hop count (default: 10)</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-255"/>
+            </constraint>
+            <constraintErrorMessage>max-hop-count must be a value between 1 and 255</constraintErrorMessage>
+          </properties>
+          <defaultValue>10</defaultValue>
+        </leafNode>
+        <leafNode name="interface">
+          <properties>
+            <help>The agent accepts the source interface that needs to relay DHCPv6 messages</help>
+            <completionHelp>
+              <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+            </completionHelp>
+            <multi />
+          </properties>
+        </leafNode>
+      </children>
+    </node>
     <tagNode name="pd">
       <properties>
         <help>DHCPv6 prefix delegation interface statement</help>

@@ -1300,7 +1300,34 @@ class Interface(Control):
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
+<<<<<<< HEAD
     def set_mirror_redirect(self):
+=======
+    def set_dhcpv6_relay(self, enable):
+        """
+        Enable/Disable DHCPv6 Relay agent on a given interface.
+        """
+        if enable not in [True, False]:
+            raise ValueError()
+
+        ifname = self.ifname
+        config_file = f'/run/dhcp-relay/dhcp6relay.{ifname}.conf'
+
+        if enable and 'disable' not in self._config:
+            render(config_file, 'dhcp-relay/dhcp6relay.conf.tmpl',
+                   self._config)
+
+            # We must ignore any return codes. This is required to enable DHCPv6-PD
+            # for interfaces which are yet not up and running.
+            return self._popen(f'systemctl restart dhcp6relay@{ifname}.service')
+        else:
+            self._popen(f'systemctl stop dhcp6relay@{ifname}.service')
+
+            if os.path.isfile(config_file):
+                os.remove(config_file)
+
+    def set_mirror(self):
+>>>>>>> 74173170 (dhcp6relay: T3596: Replace ISC DHCPv6 relay with wide-dhcp6-relay)
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
@@ -1453,6 +1480,13 @@ class Interface(Control):
         # start DHCPv6 client when only PD was configured
         if dhcpv6pd:
             self.set_dhcpv6(True)
+
+        # Start DHCPv6 Relay Agent when only dhcp6relay was configured
+        dhcp6relay = dict_search('dhcpv6_options.dhcp6relay', config)
+        if dhcp6relay:
+            self.set_dhcpv6_relay(True)
+        else:
+            self.set_dhcpv6_relay(False)
 
         # XXX: Bind interface to given VRF or unbind it if vrf is not set. Unbinding
         # will call 'ip link set dev eth0 nomaster' which will also drop the
