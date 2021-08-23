@@ -122,6 +122,18 @@ def verify(container):
                     if 'value' not in cfg:
                         raise ConfigError(f'Environment variable {var} has no value assigned!')
 
+            if 'volume' in container_config:
+                for volume, volume_config in container_config['volume'].items():
+                    if 'source' not in volume_config:
+                        raise ConfigError(f'Volume "{volume}" has no source path configured!')
+
+                    if 'destination' not in volume_config:
+                        raise ConfigError(f'Volume "{volume}" has no destination path configured!')
+
+                    source = volume_config['source']
+                    if not os.path.exists(source):
+                        raise ConfigError(f'Volume "{volume}" source path "{source}" does not exist!')
+
             # Container image is a mandatory option
             if 'image' not in container_config:
                 raise ConfigError(f'Container image for "{name}" is mandatory!')
