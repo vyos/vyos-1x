@@ -25,6 +25,10 @@
           <tagNode name="environment">
             <properties>
               <help>Add custom environment variables</help>
+              <constraint>
+                <regex>^[-_a-zA-Z0-9]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Environment variable name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="value">
