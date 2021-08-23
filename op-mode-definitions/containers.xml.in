@@ -109,4 +109,24 @@
       </tagNode>
     </children>
   </node>
+  <node name="update">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Update a container image</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Delete container image</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --update "${4}"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
