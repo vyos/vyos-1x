@@ -323,7 +323,7 @@
                     <description>BGP large-community-list filter (IPv4 address format)</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="large-community-list"/>
+                    <validator name="bgp-large-community-list"/>
                   </constraint>
                   <constraintErrorMessage>Malformed large-community-list</constraintErrorMessage>
                 </properties>
