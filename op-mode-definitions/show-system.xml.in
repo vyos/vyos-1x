@@ -55,12 +55,6 @@
             </properties>
             <command>${vyos_op_scripts_dir}/show_cpu.py</command>
           </leafNode>
-          <leafNode name= "integrity">
-            <properties>
-              <help>Checks overall system integrity</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/show_system_integrity.py</command>
-          </leafNode>
           <leafNode name="kernel-messages">
             <properties>
               <help>Show messages in kernel ring buffer</help>
