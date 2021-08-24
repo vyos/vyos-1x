@@ -237,6 +237,7 @@ def apply(container):
                 tmp = _cmd('podman ps -a --format "{{.Names}}"')
                 if name in tmp:
                     _cmd(f'podman stop {name}')
+                    _cmd(f'podman rm --force {name}')
                 continue
 
             memory = container_config['memory']
