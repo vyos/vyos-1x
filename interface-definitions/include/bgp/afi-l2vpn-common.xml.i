@@ -17,9 +17,42 @@
     <help>Route Target</help>
   </properties>
   <children>
-    #include <include/bgp/route-target-both.xml.i>
-    #include <include/bgp/route-target-export.xml.i>
-    #include <include/bgp/route-target-import.xml.i>
+    <leafNode name="both">
+      <properties>
+        <help>Route Target both import and export</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
+        </valueHelp>
+        <constraint>
+          <validator name="bgp-route-target" argument="--single"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="import">
+      <properties>
+        <help>Route Target import</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
+        </valueHelp>
+        <constraint>
+          <validator name="bgp-route-target" argument="--single"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="export">
+      <properties>
+        <help>Route Target export</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
+        </valueHelp>
+        <constraint>
+          <validator name="bgp-route-target" argument="--single"/>
+        </constraint>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
