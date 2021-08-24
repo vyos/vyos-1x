@@ -46,7 +46,7 @@ class Section:
         return klass
 
     @classmethod
-    def _basename (cls, name, vlan):
+    def _basename(cls, name, vlan, vrrp):
         """
         remove the number at the end of interface name
         name: name of the interface
@@ -56,16 +56,18 @@ class Section:
         name = name.rstrip('.')
         if vlan:
             name = name.rstrip('0123456789.')
+        if vrrp:
+            name = name.rstrip('0123456789v')
         return name
 
     @classmethod
-    def section(cls, name, vlan=True):
+    def section(cls, name, vlan=True, vrrp=True):
         """
         return the name of a section an interface should be under
         name: name of the interface (eth0, dum1, ...)
         vlan: should we try try to remove the VLAN from the number
         """
-        name = cls._basename(name, vlan)
+        name = cls._basename(name, vlan, vrrp)
 
         if name in cls._prefixes:
             return cls._prefixes[name].definition['section']
@@ -79,8 +81,8 @@ class Section:
         return list(set([cls._prefixes[_].definition['section'] for _ in cls._prefixes]))
 
     @classmethod
-    def klass(cls, name, vlan=True):
-        name = cls._basename(name, vlan)
+    def klass(cls, name, vlan=True, vrrp=True):
+        name = cls._basename(name, vlan, vrrp)
         if name in cls._prefixes:
             return cls._prefixes[name]
         raise ValueError(f'No type found for interface name: {name}')
