@@ -120,10 +120,6 @@ def split_text(text, used=0):
     yield line[1:]
 
 
-def get_vrrp_intf():
-    return [intf for intf in Section.interfaces() if intf.is_vrrp()]
-
-
 def get_counter_val(clear, now):
     """
     attempt to correct a counter if it wrapped, copied from perl
