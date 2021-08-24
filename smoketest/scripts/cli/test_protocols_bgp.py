@@ -720,8 +720,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         vrf_name = 'red'
         label = 'auto'
         rd = f'{neighbor}:{ASN}'
-        rt_export = f'{neighbor}:1002'
-        rt_import = f'{neighbor}:1003'
+        rt_export = f'{neighbor}:1002 1.2.3.4:567'
+        rt_import = f'{neighbor}:1003 500:100'
 
         self.cli_set(base_path + ['local-as', ASN])
         # testing only one AFI is sufficient as it's generic code
@@ -732,10 +732,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['address-family', afi, 'rd', 'vpn', 'export', rd])
             self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'export', route_map_out])
             self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'import', route_map_in])
-
-
-        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'export', rt_export])
-        self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'route-target', 'vpn', 'import', rt_import])
+            self.cli_set(base_path + ['address-family', afi, 'route-target', 'vpn', 'export', rt_export])
+            self.cli_set(base_path + ['address-family', afi, 'route-target', 'vpn', 'import', rt_import])
 
         # commit changes
         self.cli_commit()
@@ -753,12 +751,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'  rd vpn export {rd}', afi_config)
             self.assertIn(f'  route-map vpn export {route_map_out}', afi_config)
             self.assertIn(f'  route-map vpn import {route_map_in}', afi_config)
+            self.assertIn(f'  rt vpn export {rt_export}', afi_config)
+            self.assertIn(f'  rt vpn import {rt_import}', afi_config)
             self.assertIn(f' exit-address-family', afi_config)
-
-        afi_config = self.getFRRconfig(f' address-family ipv4 unicast', endsection='exit-address-family', daemon='bgpd')
-        self.assertIn(f'address-family ipv4 unicast', afi_config)
-        self.assertIn(f'  rt vpn export {rt_export}', afi_config)
-        self.assertIn(f'  rt vpn import {rt_import}', afi_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
