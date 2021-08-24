@@ -222,6 +222,8 @@ def apply(container):
                     for count in range(0, len(config['plugins'])):
                         if 'ipMasq' in config['plugins'][count]:
                             config['plugins'][count]['ipMasq'] = False
+                        if 'hairpinMode' in config['plugins'][count]:
+                            config['plugins'][count]['hairpinMode'] = False
 
                 write_file(cni_network_config, json.dumps(config, indent=4))
 
