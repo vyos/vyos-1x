@@ -385,3 +385,29 @@ def verify_diffie_hellman_length(file, min_keysize):
 
     return False
 
+def verify_common_route_maps(config):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if the specified route-map for either zebra to kernel
+    installation exists (this is the top-level route_map key) or when a route
+    is redistributed with a route-map that it exists!
+    """
+    # XXX: This function is called in combination with a previous call to:
+    # tmp = conf.get_config_dict(['policy']) - see protocols_ospf.py as example.
+    # We should NOT call this with the key_mangling option as this would rename
+    # route-map hypens '-' to underscores '_' and one could no longer distinguish
+    # what should have been the "proper" route-map name, as foo-bar and foo_bar
+    # are two entire different route-map instances!
+    for route_map in ['route-map', 'route_map']:
+        if route_map not in config:
+            continue
+        tmp = config[route_map]
+        # Check if the specified route-map exists, if not error out
+        if dict_search(f'policy.route-map.{tmp}', config) == None:
+            raise ConfigError(f'Specified route-map "{tmp}" does not exist!')
+
+    if 'redistribute' in config:
+        for protocol, protocol_config in config['redistribute'].items():
+            if 'route_map' in protocol_config:
+                verify_route_map(protocol_config['route_map'], config)
+
