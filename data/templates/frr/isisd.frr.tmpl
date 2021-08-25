@@ -1,5 +1,5 @@
 !
-router isis {{ process }}
+router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  net {{ net }}
 {% if dynamic_hostname is defined %}
  hostname dynamic
@@ -13,8 +13,15 @@ router isis {{ process }}
 {% if set_overload_bit is defined %}
  set-overload-bit
 {% endif %}
-{% if domain_password is defined and domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
+{% if domain_password is defined and domain_password is not none %}
+{%   if domain_password.md5 is defined and domain_password.md5 is not none %}
+ domain-password md5 {{ domain_password.plaintext_password }}
+{%   elif domain_password.plaintext_password is defined and domain_password.plaintext_password is not none %}
  domain-password clear {{ domain_password.plaintext_password }}
+{%   endif %}
+{% endif %}
+{% if log_adjacency_changes is defined %}
+ log-adjacency-changes
 {% endif %}
 {% if lsp_gen_interval is defined and lsp_gen_interval is not none %}
  lsp-gen-interval {{ lsp_gen_interval }}
@@ -95,47 +102,61 @@ router isis {{ process }}
 {% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
  spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
 {% endif %}
-{% if area_password is defined and area_password.md5 is defined and area_password.md5 is not none %}
+{% if area_password is defined and area_password is not none %}
+{%   if area_password.md5 is defined and area_password.md5 is not none %}
  area-password md5 {{ area_password.md5 }}
-{% elif area_password is defined and area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
+{%   elif area_password.plaintext_password is defined and area_password.plaintext_password is not none %}
  area-password clear {{ area_password.plaintext_password }}
+{%   endif %}
 {% endif %}
 {% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
-{%   for level in default_information.originate.ipv4 if default_information.originate.ipv4 is defined %}
- default-information originate ipv4 {{ level | replace('_', '-') }}
-{%   endfor %}
-{%   for level in default_information.originate.ipv6 if default_information.originate.ipv6 is defined %}
- default-information originate ipv6 {{ level | replace('_', '-') }} always
-{%   endfor %}
-{% endif %}
-{% if redistribute is defined and redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
-{%   for protocol in redistribute.ipv4 %}
-{%     for level, level_config in redistribute.ipv4[protocol].items() %}
-{%       if level_config.metric is defined and level_config.metric is not none %}
- redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
-{%       elif level_config.route_map is defined and level_config.route_map is not none %}
- redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
-{%       else %}
- redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
-{%       endif %}
+{%   for afi, afi_config in default_information.originate.items() %}
+{%     for level, level_config in afi_config.items() %}
+ default-information originate {{ afi }} {{ level | replace('_', '-') }} {{ 'always' if level_config.always is defined }} {{ 'route-map ' ~ level_config.route_map if level_config.route_map is defined }} {{ 'metric ' ~ level_config.metric if level_config.metric is defined }}
 {%     endfor %}
 {%   endfor %}
 {% endif %}
+{% if redistribute is defined %}
+{%   if redistribute.ipv4 is defined and redistribute.ipv4 is not none %}
+{%     for protocol, protocol_options in redistribute.ipv4.items() %}
+{%       for level, level_config in protocol_options.items() %}
+{%         if level_config.metric is defined and level_config.metric is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
+{%         elif level_config.route_map is defined and level_config.route_map is not none %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
+{%         else %}
+ redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
+{%         endif %}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
+{%   if redistribute.ipv6 is defined and redistribute.ipv6 is not none %}
+{%     for protocol, protocol_options in redistribute.ipv6.items() %}
+{%       for level, level_config in protocol_options.items() %}
+{%         if level_config.metric is defined and level_config.metric is not none %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
+{%         elif level_config.route_map is defined and level_config.route_map is not none %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
+{%         else %}
+ redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }}
+{%         endif %}
+{%       endfor %}
+{%     endfor %}
+{%   endif %}
+{% endif %}
 {% if level is defined and level is not none %}
-{%   if level == 'level-1' %}
- is-type level-1
-{%   elif level == 'level-2'  %}
+{%   if level == 'level-2'  %}
  is-type level-2-only
-{%   elif level == 'level-1-2'  %}
- is-type level-1-2
+{%   else %}
+ is-type {{ level }}
 {%   endif %}
 {% endif %}
 !
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
-interface {{ iface }}
- ip router isis {{ process }}
- ipv6 router isis {{ process }}
+interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
+ ip router isis VyOS
+ ipv6 router isis VyOS
 {%     if iface_config.bfd is defined %}
  isis bfd
 {%     endif %}
@@ -174,3 +195,4 @@ interface {{ iface }}
 {%     endif %}
 {%   endfor %}
 {% endif %}
+!
