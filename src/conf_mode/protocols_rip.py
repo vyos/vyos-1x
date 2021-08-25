@@ -125,7 +125,7 @@ def get_config(config=None):
 
     conf.set_level(base)
 
-    # Get distribute list interface 
+    # Get distribute list interface
     for dist_iface in conf.list_nodes('distribute-list interface'):
         # Set level 'distribute-list interface ethX'
         conf.set_level(base + ['distribute-list', 'interface', dist_iface])
@@ -301,6 +301,7 @@ def apply(rip):
 
     if os.path.exists(config_file):
         call(f'vtysh -d ripd -f {config_file}')
+        call('sudo vtysh --writeconfig --noerror')
         os.remove(config_file)
     else:
         print("File {0} not found".format(config_file))

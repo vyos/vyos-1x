@@ -68,15 +68,27 @@ Apply the new configuration:
 import tempfile
 import re
 from vyos import util
+from vyos.util import chown
+from vyos.util import cmd
 import logging
+from logging.handlers import SysLogHandler
+import os
 LOG = logging.getLogger(__name__)
 
+DEBUG = os.path.exists('/tmp/vyos.frr.debug')
+if DEBUG:
+    LOG.setLevel(logging.DEBUG)
+    ch = SysLogHandler(address='/dev/log')
+    ch2 = logging.StreamHandler()
+    LOG.addHandler(ch)
+    LOG.addHandler(ch2)
 
 _frr_daemons = ['zebra', 'bgpd', 'fabricd', 'isisd', 'ospf6d', 'ospfd', 'pbrd',
                 'pimd', 'ripd', 'ripngd', 'sharpd', 'staticd', 'vrrpd', 'ldpd']
 
 path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'
+path_config = '/run/frr'
 
 
 class FrrError(Exception):
@@ -175,19 +187,40 @@ def reload_configuration(config, daemon=None):
     f.write(config)
     f.flush()
 
+    LOG.debug(f'reload_configuration: Reloading config using temporary file: {f.name}')
     cmd = f'{path_frr_reload} --reload'
     if daemon:
         cmd += f' --daemon {daemon}'
+
+    if DEBUG:
+        cmd += f' --debug --stdout'
+
     cmd += f' {f.name}'
 
+    LOG.debug(f'reload_configuration: Executing command against frr-reload: "{cmd}"')
     output, code = util.popen(cmd, stderr=util.STDOUT)
     f.close()
+    for i, e in enumerate(output.split('\n')):
+        LOG.debug(f'frr-reload output: {i:3} {e}')
     if code == 1:
-        raise CommitError(f'Configuration FRR failed while commiting code: {repr(output)}')
+        raise CommitError('FRR configuration failed while running commit. Please ' \
+                          'enable debugging to examine logs.\n\n\n' \
+                          'To enable debugging run: "touch /tmp/vyos.frr.debug" ' \
+                          'and "sudo systemctl stop vyos-configd"')
     elif code:
         raise OSError(code, output)
 
     return output
+
+
+def save_configuration():
+    """Save FRR configuration to /run/frr/config/frr.conf
+       It save configuration on each commit. T3217
+    """
+
+    cmd(f'{path_vtysh} -n -w')
+
+    return
 
 
 def execute(command):
@@ -382,6 +415,11 @@ class FRRConfig:
             raise ValueError(
                 'The config element needs to be a string or list type object')
 
+        if config:
+            LOG.debug(f'__init__: frr library initiated with initial config')
+            for i, e in enumerate(self.config):
+                LOG.debug(f'__init__: initial              {i:3} {e}')
+
     def load_configuration(self, daemon=None):
         '''Load the running configuration from FRR into the config object
         daemon: str with name of the FRR Daemon to load configuration from or
@@ -390,9 +428,16 @@ class FRRConfig:
         Using this overwrites the current loaded config objects and replaces the original loaded config
         '''
         self.imported_config = get_configuration(daemon=daemon)
-        LOG.debug(f'load_configuration: Configuration loaded from FRR: {self.imported_config}')
+        if daemon:
+            LOG.debug(f'load_configuration: Configuration loaded from FRR daemon {daemon}')
+        else:
+            LOG.debug(f'load_configuration: Configuration loaded from FRR integrated config')
+
         self.original_config = self.imported_config.split('\n')
         self.config = self.original_config.copy()
+
+        for i, e in enumerate(self.imported_config.split('\n')):
+            LOG.debug(f'load_configuration:  loaded    {i:3} {e}')
         return
 
     def test_configuration(self):
@@ -408,6 +453,8 @@ class FRRConfig:
                    None to use the consolidated config
         '''
         LOG.debug('commit_configuration:  Commiting configuration')
+        for i, e in enumerate(self.config):
+            LOG.debug(f'commit_configuration: new_config {i:3} {e}')
         reload_configuration('\n'.join(self.config), daemon=daemon)
 
     def modify_section(self, start_pattern, replacement=[], stop_pattern=r'\S+', remove_stop_mark=False, count=0):
@@ -459,7 +506,8 @@ class FRRConfig:
         start = _find_first_element(self.config, before_pattern)
         if start < 0:
             return False
-
+        for i, e in enumerate(addition, start=start):
+            LOG.debug(f'add_before:   add          {i:3} {e}')
         self.config[start:start] = addition
         return True
 
