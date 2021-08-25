@@ -406,7 +406,7 @@ def get_esp_ike_cipher(group_config):
         'dh-group18' : 'modp8192',
         'dh-group19' : 'ecp256',
         'dh-group20' : 'ecp384',
-        'dh-group21' : 'ecp512',
+        'dh-group21' : 'ecp521',
         'dh-group22' : 'modp1024s160',
         'dh-group23' : 'modp2048s224',
         'dh-group24' : 'modp2048s256',
