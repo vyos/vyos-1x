@@ -30,6 +30,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WireGuardIf
 from vyos.util import check_kmod
+from vyos.util import check_port_availability
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -72,6 +73,10 @@ def verify(wireguard):
 
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
+
+    if 'port' in wireguard and check_port_availability(
+            '0.0.0.0', int(wireguard['port']), 'udp') is not True:
+        raise ConfigError('The port cannot be used for the interface')
 
     # run checks on individual configured WireGuard peer
     for tmp in wireguard['peer']:
