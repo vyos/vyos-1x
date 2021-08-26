@@ -286,20 +286,34 @@ def verify(ipsec):
                     if 'pre_shared_secret' not in ra_conf['authentication']:
                         raise ConfigError(f"Missing pre-shared-key on {name} remote-access config")
 
+                if 'client_mode' not in ra_conf['authentication']:
+                    raise ConfigError('Client authentication method is required!')
 
-                if 'client_mode' in ra_conf['authentication']:
-                    if ra_conf['authentication']['client_mode'] == 'eap-radius':
-                        if 'radius' not in ipsec['remote_access'] or 'server' not in ipsec['remote_access']['radius'] or len(ipsec['remote_access']['radius']['server']) == 0:
-                            raise ConfigError('RADIUS authentication requires at least one server')
+                if dict_search('authentication.client_mode', ra_conf) == 'eap-radius':
+                    if dict_search('remote_access.radius.server', ipsec) == None:
+                        raise ConfigError('RADIUS authentication requires at least one server')
 
                 if 'pool' in ra_conf:
+                    if {'dhcp', 'radius'} <= set(ra_conf['pool']):
+                        raise ConfigError(f'Can not use both DHCP and RADIUS for address allocation '\
+                                          f'at the same time for "{name}"!')
+
                     if 'dhcp' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
-                        raise ConfigError(f'Can not use both DHCP and a predefined address pool for "{name}"!')
+                        raise ConfigError(f'Can not use DHCP and a predefined address pool for "{name}"!')
+
+                    if 'radius' in ra_conf['pool'] and len(ra_conf['pool']) > 1:
+                        raise ConfigError(f'Can not use RADIUS and a predefined address pool for "{name}"!')
 
                     for pool in ra_conf['pool']:
                         if pool == 'dhcp':
                             if dict_search('remote_access.dhcp.server', ipsec) == None:
                                 raise ConfigError('IPSec DHCP server is not configured!')
+                        elif pool == 'radius':
+                            if dict_search('remote_access.radius.server', ipsec) == None:
+                                raise ConfigError('IPSec RADIUS server is not configured!')
+
+                            if dict_search('authentication.client_mode', ra_conf) != 'eap-radius':
+                                raise ConfigError('RADIUS IP pool requires eap-radius client authentication!')
 
                         elif 'pool' not in ipsec['remote_access'] or pool not in ipsec['remote_access']['pool']:
                             raise ConfigError(f'Requested pool "{pool}" does not exist!')

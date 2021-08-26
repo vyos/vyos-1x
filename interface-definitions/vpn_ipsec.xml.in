@@ -771,11 +771,19 @@
                       <help>Pool name used for IP address assignments</help>
                       <completionHelp>
                         <path>vpn ipsec remote-access pool</path>
-                        <list>dhcp</list>
+                        <list>dhcp radius</list>
                       </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Pool name</description>
+                        <description>Name of predefined IP pool</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dhcp</format>
+                        <description>Forward requests for virtual IP addresses to a DHCP server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>radius</format>
+                        <description>Forward requests for virtual IP addresses to a RADIUS server</description>
                       </valueHelp>
                       <multi/>
                     </properties>
