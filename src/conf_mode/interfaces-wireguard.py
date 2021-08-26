@@ -74,9 +74,12 @@ def verify(wireguard):
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
 
-    if 'port' in wireguard and check_port_availability(
-            '0.0.0.0', int(wireguard['port']), 'udp') is not True:
-        raise ConfigError('The port cannot be used for the interface')
+    listen_port = int(wireguard['port'])
+    if 'port' in wireguard and check_port_availability('0.0.0.0', listen_port,
+                                                       'udp') is not True:
+        raise ConfigError(
+            f'The UDP port {listen_port} is busy or unavailable and cannot be used for the interface'
+        )
 
     # run checks on individual configured WireGuard peer
     for tmp in wireguard['peer']:

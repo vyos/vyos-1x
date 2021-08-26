@@ -834,16 +834,13 @@ def check_port_availability(ipaddress, port, protocol):
     try:
         ipaddress = ip_address(ipaddress).compressed
     except:
-        print(f'The {ipaddress} is not a valid IPv4 or IPv6 address')
-        return
+        raise ValueError(f'The {ipaddress} is not a valid IPv4 or IPv6 address')
     if port not in range(1, 65536):
-        print(f'The port number {port} is not in the 1-65535 range')
-        return
+        raise ValueError(f'The port number {port} is not in the 1-65535 range')
     if protocol not in ['tcp', 'udp']:
-        print(
+        raise ValueError(
             f'The protocol {protocol} is not supported. Only tcp and udp are allowed'
         )
-        return
 
     # check port availability
     try:
@@ -854,7 +851,4 @@ def check_port_availability(ipaddress, port, protocol):
         server.server_close()
         return True
     except:
-        print(
-            f'The {protocol} port {port} on the {ipaddress} is busy or unavailable'
-        )
         return False
