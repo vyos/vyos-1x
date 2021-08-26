@@ -55,7 +55,7 @@ if __name__ == '__main__':
         syslog(f'Interface {interface} not found')
         sys.exit(0)
 
-    vti_link_up = (vti_link['operstate'] == 'UP' if 'operstate' in vti_link else False)
+    vti_link_up = (vti_link['operstate'] != 'DOWN' if 'operstate' in vti_link else False)
 
     config = ConfigTreeQuery()
     vti_dict = config.get_config_dict(['interfaces', 'vti', interface],
