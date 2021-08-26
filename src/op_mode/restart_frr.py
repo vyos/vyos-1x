@@ -155,7 +155,7 @@ def _check_args_daemon(daemons):
 # define program arguments
 cmd_args_parser = argparse.ArgumentParser(description='restart frr daemons')
 cmd_args_parser.add_argument('--action', choices=['restart'], required=True, help='action to frr daemons')
-cmd_args_parser.add_argument('--daemon', choices=['bfdd', 'bgpd', 'ospfd', 'ospf6d', 'ripd', 'ripngd', 'staticd', 'zebra'], required=False,  nargs='*', help='select single or multiple daemons')
+cmd_args_parser.add_argument('--daemon', choices=['bfdd', 'bgpd', 'ospfd', 'ospf6d', 'isisd', 'ripd', 'ripngd', 'staticd', 'zebra'], required=False,  nargs='*', help='select single or multiple daemons')
 # parse arguments
 cmd_args = cmd_args_parser.parse_args()
 
