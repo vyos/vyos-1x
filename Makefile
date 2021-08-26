@@ -48,6 +48,11 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
 	rm -rf $(TMPL_DIR)/vpn/nipsec
 
+	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
+	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
+	# unfortunately breaks with Intel QAT :(
+	rm -rf $(TMPL_DIR)/nat
+
 	# XXX: required until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
 	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
 	mkdir $(TMPL_DIR)/interfaces/dummy/node.tag/ipv6
@@ -84,6 +89,11 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
+
+	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
+	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
+	# unfortunately breaks with Intel QAT :(
+	rm -rf $(OP_TMPL_DIR)/show/nat
 
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself
