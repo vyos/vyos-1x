@@ -804,6 +804,19 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     },
                 },
             },
+            'evpn-configuration' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'evpn-default-route'  : '',
+                            'evpn-rd'             : '100:300',
+                            'evpn-route-type'     : 'prefix',
+                            'evpn-vni'            : '1234',
+                        },
+                    },
+                },
+            },
         }
 
         self.cli_set(['policy', 'access-list', access_list, 'rule', '10', 'action', 'permit'])
@@ -847,6 +860,14 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'community' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'community', 'community-list', rule_config['match']['community']])
                         self.cli_set(path + ['rule', rule, 'match', 'community', 'exact-match'])
+                    if 'evpn-default-route' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'default-route'])
+                    if 'evpn-rd' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'rd', rule_config['match']['evpn-rd']])
+                    if 'evpn-route-type' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'route-type', rule_config['match']['evpn-route-type']])
+                    if 'evpn-vni' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'vni', rule_config['match']['evpn-vni']])
                     if 'extcommunity' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'extcommunity', rule_config['match']['extcommunity']])
                     if 'interface' in rule_config['match']:
@@ -966,6 +987,18 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'community' in rule_config['match']:
                         tmp = f'match community {rule_config["match"]["community"]} exact-match'
+                        self.assertIn(tmp, config)
+                    if 'evpn-default-route' in rule_config['match']:
+                        tmp = f'match evpn default-route'
+                        self.assertIn(tmp, config)
+                    if 'evpn-rd' in rule_config['match']:
+                        tmp = f'match evpn rd {rule_config["match"]["evpn-rd"]}'
+                        self.assertIn(tmp, config)
+                    if 'evpn-route-type' in rule_config['match']:
+                        tmp = f'match evpn route-type {rule_config["match"]["evpn-route-type"]}'
+                        self.assertIn(tmp, config)
+                    if 'evpn-vni' in rule_config['match']:
+                        tmp = f'match evpn vni {rule_config["match"]["evpn-vni"]}'
                         self.assertIn(tmp, config)
                     if 'extcommunity' in rule_config['match']:
                         tmp = f'match extcommunity {rule_config["match"]["extcommunity"]}'

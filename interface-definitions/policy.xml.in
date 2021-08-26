@@ -551,6 +551,44 @@
                       </leafNode>
                     </children>
                   </node>
+                  <node name="evpn">
+                    <properties>
+                      <help>Ethernet Virtual Private Network</help>
+                    </properties>
+                    <children>
+                      <leafNode name="default-route">
+                        <properties>
+                          <help>Default EVPN type-5 route</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                      #include <include/bgp/route-distinguisher.xml.i>
+                      <leafNode name="route-type">
+                        <properties>
+                          <help>Match route-type</help>
+                          <completionHelp>
+                            <list>macip multicast prefix</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>macip</format>
+                            <description>mac-ip route</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>multicast</format>
+                            <description>IMET route</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>prefix</format>
+                            <description>Prefix route</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^(macip|multicast|prefix)$</regex>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      #include <include/vni.xml.i>
+                    </children>
+                  </node>
                   <leafNode name="extcommunity">
                     <properties>
                       <help>BGP extended community to match</help>
