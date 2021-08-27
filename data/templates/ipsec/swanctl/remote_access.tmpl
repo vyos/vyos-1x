@@ -10,7 +10,7 @@
         send_certreq = no
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
-{%   if rw_conf.unique is defined and rw_conf.unique is not none %}        
+{%   if rw_conf.unique is defined and rw_conf.unique is not none %}
         unique = {{ rw_conf.unique }}
 {%   endif %}
 {%   if rw_conf.pool is defined and rw_conf.pool is not none %}
@@ -39,6 +39,7 @@
                 rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 dpd_action = clear
+                inactivity = {{ rw_conf.timeout }}
 {%   set local_prefix = rw_conf.local.prefix if rw_conf.local is defined and rw_conf.local.prefix is defined else ['0.0.0.0/0', '::/0'] %}
 {%   set local_port = rw_conf.local.port if rw_conf.local is defined and rw_conf.local.port is defined else '' %}
 {%   set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}

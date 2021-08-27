@@ -757,11 +757,15 @@
                     <properties>
                       <help>Timeout to close connection if no data is transmitted</help>
                       <valueHelp>
-                        <format>u32:10-86400</format>
+                        <format>u32:0</format>
+                        <description>Disable inactivity checks</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:1-86400</format>
                         <description>Timeout in seconds (default 28800)</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 10-86400"/>
+                        <validator name="numeric" argument="--range 0-86400"/>
                       </constraint>
                     </properties>
                     <defaultValue>28800</defaultValue>
