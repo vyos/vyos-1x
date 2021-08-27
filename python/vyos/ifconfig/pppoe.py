@@ -75,6 +75,14 @@ class PPPoEIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
+        # Cache the configuration - it will be reused inside e.g. DHCP handler
+        # XXX: maybe pass the option via __init__ in the future and rename this
+        # method to apply()?
+        #
+        # We need to copy this from super().update() as we utilize self.set_dhcpv6()
+        # before this is done by the base class.
+        self._config = config
+
         # remove old routes from an e.g. old VRF assignment
         vrf = ''
         if 'vrf_old' in config:
