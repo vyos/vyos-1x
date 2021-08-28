@@ -819,3 +819,36 @@ def is_systemd_service_running(service):
     Copied from: https://unix.stackexchange.com/a/435317 """
     tmp = cmd(f'systemctl show --value -p SubState {service}')
     return bool((tmp == 'running'))
+
+def check_port_availability(ipaddress, port, protocol):
+    """
+    Check if port is available and not used by any service
+    Return False if a port is busy or IP address does not exists
+    Should be used carefully for services that can start listening
+    dynamically, because IP address may be dynamic too
+    """
+    from socketserver import TCPServer, UDPServer
+    from ipaddress import ip_address
+
+    # verify arguments
+    try:
+        ipaddress = ip_address(ipaddress).compressed
+    except:
+        raise ValueError(f'The {ipaddress} is not a valid IPv4 or IPv6 address')
+    if port not in range(1, 65536):
+        raise ValueError(f'The port number {port} is not in the 1-65535 range')
+    if protocol not in ['tcp', 'udp']:
+        raise ValueError(
+            f'The protocol {protocol} is not supported. Only tcp and udp are allowed'
+        )
+
+    # check port availability
+    try:
+        if protocol == 'tcp':
+            server = TCPServer((ipaddress, port), None, bind_and_activate=True)
+        if protocol == 'udp':
+            server = UDPServer((ipaddress, port), None, bind_and_activate=True)
+        server.server_close()
+        return True
+    except:
+        return False
