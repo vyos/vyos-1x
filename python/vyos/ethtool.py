@@ -23,14 +23,14 @@ class Ethtool:
     # dictionary containing driver featurs, it will be populated on demand and
     # the content will look like:
     # {
-    #   'tls-hw-tx-offload': {'fixed': True, 'on': False},
-    #   'tx-checksum-fcoe-crc': {'fixed': True, 'on': False},
-    #   'tx-checksum-ip-generic': {'fixed': False, 'on': True},
-    #   'tx-checksum-ipv4': {'fixed': True, 'on': False},
-    #   'tx-checksum-ipv6': {'fixed': True, 'on': False},
-    #   'tx-checksum-sctp': {'fixed': True, 'on': False},
-    #   'tx-checksumming': {'fixed': False, 'on': True},
-    #   'tx-esp-segmentation': {'fixed': True, 'on': False},
+    #   'tls-hw-tx-offload': {'fixed': True, 'enabled': False},
+    #   'tx-checksum-fcoe-crc': {'fixed': True, 'enabled': False},
+    #   'tx-checksum-ip-generic': {'fixed': False, 'enabled': True},
+    #   'tx-checksum-ipv4': {'fixed': True, 'enabled': False},
+    #   'tx-checksum-ipv6': {'fixed': True, 'enabled': False},
+    #   'tx-checksum-sctp': {'fixed': True, 'enabled': False},
+    #   'tx-checksumming': {'fixed': False, 'enabled': True},
+    #   'tx-esp-segmentation': {'fixed': True, 'enabled': False},
     # }
     features = { }
     ring_buffers = { }
@@ -42,12 +42,12 @@ class Ethtool:
         for line in out.splitlines()[1:]:
             if ":" in line:
                 key, value = [s.strip() for s in line.strip().split(":", 1)]
-                fixed = "fixed" in value
+                fixed = bool('fixed' in value)
                 if fixed:
                     value = value.split()[0].strip()
                 self.features[key.strip()] = {
-                    "on": value == "on",
-                    "fixed": fixed
+                    'enabled' : bool(value == 'on'),
+                    'fixed' : fixed
                 }
 
         out, err = popen(f'ethtool -g {ifname}')
@@ -63,36 +63,47 @@ class Ethtool:
                 if value.isdigit():
                     self.ring_buffers[key] = int(value)
 
-
     def is_fixed_lro(self):
         # in case of a missing configuration, rather return "fixed". In Ethtool
         # terminology "fixed" means the setting can not be changed by the user.
         return self.features.get('large-receive-offload', True).get('fixed', True)
 
-    def is_fixed_gro(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('generic-receive-offload', True).get('fixed', True)
+    def _get_generic(self, feature):
+        """
+        Generic method to read self.features and return a tuple for feature
+        enabled and feature is fixed.
 
-    def is_fixed_gso(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('generic-segmentation-offload', True).get('fixed', True)
+        In case of a missing key, return "fixed = True and enabled = False"
+        """
+        fixed = True
+        enabled = False
+        if feature in self.features:
+            if 'enabled' in self.features[feature]:
+                enabled = self.features[feature]['enabled']
+            if 'fixed' in self.features[feature]:
+                fixed = self.features[feature]['fixed']
+        return enabled, fixed
 
-    def is_fixed_sg(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('scatter-gather', True).get('fixed', True)
+    def get_generic_receive_offload(self):
+        return self._get_generic('generic-receive-offload')
 
-    def is_fixed_tso(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('tcp-segmentation-offload', True).get('fixed', True)
+    def get_generic_segmentation_offload(self):
+        return self._get_generic('generic-segmentation-offload')
 
-    def is_fixed_ufo(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('udp-fragmentation-offload', True).get('fixed', True)
+    def get_large_receive_offload(self):
+        return self._get_generic('large-receive-offload')
+
+    def get_scatter_gather(self):
+        return self._get_generic('scatter-gather')
+
+    def get_tcp_segmentation_offload(self):
+        return self._get_generic('tcp-segmentation-offload')
+
+    def get_udp_fragmentation_offload(self):
+        return self._get_generic('udp-fragmentation-offload')
+
+    def get_rx_vlan_offload(self):
+        return self._get_generic('rx-vlan-offload')
 
     def get_rx_buffer(self):
         # Configuration of RX ring-buffers is not supported on every device,
