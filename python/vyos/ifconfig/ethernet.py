@@ -16,6 +16,7 @@
 import os
 import re
 
+from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
 from vyos.util import dict_search
@@ -42,7 +43,7 @@ class EthernetIf(Interface):
 
     @staticmethod
     def feature(ifname, option, value):
-        run(f'ethtool -K {ifname} {option} {value}','ifconfig')
+        run(f'ethtool -K {ifname} {option} {value}')
         return False
 
     _command_set = {**Interface._command_set, **{
@@ -84,6 +85,10 @@ class EthernetIf(Interface):
             'location': '/sys/class/net/{ifname}/queues/rx-0/rps_cpus',
         },
     }}
+
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
+        self.ethtool = Ethtool(ifname)
 
     def get_driver_name(self):
         """
@@ -229,8 +234,16 @@ class EthernetIf(Interface):
         >>> i.set_gro(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('gro', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_generic_receive_offload()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing generic-receive-offload settings!')
+        return False
 
     def set_gso(self, state):
         """
@@ -241,8 +254,16 @@ class EthernetIf(Interface):
         >>> i.set_gso(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('gso', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_generic_segmentation_offload()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing generic-segmentation-offload settings!')
+        return False
 
     def set_lro(self, state):
         """
@@ -253,12 +274,20 @@ class EthernetIf(Interface):
         >>> i.set_lro(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('lro', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_large_receive_offload()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing large-receive-offload settings!')
+        return False
 
     def set_rps(self, state):
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
+            raise ValueError('Value out of range')
 
         rps_cpus = '0'
         if state:
@@ -283,8 +312,16 @@ class EthernetIf(Interface):
         >>> i.set_sg(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('sg', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_scatter_gather()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing scatter-gather settings!')
+        return False
 
     def set_tso(self, state):
         """
@@ -296,8 +333,16 @@ class EthernetIf(Interface):
         >>> i.set_tso(False)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('tso', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_tcp_segmentation_offload()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing tcp-segmentation-offload settings!')
+        return False
 
     def set_ufo(self, state):
         """
@@ -309,8 +354,16 @@ class EthernetIf(Interface):
         >>> i.set_udp_offload(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('ufo', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_udp_fragmentation_offload()
+        if not fixed:
+            enabled = 'on' if enabled else 'off'
+            if enabled != state:
+                return self.set_interface('gro', 'on' if state else 'off')
+
+        print('Adapter does not support changing udp-fragmentation-offload settings!')
+        return False
 
     def set_ring_buffer(self, b_type, b_size):
         """
