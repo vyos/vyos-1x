@@ -665,7 +665,7 @@
     </node>
     <node name="kernel">
       <properties>
-        <help>Redistribute kernel routes</help>
+        <help>Redistribute Kernel routes</help>
       </properties>
       <children>
         #include <include/ospf/metric.xml.i>
@@ -685,7 +685,7 @@
     </node>
     <node name="static">
       <properties>
-        <help>Redistribute static routes</help>
+        <help>Redistribute statically configured routes</help>
       </properties>
       <children>
         #include <include/ospf/metric.xml.i>
