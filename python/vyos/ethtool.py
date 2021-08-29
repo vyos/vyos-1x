@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from vyos.util import popen
 
 class Ethtool:
@@ -32,9 +33,37 @@ class Ethtool:
     #   'tx-esp-segmentation': {'fixed': True, 'enabled': False},
     # }
     _features = { }
+    # dictionary containing available interface speed and duplex settings
+    # {
+    #   '10'  : {'full': '', 'half': ''},
+    #   '100' : {'full': '', 'half': ''},
+    #   '1000': {'full': ''}
+    #  }
+    _speed_duplex = { }
     _ring_buffers = { }
 
     def __init__(self, ifname):
+        # Build a dictinary of supported link-speed and dupley settings.
+        out, err = popen(f'ethtool {ifname}')
+        reading = False
+        pattern = re.compile(r'\d+base.*')
+        for line in out.splitlines()[1:]:
+            line = line.lstrip()
+            if 'Supported link modes:' in line:
+                reading = True
+            if 'Supported pause frame use:' in line:
+                reading = False
+                break
+            if reading:
+                for block in line.split():
+                    if pattern.search(block):
+                        speed = block.split('base')[0]
+                        duplex = block.split('/')[-1].lower()
+                        if speed not in self._speed_duplex:
+                            self._speed_duplex.update({ speed : {}})
+                        if duplex not in self._speed_duplex[speed]:
+                            self._speed_duplex[speed].update({ duplex : ''})
+
         # Now populate features dictionaty
         out, err = popen(f'ethtool -k {ifname}')
         # skip the first line, it only says: "Features for eth0":
@@ -108,3 +137,18 @@ class Ethtool:
         # Configuration of TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
         return self._ring_buffers.get('tx', None)
+
+    def check_speed_duplex(self, speed, duplex):
+        """ Check if the passed speed and duplex combination is supported by
+        the underlaying network adapter. """
+        if isinstance(speed, int):
+            speed = str(speed)
+        if not speed.isdigit():
+            raise ValueError(f'Value "{speed}" for speed is invalid!')
+        if duplex not in ['full', 'half']:
+            raise ValueError(f'Value "{duplex}" for duplex is invalid!')
+
+        if speed in self._speed_duplex:
+            if duplex in self._speed_duplex[speed]:
+                return True
+        return False
