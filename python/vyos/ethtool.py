@@ -63,11 +63,6 @@ class Ethtool:
                 if value.isdigit():
                     self.ring_buffers[key] = int(value)
 
-    def is_fixed_lro(self):
-        # in case of a missing configuration, rather return "fixed". In Ethtool
-        # terminology "fixed" means the setting can not be changed by the user.
-        return self.features.get('large-receive-offload', True).get('fixed', True)
-
     def _get_generic(self, feature):
         """
         Generic method to read self.features and return a tuple for feature
