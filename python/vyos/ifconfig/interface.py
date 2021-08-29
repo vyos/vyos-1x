@@ -38,6 +38,7 @@ from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 from vyos.validate import assert_boolean
@@ -667,9 +668,10 @@ class Interface(Control):
         Delete the address based on the interface's MAC-based EUI64
         combined with the prefix address.
         """
-        eui64 = mac2eui64(self.get_mac(), prefix)
-        prefixlen = prefix.split('/')[1]
-        self.del_addr(f'{eui64}/{prefixlen}')
+        if is_ipv6(prefix):
+            eui64 = mac2eui64(self.get_mac(), prefix)
+            prefixlen = prefix.split('/')[1]
+            self.del_addr(f'{eui64}/{prefixlen}')
 
     def set_ipv6_forwarding(self, forwarding):
         """
