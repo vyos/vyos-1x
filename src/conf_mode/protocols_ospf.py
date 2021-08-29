@@ -115,7 +115,6 @@ def get_config(config=None):
         default_values = defaults(base + ['area', 'virtual-link'])
         for area, area_config in ospf['area'].items():
             if 'virtual_link' in area_config:
-                print(default_values)
                 for virtual_link in area_config['virtual_link']:
                     ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
                         default_values, ospf['area'][area]['virtual_link'][virtual_link])
