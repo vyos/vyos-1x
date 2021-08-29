@@ -47,6 +47,9 @@ def get_config(config=None):
     base = ['interfaces', 'wireguard']
     wireguard = get_interface_dict(conf, base)
 
+    # Check if a port was changed
+    wireguard['port_changed'] = leaf_node_changed(conf, ['port'])
+
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
     dict = {}
@@ -74,7 +77,7 @@ def verify(wireguard):
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
 
-    if 'port' in wireguard:
+    if 'port' in wireguard and wireguard['port_changed']:
         listen_port = int(wireguard['port'])
         if check_port_availability('0.0.0.0', listen_port, 'udp') is not True:
             raise ConfigError(
