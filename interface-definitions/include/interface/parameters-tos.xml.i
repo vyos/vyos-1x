@@ -3,7 +3,7 @@
   <properties>
     <help>Specifies TOS value to use in outgoing packets</help>
     <valueHelp>
-      <format>0-99</format>
+      <format>u32:0-99</format>
       <description>Type of Service (TOS)</description>
     </valueHelp>
     <constraint>

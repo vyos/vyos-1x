@@ -14,7 +14,7 @@
       <properties>
         <help>Minimum interval of receiving control packets</help>
         <valueHelp>
-          <format>10-60000</format>
+          <format>u32:10-60000</format>
           <description>Interval in milliseconds</description>
         </valueHelp>
         <constraint>
@@ -27,7 +27,7 @@
       <properties>
         <help>Minimum interval of transmitting control packets</help>
         <valueHelp>
-          <format>10-60000</format>
+          <format>u32:10-60000</format>
           <description>Interval in milliseconds</description>
         </valueHelp>
         <constraint>
@@ -40,7 +40,7 @@
       <properties>
         <help>Multiplier to determine packet loss</help>
         <valueHelp>
-          <format>2-255</format>
+          <format>u32:2-255</format>
           <description>Remote transmission interval will be multiplied by this value</description>
         </valueHelp>
         <constraint>
@@ -53,7 +53,7 @@
       <properties>
         <help>Echo receive transmission interval</help>
         <valueHelp>
-          <format>10-60000</format>
+          <format>u32:10-60000</format>
           <description>The minimal echo receive transmission interval that this system is capable of handling</description>
         </valueHelp>
         <constraint>

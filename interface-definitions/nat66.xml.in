@@ -15,7 +15,7 @@
             <properties>
               <help>Source NAT66 rule number</help>
               <valueHelp>
-                <format>1-999999</format>
+                <format>u32:1-999999</format>
                 <description>Number for this rule</description>
               </valueHelp>
               <constraint>
@@ -113,7 +113,7 @@
             <properties>
               <help>Destination NAT66 rule number</help>
               <valueHelp>
-                <format>1-999999</format>
+                <format>u32:1-999999</format>
                 <description>Number for this rule</description>
               </valueHelp>
               <constraint>

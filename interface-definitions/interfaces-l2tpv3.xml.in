@@ -22,7 +22,7 @@
             <properties>
               <help>UDP destination port for L2TPv3 tunnel (default: 5000)</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -64,7 +64,7 @@
             <properties>
               <help>Peer session identifier</help>
               <valueHelp>
-                <format>1-429496729</format>
+                <format>u32:1-429496729</format>
                 <description>L2TPv3 peer session identifier</description>
               </valueHelp>
               <constraint>
@@ -76,7 +76,7 @@
             <properties>
               <help>Peer tunnel identifier</help>
               <valueHelp>
-                <format>1-429496729</format>
+                <format>u32:1-429496729</format>
                 <description>L2TPv3 peer tunnel identifier</description>
               </valueHelp>
               <constraint>
@@ -90,7 +90,7 @@
             <properties>
               <help>Session identifier</help>
               <valueHelp>
-                <format>1-429496729</format>
+                <format>u32:1-429496729</format>
                 <description>L2TPv3 session identifier</description>
               </valueHelp>
               <constraint>
@@ -102,7 +102,7 @@
             <properties>
               <help>UDP source port for L2TPv3 tunnel (default: 5000)</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -115,7 +115,7 @@
             <properties>
               <help>Local tunnel identifier</help>
               <valueHelp>
-                <format>1-429496729</format>
+                <format>u32:1-429496729</format>
                 <description>L2TPv3 local tunnel identifier</description>
               </valueHelp>
               <constraint>

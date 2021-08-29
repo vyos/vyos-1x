@@ -96,7 +96,7 @@
                     <properties>
                       <help>Specifies the clients subnet mask as per RFC 950. If unset, subnet declaration is used.</help>
                       <valueHelp>
-                        <format>0-32</format>
+                        <format>u32:0-32</format>
                         <description>DHCP client prefix length must be 0 to 32</description>
                       </valueHelp>
                       <constraint>

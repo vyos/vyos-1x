@@ -2,6 +2,10 @@
 <tagNode name="vif-s">
   <properties>
     <help>QinQ TAG-S Virtual Local Area Network (VLAN) ID</help>
+    <valueHelp>
+      <format>u32:0-4094</format>
+      <description>QinQ Virtual Local Area Network (VLAN) ID</description>
+    </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-4094"/>
     </constraint>

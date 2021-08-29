@@ -107,7 +107,7 @@
                 <properties>
                   <help>Interval to send keepalive messages</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Interval in seconds</description>
                   </valueHelp>
                   <constraint>

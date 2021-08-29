@@ -206,7 +206,7 @@
                 <properties>
                   <help>Maximum number of keepalive packet failures (default: 60)</help>
                   <valueHelp>
-                    <format>0-1000</format>
+                    <format>u32:0-1000</format>
                     <description>Maximum number of keepalive packet failures</description>
                   </valueHelp>
                   <constraint>
@@ -219,7 +219,7 @@
                 <properties>
                   <help>Keepalive packet interval in seconds (default: 10)</help>
                   <valueHelp>
-                    <format>0-600</format>
+                    <format>u32:0-600</format>
                     <description>Keepalive packet interval (seconds)</description>
                   </valueHelp>
                   <constraint>
@@ -268,7 +268,7 @@
             <properties>
               <help>Local port number to accept connections</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -378,7 +378,7 @@
             <properties>
               <help>Remote port number to connect to</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -546,7 +546,7 @@
                 <properties>
                   <help>Number of maximum client connections</help>
                   <valueHelp>
-                    <format>1-4096</format>
+                    <format>u32:1-4096</format>
                     <description>Number of concurrent clients</description>
                   </valueHelp>
                   <constraint>
@@ -591,7 +591,7 @@
                     <properties>
                       <help>Set metric for this route</help>
                       <valueHelp>
-                        <format>0-4294967295</format>
+                        <format>u32:0-4294967295</format>
                         <description>Metric for this route</description>
                       </valueHelp>
                       <constraint>

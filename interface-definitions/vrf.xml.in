@@ -76,7 +76,7 @@
             <properties>
               <help>Routing table associated with this instance</help>
               <valueHelp>
-                <format>100-65535</format>
+                <format>u32:100-65535</format>
                 <description>Routing table ID</description>
               </valueHelp>
               <constraint>
@@ -91,7 +91,7 @@
               <!-- priority must be after BGP -->
               <priority>822</priority>
               <valueHelp>
-                <format>0-16777214</format>
+                <format>u32:0-16777214</format>
                 <description>VXLAN virtual network identifier</description>
               </valueHelp>
               <constraint>

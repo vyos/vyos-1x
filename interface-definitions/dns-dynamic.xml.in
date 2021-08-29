@@ -49,7 +49,7 @@
                         <properties>
                           <help>Time To Live (default: 600)</help>
                           <valueHelp>
-                            <format>1-86400</format>
+                            <format>u32:1-86400</format>
                             <description>DNS forwarding cache size</description>
                           </valueHelp>
                           <constraint>

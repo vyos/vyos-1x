@@ -160,7 +160,7 @@
                     <properties>
                       <help>Unique identifier of ERSPAN engine within a system</help>
                       <valueHelp>
-                        <format>0-1048575</format>
+                        <format>u32:0-1048575</format>
                         <description>Unique identifier of ERSPAN engine</description>
                       </valueHelp>
                       <constraint>
@@ -172,7 +172,7 @@
                     <properties>
                       <help>Specifify ERSPAN version 1 index field</help>
                       <valueHelp>
-                        <format>0-63</format>
+                        <format>u32:0-63</format>
                         <description>Platform-depedent field for specifying port number and direction</description>
                       </valueHelp>
                       <constraint>
@@ -183,6 +183,9 @@
                   <leafNode name="version">
                     <properties>
                       <help>Protocol version</help>
+                      <completionHelp>
+                        <list>1 2</list>
+                      </completionHelp>
                       <valueHelp>
                         <format>1</format>
                         <description>ERSPAN Type II</description>
@@ -236,7 +239,7 @@
                         <list>none</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>0-255</format>
+                        <format>u32:0-255</format>
                         <description>Encaplimit (default: 4)</description>
                       </valueHelp>
                       <valueHelp>
@@ -256,7 +259,7 @@
                     <properties>
                       <help>Hoplimit</help>
                       <valueHelp>
-                        <format>0-255</format>
+                        <format>u32:0-255</format>
                         <description>Hoplimit (default 64)</description>
                       </valueHelp>
                       <constraint>
@@ -270,7 +273,7 @@
                     <properties>
                       <help>Traffic class (Tclass)</help>
                       <valueHelp>
-                        <format>0x0-0x0FFFFF</format>
+                        <format>0x0-0x0fffff</format>
                         <description>Traffic class, 'inherit' or hex value</description>
                       </valueHelp>
                       <constraint>

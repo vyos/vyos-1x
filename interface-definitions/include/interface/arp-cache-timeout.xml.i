@@ -3,7 +3,7 @@
   <properties>
     <help>ARP cache entry timeout in seconds</help>
     <valueHelp>
-      <format>1-86400</format>
+      <format>u32:1-86400</format>
       <description>ARP cache entry timout in seconds (default 30)</description>
     </valueHelp>
     <constraint>

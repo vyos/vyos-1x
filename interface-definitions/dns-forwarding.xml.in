@@ -18,7 +18,7 @@
                 <properties>
                   <help>DNS forwarding cache size (default: 10000)</help>
                   <valueHelp>
-                    <format>0-10000</format>
+                    <format>u32:0-10000</format>
                     <description>DNS forwarding cache size</description>
                   </valueHelp>
                   <constraint>
@@ -139,7 +139,7 @@
                 <properties>
                   <help>Maximum amount of time negative entries are cached (default: 3600)</help>
                   <valueHelp>
-                    <format>0-7200</format>
+                    <format>u32:0-7200</format>
                     <description>Seconds to cache NXDOMAIN entries</description>
                   </valueHelp>
                   <constraint>

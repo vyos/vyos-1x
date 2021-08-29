@@ -3,11 +3,11 @@
   <properties>
     <help>Specifies TTL value to use in outgoing packets</help>
     <valueHelp>
-      <format>0</format>
+      <format>u32:0</format>
       <description>Inherit - copy value from original IP header</description>
     </valueHelp>
     <valueHelp>
-      <format>1-255</format>
+      <format>u32:1-255</format>
       <description>Time to Live</description>
     </valueHelp>
     <constraint>
