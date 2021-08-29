@@ -19,7 +19,6 @@ class Ethtool:
     """
     Class is used to retrive and cache information about an ethernet adapter
     """
-
     # dictionary containing driver featurs, it will be populated on demand and
     # the content will look like:
     # {
@@ -32,8 +31,8 @@ class Ethtool:
     #   'tx-checksumming': {'fixed': False, 'enabled': True},
     #   'tx-esp-segmentation': {'fixed': True, 'enabled': False},
     # }
-    features = { }
-    ring_buffers = { }
+    _features = { }
+    _ring_buffers = { }
 
     def __init__(self, ifname):
         # Now populate features dictionaty
@@ -45,7 +44,7 @@ class Ethtool:
                 fixed = bool('fixed' in value)
                 if fixed:
                     value = value.split()[0].strip()
-                self.features[key.strip()] = {
+                self._features[key.strip()] = {
                     'enabled' : bool(value == 'on'),
                     'fixed' : fixed
                 }
@@ -61,22 +60,22 @@ class Ethtool:
                 # output format from 0 -> n/a. As we are only interested in the
                 # tx/rx keys we do not care about RX Mini/Jumbo.
                 if value.isdigit():
-                    self.ring_buffers[key] = int(value)
+                    self._ring_buffers[key] = int(value)
 
     def _get_generic(self, feature):
         """
-        Generic method to read self.features and return a tuple for feature
+        Generic method to read self._features and return a tuple for feature
         enabled and feature is fixed.
 
         In case of a missing key, return "fixed = True and enabled = False"
         """
         fixed = True
         enabled = False
-        if feature in self.features:
-            if 'enabled' in self.features[feature]:
-                enabled = self.features[feature]['enabled']
-            if 'fixed' in self.features[feature]:
-                fixed = self.features[feature]['fixed']
+        if feature in self._features:
+            if 'enabled' in self._features[feature]:
+                enabled = self._features[feature]['enabled']
+            if 'fixed' in self._features[feature]:
+                fixed = self._features[feature]['fixed']
         return enabled, fixed
 
     def get_generic_receive_offload(self):
@@ -103,9 +102,9 @@ class Ethtool:
     def get_rx_buffer(self):
         # Configuration of RX ring-buffers is not supported on every device,
         # thus when it's impossible return None
-        return self.ring_buffers.get('rx', None)
+        return self._ring_buffers.get('rx', None)
 
     def get_tx_buffer(self):
         # Configuration of TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
-        return self.ring_buffers.get('tx', None)
+        return self._ring_buffers.get('tx', None)
