@@ -87,7 +87,13 @@ def get_config(config=None):
         del default_values['area']['area_type']['nssa']
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
-    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
+
+    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
+        # table is a tagNode thus we need to clean out all occurances for the
+        # default values and load them in later individually
+        if protocol == 'table':
+            del default_values['redistribute']['table']
+            continue
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
 
@@ -126,6 +132,12 @@ def get_config(config=None):
 
             ospf['interface'][interface] = dict_merge(default_values,
                 ospf['interface'][interface])
+
+    if 'redistribute' in ospf and 'table' in ospf['redistribute']:
+        default_values = defaults(base + ['redistribute', 'table'])
+        for table in ospf['redistribute']['table']:
+            ospf['redistribute']['table'][table] = dict_merge(default_values,
+                ospf['redistribute']['table'][table])
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().

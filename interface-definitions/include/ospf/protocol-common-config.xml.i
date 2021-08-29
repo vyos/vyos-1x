@@ -693,6 +693,23 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <tagNode name="table">
+      <properties>
+        <help>Redistribute non-main Kernel Routing Table</help>
+        <completionHelp>
+          <path>protocols static table</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32:1-200</format>
+          <description>Policy route table number</description>
+        </valueHelp>
+      </properties>
+      <children>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
+        #include <include/route-map.xml.i>
+      </children>
+    </tagNode>
   </children>
 </node>
 <node name="refresh">

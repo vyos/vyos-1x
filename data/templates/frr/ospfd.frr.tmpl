@@ -172,8 +172,14 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   endfor %}
 {% endif %}
 {% if redistribute is defined and redistribute is not none %}
-{%   for protocol, options in redistribute.items() %}
- redistribute {{ protocol }} {{ 'metric ' + options.metric if options.metric is defined }} {{ 'metric-type ' + options.metric_type if options.metric_type is defined }} {{ 'route-map ' + options.route_map if options.route_map is defined }}
+{%   for protocol, protocols_options in redistribute.items() %}
+{%     if protocol == 'table' %}
+{%       for table, table_options in protocols_options.items() %}
+ redistribute {{ protocol }} {{ table }} {{ 'metric ' + table_options.metric if table_options.metric is defined }} {{ 'metric-type ' + table_options.metric_type if table_options.metric_type is defined }} {{ 'route-map ' + table_options.route_map if table_options.route_map is defined }}
+{%       endfor %}
+{%     else %}
+ redistribute {{ protocol }} {{ 'metric ' + protocols_options.metric if protocols_options.metric is defined }} {{ 'metric-type ' + protocols_options.metric_type if protocols_options.metric_type is defined }} {{ 'route-map ' + protocols_options.route_map if protocols_options.route_map is defined }}
+{%     endif %}
 {%   endfor %}
 {% endif %}
 {% if refresh is defined and refresh.timers is defined and refresh.timers is not none %}
