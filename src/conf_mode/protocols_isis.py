@@ -148,7 +148,7 @@ def verify(isis):
 
         exist_timers = set(required_timers).difference(set(exist_timers))
         if len(exist_timers) > 0:
-            raise ConfigError('All types of delay must be specified: ' + ', '.join(exist_timers).replace('_', '-'))
+            raise ConfigError('All types of spf-delay must be configured. Missing: ' + ', '.join(exist_timers).replace('_', '-'))
 
     # If Redistribute set, but level don't set
     if 'redistribute' in isis:

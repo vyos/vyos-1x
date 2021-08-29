@@ -19,6 +19,7 @@ import json
 
 from ipaddress import ip_address
 from ipaddress import ip_network
+from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -28,6 +29,9 @@ from vyos.util import cmd
 from vyos.util import run
 from vyos.util import read_file
 from vyos.util import write_file
+from vyos.util import is_systemd_service_active
+from vyos.util import is_systemd_service_running
+
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -198,6 +202,18 @@ def apply(container):
     if 'network_remove' in container:
         for network in container['network_remove']:
             call(f'podman network rm --force {network}')
+
+    service_name = 'podman.service'
+    if 'network' in container or 'name' in container:
+        # Start podman if it's required and not yet running
+        if not is_systemd_service_active(service_name):
+            _cmd(f'systemctl start {service_name}')
+        # Wait for podman to be running
+        while not is_systemd_service_running(service_name):
+            sleep(0.250)
+    else:
+        _cmd(f'systemctl stop {service_name}')
+
 
     # Add network
     if 'network' in container:
