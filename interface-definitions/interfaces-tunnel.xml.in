@@ -171,8 +171,8 @@
                         <list>none</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>0-255</format>
-                        <description>Encaplimit (default 4)</description>
+                        <format>u32:0-255</format>
+                        <description>Encaplimit (default: 4)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
@@ -191,7 +191,7 @@
                     <properties>
                       <help>Hoplimit</help>
                       <valueHelp>
-                        <format>0-255</format>
+                        <format>u32:0-255</format>
                         <description>Hoplimit (default 64)</description>
                       </valueHelp>
                       <constraint>
@@ -205,7 +205,7 @@
                     <properties>
                       <help>Traffic class (Tclass)</help>
                       <valueHelp>
-                        <format>0x0-0x0FFFFF</format>
+                        <format>0x0-0x0fffff</format>
                         <description>Traffic class, 'inherit' or hex value</description>
                       </valueHelp>
                       <constraint>

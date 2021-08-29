@@ -220,9 +220,9 @@
                           #include <include/accel-ppp/radius-additions-disable-accounting.xml.i>
                           <leafNode name="fail-time">
                             <properties>
-                              <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
+                              <help>Mark server unavailable for N seconds on failure</help>
                               <valueHelp>
-                                <format>0-600</format>
+                                <format>u32:0-600</format>
                                 <description>Fail time penalty</description>
                               </valueHelp>
                               <constraint>

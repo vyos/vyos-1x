@@ -138,7 +138,7 @@
             <properties>
               <help>Enable transmission of keepalives from server to client</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Time interval in seconds for keepalive message</description>
               </valueHelp>
               <constraint>

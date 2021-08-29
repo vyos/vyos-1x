@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!-- DHCPv6 server configuration -->
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -34,7 +33,7 @@
             <properties>
               <help>Preference of this DHCPv6 server compared with others</help>
               <valueHelp>
-                <format>0-255</format>
+                <format>u32:0-255</format>
                 <description>DHCPv6 server preference (0-255)</description>
               </valueHelp>
               <constraint>
@@ -62,7 +61,7 @@
                     <properties>
                       <help>Time (in seconds) that stateless clients should wait between refreshing the information they were given</help>
                       <valueHelp>
-                        <format>1-4294967295</format>
+                        <format>u32:1-4294967295</format>
                         <description>DHCPv6 information refresh time</description>
                       </valueHelp>
                       <constraint>
@@ -161,7 +160,7 @@
                         <properties>
                           <help>Default time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>DHCPv6 valid lifetime</description>
                           </valueHelp>
                           <constraint>
@@ -173,7 +172,7 @@
                         <properties>
                           <help>Maximum time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>Maximum lease time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -185,7 +184,7 @@
                         <properties>
                           <help>Minimum time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>Minimum lease time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -273,7 +272,7 @@
                             <properties>
                               <help>Length in bits of prefixes to be delegated</help>
                               <valueHelp>
-                                <format>32-64</format>
+                                <format>u32:32-64</format>
                                 <description>Delagated prefix length (32-64)</description>
                               </valueHelp>
                               <constraint>

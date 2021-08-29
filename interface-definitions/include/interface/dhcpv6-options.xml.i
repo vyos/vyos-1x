@@ -38,7 +38,7 @@
           <properties>
             <help>Request IPv6 prefix length from peer</help>
             <valueHelp>
-              <format>32-64</format>
+              <format>u32:32-64</format>
               <description>Length of delegated prefix</description>
             </valueHelp>
             <constraint>
@@ -71,7 +71,7 @@
               <properties>
                 <help>Interface site-Level aggregator (SLA)</help>
                 <valueHelp>
-                  <format>0-128</format>
+                  <format>u32:0-128</format>
                   <description>Decimal integer which fits in the length of SLA IDs</description>
                 </valueHelp>
                 <constraint>

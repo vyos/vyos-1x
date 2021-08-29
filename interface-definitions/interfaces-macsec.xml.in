@@ -82,7 +82,7 @@
                     <properties>
                       <help>Priority of MACsec Key Agreement protocol (MKA) actor (default: 255)</help>
                       <valueHelp>
-                        <format>0-255</format>
+                        <format>u32:0-255</format>
                         <description>MACsec Key Agreement protocol (MKA) priority</description>
                       </valueHelp>
                       <constraint>
@@ -97,11 +97,11 @@
                 <properties>
                   <help>IEEE 802.1X/MACsec replay protection window</help>
                   <valueHelp>
-                    <format>0</format>
+                    <format>u32:0</format>
                     <description>No replay window, strict check</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>1-4294967295</format>
+                    <format>u32:1-4294967295</format>
                     <description>Number of packets that could be misordered</description>
                   </valueHelp>
                   <constraint>

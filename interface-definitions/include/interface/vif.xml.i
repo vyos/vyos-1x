@@ -3,7 +3,7 @@
   <properties>
     <help>Virtual Local Area Network (VLAN) ID</help>
     <valueHelp>
-      <format>0-4094</format>
+      <format>u32:0-4094</format>
       <description>Virtual Local Area Network (VLAN) ID</description>
     </valueHelp>
     <constraint>

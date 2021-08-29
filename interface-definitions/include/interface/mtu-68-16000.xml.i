@@ -3,7 +3,7 @@
   <properties>
     <help>Maximum Transmission Unit (MTU)</help>
     <valueHelp>
-      <format>68-16000</format>
+      <format>u32:68-16000</format>
       <description>Maximum Transmission Unit in byte</description>
     </valueHelp>
     <constraint>

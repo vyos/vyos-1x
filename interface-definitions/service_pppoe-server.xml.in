@@ -267,7 +267,7 @@
             <properties>
               <help>PADO delays</help>
               <valueHelp>
-                <format>1-999999</format>
+                <format>u32:1-999999</format>
                 <description>Number in ms</description>
               </valueHelp>
               <constraint>
@@ -280,7 +280,7 @@
                 <properties>
                   <help>Number of sessions</help>
                   <valueHelp>
-                    <format>1-999999</format>
+                    <format>u32:1-999999</format>
                     <description>Number of sessions</description>
                   </valueHelp>
                   <constraint>

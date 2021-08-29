@@ -267,7 +267,7 @@
                     <properties>
                       <help>Expiry scan interval</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>Expiry scan interval (default 60)</description>
                       </valueHelp>
                       <constraint>
@@ -279,7 +279,7 @@
                     <properties>
                       <help>Generic flow timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>Generic flow timeout in seconds (default 3600)</description>
                       </valueHelp>
                       <constraint>
@@ -291,7 +291,7 @@
                     <properties>
                       <help>ICMP timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>ICMP timeout in seconds (default 300)</description>
                       </valueHelp>
                       <constraint>
@@ -303,7 +303,7 @@
                     <properties>
                       <help>Max active timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>Max active timeout in seconds (default 604800)</description>
                       </valueHelp>
                       <constraint>
@@ -315,7 +315,7 @@
                     <properties>
                       <help>TCP finish timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>TCP FIN timeout in seconds (default 300)</description>
                       </valueHelp>
                       <constraint>
@@ -327,7 +327,7 @@
                     <properties>
                       <help>TCP generic timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>TCP generic timeout in seconds (default 3600)</description>
                       </valueHelp>
                       <constraint>
@@ -339,7 +339,7 @@
                     <properties>
                       <help>TCP reset timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>TCP RST timeout in seconds (default 120)</description>
                       </valueHelp>
                       <constraint>
@@ -351,7 +351,7 @@
                     <properties>
                       <help>UDP timeout value</help>
                       <valueHelp>
-                        <format>0-2147483647</format>
+                        <format>u32:0-2147483647</format>
                         <description>UDP timeout in seconds (default 300)</description>
                       </valueHelp>
                       <constraint>
