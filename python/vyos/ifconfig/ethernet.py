@@ -237,12 +237,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_generic_receive_offload()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
+        if enabled != state:
+            if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing generic-receive-offload settings!')
+            else:
+                print('Adapter does not support changing generic-receive-offload settings!')
         return False
 
     def set_gso(self, state):
@@ -257,12 +256,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_generic_segmentation_offload()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
-                return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing generic-segmentation-offload settings!')
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gso', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing generic-segmentation-offload settings!')
         return False
 
     def set_lro(self, state):
@@ -277,12 +275,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_large_receive_offload()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
+        if enabled != state:
+            if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing large-receive-offload settings!')
+            else:
+                print('Adapter does not support changing large-receive-offload settings!')
         return False
 
     def set_rps(self, state):
@@ -315,12 +312,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_scatter_gather()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
+        if enabled != state:
+            if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing scatter-gather settings!')
+            else:
+                print('Adapter does not support changing scatter-gather settings!')
         return False
 
     def set_tso(self, state):
@@ -336,12 +332,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_tcp_segmentation_offload()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
+        if enabled != state:
+            if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing tcp-segmentation-offload settings!')
+            else:
+                print('Adapter does not support changing tcp-segmentation-offload settings!')
         return False
 
     def set_ufo(self, state):
@@ -357,12 +352,11 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         enabled, fixed = self.ethtool.get_udp_fragmentation_offload()
-        if not fixed:
-            enabled = 'on' if enabled else 'off'
-            if enabled != state:
+        if enabled != state:
+            if not fixed:
                 return self.set_interface('gro', 'on' if state else 'off')
-
-        print('Adapter does not support changing udp-fragmentation-offload settings!')
+            else:
+                print('Adapter does not support changing udp-fragmentation-offload settings!')
         return False
 
     def set_ring_buffer(self, b_type, b_size):
@@ -381,7 +375,6 @@ class EthernetIf(Interface):
         if code and code != 80:
             print(f'could not set "{b_type}" ring-buffer for {ifname}')
         return output
-
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
