@@ -74,6 +74,12 @@ def verify(tunnel):
 
     verify_tunnel(tunnel)
 
+    # If tunnel source address any and key not set
+    if tunnel['encapsulation'] in ['gre'] and \
+       tunnel['source_address'] == '0.0.0.0' and \
+       dict_search('parameters.ip.key', tunnel) == None:
+        raise ConfigError('Tunnel parameters ip key must be set!')
+
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
