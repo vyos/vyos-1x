@@ -122,9 +122,6 @@ class Ethtool:
     def get_tcp_segmentation_offload(self):
         return self._get_generic('tcp-segmentation-offload')
 
-    def get_udp_fragmentation_offload(self):
-        return self._get_generic('udp-fragmentation-offload')
-
     def get_rx_buffer(self):
         # Configuration of RX ring-buffers is not supported on every device,
         # thus when it's impossible return None
