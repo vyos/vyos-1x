@@ -104,12 +104,6 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="ufo">
-                <properties>
-                  <help>Enable UDP Fragmentation Offloading</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
             </children>
           </node>
           <leafNode name="speed">

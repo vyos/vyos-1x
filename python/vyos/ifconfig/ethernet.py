@@ -71,11 +71,6 @@ class EthernetIf(Interface):
             'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
             # 'shellcmd': 'ethtool -K {ifname} tso {value}',
         },
-        'ufo': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'ufo', v),
-            # 'shellcmd': 'ethtool -K {ifname} ufo {value}',
-        },
     }}
 
     _sysfs_set = {**Interface._sysfs_set, **{
@@ -338,26 +333,6 @@ class EthernetIf(Interface):
                 print('Adapter does not support changing tcp-segmentation-offload settings!')
         return False
 
-    def set_ufo(self, state):
-        """
-        Enable UDP fragmentation offloading. State can be either True or False.
-
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.set_udp_offload(True)
-        """
-        if not isinstance(state, bool):
-            raise ValueError('Value out of range')
-
-        enabled, fixed = self.ethtool.get_udp_fragmentation_offload()
-        if enabled != state:
-            if not fixed:
-                return self.set_interface('gro', 'on' if state else 'off')
-            else:
-                print('Adapter does not support changing udp-fragmentation-offload settings!')
-        return False
-
     def set_ring_buffer(self, b_type, b_size):
         """
         Example:
@@ -402,9 +377,6 @@ class EthernetIf(Interface):
 
         # TSO (TCP segmentation offloading)
         self.set_tso(dict_search('offload.tso', config) != None)
-
-        # UDP fragmentation offloading
-        self.set_ufo(dict_search('offload.ufo', config) != None)
 
         # Set physical interface speed and duplex
         if {'speed', 'duplex'} <= set(config):

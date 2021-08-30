@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3619: mirror Linux Kernel defaults for ethernet offloading options into VyOS
-# CLI. See https://phabricator.vyos.net/T3619#102254 for all the details.
+#        CLI. See https://phabricator.vyos.net/T3619#102254 for all the details.
+# T3787: Remove deprecated UDP fragmentation offloading option
 
 from sys import argv
 
@@ -84,14 +85,9 @@ for ifname in config.list_nodes(base):
     elif enabled and not fixed:
         config.set(base + [ifname, 'offload', 'tso'])
 
-    # If UFO is enabled by the Kernel - we reflect this on the CLI. If UFO is
-    # enabled via CLI but not supported by the NIC - we remove it from the CLI
-    configured = config.exists(base + [ifname, 'offload', 'ufo'])
-    enabled, fixed = eth.get_udp_fragmentation_offload()
-    if configured and fixed:
+    # Remove deprecated UDP fragmentation offloading option
+    if config.exists(base + [ifname, 'offload', 'ufo']):
         config.delete(base + [ifname, 'offload', 'ufo'])
-    elif enabled and not fixed:
-        config.set(base + [ifname, 'offload', 'ufo'])
 
 try:
     with open(file_name, 'w') as f:
