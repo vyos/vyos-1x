@@ -73,10 +73,38 @@ def verify(ethernet):
     ifname = ethernet['ifname']
     verify_interface_exists(ifname)
 
+    ethtool = Ethtool(ifname)
     # No need to check speed and duplex keys as both have default values.
     if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
         (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
             raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
+
+    if ethernet['speed'] != 'auto' and ethernet['duplex'] != 'auto':
+        # We need to verify if the requested speed and duplex setting is
+        # supported by the underlaying NIC.
+        speed = ethernet['speed']
+        duplex = ethernet['duplex']
+        if not ethtool.check_speed_duplex(speed, duplex):
+            raise ConfigError(f'Adapter does not support speed "{speed}" and duplex "{duplex}"!')
+
+    if 'ring_buffer' in ethernet:
+        max_rx = ethtool.get_rx_buffer()
+        if not max_rx:
+            raise ConfigError('Driver does not support RX ring-buffer configuration!')
+
+        max_tx = ethtool.get_tx_buffer()
+        if not max_tx:
+            raise ConfigError('Driver does not support TX ring-buffer configuration!')
+
+        rx = dict_search('ring_buffer.rx', ethernet)
+        if rx and int(rx) > int(max_rx):
+            raise ConfigError(f'Driver only supports a maximum RX ring-buffer '\
+                              f'size of "{max_rx}" bytes!')
+
+        tx = dict_search('ring_buffer.tx', ethernet)
+        if tx and int(tx) > int(max_tx):
+            raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
+                              f'size of "{max_tx}" bytes!')
 
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
@@ -98,26 +126,6 @@ def verify(ethernet):
             raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
                               'for MTU size larger then 1500 bytes')
 
-    ethtool = Ethtool(ifname)
-    if 'ring_buffer' in ethernet:
-        max_rx = ethtool.get_rx_buffer()
-        if not max_rx:
-            raise ConfigError('Driver does not support RX ring-buffer configuration!')
-
-        max_tx = ethtool.get_tx_buffer()
-        if not max_tx:
-            raise ConfigError('Driver does not support TX ring-buffer configuration!')
-
-        rx = dict_search('ring_buffer.rx', ethernet)
-        if rx and int(rx) > int(max_rx):
-            raise ConfigError(f'Driver only supports a maximum RX ring-buffer '\
-                              f'size of "{max_rx}" bytes!')
-
-        tx = dict_search('ring_buffer.tx', ethernet)
-        if tx and int(tx) > int(max_tx):
-            raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
-                              f'size of "{max_tx}" bytes!')
-
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:
         queues = glob(f'/sys/class/net/{ifname}/queues/tx-*')
@@ -136,7 +144,7 @@ def generate(ethernet):
     if 'eapol' in ethernet:
         render(wpa_suppl_conf.format(**ethernet),
                'ethernet/wpa_supplicant.conf.tmpl', ethernet)
-        
+
         ifname = ethernet['ifname']
         cert_file_path = os.path.join(cfg_dir, f'{ifname}_cert.pem')
         cert_key_path = os.path.join(cfg_dir, f'{ifname}_cert.key')
