@@ -52,7 +52,10 @@
                     <children>
                       <leafNode name="key">
                         <properties>
-                          <help>Public key value (base64-encoded)</help>
+                          <help>Public key value (Base64 encoded)</help>
+                          <constraint>
+                            <validator name="base64"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="options">
