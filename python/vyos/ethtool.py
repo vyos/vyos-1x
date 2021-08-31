@@ -65,7 +65,7 @@ class Ethtool:
                             self._speed_duplex[speed].update({ duplex : ''})
 
         # Now populate features dictionaty
-        out, err = popen(f'ethtool -k {ifname}')
+        out, err = popen(f'ethtool --show-features {ifname}')
         # skip the first line, it only says: "Features for eth0":
         for line in out.splitlines()[1:]:
             if ":" in line:

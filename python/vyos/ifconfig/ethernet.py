@@ -43,34 +43,29 @@ class EthernetIf(Interface):
 
     @staticmethod
     def feature(ifname, option, value):
-        run(f'ethtool -K {ifname} {option} {value}')
+        run(f'ethtool --features {ifname} {option} {value}')
         return False
 
     _command_set = {**Interface._command_set, **{
         'gro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
-            # 'shellcmd': 'ethtool -K {ifname} gro {value}',
         },
         'gso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
-            # 'shellcmd': 'ethtool -K {ifname} gso {value}',
         },
         'lro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
-            # 'shellcmd': 'ethtool -K {ifname} lro {value}',
         },
         'sg': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
-            # 'shellcmd': 'ethtool -K {ifname} sg {value}',
         },
         'tso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
-            # 'shellcmd': 'ethtool -K {ifname} tso {value}',
         },
     }}
 
