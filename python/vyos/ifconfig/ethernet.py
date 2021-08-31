@@ -316,21 +316,26 @@ class EthernetIf(Interface):
                 print('Adapter does not support changing tcp-segmentation-offload settings!')
         return False
 
-    def set_ring_buffer(self, b_type, b_size):
+    def set_ring_buffer(self, rx_tx, size):
         """
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
         >>> i.set_ring_buffer('rx', '4096')
         """
+        current_size = self.ethtool.get_ring_buffer(rx_tx)
+        if current_size == size:
+            # bail out early if nothing is about to change
+            return None
+
         ifname = self.config['ifname']
-        cmd = f'ethtool -G {ifname} {b_type} {b_size}'
+        cmd = f'ethtool --set-ring {ifname} {rx_tx} {size}'
         output, code = self._popen(cmd)
         # ethtool error codes:
         #  80 - value already setted
         #  81 - does not possible to set value
         if code and code != 80:
-            print(f'could not set "{b_type}" ring-buffer for {ifname}')
+            print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
 
     def update(self, config):
@@ -369,8 +374,8 @@ class EthernetIf(Interface):
 
         # Set interface ring buffer
         if 'ring_buffer' in config:
-            for b_type in config['ring_buffer']:
-                self.set_ring_buffer(b_type, config['ring_buffer'][b_type])
+            for rx_tx, size in config['ring_buffer'].items():
+                self.set_ring_buffer(rx_tx, size)
 
         # call base class first
         super().update(config)

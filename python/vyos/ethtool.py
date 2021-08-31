@@ -43,6 +43,7 @@ class Ethtool:
     #  }
     _speed_duplex = { }
     _ring_buffers = { }
+    _ring_buffers_max = { }
     _driver_name = None
     _auto_negotiation = None
 
@@ -99,10 +100,20 @@ class Ethtool:
                     'fixed' : fixed
                 }
 
-        out, err = popen(f'ethtool -g {ifname}')
+        out, err = popen(f'ethtool --show-ring {ifname}')
         # We are only interested in line 2-5 which contains the device maximum
         # ringbuffers
         for line in out.splitlines()[2:6]:
+            if ':' in line:
+                key, value = [s.strip() for s in line.strip().split(":", 1)]
+                key = key.lower().replace(' ', '_')
+                # T3645: ethtool version used on Debian Bullseye changed the
+                # output format from 0 -> n/a. As we are only interested in the
+                # tx/rx keys we do not care about RX Mini/Jumbo.
+                if value.isdigit():
+                    self._ring_buffers_max[key] = int(value)
+        # Now we wan't to get the current RX/TX ringbuffer values - used for
+        for line in out.splitlines()[7:11]:
             if ':' in line:
                 key, value = [s.strip() for s in line.strip().split(":", 1)]
                 key = key.lower().replace(' ', '_')
@@ -143,15 +154,19 @@ class Ethtool:
     def get_tcp_segmentation_offload(self):
         return self._get_generic('tcp-segmentation-offload')
 
-    def get_rx_buffer(self):
-        # Configuration of RX ring-buffers is not supported on every device,
+    def get_ring_buffer_max(self, rx_tx):
+        # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
-        return self._ring_buffers.get('rx', None)
+        if rx_tx not in ['rx', 'tx']:
+            ValueError('Ring-buffer type must be either "rx" or "tx"')
+        return self._ring_buffers_max.get(rx_tx, None)
 
-    def get_tx_buffer(self):
-        # Configuration of TX ring-buffers is not supported on every device,
+    def get_ring_buffer(self, rx_tx):
+        # Configuration of RX/TX ring-buffers is not supported on every device,
         # thus when it's impossible return None
-        return self._ring_buffers.get('tx', None)
+        if rx_tx not in ['rx', 'tx']:
+            ValueError('Ring-buffer type must be either "rx" or "tx"')
+        return self._ring_buffers.get(rx_tx, None)
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
