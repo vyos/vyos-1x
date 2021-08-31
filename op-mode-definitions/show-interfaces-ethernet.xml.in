@@ -29,7 +29,7 @@
                 <properties>
                   <help>Show physical device information for specified ethernet interface</help>
                 </properties>
-                <command>ethtool "$4"; ethtool --driver "$4"</command>
+                <command>ethtool "$4"; ethtool --show-ring "$4"; ethtool --driver "$4"</command>
                 <children>
                   <leafNode name="offload">
                     <properties>
