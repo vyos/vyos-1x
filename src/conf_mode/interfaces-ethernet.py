@@ -88,6 +88,10 @@ def verify(ethernet):
             raise ConfigError(f'Adapter does not support changing speed and duplex '\
                               f'settings to: {speed}/{duplex}!')
 
+    if 'disable_flow_control' in ethernet:
+        if not ethtool.check_flow_control():
+            raise ConfigError('Adapter does not support changing flow-control settings!')
+
     if 'ring_buffer' in ethernet:
         max_rx = ethtool.get_ring_buffer_max('rx')
         if not max_rx:
