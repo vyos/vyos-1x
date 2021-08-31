@@ -104,6 +104,14 @@ for ifname in config.list_nodes(base):
                 config.delete(speed_path)
                 config.delete(duplex_path)
 
+    # Also while processing the interface configuration, not all adapters support
+    # changing disabling flow-control - or change this setting. If disabling
+    # flow-control is not supported by the NIC, we remove the setting from CLI
+    flow_control_path = base + [ifname, 'disable-flow-control']
+    if config.exists(flow_control_path):
+        if not eth.check_flow_control():
+            config.delete(flow_control_path)
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

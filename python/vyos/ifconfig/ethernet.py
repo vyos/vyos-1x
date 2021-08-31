@@ -122,38 +122,16 @@ class EthernetIf(Interface):
                             'flow control settings!')
             return
 
-        # Get current flow control settings:
-        cmd = f'ethtool --show-pause {ifname}'
-        output, code = self._popen(cmd)
-        if code == 76:
-            # the interface does not support it
-            return ''
-        if code:
-            # never fail here as it prevent vyos to boot
-            print(f'unexpected return code {code} from {cmd}')
-            return ''
-
-        # The above command returns - with tabs:
-        #
-        # Pause parameters for eth0:
-        # Autonegotiate:  on
-        # RX:             off
-        # TX:             off
-        if re.search("Autonegotiate:\ton", output):
-            if enable == "on":
-                # flowcontrol is already enabled - no need to re-enable it again
-                # this will prevent the interface from flapping as applying the
-                # flow-control settings will take the interface down and bring
-                # it back up every time.
-                return ''
-
-        # Assemble command executed on system. Unfortunately there is no way
-        # to change this setting via sysfs
-        cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
-        output, code = self._popen(cmd)
-        if code:
-            print(f'could not set flowcontrol for {ifname}')
-        return output
+        current = self.ethtool.get_flow_control()
+        if current != enable:
+            # Assemble command executed on system. Unfortunately there is no way
+            # to change this setting via sysfs
+            cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
+            output, code = self._popen(cmd)
+            if code:
+                print(f'Could not set flowcontrol for {ifname}')
+            return output
+        return None
 
     def set_speed_duplex(self, speed, duplex):
         """

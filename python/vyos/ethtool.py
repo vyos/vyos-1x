@@ -46,6 +46,8 @@ class Ethtool:
     _ring_buffers_max = { }
     _driver_name = None
     _auto_negotiation = None
+    _flow_control = None
+    _flow_control_enabled = None
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -123,6 +125,15 @@ class Ethtool:
                 if value.isdigit():
                     self._ring_buffers[key] = int(value)
 
+        # Get current flow control settings, but this is not supported by
+        # all NICs (e.g. vmxnet3 does not support is)
+        out, err = popen(f'ethtool --show-pause {ifname}')
+        if len(out.splitlines()) > 1:
+            self._flow_control = True
+            # read current flow control setting, this returns:
+            # ['Autonegotiate:', 'on']
+            self._flow_control_enabled = out.splitlines()[1].split()[-1]
+
     def _get_generic(self, feature):
         """
         Generic method to read self._features and return a tuple for feature
@@ -185,6 +196,18 @@ class Ethtool:
             if duplex in self._speed_duplex[speed]:
                 return True
         return False
+
+    def check_flow_control(self):
+        """ Check if the NIC supports flow-control """
+        if self._driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+            return False
+        return self._flow_control
+
+    def get_flow_control(self):
+        if self._flow_control_enabled == None:
+            raise ValueError('Interface does not support changing '\
+                             'flow-control settings!')
+        return self._flow_control_enabled
 
     def get_auto_negotiation(self):
         return self._auto_negotiation
