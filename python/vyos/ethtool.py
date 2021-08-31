@@ -113,7 +113,7 @@ class Ethtool:
                 # output format from 0 -> n/a. As we are only interested in the
                 # tx/rx keys we do not care about RX Mini/Jumbo.
                 if value.isdigit():
-                    self._ring_buffers_max[key] = int(value)
+                    self._ring_buffers_max[key] = value
         # Now we wan't to get the current RX/TX ringbuffer values - used for
         for line in out.splitlines()[7:11]:
             if ':' in line:
@@ -123,7 +123,7 @@ class Ethtool:
                 # output format from 0 -> n/a. As we are only interested in the
                 # tx/rx keys we do not care about RX Mini/Jumbo.
                 if value.isdigit():
-                    self._ring_buffers[key] = int(value)
+                    self._ring_buffers[key] = value
 
         # Get current flow control settings, but this is not supported by
         # all NICs (e.g. vmxnet3 does not support is)
@@ -177,7 +177,7 @@ class Ethtool:
         # thus when it's impossible return None
         if rx_tx not in ['rx', 'tx']:
             ValueError('Ring-buffer type must be either "rx" or "tx"')
-        return self._ring_buffers.get(rx_tx, None)
+        return str(self._ring_buffers.get(rx_tx, None))
 
     def check_speed_duplex(self, speed, duplex):
         """ Check if the passed speed and duplex combination is supported by
