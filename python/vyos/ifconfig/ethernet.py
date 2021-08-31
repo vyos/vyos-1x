@@ -20,6 +20,7 @@ from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
 from vyos.util import dict_search
+from vyos.util import read_file
 from vyos.validate import assert_list
 
 @Interface.register
@@ -181,32 +182,19 @@ class EthernetIf(Interface):
 
         # Get current speed and duplex settings:
         ifname = self.config['ifname']
-        cmd = f'ethtool {ifname}'
-        tmp = self._cmd(cmd)
-
-        if re.search("\tAuto-negotiation: on", tmp):
+        if self.ethtool.get_auto_negotiation():
             if speed == 'auto' and duplex == 'auto':
                 # bail out early as nothing is to change
                 return
         else:
             # read in current speed and duplex settings
-            cur_speed = 0
-            cur_duplex = ''
-            for line in tmp.splitlines():
-                if line.lstrip().startswith("Speed:"):
-                    non_decimal = re.compile(r'[^\d.]+')
-                    cur_speed = non_decimal.sub('', line)
-                    continue
-
-                if line.lstrip().startswith("Duplex:"):
-                    cur_duplex = line.split()[-1].lower()
-                    break
-
+            cur_speed = read_file(f'/sys/class/net/{ifname}/speed')
+            cur_duplex = read_file(f'/sys/class/net/{ifname}/duplex')
             if (cur_speed == speed) and (cur_duplex == duplex):
                 # bail out early as nothing is to change
                 return
 
-        cmd = f'ethtool -s {ifname}'
+        cmd = f'ethtool --change {ifname}'
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
         else:

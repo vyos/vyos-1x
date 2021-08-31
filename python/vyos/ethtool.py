@@ -44,6 +44,7 @@ class Ethtool:
     _speed_duplex = { }
     _ring_buffers = { }
     _driver_name = None
+    _auto_negotiation = None
 
     def __init__(self, ifname):
         # Get driver used for interface
@@ -65,7 +66,6 @@ class Ethtool:
                 reading = True
             if 'Supported pause frame use:' in line:
                 reading = False
-                break
             if reading:
                 for block in line.split():
                     if pattern.search(block):
@@ -75,6 +75,15 @@ class Ethtool:
                             self._speed_duplex.update({ speed : {}})
                         if duplex not in self._speed_duplex[speed]:
                             self._speed_duplex[speed].update({ duplex : ''})
+            if 'Auto-negotiation:' in line:
+                # Split the following string: Auto-negotiation: off
+                # we are only interested in off or on
+                tmp = line.split()[-1]
+                self._auto_negotiation = bool(tmp == 'on')
+
+        if self._auto_negotiation == None:
+            raise ValueError(f'Could not determine auto-negotiation settings '\
+                             f'for interface {ifname}!')
 
         # Now populate features dictionaty
         out, err = popen(f'ethtool --show-features {ifname}')
@@ -162,3 +171,5 @@ class Ethtool:
                 return True
         return False
 
+    def get_auto_negotiation(self):
+        return self._auto_negotiation
