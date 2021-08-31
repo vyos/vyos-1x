@@ -79,11 +79,11 @@ def verify(ethernet):
                               f'settings to: {speed}/{duplex}!')
 
     if 'ring_buffer' in ethernet:
-        max_rx = ethtool.get_rx_buffer()
+        max_rx = ethtool.get_ring_buffer_max('rx')
         if not max_rx:
             raise ConfigError('Driver does not support RX ring-buffer configuration!')
 
-        max_tx = ethtool.get_tx_buffer()
+        max_tx = ethtool.get_ring_buffer_max('tx')
         if not max_tx:
             raise ConfigError('Driver does not support TX ring-buffer configuration!')
 
