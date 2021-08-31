@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
+
 from vyos.util import popen
 
 class Ethtool:
@@ -41,8 +43,18 @@ class Ethtool:
     #  }
     _speed_duplex = { }
     _ring_buffers = { }
+    _driver_name = None
 
     def __init__(self, ifname):
+        # Get driver used for interface
+        sysfs_file = f'/sys/class/net/{ifname}/device/driver/module'
+        if os.path.exists(sysfs_file):
+            link = os.readlink(sysfs_file)
+            self._driver_name = os.path.basename(link)
+
+        if not self._driver_name:
+            raise ValueError(f'Could not determine driver for interface {ifname}!')
+
         # Build a dictinary of supported link-speed and dupley settings.
         out, err = popen(f'ethtool {ifname}')
         reading = False
@@ -141,6 +153,9 @@ class Ethtool:
             raise ValueError(f'Value "{speed}" for speed is invalid!')
         if duplex not in ['full', 'half']:
             raise ValueError(f'Value "{duplex}" for duplex is invalid!')
+
+        if self._driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+            return False
 
         if speed in self._speed_duplex:
             if duplex in self._speed_duplex[speed]:

@@ -75,7 +75,8 @@ def verify(ethernet):
         speed = ethernet['speed']
         duplex = ethernet['duplex']
         if not ethtool.check_speed_duplex(speed, duplex):
-            raise ConfigError(f'Adapter does not support speed "{speed}" and duplex "{duplex}"!')
+            raise ConfigError(f'Adapter does not support changing speed and duplex '\
+                              f'settings to: {speed}/{duplex}!')
 
     if 'ring_buffer' in ethernet:
         max_rx = ethtool.get_rx_buffer()
