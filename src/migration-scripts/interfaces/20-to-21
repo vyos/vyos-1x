@@ -89,6 +89,21 @@ for ifname in config.list_nodes(base):
     if config.exists(base + [ifname, 'offload', 'ufo']):
         config.delete(base + [ifname, 'offload', 'ufo'])
 
+    # Also while processing the interface configuration, not all adapters support
+    # changing the speed and duplex settings. If the desired speed and duplex
+    # values do not work for the NIC driver, we change them back to the default
+    # value of "auto" - which will be applied if the CLI node is deleted.
+    speed_path = base + [ifname, 'speed']
+    duplex_path = base + [ifname, 'duplex']
+    # speed and duplex must always be set at the same time if not set to "auto"
+    if config.exists(speed_path) and config.exists(duplex_path):
+        speed = config.return_value(speed_path)
+        duplex = config.return_value(duplex_path)
+        if speed != 'auto' and duplex != 'auto':
+            if not eth.check_speed_duplex(speed, duplex):
+                config.delete(speed_path)
+                config.delete(duplex_path)
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
