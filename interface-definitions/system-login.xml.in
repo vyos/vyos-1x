@@ -12,7 +12,7 @@
             <properties>
               <help>Local user account information</help>
               <constraint>
-                <regex>[a-zA-Z0-9\-_\.]{1,100}</regex>
+                <regex>^[-_a-zA-Z0-9.]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>
