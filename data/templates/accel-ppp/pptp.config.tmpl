@@ -2,12 +2,13 @@
 [modules]
 log_syslog
 pptp
-ippool
+shaper
 {% if auth_mode == 'local' %}
 chap-secrets
 {% elif auth_mode == 'radius' %}
 radius
 {% endif %}
+ippool
 {% for proto in auth_proto %}
 {{proto}}
 {% endfor %}
@@ -86,6 +87,10 @@ nas-ip-address={{ radius_nas_ip }}
 {% if radius_source_address %}
 bind={{ radius_source_address }}
 {% endif %}
+{% endif %}
+{# Both chap-secrets and radius block required the gw-ip-address #}
+{% if gw_ip is defined and gw_ip is not none %}
+gw-ip-address={{ gw_ip }}
 {% endif %}
 
 [cli]
