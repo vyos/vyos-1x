@@ -61,6 +61,9 @@ group = 'openvpn'
 
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
+otp_path = '/config/auth/openvpn'
+otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
+secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
 
 def get_config(config=None):
     """
@@ -310,7 +313,6 @@ def verify(openvpn):
             if 'is_bridge_member' not in openvpn:
                 raise ConfigError('Must specify "server subnet" or add interface to bridge in server mode')
 
-
         for client_k, client_v in (dict_search('server.client', openvpn).items() or []):
             if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
                 raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
@@ -362,10 +364,11 @@ def verify(openvpn):
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
 
         if dict_search('server.2fa.totp', openvpn):
-            if not Path(otp_file).is_file():
-                Path(otp_file).touch()
+            if not Path(otp_file.format(**openvpn)).is_file():
+                Path(otp_path).mkdir(parents=True, exist_ok=True)
+                Path(otp_file.format(**openvpn)).touch()
             for client in (dict_search('server.client', openvpn) or []):
-                with open(otp_file, "r+") as f:
+                with open(otp_file.format(**openvpn), "r+") as f:
                     users = f.readlines()
                     exists = None
                     for user in users:
@@ -376,7 +379,6 @@ def verify(openvpn):
                         random = SystemRandom()
                         totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
                         f.write("{0} otp totp:sha1:base32:{1}::xxx *\n".format(client, totp_secret))
-
 
     else:
         # checks for both client and site-to-site go here

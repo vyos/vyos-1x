@@ -55,6 +55,34 @@
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf=$4</command>
             <children>
+              <tagNode name="user">
+                <properties>
+                  <help>Show OpenVPN interface users</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_completion_dir}/list_openvpn_users.py --interface "$4"</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="2fa secret">
+                    <properties>
+                      <help>Show 2fa authentication secret</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=sercret</command>
+                  </leafNode>
+                  <leafNode name="2fa otpauth uri">
+                    <properties>
+                      <help>Show 2fa otpauth uri</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=uri</command>
+                  </leafNode>
+                  <leafNode name="2fa QR code">
+                    <properties>
+                      <help>Show 2fa QR code</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=qrcode</command>
+                  </leafNode>
+                </children>
+              </tagNode>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of specified OpenVPN interface information</help>

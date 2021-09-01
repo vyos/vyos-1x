@@ -648,32 +648,71 @@
                       <leafNode name="slop">
                         <properties>
                           <help>Maximum allowed clock slop in seconds (default: 180)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
                         </properties>
                         <defaultValue>180</defaultValue>
                       </leafNode>
                       <leafNode name="t0">
                         <properties>
                           <help>time drift in seconds (default: 0)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
                         </properties>
                         <defaultValue>0</defaultValue>
                       </leafNode>
                       <leafNode name="step">
                         <properties>
                           <help>Step value for TOTP in seconds (default: 30)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
                         </properties>
                         <defaultValue>30</defaultValue>
                       </leafNode>
                       <leafNode name="digits">
                         <properties>
                           <help>Number of digits to use from TOTP hash (default: 6)</help>
+                          <valueHelp>
+                            <format>1-65535</format>
+                            <description>Seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-65535"/>
+                          </constraint>
                         </properties>
                         <defaultValue>6</defaultValue>
                       </leafNode>
                       <leafNode name="challenge">
                         <properties>
                           <help>expect password as result of a challenge response protocol (default: enabled)</help>
+                          <completionHelp>
+                            <list>disable enable</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>disable</format>
+                            <description>Disable challenge response (default)</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>enable</format>
+                            <description>Enable chalenge response (default)</description>
+                          </valueHelp>
                           <constraint>
-                            <regex>^(enable|disable)$</regex>
+                            <regex>^(disable|enable)$</regex>
                           </constraint>
                         </properties>
                         <defaultValue>enable</defaultValue>
