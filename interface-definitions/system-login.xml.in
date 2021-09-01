@@ -44,6 +44,9 @@
                   <tagNode name="public-keys">
                     <properties>
                       <help>Remote access public keys</help>
+                      <constraint>
+                        <regex>^[-_a-zA-Z0-9@]+$</regex>
+                      </constraint>
                       <valueHelp>
                         <format>txt</format>
                         <description>Key identifier used by ssh-keygen (usually of form user@host)</description>
