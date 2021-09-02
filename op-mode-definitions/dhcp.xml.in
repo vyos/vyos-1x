@@ -22,7 +22,7 @@
                     <properties>
                       <help>Show DHCP server leases for a specific pool</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed pool</script>
+                        <path>service dhcp-server shared-network-name</path>
                       </completionHelp>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --pool $6</command>
@@ -57,7 +57,7 @@
                     <properties>
                       <help>Show DHCP server statistics for a specific pool</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed pool</script>
+                        <path>service dhcp-server shared-network-name</path>
                       </completionHelp>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics --pool $6</command>
