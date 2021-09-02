@@ -29,7 +29,9 @@ disable
 verbose=1
 ifname=sstp%d
 accept=ssl
+{% if ssl.ca_cert_file is defined and ssl.ca_cert_file is not none %}
 ssl-ca-file={{ ssl.ca_cert_file }}
+{% endif %}
 ssl-pemfile={{ ssl.cert_file }}
 ssl-keyfile={{ ssl.key_file }}
 
