@@ -16,6 +16,7 @@
 
 import os
 import re
+import tempfile
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from glob import glob
@@ -313,9 +314,10 @@ def verify(openvpn):
             if 'is_bridge_member' not in openvpn:
                 raise ConfigError('Must specify "server subnet" or add interface to bridge in server mode')
 
-        for client_k, client_v in (dict_search('server.client', openvpn).items() or []):
-            if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
-                raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
+        if hasattr(dict_search('server.client', openvpn), '__iter__'):
+            for client_k, client_v in dict_search('server.client', openvpn).items():
+                if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
+                    raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
 
         if dict_search('server.client_ip_pool', openvpn):
             if not (dict_search('server.client_ip_pool.start', openvpn) and dict_search('server.client_ip_pool.stop', openvpn)):
@@ -363,22 +365,34 @@ def verify(openvpn):
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
 
+        # add 2fa users to the file the 2fa plugin uses
         if dict_search('server.2fa.totp', openvpn):
             if not Path(otp_file.format(**openvpn)).is_file():
                 Path(otp_path).mkdir(parents=True, exist_ok=True)
                 Path(otp_file.format(**openvpn)).touch()
-            for client in (dict_search('server.client', openvpn) or []):
-                with open(otp_file.format(**openvpn), "r+") as f:
-                    users = f.readlines()
-                    exists = None
-                    for user in users:
-                        if re.search('^' + client + ' ', user):
-                            exists = 'true'
 
-                    if not exists:
-                        random = SystemRandom()
-                        totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
-                        f.write("{0} otp totp:sha1:base32:{1}::xxx *\n".format(client, totp_secret))
+            with tempfile.TemporaryFile(mode='w+') as fp:
+                with open(otp_file.format(**openvpn), 'r+') as f:
+                    ovpn_users = f.readlines()
+                    for client in (dict_search('server.client', openvpn) or []):
+                        exists = None
+                        for ovpn_user in ovpn_users:
+                            if re.search('^' + client + ' ', user):
+                                fp.write(ovpn_user)
+                                exists = 'true'
+
+                        if not exists:
+                            random = SystemRandom()
+                            totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
+                            fp.write("{0} otp totp:sha1:base32:{1}::xxx *\n".format(client, totp_secret))
+
+                    f.seek(0)
+                    fp.seek(0)
+                    for tmp_user in fp.readlines():
+                        f.write(tmp_user)
+                    f.truncate()
+
+            chown(otp_file.format(**openvpn), user, group)
 
     else:
         # checks for both client and site-to-site go here
