@@ -178,7 +178,7 @@ if __name__ == '__main__':
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-l", "--leases", action="store_true", help="Show DHCP leases")
     group.add_argument("-s", "--statistics", action="store_true", help="Show DHCP statistics")
-    group.add_argument("--allowed", type=str, choices=["pool", "sort", "state"], help="Show allowed values for argument")
+    group.add_argument("--allowed", type=str, choices=["sort", "state"], help="Show allowed values for argument")
 
     parser.add_argument("-p", "--pool", type=str, help="Show lease for specific pool")
     parser.add_argument("-S", "--sort", type=str, default='ip', help="Sort by")
@@ -189,11 +189,7 @@ if __name__ == '__main__':
 
     conf = Config()
 
-    if args.allowed == 'pool':
-        if conf.exists_effective('service dhcp-server'):
-            print(' '.join(conf.list_effective_nodes("service dhcp-server shared-network-name")))
-        exit(0)
-    elif args.allowed == 'sort':
+    if args.allowed == 'sort':
         print(' '.join(lease_display_fields.keys()))
         exit(0)
     elif args.allowed == 'state':
