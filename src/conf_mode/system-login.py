@@ -80,12 +80,6 @@ def get_config(config=None):
         login['radius']['server'][server] = dict_merge(default_values,
             login['radius']['server'][server])
 
-    # XXX: for a yet unknown reason when we only have one source-address
-    # get_config_dict() will show a string over a string
-    if 'radius' in login and 'source_address' in login['radius']:
-        if isinstance(login['radius']['source_address'], str):
-            login['radius']['source_address'] = [login['radius']['source_address']]
-
     # create a list of all users, cli and users
     all_users = list(set(local_users + cli_users))
     # We will remove any normal users that dos not exist in the current
