@@ -216,6 +216,19 @@ def generate(data):
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_secrets_file)
         remove_confs(delim_ipsec_l2tp_begin, delim_ipsec_l2tp_end, ipsec_conf_file)
 
+def is_charon_responsive():
+    # Check if charon responds to strokes
+    #
+    # Sometimes it takes time to fully initialize,
+    # so waiting for the process to come to live isn't always enough
+    #
+    # There's no official "no-op" stroke so we use the "memusage" stroke as a substitute
+    res = system("ipsec stroke memusage >&/dev/null")
+    if res == 0:
+        return True
+    else:
+        return False
+
 def restart_ipsec():
     try:
         # Restart the IPsec daemon when it's running.
@@ -223,17 +236,28 @@ def restart_ipsec():
         # there's a chance that this script will run before charon is up,
         # so we can't assume it's running and have to check and wait if needed.
 
-        # First, wait for charon to get started by the old ipsec.pl script.
+        # But before everything else, there's a catch!
+        # This script is run from _two_ places: "vpn ipsec options" and the top level "vpn" node
+        # When IPsec isn't set up yet, and a user wants to commit an IPsec config with some
+        # "vpn ipsec settings", this script will first be called before StrongSWAN is started by vpn-config.pl!
+        # Thus if this script is run from "settings" _and_ charon is unresponsive,
+        # we shouldn't wait for it, else there will be a deadlock.
+        # We indicate that by passing a "from-options" argument to the script.
+        if len(argv) > 1:
+            if argv[1] == "from-options":
+                if not is_charon_responsive():
+                    return
+
+        # If we got this far, then we actually need to restart StrongSWAN
+
+        # First, wait for charon to get started by the old vpn-config.pl script.
         from time import sleep, time
         from os import system
         now = time()
         while True:
             if (time() - now) > 60:
                 raise OSError("Timeout waiting for the IPsec process to become responsive")
-            # There's no oficial "no-op" stroke,
-            # so we use memusage to check if charon is alive and responsive
-            res = system("ipsec stroke memusage >&/dev/null")
-            if res == 0:
+            if is_charon_responsive():
                 break
             sleep(5)
 
