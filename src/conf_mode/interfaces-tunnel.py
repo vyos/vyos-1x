@@ -123,6 +123,11 @@ def verify(tunnel):
                     raise ConfigError(f'Key "{orig_new_key}" for source-address "{new_source_address}" ' \
                                       f'is already used for tunnel "{tunnel_if}"!')
 
+    # Keys are not allowed with ipip and sit tunnels
+    if tunnel['encapsulation'] in ['ipip', 'sit']:
+        if dict_search('parameters.ip.key', tunnel) != None:
+            raise ConfigError('Keys are not allowed with ipip and sit tunnels!')
+
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
