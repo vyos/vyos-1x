@@ -45,8 +45,6 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/policy/node.def
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
-	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
-	rm -rf $(TMPL_DIR)/vpn/nipsec
 
 	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
 	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
