@@ -59,7 +59,7 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'login']
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                 get_first_key=True)
+                                 no_tag_node_value_mangle=True, get_first_key=True)
 
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
