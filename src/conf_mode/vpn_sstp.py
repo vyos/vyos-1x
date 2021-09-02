@@ -57,9 +57,7 @@ def verify(sstp):
     # SSL certificate checks
     #
     tmp = dict_search('ssl.ca_cert_file', sstp)
-    if not tmp:
-        raise ConfigError(f'SSL CA certificate file required!')
-    else:
+    if tmp:
         if not os.path.isfile(tmp):
             raise ConfigError(f'SSL CA certificate "{tmp}" does not exist!')
 
