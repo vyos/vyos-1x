@@ -226,9 +226,6 @@ auth-user-pass {{ auth_user_pass_file }}
 auth-retry nointeract
 {% endif %}
 
-
-{% if openvpn_option is defined and openvpn_option is not none %}
-
 {% if openvpn_option is defined and openvpn_option is not none %}
 #
 # Custom options added by user (not validated)
