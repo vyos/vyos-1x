@@ -59,27 +59,27 @@
                 <properties>
                   <help>Show OpenVPN interface users</help>
                   <completionHelp>
-                    <script>sudo ${vyos_completion_dir}/list_openvpn_users.py --interface "$4"</script>
+                    <script>sudo ${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
                   </completionHelp>
                 </properties>
                 <children>
-                  <leafNode name="2fa secret">
+                  <leafNode name="2fa-secret">
                     <properties>
                       <help>Show 2fa authentication secret</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=sercret</command>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=secret</command>
                   </leafNode>
-                  <leafNode name="2fa otpauth uri">
+                  <leafNode name="2fa-uri">
                     <properties>
                       <help>Show 2fa otpauth uri</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=uri</command>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=uri</command>
                   </leafNode>
-                  <leafNode name="2fa QR code">
+                  <leafNode name="2fa-QRcode">
                     <properties>
                       <help>Show 2fa QR code</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$4" --intf="$6" --action=qrcode</command>
+                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=qrcode</command>
                   </leafNode>
                 </children>
               </tagNode>

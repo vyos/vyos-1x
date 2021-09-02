@@ -177,6 +177,10 @@ def verify_pki(openvpn):
 
 def verify(openvpn):
     if 'deleted' in openvpn:
+        # remove totp secrets file if totp is not configured
+        if os.path.isfile(otp_file.format(**openvpn)):
+            os.remove(otp_file.format(**openvpn))
+
         verify_bridge_delete(openvpn)
         return None
 
