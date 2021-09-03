@@ -381,7 +381,7 @@ def verify(openvpn):
                     for client in (dict_search('server.client', openvpn) or []):
                         exists = None
                         for ovpn_user in ovpn_users:
-                            if re.search('^' + client + ' ', user):
+                            if re.search('^' + client + ' ', ovpn_user):
                                 fp.write(ovpn_user)
                                 exists = 'true'
 
