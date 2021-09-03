@@ -63,24 +63,31 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <leafNode name="2fa-secret">
+                  <node name="2fa">
                     <properties>
-                      <help>Show 2fa authentication secret</help>
+                      <help>Show 2fa information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=secret</command>
-                  </leafNode>
-                  <leafNode name="2fa-uri">
-                    <properties>
-                      <help>Show 2fa otpauth uri</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=uri</command>
-                  </leafNode>
-                  <leafNode name="2fa-QRcode">
-                    <properties>
-                      <help>Show 2fa QR code</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=qrcode</command>
-                  </leafNode>
+                    <children>
+                      <leafNode name="secret">
+                        <properties>
+                          <help>Show 2fa authentication secret</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=secret</command>
+                      </leafNode>
+                      <leafNode name="uri">
+                        <properties>
+                          <help>Show 2fa otpauth uri</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=uri</command>
+                      </leafNode>
+                      <leafNode name="qrcode">
+                        <properties>
+                          <help>Show 2fa QR code</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=qrcode</command>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </tagNode>
               <leafNode name="brief">

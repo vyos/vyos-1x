@@ -131,7 +131,7 @@ push "dhcp-option DOMAIN {{ server.domain_name }}"
 {%       if server['2fa']['totp'] is defined and server['2fa']['totp'] is not none %}
 plugin "/usr/lib/x86_64-linux-gnu/openvpn/plugins/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{{ ifname }}-otp-secrets otp_slop=
 {{- server['2fa']['totp']['slop']|default(180) }} totp_t0=
-{{- server['2fa']['totp']['t0']|default(0) }} totp_step=
+{{- server['2fa']['totp']['drift']|default(0) }} totp_step=
 {{- server['2fa']['totp']['step']|default(30) }} totp_digits=
 {{- server['2fa']['totp']['digits']|default(6)}} password_is_cr=
 {%-if server['2fa']['totp']['challenge']|default('enable') == 'enable' %}1{% else %}0{% endif %}"

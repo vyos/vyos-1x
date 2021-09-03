@@ -657,7 +657,7 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="t0">
+                      <leafNode name="drift">
                         <properties>
                           <help>time drift in seconds (default: 0)</help>
                           <valueHelp>
