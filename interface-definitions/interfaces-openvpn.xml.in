@@ -656,7 +656,6 @@
                             <validator name="numeric" argument="--range 1-65535"/>
                           </constraint>
                         </properties>
-                        <defaultValue>180</defaultValue>
                       </leafNode>
                       <leafNode name="t0">
                         <properties>
@@ -669,7 +668,6 @@
                             <validator name="numeric" argument="--range 1-65535"/>
                           </constraint>
                         </properties>
-                        <defaultValue>0</defaultValue>
                       </leafNode>
                       <leafNode name="step">
                         <properties>
@@ -682,7 +680,6 @@
                             <validator name="numeric" argument="--range 1-65535"/>
                           </constraint>
                         </properties>
-                        <defaultValue>30</defaultValue>
                       </leafNode>
                       <leafNode name="digits">
                         <properties>
@@ -695,7 +692,6 @@
                             <validator name="numeric" argument="--range 1-65535"/>
                           </constraint>
                         </properties>
-                        <defaultValue>6</defaultValue>
                       </leafNode>
                       <leafNode name="challenge">
                         <properties>
@@ -715,7 +711,6 @@
                             <regex>^(disable|enable)$</regex>
                           </constraint>
                         </properties>
-                        <defaultValue>enable</defaultValue>
                       </leafNode>
                    </children>
                   </node>
