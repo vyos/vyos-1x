@@ -130,7 +130,7 @@ def verify(bgp):
 
             if 'local_as' in peer_config:
                 if len(peer_config['local_as']) > 1:
-                    raise ConfigError('Only one local-as number may be specified!')
+                    raise ConfigError(f'Only one local-as number can be specified for peer "{peer}"!')
 
                 # Neighbor local-as override can not be the same as the local-as
                 # we use for this BGP instane!

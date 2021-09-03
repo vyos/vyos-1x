@@ -1,10 +1,10 @@
 <!-- include start from bgp/neighbor-local-as.xml.i -->
 <tagNode name="local-as">
   <properties>
-    <help>Local AS number [REQUIRED]</help>
+    <help>Specify alternate ASN for this BGP process</help>
     <valueHelp>
       <format>u32:1-4294967294</format>
-      <description>Local AS number</description>
+      <description>Autonomous System Number (ASN)</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-4294967294"/>
@@ -13,7 +13,13 @@
   <children>
     <leafNode name="no-prepend">
       <properties>
-        <help>Disable prepending local-as to updates from EBGP peers</help>
+        <help>Disable prepending local-as from/to updates for eBGP peers</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="replace-as">
+      <properties>
+        <help>Prepend only local-as from/to updates for eBGP peers</help>
         <valueless/>
       </properties>
     </leafNode>

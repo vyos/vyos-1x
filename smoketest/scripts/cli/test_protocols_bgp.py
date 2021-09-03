@@ -165,7 +165,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         if 'multi_hop' in peer_config:
             self.assertIn(f' neighbor {peer} ebgp-multihop {peer_config["multi_hop"]}', frrconfig)
         if 'local_as' in peer_config:
-            self.assertIn(f' neighbor {peer} local-as {peer_config["local_as"]}', frrconfig)
+            self.assertIn(f' neighbor {peer} local-as {peer_config["local_as"]} no-prepend replace-as', frrconfig)
         if 'cap_over' in peer_config:
             self.assertIn(f' neighbor {peer} override-capability', frrconfig)
         if 'passive' in peer_config:
@@ -284,7 +284,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'multi_hop' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'ebgp-multihop', peer_config["multi_hop"]])
             if 'local_as' in peer_config:
-                self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"]])
+                self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"], 'no-prepend'])
+                self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"], 'replace-as'])
             if 'cap_over' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'override-capability'])
             if 'passive' in peer_config:
@@ -353,7 +354,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'multi_hop' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'ebgp-multihop', config["multi_hop"]])
             if 'local_as' in config:
-                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"], 'no-prepend'])
+                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"], 'replace-as'])
             if 'cap_over' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'override-capability'])
             if 'passive' in config:

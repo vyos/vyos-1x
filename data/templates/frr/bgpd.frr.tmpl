@@ -46,8 +46,9 @@
  neighbor {{ neighbor }} {{ graceful_restart }}
 {%   endif %}
 {%   if config.local_as is defined and config.local_as is not none %}
-{%     for local_asn in config.local_as %}
- neighbor {{ neighbor }} local-as {{ local_asn }} {{ 'no-prepend' if config.local_as[local_asn].no_prepend is defined }}
+{%     for local_asn, local_asn_config in config.local_as.items() %}
+{#       There can be only one local-as value, this is checked in the Python code #}
+ neighbor {{ neighbor }} local-as {{ local_asn }} {{ 'no-prepend' if local_asn_config.no_prepend is defined }} {{ 'replace-as' if local_asn_config.replace_as is defined }}
 {%     endfor %}
 {%   endif %}
 {%   if config.override_capability is defined %}
