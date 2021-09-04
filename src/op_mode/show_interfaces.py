@@ -52,11 +52,12 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
     ifnames: a list of interfaces names to consider, empty do not filter
     return an instance of the interface class
     """
-    allnames = Section.interfaces()
+    if isinstance(iftypes, list):
+        for iftype in iftypes:
+            yield from filtered_interfaces(ifnames, iftype, vif, vrrp)
 
-    vrrp_interfaces = VRRP.active_interfaces() if vrrp else []
-
-    for ifname in allnames:
+    for ifname in Section.interfaces(iftypes):
+        # Bail out early if interface name not part of our search list
         if ifnames and ifname not in ifnames:
             continue
 
@@ -64,14 +65,14 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
         # generic base class which exposes all the data via a common API
         interface = Interface(ifname, create=False, debug=False)
 
-        if iftypes and interface.definition['section'] not in iftypes:
-            continue
-
+        # VLAN interfaces have a '.' in their name by convention
         if vif and not '.' in ifname:
             continue
 
-        if vrrp and ifname not in vrrp_interfaces:
-            continue
+        if vrrp:
+            vrrp_interfaces = VRRP.active_interfaces()
+            if ifname not in vrrp_interfaces:
+                continue
 
         yield interface
 
