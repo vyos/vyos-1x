@@ -140,7 +140,7 @@ def verify(bgp):
 
             # ttl-security and ebgp-multihop can't be used in the same configration
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
-                raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
+                raise ConfigError('You can not set both ebgp-multihop and ttl-security hops')
 
             # Check if neighbor has both override capability and strict capability match configured at the same time.
             if 'override_capability' in peer_config and 'strict_capability_match' in peer_config:
@@ -148,7 +148,7 @@ def verify(bgp):
 
             # Check spaces in the password
             if 'password' in peer_config and ' ' in peer_config['password']:
-                raise ConfigError('You can\'t use spaces in the password')
+                raise ConfigError('Whitespace is not allowed in passwords!')
 
             # Some checks can/must only be done on a neighbor and not a peer-group
             if neighbor == 'neighbor':

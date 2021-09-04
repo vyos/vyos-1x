@@ -11,18 +11,19 @@
     </constraint>
   </properties>
   <children>
-    <leafNode name="no-prepend">
+    <node name="no-prepend">
       <properties>
         <help>Disable prepending local-as from/to updates for eBGP peers</help>
-        <valueless/>
       </properties>
-    </leafNode>
-    <leafNode name="replace-as">
-      <properties>
-        <help>Prepend only local-as from/to updates for eBGP peers</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+      <children>
+        <leafNode name="replace-as">
+          <properties>
+            <help>Prepend only local-as from/to updates for eBGP peers</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </tagNode>
 <!-- include end -->
