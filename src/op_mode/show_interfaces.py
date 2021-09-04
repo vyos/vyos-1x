@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2017, 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,7 @@ import os
 import re
 import sys
 import glob
-import datetime
 import argparse
-import netifaces
 
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
