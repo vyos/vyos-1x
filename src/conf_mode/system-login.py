@@ -240,7 +240,9 @@ def apply(login):
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.tmpl',
-                       user_config, permission=0o600, user=user, group='users')
+                       user_config, permission=0o600,
+                       formater=lambda _: _.replace("&quot;", '"'),
+                       user=user, group='users')
 
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
