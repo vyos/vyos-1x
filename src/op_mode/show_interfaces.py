@@ -60,10 +60,9 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
         if ifnames and ifname not in ifnames:
             continue
 
-        # return the class which can handle this interface name
-        klass = Section.klass(ifname)
-        # connect to the interface
-        interface = klass(ifname, create=False, debug=False)
+        # As we are only "reading" from the interface - we must use the
+        # generic base class which exposes all the data via a common API
+        interface = Interface(ifname, create=False, debug=False)
 
         if iftypes and interface.definition['section'] not in iftypes:
             continue
