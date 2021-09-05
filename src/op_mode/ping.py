@@ -62,8 +62,8 @@ options = {
     },
     'interface': {
         'ping': '{command} -I {value}',
-        'type': '<interface> <X.X.X.X> <h:h:h:h:h:h:h:h>',
-        'help': 'Interface to use as source for ping'
+        'type': '<interface>',
+        'help': 'Source interface'
     },
     'interval': {
         'ping': '{command} -i {value}',
@@ -114,6 +114,10 @@ options = {
         'ping': '{command} -s {value}',
         'type': '<bytes>',
         'help': 'Number of bytes to send'
+    },
+    'source-address': {
+        'ping': '{command} -I {value}',
+        'type': '<x.x.x.x> <h:h:h:h:h:h:h:h>',
     },
     'ttl': {
         'ping': '{command} -t {value}',
@@ -234,4 +238,4 @@ if __name__ == '__main__':
 
     # print(f'{command} {host}')
     os.system(f'{command} {host}')
-    
+
