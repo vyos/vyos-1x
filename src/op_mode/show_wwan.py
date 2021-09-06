@@ -34,13 +34,17 @@ required = parser.add_argument_group('Required arguments')
 required.add_argument("--interface", help="WWAN interface name, e.g. wwan0", required=True)
 
 def qmi_cmd(device, command, silent=False):
-    tmp = cmd(f'qmicli --device={device} --device-open-proxy {command}')
-    tmp = tmp.replace(f'[{cdc}] ', '')
-    if not silent:
-        # skip first line as this only holds the info headline
-        for line in tmp.splitlines()[1:]:
-            print(line.lstrip())
-    return tmp
+    try:
+        tmp = cmd(f'qmicli --device={device} --device-open-proxy {command}')
+        tmp = tmp.replace(f'[{cdc}] ', '')
+        if not silent:
+            # skip first line as this only holds the info headline
+            for line in tmp.splitlines()[1:]:
+                print(line.lstrip())
+        return tmp
+    except:
+        print('Command not supported by Modem')
+        exit(1)
 
 if __name__ == '__main__':
     args = parser.parse_args()
