@@ -25,9 +25,26 @@ from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 
-pki_path = ['pki']
-cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
-key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
+cert_data = """
+MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
+WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
+MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
+BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
+UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
+QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
+BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
++JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
+ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
++dm/LDnp7C0=
+"""
+
+key_data = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
+2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
+u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+"""
 
 def get_wpa_supplicant_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
@@ -64,10 +81,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         # call base-classes classmethod
         super(cls, cls).setUpClass()
 
-
     def tearDown(self):
-        self.cli_delete(pki_path)
-
         for interface in self._interfaces:
             # when using a dedicated interface to test via TEST_ETH environment
             # variable only this one will be cleared in the end - usable to test
@@ -151,14 +165,17 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
 
     def test_eapol_support(self):
-        self.cli_set(pki_path + ['ca', 'eapol', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'eapol', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'eapol', 'private', 'key', key_data])
+        ca_name = 'eapol'
+        cert_name = 'eapol'
+
+        self.cli_set(['pki', 'ca', ca_name, 'certificate', cert_data.replace('\n','')])
+        self.cli_set(['pki', 'certificate', cert_name, 'certificate', cert_data.replace('\n','')])
+        self.cli_set(['pki', 'certificate', cert_name, 'private', 'key', key_data.replace('\n','')])
 
         for interface in self._interfaces:
             # Enable EAPoL
-            self.cli_set(self._base_path + [interface, 'eapol', 'ca-certificate', 'eapol'])
-            self.cli_set(self._base_path + [interface, 'eapol', 'certificate', 'eapol'])
+            self.cli_set(self._base_path + [interface, 'eapol', 'ca-certificate', ca_name])
+            self.cli_set(self._base_path + [interface, 'eapol', 'certificate', cert_name])
 
         self.cli_commit()
 
@@ -188,6 +205,9 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             mac = read_file(f'/sys/class/net/{interface}/address')
             tmp = get_wpa_supplicant_value(interface, 'identity')
             self.assertEqual(f'"{mac}"', tmp)
+
+        self.cli_delete(['pki', 'ca', ca_name])
+        self.cli_delete(['pki', 'certificate', cert_name])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -152,11 +152,10 @@ def verify_eapol(config):
         if 'certificate' not in config['eapol']:
             raise ConfigError('Certificate must be specified when using EAPoL!')
 
-        if 'certificate' not in config['pki']:
+        if 'pki' not in config or 'certificate' not in config['pki']:
             raise ConfigError('Invalid certificate specified for EAPoL')
 
         cert_name = config['eapol']['certificate']
-
         if cert_name not in config['pki']['certificate']:
             raise ConfigError('Invalid certificate specified for EAPoL')
 

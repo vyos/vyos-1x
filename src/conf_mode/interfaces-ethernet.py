@@ -55,15 +55,17 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
+    # This must be called prior to get_interface_dict(), as this function will
+    # alter the config level (config.set_level())
+    pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
+
     base = ['interfaces', 'ethernet']
-
-    tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
-
     ethernet = get_interface_dict(conf, base)
 
     if 'deleted' not in ethernet:
-        ethernet['pki'] = tmp_pki
+       if pki: ethernet['pki'] = pki
 
     return ethernet
 
