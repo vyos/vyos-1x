@@ -724,6 +724,23 @@ def dict_search_args(dict_object, *path):
         dict_object = dict_object[item]
     return dict_object
 
+def dict_search_recursive(dict_object, key):
+    """ Traverse a dictionary recurisvely and return the value of the key
+    we are looking for.
+
+    Thankfully copied from https://stackoverflow.com/a/19871956
+    """
+    if isinstance(dict_object, list):
+        for i in dict_object:
+            for x in dict_search_recursive(i, key):
+               yield x
+    elif isinstance(dict_object, dict):
+        if key in dict_object:
+            yield dict_object[key]
+        for j in dict_object.values():
+            for x in dict_search_recursive(j, key):
+                yield x
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
