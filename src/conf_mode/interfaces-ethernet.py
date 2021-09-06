@@ -37,6 +37,7 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -156,19 +157,16 @@ def generate(ethernet):
         cert_name = ethernet['eapol']['certificate']
         pki_cert = ethernet['pki']['certificate'][cert_name]
 
-        with open(cert_file_path, 'w') as f:
-            f.write(wrap_certificate(pki_cert['certificate']))
-
-        with open(cert_key_path, 'w') as f:
-            f.write(wrap_private_key(pki_cert['private']['key']))
+        write_file(cert_file_path, wrap_certificate(pki_cert['certificate']))
+        write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
 
         if 'ca_certificate' in ethernet['eapol']:
             ca_cert_file_path = os.path.join(cfg_dir, f'{ifname}_ca.pem')
             ca_cert_name = ethernet['eapol']['ca_certificate']
             pki_ca_cert = ethernet['pki']['ca'][cert_name]
 
-            with open(ca_cert_file_path, 'w') as f:
-                f.write(wrap_certificate(pki_ca_cert['certificate']))
+            write_file(ca_cert_file_path,
+                       wrap_certificate(pki_ca_cert['certificate']))
     else:
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**ethernet)):
