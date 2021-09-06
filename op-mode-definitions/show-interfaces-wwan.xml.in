@@ -68,9 +68,9 @@
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/show_wwan.py --interface=$4 --sim</command>
               </leafNode>
-              <leafNode name="summary">
+              <leafNode name="detail">
                 <properties>
-                  <help>Show WWAN module information summary</help>
+                  <help>Show WWAN module detailed information summary</help>
                 </properties>
                 <command>mmcli --modem ${4#wwan}</command>
               </leafNode>
