@@ -72,6 +72,13 @@ def verify(ethernet):
 
     ifname = ethernet['ifname']
     verify_interface_exists(ifname)
+    verify_mtu(ethernet)
+    verify_mtu_ipv6(ethernet)
+    verify_dhcpv6(ethernet)
+    verify_address(ethernet)
+    verify_vrf(ethernet)
+    verify_eapol(ethernet)
+    verify_mirror(ethernet)
 
     ethtool = Ethtool(ifname)
     # No need to check speed and duplex keys as both have default values.
@@ -110,14 +117,6 @@ def verify(ethernet):
         if tx and int(tx) > int(max_tx):
             raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
                               f'size of "{max_tx}" bytes!')
-
-    verify_mtu(ethernet)
-    verify_mtu_ipv6(ethernet)
-    verify_dhcpv6(ethernet)
-    verify_address(ethernet)
-    verify_vrf(ethernet)
-    verify_eapol(ethernet)
-    verify_mirror(ethernet)
 
     # verify offloading capabilities
     if dict_search('offload.rps', ethernet) != None:
