@@ -38,6 +38,7 @@ server {
         #
         include snippets/snakeoil.conf;
 {% endif %}
+        ssl_protocols TLSv1.2 TLSv1.3;
 
         # proxy settings for HTTP API, if enabled; 503, if not
         location ~ /(retrieve|configure|config-file|image|generate|show) {
