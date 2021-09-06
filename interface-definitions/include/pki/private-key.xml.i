@@ -7,13 +7,13 @@
     <leafNode name="key">
       <properties>
         <help>Private key in PKI configuration</help>
-        <valueHelp>
-          <format>key name</format>
-          <description>Name of private key in PKI configuration</description>
-        </valueHelp>
         <completionHelp>
           <path>pki key-pair</path>
         </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Name of private key in PKI configuration</description>
+        </valueHelp>
       </properties>
     </leafNode>
     <leafNode name="passphrase">
