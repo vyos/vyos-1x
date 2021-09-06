@@ -246,10 +246,18 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 base = self._base_path + [intf]
                 self.cli_set(base + ['mtu', self._mtu])
-                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
                 for option in self._options.get(intf, []):
                     self.cli_set(base + option.split())
+
+            # check validate() - can not set low MTU if 'no-default-link-local'
+            # is not set on CLI
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            for intf in self._interfaces:
+                base = self._base_path + [intf]
+                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
             # commit interface changes
             self.cli_commit()
