@@ -6,7 +6,7 @@
         <children>
           <tagNode name="vxlan">
             <properties>
-              <help>Show VXLAN interface information</help>
+              <help>Show specified VXLAN interface information</help>
               <completionHelp>
                 <path>interfaces vxlan</path>
               </completionHelp>

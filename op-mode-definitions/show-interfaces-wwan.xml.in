@@ -6,7 +6,7 @@
         <children>
           <tagNode name="wwan">
             <properties>
-              <help>Show Wireless Wire Area Network (WWAN) interface information</help>
+              <help>Show specified Wireless Wire Area Network (WWAN) interface information</help>
               <completionHelp>
                 <path>interfaces wwan</path>
                 <script>cd /sys/class/net; ls -d wwan*</script>

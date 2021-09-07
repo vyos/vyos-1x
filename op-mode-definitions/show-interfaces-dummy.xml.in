@@ -6,7 +6,7 @@
         <children>
           <tagNode name="dummy">
             <properties>
-              <help>Show dummy interface information</help>
+              <help>Show specified Dummy interface information</help>
               <completionHelp>
                 <path>interfaces dummy</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="dummy">
             <properties>
-              <help>Show dummy interface information</help>
+              <help>Show Dummy interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=dummy --action=show-brief</command>
             <children>

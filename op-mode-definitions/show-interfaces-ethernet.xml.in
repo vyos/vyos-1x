@@ -6,7 +6,7 @@
         <children>
           <tagNode name="ethernet">
             <properties>
-              <help>Show ethernet interface information</help>
+              <help>Show specified Ethernet interface information</help>
               <completionHelp>
                 <path>interfaces ethernet</path>
               </completionHelp>
@@ -78,7 +78,7 @@
           </tagNode>
           <node name="ethernet">
             <properties>
-              <help>Show ethernet interface information</help>
+              <help>Show Ethernet interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=ethernet --action=show-brief</command>
             <children>

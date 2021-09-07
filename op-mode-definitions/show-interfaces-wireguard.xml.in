@@ -6,7 +6,7 @@
         <children>
           <tagNode name="wireguard">
             <properties>
-              <help>Show Wireguard interface information</help>
+              <help>Show specified WireGuard interface information</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
@@ -47,7 +47,7 @@
           </tagNode>
           <node name="wireguard">
             <properties>
-              <help>Show Wireguard interface information</help>
+              <help>Show WireGuard interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=wireguard --action=show-brief</command>
             <children>
