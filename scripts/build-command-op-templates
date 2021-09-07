@@ -29,13 +29,10 @@ import functools
 from lxml import etree as ET
 
 # Defaults
-
 validator_dir = "/opt/vyatta/libexec/validators"
 default_constraint_err_msg = "Invalid value"
 
-
 ## Get arguments
-
 parser = argparse.ArgumentParser(description='Converts new-style XML interface definitions to old-style command templates')
 parser.add_argument('--debug', help='Enable debug information output', action='store_true')
 parser.add_argument('INPUT_FILE', type=str, help="XML interface definition file")
@@ -50,7 +47,6 @@ output_dir = args.OUTPUT_DIR
 debug = args.debug
 
 ## Load and validate the inputs
-
 try:
     xml = ET.parse(input_file)
 except Exception as e:
@@ -76,7 +72,6 @@ if not os.access(output_dir, os.W_OK):
     sys.exit(1)
 
 ## If we got this far, everything must be ok and we can convert the file
-
 def make_path(l):
     path = functools.reduce(os.path.join, l)
     if debug:
@@ -125,21 +120,14 @@ def get_properties(p):
 def make_node_def(props, command):
     # XXX: replace with a template processor if it grows
     #      out of control
-
     node_def = ""
 
     if "help" in props:
         node_def += "help: {0}\n".format(props["help"])
-
-
     if "comp_help" in props:
         node_def += "allowed: {0}\n".format(props["comp_help"])
-
-
     if command is not None:
         node_def += "run: {0}\n".format(command.text)
-
-
     if debug:
         print("The contents of the node.def file:\n", node_def)
 
@@ -152,7 +140,6 @@ def process_node(n, tmpl_dir):
     props_elem = n.find("properties")
     children = n.find("children")
     command = n.find("command")
-
     name = n.get("name")
 
     node_type = n.tag
@@ -180,8 +167,7 @@ def process_node(n, tmpl_dir):
             inner_nodes = children.iterfind("*")
             for inner_n in inner_nodes:
                 process_node(inner_n, my_tmpl_dir)
-
-    if node_type == "tagNode":
+    elif node_type == "tagNode":
         if debug:
           print(f"Processing tagNode {name}")
 
@@ -211,7 +197,7 @@ def process_node(n, tmpl_dir):
             inner_nodes = children.iterfind("*")
             for inner_n in inner_nodes:
                 process_node(inner_n, my_tmpl_dir)
-    else:
+    elif node_type == "leafNode":
         # This is a leaf node
         if debug:
             print(f"Processing leaf node {name}")
@@ -219,8 +205,47 @@ def process_node(n, tmpl_dir):
         if not os.path.exists(nodedef_path) or os.path.getsize(nodedef_path) == 0:
             with open(nodedef_path, "w") as f:
                 f.write(make_node_def(props, command))
+    else:
+        print(f"Unknown node_type: {node_type}")
+
+
+def get_node_key(node, attr=None):
+    """ Return the sorting key of an xml node using tag and attributes """
+    if attr is None:
+        return '%s' % node.tag + ':'.join([node.get(attr)
+                                        for attr in sorted(node.attrib)])
+    if attr in node.attrib:
+        return '%s:%s' % (node.tag, node.get(attr))
+    return '%s' % node.tag
+
+
+def sort_children(node, attr=None):
+    """ Sort children along tag and given attribute. if attr is None, sort
+    along all attributes """
+    if not isinstance(node.tag, str):  # PYTHON 2: use basestring instead
+        # not a TAG, it is comment or DATA
+        # no need to sort
+        return
+    # sort child along attr
+    node[:] = sorted(node, key=lambda child: get_node_key(child, attr))
+    # and recurse
+    for child in node:
+        sort_children(child, attr)
 
 root = xml.getroot()
+
+# process_node() processes the XML tree in a fixed order, "node" before "tagNode"
+# before "leafNode". If the generator created a "node.def" file, it can no longer
+# be overwritten - else we would have some stale "node.def" files with an empty
+# help string (T2555). Without the fixed order this would resulted in a case
+# where we get a node and a tagNode with the same name, e.g. "show interfaces
+# ethernet" and "show interfaces ethernet eth0" that the node implementation
+# was not callable from the CLI, rendering this command useless (T3807).
+#
+# This can be fixed by forcing the "node", "tagNode", "leafNode" order by sorting
+# the input XML file automatically (sorting from https://stackoverflow.com/a/46128043)
+# thus adding no additional overhead to the user.
+sort_children(root, 'name')
 
 nodes = root.iterfind("*")
 for n in nodes:
