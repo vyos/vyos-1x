@@ -6,7 +6,7 @@
         <children>
           <tagNode name="input">
             <properties>
-              <help>Show input interface information</help>
+              <help>Show specified Input interface information</help>
               <completionHelp>
                 <path>interfaces input</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="input">
             <properties>
-              <help>Show input interface information</help>
+              <help>Show Input (ifb) interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=input --action=show-brief</command>
             <children>

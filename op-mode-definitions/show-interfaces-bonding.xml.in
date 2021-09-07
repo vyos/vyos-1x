@@ -6,7 +6,7 @@
         <children>
           <tagNode name="bonding">
             <properties>
-              <help>Show bonding interface information</help>
+              <help>Show specified Bonding interface information</help>
               <completionHelp>
                 <path>interfaces bonding</path>
               </completionHelp>
@@ -46,7 +46,7 @@
           </tagNode>
           <node name="bonding">
             <properties>
-              <help>Show bonding interface information</help>
+              <help>Show Bonding interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bonding --action=show-brief</command>
             <children>
