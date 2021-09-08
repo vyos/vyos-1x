@@ -80,9 +80,6 @@ def get_config(config=None):
     openvpn = get_interface_dict(conf, base)
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
-    openvpn['daemon_user'] = user
-    openvpn['daemon_group'] = group
-
     return openvpn
 
 def verify(openvpn):
