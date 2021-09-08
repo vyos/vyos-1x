@@ -48,9 +48,9 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import call
 from vyos.util import chown
-from vyos.util import chmod_600
 from vyos.util import dict_search
 from vyos.util import dict_search_args
+from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 
 from vyos import ConfigError
@@ -498,7 +498,6 @@ def verify(openvpn):
 
 def generate_pki_files(openvpn):
     pki = openvpn['pki']
-
     if not pki:
         return None
 
@@ -506,16 +505,11 @@ def generate_pki_files(openvpn):
     shared_secret_key = dict_search_args(openvpn, 'shared_secret_key')
     tls = dict_search_args(openvpn, 'tls')
 
-    files = []
-
     if shared_secret_key:
         pki_key = pki['openvpn']['shared_secret'][shared_secret_key]
         key_path = os.path.join(cfg_dir, f'{interface}_shared.key')
-
-        with open(key_path, 'w') as f:
-            f.write(wrap_openvpn_key(pki_key['key']))
-
-        files.append(key_path)
+        write_file(key_path, wrap_openvpn_key(pki_key['key']),
+                   user=user, group=group)
 
     if tls:
         if 'ca_certificate' in tls:
@@ -524,20 +518,15 @@ def generate_pki_files(openvpn):
 
             if 'certificate' in pki_ca:
                 cert_path = os.path.join(cfg_dir, f'{interface}_ca.pem')
-
-                with open(cert_path, 'w') as f:
-                    f.write(wrap_certificate(pki_ca['certificate']))
-
-                files.append(cert_path)
+                write_file(cert_path, wrap_certificate(pki_ca['certificate']),
+                           user=user, group=group, mode=0o600)
 
             if 'crl' in pki_ca:
                 for crl in pki_ca['crl']:
                     crl_path = os.path.join(cfg_dir, f'{interface}_crl.pem')
+                    write_file(crl_path, wrap_crl(crl), user=user, group=group,
+                               mode=0o600)
 
-                    with open(crl_path, 'w') as f:
-                        f.write(wrap_crl(crl))
-
-                    files.append(crl_path)
                 openvpn['tls']['crl'] = True
 
         if 'certificate' in tls:
@@ -546,19 +535,14 @@ def generate_pki_files(openvpn):
 
             if 'certificate' in pki_cert:
                 cert_path = os.path.join(cfg_dir, f'{interface}_cert.pem')
-
-                with open(cert_path, 'w') as f:
-                    f.write(wrap_certificate(pki_cert['certificate']))
-
-                files.append(cert_path)
+                write_file(cert_path, wrap_certificate(pki_cert['certificate']),
+                           user=user, group=group, mode=0o600)
 
             if 'private' in pki_cert and 'key' in pki_cert['private']:
                 key_path = os.path.join(cfg_dir, f'{interface}_cert.key')
+                write_file(key_path, wrap_private_key(pki_cert['private']['key']),
+                           user=user, group=group, mode=0o600)
 
-                with open(key_path, 'w') as f:
-                    f.write(wrap_private_key(pki_cert['private']['key']))
-
-                files.append(key_path)
                 openvpn['tls']['private_key'] = True
 
         if 'dh_params' in tls:
@@ -567,11 +551,8 @@ def generate_pki_files(openvpn):
 
             if 'parameters' in pki_dh:
                 dh_path = os.path.join(cfg_dir, f'{interface}_dh.pem')
-
-                with open(dh_path, 'w') as f:
-                    f.write(wrap_dh_parameters(pki_dh['parameters']))
-
-                files.append(dh_path)
+                write_file(dh_path, wrap_dh_parameters(pki_dh['parameters']),
+                           user=user, group=group, mode=0o600)
 
         if 'auth_key' in tls:
             key_name = tls['auth_key']
@@ -579,11 +560,8 @@ def generate_pki_files(openvpn):
 
             if 'key' in pki_key:
                 key_path = os.path.join(cfg_dir, f'{interface}_auth.key')
-
-                with open(key_path, 'w') as f:
-                    f.write(wrap_openvpn_key(pki_key['key']))
-
-                files.append(key_path)
+                write_file(key_path, wrap_openvpn_key(pki_key['key']),
+                           user=user, group=group, mode=0o600)
 
         if 'crypt_key' in tls:
             key_name = tls['crypt_key']
@@ -620,7 +598,7 @@ def generate(openvpn):
         chown(ccd_dir, user, group)
 
     # Fix file permissons for keys
-    fix_permissions = generate_pki_files(openvpn)
+    generate_pki_files(openvpn)
 
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
@@ -647,10 +625,6 @@ def generate(openvpn):
     # see https://phabricator.vyos.net/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
-
-    # Fixup file permissions
-    for file in fix_permissions:
-        chmod_600(file)
 
     return None
 

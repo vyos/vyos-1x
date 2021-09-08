@@ -197,7 +197,7 @@ def read_file(fname, defaultonfailure=None):
             return defaultonfailure
         raise e
 
-def write_file(fname, data, defaultonfailure=None, user=None, group=None):
+def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=None):
     """
     Write content of data to given fname, should defaultonfailure be not None,
     it is returned on failure to read.
@@ -215,6 +215,7 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None):
         with open(fname, 'w') as f:
             bytes = f.write(data)
         chown(fname, user, group)
+        chmod(fname, mode)
         return bytes
     except Exception as e:
         if defaultonfailure is not None:
@@ -294,7 +295,6 @@ def makedir(path, user=None, group=None):
         return
     os.makedirs(path, mode=0o755)
     chown(path, user, group)
-
 
 def colon_separated_to_dict(data_string, uniquekeys=False):
     """ Converts a string containing newline-separated entries
