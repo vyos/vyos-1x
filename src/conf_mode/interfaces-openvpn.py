@@ -40,6 +40,7 @@ from vyos.util import call
 from vyos.util import chown
 from vyos.util import chmod_600
 from vyos.util import dict_search
+from vyos.util import makedir
 from vyos.validate import is_addr_assigned
 
 from vyos import ConfigError
@@ -425,6 +426,10 @@ def verify(openvpn):
 def generate(openvpn):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
+    # create base config directory on demand
+    makedir(directory, user, group)
+    # enforce proper permissions on /run/openvpn
+    chown(directory, user, group)
 
     # we can't know in advance which clients have been removed,
     # thus all client configs will be removed and re-added on demand
@@ -436,9 +441,7 @@ def generate(openvpn):
         return None
 
     # create client config directory on demand
-    if not os.path.exists(ccd_dir):
-        os.makedirs(ccd_dir, 0o755)
-        chown(ccd_dir, user, group)
+    makedir(ccd_dir, user, group)
 
     # Fix file permissons for keys
     fix_permissions = []
