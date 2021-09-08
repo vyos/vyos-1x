@@ -81,9 +81,6 @@ def get_config(config=None):
         openvpn['pki'] = tmp_pki
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
-    openvpn['daemon_user'] = user
-    openvpn['daemon_group'] = group
-
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
