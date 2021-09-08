@@ -146,7 +146,7 @@ def verify_pki(openvpn):
         if tls['ca_certificate'] not in pki['ca']:
             raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
 
-        if not (mode == 'client' and 'auth_key' in tls):
+        if mode != 'client' and 'auth_key' not in tls:
             if 'certificate' not in tls:
                 raise ConfigError(f'Missing "tls certificate" on openvpn interface {interface}')
 
