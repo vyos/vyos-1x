@@ -92,8 +92,6 @@ def get_config(config=None):
         openvpn['pki'] = tmp_pki
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
-    openvpn['daemon_user'] = user
-    openvpn['daemon_group'] = group
 
     # We have to cleanup the config dict, as default values could enable features
     # which are not explicitly enabled on the CLI. Example: server mfa totp
