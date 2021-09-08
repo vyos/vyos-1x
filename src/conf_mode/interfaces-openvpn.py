@@ -47,6 +47,7 @@ from vyos.util import call
 from vyos.util import chown
 from vyos.util import dict_search
 from vyos.util import dict_search_args
+from vyos.util import makedir
 from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 
@@ -520,18 +521,17 @@ def generate_pki_files(openvpn):
 
             if 'key' in pki_key:
                 key_path = os.path.join(cfg_dir, f'{interface}_crypt.key')
-
-                with open(key_path, 'w') as f:
-                    f.write(wrap_openvpn_key(pki_key['key']))
-
-                files.append(key_path)
-
-    return files
+                write_file(key_path, wrap_openvpn_key(pki_key['key']),
+                           user=user, group=group, mode=0o600)
 
 
 def generate(openvpn):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
+    # create base config directory on demand
+    makedir(directory, user, group)
+    # enforce proper permissions on /run/openvpn
+    chown(directory, user, group)
 
     # we can't know in advance which clients have been removed,
     # thus all client configs will be removed and re-added on demand
@@ -543,9 +543,7 @@ def generate(openvpn):
         return None
 
     # create client config directory on demand
-    if not os.path.exists(ccd_dir):
-        os.makedirs(ccd_dir, 0o755)
-        chown(ccd_dir, user, group)
+    makedir(ccd_dir, user, group)
 
     # Fix file permissons for keys
     generate_pki_files(openvpn)
