@@ -282,60 +282,66 @@
           </node>
           <node name="wireguard">
             <properties>
-              <help>Generate Wireguard keys</help>
+              <help>Generate WireGuard keys</help>
             </properties>
             <children>
               <node name="key-pair">
                 <properties>
-                  <help>Generate Wireguard key pair for use with server or peer</help>
+                  <help>Generate WireGuard public/private key-pair</help>
                 </properties>
                 <children>
-                  <tagNode name="file">
+                  <node name="install">
                     <properties>
-                      <help>Write generated Wireguard keys into the specified filename</help>
-                      <completionHelp>
-                        <list>&lt;filename&gt;</list>
-                      </completionHelp>
+                      <help>Generate CLI commands to install WireGuard key to configuration</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "$6" --file</command>
-                  </tagNode>
-                  <tagNode name="install">
-                    <properties>
-                      <help>Commands for installing generated Wireguard key into running configuration</help>
-                      <completionHelp>
-                        <list>&lt;interface&gt; &lt;peer&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "$6" --install</command>
-                  </tagNode>
+                    <children>
+                      <tagNode name="interface">
+                        <properties>
+                          <help>WireGuard Interface used in install command</help>
+                          <completionHelp>
+                            <path>interfaces wireguard</path>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key --interface "$7" --install</command>
+                      </tagNode>
+                    </children>
+                  </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "noname"</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key</command>
               </node>
-              <node name="pre-shared-key">
+              <node name="preshared-key">
                 <properties>
-                  <help>Generate pre-shared key for use with a Wireguard peer</help>
+                  <help>Generate WireGuard pre-shared key</help>
                 </properties>
                 <children>
-                  <tagNode name="file">
+                  <node name="install">
                     <properties>
-                      <help>Write generated Wireguard PSK into the specified filename</help>
-                      <completionHelp>
-                        <list>&lt;filename&gt;</list>
-                      </completionHelp>
+                      <help>Generate CLI commands to install WireGuard key to configuration</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "$6" --file</command>
-                  </tagNode>
-                  <tagNode name="install">
-                    <properties>
-                      <help>Commands for installing generated Wireguard PSK on specified peer into running configuration</help>
-                      <completionHelp>
-                        <list>&lt;peer&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "$6" --install</command>
-                  </tagNode>
+                    <children>
+                      <tagNode name="interface">
+                        <properties>
+                          <help>WireGuard Interface used in install command</help>
+                          <completionHelp>
+                            <path>interfaces wireguard</path>
+                          </completionHelp>
+                        </properties>
+                        <children>
+                          <tagNode name="peer">
+                            <properties>
+                              <help>Interface used for install command</help>
+                              <completionHelp>
+                                <path>interfaces wireguard ${COMP_WORDS[COMP_CWORD-2]} peer</path>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk --interface "$7" --peer "$9" --install</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "noname"</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk</command>
               </node>
             </children>
           </node>
