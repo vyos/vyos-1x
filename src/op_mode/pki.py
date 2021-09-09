@@ -17,7 +17,6 @@
 import argparse
 import ipaddress
 import os
-import re
 import sys
 import tabulate
 
@@ -44,12 +43,14 @@ auth_dir = '/config/auth'
 conf = ConfigTreeQuery()
 def get_default_values():
     # Fetch default x509 values
-
     base = ['pki', 'x509', 'default']
     x509_defaults = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True, no_tag_node_value_mangle=True)
+                                     get_first_key=True,
+                                     no_tag_node_value_mangle=True)
     default_values = defaults(base)
-    return dict_merge(default_values, x509_defaults)
+    x509_defaults = dict_merge(default_values, x509_defaults)
+
+    return x509_defaults
 
 def get_config_ca_certificate(name=None):
     # Fetch ca certificates from config
@@ -63,7 +64,8 @@ def get_config_ca_certificate(name=None):
             return False
 
     return conf.get_config_dict(base, key_mangling=('-', '_'),
-        get_first_key=True, no_tag_node_value_mangle=True)
+                                get_first_key=True,
+                                no_tag_node_value_mangle=True)
 
 def get_config_certificate(name=None):
     # Get certificates from config
@@ -77,7 +79,8 @@ def get_config_certificate(name=None):
             return False
 
     return conf.get_config_dict(base, key_mangling=('-', '_'),
-        get_first_key=True, no_tag_node_value_mangle=True)
+                                get_first_key=True,
+                                no_tag_node_value_mangle=True)
 
 def get_certificate_ca(cert, ca_certs):
     # Find CA certificate for given certificate
@@ -103,12 +106,14 @@ def get_config_revoked_certificates():
 
     if conf.exists(ca_base):
         ca_certificates = conf.get_config_dict(ca_base, key_mangling=('-', '_'),
-            get_first_key=True, no_tag_node_value_mangle=True)
+                                               get_first_key=True,
+                                               no_tag_node_value_mangle=True)
         certs.extend(ca_certificates.values())
 
     if conf.exists(cert_base):
         certificates = conf.get_config_dict(cert_base, key_mangling=('-', '_'),
-            get_first_key=True, no_tag_node_value_mangle=True)
+                                            get_first_key=True,
+                                            no_tag_node_value_mangle=True)
         certs.extend(certificates.values())
 
     return [cert_dict for cert_dict in certs if 'revoke' in cert_dict]
@@ -139,39 +144,41 @@ def get_revoked_by_serial_numbers(serial_numbers=[]):
 def install_certificate(name, cert='', private_key=None, key_type=None, key_passphrase=None, is_ca=False):
     # Show conf commands for installing certificate
     prefix = 'ca' if is_ca else 'certificate'
-    print("Configure mode commands to install:")
+    print('Configure mode commands to install:')
 
+    base = f"set pki {prefix} {name}"
     if cert:
         cert_pem = "".join(encode_certificate(cert).strip().split("\n")[1:-1])
-        print("set pki %s %s certificate '%s'" % (prefix, name, cert_pem))
+        print(f"{base} certificate '{cert_pem}'")
 
     if private_key:
         key_pem = "".join(encode_private_key(private_key, passphrase=key_passphrase).strip().split("\n")[1:-1])
-        print("set pki %s %s private key '%s'" % (prefix, name, key_pem))
+        print(f"{base} private key '{key_pem}'")
         if key_passphrase:
-            print("set pki %s %s private password-protected" % (prefix, name))
+            print(f"{base} private password-protected")
 
 def install_crl(ca_name, crl):
     # Show conf commands for installing crl
     print("Configure mode commands to install CRL:")
     crl_pem = "".join(encode_certificate(crl).strip().split("\n")[1:-1])
-    print("set pki ca %s crl '%s'" % (ca_name, crl_pem))
+    print(f"set pki ca {ca_name} crl '{crl_pem}'")
 
 def install_dh_parameters(name, params):
     # Show conf commands for installing dh params
     print("Configure mode commands to install DH parameters:")
     dh_pem = "".join(encode_dh_parameters(params).strip().split("\n")[1:-1])
-    print("set pki dh %s parameters '%s'" % (name, dh_pem))
+    print(f"set pki dh {name} parameters '{dh_pem}'")
 
 def install_ssh_key(name, public_key, private_key, passphrase=None):
     # Show conf commands for installing ssh key
     key_openssh = encode_public_key(public_key, encoding='OpenSSH', key_format='OpenSSH')
     username = os.getlogin()
     type_key_split = key_openssh.split(" ")
+
+    base = f"set system login user {username} authentication public-keys {name}"
     print("Configure mode commands to install SSH key:")
-    print("set system login user %s authentication public-keys %s key '%s'" % (username, name, type_key_split[1]))
-    print("set system login user %s authentication public-keys %s type '%s'" % (username, name, type_key_split[0]))
-    print("")
+    print(f"{base} key '{type_key_split[1]}'")
+    print(f"{base} type '{type_key_split[0]}'", end="\n\n")
     print(encode_private_key(private_key, encoding='PEM', key_format='OpenSSH', passphrase=passphrase))
 
 def install_keypair(name, key_type, private_key=None, public_key=None, passphrase=None):
@@ -184,7 +191,7 @@ def install_keypair(name, key_type, private_key=None, public_key=None, passphras
 
         if install_public_key:
             install_public_pem = "".join(public_key_pem.strip().split("\n")[1:-1])
-            print("set pki key-pair %s public key '%s'" % (name, install_public_pem))
+            print(f"set pki key-pair {name} public key '{install_public_pem}'")
         else:
             print("Public key:")
             print(public_key_pem)
@@ -808,16 +815,22 @@ if __name__ == '__main__':
                     generate_certificate_selfsign(args.certificate, install=args.install, file=args.file)
                 else:
                     generate_certificate_request(name=args.certificate, install=args.install, file=args.file)
+
             elif args.crl:
                 generate_certificate_revocation_list(args.crl, install=args.install, file=args.file)
+
             elif args.ssh:
                 generate_ssh_keypair(args.ssh, install=args.install, file=args.file)
+
             elif args.dh:
                 generate_dh_parameters(args.dh, install=args.install, file=args.file)
+
             elif args.keypair:
                 generate_keypair(args.keypair, install=args.install, file=args.file)
+
             elif args.openvpn:
                 generate_openvpn_key(args.openvpn, install=args.install, file=args.file)
+
             elif args.wireguard:
                 if args.key:
                     generate_wireguard_key(args.key, install=args.install, file=args.file)
