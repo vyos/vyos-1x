@@ -347,8 +347,8 @@ def get_interface_dict(config, base, ifname=''):
 
     # setup config level which is extracted in get_removed_vlans()
     config.set_level(base + [ifname])
-    dict = config.get_config_dict([], key_mangling=('-', '_'),
-                                  get_first_key=True)
+    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True,
+                                  no_tag_node_value_mangle=True)
 
     # Check if interface has been removed. We must use exists() as
     # get_config_dict() will always return {} - even when an empty interface
