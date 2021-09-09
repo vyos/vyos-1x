@@ -643,7 +643,6 @@ def generate_wireguard_key(name, install=False, file=False):
     if not install:
         print("Private key: " + private_key)
         print("Public key: " + public_key)
-        return None
 
     if install:
         install_wireguard_key(name, private_key, public_key)
