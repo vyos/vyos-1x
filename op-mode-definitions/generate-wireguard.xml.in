@@ -4,9 +4,27 @@
     <children>
       <node name="wireguard">
         <properties>
-          <help>Generate Wireguard keys</help>
+          <help>Generate WireGuard keys</help>
         </properties>
         <children>
+          <leafNode name="default-keypair">
+            <properties>
+              <help>generates the wireguard default-keypair</help>
+            </properties>
+            <command>echo "This command is deprecated. Please use: \"generate pki wireguard key-pair\""</command>
+          </leafNode>
+          <leafNode name="preshared-key">
+            <properties>
+              <help>generate a wireguard preshared key</help>
+            </properties>
+            <command>echo "This command is deprecated. Please use: \"generate pki wireguard pre-shared-key\""</command>
+          </leafNode>
+          <tagNode name="named-keypairs">
+            <properties>
+              <help>Generates named wireguard keypairs</help>
+            </properties>
+            <command>echo "This command is deprecated. Please use: \"generate pki wireguard key-pair install wgN\""</command>
+          </tagNode>
           <tagNode name="client-config">
             <properties>
               <help>Generate Client config QR code</help>
@@ -59,12 +77,6 @@
               </tagNode>
             </children>
           </tagNode>
-          <leafNode name="key-pair">
-            <properties>
-              <help>Generate Wireguard key pair for use with server or peer</help>
-            </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "noname"</command>
-          </leafNode>
         </children>
       </node>
     </children>
