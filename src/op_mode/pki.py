@@ -23,6 +23,7 @@ import tabulate
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
+from vyos.config import Config
 from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import dict_merge
 from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
@@ -36,7 +37,6 @@ from vyos.util import ask_input, ask_yes_no
 from vyos.util import cmd
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
-
 auth_dir = '/config/auth'
 
 # Helper Functions
@@ -216,17 +216,39 @@ def install_wireguard_key(interface, private_key, public_key):
         print(f'"{interface}" is not a WireGuard interface name!')
         exit(1)
 
-    print("Configure mode commands to install key:", end="\n\n")
-    print(f"set interfaces wireguard {interface} private-key '{private_key}'", end="\n\n")
-    print(f"Public key to use on peer system: '{public_key}'")
+    # Check if we are running in a config session - if yes, we can directly write to the CLI
+    cli_string = f"interfaces wireguard {interface} private-key '{private_key}'"
+    if Config().in_session():
+        cmd(f"/opt/vyatta/sbin/my_set {cli_string}")
+
+        print('"generate" CLI command executed from config session.\nGenerated private-key was imported to CLI!',end='\n\n')
+        print(f'Use the following command to verify: show interfaces wireguard {interface}')
+    else:
+        print('"generate" CLI command executed from operational level.\n'
+              'Generated private-key is not stored to CLI, use configure mode commands to install key:', end='\n\n')
+        print(f"set {cli_string}", end="\n\n")
+
+    print(f"Corresponding public-key to use on peer system is: '{public_key}'")
+
 
 def install_wireguard_psk(interface, peer, psk):
     from vyos.ifconfig import Section
     if Section.section(interface) != 'wireguard':
         print(f'"{interface}" is not a WireGuard interface name!')
         exit(1)
-    # Show conf commands for installing wireguard psk
-    print(f"set interfaces wireguard {interface} peer {peer} preshared-key '{psk}'")
+
+    # Check if we are running in a config session - if yes, we can directly write to the CLI
+    cli_string = f"interfaces wireguard {interface} peer {peer} preshared-key '{psk}'"
+    if Config().in_session():
+        cmd(f"/opt/vyatta/sbin/my_set {cli_string}")
+
+        print('"generate" CLI command executed from config session.\nGenerated preshared-key was imported to CLI!',end='\n\n')
+        print(f'Use the following command to verify: show interfaces wireguard {interface}')
+    else:
+        print('"generate" CLI command executed from operational level.\n'
+              'Generated preshared-key is not stored to CLI, use configure mode commands to install key:', end='\n\n')
+        print(f"set {cli_string}", end="\n\n")
+
 
 def ask_passphrase():
     passphrase = None
@@ -825,6 +847,10 @@ if __name__ == '__main__':
                 generate_openvpn_key(args.openvpn, install=args.install, file=args.file)
 
             elif args.wireguard:
+                # WireGuard supports writing key directly into the CLI, but this
+                # requires the vyos_libexec_dir environment variable to be set
+                os.environ["vyos_libexec_dir"] = "/usr/libexec/vyos"
+
                 if args.key:
                     generate_wireguard_key(args.interface, install=args.install)
                 if args.psk:
