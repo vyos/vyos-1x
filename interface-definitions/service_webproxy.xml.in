@@ -504,6 +504,7 @@
                             <validator name="ipv4-prefix"/>
                             <validator name="ipv4-range"/>
                           </constraint>
+                          <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="description">
