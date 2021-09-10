@@ -81,25 +81,6 @@ class EthernetIf(Interface):
         super().__init__(ifname, **kargs)
         self.ethtool = Ethtool(ifname)
 
-    def get_driver_name(self):
-        """
-        Return the driver name used by NIC. Some NICs don't support all
-        features e.g. changing link-speed, duplex
-
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.get_driver_name()
-        'vmxnet3'
-        """
-        ifname = self.config['ifname']
-        sysfs_file = f'/sys/class/net/{ifname}/device/driver/module'
-        if os.path.exists(sysfs_file):
-            link = os.readlink(sysfs_file)
-            return os.path.basename(link)
-        else:
-            return None
-
     def set_flow_control(self, enable):
         """
         Changes the pause parameters of the specified Ethernet device.
@@ -117,8 +98,7 @@ class EthernetIf(Interface):
             raise ValueError("Value out of range")
 
         if not self.ethtool.check_flow_control():
-            self._debug_msg(f'{driver_name} driver does not support changing '\
-                            'flow control settings!')
+            self._debug_msg(f'NIC driver does not support changing flow control settings!')
             return False
 
         current = self.ethtool.get_flow_control()
@@ -152,10 +132,8 @@ class EthernetIf(Interface):
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError("Value out of range (duplex)")
 
-        driver_name = self.get_driver_name()
-        if driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
-            self._debug_msg(f'{driver_name} driver does not support changing '\
-                            'speed/duplex settings!')
+        if not self.ethtool.check_speed_duplex(speed, duplex):
+            self._debug_msg(f'NIC driver does not support changing speed/duplex settings!')
             return
 
         # Get current speed and duplex settings:

@@ -134,6 +134,12 @@ class Ethtool:
             # ['Autonegotiate:', 'on']
             self._flow_control_enabled = out.splitlines()[1].split()[-1]
 
+    def get_auto_negotiation(self):
+        return self._auto_negotiation
+
+    def get_driver_name(self):
+        return self._driver_name
+
     def _get_generic(self, feature):
         """
         Generic method to read self._features and return a tuple for feature
@@ -189,7 +195,7 @@ class Ethtool:
         if duplex not in ['full', 'half']:
             raise ValueError(f'Value "{duplex}" for duplex is invalid!')
 
-        if self._driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
             return False
 
         if speed in self._speed_duplex:
@@ -199,7 +205,7 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
-        if self._driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
             return False
         return self._flow_control
 
@@ -208,6 +214,3 @@ class Ethtool:
             raise ValueError('Interface does not support changing '\
                              'flow-control settings!')
         return self._flow_control_enabled
-
-    def get_auto_negotiation(self):
-        return self._auto_negotiation
