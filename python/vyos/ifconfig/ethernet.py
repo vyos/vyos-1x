@@ -116,11 +116,10 @@ class EthernetIf(Interface):
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
 
-        driver_name = self.get_driver_name()
-        if driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+        if not self.ethtool.check_flow_control():
             self._debug_msg(f'{driver_name} driver does not support changing '\
                             'flow control settings!')
-            return
+            return False
 
         current = self.ethtool.get_flow_control()
         if current != enable:

@@ -46,7 +46,7 @@ class Ethtool:
     _ring_buffers_max = { }
     _driver_name = None
     _auto_negotiation = None
-    _flow_control = None
+    _flow_control = False
     _flow_control_enabled = None
 
     def __init__(self, ifname):
