@@ -126,7 +126,7 @@ def verify(ethernet):
         if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
             raise ConfigError('Interface does not suport RPS!')
 
-    driver = EthernetIf(ifname).get_driver_name()
+    driver = ethtool.get_driver_name()
     # T3342 - Xen driver requires special treatment
     if driver == 'vif':
         if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
