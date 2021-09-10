@@ -142,9 +142,12 @@ class EthernetIf(Interface):
                 # bail out early as nothing is to change
                 return
         else:
-            # read in current speed and duplex settings
-            cur_speed = read_file(f'/sys/class/net/{ifname}/speed')
-            cur_duplex = read_file(f'/sys/class/net/{ifname}/duplex')
+            # XXX: read in current speed and duplex settings
+            # There are some "nice" NICs like AX88179 which do not support
+            # reading the speed thus we simply fallback to the supplied speed
+            # to not cause any change here and raise an exception.
+            cur_speed = read_file(f'/sys/class/net/{ifname}/speed', speed)
+            cur_duplex = read_file(f'/sys/class/net/{ifname}/duplex', duplex)
             if (cur_speed == speed) and (cur_duplex == duplex):
                 # bail out early as nothing is to change
                 return
