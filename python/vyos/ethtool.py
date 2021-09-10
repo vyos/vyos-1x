@@ -190,9 +190,9 @@ class Ethtool:
         the underlaying network adapter. """
         if isinstance(speed, int):
             speed = str(speed)
-        if not speed.isdigit():
+        if speed != 'auto' and not speed.isdigit():
             raise ValueError(f'Value "{speed}" for speed is invalid!')
-        if duplex not in ['full', 'half']:
+        if duplex not in ['auto', 'full', 'half']:
             raise ValueError(f'Value "{duplex}" for duplex is invalid!')
 
         if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
