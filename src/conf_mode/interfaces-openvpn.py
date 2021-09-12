@@ -477,6 +477,7 @@ def generate(openvpn):
     # Fixup file permissions
     for file in fix_permissions:
         chmod_600(file)
+        chown(file, 'openvpn', 'openvpn')
 
     return None
 
