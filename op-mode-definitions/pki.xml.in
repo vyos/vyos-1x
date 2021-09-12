@@ -384,7 +384,7 @@
                 <path>pki certificate</path>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
           </tagNode>
           <node name="crl">
             <properties>
