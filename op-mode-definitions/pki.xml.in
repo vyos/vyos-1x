@@ -356,23 +356,21 @@
           <help>Show PKI certificates</help>
         </properties>
         <children>
-          <node name="ca">
+          <leafNode name="ca">
             <properties>
               <help>Show CA certificates</help>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show CA certificate by name</help>
-                  <completionHelp>
-                    <path>pki ca</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$5"</command>
-              </leafNode>
-            </children>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
-          </node>
+          </leafNode>
+          <tagNode name="ca">
+            <properties>
+              <help>Show CA certificate by name</help>
+              <completionHelp>
+                <path>pki ca</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
+          </tagNode>
           <node name="certificate">
             <properties>
               <help>Show certificates</help>
