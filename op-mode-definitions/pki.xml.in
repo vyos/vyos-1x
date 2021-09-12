@@ -353,41 +353,39 @@
     <children>
       <node name="pki">
         <properties>
-          <help>Show PKI certificates</help>
+          <help>Show PKI x509 certificates</help>
         </properties>
         <children>
           <leafNode name="ca">
             <properties>
-              <help>Show CA certificates</help>
+              <help>Show x509 CA certificates</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
           </leafNode>
           <tagNode name="ca">
             <properties>
-              <help>Show CA certificate by name</help>
+              <help>Show x509 CA certificate by name</help>
               <completionHelp>
                 <path>pki ca</path>
               </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
           </tagNode>
-          <node name="certificate">
+          <leafNode name="certificate">
             <properties>
-              <help>Show certificates</help>
+              <help>Show x509 certificates</help>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show certificate by name</help>
-                  <completionHelp>
-                    <path>pki certificate</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$5"</command>
-              </leafNode>
-            </children>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
-          </node>
+          </leafNode>
+          <tagNode name="certificate">
+            <properties>
+              <help>Show x509 certificate by name</help>
+              <completionHelp>
+                <path>pki certificate</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
+          </tagNode>
           <node name="crl">
             <properties>
               <help>Show certificate revocation lists</help>
