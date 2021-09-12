@@ -386,23 +386,12 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
           </tagNode>
-          <node name="crl">
+          <leafNode name="crl">
             <properties>
-              <help>Show certificate revocation lists</help>
+              <help>Show x509 certificate revocation lists</help>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show certificate revocation lists from specified CA</help>
-                  <completionHelp>
-                    <path>pki ca</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "$5"</command>
-              </leafNode>
-            </children>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "all"</command>
-          </node>
+          </leafNode>
         </children>
         <command>sudo ${vyos_op_scripts_dir}/pki.py --action show</command>
       </node>
