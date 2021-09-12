@@ -32,12 +32,12 @@ parser.add_argument("-j", "--json", action="store_true", help="Produce JSON outp
 
 version_output_tmpl = """
 Version:          VyOS {{version}}
-Release Train:    {{release_train}}
+Release train:    {{release_train}}
 
 Built by:         {{built_by}}
 Built on:         {{built_on}}
 Build UUID:       {{build_uuid}}
-Build Commit ID:  {{build_git}}
+Build commit ID:  {{build_git}}
 
 Architecture:     {{system_arch}}
 Boot via:         {{boot_via}}
