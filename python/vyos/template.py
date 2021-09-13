@@ -393,8 +393,15 @@ def get_ip(interface):
     from vyos.ifconfig import Interface
     return Interface(interface).get_addr()
 
+def get_first_ike_dh_group(ike_group):
+    if ike_group and 'proposal' in ike_group:
+        for priority, proposal in ike_group['proposal'].items():
+            if 'dh_group' in proposal:
+                return 'dh-group' + proposal['dh_group']
+    return 'dh-group2' # Fallback on dh-group2
+
 @register_filter('get_esp_ike_cipher')
-def get_esp_ike_cipher(group_config):
+def get_esp_ike_cipher(group_config, ike_group=None):
     pfs_lut = {
         'dh-group1'  : 'modp768',
         'dh-group2'  : 'modp1024',
@@ -433,7 +440,7 @@ def get_esp_ike_cipher(group_config):
             elif 'pfs' in group_config and group_config['pfs'] != 'disable':
                 group = group_config['pfs']
                 if group_config['pfs'] == 'enable':
-                    group = 'dh-group2'
+                    group = get_first_ike_dh_group(ike_group)
                 tmp += '-' + pfs_lut[group]
 
             ciphers.append(tmp)
