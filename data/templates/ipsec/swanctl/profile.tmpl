@@ -19,7 +19,7 @@
 {%       endif %}
         children {
             dmvpn {
-                esp_proposals = {{ esp | get_esp_ike_cipher | join(',')  }}
+                esp_proposals = {{ esp | get_esp_ike_cipher(ike) | join(',')  }}
                 rekey_time = {{ esp.lifetime }}s
                 rand_time = 540s
                 local_ts = dynamic[gre]
