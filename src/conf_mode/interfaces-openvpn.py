@@ -440,14 +440,17 @@ def generate(openvpn):
     # create client config directory on demand
     makedir(ccd_dir, user, group)
 
-    # Fix file permissons for keys
-    fix_permissions = []
+    # Fix file permissons for site2site shared secret
+    if dict_search('shared_secret_key_file', openvpn):
+        chmod_600(openvpn['shared_secret_key_file'])
+        chown(openvpn['shared_secret_key_file'], user, group)
 
-    tmp = dict_search('shared_secret_key_file', openvpn)
-    if tmp: fix_permissions.append(openvpn['shared_secret_key_file'])
-
-    tmp = dict_search('tls.key_file', openvpn)
-    if tmp: fix_permissions.append(tmp)
+    # Fix file permissons for TLS certificate and keys
+    for tls in ['auth_file', 'ca_cert_file', 'cert_file', 'crl_file',
+                'crypt_file', 'dh_file', 'key_file']:
+        if dict_search(f'tls.{tls}', openvpn):
+            chmod_600(openvpn['tls'][tls])
+            chown(openvpn['tls'][tls], user, group)
 
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
@@ -473,11 +476,6 @@ def generate(openvpn):
     # see https://phabricator.vyos.net/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
-
-    # Fixup file permissions
-    for file in fix_permissions:
-        chmod_600(file)
-        chown(file, 'openvpn', 'openvpn')
 
     return None
 
