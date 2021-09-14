@@ -83,7 +83,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Use Diffie-Hellman group 2 (modp1024) - default</description>
+                    <description>Inherit Diffie-Hellman group from IKE group - default</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group1</format>
