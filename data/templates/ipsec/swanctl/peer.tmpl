@@ -42,9 +42,9 @@
 {%   endif %}
         }
         remote {
-{%   if peer_conf.authentication.remote_id is defined %}
+{%   if peer_conf.authentication is defined and peer_conf.authentication.remote_id is defined and peer_conf.authentication.remote_id is not none %}
             id = "{{ peer_conf.authentication.remote_id }}"
-{%   elif peer[0:1] == '@' %}
+{%   else %}
             id = "{{ peer }}"
 {%   endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
