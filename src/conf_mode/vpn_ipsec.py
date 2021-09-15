@@ -362,6 +362,9 @@ def verify(ipsec):
             if 'authentication' not in peer_conf or 'mode' not in peer_conf['authentication']:
                 raise ConfigError(f"Missing authentication on site-to-site peer {peer}")
 
+            if {'id', 'use_x509_id'} <= set(peer_conf['authentication']):
+                raise ConfigError(f"Manually set peer id and use-x509-id are mutually exclusive!")
+
             if peer_conf['authentication']['mode'] == 'x509':
                 if 'x509' not in peer_conf['authentication']:
                     raise ConfigError(f"Missing x509 settings on site-to-site peer {peer}")
