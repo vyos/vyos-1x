@@ -47,7 +47,7 @@ ipv4_re = re.compile(r'(\d{1,3}\.){2}(\d{1,3}\.\d{1,3})')
 ipv4_subst = r'xxx.xxx.\2'
 
 # Censor all but the first two fields.
-ipv6_re = re.compile(r'([0-9a-fA-F]{1,4}\:){2}(\S+)')
+ipv6_re = re.compile(r'([0-9a-fA-F]{1,4}\:){2}([0-9a-fA-F:]+)')
 ipv6_subst = r'xxxx:xxxx:\2'
 
 def ip_match(match: re.Match, subst: str) -> str:
@@ -96,12 +96,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # Strict mode is the default and the absence of loose mode implies presence of strict mode.
     if not args.loose:
-        for arg in [args.mac, args.domain, args.hostname, args.username, args.dhcp, args.asn, args.snmp, args.lldp]:
-            arg = True
+        args.mac = args.domain = args.hostname = args.username = args.dhcp = args.asn = args.snmp = args.lldp = True
         if not args.public_address and not args.keep_address:
             args.address = True
     elif not args.address and not args.public_address:
         args.keep_address = True
+
     # (condition, precompiled regexp, substitution string)
     stripping_rules = [
         # Strip passwords
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         (True, re.compile(r'private-key \S+'), 'private-key xxxxxx'),
 
         # Strip MAC addresses
-        (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'XX:XX:XX:XX:XX:\2'),
+        (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'xx:xx:xx:xx:xx:\2'),
 
         # Strip host-name, domain-name, and domain-search
         (args.hostname, re.compile(r'(host-name|domain-name|domain-search) \S+'), r'\1 xxxxxx'),
