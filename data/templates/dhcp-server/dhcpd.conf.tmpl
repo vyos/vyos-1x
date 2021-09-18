@@ -70,6 +70,12 @@ shared-network {{ network | replace('_','-') }} {
 {%     if network_config.authoritative is defined %}
     authoritative;
 {%     endif %}
+{%     if network_config.name_server is defined and network_config.name_server is not none %}
+    option domain-name-servers {{ network_config.name_server | join(', ') }};
+{%     endif %}
+{%     if network_config.domain_name is defined and network_config.domain_name is not none %}
+    option domain-name "{{ network_config.domain_name }}";
+{%     endif %}
 {%     if network_config.ping_check is defined %}
     ping-check true;
 {%     endif %}
