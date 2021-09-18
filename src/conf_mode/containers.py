@@ -20,6 +20,7 @@ import json
 from ipaddress import ip_address
 from ipaddress import ip_network
 from time import sleep
+from json import dumps as json_write
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -31,10 +32,10 @@ from vyos.util import read_file
 from vyos.util import write_file
 from vyos.util import is_systemd_service_active
 from vyos.util import is_systemd_service_running
-
-from vyos.template import render
+from vyos.template import inc_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
+from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -185,6 +186,37 @@ def generate(container):
     if not container:
         return None
 
+    if 'network' in container:
+        for network, network_config in container['network'].items():
+            tmp = {
+                'cniVersion' : '0.4.0',
+                'name' : network,
+                'plugins' : [{
+                    'type': 'bridge',
+                    'bridge': f'cni-{network}',
+                    'isGateway': True,
+                    'ipMasq': False,
+                    'hairpinMode': False,
+                    'ipam' : {
+                        'type': 'host-local',
+                        'routes': [],
+                        'ranges' : [],
+                    },
+                }]
+            }
+
+            for prefix in network_config['prefix']:
+                net = [{'gateway' : inc_ip(prefix, 1), 'subnet' : prefix}]
+                tmp['plugins'][0]['ipam']['ranges'].append(net)
+
+                # install per address-family default orutes
+                default_route = '0.0.0.0/0'
+                if is_ipv6(prefix):
+                    default_route = '::/0'
+                tmp['plugins'][0]['ipam']['routes'].append({'dst': default_route})
+
+            write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
+
     render(config_containers_registry, 'containers/registry.tmpl', container)
     render(config_containers_storage, 'containers/storage.tmpl', container)
 
@@ -201,7 +233,9 @@ def apply(container):
     # Delete old networks if needed
     if 'network_remove' in container:
         for network in container['network_remove']:
-            call(f'podman network rm --force {network}')
+            tmp = f'/etc/cni/net.d/{network}.conflist'
+            if os.path.exists(tmp):
+                os.unlink(tmp)
 
     service_name = 'podman.service'
     if 'network' in container or 'name' in container:
@@ -213,35 +247,6 @@ def apply(container):
             sleep(0.250)
     else:
         _cmd(f'systemctl stop {service_name}')
-
-
-    # Add network
-    if 'network' in container:
-        for network, network_config in container['network'].items():
-            # Check if the network has already been created
-            if not network_exists(network) and 'prefix' in network_config:
-                tmp = f'podman network create {network}'
-                # we can not use list comprehension here as the --ipv6 option
-                # must immediately follow the specified subnet!!!
-                for prefix in sorted(network_config['prefix']):
-                    tmp += f' --subnet={prefix}'
-                    if is_ipv6(prefix):
-                      tmp += ' --ipv6'
-                _cmd(tmp)
-
-                # Disable masquerading and use traditional bridging so VyOS
-                # can control firewalling/NAT by the real VyOS CLI
-                cni_network_config = f'/etc/cni/net.d/{network}.conflist'
-                tmp = read_file(cni_network_config)
-                config = json.loads(tmp)
-                if 'plugins' in config:
-                    for count in range(0, len(config['plugins'])):
-                        if 'ipMasq' in config['plugins'][count]:
-                            config['plugins'][count]['ipMasq'] = False
-                        if 'hairpinMode' in config['plugins'][count]:
-                            config['plugins'][count]['hairpinMode'] = False
-
-                write_file(cni_network_config, json.dumps(config, indent=4))
 
     # Add container
     if 'name' in container:
@@ -303,7 +308,8 @@ def apply(container):
                 for network in container_config['network']:
                     ipparam = ''
                     if 'address' in container_config['network'][network]:
-                        ipparam = '--ip ' + container_config['network'][network]['address']
+                        address = container_config['network'][network]['address']
+                        ipparam = f'--ip {address}'
                     _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
 
     return None

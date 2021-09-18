@@ -76,7 +76,8 @@
             <children>
               <leafNode name="address">
                 <properties>
-                  <help>Set IPv4 static address to container (optional)</help>
+                  <!-- PODMAN currently does not support more then one IPv4 or IPv6 address assignments to a container -->
+                  <help>Assign static IP address to container</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 address</description>
@@ -206,8 +207,13 @@
                 <format>ipv4net</format>
                 <description>IPv4 network prefix</description>
               </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 network prefix</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-prefix"/>
+                <validator name="ipv6-prefix"/>
               </constraint>
               <multi/>
             </properties>
