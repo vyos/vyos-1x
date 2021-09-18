@@ -53,11 +53,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="description">
-                <properties>
-                  <help>Shared-network-name description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
