@@ -190,7 +190,7 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/accel-ppp/name-server.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
             </children>
           </node>
       </children>

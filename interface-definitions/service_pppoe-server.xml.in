@@ -59,7 +59,7 @@
             </children>
           </node>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
-          #include <include/accel-ppp/name-server.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>

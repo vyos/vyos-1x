@@ -27,7 +27,7 @@
           </node>
           #include <include/interface/mtu-68-1500.xml.i>
           #include <include/accel-ppp/gateway-address.xml.i>
-          #include <include/accel-ppp/name-server.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           <node name="client-ip-pool">
             <properties>
               <help>Client IP pools and gateway setting</help>

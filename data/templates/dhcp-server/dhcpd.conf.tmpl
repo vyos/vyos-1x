@@ -88,8 +88,8 @@ shared-network {{ network | replace('_','-') }} {
 {%     if network_config.subnet is defined and network_config.subnet is not none %}
 {%       for subnet, subnet_config in network_config.subnet.items() %}
     subnet {{ subnet | address_from_cidr }} netmask {{ subnet | netmask_from_cidr }} {
-{%         if subnet_config.dns_server is defined and subnet_config.dns_server is not none %}
-        option domain-name-servers {{ subnet_config.dns_server | join(', ') }};
+{%         if subnet_config.name_server is defined and subnet_config.name_server is not none %}
+        option domain-name-servers {{ subnet_config.name_server | join(', ') }};
 {%         endif %}
 {%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
         option domain-search "{{ subnet_config.domain_search | join('", "') }}";
