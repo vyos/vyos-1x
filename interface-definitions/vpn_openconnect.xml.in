@@ -75,7 +75,7 @@
           </node>
           <node name="listen-ports">
             <properties>
-              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+              <help>Specify custom ports to use for client connections</help>
             </properties>
             <children>
               <leafNode name="tcp">
