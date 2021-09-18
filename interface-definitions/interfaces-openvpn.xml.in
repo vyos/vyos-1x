@@ -554,23 +554,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="name-server">
-                <properties>
-                  <help>Domain Name Server (DNS)</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>DNS server IPv4 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>DNS server IPv6 address</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ip-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv4-ipv6.xml.i>
               <tagNode name="push-route">
                 <properties>
                   <help>Route to be pushed to all clients</help>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -59,8 +59,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['dns-server', dns_1])
-        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['name-server', dns_1])
+        self.cli_set(pool + ['name-server', dns_2])
         self.cli_set(pool + ['domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
@@ -108,8 +108,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['dns-server', dns_1])
-        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['name-server', dns_1])
+        self.cli_set(pool + ['name-server', dns_2])
         self.cli_set(pool + ['domain-name', domain_name])
         self.cli_set(pool + ['ip-forwarding'])
         self.cli_set(pool + ['smtp-server', smtp_server])
@@ -201,8 +201,8 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
         self.cli_set(pool + ['default-router', router])
-        self.cli_set(pool + ['dns-server', dns_1])
-        self.cli_set(pool + ['dns-server', dns_2])
+        self.cli_set(pool + ['name-server', dns_1])
+        self.cli_set(pool + ['name-server', dns_2])
         self.cli_set(pool + ['domain-name', domain_name])
 
         # check validate() - No DHCP address range or active static-mapping set
@@ -261,7 +261,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
             pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
             # we use the first subnet IP address as default gateway
             self.cli_set(pool + ['default-router', router])
-            self.cli_set(pool + ['dns-server', dns_1])
+            self.cli_set(pool + ['name-server', dns_1])
             self.cli_set(pool + ['domain-name', domain_name])
             self.cli_set(pool + ['lease', lease_time])
 

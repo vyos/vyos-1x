@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# T1968: allow multiple static-routes to be configured
+# T3838: rename dns-server -> name-server
 
 import sys
 from vyos.configtree import ConfigTree
@@ -45,6 +47,7 @@ for network in config.list_nodes(base):
     for subnet in config.list_nodes(base_network + ['subnet']):
         base_subnet = base_network + ['subnet', subnet]
 
+        # T1968: allow multiple static-routes to be configured
         if config.exists(base_subnet + ['static-route']):
             prefix = config.return_value(base_subnet + ['static-route', 'destination-subnet'])
             router = config.return_value(base_subnet + ['static-route', 'router'])
@@ -52,6 +55,10 @@ for network in config.list_nodes(base):
 
             config.set(base_subnet + ['static-route', prefix, 'next-hop'], value=router)
             config.set_tag(base_subnet + ['static-route'])
+
+        # T3838: rename dns-server -> name-server
+        if config.exists(base_subnet + ['dns-server']):
+            config.rename(base_subnet + ['dns-server'], 'name-server')
 
 try:
     with open(file_name, 'w') as f:

@@ -117,19 +117,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="dns-server">
-                    <properties>
-                      <help>DNS server IPv4 address</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>DNS server IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/name-server-ipv4.xml.i>
                   <leafNode name="domain-name">
                     <properties>
                       <help>Client Domain Name</help>

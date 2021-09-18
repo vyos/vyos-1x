@@ -22,19 +22,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="name-server">
-                <properties>
-                  <help>Domain Name Server (DNS) propagated to client</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Domain Name Server (DNS) IPv4 address</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv4.xml.i>
               #include <include/accel-ppp/wins-server.xml.i>
               <node name="client-ip-pool">
                 <properties>

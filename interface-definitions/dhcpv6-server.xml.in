@@ -14,19 +14,7 @@
               <help>Additional global parameters for DHCPv6 server</help>
             </properties>
             <children>
-              <leafNode name="name-server">
-                <properties>
-                  <help>IPv6 address of a Recursive DNS Server</help>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address of DNS name server</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv6.xml.i>
             </children>
           </node>
           <leafNode name="preference">
@@ -70,19 +58,7 @@
                     </properties>
                   </leafNode>
                   #include <include/dhcp-server-domain-search.xml.i>
-                  <leafNode name="name-server">
-                    <properties>
-                      <help>IPv6 address of a Recursive DNS Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of DNS name server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/name-server-ipv6.xml.i>
                 </children>
               </node>
               <tagNode name="subnet">
@@ -194,19 +170,7 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="name-server">
-                    <properties>
-                      <help>IPv6 address of a Recursive DNS Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of DNS name server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/name-server-ipv6.xml.i>
                   <leafNode name="nis-domain">
                     <properties>
                       <help>NIS domain name for client to use</help>

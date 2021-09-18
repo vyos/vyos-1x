@@ -884,8 +884,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <!-- Include Accel-PPP definition here, maybe time for a rename? -->
-                  #include <include/accel-ppp/name-server.xml.i>
+                  #include <include/name-server-ipv4-ipv6.xml.i>
                 </children>
               </tagNode>
               #include <include/radius-server-ipv4.xml.i>
