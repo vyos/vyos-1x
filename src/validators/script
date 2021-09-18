@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 #
-# numeric value validator
-#
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -23,7 +21,6 @@ import shlex
 
 import vyos.util
 
-
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         sys.exit('Please specify script file to check')
@@ -35,11 +32,11 @@ if __name__ == '__main__':
         sys.exit(f'File {script} does not exist')
 
     if not (os.path.isfile(script) and os.access(script, os.X_OK)):
-        sys.exit('File {script} is not an executable file')
+        sys.exit(f'File {script} is not an executable file')
 
     # File outside the config dir is just a warning
     if not vyos.util.file_is_persistent(script):
         sys.exit(
-            'Warning: file {path} is outside the / config directory\n'
+            f'Warning: file {path} is outside the / config directory\n'
             'It will not be automatically migrated to a new image on system update'
         )
