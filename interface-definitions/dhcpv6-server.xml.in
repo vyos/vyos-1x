@@ -40,6 +40,7 @@
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="common-options">
                 <properties>
                   <help>Common options to distribute to all clients, including stateless clients</help>
