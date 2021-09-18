@@ -126,7 +126,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running('charon'))
 
         self.cli_delete(base_path)
-        self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
         self.cli_delete(ethernet_path)
         self.cli_commit()
@@ -318,6 +317,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         ]
         for line in swanctl_lines:
             self.assertIn(line, swanctl_conf)
+
+        # There is only one NHRP test so no need to delete this globally in tearDown()
+        self.cli_delete(nhrp_path)
 
     def test_05_x509_site2site(self):
         # Enable PKI
