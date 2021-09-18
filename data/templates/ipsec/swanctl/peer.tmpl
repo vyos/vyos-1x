@@ -61,8 +61,11 @@
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
-                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
+                {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+                {# Thus we simply shift the key by one to also support a vti0 interface #}
+{%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
                 ipcomp = {{ 'yes' if vti_esp.compression is defined and vti_esp.compression == 'enable' else 'no' }}
                 mode = {{ vti_esp.mode }}
 {%     if peer[0:1] == '@' %}
@@ -117,8 +120,11 @@
 {%       endif %}
 {%       if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
-                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
+                {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+                {# Thus we simply shift the key by one to also support a vti0 interface #}
+{%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
 {%       endif %}
             }
 {%       if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}

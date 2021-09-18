@@ -128,7 +128,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_delete(nhrp_path)
         self.cli_delete(tunnel_path)
-        self.cli_delete(vti_path)
         self.cli_delete(ethernet_path)
         self.cli_commit()
 
@@ -228,6 +227,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         swanctl_conf = read_file(swanctl_file)
+        if_id = vti.lstrip('vti')
+        # The key defaults to 0 and will match any policies which similarly do
+        # not have a lookup key configuration - thus we shift the key by one
+        # to also support a vti0 interface
+        if_id = str(int(if_id) +1)
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
@@ -238,8 +242,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'mode = tunnel',
             f'local_ts = 172.16.10.0/24,172.16.11.0/24',
             f'remote_ts = 172.17.10.0/24,172.17.11.0/24',
-            f'if_id_in = {vti.lstrip("vti")}', # will be 10 for vti10
-            f'if_id_out = {vti.lstrip("vti")}',
+            f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
+            f'if_id_out = {if_id}',
             f'updown = "/etc/ipsec.d/vti-up-down {vti} no"'
         ]
         for line in swanctl_conf_lines:
@@ -346,6 +350,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         tmp = peer_ip.replace('.', '-')
+        if_id = vti.lstrip('vti')
+        # The key defaults to 0 and will match any policies which similarly do
+        # not have a lookup key configuration - thus we shift the key by one
+        # to also support a vti0 interface
+        if_id = str(int(if_id) +1)
         swanctl_lines = [
             f'peer_{tmp}',
             f'version = 0', # key-exchange not set - defaulting to 0 for ikev1 and ikev2
@@ -362,8 +371,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'local_ts = 0.0.0.0/0,::/0',
             f'remote_ts = 0.0.0.0/0,::/0',
             f'updown = "/etc/ipsec.d/vti-up-down {vti} no"',
-            f'if_id_in = {vti.lstrip("vti")}', # will be 10 for vti10
-            f'if_id_out = {vti.lstrip("vti")}',
+            f'if_id_in = {if_id}', # will be 11 for vti10
+            f'if_id_out = {if_id}',
             f'ipcomp = no',
             f'mode = tunnel',
             f'start_action = start',
@@ -377,6 +386,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         ]
         for line in swanctl_secrets_lines:
             self.assertIn(line, swanctl_conf)
+
+        # There is only one VTI test so no need to delete this globally in tearDown()
+        self.cli_delete(vti_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
