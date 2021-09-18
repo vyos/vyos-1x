@@ -159,9 +159,10 @@ def verify(dhcp):
                               'lease subnet must be configured.')
 
         for subnet, subnet_config in network_config['subnet'].items():
-            if 'static_route' in subnet_config and len(subnet_config['static_route']) != 2:
-                raise ConfigError('Missing DHCP static-route parameter(s):\n' \
-                                  'destination-subnet | router must be defined!')
+            if 'static_route' in subnet_config:
+                for route, route_option in subnet_config['static_route'].items():
+                    if 'next_hop' not in route_option:
+                        raise ConfigError(f'DHCP static-route "{route}" requires router to be defined!')
 
             # Check if DHCP address range is inside configured subnet declaration
             if 'range' in subnet_config:

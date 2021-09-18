@@ -110,9 +110,13 @@ shared-network {{ network | replace('_','-') }} {
 {%           if subnet_config.default_router and subnet_config.default_router is not none %}
 {%             set static_default_route = ', ' + '0.0.0.0/0' | isc_static_route(subnet_config.default_router) %}
 {%           endif %}
-{%           if subnet_config.static_route.router is defined and subnet_config.static_route.router is not none and subnet_config.static_route.destination_subnet is defined and subnet_config.static_route.destination_subnet is not none %}
-        option rfc3442-static-route {{ subnet_config.static_route.destination_subnet | isc_static_route(subnet_config.static_route.router) }}{{ static_default_route }};
-        option windows-static-route {{ subnet_config.static_route.destination_subnet | isc_static_route(subnet_config.static_route.router) }};
+{%           if subnet_config.static_route is defined and subnet_config.static_route is not none %}
+{%           set rfc3442_routes = [] %}
+{%           for route, route_options in subnet_config.static_route.items() %}
+{%             set rfc3442_routes = rfc3442_routes.append(route | isc_static_route(route_options.next_hop)) %}
+{%           endfor %}
+        option rfc3442-static-route {{ rfc3442_routes | join(', ') }}{{ static_default_route }};
+        option windows-static-route {{ rfc3442_routes | join(', ') }};
 {%           endif %}
 {%         endif %}
 {%         if subnet_config.ip_forwarding is defined %}

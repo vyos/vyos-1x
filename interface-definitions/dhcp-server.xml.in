@@ -357,26 +357,21 @@
                       </leafNode>
                     </children>
                   </tagNode>
-                  <node name="static-route">
+                  <tagNode name="static-route">
                     <properties>
-                      <help>Classless static route</help>
+                      <help>Classless static route destination subnet [REQUIRED]</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
                     </properties>
                     <children>
-                      <leafNode name="destination-subnet">
+                      <leafNode name="next-hop">
                         <properties>
-                          <help>Destination subnet [REQUIRED]</help>
-                          <valueHelp>
-                            <format>ipv4net</format>
-                            <description>IPv4 address and prefix length</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-prefix"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="router">
-                        <properties>
-                          <help>IP address of router to be used to reach the destination subnet [REQUIRED]</help>
+                          <help>IP address of router to be used to reach the destination subnet</help>
                           <valueHelp>
                             <format>ipv4</format>
                             <description>IPv4 address of router</description>
@@ -387,7 +382,7 @@
                         </properties>
                       </leafNode>
                     </children>
-                  </node>
+                  </tagNode >
                   <leafNode name="subnet-parameters">
                     <properties>
                       <help>Additional subnet parameters for DHCP server. You must
