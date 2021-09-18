@@ -123,8 +123,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['wpad-url', wpad])
         self.cli_set(pool + ['server-identifier', server_identifier])
 
-        self.cli_set(pool + ['static-route', 'destination-subnet', '10.0.0.0/24'])
-        self.cli_set(pool + ['static-route', 'router', '192.0.2.1'])
+        self.cli_set(pool + ['static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
