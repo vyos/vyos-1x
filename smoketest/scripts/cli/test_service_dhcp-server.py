@@ -37,12 +37,19 @@ dns_2 = inc_ip(subnet, 3)
 domain_name = 'vyos.net'
 
 class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
         cidr_mask = subnet.split('/')[-1]
-        self.cli_set(['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
+        cls.cli_set(cls, ['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'dummy', 'dum8765'])
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'dummy', 'dum8765'])
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -131,33 +138,10 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['range', '0', 'start', range_0_start])
         self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
 
-        # failover
-        failover_local = router
-        failover_remote = inc_ip(router, 1)
-
-        self.cli_set(pool + ['failover', 'local-address', failover_local])
-        self.cli_set(pool + ['failover', 'name', shared_net_name])
-        self.cli_set(pool + ['failover', 'peer-address', failover_remote])
-        self.cli_set(pool + ['failover', 'status', 'primary'])
-
         # commit changes
         self.cli_commit()
 
         config = read_file(DHCPD_CONF)
-
-        self.assertIn(f'failover peer "{shared_net_name}"' + r' {', config)
-        self.assertIn(f'primary;', config)
-        self.assertIn(f'mclt 1800;', config)
-        self.assertIn(f'mclt 1800;', config)
-        self.assertIn(f'split 128;', config)
-        self.assertIn(f'port 520;', config)
-        self.assertIn(f'peer port 520;', config)
-        self.assertIn(f'max-response-delay 30;', config)
-        self.assertIn(f'max-unacked-updates 10;', config)
-        self.assertIn(f'load balance max seconds 3;', config)
-        self.assertIn(f'peer port 520;', config)
-        self.assertIn(f'address {failover_local};', config)
-        self.assertIn(f'peer address {failover_remote};', config)
 
         network = address_from_cidr(subnet)
         netmask = netmask_from_cidr(subnet)
@@ -184,8 +168,6 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'max-lease-time 86400;', config)
         self.assertIn(f'range {range_0_start} {range_0_stop};', config)
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
-        self.assertIn(f'failover peer "{shared_net_name}";', config)
-        self.assertIn(f'deny dynamic bootp clients;', config)
 
         # weird syntax for those static routes
         self.assertIn(f'option rfc3442-static-route 24,10,0,0,192,0,2,1, 0,192,0,2,1;', config)
@@ -433,6 +415,69 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         # commit changes
         self.cli_commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dhcp_failover(self):
+        shared_net_name = 'FAILOVER'
+        failover_name = 'VyOS-Failover'
+
+        range_0_start = inc_ip(subnet, 10)
+        range_0_stop  = inc_ip(subnet, 20)
+
+        pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
+        # we use the first subnet IP address as default gateway
+        self.cli_set(pool + ['default-router', router])
+
+        # check validate() - No DHCP address range or active static-mapping set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(pool + ['range', '0', 'start', range_0_start])
+        self.cli_set(pool + ['range', '0', 'stop', range_0_stop])
+
+        # failover
+        failover_local = router
+        failover_remote = inc_ip(router, 1)
+
+        self.cli_set(base_path + ['failover', 'source-address', failover_local])
+        self.cli_set(base_path + ['failover', 'name', failover_name])
+        self.cli_set(base_path + ['failover', 'remote', failover_remote])
+        self.cli_set(base_path + ['failover', 'status', 'primary'])
+
+        # check validate() - failover needs to be enabled for at least one subnet
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(pool + ['enable-failover'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(DHCPD_CONF)
+
+        self.assertIn(f'failover peer "{failover_name}"' + r' {', config)
+        self.assertIn(f'primary;', config)
+        self.assertIn(f'mclt 1800;', config)
+        self.assertIn(f'mclt 1800;', config)
+        self.assertIn(f'split 128;', config)
+        self.assertIn(f'port 520;', config)
+        self.assertIn(f'peer port 520;', config)
+        self.assertIn(f'max-response-delay 30;', config)
+        self.assertIn(f'max-unacked-updates 10;', config)
+        self.assertIn(f'load balance max seconds 3;', config)
+        self.assertIn(f'peer port 520;', config)
+        self.assertIn(f'address {failover_local};', config)
+        self.assertIn(f'peer address {failover_remote};', config)
+
+        network = address_from_cidr(subnet)
+        netmask = netmask_from_cidr(subnet)
+        self.assertIn(f'ddns-update-style none;', config)
+        self.assertIn(f'subnet {network} netmask {netmask}' + r' {', config)
+        self.assertIn(f'option routers {router};', config)
+        self.assertIn(f'range {range_0_start} {range_0_stop};', config)
+        self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+        self.assertIn(f'failover peer "{failover_name}";', config)
+        self.assertIn(f'deny dynamic bootp clients;', config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
