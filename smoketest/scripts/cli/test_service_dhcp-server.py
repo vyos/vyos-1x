@@ -69,6 +69,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['name-server', dns_1])
         self.cli_set(pool + ['name-server', dns_2])
         self.cli_set(pool + ['domain-name', domain_name])
+        self.cli_set(pool + ['ping-check'])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
@@ -91,6 +92,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'option domain-name "{domain_name}";', config)
         self.assertIn(f'default-lease-time 86400;', config)
         self.assertIn(f'max-lease-time 86400;', config)
+        self.assertIn(f'ping-check true;', config)
         self.assertIn(f'range {range_0_start} {range_0_stop};', config)
         self.assertIn(f'range {range_1_start} {range_1_stop};', config)
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
