@@ -69,10 +69,12 @@ for network in config.list_nodes(base + ['shared-network-name']):
                 local = config.return_value(base_subnet + ['failover', 'local-address'])
                 remote = config.return_value(base_subnet + ['failover', 'peer-address'])
                 status = config.return_value(base_subnet + ['failover', 'status'])
+                name = config.return_value(base_subnet + ['failover', 'name'])
 
                 config.set(base + ['failover', 'remote'], value=remote)
                 config.set(base + ['failover', 'source-address'], value=local)
                 config.set(base + ['failover', 'status'], value=status)
+                config.set(base + ['failover', 'name'], value=name)
 
             config.delete(base_subnet + ['failover'])
             config.set(base_subnet + ['enable-failover'])
