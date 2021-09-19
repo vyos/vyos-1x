@@ -182,7 +182,10 @@ shared-network {{ network | replace('_','-') }} {
         }
 {%           endfor %}
 {%         endif %}
+{%         if subnet_config.range is defined and subnet_config.range is not none %}
+{#           pool configuration can only be used if there follows a range option #}
         pool {
+{%         endif %}
 {%         if subnet_config.enable_failover is defined %}
             failover peer "{{ failover.name }}";
             deny dynamic bootp clients;
@@ -192,7 +195,10 @@ shared-network {{ network | replace('_','-') }} {
             range {{ range_options.start }} {{ range_options.stop }};
 {%             endfor %}
 {%           endif %}
+{%         if subnet_config.range is defined and subnet_config.range is not none %}
+{#           pool configuration can only be used if there follows a range option #}
         }
+{%         endif %}
     }
 {%       endfor %}
 {%     endif %}
