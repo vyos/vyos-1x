@@ -1085,6 +1085,8 @@ class Interface(Control):
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
+        if not addr:
+            raise ValueError()
 
         # remove from interface
         if addr == 'dhcp':
@@ -1364,16 +1366,16 @@ class Interface(Control):
 
         # determine IP addresses which are assigned to the interface and build a
         # list of addresses which are no longer in the dict so they can be removed
-        cur_addr = self.get_addr()
-        for addr in list_diff(cur_addr, new_addr):
-            # we will delete all interface specific IP addresses if they are not
-            # explicitly configured on the CLI
-            if is_ipv6_link_local(addr):
-                eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
-                if addr != f'{eui64}/64':
+        if 'address_old' in config:
+            for addr in list_diff(config['address_old'], new_addr):
+                # we will delete all interface specific IP addresses if they are not
+                # explicitly configured on the CLI
+                if is_ipv6_link_local(addr):
+                    eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
+                    if addr != f'{eui64}/64':
+                        self.del_addr(addr)
+                else:
                     self.del_addr(addr)
-            else:
-                self.del_addr(addr)
 
         for addr in new_addr:
             self.add_addr(addr)
