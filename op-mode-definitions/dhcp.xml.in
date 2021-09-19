@@ -128,13 +128,13 @@
         <children>
           <node name="server">
             <properties>
-              <help>Restart the DHCP server process</help>
+              <help>Restart DHCP server process</help>
             </properties>
             <command>sudo systemctl restart isc-dhcp-server.service</command>
           </node>
           <node name="relay-agent">
             <properties>
-              <help>Restart the DHCP server process</help>
+              <help>Restart DHCP relay agent</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/restart_dhcp_relay.py --ipv4</command>
           </node>
