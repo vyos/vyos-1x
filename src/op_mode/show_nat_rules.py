@@ -69,7 +69,7 @@ if args.source or args.destination:
         srcdest = ''
         srcdests = []
         tran_addr = ''
-        for i in range(1,len(data['expr']) + 1):
+        for i in range(1,len(data['expr']) ):
             srcdest_json = dict_search('match.right', data['expr'][i])
             if srcdest_json:
                 if isinstance(srcdest_json,str):
@@ -113,7 +113,7 @@ if args.source or args.destination:
             srcdest = ''
         print(format_nat_rule.format(rule, srcdests[0], tran_addr, interface))
         
-        for i in range(1, list(srcdest)):
+        for i in range(1, len(srcdests)):
             print(format_nat_rule.format(' ', srcdests[i], ' ', ' '))
     
     exit(0)
