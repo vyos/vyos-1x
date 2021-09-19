@@ -29,16 +29,16 @@ file_name = sys.argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['service', 'dhcp-server', 'shared-network-name']
+base = ['service', 'dhcp-server']
 config = ConfigTree(config_file)
 
-if not config.exists(base):
+if not config.exists(base + ['shared-network-name']):
     # Nothing to do
     exit(0)
 
 # Run this for every instance if 'shared-network-name'
-for network in config.list_nodes(base):
-    base_network = base + [network]
+for network in config.list_nodes(base + ['shared-network-name']):
+    base_network = base + ['shared-network-name', network]
 
     if not config.exists(base_network + ['subnet']):
         continue
@@ -59,6 +59,23 @@ for network in config.list_nodes(base):
         # T3838: rename dns-server -> name-server
         if config.exists(base_subnet + ['dns-server']):
             config.rename(base_subnet + ['dns-server'], 'name-server')
+
+
+        # T3672: ISC DHCP server only supports one failover peer
+        if config.exists(base_subnet + ['failover']):
+            # There can only be one failover configuration, if none is present
+            # we add the first one
+            if not config.exists(base + ['failover']):
+                local = config.return_value(base_subnet + ['failover', 'local-address'])
+                remote = config.return_value(base_subnet + ['failover', 'peer-address'])
+                status = config.return_value(base_subnet + ['failover', 'status'])
+
+                config.set(base + ['failover', 'remote'], value=remote)
+                config.set(base + ['failover', 'source-address'], value=local)
+                config.set(base + ['failover', 'status'], value=status)
+
+            config.delete(base_subnet + ['failover'])
+            config.set(base_subnet + ['enable-failover'])
 
 try:
     with open(file_name, 'w') as f:

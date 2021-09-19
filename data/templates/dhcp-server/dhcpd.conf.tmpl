@@ -31,32 +31,25 @@ option wpad-url code 252 = text;
 {%   endfor %}
 
 {% endif %}
-{% if shared_network_name is defined and shared_network_name is not none %}
-{%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
-{%     if network_config.subnet is defined and network_config.subnet is not none %}
-{%       for subnet, subnet_config in network_config.subnet.items() %}
-{%         if subnet_config.failover is defined and subnet_config.failover is defined and subnet_config.failover.name is defined and subnet_config.failover.name is not none %}
-# Failover configuration for {{ subnet }}
-failover peer "{{ subnet_config.failover.name }}" {
-{%           if subnet_config.failover.status == 'primary' %}
+{% if failover is defined and failover is not none %}
+{%   set dhcp_failover_name = 'VyOS-DHCP-failover-peer' %}
+# DHCP failover configuration
+failover peer "{{ dhcp_failover_name }}" {
+{%   if failover.status == 'primary' %}
     primary;
     mclt 1800;
     split 128;
-{%           elif subnet_config.failover.status == 'secondary' %}
+{%   elif failover.status == 'secondary' %}
     secondary;
-{%           endif %}
-    address {{ subnet_config.failover.local_address }};
+{%   endif %}
+    address {{ failover.source_address }};
     port 520;
-    peer address {{ subnet_config.failover.peer_address }};
+    peer address {{ failover.remote }};
     peer port 520;
     max-response-delay 30;
     max-unacked-updates 10;
     load balance max seconds 3;
 }
-{%         endif %}
-{%       endfor %}
-{%     endif %}
-{%   endfor %}
 {% endif %}
 {% if listen_address is defined and listen_address is not none %}
 
@@ -184,23 +177,17 @@ shared-network {{ network | replace('_','-') }} {
         }
 {%           endfor %}
 {%         endif %}
-{%         if subnet_config.failover is defined and subnet_config.failover.name is defined and subnet_config.failover.name is not none %}
         pool {
-            failover peer "{{ subnet_config.failover.name }}";
+{%         if subnet_config.enable_failover is defined %}
+            failover peer "{{ dhcp_failover_name }}";
             deny dynamic bootp clients;
+{%         endif %}
 {%           if subnet_config.range is defined and subnet_config.range is not none %}
 {%             for range, range_options in subnet_config.range.items() %}
             range {{ range_options.start }} {{ range_options.stop }};
 {%             endfor %}
 {%           endif %}
         }
-{%         else %}
-{%           if subnet_config.range is defined and subnet_config.range is not none %}
-{%             for range, range_options in subnet_config.range.items() %}
-        range {{ range_options.start }} {{ range_options.stop }};
-{%             endfor %}
-{%           endif %}
-{%         endif %}
     }
 {%       endfor %}
 {%     endif %}
