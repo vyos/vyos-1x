@@ -34,6 +34,15 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="name">
+                <properties>
+                  <help>Peer name used to identify connection</help>
+                  <constraint>
+                    <regex>[-_a-zA-Z0-9.]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid failover peer name. May only contain letters, numbers and .-_</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="status">
                 <properties>
                   <help>Failover hierarchy</help>
