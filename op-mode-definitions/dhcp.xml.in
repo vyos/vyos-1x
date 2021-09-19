@@ -130,7 +130,7 @@
             <properties>
               <help>Restart DHCP server process</help>
             </properties>
-            <command>sudo systemctl restart isc-dhcp-server.service</command>
+            <command>if cli-shell-api existsActive service dhcp-server; then sudo systemctl restart isc-dhcp-server.service; else echo "DHCP server not configured"; fi</command>
           </node>
           <node name="relay-agent">
             <properties>
