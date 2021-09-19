@@ -247,7 +247,7 @@ def verify(dhcp):
         if not failover_ok:
             raise ConfigError('DHCP failover must be enabled for at least one subnet!')
 
-        for key in ['source_address', 'remote', 'status']:
+        for key in ['name', 'remote', 'source_address', 'status']:
             if key not in dhcp['failover']:
                 tmp = key.replace('_', '-')
                 raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')

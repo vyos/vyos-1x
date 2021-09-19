@@ -32,9 +32,8 @@ option wpad-url code 252 = text;
 
 {% endif %}
 {% if failover is defined and failover is not none %}
-{%   set dhcp_failover_name = 'VyOS-DHCP-failover-peer' %}
 # DHCP failover configuration
-failover peer "{{ dhcp_failover_name }}" {
+failover peer "{{ failover.name }}" {
 {%   if failover.status == 'primary' %}
     primary;
     mclt 1800;
@@ -185,7 +184,7 @@ shared-network {{ network | replace('_','-') }} {
 {%         endif %}
         pool {
 {%         if subnet_config.enable_failover is defined %}
-            failover peer "{{ dhcp_failover_name }}";
+            failover peer "{{ failover.name }}";
             deny dynamic bootp clients;
 {%         endif %}
 {%           if subnet_config.range is defined and subnet_config.range is not none %}
