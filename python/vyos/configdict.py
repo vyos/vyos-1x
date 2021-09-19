@@ -375,6 +375,9 @@ def get_interface_dict(config, base, ifname=''):
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
 
+    address = leaf_node_changed(config, ['address'])
+    if address: dict.update({'address_old' : address})
+
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')
     if bridge: dict.update({'is_bridge_member' : bridge})
