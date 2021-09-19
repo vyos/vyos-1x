@@ -1,4 +1,4 @@
-<!-- include start from dhcp-server-domain-search.xml.i -->
+<!-- include start from dhcp/domain-search.xml.i -->
 <leafNode name="domain-search">
   <properties>
     <help>Client Domain Name search list</help>

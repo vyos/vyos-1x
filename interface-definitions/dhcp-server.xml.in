@@ -102,8 +102,8 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              #include <include/dhcp-ping-check.xml.i>
-              #include <include/dhcp-domain-name.xml.i>
+              #include <include/dhcp/domain-name.xml.i>
+              #include <include/dhcp/ping-check.xml.i>
               #include <include/name-server-ipv4.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
@@ -166,8 +166,8 @@
                     </properties>
                   </leafNode>
                   #include <include/name-server-ipv4.xml.i>
-                  #include <include/dhcp-domain-name.xml.i>
-                  #include <include/dhcp-server-domain-search.xml.i>
+                  #include <include/dhcp/domain-name.xml.i>
+                  #include <include/dhcp/domain-search.xml.i>
                   <leafNode name="enable-failover">
                     <properties>
                       <help>Enable DHCP failover support for this subnet</help>
@@ -220,7 +220,7 @@
                       <multi/>
                     </properties>
                   </leafNode>
-                  #include <include/dhcp-ping-check.xml.i>
+                  #include <include/dhcp/ping-check.xml.i>
                   <leafNode name="pop-server">
                     <properties>
                       <help>IP address of POP3 server</help>
