@@ -58,7 +58,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  #include <include/dhcp-server-domain-search.xml.i>
+                  #include <include/dhcp/domain-search.xml.i>
                   #include <include/name-server-ipv6.xml.i>
                 </children>
               </node>
@@ -127,7 +127,7 @@
                       </tagNode>
                     </children>
                   </node>
-                  #include <include/dhcp-server-domain-search.xml.i>
+                  #include <include/dhcp/domain-search.xml.i>
                   <node name="lease-time">
                     <properties>
                       <help>Parameters relating to the lease time</help>

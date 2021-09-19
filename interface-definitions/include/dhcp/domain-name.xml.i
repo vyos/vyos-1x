@@ -1,4 +1,4 @@
-<!-- include start from dhcp-domain-name.xml.i -->
+<!-- include start from dhcp/domain-name.xml.i -->
 <leafNode name="domain-name">
   <properties>
     <help>Client Domain Name</help>
