@@ -70,6 +70,9 @@ shared-network {{ network | replace('_','-') }} {
 {%     if network_config.authoritative is defined %}
     authoritative;
 {%     endif %}
+{%     if network_config.ping_check is defined %}
+    ping-check true;
+{%     endif %}
 {%     if network_config.shared_network_parameters is defined and network_config.shared_network_parameters is not none %}
     # The following {{ network_config.shared_network_parameters | length }} line(s)
     # were added as shared-network-parameters in the CLI and have not been validated
@@ -156,6 +159,9 @@ shared-network {{ network | replace('_','-') }} {
 {%         if subnet_config.lease is defined and subnet_config.lease is not none %}
         default-lease-time {{ subnet_config.lease }};
         max-lease-time {{ subnet_config.lease }};
+{%         endif %}
+{%         if network_config.ping_check is not defined and subnet_config.ping_check is defined %}
+        ping-check true;
 {%         endif %}
 {%         if subnet_config.static_mapping is defined and subnet_config.static_mapping is not none %}
 {%           for host, host_config in subnet_config.static_mapping.items() if host_config.disable is not defined %}

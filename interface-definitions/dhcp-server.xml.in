@@ -107,6 +107,7 @@
                   <help>Shared-network-name description</help>
                 </properties>
               </leafNode>
+              #include <include/dhcp-ping-check.xml.i>
               #include <include/generic-disable-node.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
@@ -229,6 +230,7 @@
                       <multi/>
                     </properties>
                   </leafNode>
+                  #include <include/dhcp-ping-check.xml.i>
                   <leafNode name="pop-server">
                     <properties>
                       <help>IP address of POP3 server</help>
