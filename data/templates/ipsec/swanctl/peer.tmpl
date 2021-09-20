@@ -60,7 +60,7 @@
                 life_time = {{ vti_esp.lifetime }}s
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
                 {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
                 {# Thus we simply shift the key by one to also support a vti0 interface #}
 {%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
@@ -119,7 +119,7 @@
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
 {%       endif %}
 {%       if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
                 {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
                 {# Thus we simply shift the key by one to also support a vti0 interface #}
 {%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
