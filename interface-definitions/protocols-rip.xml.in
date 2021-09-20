@@ -155,7 +155,7 @@
               #include <include/static/static-route-distance.xml.i>
             </children>
           </tagNode>
-          #include <include/routing-passive-interface-xml.i>
+          #include <include/routing-passive-interface.xml.i>
           <node name="redistribute">
             <properties>
               <help>Redistribute information from another routing protocol</help>
