@@ -27,6 +27,8 @@ from netifaces import ifaddresses
 # this is not the same as socket.AF_INET/INET6
 from netifaces import AF_INET
 from netifaces import AF_INET6
+from uuid import uuid3
+from uuid import NAMESPACE_DNS
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
@@ -56,7 +58,6 @@ from vyos.ifconfig import Section
 
 from netaddr import EUI
 from netaddr import mac_unix_expanded
-from random import getrandbits
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -438,9 +439,14 @@ class Interface(Control):
         >>> Interface('eth0').get_mac()
         '00:50:ab:cd:ef:00'
         """
-        # we choose 40 random bytes for the MAC address, this gives
-        # us e.g. EUI('00-EA-EE-D6-A3-C8') or EUI('00-41-B9-0D-F2-2A')
-        tmp = EUI(getrandbits(48)).value
+        # calculate a UUID based on the interface name - this is as predictable
+        # as an interface MAC address and thus can be used in the same way
+        tmp = uuid3(NAMESPACE_DNS, self.ifname)
+        # take the last 48 bits from the UUID string
+        tmp = str(tmp).split('-')[-1]
+        # Convert pseudo random string into EUI format which now represents a
+        # MAC address
+        tmp = EUI(tmp).value
         # set locally administered bit in MAC address
         tmp |= 0xf20000000000
         # convert integer to "real" MAC address representation
