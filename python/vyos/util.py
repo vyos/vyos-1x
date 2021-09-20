@@ -704,8 +704,16 @@ def get_interface_config(interface):
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
 
+def is_systemd_service_active(service):
+    """ Test is a specified systemd service is activated.
+    Returns True if service is active, false otherwise.
+    Copied from: https://unix.stackexchange.com/a/435317 """
+    tmp = cmd(f'systemctl show --value -p ActiveState {service}')
+    return bool((tmp == 'active'))
+
 def is_systemd_service_running(service):
     """ Test is a specified systemd service is actually running.
-    Returns True if service is running, false otherwise. """
-    tmp = run(f'systemctl is-active --quiet {service}')
-    return bool((tmp == 0))
+    Returns True if service is running, false otherwise.
+    Copied from: https://unix.stackexchange.com/a/435317 """
+    tmp = cmd(f'systemctl show --value -p SubState {service}')
+    return bool((tmp == 'running'))
