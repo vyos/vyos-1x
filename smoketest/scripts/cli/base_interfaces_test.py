@@ -214,7 +214,7 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                self.assertTrue(AF_INET6 not in ifaddresses(interface))
+                self.assertNotIn(AF_INET6, ifaddresses(interface))
 
         def test_interface_mtu(self):
             if not self._test_mtu:
