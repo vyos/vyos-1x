@@ -18,11 +18,12 @@ import os
 from inspect import signature
 from inspect import _empty
 
-from vyos import debug
+from vyos.ifconfig.section import Section
 from vyos.util import popen
 from vyos.util import cmd
-from vyos.ifconfig.section import Section
-
+from vyos.util import read_file
+from vyos.util import write_file
+from vyos import debug
 
 class Control(Section):
     _command_get = {}
@@ -116,20 +117,18 @@ class Control(Section):
         Provide a single primitive w/ error checking for reading from sysfs.
         """
         value = None
-        with open(filename, 'r') as f:
-            value = f.read().rstrip('\n')
-
-        self._debug_msg("read '{}' < '{}'".format(value, filename))
+        if os.path.exists(filename):
+            value = read_file(filename)
+            self._debug_msg("read '{}' < '{}'".format(value, filename))
         return value
 
     def _write_sysfs(self, filename, value):
         """
         Provide a single primitive w/ error checking for writing to sysfs.
         """
-        self._debug_msg("write '{}' > '{}'".format(value, filename))
         if os.path.isfile(filename):
-            with open(filename, 'w') as f:
-                f.write(str(value))
+            write_file(filename, str(value))
+            self._debug_msg("write '{}' > '{}'".format(value, filename))
             return True
         return False
 
