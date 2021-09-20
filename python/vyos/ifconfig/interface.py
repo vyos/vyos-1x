@@ -1369,16 +1369,11 @@ class Interface(Control):
             self.set_mtu(config.get('mtu'))
 
         # Delete old IPv6 EUI64 addresses before changing MAC
-        tmp = dict_search('ipv6.address.eui64_old', config)
-        if tmp:
-            for addr in tmp:
-                self.del_ipv6_eui64_address(addr)
+        for addr in (dict_search('ipv6.address.eui64_old', config) or []):
+            self.del_ipv6_eui64_address(addr)
 
         # Manage IPv6 link-local addresses
-        tmp = dict_search('ipv6.address.no_default_link_local', config)
-        # we must check explicitly for None type as if the key is set we will
-        # get an empty dict (<class 'dict'>)
-        if isinstance(tmp, dict):
+        if dict_search('ipv6.address.no_default_link_local', config) != None:
             self.del_ipv6_eui64_address('fe80::/64')
         else:
             self.add_ipv6_eui64_address('fe80::/64')
