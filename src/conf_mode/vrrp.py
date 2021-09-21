@@ -17,7 +17,12 @@
 import os
 
 from sys import exit
-from ipaddress import ip_address, ip_interface, IPv4Interface, IPv6Interface, IPv4Address, IPv6Address
+from ipaddress import ip_address
+from ipaddress import ip_interface
+from ipaddress import IPv4Interface
+from ipaddress import IPv6Interface
+from ipaddress import IPv4Address
+from ipaddress import IPv6Address
 from json import dumps
 from pathlib import Path
 
