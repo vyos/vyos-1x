@@ -606,7 +606,7 @@
     #include <include/router-id.xml.i>
   </children>
 </node>
-#include <include/routing-passive-interface-xml.i>
+#include <include/routing-passive-interface.xml.i>
 <leafNode name="passive-interface-exclude">
   <properties>
     <help>Interface to exclude when using 'passive-interface default'</help>
