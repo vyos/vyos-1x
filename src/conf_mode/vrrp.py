@@ -30,6 +30,7 @@ import vyos.config
 
 from vyos import ConfigError
 from vyos.util import call
+from vyos.util import makedir
 from vyos.template import render
 
 from vyos.ifconfig.vrrp import VRRP
@@ -136,7 +137,9 @@ def get_config(config=None):
         sync_groups.append(sync_group)
 
     # create a file with dict with proposed configuration
-    with open("{}.temp".format(VRRP.location['vyos']), 'w') as dict_file:
+    dirname = os.path.dirname(VRRP.location['vyos'])
+    makedir(dirname)
+    with open(VRRP.location['vyos'] + ".temp", 'w') as dict_file:
         dict_file.write(dumps({'vrrp_groups': vrrp_groups, 'sync_groups': sync_groups}))
 
     return (vrrp_groups, sync_groups)

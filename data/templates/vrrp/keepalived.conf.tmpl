@@ -5,7 +5,7 @@
 global_defs {
     dynamic_interfaces
     script_user root
-    notify_fifo /run/keepalived_notify_fifo
+    notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
 
@@ -16,7 +16,6 @@ vrrp_script healthcheck_{{ group.name }} {
     interval {{ group.health_check_interval }}
     fall {{ group.health_check_count }}
     rise 1
-
 }
 {%   endif %}
 

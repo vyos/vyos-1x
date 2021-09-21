@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import os
 import time
@@ -22,11 +21,12 @@ import argparse
 import threading
 import re
 import json
-from pathlib import Path
-from queue import Queue
 import logging
+
+from queue import Queue
 from logging.handlers import SysLogHandler
 
+from vyos.ifconfig.vrrp import VRRP
 from vyos.util import cmd
 
 # configure logging
@@ -60,7 +60,7 @@ class KeepalivedFifo:
     def _config_load(self):
         try:
             # read the dictionary file with configuration
-            with open('/run/keepalived_config.dict', 'r') as dict_file:
+            with open(VRRP.location['vyos'], 'r') as dict_file:
                 vrrp_config_dict = json.load(dict_file)
             self.vrrp_config = {'vrrp_groups': {}, 'sync_groups': {}}
             # save VRRP instances to the new dictionary
@@ -93,8 +93,8 @@ class KeepalivedFifo:
 
     # create FIFO pipe
     def pipe_create(self):
-        if Path(self.pipe_path).exists():
-            logger.info("PIPE already exist: {}".format(self.pipe_path))
+        if os.path.exists(self.pipe_path):
+            logger.info(f"PIPE already exist: {self.pipe_path}")
         else:
             os.mkfifo(self.pipe_path)
 
