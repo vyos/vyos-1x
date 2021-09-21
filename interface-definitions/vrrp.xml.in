@@ -60,6 +60,14 @@
                       <completionHelp>
                         <list>plaintext-password ah</list>
                       </completionHelp>
+                      <valueHelp>
+                        <format>plaintext-password</format>
+                        <description>Simple password string</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ah</format>
+                        <description>AH - IPSEC (not recommended)</description>
+                      </valueHelp>
                       <constraint>
                         <regex>^(plaintext-password|ah)$</regex>
                       </constraint>
