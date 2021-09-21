@@ -14,22 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.ifconfig.vrrp import VRRP
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
-
 from vyos.template import inc_ip
 
 PROCESS_NAME = 'keepalived'
-KEEPALIVED_CONF = '/etc/keepalived/keepalived.conf'
+KEEPALIVED_CONF = VRRP.location['config']
 base_path = ['high-availability', 'vrrp']
 
 vrrp_interface = 'eth1'
