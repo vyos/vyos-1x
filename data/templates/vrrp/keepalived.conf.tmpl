@@ -60,16 +60,16 @@ vrrp_instance {{ name }} {
 {%       endif %}
     }
 {%     endif %}
-{%     if group_config.virtual_address is defined and group_config.virtual_address is not none %}
+{%     if group_config.address is defined and group_config.address is not none %}
     virtual_ipaddress {
-{%       for addr in group_config.virtual_address %}
+{%       for addr in group_config.address %}
         {{ addr }}
 {%       endfor %}
     }
 {%     endif %}
-{%     if group_config.virtual_address_excluded is defined and group_config.virtual_address_excluded is not none %}
+{%     if group_config.excluded_address is defined and group_config.excluded_address is not none %}
     virtual_ipaddress_excluded {
-{%       for addr in group_config.virtual_address_excluded %}
+{%       for addr in group_config.excluded_address %}
         {{ addr }}
 {%       endfor %}
     }

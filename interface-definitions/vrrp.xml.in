@@ -185,9 +185,9 @@
                 </properties>
               </leafNode>
               #include <include/vrrp-transition-script.xml.i>
-              <leafNode name="virtual-address">
+              <leafNode name="address">
                 <properties>
-                  <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
+                  <help>Virtual IP address</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 virtual address</description>
@@ -200,11 +200,10 @@
                     <validator name="ipv4-host"/>
                     <validator name="ipv6-host"/>
                   </constraint>
-                  <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
                   <multi/>
                 </properties>
               </leafNode>
-              <leafNode name="virtual-address-excluded">
+              <leafNode name="excluded-address">
                 <properties>
                   <help>Virtual address (If you need additional IPv4 and IPv6 in same group)</help>
                   <valueHelp>

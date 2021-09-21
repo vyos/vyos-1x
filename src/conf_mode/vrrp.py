@@ -72,8 +72,8 @@ def verify(vrrp):
             if 'interface' not in group_config:
                 raise ConfigError(f'Interface is required but not set in VRRP group "{group}"')
 
-            if 'virtual_address' not in group_config:
-                raise ConfigError(f'virtual-address is required but not set in VRRP group "{group}"')
+            if 'address' not in group_config:
+                raise ConfigError(f'Virtual IP address is required but not set in VRRP group "{group}"')
 
             if 'authentication' in group_config:
                 if not {'password', 'type'} <= set(group_config['authentication']):
@@ -92,7 +92,7 @@ def verify(vrrp):
             # XXX: filter on map object is destructive, so we force it to list.
             # Additionally, filter objects always evaluate to True, empty or not,
             # so we force them to lists as well.
-            vaddrs = list(map(lambda i: ip_interface(i), group_config['virtual_address']))
+            vaddrs = list(map(lambda i: ip_interface(i), group_config['address']))
             vaddrs4 = list(filter(lambda x: isinstance(x, IPv4Interface), vaddrs))
             vaddrs6 = list(filter(lambda x: isinstance(x, IPv6Interface), vaddrs))
 

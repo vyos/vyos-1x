@@ -59,7 +59,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
             self.cli_set(group_base + ['description', group])
             self.cli_set(group_base + ['interface', f'{vrrp_interface}.{vlan_id}'])
-            self.cli_set(group_base + ['virtual-address', vip])
+            self.cli_set(group_base + ['address', vip])
             self.cli_set(group_base + ['vrid', vlan_id])
 
         # commit changes
@@ -93,7 +93,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
             self.cli_set(group_base + ['description', group])
             self.cli_set(group_base + ['interface', f'{vrrp_interface}.{vlan_id}'])
-            self.cli_set(group_base + ['virtual-address', vip])
+            self.cli_set(group_base + ['address', vip])
             self.cli_set(group_base + ['vrid', vlan_id])
 
             self.cli_set(group_base + ['advertise-interval', advertise_interval])
@@ -139,7 +139,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
 
             self.cli_set(group_base + ['interface', f'{vrrp_interface}.{vlan_id}'])
-            self.cli_set(group_base + ['virtual-address', vip])
+            self.cli_set(group_base + ['address', vip])
             self.cli_set(group_base + ['vrid', vlan_id])
 
             self.cli_set(base_path + ['sync-group', sync_group, 'member', group])

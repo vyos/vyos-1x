@@ -44,6 +44,16 @@ if config.exists(base + ['group']):
         if config.exists(tmp):
             config.delete(tmp)
 
+        # Rename virtual-address -> address
+        tmp = group_base + ['virtual-address']
+        if config.exists(tmp):
+            config.rename(tmp, 'address')
+
+        # Rename virtual-address-excluded -> excluded-address
+        tmp = group_base + ['virtual-address-excluded']
+        if config.exists(tmp):
+            config.rename(tmp, 'excluded-address')
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
