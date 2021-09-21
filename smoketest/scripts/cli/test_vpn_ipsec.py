@@ -243,7 +243,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'remote_ts = 172.17.10.0/24,172.17.11.0/24',
             f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
             f'if_id_out = {if_id}',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti} no"'
+            f'updown = "/etc/ipsec.d/vti-up-down {vti}"'
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)
@@ -372,7 +372,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'remote_addrs = {peer_ip}',
             f'local_ts = 0.0.0.0/0,::/0',
             f'remote_ts = 0.0.0.0/0,::/0',
-            f'updown = "/etc/ipsec.d/vti-up-down {vti} no"',
+            f'updown = "/etc/ipsec.d/vti-up-down {vti}"',
             f'if_id_in = {if_id}', # will be 11 for vti10
             f'if_id_out = {if_id}',
             f'ipcomp = no',
