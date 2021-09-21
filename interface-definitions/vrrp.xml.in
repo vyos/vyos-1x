@@ -77,11 +77,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="description">
-                <properties>
-                  <help>Group description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
               <node name="health-check">
                 <properties>
