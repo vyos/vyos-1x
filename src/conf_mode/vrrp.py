@@ -116,12 +116,6 @@ def verify(vrrp):
                 if 'peer_address' in group_config:
                     if is_ipv4(group_config['peer_address']):
                         raise ConfigError(f'VRRP group "{group}" uses IPv6 but peer-address is IPv4!')
-
-            # Warn the user about the deprecated mode-force option
-            if 'transition_script' in group_config and 'mode_force' in group_config['transition_script']:
-                print("""Warning: "transition-script mode-force" VRRP option is deprecated and will be removed in VyOS 1.4.""")
-                print("""It's no longer necessary, so you can safely remove it from your config now.""")
-
     # Check sync groups
     if 'sync_group' in vrrp:
         for sync_group, sync_config in vrrp['sync_group'].items():
