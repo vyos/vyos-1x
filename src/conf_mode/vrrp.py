@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,251 +17,135 @@
 import os
 
 from sys import exit
-from ipaddress import ip_address
 from ipaddress import ip_interface
 from ipaddress import IPv4Interface
 from ipaddress import IPv6Interface
-from ipaddress import IPv4Address
-from ipaddress import IPv6Address
-from json import dumps
-from pathlib import Path
 
-import vyos.config
-
-from vyos import ConfigError
-from vyos.util import call
-from vyos.util import makedir
-from vyos.template import render
-
+from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.ifconfig.vrrp import VRRP
-
+from vyos.template import render
+from vyos.template import is_ipv4
+from vyos.template import is_ipv6
+from vyos.util import call
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 def get_config(config=None):
-    vrrp_groups = []
-    sync_groups = []
-
     if config:
-        config = config
+        conf = config
     else:
-        config = vyos.config.Config()
+        conf = Config()
 
-    # Get the VRRP groups
-    for group_name in config.list_nodes("high-availability vrrp group"):
-        config.set_level("high-availability vrrp group {0}".format(group_name))
+    base = ['high-availability', 'vrrp']
+    if not conf.exists(base):
+        return None
 
-        # Retrieve the values
-        group = {"preempt": True, "use_vmac": False, "disable": False}
+    vrrp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    if 'group' in vrrp:
+        default_values = defaults(base + ['group'])
+        for group in vrrp['group']:
+            vrrp['group'][group] = dict_merge(default_values, vrrp['group'][group])
 
-        if config.exists("disable"):
-            group["disable"] = True
+    ## Get the sync group used for conntrack-sync
+    conntrack_path = ['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group']
+    if conf.exists(conntrack_path):
+        vrrp['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-        group["name"] = group_name
-        group["vrid"] = config.return_value("vrid")
-        group["interface"] = config.return_value("interface")
-        group["description"] = config.return_value("description")
-        group["advertise_interval"] = config.return_value("advertise-interval")
-        group["priority"] = config.return_value("priority")
-        group["hello_source"] = config.return_value("hello-source-address")
-        group["peer_address"] = config.return_value("peer-address")
-        group["sync_group"] = config.return_value("sync-group")
-        group["preempt_delay"] = config.return_value("preempt-delay")
-        group["virtual_addresses"] = config.return_values("virtual-address")
-        group["virtual_addresses_excluded"] = config.return_values("virtual-address-excluded")
+    return vrrp
 
-        group["auth_password"] = config.return_value("authentication password")
-        group["auth_type"] = config.return_value("authentication type")
+def verify(vrrp):
+    if not vrrp:
+        return None
 
-        group["health_check_script"] = config.return_value("health-check script")
-        group["health_check_interval"] = config.return_value("health-check interval")
-        group["health_check_count"] = config.return_value("health-check failure-count")
+    used_vrid_if = []
+    if 'group' in vrrp:
+        for group, group_config in vrrp['group'].items():
+            # Check required fields
+            if 'vrid' not in group_config:
+                raise ConfigError(f'VRID is required but not set in VRRP group "{group}"')
 
-        group["master_script"] = config.return_value("transition-script master")
-        group["backup_script"] = config.return_value("transition-script backup")
-        group["fault_script"] = config.return_value("transition-script fault")
-        group["stop_script"] = config.return_value("transition-script stop")
-        group["script_mode_force"] = config.exists("transition-script mode-force")
+            if 'interface' not in group_config:
+                raise ConfigError(f'Interface is required but not set in VRRP group "{group}"')
 
-        if config.exists("no-preempt"):
-            group["preempt"] = False
-        if config.exists("rfc3768-compatibility"):
-            group["use_vmac"] = True
+            if 'virtual_address' not in group_config:
+                raise ConfigError(f'virtual-address is required but not set in VRRP group "{group}"')
 
-        # Substitute defaults where applicable
-        if not group["advertise_interval"]:
-            group["advertise_interval"] = 1
-        if not group["priority"]:
-            group["priority"] = 100
-        if not group["preempt_delay"]:
-            group["preempt_delay"] = 0
-        if not group["health_check_interval"]:
-            group["health_check_interval"] = 60
-        if not group["health_check_count"]:
-            group["health_check_count"] = 3
+            if 'authentication' in group_config:
+                if not {'password', 'type'} <= set(group_config['authentication']):
+                    raise ConfigError(f'Authentication requires both type and passwortd to be set in VRRP group "{group}"')
 
-        # FIXUP: translate our option for auth type to keepalived's syntax
-        # for simplicity
-        if group["auth_type"]:
-            if group["auth_type"] == "plaintext-password":
-                group["auth_type"] = "PASS"
-            else:
-                group["auth_type"] = "AH"
+            # We can not use a VRID once per interface
+            interface = group_config['interface']
+            vrid = group_config['vrid']
+            tmp = {'interface': interface, 'vrid': vrid}
+            if tmp in used_vrid_if:
+                raise ConfigError(f'VRID "{vrid}" can only be used once on interface "{interface}"!')
+            used_vrid_if.append(tmp)
 
-        vrrp_groups.append(group)
+            # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
 
-    config.set_level("")
+            # XXX: filter on map object is destructive, so we force it to list.
+            # Additionally, filter objects always evaluate to True, empty or not,
+            # so we force them to lists as well.
+            vaddrs = list(map(lambda i: ip_interface(i), group_config['virtual_address']))
+            vaddrs4 = list(filter(lambda x: isinstance(x, IPv4Interface), vaddrs))
+            vaddrs6 = list(filter(lambda x: isinstance(x, IPv6Interface), vaddrs))
 
-    # Get the sync group used for conntrack-sync
-    conntrack_sync_group = None
-    if config.exists("service conntrack-sync failover-mechanism vrrp"):
-        conntrack_sync_group = config.return_value("service conntrack-sync failover-mechanism vrrp sync-group")
+            if vaddrs4 and vaddrs6:
+                raise ConfigError(f'VRRP group "{group}" mixes IPv4 and IPv6 virtual addresses, this is not allowed.\n' \
+                                  'Create individual groups for IPv4 and IPv6!')
+            if vaddrs4:
+                if 'hello_source_address' in group_config:
+                    if is_ipv6(group_config['hello_source_address']):
+                        raise ConfigError(f'VRRP group "{group}" uses IPv4 but hello-source-address is IPv6!')
 
-    # Get the sync groups
-    for sync_group_name in config.list_nodes("high-availability vrrp sync-group"):
-        config.set_level("high-availability vrrp sync-group {0}".format(sync_group_name))
+                if 'peer_address' in group_config:
+                    if is_ipv6(group_config['peer_address']):
+                        raise ConfigError(f'VRRP group "{group}" uses IPv4 but peer-address is IPv6!')
 
-        sync_group = {"conntrack_sync": False}
-        sync_group["name"] = sync_group_name
-        sync_group["members"] = config.return_values("member")
-        if conntrack_sync_group:
-            if conntrack_sync_group == sync_group_name:
-                sync_group["conntrack_sync"] = True
+            if vaddrs6:
+                if 'hello_source_address' in group_config:
+                    if is_ipv4(group_config['hello_source_address']):
+                        raise ConfigError(f'VRRP group "{group}" uses IPv6 but hello-source-address is IPv4!')
 
-        # add transition script configuration
-        sync_group["master_script"] = config.return_value("transition-script master")
-        sync_group["backup_script"] = config.return_value("transition-script backup")
-        sync_group["fault_script"] = config.return_value("transition-script fault")
-        sync_group["stop_script"] = config.return_value("transition-script stop")
+                if 'peer_address' in group_config:
+                    if is_ipv4(group_config['peer_address']):
+                        raise ConfigError(f'VRRP group "{group}" uses IPv6 but peer-address is IPv4!')
 
-        sync_groups.append(sync_group)
-
-    # create a file with dict with proposed configuration
-    dirname = os.path.dirname(VRRP.location['vyos'])
-    makedir(dirname)
-    with open(VRRP.location['vyos'] + ".temp", 'w') as dict_file:
-        dict_file.write(dumps({'vrrp_groups': vrrp_groups, 'sync_groups': sync_groups}))
-
-    return (vrrp_groups, sync_groups)
-
-
-def verify(data):
-    vrrp_groups, sync_groups = data
-
-    for group in vrrp_groups:
-        # Check required fields
-        if not group["vrid"]:
-            raise ConfigError("vrid is required but not set in VRRP group {0}".format(group["name"]))
-        if not group["interface"]:
-            raise ConfigError("interface is required but not set in VRRP group {0}".format(group["name"]))
-        if not group["virtual_addresses"]:
-            raise ConfigError("virtual-address is required but not set in VRRP group {0}".format(group["name"]))
-
-        if group["auth_password"] and (not group["auth_type"]):
-            raise ConfigError("authentication type is required but not set in VRRP group {0}".format(group["name"]))
-
-        # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
-
-        # XXX: filter on map object is destructive, so we force it to list.
-        # Additionally, filter objects always evaluate to True, empty or not,
-        # so we force them to lists as well.
-        vaddrs = list(map(lambda i: ip_interface(i), group["virtual_addresses"]))
-        vaddrs4 = list(filter(lambda x: isinstance(x, IPv4Interface), vaddrs))
-        vaddrs6 = list(filter(lambda x: isinstance(x, IPv6Interface), vaddrs))
-
-        if vaddrs4 and vaddrs6:
-            raise ConfigError("VRRP group {0} mixes IPv4 and IPv6 virtual addresses, this is not allowed. Create separate groups for IPv4 and IPv6".format(group["name"]))
-
-        if vaddrs4:
-            if group["hello_source"]:
-                hsa = ip_address(group["hello_source"])
-                if isinstance(hsa, IPv6Address):
-                    raise ConfigError("VRRP group {0} uses IPv4 but its hello-source-address is IPv6".format(group["name"]))
-            if group["peer_address"]:
-                pa = ip_address(group["peer_address"])
-                if isinstance(pa, IPv6Address):
-                    raise ConfigError("VRRP group {0} uses IPv4 but its peer-address is IPv6".format(group["name"]))
-
-        if vaddrs6:
-            if group["hello_source"]:
-                hsa = ip_address(group["hello_source"])
-                if isinstance(hsa, IPv4Address):
-                    raise ConfigError("VRRP group {0} uses IPv6 but its hello-source-address is IPv4".format(group["name"]))
-            if group["peer_address"]:
-                pa = ip_address(group["peer_address"])
-                if isinstance(pa, IPv4Address):
-                    raise ConfigError("VRRP group {0} uses IPv6 but its peer-address is IPv4".format(group["name"]))
-
-        # Warn the user about the deprecated mode-force option
-        if group['script_mode_force']:
-            print("""Warning: "transition-script mode-force" VRRP option is deprecated and will be removed in VyOS 1.4.""")
-            print("""It's no longer necessary, so you can safely remove it from your config now.""")
-
-    # Disallow same VRID on multiple interfaces
-    _groups = sorted(vrrp_groups, key=(lambda x: x["interface"]))
-    count = len(_groups) - 1
-    index = 0
-    while (index < count):
-        if (_groups[index]["vrid"] == _groups[index + 1]["vrid"]) and (_groups[index]["interface"] == _groups[index + 1]["interface"]):
-            raise ConfigError("VRID {0} is used in groups {1} and {2} that both use interface {3}. Groups on the same interface must use different VRIDs".format(
-              _groups[index]["vrid"], _groups[index]["name"], _groups[index + 1]["name"], _groups[index]["interface"]))
-        else:
-            index += 1
+            # Warn the user about the deprecated mode-force option
+            if 'transition_script' in group_config and 'mode_force' in group_config['transition_script']:
+                print("""Warning: "transition-script mode-force" VRRP option is deprecated and will be removed in VyOS 1.4.""")
+                print("""It's no longer necessary, so you can safely remove it from your config now.""")
 
     # Check sync groups
-    vrrp_group_names = list(map(lambda x: x["name"], vrrp_groups))
+    if 'sync_group' in vrrp:
+        for sync_group, sync_config in vrrp['sync_group'].items():
+            if 'member' in sync_config:
+                for member in sync_config['member']:
+                    if member not in vrrp['group']:
+                        raise ConfigError(f'VRRP sync-group "{sync_group}" refers to VRRP group "{member}", '\
+                                          'but it does not exist!')
 
-    for sync_group in sync_groups:
-        for m in sync_group["members"]:
-            if not (m in vrrp_group_names):
-                raise ConfigError("VRRP sync-group {0} refers to VRRP group {1}, but group {1} does not exist".format(sync_group["name"], m))
+def generate(vrrp):
+    if not vrrp:
+        return None
 
-
-def generate(data):
-    vrrp_groups, sync_groups = data
-
-    # Remove disabled groups from the sync group member lists
-    for sync_group in sync_groups:
-        for member in sync_group["members"]:
-            g = list(filter(lambda x: x["name"] == member, vrrp_groups))[0]
-            if g["disable"]:
-                print("Warning: ignoring disabled VRRP group {0} in sync-group {1}".format(g["name"], sync_group["name"]))
-    # Filter out disabled groups
-    vrrp_groups = list(filter(lambda x: x["disable"] is not True, vrrp_groups))
-
-    render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl',
-            {"groups": vrrp_groups, "sync_groups": sync_groups})
-    render(VRRP.location['daemon'], 'vrrp/daemon.tmpl', {})
+    render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl', vrrp)
     return None
 
+def apply(vrrp):
+    service_name = 'keepalived.service'
+    if not vrrp:
+        call(f'systemctl stop {service_name}')
+        return None
 
-def apply(data):
-    vrrp_groups, sync_groups = data
-    if vrrp_groups:
-        # safely rename a temporary file with configuration dict
-        try:
-            dict_file = Path("{}.temp".format(VRRP.location['vyos']))
-            dict_file.rename(Path(VRRP.location['vyos']))
-        except Exception as err:
-            print("Unable to rename the file with keepalived config for FIFO pipe: {}".format(err))
-
-        if not VRRP.is_running():
-            print("Starting the VRRP process")
-            ret = call("systemctl restart keepalived.service")
-        else:
-            print("Reloading the VRRP process")
-            ret = call("systemctl reload keepalived.service")
-
-        if ret != 0:
-            raise ConfigError("keepalived failed to start")
-    else:
-        # VRRP is removed in the commit
-        print("Stopping the VRRP process")
-        call("systemctl stop keepalived.service")
-        os.unlink(VRRP.location['daemon'])
-
+    call(f'systemctl restart {service_name}')
     return None
-
 
 if __name__ == '__main__':
     try:
@@ -270,5 +154,5 @@ if __name__ == '__main__':
         generate(c)
         apply(c)
     except ConfigError as e:
-        print("VRRP error: {0}".format(str(e)))
+        print(e)
         exit(1)
