@@ -184,45 +184,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <node name="transition-script">
-                <properties>
-                  <help>VRRP transition scripts</help>
-                </properties>
-                <children>
-                  <leafNode name="master">
-                    <properties>
-                      <help>Script to run on VRRP state transition to master</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="backup">
-                    <properties>
-                      <help>Script to run on VRRP state transition to backup</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fault">
-                    <properties>
-                      <help>Script to run on VRRP state transition to fault</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="stop">
-                    <properties>
-                      <help>Script to run on VRRP state transition to stop</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/vrrp-transition-script.xml.i>
               <leafNode name="virtual-address">
                 <properties>
                   <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
@@ -293,45 +255,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              <node name="transition-script">
-                <properties>
-                  <help>VRRP transition scripts</help>
-                </properties>
-                <children>
-                  <leafNode name="master">
-                    <properties>
-                      <help>Script to run on VRRP state transition to master</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="backup">
-                    <properties>
-                      <help>Script to run on VRRP state transition to backup</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fault">
-                    <properties>
-                      <help>Script to run on VRRP state transition to fault</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="stop">
-                    <properties>
-                      <help>Script to run on VRRP state transition to stop</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/vrrp-transition-script.xml.i>
             </children>
           </tagNode>
         </children>
