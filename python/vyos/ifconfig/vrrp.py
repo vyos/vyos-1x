@@ -37,7 +37,6 @@ class VRRP(object):
         'state':    '/tmp/keepalived.data',
         'stats':    '/tmp/keepalived.stats',
         'json':     '/tmp/keepalived.json',
-        'daemon':   '/etc/default/keepalived',
         'config':   '/run/keepalived/keepalived.conf',
         'vyos':     '/run/keepalived/keepalived_config.dict',
     }

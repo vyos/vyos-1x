@@ -231,7 +231,6 @@ def generate(data):
 
     render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl',
             {"groups": vrrp_groups, "sync_groups": sync_groups})
-    render(VRRP.location['daemon'], 'vrrp/daemon.tmpl', {})
     return None
 
 
