@@ -10,8 +10,7 @@ global_defs {
 }
 
 {% for group in groups %}
-
-{% if group.health_check_script %}
+{%   if group.health_check_script is defined and group.health_check_script is not none %}
 vrrp_script healthcheck_{{ group.name }} {
     script "{{ group.health_check_script }}"
     interval {{ group.health_check_interval }}
@@ -19,88 +18,78 @@ vrrp_script healthcheck_{{ group.name }} {
     rise 1
 
 }
-{% endif %}
+{%   endif %}
 
 vrrp_instance {{ group.name }} {
-    {% if group.description %}
-    # {{ group.description }}
-    {% endif %}
-
+    {{ '# ' ~ group.description if group.description is defined }}
     state BACKUP
     interface {{ group.interface }}
     virtual_router_id {{ group.vrid }}
     priority {{ group.priority }}
     advert_int {{ group.advertise_interval }}
-
-    {% if group.preempt %}
+{%   if group.preempt is defined and group.preempt is not none %}
     preempt_delay {{ group.preempt_delay }}
-    {% else %}
+{%   else %}
     nopreempt
-    {% endif %}
-
-    {% if group.peer_address %}
+{%   endif %}
+{%   if group.peer_address is defined and group.peer_address is not none %}
     unicast_peer { {{ group.peer_address }} }
-    {% endif %}
-
-    {% if group.hello_source %}
-      {% if group.peer_address %}
-      unicast_src_ip {{ group.hello_source }}
-      {% else %}
-      mcast_src_ip {{ group.hello_source }}
-      {% endif %}
-    {% endif %}
-
-    {% if group.use_vmac and group.peer_address %}
-      use_vmac {{group.interface}}v{{group.vrid}}
-      vmac_xmit_base
-    {% elif group.use_vmac %}
-      use_vmac {{group.interface}}v{{group.vrid}}
-    {% endif %}
-
-    {% if group.auth_password %}
-      authentication {
+{%   endif %}
+{%   if group.hello_source is defined and group.hello_source is not none %}
+{%     if group.peer_address is defined and group.peer_address is not none %}
+    unicast_src_ip {{ group.hello_source }}
+{%     else %}
+    mcast_src_ip {{ group.hello_source }}
+{%     endif %}
+{%   endif %}
+{%   if group.use_vmac is defined and group.peer_address is defined %}
+    use_vmac {{ group.interface }}v{{ group.vrid }}
+    vmac_xmit_base
+{%   elif group.use_vmac is defined %}
+    use_vmac {{ group.interface }}v{{ group.vrid }}
+{%   endif %}
+{%   if group.auth_password is defined and group.auth_password is not none %}
+    authentication {
         auth_pass "{{ group.auth_password }}"
         auth_type {{ group.auth_type }}
-      }
-    {% endif %}
-
+    }
+{%   endif %}
+{%   if group.virtual_addresses is defined and group.virtual_addresses is not none %}
     virtual_ipaddress {
-    {% for addr in group.virtual_addresses %}
+{%     for addr in group.virtual_addresses %}
         {{ addr }}
-    {% endfor %}
+{%     endfor %}
     }
-
-    {% if group.virtual_addresses_excluded %}
+{%   endif %}
+{%   if group.virtual_addresses_excluded is defined and group.virtual_addresses_excluded is not none %}
     virtual_ipaddress_excluded {
-    {% for addr in group.virtual_addresses_excluded %}
+{%     for addr in group.virtual_addresses_excluded %}
         {{ addr }}
-    {% endfor %}
+{%     endfor %}
     }
-    {% endif %}
-
-    {% if group.health_check_script %}
+{%   endif %}
+{%   if group.health_check_script is defined and group.health_check_script is not none %}
     track_script {
         healthcheck_{{ group.name }}
     }
-    {% endif %}
+{%   endif %}
 }
-
 {% endfor %}
 
-{% for sync_group in sync_groups %}
+{% if sync_groups is defined and sync_groups is not none %}
+{%   for sync_group in sync_groups %}
 vrrp_sync_group {{ sync_group.name }} {
-       group {
-            {% for member in sync_group.members %}
-                {{ member }}
-            {% endfor %}
-        }
-
-        {% if sync_group.conntrack_sync %}
-        {%  set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
-            notify_master "{{ vyos_helper }} master {{ sync_group.name }}"
-            notify_backup "{{ vyos_helper }} backup {{ sync_group.name }}"
-            notify_fault "{{ vyos_helper }} fault {{ sync_group.name }}"
-        {% endif %}
+    group {
+{%     for member in sync_group.members %}
+        {{ member }}
+{%     endfor %}
+    }
+{%     if sync_group.conntrack_sync %}
+{%     set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
+    notify_master "{{ vyos_helper }} master {{ sync_group.name }}"
+    notify_backup "{{ vyos_helper }} backup {{ sync_group.name }}"
+    notify_fault "{{ vyos_helper }} fault {{ sync_group.name }}"
+{%     endif %}
 }
-
-{% endfor %}
+{%   endfor %}
+{% endif %}
