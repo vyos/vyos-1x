@@ -103,10 +103,12 @@
                 </properties>
               </leafNode>
               #include <include/dhcp/domain-name.xml.i>
+              #include <include/dhcp/domain-search.xml.i>
+              #include <include/dhcp/ntp-server.xml.i>
               #include <include/dhcp/ping-check.xml.i>
-              #include <include/name-server-ipv4.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
+              #include <include/name-server-ipv4.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
                   <help>Additional shared-network parameters for DHCP server.
@@ -165,9 +167,10 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  #include <include/name-server-ipv4.xml.i>
                   #include <include/dhcp/domain-name.xml.i>
                   #include <include/dhcp/domain-search.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/name-server-ipv4.xml.i>
                   <leafNode name="enable-failover">
                     <properties>
                       <help>Enable DHCP failover support for this subnet</help>
@@ -207,19 +210,7 @@
                     </properties>
                     <defaultValue>86400</defaultValue>
                   </leafNode>
-                  <leafNode name="ntp-server">
-                    <properties>
-                      <help>IP address of NTP server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>NTP server IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp/ntp-server.xml.i>
                   #include <include/dhcp/ping-check.xml.i>
                   <leafNode name="pop-server">
                     <properties>

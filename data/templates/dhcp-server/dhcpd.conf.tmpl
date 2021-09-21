@@ -72,6 +72,12 @@ shared-network {{ network | replace('_','-') }} {
 {%     if network_config.domain_name is defined and network_config.domain_name is not none %}
     option domain-name "{{ network_config.domain_name }}";
 {%     endif %}
+{%     if network_config.domain_search is defined and network_config.domain_search is not none %}
+    option domain-search "{{ network_config.domain_search | join('", "') }}";
+{%     endif %}
+{%     if network_config.ntp_server is defined and network_config.ntp_server is not none %}
+    option ntp-servers {{ network_config.ntp_server | join(', ') }};
+{%     endif %}
 {%     if network_config.ping_check is defined %}
     ping-check true;
 {%     endif %}
@@ -87,6 +93,9 @@ shared-network {{ network | replace('_','-') }} {
     subnet {{ subnet | address_from_cidr }} netmask {{ subnet | netmask_from_cidr }} {
 {%         if subnet_config.name_server is defined and subnet_config.name_server is not none %}
         option domain-name-servers {{ subnet_config.name_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.domain_name is defined and subnet_config.domain_name is not none %}
+        option domain-name "{{ subnet_config.domain_name }}";
 {%         endif %}
 {%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
         option domain-search "{{ subnet_config.domain_search | join('", "') }}";
@@ -128,9 +137,6 @@ shared-network {{ network | replace('_','-') }} {
 {%         endif %}
 {%         if subnet_config.server_identifier is defined and subnet_config.server_identifier is not none %}
         option dhcp-server-identifier {{ subnet_config.server_identifier }};
-{%         endif %}
-{%         if subnet_config.domain_name is defined and subnet_config.domain_name is not none %}
-        option domain-name "{{ subnet_config.domain_name }}";
 {%         endif %}
 {%         if subnet_config.subnet_parameters is defined and subnet_config.subnet_parameters is not none %}
         # The following {{ subnet_config.subnet_parameters | length }} line(s) were added as
