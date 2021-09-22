@@ -154,7 +154,7 @@ def verify_pki(openvpn):
             if tls['certificate'] not in pki['certificate']:
                 raise ConfigError(f'Invalid certificate on openvpn interface {interface}')
 
-            if dict_search_args(pki, 'certificate', tls['certificate'], 'private', 'password_protected'):
+            if dict_search_args(pki, 'certificate', tls['certificate'], 'private', 'password_protected') is not None:
                 raise ConfigError(f'Cannot use encrypted private key on openvpn interface {interface}')
 
             if mode == 'server' and 'dh_params' not in tls and not is_ec_private_key(pki, tls['certificate']):
