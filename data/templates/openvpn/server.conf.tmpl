@@ -176,6 +176,8 @@ tls-version-min {{ tls.tls_version_min }}
 {%   endif %}
 {%   if tls.dh_params is defined and tls.dh_params is not none %}
 dh /run/openvpn/{{ ifname }}_dh.pem
+{%   elif mode == 'server' and tls.private_key is defined %}
+dh none
 {%   endif %}
 {%   if tls.auth_key is defined and tls.auth_key is not none %}
 {%     if mode == 'client' %}
