@@ -678,7 +678,7 @@
                 <properties>
                   <help>Specify the minimum required TLS version</help>
                   <completionHelp>
-                    <list>1.0 1.1 1.2</list>
+                    <list>1.0 1.1 1.2 1.3</list>
                   </completionHelp>
                   <valueHelp>
                     <format>1.0</format>
@@ -692,8 +692,12 @@
                     <format>1.2</format>
                     <description>TLS v1.2</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>1.3</format>
+                    <description>TLS v1.3</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>^(1.0|1.1|1.2)$</regex>
+                    <regex>^(1.0|1.1|1.2|1.3)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
