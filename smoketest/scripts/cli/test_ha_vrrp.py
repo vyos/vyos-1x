@@ -43,6 +43,10 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+        for group in groups:
+            vlan_id = group.lstrip('VLAN')
+            self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id])
+
         self.cli_delete(base_path)
         self.cli_commit()
 
