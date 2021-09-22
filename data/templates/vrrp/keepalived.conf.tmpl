@@ -23,7 +23,9 @@ vrrp_script healthcheck_{{ name }} {
 }
 {%     endif %}
 vrrp_instance {{ name }} {
-    {{ '# ' ~ group_config.description if group_config.description is defined }}
+{%     if group_config.description is defined and group_config.description is not none %}
+    # {{ group_config.description }}
+{%     endif %}
     state BACKUP
     interface {{ group_config.interface }}
     virtual_router_id {{ group_config.vrid }}
