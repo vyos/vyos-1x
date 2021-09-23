@@ -234,7 +234,6 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
         except:
             log.debug(frrconfig)
-            log.debug(cmd('sudo dmesg'))
             log.debug(cmd('sudo cat /var/log/messages'))
             log.debug(cmd('vtysh -c "show run"'))
             self.fail('Now we can hopefully see why OSPF fails!')
