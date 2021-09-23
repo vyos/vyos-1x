@@ -94,7 +94,7 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
     def test_system_user_ssh_key(self):
         ssh_user = 'ssh-test_user'
-        public_keys = 'vyos'
+        public_keys = 'vyos_test@domain-foo.com'
         type = 'ssh-rsa'
 
         self.cli_set(base_path + ['user', ssh_user, 'authentication', 'public-keys', public_keys, 'key', ssh_pubkey.replace('\n','')])
