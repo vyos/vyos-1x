@@ -80,4 +80,6 @@ if __name__ == '__main__':
         call('sudo ipsec rereadall')
         call('sudo ipsec reload')
         call('sudo swanctl -q')
+
+    exit(0)
 PYEND
