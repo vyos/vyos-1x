@@ -61,25 +61,26 @@ if __name__ == '__main__':
     new_ip = os.getenv('new_ip_address')
     old_ip = os.getenv('old_ip_address')
 
-    conf_lines = read_file(SWANCTL_CONF)
-    found = False
-    to_match = f'# dhcp:{interface}'
+    if os.path.exists(SWANCTL_CONF):
+        conf_lines = read_file(SWANCTL_CONF)
+        found = False
+        to_match = f'# dhcp:{interface}'
 
-    for i, line in enumerate(conf_lines):
-        if line.find(to_match) > 0:
-            conf_lines[i] = line.replace(old_ip, new_ip)
-            found = True
+        for i, line in enumerate(conf_lines):
+            if line.find(to_match) > 0:
+                conf_lines[i] = line.replace(old_ip, new_ip)
+                found = True
 
-    for i, line in enumerate(secrets_lines):
-        if line.find(to_match) > 0:
-            secrets_lines[i] = line.replace(old_ip, new_ip)
+        for i, line in enumerate(secrets_lines):
+            if line.find(to_match) > 0:
+                secrets_lines[i] = line.replace(old_ip, new_ip)
 
-    if found:
-        write_file(SWANCTL_CONF, conf_lines)
-        ipsec_down(old_ip)
-        call('sudo ipsec rereadall')
-        call('sudo ipsec reload')
-        call('sudo swanctl -q')
+        if found:
+            write_file(SWANCTL_CONF, conf_lines)
+            ipsec_down(old_ip)
+            call('sudo ipsec rereadall')
+            call('sudo ipsec reload')
+            call('sudo swanctl -q')
 
     exit(0)
 PYEND
