@@ -1163,16 +1163,16 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        systemd_service = f'dhcp6c@{ifname}.service'
 
         if enable and 'disable' not in self._config:
             render(config_file, 'dhcp-client/ipv6.tmpl',
                    self._config)
 
-            # We must ignore any return codes. This is required to enable DHCPv6-PD
-            # for interfaces which are yet not up and running.
-            return self._popen(f'systemctl restart dhcp6c@{ifname}.service')
+            # We must ignore any return codes. This is required to enable
+            # DHCPv6-PD for interfaces which are yet not up and running.
+            return self._popen(f'systemctl restart {systemd_service}')
         else:
-            systemd_service = f'dhcp6c@{ifname}.service'
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
             if os.path.isfile(config_file):
