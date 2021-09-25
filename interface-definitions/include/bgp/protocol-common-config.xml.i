@@ -974,6 +974,7 @@
       <children>
         #include <include/bgp/peer-group.xml.i>
         #include <include/bgp/remote-as.xml.i>
+        #include <include/source-interface.xml.i>
         <node name="v6only">
           <properties>
             <help>Enable BGP with v6 link-local only</help>
