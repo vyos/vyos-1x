@@ -960,9 +960,9 @@
         </constraint>
       </properties>
     </leafNode>
+    #include <include/generic-description.xml.i>
     #include <include/bgp/neighbor-bfd.xml.i>
     #include <include/bgp/neighbor-capability.xml.i>
-    #include <include/bgp/neighbor-description.xml.i>
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
@@ -1418,9 +1418,9 @@
         #include <include/bgp/neighbor-afi-l2vpn-evpn.xml.i>
       </children>
     </node>
+    #include <include/generic-description.xml.i>
     #include <include/bgp/neighbor-bfd.xml.i>
     #include <include/bgp/neighbor-capability.xml.i>
-    #include <include/bgp/neighbor-description.xml.i>
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
