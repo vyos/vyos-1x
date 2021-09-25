@@ -22,6 +22,7 @@
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-vpn.xml.i>
   </children>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <tagNode name="ipv6">
   <properties>
@@ -44,6 +45,7 @@
     #include <include/bgp/afi-ipv4-ipv6-common.xml.i>
     #include <include/bgp/afi-ipv4-ipv6-vpn.xml.i>
   </children>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <node name="l2vpn">
   <properties>
