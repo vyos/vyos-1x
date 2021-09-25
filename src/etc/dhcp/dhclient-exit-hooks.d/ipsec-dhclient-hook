@@ -35,18 +35,13 @@ fi
 python3 - <<PYEND
 import os
 import re
+
 from vyos.util import call
 from vyos.util import cmd
+from vyos.util import read_file
+from vyos.util import write_file
 
 SWANCTL_CONF="/etc/swanctl/swanctl.conf"
-
-def getlines(file):
-    with open(file, 'r') as f:
-        return f.readlines()
-
-def writelines(file, lines):
-    with open(file, 'w') as f:
-        f.writelines(lines)
 
 def ipsec_down(ip_address):
     # This prevents the need to restart ipsec and kill all active connections, only the stale connection is closed
@@ -66,7 +61,7 @@ if __name__ == '__main__':
     new_ip = os.getenv('new_ip_address')
     old_ip = os.getenv('old_ip_address')
 
-    conf_lines = getlines(SWANCTL_CONF)
+    conf_lines = read_file(SWANCTL_CONF)
     found = False
     to_match = f'# dhcp:{interface}'
 
@@ -80,7 +75,7 @@ if __name__ == '__main__':
             secrets_lines[i] = line.replace(old_ip, new_ip)
 
     if found:
-        writelines(SWANCTL_CONF, conf_lines)
+        write_file(SWANCTL_CONF, conf_lines)
         ipsec_down(old_ip)
         call('sudo ipsec rereadall')
         call('sudo ipsec reload')
