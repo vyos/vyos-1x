@@ -858,8 +858,18 @@ if __name__ == '__main__':
 
         elif args.action == 'show':
             if args.ca:
-                show_certificate_authority(None if args.ca == 'all' else args.ca)
+                ca_name = None if args.ca == 'all' else args.ca
+                if ca_name:
+                    if not conf.exists(['pki', 'ca', ca_name]):
+                        print(f'CA "{ca_name}" does not exist!')
+                        exit(1)
+                show_certificate_authority(ca_name)
             elif args.certificate:
+                cert_name = None if args.certificate == 'all' else args.certificate
+                if cert_name:
+                    if not conf.exists(['pki', 'certificate', cert_name]):
+                        print(f'Certificate "{cert_name}" does not exist!')
+                        exit(1)
                 show_certificate(None if args.certificate == 'all' else args.certificate)
             elif args.crl:
                 show_crl(None if args.crl == 'all' else args.crl)
