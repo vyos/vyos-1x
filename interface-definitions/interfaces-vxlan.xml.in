@@ -31,8 +31,10 @@
                 <description>Multicast IPv6 group address</description>
               </valueHelp>
               <constraint>
-                <validator name="ip-address"/>
+                <validator name="ipv4-multicast"/>
+                <validator name="ipv6-multicast"/>
               </constraint>
+              <constraintErrorMessage>Multicast IPv4/IPv6 address required</constraintErrorMessage>
             </properties>
           </leafNode>
           #include <include/interface/ipv4-options.xml.i>
