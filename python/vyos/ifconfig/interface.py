@@ -27,8 +27,6 @@ from netifaces import ifaddresses
 # this is not the same as socket.AF_INET/INET6
 from netifaces import AF_INET
 from netifaces import AF_INET6
-from uuid import uuid3
-from uuid import NAMESPACE_DNS
 
 from vyos import ConfigError
 from vyos.configdict import list_diff
@@ -459,11 +457,22 @@ class Interface(Control):
         >>> Interface('eth0').get_mac()
         '00:50:ab:cd:ef:00'
         """
-        # calculate a UUID based on the interface name - this is as predictable
-        # as an interface MAC address and thus can be used in the same way
-        tmp = uuid3(NAMESPACE_DNS, self.ifname)
-        # take the last 48 bits from the UUID string
-        tmp = str(tmp).split('-')[-1]
+        from hashlib import sha256
+
+        # Get processor ID number
+        cpu_id = self._cmd('sudo dmidecode -t 4 | grep ID | head -n1 |  sed "s/.*ID://;s/ //g"')
+        # Get system eth0 base MAC address - every system has eth0
+        eth0_mac = Interface('eth0').get_mac()
+
+        sha = sha256()
+        # Calculate SHA256 sum based on the CPU ID number, eth0 mac address and
+        # this interface identifier - this is as predictable as an interface
+        # MAC address and thus can be used in the same way
+        sha.update(cpu_id.encode())
+        sha.update(eth0_mac.encode())
+        sha.update(self.ifname.encode())
+        # take the most significant 48 bits from the SHA256 string
+        tmp = sha.hexdigest()[:12]
         # Convert pseudo random string into EUI format which now represents a
         # MAC address
         tmp = EUI(tmp).value
