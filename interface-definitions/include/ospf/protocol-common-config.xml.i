@@ -435,19 +435,7 @@
     </leafNode>
   </children>
 </tagNode>
-<node name="log-adjacency-changes">
-  <properties>
-    <help>Log adjacency state changes</help>
-  </properties>
-  <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Log all state changes</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/ospf/log-adjacency-changes.xml.i>
 <node name="max-metric">
   <properties>
     <help>OSPF maximum and infinite-distance metric</help>

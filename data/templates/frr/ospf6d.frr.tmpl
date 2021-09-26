@@ -76,6 +76,9 @@ router ospf6
  distance ospf6 {{ 'intra-area ' + distance.ospfv3.intra_area if distance.ospfv3.intra_area is defined }} {{ 'inter-area ' + distance.ospfv3.inter_area if distance.ospfv3.inter_area is defined }} {{ 'external ' + distance.ospfv3.external if distance.ospfv3.external is defined }}
 {%   endif %}
 {% endif %}
+{% if log_adjacency_changes is defined %}
+ log-adjacency-changes {{ "detail" if log_adjacency_changes.detail is defined }}
+{% endif %}
 {% if parameters is defined and parameters is not none %}
 {%   if parameters.router_id is defined and parameters.router_id is not none %}
  ospf6 router-id {{ parameters.router_id }}

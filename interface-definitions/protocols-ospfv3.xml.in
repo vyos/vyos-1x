@@ -186,6 +186,7 @@
               #include <include/isis/passive.xml.i>
             </children>
           </tagNode>
+          #include <include/ospf/log-adjacency-changes.xml.i>
           <node name="parameters">
             <properties>
               <help>OSPFv3 specific parameters</help>
