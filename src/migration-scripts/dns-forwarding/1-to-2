@@ -67,8 +67,14 @@ if config.exists(base + ['listen-on']):
         # retrieve corresponding interface addresses in CIDR format
         # those need to be converted in pure IP addresses without network information
         path = ['interfaces', section, intf, 'address']
-        for addr in config.return_values(path):
-            listen_addr.append( ip_interface(addr).ip )
+        try:
+            for addr in config.return_values(path):
+                listen_addr.append( ip_interface(addr).ip )
+        except:
+            # Some interface types do not use "address" option (e.g. OpenVPN)
+            # and may not even have a fixed address
+            print("Could not retrieve the address of the interface {} from the config".format(intf))
+            print("You will need to update your DNS forwarding configuration manually")
 
     for addr in listen_addr:
         config.set(base + ['listen-address'], value=addr, replace=False)
