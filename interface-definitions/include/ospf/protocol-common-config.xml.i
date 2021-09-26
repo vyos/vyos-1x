@@ -364,6 +364,9 @@
     <leafNode name="area">
       <properties>
         <help>Enable OSPF on this interface</help>
+        <completionHelp>
+          <path>protocols ospf area</path>
+        </completionHelp>
         <valueHelp>
           <format>u32</format>
           <description>OSPF area ID as decimal notation</description>
