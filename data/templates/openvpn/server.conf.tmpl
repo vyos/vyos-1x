@@ -76,7 +76,7 @@ server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} nopool
 {%     if server.push_route is defined and server.push_route is not none %}
 {%       for route, route_config in server.push_route.items() %}
 {%         if route | is_ipv4 %}
-push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }} {{ subnet | first_host_address }} {{ route_config.metric if route_config.metric is defined else "0" }}"
+push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }}{% if route_config.metric is defined %} {{ subnet | first_host_address }} {{ route_config.metric }}{% endif %}"
 {%         elif route | is_ipv6 %}
 push "route-ipv6 {{ route }}"
 {%         endif %}
