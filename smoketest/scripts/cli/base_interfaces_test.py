@@ -359,8 +359,6 @@ class BasicInterfaceTest:
 
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
-                    for address in self._test_addr:
-                        self.cli_set(base + ['address', address])
                     self.cli_set(base + ['ingress-qos', '0:1'])
                     self.cli_set(base + ['egress-qos', '1:6'])
 
@@ -385,9 +383,6 @@ class BasicInterfaceTest:
                         self.assertEqual(from_key, 1)
                         self.assertEqual(to_key, 6)
 
-                    for address in self._test_addr:
-                        self.assertTrue(is_intf_addr_assigned(vif, address))
-
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
 
             new_ingress_qos_from = 1
@@ -398,8 +393,6 @@ class BasicInterfaceTest:
                 base = self._base_path + [interface]
                 for vlan in self._vlan_range:
                     base = self._base_path + [interface, 'vif', vlan]
-                    self.cli_delete(base + ['ingress-qos', '0:1'])
-                    self.cli_delete(base + ['egress-qos', '1:6'])
                     self.cli_set(base + ['ingress-qos', f'{new_ingress_qos_from}:{new_ingress_qos_to}'])
                     self.cli_set(base + ['egress-qos', f'{new_egress_qos_from}:{new_egress_qos_to}'])
 
