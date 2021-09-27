@@ -286,30 +286,12 @@ class BasicInterfaceTest:
                     base = self._base_path + [interface, 'vif', vlan]
                     for address in self._test_addr:
                         self.cli_set(base + ['address', address])
-                    self.cli_set(base + ['ingress-qos', '0:1'])
-                    self.cli_set(base + ['egress-qos', '1:6'])
 
             self.cli_commit()
 
             for intf in self._interfaces:
                 for vlan in self._vlan_range:
                     vif = f'{intf}.{vlan}'
-                    tmp = get_interface_config(f'{vif}')
-
-                    tmp2 = dict_search('linkinfo.info_data.ingress_qos', tmp)
-                    for item in tmp2 if tmp2 else []:
-                        from_key = item['from']
-                        to_key = item['to']
-                        self.assertEqual(from_key, 0)
-                        self.assertEqual(to_key, 1)
-
-                    tmp2 = dict_search('linkinfo.info_data.egress_qos', tmp)
-                    for item in tmp2 if tmp2 else []:
-                        from_key = item['from']
-                        to_key = item['to']
-                        self.assertEqual(from_key, 1)
-                        self.assertEqual(to_key, 6)
-
                     for address in self._test_addr:
                         self.assertTrue(is_intf_addr_assigned(vif, address))
 
