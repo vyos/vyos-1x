@@ -120,6 +120,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_BIN_DIR)
 	cp -r smoketest/bin/* $(DIR)/$(VYOS_BIN_DIR)
 
+	# Install udev script
+	mkdir -p $(DIR)/usr/lib/udev
+	cp src/helpers/vyos_net_name $(DIR)/usr/lib/udev
+
 ifeq ($(DEB_TARGET_ARCH),amd64)
 	# We only install XDP on amd64 systems
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)/xdp
