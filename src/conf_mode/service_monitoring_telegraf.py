@@ -18,19 +18,23 @@ import os
 import json
 
 from sys import exit
+from shutil import rmtree
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
 from vyos.util import chown
 from vyos.util import cmd
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 
-cache_dir = '/run/telegraf/.cache'
-config_telegraf = '/run/telegraf/vyos-telegraf.conf'
+base_dir = '/run/telegraf'
+cache_dir = f'/etc/telegraf/.cache'
+config_telegraf = f'{base_dir}/vyos-telegraf.conf'
 custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
 systemd_telegraf_service = '/etc/systemd/system/vyos-telegraf.service'
@@ -59,18 +63,20 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['service', 'monitoring']
+    base = ['service', 'monitoring', 'telegraf']
+    if not conf.exists(base):
+        return None
+
     monitoring = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
-    if monitoring:
-        # Set default value for bucket if not configured
-        if 'bucket' not in monitoring:
-            monitoring['bucket'] = cmd('cat /etc/hostname')
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    monitoring = dict_merge(default_values, monitoring)
 
-        # Get nftables chains
-        monitoring['nft_chains'] = get_nft_filter_chains()
-        monitoring['custom_scripts_dir'] = custom_scripts_dir
+    monitoring['nft_chains'] = get_nft_filter_chains()
+    monitoring['custom_scripts_dir'] = custom_scripts_dir
 
     return monitoring
 
@@ -79,8 +85,10 @@ def verify(monitoring):
     if not monitoring:
         return None
 
-    if 'login' not in monitoring['authentication'] or 'token' not in monitoring['authentication']:
-        raise ConfigError(f'Authentication "login and token" are mandatory!')
+    if 'authentication' not in monitoring or \
+       'organization' not in monitoring['authentication'] or \
+       'token' not in monitoring['authentication']:
+        raise ConfigError(f'Authentication "organization and token" are mandatory!')
 
     if 'url' not in monitoring:
         raise ConfigError(f'Monitoring "url" is mandatory!')
@@ -89,22 +97,23 @@ def verify(monitoring):
 
 def generate(monitoring):
     if not monitoring:
-        # Delete config file
-        if os.path.isfile(config_telegraf):
-            os.unlink(config_telegraf)
-        if os.path.isfile(systemd_override):
-            os.unlink(systemd_override)
-        if os.path.isfile(syslog_telegraf):
-            os.unlink(syslog_telegraf)
+        # Delete config and systemd files
+        config_files = [config_telegraf, systemd_telegraf_service, systemd_override, syslog_telegraf]
+        for file in config_files:
+            if os.path.isfile(file):
+                os.unlink(file)
 
+        # Delete old directories
+        if os.path.isdir(cache_dir):
+            rmtree(cache_dir, ignore_errors=True)
 
         return None
 
     # Create telegraf cache dir
     if not os.path.exists(cache_dir):
-        os.mkdir(cache_dir)
+        os.makedirs(cache_dir)
 
-    chown(cache_dir, 'telegraf', 'vyattacfg')
+    chown(cache_dir, 'telegraf', 'telegraf')
 
     # Create systemd override dir
     if not os.path.exists(systemd_telegraf_override_dir):
@@ -119,6 +128,8 @@ def generate(monitoring):
     render(systemd_telegraf_service, 'monitoring/systemd_vyos_telegraf_service.tmpl', monitoring)
     render(systemd_override, 'monitoring/override.conf.tmpl', monitoring, permission=0o640)
     render(syslog_telegraf, 'monitoring/syslog_telegraf.tmpl', monitoring)
+
+    chown(base_dir, 'telegraf', 'telegraf')
 
     return None
 
