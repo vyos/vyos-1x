@@ -90,6 +90,9 @@ shared-network {{ network | replace('_','-') }} {
 {%     endif %}
 {%     if network_config.subnet is defined and network_config.subnet is not none %}
 {%       for subnet, subnet_config in network_config.subnet.items() %}
+{%         if subnet_config.description is defined and subnet_config.description is not none %}
+    # {{ subnet_config.description }}
+{%         endif %}
     subnet {{ subnet | address_from_cidr }} netmask {{ subnet | netmask_from_cidr }} {
 {%         if subnet_config.name_server is defined and subnet_config.name_server is not none %}
         option domain-name-servers {{ subnet_config.name_server | join(', ') }};
