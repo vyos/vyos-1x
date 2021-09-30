@@ -45,7 +45,7 @@ class Ethtool:
     _ring_buffers = { }
     _ring_buffers_max = { }
     _driver_name = None
-    _auto_negotiation = None
+    _auto_negotiation = False
     _flow_control = False
     _flow_control_enabled = None
 
@@ -83,10 +83,6 @@ class Ethtool:
                 # we are only interested in off or on
                 tmp = line.split()[-1]
                 self._auto_negotiation = bool(tmp == 'on')
-
-        if self._auto_negotiation == None:
-            raise ValueError(f'Could not determine auto-negotiation settings '\
-                             f'for interface {ifname}!')
 
         # Now populate features dictionaty
         out, err = popen(f'ethtool --show-features {ifname}')
