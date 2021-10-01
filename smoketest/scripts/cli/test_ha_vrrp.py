@@ -81,6 +81,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'priority 100', config) # default value
             self.assertIn(f'advert_int 1', config) # default value
             self.assertIn(f'preempt_delay 0', config) # default value
+            self.assertNotIn(f'use_vmac', config)
             self.assertIn(f'    {vip}', config)
 
     def test_02_simple_options(self):
@@ -158,6 +159,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
             self.assertIn(f'interface {vrrp_interface}.{vlan_id}', config)
             self.assertIn(f'virtual_router_id {vlan_id}', config)
+            self.assertNotIn(f'use_vmac', config)
             self.assertIn(f'    {vip}', config)
 
         config = getConfig(f'vrrp_sync_group {sync_group}')
@@ -166,4 +168,4 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'{group}', config)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
