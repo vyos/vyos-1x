@@ -57,8 +57,6 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         vrrp['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-    import pprint
-    pprint.pprint(vrrp)
     return vrrp
 
 def verify(vrrp):
