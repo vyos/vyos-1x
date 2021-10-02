@@ -1304,7 +1304,7 @@ class Interface(Control):
             # unbinding will call 'ip link set dev eth0 nomaster' which will
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
-            self.set_vrf(config.get('vrf', None))
+            self.set_vrf(config.get('vrf', ''))
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
