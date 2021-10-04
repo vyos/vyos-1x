@@ -6,7 +6,7 @@
         <properties>
           <help>Show contents of current master log file</help>
         </properties>
-        <command>/bin/journalctl</command>
+        <command>journalctl --boot</command>
         <children>
           <leafNode name="all">
             <properties>
@@ -18,7 +18,7 @@
             <properties>
               <help>Show listing of authorization attempts</help>
             </properties>
-            <command>/bin/journalctl --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
+            <command>journalctl --boot --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>
@@ -30,7 +30,7 @@
             <properties>
               <help>Show log for Conntrack-sync</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | grep -e conntrackd</command>
+            <command>journalctl --boot --unit conntrackd.service</command>
           </leafNode>
           <leafNode name="dhcp">
             <properties>
@@ -89,7 +89,7 @@
             <properties>
               <help>Show log for HTTPs</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e nginx</command>
+            <command>journalctl --boot --unit nginx.service</command>
           </leafNode>
           <tagNode name="image">
             <properties>
@@ -133,7 +133,7 @@
             <properties>
               <help>Show log for LLDP</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e lldpd</command>
+            <command>journalctl --boot --unit lldpd.service</command>
           </leafNode>
           <leafNode name="nat">
             <properties>
@@ -141,17 +141,28 @@
             </properties>
             <command>egrep -i "kernel:.*\[NAT-[A-Z]{3,}-[0-9]+(-MASQ)?\]" $(find /var/log -maxdepth 1 -type f -name messages\* | sort -t. -k2nr)</command>
           </leafNode>
-          <leafNode name="openvpn">
+          <node name="openvpn">
             <properties>
               <help>Show log for OpenVPN</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e openvpn</command>
-          </leafNode>
+            <command>journalctl --boot --unit openvpn@*.service</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show OpenVPN log on specific interface</help>
+                  <completionHelp>
+                    <path>interfaces openvpn</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --boot --unit openvpn@$5.service</command>
+              </tagNode>
+            </children>
+          </node>
           <leafNode name="snmp">
             <properties>
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e snmpd</command>
+            <command>journalctl --boot --unit snmpd.service</command>
           </leafNode>
           <tagNode name="tail">
             <properties>
@@ -195,13 +206,13 @@
                 <properties>
                   <help>Show log for PPTP</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e accel-pptp -e ppp</command>
+                <command>journalctl --boot --unit accel-ppp@pptp.service</command>
               </leafNode>
               <leafNode name="sstp">
                 <properties>
                   <help>Show log for SSTP</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e accel-sstp -e ppp</command>
+                <command>journalctl --boot --unit accel-ppp@sstp.service</command>
               </leafNode>
             </children>
           </node>
@@ -209,13 +220,13 @@
             <properties>
               <help>Show log for Virtual Router Redundancy Protocol (VRRP)</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e Keepalived_vrrp</command>
+            <command>journalctl --boot --unit keepalived.service</command>
           </leafNode>
           <leafNode name="webproxy">
             <properties>
               <help>Show log for Webproxy</help>
             </properties>
-            <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "squid"</command>
+            <command>journalctl --boot --unit squid.service</command>
           </leafNode>
         </children>
       </node>
