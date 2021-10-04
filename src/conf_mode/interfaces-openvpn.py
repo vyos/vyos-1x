@@ -51,6 +51,7 @@ user = 'openvpn'
 group = 'openvpn'
 
 cfg_file = '/run/openvpn/{ifname}.conf'
+service_file = '/run/systemd/system/openvpn@{ifname}.service.d/20-override.conf'
 
 def checkCertHeader(header, filename):
     """
@@ -434,6 +435,11 @@ def generate(openvpn):
     if os.path.isdir(ccd_dir):
         rmtree(ccd_dir, ignore_errors=True)
 
+    # Remove systemd directories with overrides
+    service_dir = os.path.dirname(service_file.format(**openvpn))
+    if os.path.isdir(service_dir):
+        rmtree(service_dir, ignore_errors=True)
+
     if 'deleted' in openvpn or 'disable' in openvpn:
         return None
 
@@ -476,6 +482,12 @@ def generate(openvpn):
     # see https://phabricator.vyos.net/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+
+    # Render 20-override.conf for OpenVPN service
+    render(service_file.format(**openvpn), 'openvpn/service-override.conf.tmpl', openvpn,
+           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+    # Reload systemd services config to apply an override
+    call(f'systemctl daemon-reload')
 
     return None
 
