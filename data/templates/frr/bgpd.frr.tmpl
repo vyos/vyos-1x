@@ -230,10 +230,8 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {% else %}
  no bgp ebgp-requires-policy
 {% endif %}
-{% if parameters is defined and parameters.default is defined and parameters.default.no_ipv4_unicast is defined %}
 {#   Option must be set before any neighbor - see https://phabricator.vyos.net/T3463 #}
  no bgp default ipv4-unicast
-{% endif %}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
 {% if address_family is defined and address_family is not none %}

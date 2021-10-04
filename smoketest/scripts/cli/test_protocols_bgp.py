@@ -221,8 +221,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # Default local preference (higher = more preferred, default value is 100)
         self.cli_set(base_path + ['parameters', 'default', 'local-pref', local_pref])
-        # Deactivate IPv4 unicast for a peer by default
-        self.cli_set(base_path + ['parameters', 'default', 'no-ipv4-unicast'])
         self.cli_set(base_path + ['parameters', 'graceful-restart', 'stalepath-time', stalepath_time])
         self.cli_set(base_path + ['parameters', 'graceful-shutdown'])
         self.cli_set(base_path + ['parameters', 'ebgp-requires-policy'])
@@ -246,7 +244,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
-        self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
