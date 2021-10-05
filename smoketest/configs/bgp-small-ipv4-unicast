@@ -1,6 +1,6 @@
 interfaces {
     ethernet eth0 {
-        address 192.0.2.1
+        address 192.0.2.1/24
         address 2001:db8::1/64
     }
     loopback lo {
