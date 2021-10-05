@@ -141,7 +141,7 @@
           </tagNode>
           <leafNode name="restart">
             <properties>
-              <help>Mount a volume into the container</help>
+              <help>Restart options for container</help>
               <completionHelp>
                 <list>no on-failure always</list>
               </completionHelp>
