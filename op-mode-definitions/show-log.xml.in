@@ -6,7 +6,7 @@
         <properties>
           <help>Show contents of current master log file</help>
         </properties>
-        <command>journalctl --boot</command>
+        <command>journalctl --no-hostname --boot</command>
         <children>
           <leafNode name="all">
             <properties>
@@ -18,7 +18,7 @@
             <properties>
               <help>Show listing of authorization attempts</help>
             </properties>
-            <command>journalctl --boot --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
+            <command>journalctl --no-hostname --boot --quiet SYSLOG_FACILITY=10 SYSLOG_FACILITY=4</command>
           </leafNode>
           <leafNode name="cluster">
             <properties>
@@ -30,7 +30,7 @@
             <properties>
               <help>Show log for Conntrack-sync</help>
             </properties>
-            <command>journalctl --boot --unit conntrackd.service</command>
+            <command>journalctl --no-hostname --boot --unit conntrackd.service</command>
           </leafNode>
           <node name="dhcp">
             <properties>
@@ -41,13 +41,13 @@
                 <properties>
                   <help>Show log for DHCP server</help>
                 </properties>
-                <command>journalctl --boot --unit isc-dhcp-server.service</command>
+                <command>journalctl --no-hostname --boot --unit isc-dhcp-server.service</command>
               </node>
               <node name="client">
                 <properties>
                   <help>Show DHCP client logs</help>
                 </properties>
-                <command>journalctl --boot --unit "dhclient@*.service"</command>
+                <command>journalctl --no-hostname --boot --unit "dhclient@*.service"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -56,7 +56,7 @@
                         <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
                       </completionHelp>
                     </properties>
-                    <command>journalctl --boot --unit "dhclient@$6.service"</command>
+                    <command>journalctl --no-hostname --boot --unit "dhclient@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -71,13 +71,13 @@
                 <properties>
                   <help>Show log for DHCPv6 server</help>
                 </properties>
-                <command>journalctl --boot --unit isc-dhcp-server6.service</command>
+                <command>journalctl --no-hostname --boot --unit isc-dhcp-server6.service</command>
               </node>
               <node name="client">
                 <properties>
                   <help>Show DHCPv6 client logs</help>
                 </properties>
-                <command>journalctl --boot --unit "dhcp6c@*.service"</command>
+                <command>journalctl --no-hostname --boot --unit "dhcp6c@*.service"</command>
                 <children>
                   <tagNode name="interface">
                     <properties>
@@ -86,7 +86,7 @@
                         <script>${vyos_completion_dir}/list_interfaces.py</script>
                       </completionHelp>
                     </properties>
-                    <command>journalctl --boot --unit "dhcp6c@$6.service"</command>
+                    <command>journalctl --no-hostname --boot --unit "dhcp6c@$6.service"</command>
                   </tagNode>
                 </children>
               </node>
@@ -143,7 +143,7 @@
             <properties>
               <help>Show log for HTTPs</help>
             </properties>
-            <command>journalctl --boot --unit nginx.service</command>
+            <command>journalctl --no-hostname --boot --unit nginx.service</command>
           </leafNode>
           <tagNode name="image">
             <properties>
@@ -173,7 +173,7 @@
                     <list>&lt;NUMBER&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>tail -n "$6"  /lib/live/mount/persistence/boot/$4/rw/var/log/messages | ${VYATTA_PAGER:-cat}</command>
+                <command>tail -n "$6" /lib/live/mount/persistence/boot/$4/rw/var/log/messages | ${VYATTA_PAGER:-cat}</command>
               </tagNode>
             </children>
           </tagNode>
@@ -187,7 +187,7 @@
             <properties>
               <help>Show log for LLDP</help>
             </properties>
-            <command>journalctl --boot --unit lldpd.service</command>
+            <command>journalctl --no-hostname --boot --unit lldpd.service</command>
           </leafNode>
           <leafNode name="nat">
             <properties>
@@ -199,7 +199,7 @@
             <properties>
               <help>Show log for OpenVPN</help>
             </properties>
-            <command>journalctl --boot --unit openvpn@*.service</command>
+            <command>journalctl --no-hostname --boot --unit openvpn@*.service</command>
             <children>
               <tagNode name="interface">
                 <properties>
@@ -208,7 +208,7 @@
                     <path>interfaces openvpn</path>
                   </completionHelp>
                 </properties>
-                <command>journalctl --boot --unit openvpn@$5.service</command>
+                <command>journalctl --no-hostname --boot --unit openvpn@$5.service</command>
               </tagNode>
             </children>
           </node>
@@ -216,7 +216,7 @@
             <properties>
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
             </properties>
-            <command>journalctl --boot --unit snmpd.service</command>
+            <command>journalctl --no-hostname --boot --unit snmpd.service</command>
           </leafNode>
           <tagNode name="tail">
             <properties>
@@ -260,13 +260,13 @@
                 <properties>
                   <help>Show log for PPTP</help>
                 </properties>
-                <command>journalctl --boot --unit accel-ppp@pptp.service</command>
+                <command>journalctl --no-hostname --boot --unit accel-ppp@pptp.service</command>
               </leafNode>
               <leafNode name="sstp">
                 <properties>
                   <help>Show log for SSTP</help>
                 </properties>
-                <command>journalctl --boot --unit accel-ppp@sstp.service</command>
+                <command>journalctl --no-hostname --boot --unit accel-ppp@sstp.service</command>
               </leafNode>
             </children>
           </node>
@@ -274,13 +274,13 @@
             <properties>
               <help>Show log for Virtual Router Redundancy Protocol (VRRP)</help>
             </properties>
-            <command>journalctl --boot --unit keepalived.service</command>
+            <command>journalctl --no-hostname --boot --unit keepalived.service</command>
           </leafNode>
           <leafNode name="webproxy">
             <properties>
               <help>Show log for Webproxy</help>
             </properties>
-            <command>journalctl --boot --unit squid.service</command>
+            <command>journalctl --no-hostname --boot --unit squid.service</command>
           </leafNode>
         </children>
       </node>
