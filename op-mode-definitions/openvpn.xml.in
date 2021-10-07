@@ -63,28 +63,28 @@
                   </completionHelp>
                 </properties>
                 <children>
-                  <node name="2fa">
+                  <node name="mfa">
                     <properties>
-                      <help>Show 2fa information</help>
+                      <help>Show multi-factor authentication information</help>
                     </properties>
                     <children>
                       <leafNode name="secret">
                         <properties>
-                          <help>Show 2fa authentication secret</help>
+                          <help>Show multi-factor authentication secret</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=secret</command>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=secret</command>
                       </leafNode>
                       <leafNode name="uri">
                         <properties>
-                          <help>Show 2fa otpauth uri</help>
+                          <help>Show multi-factor authentication otpauth uri</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=uri</command>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=uri</command>
                       </leafNode>
                       <leafNode name="qrcode">
                         <properties>
-                          <help>Show 2fa QR code</help>
+                          <help>Show multi-factor authentication QR code</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/show_openvpn_2fa.py --user="$6" --intf="$4" --action=qrcode</command>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=qrcode</command>
                       </leafNode>
                     </children>
                   </node>

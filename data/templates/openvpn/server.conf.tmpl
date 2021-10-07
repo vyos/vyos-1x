@@ -127,14 +127,10 @@ push "dhcp-option DNS6 {{ nameserver }}"
 {%     if server.domain_name is defined and server.domain_name is not none %}
 push "dhcp-option DOMAIN {{ server.domain_name }}"
 {%     endif %}
-{%     if server['2fa'] is defined and server['2fa'] is not none %}
-{%       if server['2fa']['totp'] is defined and server['2fa']['totp'] is not none %}
-plugin "/usr/lib/openvpn/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{{ ifname }}-otp-secrets otp_slop=
-{{- server['2fa']['totp']['slop']|default(180) }} totp_t0=
-{{- server['2fa']['totp']['drift']|default(0) }} totp_step=
-{{- server['2fa']['totp']['step']|default(30) }} totp_digits=
-{{- server['2fa']['totp']['digits']|default(6)}} password_is_cr=
-{%-if server['2fa']['totp']['challenge']|default('enable') == 'enable' %}1{% else %}0{% endif %}"
+{%     if server.mfa is defined and server.mfa is not none %}
+{%       if server.mfa.totp is defined and server.mfa.totp is not none %}
+{%         set totp_config = server.mfa.totp %}
+plugin "{{ plugin_dir}}/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{{ ifname }}-otp-secrets {{ 'otp_slop=' ~ totp_config.slop }} {{ 'totp_t0=' ~ totp_config.drift }} {{ 'totp_step=' ~ totp_config.step }} {{ 'totp_digits=' ~ totp_config.digits }} password_is_cr={{ '1' if totp_config.challenge == 'enable' else '0' }}"
 {%       endif %}
 {%     endif %}
 {%   endif %}

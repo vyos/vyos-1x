@@ -24,7 +24,7 @@ from vyos.util import popen
 
 otp_file = '/config/auth/openvpn/{interface}-otp-secrets'
 
-def get_2fa_secret(interface, client):
+def get_mfa_secret(interface, client):
     try:
         with open(otp_file.format(interface=interface), "r") as f:
             users = f.readlines()
@@ -34,7 +34,7 @@ def get_2fa_secret(interface, client):
     except:
         pass
 
-def get_2fa_uri(client, secret):
+def get_mfa_uri(client, secret):
     hostname = socket.gethostname()
     fqdn = socket.getfqdn()
     uri = 'otpauth://totp/{hostname}:{client}@{fqdn}?secret={secret}'
@@ -42,23 +42,23 @@ def get_2fa_uri(client, secret):
     return urllib.parse.quote(uri.format(hostname=hostname, client=client, fqdn=fqdn, secret=secret), safe='/:@?=')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(add_help=False, description='Show 2fa information')
+    parser = argparse.ArgumentParser(add_help=False, description='Show two-factor authentication information')
     parser.add_argument('--intf', action="store", type=str, default='', help='only show the specified interface')
     parser.add_argument('--user', action="store", type=str, default='', help='only show the specified users')
     parser.add_argument('--action', action="store", type=str, default='show', help='action to perform')
 
     args = parser.parse_args()
-    secret = get_2fa_secret(args.intf, args.user)
+    secret = get_mfa_secret(args.intf, args.user)
 
     if args.action == "secret" and secret:
         print(secret)
 
     if args.action == "uri" and secret:
-        uri = get_2fa_uri(args.user, secret)
+        uri = get_mfa_uri(args.user, secret)
         print(uri)
 
     if args.action == "qrcode" and secret:
-        uri = get_2fa_uri(args.user, secret)
+        uri = get_mfa_uri(args.user, secret)
         qrcode,err = popen('qrencode -t ansiutf8', input=uri)
         print(qrcode)
 

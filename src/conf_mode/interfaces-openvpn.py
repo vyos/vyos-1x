@@ -80,6 +80,11 @@ def get_config(config=None):
     tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
 
+    # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
+    # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
+    tmp_openvpn = conf.get_config_dict(base + [os.environ['VYOS_TAGNODE_VALUE']], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     openvpn = get_interface_dict(conf, base)
 
     if 'deleted' not in openvpn:
@@ -88,6 +93,14 @@ def get_config(config=None):
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
     openvpn['daemon_user'] = user
     openvpn['daemon_group'] = group
+
+    # We have to cleanup the config dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: server mfa totp
+    # originate comes with defaults, which will enable the
+    # totp plugin, even when not set via CLI so we
+    # need to check this first and drop those keys
+    if 'totp' not in tmp_openvpn['server']:
+        del openvpn['server']['mfa']['totp']
 
     return openvpn
 
@@ -369,8 +382,8 @@ def verify(openvpn):
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
 
-        # add 2fa users to the file the 2fa plugin uses
-        if dict_search('server.2fa.totp', openvpn):
+        # add mfa users to the file the mfa plugin uses
+        if dict_search('server.mfa.totp', openvpn):
             if not Path(otp_file.format(**openvpn)).is_file():
                 Path(otp_path).mkdir(parents=True, exist_ok=True)
                 Path(otp_file.format(**openvpn)).touch()
@@ -590,6 +603,7 @@ def generate_pki_files(openvpn):
 def generate(openvpn):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
+    plugin_dir = '/usr/lib/openvpn'
 
     # we can't know in advance which clients have been removed,
     # thus all client configs will be removed and re-added on demand
