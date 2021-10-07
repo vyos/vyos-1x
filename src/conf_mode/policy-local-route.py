@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -44,16 +44,25 @@ def get_config(config=None):
     if tmp:
         for rule in (tmp or []):
             src = leaf_node_changed(conf, ['policy', 'local-route', 'rule', rule, 'source'])
+            fwmk = leaf_node_changed(conf, ['policy', 'local-route', 'rule', rule, 'fwmark'])
             if src:
                 dict = dict_merge({'rule_remove' : {rule : {'source' : src}}}, dict)
                 pbr.update(dict)
+            if fwmk:
+                dict = dict_merge({'rule_remove' : {rule : {'fwmark' : fwmk}}}, dict)
+                pbr.update(dict)
 
     # delete policy local-route rule x source x.x.x.x
+    # delete policy local-route rule x fwmark x
     if 'rule' in pbr:
         for rule in pbr['rule']:
             src = leaf_node_changed(conf, ['policy', 'local-route', 'rule', rule, 'source'])
+            fwmk = leaf_node_changed(conf, ['policy', 'local-route', 'rule', rule, 'fwmark'])
             if src:
                 dict = dict_merge({'rule_remove' : {rule : {'source' : src}}}, dict)
+                pbr.update(dict)
+            if fwmk:
+                dict = dict_merge({'rule_remove' : {rule : {'fwmark' : fwmk}}}, dict)
                 pbr.update(dict)
 
     return pbr
@@ -65,8 +74,8 @@ def verify(pbr):
 
     if 'rule' in pbr:
         for rule in pbr['rule']:
-            if 'source' not in pbr['rule'][rule]:
-                raise ConfigError('Source address required!')
+            if 'source' not in pbr['rule'][rule] and 'fwmark' not in pbr['rule'][rule]:
+                raise ConfigError('Source address or fwmark is required!')
             else:
                 if 'set' not in pbr['rule'][rule] or 'table' not in pbr['rule'][rule]['set']:
                     raise ConfigError('Table set is required!')
@@ -86,16 +95,34 @@ def apply(pbr):
     # Delete old rule if needed
     if 'rule_remove' in pbr:
         for rule in pbr['rule_remove']:
-            for src in pbr['rule_remove'][rule]['source']:
-                call(f'ip rule del prio {rule} from {src}')
+            if 'source' in pbr['rule_remove'][rule]:
+                for src in pbr['rule_remove'][rule]['source']:
+                    call(f'ip rule del prio {rule} from {src}')
+            if 'fwmark' in  pbr['rule_remove'][rule]:
+                for fwmk in pbr['rule_remove'][rule]['fwmark']:
+                    call(f'ip rule del prio {rule} from all fwmark {fwmk}')
 
     # Generate new config
     if 'rule' in pbr:
         for rule in pbr['rule']:
             table = pbr['rule'][rule]['set']['table']
-            if pbr['rule'][rule]['source']:
+            # Only source in the rule
+            # set policy local-route rule 100 source '203.0.113.1'
+            if 'source' in pbr['rule'][rule] and not 'fwmark' in pbr['rule'][rule]:
                 for src in pbr['rule'][rule]['source']:
                     call(f'ip rule add prio {rule} from {src} lookup {table}')
+            # Only fwmark in the rule
+            # set policy local-route rule 101 fwmark '23'
+            if 'fwmark' in pbr['rule'][rule] and not 'source' in pbr['rule'][rule]:
+                fwmk = pbr['rule'][rule]['fwmark']
+                call(f'ip rule add prio {rule} from all fwmark {fwmk} lookup {table}')
+            # Source and fwmark in the rule
+            # set policy local-route rule 100 source '203.0.113.1'
+            # set policy local-route rule 100 fwmark '23'
+            if 'source' in pbr['rule'][rule] and 'fwmark' in pbr['rule'][rule]:
+                fwmk = pbr['rule'][rule]['fwmark']
+                for src in pbr['rule'][rule]['source']:
+                    call(f'ip rule add prio {rule} from {src} fwmark {fwmk} lookup {table}')
 
     return None
 

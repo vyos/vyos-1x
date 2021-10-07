@@ -6,7 +6,7 @@
         <children>
           <tagNode name="bridge">
             <properties>
-              <help>Show bridge interface information</help>
+              <help>Show specified Bridge interface information</help>
               <completionHelp>
                 <path>interfaces bridge</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="bridge">
             <properties>
-              <help>Show bridge interface information</help>
+              <help>Show Bridge interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=bridge --action=show-brief</command>
             <children>

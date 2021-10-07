@@ -35,8 +35,11 @@ class VTIIf(Interface):
         mapping = {
             'source_interface' : 'dev',
         }
-
         if_id = self.ifname.lstrip('vti')
+        # The key defaults to 0 and will match any policies which similarly do
+        # not have a lookup key configuration - thus we shift the key by one
+        # to also support a vti0 interface
+        if_id = str(int(if_id) +1)
         cmd = f'ip link add {self.ifname} type xfrm if_id {if_id}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like

@@ -1,9 +1,0 @@
-{% if name is defined and name is not none %}
-{%   for vrf, vrf_config in name.items() %}
-vrf {{ vrf }}
-{%     if vrf_config.vni is defined and vrf_config.vni is not none %}
- vni {{ vrf_config.vni }}
-{%     endif %}
- exit-vrf
-{%   endfor %}
-{% endif %}

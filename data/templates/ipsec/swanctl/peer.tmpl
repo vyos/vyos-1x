@@ -17,10 +17,10 @@
 {%   if ike.key_exchange is defined and ike.key_exchange == "ikev1" and ike.mode is defined and ike.mode == "aggressive" %}
         aggressive = yes
 {%   endif %}
+        rekey_time = {{ ike.lifetime }}s
         mobike = {{ "yes" if ike.mobike is not defined or ike.mobike == "enable" else "no" }}
 {%   if peer[0:1] == '@' %}
         keyingtries = 0
-        rekey_time = 0
         reauth_time = 0
 {%   elif peer_conf.connection_type is not defined or peer_conf.connection_type == 'initiate' %}
         keyingtries = 0
@@ -31,7 +31,7 @@
         encap = yes
 {%   endif %}
         local {
-{%   if peer_conf.authentication is defined and peer_conf.authentication.id is defined and peer_conf.authentication.use_x509_id is not defined %}
+{%   if peer_conf.authentication is defined and peer_conf.authentication.id is defined and peer_conf.authentication.id is not none %}
             id = "{{ peer_conf.authentication.id }}"
 {%   endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
@@ -42,9 +42,9 @@
 {%   endif %}
         }
         remote {
-{%   if peer_conf.authentication.remote_id is defined %}
+{%   if peer_conf.authentication is defined and peer_conf.authentication.remote_id is defined and peer_conf.authentication.remote_id is not none %}
             id = "{{ peer_conf.authentication.remote_id }}"
-{%   elif peer[0:1] == '@' %}
+{%   else %}
             id = "{{ peer }}"
 {%   endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
@@ -56,12 +56,16 @@
 {%   if peer_conf.vti is defined and peer_conf.vti.bind is defined and peer_conf.tunnel is not defined %}
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is defined else esp_group[ peer_conf.default_esp_group ] %}
             peer_{{ name }}_vti {
-                esp_proposals = {{ vti_esp | get_esp_ike_cipher | join(',') }}
+                esp_proposals = {{ vti_esp | get_esp_ike_cipher(ike) | join(',') }}
+                life_time = {{ vti_esp.lifetime }}s
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
-                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+                {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+                {# Thus we simply shift the key by one to also support a vti0 interface #}
+{%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
                 ipcomp = {{ 'yes' if vti_esp.compression is defined and vti_esp.compression == 'enable' else 'no' }}
                 mode = {{ vti_esp.mode }}
 {%     if peer[0:1] == '@' %}
@@ -86,7 +90,8 @@
 {%       set remote_port = tunnel_conf.remote.port if tunnel_conf.remote is defined and tunnel_conf.remote.port is defined else '' %}
 {%       set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
-                esp_proposals = {{ tunnel_esp | get_esp_ike_cipher | join(',') }}
+                esp_proposals = {{ tunnel_esp | get_esp_ike_cipher(ike) | join(',') }}
+                life_time = {{ tunnel_esp.lifetime }}s
 {%       if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%         if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}
 {%           set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
@@ -114,9 +119,12 @@
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
 {%       endif %}
 {%       if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
-                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }} {{ peer_conf.dhcp_interface if peer_conf.dhcp_interface is defined else 'no' }}"
-                if_id_in = {{ peer_conf.vti.bind | replace('vti', '') }}
-                if_id_out = {{ peer_conf.vti.bind | replace('vti', '') }}
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+                {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+                {# Thus we simply shift the key by one to also support a vti0 interface #}
+{%              set if_id = peer_conf.vti.bind | replace('vti', '') | int +1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
 {%       endif %}
             }
 {%       if tunnel_conf.passthrough is defined and tunnel_conf.passthrough %}

@@ -165,6 +165,18 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           if rule_config.match.extcommunity is defined and rule_config.match.extcommunity is not none %}
  match extcommunity {{ rule_config.match.extcommunity }}
 {%           endif %}
+{%           if rule_config.match.evpn is defined and rule_config.match.evpn.default_route is defined %}
+ match evpn default-route
+{%           endif %}
+{%           if rule_config.match.evpn is defined and rule_config.match.evpn.rd is defined and rule_config.match.evpn.rd is not none %}
+ match evpn rd {{ rule_config.match.evpn.rd }}
+{%           endif %}
+{%           if rule_config.match.evpn is defined and rule_config.match.evpn.route_type is defined and rule_config.match.evpn.route_type is not none %}
+ match evpn route-type {{ rule_config.match.evpn.route_type }}
+{%           endif %}
+{%           if rule_config.match.evpn is defined and rule_config.match.evpn.vni is defined and rule_config.match.evpn.vni is not none %}
+ match evpn vni {{ rule_config.match.evpn.vni }}
+{%           endif %}
 {%           if rule_config.match.interface is defined and rule_config.match.interface is not none %}
  match interface {{ rule_config.match.interface }}
 {%           endif %}
@@ -270,6 +282,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           endif %}
 {%           if rule_config.set.large_community is defined and rule_config.set.large_community is not none %}
  set large-community {{ rule_config.set.large_community }}
+{%           endif %}
+{%           if rule_config.set.large_comm_list_delete is defined and rule_config.set.large_comm_list_delete is not none %}
+ set large-comm-list {{ rule_config.set.large_comm_list_delete }} delete
 {%           endif %}
 {%           if rule_config.set.local_preference is defined and rule_config.set.local_preference is not none %}
  set local-preference {{ rule_config.set.local_preference }}

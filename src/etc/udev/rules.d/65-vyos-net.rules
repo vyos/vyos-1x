@@ -1,0 +1,26 @@
+# These rules use vyos_net_name to persistently name network interfaces
+# per "hwid" association in the VyOS configuration file.
+
+ACTION!="add", 				GOTO="vyos_net_end"
+SUBSYSTEM!="net",			GOTO="vyos_net_end"
+
+# ignore the interface if a name has already been set
+NAME=="?*",				GOTO="vyos_net_end"
+
+# Do name change for ethernet and wireless devices only
+KERNEL!="eth*|wlan*", 			GOTO="vyos_net_end"
+
+# ignore "secondary" monitor interfaces of mac80211 drivers
+KERNEL=="wlan*", ATTRS{type}=="803",	GOTO="vyos_net_end"
+
+# If using VyOS predefined names
+ENV{VYOS_IFNAME}!="eth*",	GOTO="end_vyos_predef_names"
+
+DRIVERS=="?*", PROGRAM="vyos_net_name %k $attr{address} $env{VYOS_IFNAME}", NAME="%c", GOTO="vyos_net_end"
+
+LABEL="end_vyos_predef_names"
+
+# ignore interfaces without a driver link like bridges and VLANs
+DRIVERS=="?*", PROGRAM="vyos_net_name %k $attr{address}", NAME="%c"
+
+LABEL="vyos_net_end"

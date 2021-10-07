@@ -282,60 +282,66 @@
           </node>
           <node name="wireguard">
             <properties>
-              <help>Generate Wireguard keys</help>
+              <help>Generate WireGuard keys</help>
             </properties>
             <children>
               <node name="key-pair">
                 <properties>
-                  <help>Generate Wireguard key pair for use with server or peer</help>
+                  <help>Generate WireGuard public/private key-pair</help>
                 </properties>
                 <children>
-                  <tagNode name="file">
+                  <node name="install">
                     <properties>
-                      <help>Write generated Wireguard keys into the specified filename</help>
-                      <completionHelp>
-                        <list>&lt;filename&gt;</list>
-                      </completionHelp>
+                      <help>Generate CLI commands to install WireGuard key to configuration</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "$6" --file</command>
-                  </tagNode>
-                  <tagNode name="install">
-                    <properties>
-                      <help>Commands for installing generated Wireguard key into running configuration</help>
-                      <completionHelp>
-                        <list>&lt;interface&gt; &lt;peer&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "$6" --install</command>
-                  </tagNode>
+                    <children>
+                      <tagNode name="interface">
+                        <properties>
+                          <help>WireGuard Interface used in install command</help>
+                          <completionHelp>
+                            <path>interfaces wireguard</path>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key --interface "$7" --install</command>
+                      </tagNode>
+                    </children>
+                  </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key "noname"</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --key</command>
               </node>
-              <node name="pre-shared-key">
+              <node name="preshared-key">
                 <properties>
-                  <help>Generate pre-shared key for use with a Wireguard peer</help>
+                  <help>Generate WireGuard pre-shared key</help>
                 </properties>
                 <children>
-                  <tagNode name="file">
+                  <node name="install">
                     <properties>
-                      <help>Write generated Wireguard PSK into the specified filename</help>
-                      <completionHelp>
-                        <list>&lt;filename&gt;</list>
-                      </completionHelp>
+                      <help>Generate CLI commands to install WireGuard key to configuration</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "$6" --file</command>
-                  </tagNode>
-                  <tagNode name="install">
-                    <properties>
-                      <help>Commands for installing generated Wireguard PSK on specified peer into running configuration</help>
-                      <completionHelp>
-                        <list>&lt;peer&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "$6" --install</command>
-                  </tagNode>
+                    <children>
+                      <tagNode name="interface">
+                        <properties>
+                          <help>WireGuard Interface used in install command</help>
+                          <completionHelp>
+                            <path>interfaces wireguard</path>
+                          </completionHelp>
+                        </properties>
+                        <children>
+                          <tagNode name="peer">
+                            <properties>
+                              <help>Interface used for install command</help>
+                              <completionHelp>
+                                <path>interfaces wireguard ${COMP_WORDS[COMP_CWORD-2]} peer</path>
+                              </completionHelp>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk --interface "$7" --peer "$9" --install</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk "noname"</command>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action generate --wireguard --psk</command>
               </node>
             </children>
           </node>
@@ -347,60 +353,45 @@
     <children>
       <node name="pki">
         <properties>
-          <help>Show PKI certificates</help>
+          <help>Show PKI x509 certificates</help>
         </properties>
         <children>
-          <node name="ca">
+          <leafNode name="ca">
             <properties>
-              <help>Show CA certificates</help>
+              <help>Show x509 CA certificates</help>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show CA certificate by name</help>
-                  <completionHelp>
-                    <path>pki ca</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$5"</command>
-              </leafNode>
-            </children>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "all"</command>
-          </node>
-          <node name="certificate">
+          </leafNode>
+          <tagNode name="ca">
             <properties>
-              <help>Show certificates</help>
+              <help>Show x509 CA certificate by name</help>
+              <completionHelp>
+                <path>pki ca</path>
+              </completionHelp>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show certificate by name</help>
-                  <completionHelp>
-                    <path>pki certificate</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$5"</command>
-              </leafNode>
-            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
+          </tagNode>
+          <leafNode name="certificate">
+            <properties>
+              <help>Show x509 certificates</help>
+            </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "all"</command>
-          </node>
-          <node name="crl">
+          </leafNode>
+          <tagNode name="certificate">
             <properties>
-              <help>Show certificate revocation lists</help>
+              <help>Show x509 certificate by name</help>
+              <completionHelp>
+                <path>pki certificate</path>
+              </completionHelp>
             </properties>
-            <children>
-              <leafNode name="name">
-                <properties>
-                  <help>Show certificate revocation lists from specified CA</help>
-                  <completionHelp>
-                    <path>pki ca</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "$5"</command>
-              </leafNode>
-            </children>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
+          </tagNode>
+          <leafNode name="crl">
+            <properties>
+              <help>Show x509 certificate revocation lists</help>
+            </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "all"</command>
-          </node>
+          </leafNode>
         </children>
         <command>sudo ${vyos_op_scripts_dir}/pki.py --action show</command>
       </node>

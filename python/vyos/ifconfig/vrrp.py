@@ -22,6 +22,7 @@ from time import sleep
 from tabulate import tabulate
 
 from vyos import util
+from vyos.configquery import ConfigTreeQuery
 
 class VRRPError(Exception):
     pass
@@ -32,14 +33,13 @@ class VRRPNoData(VRRPError):
 class VRRP(object):
     _vrrp_prefix = '00:00:5E:00:01:'
     location = {
-        'pid':      '/run/keepalived.pid',
-        'fifo':     '/run/keepalived_notify_fifo',
+        'pid':      '/run/keepalived/keepalived.pid',
+        'fifo':     '/run/keepalived/keepalived_notify_fifo',
         'state':    '/tmp/keepalived.data',
         'stats':    '/tmp/keepalived.stats',
         'json':     '/tmp/keepalived.json',
         'daemon':   '/etc/default/keepalived',
-        'config':   '/etc/keepalived/keepalived.conf',
-        'vyos':     '/run/keepalived_config.dict',
+        'config':   '/run/keepalived/keepalived.conf',
     }
 
     _signal = {
@@ -111,17 +111,20 @@ class VRRP(object):
 
     @classmethod
     def disabled(cls):
-        if not os.path.exists(cls.location['vyos']):
-            return []
-
         disabled = []
-        config = json.loads(util.read_file(cls.location['vyos']))
+        base = ['high-availability', 'vrrp']
+        conf = ConfigTreeQuery()
+        if conf.exists(base):
+            # Read VRRP configuration directly from CLI
+            vrrp_config_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                                    get_first_key=True)
 
-        # add disabled groups to the list
-        for group in config['vrrp_groups']:
-            if group['disable']:
-                disabled.append(
-                    [group['name'], group['interface'], group['vrid'], 'DISABLED', ''])
+            # add disabled groups to the list
+            if 'group' in vrrp_config_dict:
+                for group, group_config in vrrp_config_dict['group'].items():
+                    if 'disable' not in group_config:
+                        continue
+                    disabled.append([group, group_config['interface'], group_config['vrid'], 'DISABLED', ''])
 
         # return list with disabled instances
         return disabled

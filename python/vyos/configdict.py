@@ -108,16 +108,20 @@ def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return a list containing the old
-    value(s). If nothing has been changed, None is returned
+    value(s). If nothing has been changed, None is returned.
+
+    NOTE: path must use the real CLI node name (e.g. with a hyphen!)
     """
     from vyos.configdiff import get_config_diff
     D = get_config_diff(conf, key_mangling=('-', '_'))
     D.set_level(conf.get_level())
     (new, old) = D.get_value_diff(path)
     if new != old:
+        if old is None:
+            return []
         if isinstance(old, str):
             return [old]
-        elif isinstance(old, list):
+        if isinstance(old, list):
             if isinstance(new, str):
                 new = [new]
             elif isinstance(new, type(None)):
@@ -343,8 +347,8 @@ def get_interface_dict(config, base, ifname=''):
 
     # setup config level which is extracted in get_removed_vlans()
     config.set_level(base + [ifname])
-    dict = config.get_config_dict([], key_mangling=('-', '_'),
-                                  get_first_key=True)
+    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True,
+                                  no_tag_node_value_mangle=True)
 
     # Check if interface has been removed. We must use exists() as
     # get_config_dict() will always return {} - even when an empty interface
@@ -370,6 +374,9 @@ def get_interface_dict(config, base, ifname=''):
 
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
+
+    address = leaf_node_changed(config, ['address'])
+    if address: dict.update({'address_old' : address})
 
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')

@@ -447,7 +447,7 @@
             <help>Border Gateway Protocol (BGP)</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="connected">
@@ -455,7 +455,7 @@
             <help>Redistribute connected routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="kernel">
@@ -463,7 +463,7 @@
             <help>Redistribute kernel routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="ospf">
@@ -471,7 +471,7 @@
             <help>Redistribute OSPF routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="rip">
@@ -479,7 +479,7 @@
             <help>Redistribute RIP routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="static">
@@ -487,7 +487,7 @@
             <help>Redistribute static routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv4.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
       </children>
@@ -502,7 +502,7 @@
             <help>Redistribute BGP routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="connected">
@@ -510,7 +510,7 @@
             <help>Redistribute connected routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="kernel">
@@ -518,7 +518,7 @@
             <help>Redistribute kernel routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="ospf6">
@@ -526,7 +526,7 @@
             <help>Redistribute OSPFv3 routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="ripng">
@@ -534,7 +534,7 @@
             <help>Redistribute RIPng routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
         <node name="static">
@@ -542,7 +542,7 @@
             <help>Redistribute static routes into IS-IS</help>
           </properties>
           <children>
-            #include <include/isis/redistribute-ipv6.xml.i>
+            #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
       </children>

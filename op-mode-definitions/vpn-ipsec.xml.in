@@ -140,6 +140,12 @@
                 </properties>
                 <command>sudo ip xfrm policy list</command>
               </node>
+              <leafNode name="remote-access">
+                 <properties>
+                   <help>Show active VPN server sessions</help>
+                 </properties>
+                <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command>
+              </leafNode>
               <node name="sa">
                 <properties>
                   <help>Show all active IPSec Security Associations (SA)</help>
@@ -178,7 +184,7 @@
                     <command>if pgrep charon >/dev/null ; then sudo /usr/sbin/ipsec statusall ; else echo "IPSec process not running" ; fi</command>
                   </node>
                 </children>
-                <command>if pgrep charon >/dev/null ; then sudo /usr/libexec/vyos/op_mode/show_ipsec_sa.py ; else echo "IPSec process not running" ; fi</command>
+                <command>if pgrep charon >/dev/null ; then sudo ${vyos_op_scripts_dir}/show_ipsec_sa.py ; else echo "IPSec process not running" ; fi</command>
               </node>
               <node name="state">
                 <properties>

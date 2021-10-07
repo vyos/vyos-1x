@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# T3795: merge "system name-servers-dhcp" into "system name-server"
+
 import os
 
-from sys import exit, argv
+from sys import argv
 from vyos.configtree import ConfigTree
 
 if (len(argv) < 1):
@@ -27,27 +29,16 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['system', 'sysctl']
+base = ['system', 'name-servers-dhcp']
 config = ConfigTree(config_file)
-
 if not config.exists(base):
     # Nothing to do
     exit(0)
 
-for all_custom in ['all', 'custom']:
-    if config.exists(base + [all_custom]):
-        for key in config.list_nodes(base + [all_custom]):
-            tmp = config.return_value(base + [all_custom, key, 'value'])
-            config.set(base + ['parameter', key, 'value'], value=tmp)
-            config.set_tag(base + ['parameter'])
-        config.delete(base + [all_custom])
+for interface in config.return_values(base):
+    config.set(['system', 'name-server'], value=interface, replace=False)
 
-for ipv4_param in ['net.ipv4.igmp_max_memberships', 'net.ipv4.ipfrag_time']:
-    if config.exists(base + [ipv4_param]):
-        tmp = config.return_value(base + [ipv4_param])
-        config.set(base + ['parameter', ipv4_param, 'value'], value=tmp)
-        config.set_tag(base + ['parameter'])
-        config.delete(base + [ipv4_param])
+config.delete(base)
 
 try:
     with open(file_name, 'w') as f:

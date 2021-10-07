@@ -7,23 +7,33 @@
     </completionHelp>
   </properties>
   <children>
-    <leafNode name="exact-match">
-      <properties>
-        <help>Exact match of the communities</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/bgp/exact-match.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
 <tagNode name="large-community">
   <properties>
-    <help>List of large-community numbers</help>
+    <help>Display routes matching the large-communities</help>
     <completionHelp>
       <list>AA:BB:CC</list>
     </completionHelp>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <children>
+    #include <include/bgp/exact-match.xml.i>
+  </children>
+</tagNode>
+<tagNode name="large-community-list">
+  <properties>
+    <help>Display routes matching the large-community-list</help>
+    <completionHelp>
+      <path>policy large-community-list</path>
+    </completionHelp>
+  </properties>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+  <children>
+    #include <include/bgp/exact-match.xml.i>
+  </children>
 </tagNode>
 <leafNode name="statistics">
   <properties>

@@ -113,9 +113,13 @@ def verify(isis):
         # Interface MTU must be >= configured lsp-mtu
         mtu = Interface(interface).get_mtu()
         area_mtu = isis['lsp_mtu']
-        if mtu < int(area_mtu):
-            raise ConfigError(f'Interface {interface} has MTU {mtu}, minimum ' \
-                              f'area MTU is {area_mtu}!')
+        # Recommended maximum PDU size = interface MTU - 3 bytes
+        recom_area_mtu = mtu - 3
+        if mtu < int(area_mtu) or int(area_mtu) > recom_area_mtu:
+            raise ConfigError(f'Interface {interface} has MTU {mtu}, ' \
+                              f'current area MTU is {area_mtu}! \n' \
+                              f'Recommended area lsp-mtu {recom_area_mtu} or less ' \
+                              '(calculated on MTU size).')
 
         if 'vrf' in isis:
             # If interface specific options are set, we must ensure that the
@@ -144,7 +148,7 @@ def verify(isis):
 
         exist_timers = set(required_timers).difference(set(exist_timers))
         if len(exist_timers) > 0:
-            raise ConfigError('All types of delay must be specified: ' + ', '.join(exist_timers).replace('_', '-'))
+            raise ConfigError('All types of spf-delay must be configured. Missing: ' + ', '.join(exist_timers).replace('_', '-'))
 
     # If Redistribute set, but level don't set
     if 'redistribute' in isis:

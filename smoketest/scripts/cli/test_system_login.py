@@ -31,7 +31,19 @@ from vyos.util import read_file
 from vyos.template import inc_ip
 
 base_path = ['system', 'login']
-users = ['vyos1', 'vyos2']
+users = ['vyos1', 'vyos-roxx123', 'VyOS-123_super.Nice']
+
+ssh_pubkey = """
+AAAAB3NzaC1yc2EAAAADAQABAAABgQD0NuhUOEtMIKnUVFIHoFatqX/c4mjerXyF
+TlXYfVt6Ls2NZZsUSwHbnhK4BKDrPvVZMW/LycjQPzWW6TGtk6UbZP1WqdviQ9hP
+jsEeKJSTKciMSvQpjBWyEQQPXSKYQC7ryQQilZDqnJgzqwzejKEe+nhhOdBvjuZc
+uukxjT69E0UmWAwLxzvfiurwiQaC7tG+PwqvtfHOPL3i6yRO2C5ORpFarx8PeGDS
+IfIXJCr3LoUbLHeuE7T2KaOKQcX0UsWJ4CoCapRLpTVYPDB32BYfgq7cW1Sal1re
+EGH2PzuXBklinTBgCHA87lHjpwDIAqdmvMj7SXIW9LxazLtP+e37sexE7xEs0cpN
+l68txdDbY2P2Kbz5mqGFfCvBYKv9V2clM5vyWNy/Xp5TsCis89nn83KJmgFS7sMx
+pHJz8umqkxy3hfw0K7BRFtjWd63sbOP8Q/SDV7LPaIfIxenA9zv2rY7y+AIqTmSr
+TTSb0X1zPGxPIRFy5GoGtO9Mm5h4OZk=
+"""
 
 class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
@@ -42,6 +54,8 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_add_linux_system_user(self):
+        # We are not allowed to re-use a username already taken by the Linux
+        # base system
         system_user = 'backup'
         self.cli_set(base_path + ['user', system_user, 'authentication', 'plaintext-password', system_user])
 
@@ -75,8 +89,29 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
             (stdout, stderr) = proc.communicate()
 
             # stdout is something like this:
-            # b'Linux vyos 4.19.101-amd64-vyos #1 SMP Sun Feb 2 10:18:07 UTC 2020 x86_64 GNU/Linux\n'
+            # b'Linux LR1.wue3 5.10.61-amd64-vyos #1 SMP Fri Aug 27 08:55:46 UTC 2021 x86_64 GNU/Linux\n'
             self.assertTrue(len(stdout) > 40)
+
+    def test_system_user_ssh_key(self):
+        ssh_user = 'ssh-test_user'
+        public_keys = 'vyos_test@domain-foo.com'
+        type = 'ssh-rsa'
+
+        self.cli_set(base_path + ['user', ssh_user, 'authentication', 'public-keys', public_keys, 'key', ssh_pubkey.replace('\n','')])
+
+        # check validate() - missing type for public-key
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['user', ssh_user, 'authentication', 'public-keys', public_keys, 'type', type])
+
+        self.cli_commit()
+
+        # Check that SSH key was written properly
+        tmp = cmd(f'sudo cat /home/{ssh_user}/.ssh/authorized_keys')
+        key = f'{type} ' + ssh_pubkey.replace('\n','')
+        self.assertIn(key, tmp)
+
+        self.cli_delete(base_path + ['user', ssh_user])
 
     def test_radius_kernel_features(self):
         # T2886: RADIUS requires some Kernel options to be present
@@ -201,4 +236,4 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(tmp)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

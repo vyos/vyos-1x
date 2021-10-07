@@ -37,65 +37,51 @@
           </leafNode>
           <node name="modules">
             <properties>
-              <help>Connection tracking modules settings</help>
+              <help>Connection tracking modules</help>
             </properties>
             <children>
-              <node name="ftp">
+              <leafNode name="ftp">
                 <properties>
-                  <help>FTP connection tracking settings</help>
+                  <help>FTP connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="h323">
+              </leafNode>
+              <leafNode name="h323">
                 <properties>
-                  <help>H.323 connection tracking settings</help>
+                  <help>H.323 connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="nfs">
+              </leafNode>
+              <leafNode name="nfs">
                 <properties>
-                  <help>NFS connection tracking settings</help>
+                  <help>NFS connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="pptp">
+              </leafNode>
+              <leafNode name="pptp">
                 <properties>
-                  <help>PPTP connection tracking settings</help>
+                  <help>PPTP connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="sip">
+              </leafNode>
+              <leafNode name="sip">
                 <properties>
-                  <help>SIP connection tracking settings</help>
+                  <help>SIP connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="sqlnet">
+              </leafNode>
+              <leafNode name="sqlnet">
                 <properties>
-                  <help>SQLnet connection tracking settings</help>
+                  <help>SQLnet connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
-              <node name="tftp">
+              </leafNode>
+              <leafNode name="tftp">
                 <properties>
-                  <help>TFTP connection tracking settings</help>
+                  <help>TFTP connection tracking</help>
+                  <valueless/>
                 </properties>
-                <children>
-                  #include <include/conntrack-module-disable.xml.i>
-                </children>
-              </node>
+              </leafNode>
             </children>
           </node>
           <leafNode name="table-size">

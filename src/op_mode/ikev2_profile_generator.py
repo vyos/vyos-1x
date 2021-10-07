@@ -21,7 +21,7 @@ from sys import exit
 from socket import getfqdn
 from cryptography.x509.oid import NameOID
 
-from vyos.config import Config
+from vyos.configquery import ConfigTreeQuery
 from vyos.pki import load_certificate
 from vyos.template import render_to_string
 from vyos.util import ask_input
@@ -117,7 +117,7 @@ args = parser.parse_args()
 ipsec_base = ['vpn', 'ipsec']
 config_base = ipsec_base +  ['remote-access', 'connection']
 pki_base = ['pki']
-conf = Config()
+conf = ConfigTreeQuery()
 if not conf.exists(config_base):
     exit('IPSec remote-access is not configured!')
 
@@ -153,7 +153,7 @@ cert = load_certificate(pki['certificate'][cert_name]['certificate'])
 
 data['ca_cn'] = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 data['cert_cn'] = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-data['ca_cert'] = conf.return_value(pki_base + ['ca', ca_name, 'certificate'])
+data['ca_cert'] = conf.value(pki_base + ['ca', ca_name, 'certificate'])
 
 esp_proposals = conf.get_config_dict(ipsec_base + ['esp-group', data['esp_group'], 'proposal'],
                                      key_mangling=('-', '_'), get_first_key=True)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -100,7 +100,7 @@ def get_config(config=None):
     # need to check this first and drop those keys
     if 'totp' not in tmp_openvpn['server']:
         del openvpn['server']['mfa']['totp']
-
+        
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
@@ -294,6 +294,9 @@ def verify(openvpn):
     if openvpn['mode'] == 'server':
         if openvpn['protocol'] == 'tcp-active':
             raise ConfigError('Protocol "tcp-active" is not valid in server mode')
+
+        if dict_search('authentication.username', openvpn) or dict_search('authentication.password', openvpn):
+            raise ConfigError('Cannot specify "authentication" in server mode')
 
         if 'remote_port' in openvpn:
             raise ConfigError('Cannot specify "remote-port" in server mode')

@@ -20,7 +20,9 @@ from time import sleep
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos import ConfigError
+from vyos.defaults import commit_lock
 from vyos.util import cmd
+from vyos.util import run
 
 save_config = '/tmp/vyos-smoketest-save'
 
@@ -70,21 +72,16 @@ class VyOSUnitTestSHIM:
 
         def cli_commit(self):
             self._session.commit()
+            # during a commit there is a process opening commit_lock, and run() returns 0
+            while run(f'sudo lsof | grep -q {commit_lock}') == 0:
+                sleep(0.250)
 
-        def getFRRconfig(self, string, end='$', endsection='^!'):
+        def getFRRconfig(self, string, end='$', endsection='^!', daemon=''):
             """ Retrieve current "running configuration" from FRR """
-            command = f'vtysh -c "show run" | sed -n "/^{string}{end}/,/{endsection}/p"'
-
-            count = 0
-            tmp = ''
-            while count < 10 and tmp == '':
-                # Let FRR settle after a config change first before harassing it again
-                sleep(1)
-                tmp = cmd(command)
-                count += 1
-
-            if self.debug or tmp == '':
+            command = f'vtysh -c "show run {daemon} no-header" | sed -n "/^{string}{end}/,/{endsection}/p"'
+            out = cmd(command)
+            if self.debug:
                 import pprint
                 print(f'\n\ncommand "{command}" returned:\n')
-                pprint.pprint(tmp)
-            return tmp
+                pprint.pprint(out)
+            return out

@@ -87,7 +87,13 @@ def get_config(config=None):
         del default_values['area']['area_type']['nssa']
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
-    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
+
+    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
+        # table is a tagNode thus we need to clean out all occurances for the
+        # default values and load them in later individually
+        if protocol == 'table':
+            del default_values['redistribute']['table']
+            continue
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
 
@@ -109,7 +115,6 @@ def get_config(config=None):
         default_values = defaults(base + ['area', 'virtual-link'])
         for area, area_config in ospf['area'].items():
             if 'virtual_link' in area_config:
-                print(default_values)
                 for virtual_link in area_config['virtual_link']:
                     ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
                         default_values, ospf['area'][area]['virtual_link'][virtual_link])
@@ -126,6 +131,12 @@ def get_config(config=None):
 
             ospf['interface'][interface] = dict_merge(default_values,
                 ospf['interface'][interface])
+
+    if 'redistribute' in ospf and 'table' in ospf['redistribute']:
+        default_values = defaults(base + ['redistribute', 'table'])
+        for table in ospf['redistribute']['table']:
+            ospf['redistribute']['table'][table] = dict_merge(default_values,
+                ospf['redistribute']['table'][table])
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
@@ -149,13 +160,22 @@ def verify(ospf):
     if route_map_name: verify_route_map(route_map_name, ospf)
 
     if 'interface' in ospf:
-        for interface in ospf['interface']:
+        for interface, interface_config in ospf['interface'].items():
             verify_interface_exists(interface)
             # One can not use dead-interval and hello-multiplier at the same
             # time. FRR will only activate the last option set via CLI.
-            if {'hello_multiplier', 'dead_interval'} <= set(ospf['interface'][interface]):
+            if {'hello_multiplier', 'dead_interval'} <= set(interface_config):
                 raise ConfigError(f'Can not use hello-multiplier and dead-interval ' \
                                   f'concurrently for {interface}!')
+
+            # One can not use the "network <prefix> area <id>" command and an
+            # per interface area assignment at the same time. FRR will error
+            # out using: "Please remove all network commands first."
+            if 'area' in ospf and 'area' in interface_config:
+                for area, area_config in ospf['area'].items():
+                    if 'network' in area_config:
+                        raise ConfigError('Can not use OSPF interface area and area ' \
+                                          'network configuration at the same time!')
 
             if 'vrf' in ospf:
             # If interface specific options are set, we must ensure that the
@@ -177,7 +197,7 @@ def generate(ospf):
 
     ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.tmpl
     ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', ospf)
-    ospf['frr_ospfd_config']   = render_to_string('frr/ospf.frr.tmpl', ospf)
+    ospf['frr_ospfd_config'] = render_to_string('frr/ospfd.frr.tmpl', ospf)
     return None
 
 def apply(ospf):

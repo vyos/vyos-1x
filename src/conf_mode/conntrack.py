@@ -97,7 +97,7 @@ def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
     # modules we need to either insmod or rmmod the helpers.
     for module, module_config in module_map.items():
-        if dict_search(f'modules.{module}.disable', conntrack) != None:
+        if dict_search(f'modules.{module}', conntrack) is None:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     # Only remove the module if it's loaded
@@ -105,8 +105,9 @@ def apply(conntrack):
                         cmd(f'rmmod {mod}')
             if 'iptables' in module_config:
                 for rule in module_config['iptables']:
-                    print(f'iptables --delete {rule}')
-                    cmd(f'iptables --delete {rule}')
+                    # Only install iptables rule if it does not exist
+                    tmp = run(f'iptables --check {rule}')
+                    if tmp == 0: cmd(f'iptables --delete {rule}')
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
@@ -115,9 +116,7 @@ def apply(conntrack):
                 for rule in module_config['iptables']:
                     # Only install iptables rule if it does not exist
                     tmp = run(f'iptables --check {rule}')
-                    if tmp > 0:
-                        cmd(f'iptables --insert {rule}')
-
+                    if tmp > 0: cmd(f'iptables --insert {rule}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values

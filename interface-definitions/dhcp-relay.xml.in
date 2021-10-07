@@ -27,7 +27,7 @@
                 <properties>
                   <help>Policy to discard packets that have reached specified hop-count</help>
                   <valueHelp>
-                    <format>1-255</format>
+                    <format>u32:1-255</format>
                     <description>Hop count (default: 10)</description>
                   </valueHelp>
                   <constraint>
@@ -41,7 +41,7 @@
                 <properties>
                   <help>Maximum packet size to send to a DHCPv4/BOOTP server</help>
                   <valueHelp>
-                    <format>64-1400</format>
+                    <format>u32:64-1400</format>
                     <description>Maximum packet size (default: 576)</description>
                   </valueHelp>
                   <constraint>

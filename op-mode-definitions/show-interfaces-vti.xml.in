@@ -6,7 +6,7 @@
         <children>
           <tagNode name="vti">
             <properties>
-              <help>Show vti interface information</help>
+              <help>Show specified VTI interface information</help>
               <completionHelp>
                 <path>interfaces vti</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="vti">
             <properties>
-              <help>Show vti interface information</help>
+              <help>Show VTI interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=vti --action=show-brief</command>
             <children>

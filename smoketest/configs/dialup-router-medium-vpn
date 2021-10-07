@@ -624,6 +624,7 @@ system {
         }
     }
     name-server 192.168.0.1
+    name-servers-dhcp pppoe0
     ntp {
         allow-clients {
             address 192.168.0.0/16

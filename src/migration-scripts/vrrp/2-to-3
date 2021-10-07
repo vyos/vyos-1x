@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3847: vrrp config cleanup
+
+from sys import argv
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print('Must specify file name!')
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['high-availability', 'vrrp']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+if config.exists(base + ['group']):
+    for group in config.list_nodes(base + ['group']):
+        group_base = base + ['group', group]
+
+        # Deprecated option
+        tmp = group_base + ['transition-script', 'mode-force']
+        if config.exists(tmp):
+            config.delete(tmp)
+
+        # Rename virtual-address -> address
+        tmp = group_base + ['virtual-address']
+        if config.exists(tmp):
+            config.rename(tmp, 'address')
+
+        # Rename virtual-address-excluded -> excluded-address
+        tmp = group_base + ['virtual-address-excluded']
+        if config.exists(tmp):
+            config.rename(tmp, 'excluded-address')
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)

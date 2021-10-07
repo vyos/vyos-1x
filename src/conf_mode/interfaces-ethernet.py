@@ -37,6 +37,7 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -54,15 +55,17 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
+    # This must be called prior to get_interface_dict(), as this function will
+    # alter the config level (config.set_level())
+    pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
+
     base = ['interfaces', 'ethernet']
-
-    tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
-
     ethernet = get_interface_dict(conf, base)
 
     if 'deleted' not in ethernet:
-        ethernet['pki'] = tmp_pki
+       if pki: ethernet['pki'] = pki
 
     return ethernet
 
@@ -72,12 +75,6 @@ def verify(ethernet):
 
     ifname = ethernet['ifname']
     verify_interface_exists(ifname)
-
-    # No need to check speed and duplex keys as both have default values.
-    if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
-        (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
-            raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
-
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
     verify_dhcpv6(ethernet)
@@ -86,25 +83,31 @@ def verify(ethernet):
     verify_eapol(ethernet)
     verify_mirror(ethernet)
 
-    # verify offloading capabilities
-    if dict_search('offload.rps', ethernet) != None:
-        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
-            raise ConfigError('Interface does not suport RPS!')
-
-    driver = EthernetIf(ifname).get_driver_name()
-    # T3342 - Xen driver requires special treatment
-    if driver == 'vif':
-        if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
-            raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
-                              'for MTU size larger then 1500 bytes')
-
     ethtool = Ethtool(ifname)
+    # No need to check speed and duplex keys as both have default values.
+    if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
+        (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
+            raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
+
+    if ethernet['speed'] != 'auto' and ethernet['duplex'] != 'auto':
+        # We need to verify if the requested speed and duplex setting is
+        # supported by the underlaying NIC.
+        speed = ethernet['speed']
+        duplex = ethernet['duplex']
+        if not ethtool.check_speed_duplex(speed, duplex):
+            raise ConfigError(f'Adapter does not support changing speed and duplex '\
+                              f'settings to: {speed}/{duplex}!')
+
+    if 'disable_flow_control' in ethernet:
+        if not ethtool.check_flow_control():
+            raise ConfigError('Adapter does not support changing flow-control settings!')
+
     if 'ring_buffer' in ethernet:
-        max_rx = ethtool.get_rx_buffer()
+        max_rx = ethtool.get_ring_buffer_max('rx')
         if not max_rx:
             raise ConfigError('Driver does not support RX ring-buffer configuration!')
 
-        max_tx = ethtool.get_tx_buffer()
+        max_tx = ethtool.get_ring_buffer_max('tx')
         if not max_tx:
             raise ConfigError('Driver does not support TX ring-buffer configuration!')
 
@@ -117,6 +120,18 @@ def verify(ethernet):
         if tx and int(tx) > int(max_tx):
             raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
                               f'size of "{max_tx}" bytes!')
+
+    # verify offloading capabilities
+    if dict_search('offload.rps', ethernet) != None:
+        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
+            raise ConfigError('Interface does not suport RPS!')
+
+    driver = ethtool.get_driver_name()
+    # T3342 - Xen driver requires special treatment
+    if driver == 'vif':
+        if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
+            raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
+                              'for MTU size larger then 1500 bytes')
 
     # XDP requires multiple TX queues
     if 'xdp' in ethernet:
@@ -136,7 +151,7 @@ def generate(ethernet):
     if 'eapol' in ethernet:
         render(wpa_suppl_conf.format(**ethernet),
                'ethernet/wpa_supplicant.conf.tmpl', ethernet)
-        
+
         ifname = ethernet['ifname']
         cert_file_path = os.path.join(cfg_dir, f'{ifname}_cert.pem')
         cert_key_path = os.path.join(cfg_dir, f'{ifname}_cert.key')
@@ -144,19 +159,16 @@ def generate(ethernet):
         cert_name = ethernet['eapol']['certificate']
         pki_cert = ethernet['pki']['certificate'][cert_name]
 
-        with open(cert_file_path, 'w') as f:
-            f.write(wrap_certificate(pki_cert['certificate']))
-
-        with open(cert_key_path, 'w') as f:
-            f.write(wrap_private_key(pki_cert['private']['key']))
+        write_file(cert_file_path, wrap_certificate(pki_cert['certificate']))
+        write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
 
         if 'ca_certificate' in ethernet['eapol']:
             ca_cert_file_path = os.path.join(cfg_dir, f'{ifname}_ca.pem')
             ca_cert_name = ethernet['eapol']['ca_certificate']
             pki_ca_cert = ethernet['pki']['ca'][cert_name]
 
-            with open(ca_cert_file_path, 'w') as f:
-                f.write(wrap_certificate(pki_ca_cert['certificate']))
+            write_file(ca_cert_file_path,
+                       wrap_certificate(pki_ca_cert['certificate']))
     else:
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**ethernet)):

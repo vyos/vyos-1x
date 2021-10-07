@@ -9,6 +9,7 @@
     <constraint>
       <validator name="numeric" argument="--range 1-65535"/>
     </constraint>
+    <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

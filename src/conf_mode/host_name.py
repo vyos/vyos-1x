@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,10 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-conf-mode script for 'system host-name' and 'system domain-name'.
-"""
-
 import re
 import sys
 import copy
@@ -25,10 +21,13 @@ import copy
 import vyos.util
 import vyos.hostsd_client
 
-from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import cmd, call, process_named_running
-
+from vyos.config import Config
+from vyos.ifconfig import Section
+from vyos.template import is_ip
+from vyos.util import cmd
+from vyos.util import call
+from vyos.util import process_named_running
 from vyos import airbag
 airbag.enable()
 
@@ -37,7 +36,7 @@ default_config_data = {
     'domain_name': '',
     'domain_search': [],
     'nameserver': [],
-    'nameservers_dhcp_interfaces': [],
+    'nameservers_dhcp_interfaces': {},
     'static_host_mapping': {}
 }
 
@@ -51,29 +50,37 @@ def get_config(config=None):
 
     hosts = copy.deepcopy(default_config_data)
 
-    hosts['hostname'] = conf.return_value("system host-name")
+    hosts['hostname'] = conf.return_value(['system', 'host-name'])
 
     # This may happen if the config is not loaded yet,
     # e.g. if run by cloud-init
     if not hosts['hostname']:
         hosts['hostname'] = default_config_data['hostname']
 
-    if conf.exists("system domain-name"):
-        hosts['domain_name'] = conf.return_value("system domain-name")
+    if conf.exists(['system', 'domain-name']):
+        hosts['domain_name'] = conf.return_value(['system', 'domain-name'])
         hosts['domain_search'].append(hosts['domain_name'])
 
-    for search in conf.return_values("system domain-search domain"):
+    for search in conf.return_values(['system', 'domain-search', 'domain']):
         hosts['domain_search'].append(search)
 
-    hosts['nameserver'] = conf.return_values("system name-server")
+    if conf.exists(['system', 'name-server']):
+        for ns in conf.return_values(['system', 'name-server']):
+            if is_ip(ns):
+                hosts['nameserver'].append(ns)
+            else:
+                tmp = ''
+                if_type = Section.section(ns)
+                if conf.exists(['interfaces', if_type, ns, 'address']):
+                    tmp = conf.return_values(['interfaces', if_type, ns, 'address'])
 
-    hosts['nameservers_dhcp_interfaces'] = conf.return_values("system name-servers-dhcp")
+                hosts['nameservers_dhcp_interfaces'].update({ ns : tmp })
 
     # system static-host-mapping
-    for hn in conf.list_nodes('system static-host-mapping host-name'):
+    for hn in conf.list_nodes(['system', 'static-host-mapping', 'host-name']):
         hosts['static_host_mapping'][hn] = {}
-        hosts['static_host_mapping'][hn]['address'] = conf.return_value(f'system static-host-mapping host-name {hn} inet')
-        hosts['static_host_mapping'][hn]['aliases'] = conf.return_values(f'system static-host-mapping host-name {hn} alias')
+        hosts['static_host_mapping'][hn]['address'] = conf.return_value(['system', 'static-host-mapping', 'host-name', hn, 'inet'])
+        hosts['static_host_mapping'][hn]['aliases'] = conf.return_values(['system', 'static-host-mapping', 'host-name', hn, 'alias'])
 
     return hosts
 
@@ -103,8 +110,10 @@ def verify(hosts):
             if not hostname_regex.match(a) and len(a) != 0:
                 raise ConfigError(f'Invalid alias "{a}" in static-host-mapping "{host}"')
 
-    # TODO: add warnings for nameservers_dhcp_interfaces if interface doesn't
-    # exist or doesn't have address dhcp(v6)
+    for interface, interface_config in hosts['nameservers_dhcp_interfaces'].items():
+        # Warnin user if interface does not have DHCP or DHCPv6 configured
+        if not set(interface_config).intersection(['dhcp', 'dhcpv6']):
+            print(f'WARNING: "{interface}" is not a DHCP interface but uses DHCP name-server option!')
 
     return None
 

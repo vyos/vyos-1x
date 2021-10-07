@@ -78,6 +78,7 @@ neighbor_config = {
         'cap_over'     : '',
         'ttl_security' : '5',
         'local_as'     : '300',
+        'solo'         : '',
         'route_map_in' : route_map_in,
         'route_map_out': route_map_out,
         'no_send_comm_std' : '',
@@ -164,7 +165,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         if 'multi_hop' in peer_config:
             self.assertIn(f' neighbor {peer} ebgp-multihop {peer_config["multi_hop"]}', frrconfig)
         if 'local_as' in peer_config:
-            self.assertIn(f' neighbor {peer} local-as {peer_config["local_as"]}', frrconfig)
+            self.assertIn(f' neighbor {peer} local-as {peer_config["local_as"]} no-prepend replace-as', frrconfig)
         if 'cap_over' in peer_config:
             self.assertIn(f' neighbor {peer} override-capability', frrconfig)
         if 'passive' in peer_config:
@@ -173,6 +174,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} password {peer_config["password"]}', frrconfig)
         if 'remote_as' in peer_config:
             self.assertIn(f' neighbor {peer} remote-as {peer_config["remote_as"]}', frrconfig)
+        if 'solo' in peer_config:
+            self.assertIn(f' neighbor {peer} solo', frrconfig)
         if 'shutdown' in peer_config:
             self.assertIn(f' neighbor {peer} shutdown', frrconfig)
         if 'ttl_security' in peer_config:
@@ -218,8 +221,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # Default local preference (higher = more preferred, default value is 100)
         self.cli_set(base_path + ['parameters', 'default', 'local-pref', local_pref])
-        # Deactivate IPv4 unicast for a peer by default
-        self.cli_set(base_path + ['parameters', 'default', 'no-ipv4-unicast'])
         self.cli_set(base_path + ['parameters', 'graceful-restart', 'stalepath-time', stalepath_time])
         self.cli_set(base_path + ['parameters', 'graceful-shutdown'])
         self.cli_set(base_path + ['parameters', 'ebgp-requires-policy'])
@@ -243,7 +244,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
-        self.assertIn(f' no bgp default ipv4-unicast', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
@@ -281,7 +281,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'multi_hop' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'ebgp-multihop', peer_config["multi_hop"]])
             if 'local_as' in peer_config:
-                self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"]])
+                self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"], 'no-prepend', 'replace-as'])
             if 'cap_over' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'override-capability'])
             if 'passive' in peer_config:
@@ -296,6 +296,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'strict-capability-match'])
             if 'shutdown' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'shutdown'])
+            if 'solo' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'solo'])
             if 'ttl_security' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'ttl-security', 'hops', peer_config["ttl_security"]])
             if 'update_src' in peer_config:
@@ -348,7 +350,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'multi_hop' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'ebgp-multihop', config["multi_hop"]])
             if 'local_as' in config:
-                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"], 'no-prepend', 'replace-as'])
             if 'cap_over' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'override-capability'])
             if 'passive' in config:
@@ -628,6 +630,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # templates and Jinja2 FRR template.
         table = '1000'
 
+        self.cli_set(base_path + ['local-as', ASN])
+        # testing only one AFI is sufficient as it's generic code
+
         for vrf in vrfs:
             vrf_base = ['vrf', 'name', vrf]
             self.cli_set(vrf_base + ['table', table])
@@ -636,15 +641,26 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(vrf_base + ['protocols', 'bgp', 'route-map', route_map_in])
             table = str(int(table) + 1000)
 
+            # import VRF routes do main RIB
+            self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'import', 'vrf', vrf])
+
         self.cli_commit()
 
-        for vrf in vrfs:
-            # Verify FRR bgpd configuration
-            frrconfig = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
-            self.assertIn(f'router bgp {ASN} vrf {vrf}', frrconfig)
-            self.assertIn(f' bgp router-id {router_id}', frrconfig)
+        # Verify FRR bgpd configuration
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' address-family ipv6 unicast', frrconfig)
 
-            # CCC: Currently this is not working as FRR() class does not support
+
+        for vrf in vrfs:
+            self.assertIn(f'  import vrf {vrf}', frrconfig)
+
+            # Verify FRR bgpd configuration
+            frr_vrf_config = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
+            self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
+            self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
+
+            # XXX: Currently this is not working as FRR() class does not support
             # route-maps for multiple vrfs because the modify_section() only works
             # on lines and not text blocks.
             #
@@ -694,13 +710,27 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  neighbor {interface} activate', frrconfig)
         self.assertIn(f' exit-address-family', frrconfig)
 
-    def test_bgp_13_solo(self):
+
+    def test_bgp_13_vpn(self):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.55'
+        vrf_name = 'red'
+        label = 'auto'
+        rd = f'{neighbor}:{ASN}'
+        rt_export = f'{neighbor}:1002 1.2.3.4:567'
+        rt_import = f'{neighbor}:1003 500:100'
 
         self.cli_set(base_path + ['local-as', ASN])
-        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
-        self.cli_set(base_path + ['neighbor', neighbor, 'solo'])
+        # testing only one AFI is sufficient as it's generic code
+        for afi in ['ipv4-unicast', 'ipv6-unicast']:
+            self.cli_set(base_path + ['address-family', afi, 'export', 'vpn'])
+            self.cli_set(base_path + ['address-family', afi, 'import', 'vpn'])
+            self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
+            self.cli_set(base_path + ['address-family', afi, 'rd', 'vpn', 'export', rd])
+            self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'export', route_map_out])
+            self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'import', route_map_in])
+            self.cli_set(base_path + ['address-family', afi, 'route-target', 'vpn', 'export', rt_export])
+            self.cli_set(base_path + ['address-family', afi, 'route-target', 'vpn', 'import', rt_import])
 
         # commit changes
         self.cli_commit()
@@ -708,7 +738,19 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # Verify FRR bgpd configuration
         frrconfig = self.getFRRconfig(f'router bgp {ASN}')
         self.assertIn(f'router bgp {ASN}', frrconfig)
-        self.assertIn(f' neighbor {neighbor} solo', frrconfig)
+
+        for afi in ['ipv4', 'ipv6']:
+            afi_config = self.getFRRconfig(f' address-family {afi} unicast', endsection='exit-address-family', daemon='bgpd')
+            self.assertIn(f'address-family {afi} unicast', afi_config)
+            self.assertIn(f'  export vpn', afi_config)
+            self.assertIn(f'  import vpn', afi_config)
+            self.assertIn(f'  label vpn export {label}', afi_config)
+            self.assertIn(f'  rd vpn export {rd}', afi_config)
+            self.assertIn(f'  route-map vpn export {route_map_out}', afi_config)
+            self.assertIn(f'  route-map vpn import {route_map_in}', afi_config)
+            self.assertIn(f'  rt vpn export {rt_export}', afi_config)
+            self.assertIn(f'  rt vpn import {rt_import}', afi_config)
+            self.assertIn(f' exit-address-family', afi_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

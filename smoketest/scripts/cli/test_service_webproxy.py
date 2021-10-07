@@ -52,8 +52,6 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'access_log /var/log/squid/access.log squid', config)
 
         # ACL verification
-        self.assertIn(f'acl localhost src 127.0.0.1/32', config)
-        self.assertIn(f'acl to_localhost dst 127.0.0.0/8', config)
         self.assertIn(f'acl net src all', config)
         self.assertIn(f'acl SSL_ports port 443', config)
 
@@ -234,8 +232,8 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:3128 intercept', config)
 
-        self.assertIn(f'redirect_program /usr/bin/squidGuard -c /etc/squidguard/squidGuard.conf', config)
-        self.assertIn(f'redirect_children 8', config)
+        self.assertIn(f'url_rewrite_program /usr/bin/squidGuard -c /etc/squidguard/squidGuard.conf', config)
+        self.assertIn(f'url_rewrite_children 8', config)
 
         # Check SquidGuard config
         sg_config = read_file('/etc/squidguard/squidGuard.conf')

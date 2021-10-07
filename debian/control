@@ -156,6 +156,7 @@ Depends:
   traceroute,
   tuned,
   udp-broadcast-relay,
+  uidmap,
   usb-modeswitch,
   usbutils,
   vyatta-bash,

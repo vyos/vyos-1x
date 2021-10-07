@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,10 +22,8 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
-from vyos.util import read_file
 
 config_file = '/etc/ppp/peers/{}'
-dhcp6c_config_file = '/run/dhcp6c/dhcp6c.{}.conf'
 base_path = ['interfaces', 'pppoe']
 
 def get_config_value(interface, key):
@@ -35,25 +33,26 @@ def get_config_value(interface, key):
                 return list(line.split())
     return []
 
-def get_dhcp6c_config_value(interface, key):
-    tmp = read_file(dhcp6c_config_file.format(interface))
-    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
-
-    out = []
-    for item in tmp:
-        out.append(item.replace(';',''))
-    return out
-
+# add a classmethod to setup a temporaray PPPoE server for "proper" validation
 class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
         self._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
         self._source_interface = 'eth0'
 
     def tearDown(self):
+        # Validate PPPoE client process
+        for interface in self._interfaces:
+            running = False
+            for proc in process_iter():
+                if interface in proc.cmdline():
+                    running = True
+                    break
+            self.assertTrue(running)
+
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_pppoe_client(self):
+    def test_01_pppoe_client(self):
         # Check if PPPoE dialer can be configured and runs
         for interface in self._interfaces:
             user = 'VyOS-user-' + interface
@@ -71,8 +70,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
                 self.cli_commit()
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
 
-            # commit changes
-            self.cli_commit()
+        # commit changes
+        self.cli_commit()
 
         # verify configuration file(s)
         for interface in self._interfaces:
@@ -88,17 +87,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value(interface, 'ifname')[1]
             self.assertEqual(tmp, interface)
 
-            # Check if ppp process is running in the interface in question
-            running = False
-            for p in process_iter():
-                if "pppd" in p.name():
-                    if interface in p.cmdline():
-                        running = True
-
-            self.assertTrue(running)
-
-
-    def test_pppoe_clent_disabled_interface(self):
+    def test_02_pppoe_client_disabled_interface(self):
         # Check if PPPoE Client can be disabled
         for interface in self._interfaces:
             self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
@@ -106,23 +95,45 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'disable'])
 
-            self.cli_commit()
+        self.cli_commit()
 
-        # Validate PPPoE client process
-        running = False
+        # Validate PPPoE client process - must not run as interfaces are disabled
         for interface in self._interfaces:
+            running = False
             for proc in process_iter():
                 if interface in proc.cmdline():
                     running = True
+                    break
+            self.assertFalse(running)
 
-        self.assertFalse(running)
+        # enable PPPoE interfaces
+        for interface in self._interfaces:
+            self.cli_delete(base_path + [interface, 'disable'])
+
+        self.cli_commit()
 
 
-    def test_pppoe_dhcpv6pd(self):
+    def test_03_pppoe_authentication(self):
+        # When username or password is set - so must be the other
+        for interface in self._interfaces:
+            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+            self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
+
+            # check validate() - if user is set, so must be the password
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+
+        self.cli_commit()
+
+    def test_04_pppoe_dhcpv6pd(self):
         # Check if PPPoE dialer can be configured with DHCPv6-PD
         address = '1'
         sla_id = '0'
         sla_len = '8'
+
         for interface in self._interfaces:
             self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
             self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
@@ -147,51 +158,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp, 'vyos')
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
             self.assertEqual(tmp, 'vyos')
-
-            for param in ['+ipv6', 'ipv6cp-use-ipaddr']:
-                tmp = get_config_value(interface, param)[0]
-                self.assertEqual(tmp, param)
-
-            # verify DHCPv6 prefix delegation
-            # will return: ['delegation', '::/56 infinity;']
-            tmp = get_dhcp6c_config_value(interface, 'prefix')[1].split()[0] # mind the whitespace
-            self.assertEqual(tmp, '::/56')
-            tmp = get_dhcp6c_config_value(interface, 'prefix-interface')[0].split()[0]
-            self.assertEqual(tmp, self._source_interface)
-            tmp = get_dhcp6c_config_value(interface, 'ifid')[0]
-            self.assertEqual(tmp, address)
-            tmp = get_dhcp6c_config_value(interface, 'sla-id')[0]
-            self.assertEqual(tmp, sla_id)
-            tmp = get_dhcp6c_config_value(interface, 'sla-len')[0]
-            self.assertEqual(tmp, sla_len)
-
-            # Check if ppp process is running in the interface in question
-            running = False
-            for p in process_iter():
-                if "pppd" in p.name():
-                    running = True
-            self.assertTrue(running)
-
-            # We can not check if wide-dhcpv6 process is running as it is started
-            # after the PPP interface gets a link to the ISP - but we can see if
-            # it would be started by the scripts
-            tmp = read_file(f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{interface}')
-            tmp = re.findall(f'systemctl restart dhcp6c@{interface}.service', tmp)
-            self.assertTrue(tmp)
-
-    def test_pppoe_authentication(self):
-        # When username or password is set - so must be the other
-        interface = 'pppoe0'
-        self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
-        self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
-        self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
-
-        # check validate() - if user is set, so must be the password
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
-        self.cli_commit()
+            tmp = get_config_value(interface, '+ipv6 ipv6cp-use-ipaddr')
+            self.assertListEqual(tmp, ['+ipv6', 'ipv6cp-use-ipaddr'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

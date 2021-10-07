@@ -83,17 +83,8 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  #include <include/port-number.xml.i>
                   <leafNode name="port">
-                    <properties>
-                      <help>LDAP server port to use (default: 389)</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Port number to use</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                    </properties>
                     <defaultValue>389</defaultValue>
                   </leafNode>
                   <leafNode name="server">
@@ -214,7 +205,7 @@
                 <properties>
                   <help>Cache peer options (default: "no-query default")</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>Cache peer options</description>
                   </valueHelp>
                 </properties>
@@ -513,6 +504,7 @@
                             <validator name="ipv4-prefix"/>
                             <validator name="ipv4-range"/>
                           </constraint>
+                          <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="description">

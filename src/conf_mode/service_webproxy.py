@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
+from vyos.util import chmod_755
 from vyos.util import dict_search
 from vyos.util import write_file
 from vyos.validate import is_addr_assigned
@@ -192,6 +193,8 @@ def apply(proxy):
 
         return None
 
+    if os.path.exists(squidguard_db_dir):
+        chmod_755(squidguard_db_dir)
     call('systemctl restart squid.service')
     return None
 

@@ -35,7 +35,7 @@
             <properties>
               <help>Maximum hop count for which requests will be processed</help>
               <valueHelp>
-                <format>1-255</format>
+                <format>u32:1-255</format>
                 <description>Hop count (default: 10)</description>
               </valueHelp>
               <constraint>

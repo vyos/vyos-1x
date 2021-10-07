@@ -61,12 +61,7 @@ op_mode_definitions: $(op_xml_obj)
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
-	#find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
-
-.PHONY: component_versions
-.ONESHELL:
-component_versions: interface_definitions
-	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
+	find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
 .PHONY: vyshim
 vyshim:
@@ -77,7 +72,7 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim
+all: clean interface_definitions op_mode_definitions vyshim
 
 .PHONY: clean
 clean:
@@ -89,7 +84,7 @@ clean:
 
 .PHONY: test
 test:
-	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/' .
+	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/, /ppp/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
 
 .PHONY: sonar

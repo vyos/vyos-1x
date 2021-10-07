@@ -83,7 +83,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Use Diffie-Hellman group 2 (modp1024) - default</description>
+                    <description>Inherit Diffie-Hellman group from IKE group - default</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group1</format>
@@ -757,11 +757,15 @@
                     <properties>
                       <help>Timeout to close connection if no data is transmitted</help>
                       <valueHelp>
-                        <format>u32:10-86400</format>
+                        <format>u32:0</format>
+                        <description>Disable inactivity checks</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>u32:1-86400</format>
                         <description>Timeout in seconds (default 28800)</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="numeric" argument="--range 10-86400"/>
+                        <validator name="numeric" argument="--range 0-86400"/>
                       </constraint>
                     </properties>
                     <defaultValue>28800</defaultValue>
@@ -771,11 +775,19 @@
                       <help>Pool name used for IP address assignments</help>
                       <completionHelp>
                         <path>vpn ipsec remote-access pool</path>
-                        <list>dhcp</list>
+                        <list>dhcp radius</list>
                       </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Pool name</description>
+                        <description>Name of predefined IP pool</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>dhcp</format>
+                        <description>Forward requests for virtual IP addresses to a DHCP server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>radius</format>
+                        <description>Forward requests for virtual IP addresses to a RADIUS server</description>
                       </valueHelp>
                       <multi/>
                     </properties>
@@ -872,8 +884,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <!-- Include Accel-PPP definition here, maybe time for a rename? -->
-                  #include <include/accel-ppp/name-server.xml.i>
+                  #include <include/name-server-ipv4-ipv6.xml.i>
                 </children>
               </tagNode>
               #include <include/radius-server-ipv4.xml.i>

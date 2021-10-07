@@ -65,7 +65,7 @@
                 <properties>
                   <help>TTL threshold (default: 1)</help>
                   <valueHelp>
-                    <format>1-255</format>
+                    <format>u32:1-255</format>
                     <description>TTL threshold for the interfaces (default: 1)</description>
                   </valueHelp>
                   <constraint>

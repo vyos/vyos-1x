@@ -125,14 +125,14 @@ def _intercepting_exceptions(_singleton=[False]):
 # if the key before the value has not time, syslog takes that as the source of the message
 
 FAULT = """\
-Report Time:      {date}
-Image Version:    VyOS {version}
-Release Train:    {release_train}
+Report time:      {date}
+Image version:    VyOS {version}
+Release train:    {release_train}
 
 Built by:         {built_by}
 Built on:         {built_on}
 Build UUID:       {build_uuid}
-Build Commit ID:  {build_git}
+Build commit ID:  {build_git}
 
 Architecture:     {system_arch}
 Boot via:         {boot_via}

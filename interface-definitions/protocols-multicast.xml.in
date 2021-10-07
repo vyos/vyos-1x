@@ -37,7 +37,7 @@
                         <properties>
                           <help>Distance value for this route</help>
                           <valueHelp>
-                            <format>1-255</format>
+                            <format>u32:1-255</format>
                             <description>Distance for this route</description>
                           </valueHelp>
                           <constraint>
@@ -73,7 +73,7 @@
                         <properties>
                           <help>Distance value for this route</help>
                           <valueHelp>
-                            <format>1-255</format>
+                            <format>u32:1-255</format>
                             <description>Distance for this route</description>
                           </valueHelp>
                           <constraint>

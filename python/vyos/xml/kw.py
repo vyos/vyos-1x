@@ -32,6 +32,7 @@ priorities = '[priorities]'
 owners = '[owners]'
 tags = '[tags]'
 default = '[default]'
+component_version = '[component_version]'
 
 # nodes
 

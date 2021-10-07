@@ -2,13 +2,13 @@
 <leafNode name="ca-certificate">
   <properties>
     <help>Certificate Authority in PKI configuration</help>
-    <valueHelp>
-      <format>CA name</format>
-      <description>Name of CA in PKI configuration</description>
-    </valueHelp>
     <completionHelp>
       <path>pki ca</path>
     </completionHelp>
+    <valueHelp>
+      <format>txt</format>
+      <description>Name of CA in PKI configuration</description>
+    </valueHelp>
   </properties>
 </leafNode>
 <!-- include end -->

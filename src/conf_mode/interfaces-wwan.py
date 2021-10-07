@@ -26,7 +26,6 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
 from vyos.util import cmd
 from vyos.util import dict_search
-from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

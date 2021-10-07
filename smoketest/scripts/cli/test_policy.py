@@ -804,6 +804,19 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     },
                 },
             },
+            'evpn-configuration' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'evpn-default-route'  : '',
+                            'evpn-rd'             : '100:300',
+                            'evpn-route-type'     : 'prefix',
+                            'evpn-vni'            : '1234',
+                        },
+                    },
+                },
+            },
         }
 
         self.cli_set(['policy', 'access-list', access_list, 'rule', '10', 'action', 'permit'])
@@ -847,6 +860,14 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'community' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'community', 'community-list', rule_config['match']['community']])
                         self.cli_set(path + ['rule', rule, 'match', 'community', 'exact-match'])
+                    if 'evpn-default-route' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'default-route'])
+                    if 'evpn-rd' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'rd', rule_config['match']['evpn-rd']])
+                    if 'evpn-route-type' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'route-type', rule_config['match']['evpn-route-type']])
+                    if 'evpn-vni' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'evpn', 'vni', rule_config['match']['evpn-vni']])
                     if 'extcommunity' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'extcommunity', rule_config['match']['extcommunity']])
                     if 'interface' in rule_config['match']:
@@ -966,6 +987,18 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'community' in rule_config['match']:
                         tmp = f'match community {rule_config["match"]["community"]} exact-match'
+                        self.assertIn(tmp, config)
+                    if 'evpn-default-route' in rule_config['match']:
+                        tmp = f'match evpn default-route'
+                        self.assertIn(tmp, config)
+                    if 'evpn-rd' in rule_config['match']:
+                        tmp = f'match evpn rd {rule_config["match"]["evpn-rd"]}'
+                        self.assertIn(tmp, config)
+                    if 'evpn-route-type' in rule_config['match']:
+                        tmp = f'match evpn route-type {rule_config["match"]["evpn-route-type"]}'
+                        self.assertIn(tmp, config)
+                    if 'evpn-vni' in rule_config['match']:
+                        tmp = f'match evpn vni {rule_config["match"]["evpn-vni"]}'
                         self.assertIn(tmp, config)
                     if 'extcommunity' in rule_config['match']:
                         tmp = f'match extcommunity {rule_config["match"]["extcommunity"]}'
@@ -1111,6 +1144,59 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         50:	from 203.0.113.2 lookup 23
         """
         tmp = cmd('ip rule show prio 50')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
+
+    # Test set table for fwmark
+    def test_fwmark_table_id(self):
+        path = base_path + ['local-route']
+
+        fwmk = '24'
+        rule = '101'
+        table = '154'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        # Check generated configuration
+
+        # Expected values
+        original = """
+        101:    from all fwmark 0x18 lookup 154
+        """
+        tmp = cmd('ip rule show prio 101')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
+
+    # Test set table for sources with fwmark
+    def test_fwmark_sources_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.11', '203.0.113.12']
+        fwmk = '23'
+        rule = '100'
+        table = '150'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        # Check generated configuration
+
+        # Expected values
+        original = """
+        100:	from 203.0.113.11 fwmark 0x17 lookup 150
+        100:	from 203.0.113.12 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
         original = original.split()
         tmp = tmp.split()
 

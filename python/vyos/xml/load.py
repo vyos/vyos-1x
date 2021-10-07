@@ -115,7 +115,12 @@ def _format_nodes(inside, conf, xml):
             nodetype = 'tagNode'
             nodename = kw.tagNode
         elif 'syntaxVersion' in conf.keys():
-            conf.pop('syntaxVersion')
+            sv = conf.pop('syntaxVersion')
+            if isinstance(sv, list):
+                for v in sv:
+                    xml[kw.component_version][v['@component']] = v['@version']
+            else:
+                xml[kw.component_version][sv['@component']] = sv['@version']
             continue
         else:
             _fatal(conf.keys())
@@ -125,14 +130,20 @@ def _format_nodes(inside, conf, xml):
             for node in nodes:
                 name = node.pop('@name')
                 into = inside + [name]
-                r[name] = _format_node(into, node, xml)
+                if name in r:
+                    r[name].update(_format_node(into, node, xml))
+                else:
+                    r[name] = _format_node(into, node, xml)
                 r[name][kw.node] = nodename
                 xml[kw.tags].append(' '.join(into))
         else:
             node = nodes
             name = node.pop('@name')
             into = inside + [name]
-            r[name] = _format_node(inside + [name], node, xml)
+            if name in r:
+                r[name].update(_format_node(inside + [name], node, xml))
+            else:
+                r[name] = _format_node(inside + [name], node, xml)
             r[name][kw.node] = nodename
             xml[kw.tags].append(' '.join(into))
     return r

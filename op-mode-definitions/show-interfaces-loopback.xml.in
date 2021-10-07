@@ -6,7 +6,7 @@
         <children>
           <tagNode name="loopback">
             <properties>
-              <help>Show loopback interface information</help>
+              <help>Show specified Loopback interface information</help>
               <completionHelp>
                 <path>interfaces loopback</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="loopback">
             <properties>
-              <help>Show loopback interface information</help>
+              <help>Show Loopback interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=loopback --action=show-brief</command>
             <children>

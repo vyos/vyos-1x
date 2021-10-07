@@ -14,10 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+import sys
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import process_named_running
 from vyos.util import cmd
@@ -26,6 +29,8 @@ PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
 
 route_map = 'foo-bar-baz10'
+
+log = logging.getLogger('TestProtocolsOSPF')
 
 class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def setUp(self):
@@ -202,10 +207,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             for interface in interfaces:
                 self.assertIn(f' no passive-interface {interface}', frrconfig) # default
         except:
-            tmp1 = cmd('sudo dmesg')
-            tmp2 = cmd('tail -n 250 /var/log/messages')
-            tmp3 = cmd('vtysh -c "show run"')
-            self.fail(f'Now we can hopefully see why OSPF fails:\n{tmp1}\n\n{tmp2}\n\n{tmp3}')
+            log.debug(frrconfig)
+            log.debug(cmd('sudo dmesg'))
+            log.debug(cmd('sudo cat /var/log/messages'))
+            log.debug(cmd('vtysh -c "show run"'))
+            self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_08_redistribute(self):
         metric = '15'
@@ -215,21 +221,22 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for protocol in redistribute:
             self.cli_set(base_path + ['redistribute', protocol, 'metric', metric])
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
-            if protocol not in ['kernel', 'static']:
-                self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
+            self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
         # commit changes
         self.cli_commit()
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
-        self.assertIn(f'router ospf', frrconfig)
-        for protocol in redistribute:
-            if protocol in ['kernel', 'static']:
-                self.assertIn(f' redistribute {protocol} metric {metric} route-map {route_map}', frrconfig)
-            else:
+        try:
+            self.assertIn(f'router ospf', frrconfig)
+            for protocol in redistribute:
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
-
+        except:
+            log.debug(frrconfig)
+            log.debug(cmd('sudo cat /var/log/messages'))
+            log.debug(cmd('vtysh -c "show run"'))
+            self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_09_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
@@ -261,7 +268,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' network {network} area {area}', frrconfig)
 
 
-    def test_ospf_10_interface_configureation(self):
+    def test_ospf_10_interface_configuration(self):
         interfaces = Section.interfaces('ethernet')
         password = 'vyos1234'
         bandwidth = '10000'
@@ -344,5 +351,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(zebra_route_map)
         self.assertNotIn(zebra_route_map, frrconfig)
 
+    def test_ospf_13_interface_area(self):
+        area = '0'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['area', area, 'network', '10.0.0.0/8'])
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'area', area])
+
+        # we can not have bot area network and interface area set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area', area, 'network'])
+
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+
+        for interface in interfaces:
+            config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf area {area}', config)
+
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     unittest.main(verbosity=2)

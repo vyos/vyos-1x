@@ -49,13 +49,13 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/description.xml.i>
           #include <include/interface/dhcp-options.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
-          #include <include/interface/interface-disable-link-detect.xml.i>
-          #include <include/interface/interface-disable.xml.i>
-          #include <include/interface/interface-vrf.xml.i>
-          #include <include/interface/interface-mirror.xml.i>
+          #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="hash-policy">
             <properties>
               <help>Bonding transmit hash policy</help>
@@ -89,9 +89,9 @@
             </properties>
             <defaultValue>layer2</defaultValue>
           </leafNode>
-          #include <include/interface/interface-ipv4-options.xml.i>
-          #include <include/interface/interface-ipv6-options.xml.i>
-          #include <include/interface/interface-mac.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
           <leafNode name="min-links">
             <properties>
               <help>Minimum number of member interfaces required up before enabling bond</help>
@@ -182,7 +182,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-mtu-68-16000.xml.i>
+          #include <include/interface/mtu-68-16000.xml.i>
           <leafNode name="primary">
             <properties>
               <help>Primary device interface</help>
@@ -193,7 +193,7 @@
           </leafNode>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>
-          #include <include/interface/interface-xdp.xml.i>
+          #include <include/interface/xdp.xml.i>
         </children>
       </tagNode>
     </children>

@@ -3,12 +3,12 @@
   <properties>
     <help>Number of NS messages to send while performing DAD (default: 1)</help>
     <valueHelp>
-      <format>1-n</format>
-      <description>Number of NS messages to send while performing DAD</description>
+      <format>u32:0</format>
+      <description>Disable Duplicate Address Dectection (DAD)</description>
     </valueHelp>
     <valueHelp>
-      <format>0</format>
-      <description>Disable Duplicate Address Dectection (DAD)</description>
+      <format>u32:1-n</format>
+      <description>Number of NS messages to send while performing DAD</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--non-negative"/>
