@@ -88,18 +88,17 @@ def verify(tunnel):
             # Prevent the same key for 2 tunnels with same source-address/encap. T2920
             for tunnel_if in Section.interfaces('tunnel'):
                 tunnel_cfg = get_interface_config(tunnel_if)
-                exist_encap = tunnel_cfg['linkinfo']['info_kind']
-                exist_source_address = tunnel_cfg['address']
-                exist_key = tunnel_cfg['linkinfo']['info_data']['ikey']
+                # no match on encapsulation - bail out
+                if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
+                    continue
                 new_source_address = tunnel['source_address']
                 # Convert tunnel key to ip key, format "ip -j link show"
                 # 1 => 0.0.0.1, 999 => 0.0.3.231
-                orig_new_key = int(tunnel['parameters']['ip']['key'])
-                new_key = IPv4Address(orig_new_key)
+                orig_new_key = dict_search('parameters.ip.key', tunnel)
+                new_key = IPv4Address(int(orig_new_key))
                 new_key = str(new_key)
-                if tunnel['encapsulation'] == exist_encap and \
-                   new_source_address == exist_source_address and \
-                   new_key == exist_key:
+                if dict_search('address', tunnel_cfg) == new_source_address and \
+                   dict_search('linkinfo.info_data.ikey', tunnel_cfg) == new_key:
                     raise ConfigError(f'Key "{orig_new_key}" for source-address "{new_source_address}" ' \
                                       f'is already used for tunnel "{tunnel_if}"!')
 
