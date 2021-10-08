@@ -105,6 +105,456 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <tagNode name="authoritative-domain">
+                <properties>
+                  <help>Domain to host authoritative records for</help>
+                  <valueHelp>
+                    <format>text</format>
+                    <description>An absolute DNS name</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^[-_a-zA-Z0-9.]{1,63}$</regex>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="records">
+                    <properties>
+                      <help>DNS zone records</help>
+                    </properties>
+                    <children>
+                      <tagNode name="a">
+                        <properties>
+                          <help>"A" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="address">
+                            <properties>
+                              <help>IPv4 address [REQUIRED]</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>IPv4 address</description>
+                              </valueHelp>
+                              <multi/>
+                              <constraint>
+                                <validator name="ipv4-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="aaaa">
+                        <properties>
+                          <help>"AAAA" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="address">
+                            <properties>
+                              <help>IPv6 address [REQUIRED]</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>IPv6 address</description>
+                              </valueHelp>
+                              <multi/>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="cname">
+                        <properties>
+                          <help>"CNAME" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="target">
+                            <properties>
+                              <help>Target DNS name [REQUIRED]</help>
+                              <valueHelp>
+                                <format>name.example.com</format>
+                                <description>An absolute DNS name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="mx">
+                        <properties>
+                          <help>"MX" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <tagNode name="server">
+                            <properties>
+                              <help>Mail server [REQUIRED]</help>
+                              <valueHelp>
+                                <format>name.example.com</format>
+                                <description>An absolute DNS name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                              </constraint>
+                            </properties>
+                            <children>
+                              <leafNode name="priority">
+                                <properties>
+                                  <help>Server priority</help>
+                                  <valueHelp>
+                                    <format>u32:1-999</format>
+                                    <description>Server priority (lower numbers are higher priority)</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 1-999"/>
+                                  </constraint>
+                                </properties>
+                                <defaultValue>10</defaultValue>
+                              </leafNode>
+                            </children>
+                          </tagNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="ptr">
+                        <properties>
+                          <help>"PTR" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="target">
+                            <properties>
+                              <help>Target DNS name [REQUIRED]</help>
+                              <valueHelp>
+                                <format>name.example.com</format>
+                                <description>An absolute DNS name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="txt">
+                        <properties>
+                          <help>"TXT" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="value">
+                            <properties>
+                              <help>Record contents [REQUIRED]</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record contents</description>
+                              </valueHelp>
+                              <multi/>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="spf">
+                        <properties>
+                          <help>"SPF" record (type=SPF)</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="value">
+                            <properties>
+                              <help>Record contents [REQUIRED]</help>
+                              <valueHelp>
+                                <format>text</format>
+                                <description>Record contents</description>
+                              </valueHelp>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="srv">
+                        <properties>
+                          <help>Host an DNS "SRV" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <tagNode name="entry">
+                            <properties>
+                              <help>Service entry [REQUIRED]</help>
+                              <valueHelp>
+                                <format>u32:0-65535</format>
+                                <description>Entry number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-65535"/>
+                              </constraint>
+                            </properties>
+                            <children>
+                              <leafNode name="hostname">
+                                <properties>
+                                  <help>Server hostname [REQUIRED]</help>
+                                  <valueHelp>
+                                    <format>name.example.com</format>
+                                    <description>An absolute DNS name</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="port">
+                                <properties>
+                                  <help>Port number [REQUIRED]</help>
+                                  <valueHelp>
+                                    <format>u32:0-65535</format>
+                                    <description>TCP/UDP port number</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 0-65536"/>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="priority">
+                                <properties>
+                                  <help>Entry priority</help>
+                                  <valueHelp>
+                                    <format>u32:0-65535</format>
+                                    <description>Entry priority (lower numbers are higher priority)</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 0-65535"/>
+                                  </constraint>
+                                </properties>
+                                <defaultValue>10</defaultValue>
+                              </leafNode>
+                              <leafNode name="weight">
+                                <properties>
+                                  <help>Entry weight</help>
+                                  <valueHelp>
+                                    <format>u32:0-65535</format>
+                                    <description>Entry weight</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 0-65535"/>
+                                  </constraint>
+                                </properties>
+                                <defaultValue>0</defaultValue>
+                              </leafNode>
+                            </children>
+                          </tagNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                      <tagNode name="naptr">
+                        <properties>
+                          <help>"NAPTR" record</help>
+                          <valueHelp>
+                            <format>text</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>@</format>
+                            <description>Root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>NAPTR rule [REQUIRED]</help>
+                              <valueHelp>
+                                <format>u32:0-65535</format>
+                                <description>Rule number</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-65535"/>
+                              </constraint>
+                            </properties>
+                            <children>
+                              <leafNode name="order">
+                                <properties>
+                                  <help>Rule order</help>
+                                  <valueHelp>
+                                    <format>u32:0-65535</format>
+                                    <description>Rule order (lower order is evaluated first)</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 0-65535"/>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="preference">
+                                <properties>
+                                  <help>Rule preference</help>
+                                  <valueHelp>
+                                    <format>u32:0-65535</format>
+                                    <description>Rule preference</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <validator name="numeric" argument="--range 0-65535"/>
+                                  </constraint>
+                                </properties>
+                                <defaultValue>0</defaultValue>
+                              </leafNode>
+                              <leafNode name="lookup-srv">
+                                <properties>
+                                  <help>"S" flag</help>
+                                  <valueless/>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="lookup-a">
+                                <properties>
+                                  <help>"A" flag</help>
+                                  <valueless/>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="resolve-uri">
+                                <properties>
+                                  <help>"U" flag</help>
+                                  <valueless/>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="protocol-specific">
+                                <properties>
+                                  <help>"P" flag</help>
+                                  <valueless/>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="service">
+                                <properties>
+                                  <help>Service type</help>
+                                  <constraint>
+                                    <regex>^[a-zA-Z][a-zA-Z0-9]{0,31}(\+[a-zA-Z][a-zA-Z0-9]{0,31})?$</regex>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="regexp">
+                                <properties>
+                                  <help>Regular expression</help>
+                                </properties>
+                              </leafNode>
+                              <leafNode name="replacement">
+                                <properties>
+                                  <help>Replacement DNS name</help>
+                                  <valueHelp>
+                                    <format>name.example.com</format>
+                                    <description>An absolute DNS name</description>
+                                  </valueHelp>
+                                  <constraint>
+                                    <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                  </constraint>
+                                </properties>
+                              </leafNode>
+                            </children>
+                          </tagNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                  #include <include/generic-disable-node.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="ignore-hosts-file">
                 <properties>
                   <help>Do not use local /etc/hosts file in name resolution</help>
@@ -114,7 +564,7 @@
               <leafNode name="no-serve-rfc1918">
                 <properties>
                   <help>Makes the server authoritatively not aware of RFC1918 addresses</help>
-		  <valueless/>
+		          <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="allow-from">

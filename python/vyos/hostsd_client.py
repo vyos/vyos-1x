@@ -79,6 +79,18 @@ class Client(object):
         msg = {'type': 'forward_zones', 'op': 'get'}
         return self._communicate(msg)
 
+    def add_authoritative_zones(self, data):
+        msg = {'type': 'authoritative_zones', 'op': 'add', 'data': data}
+        self._communicate(msg)
+
+    def delete_authoritative_zones(self, data):
+        msg = {'type': 'authoritative_zones', 'op': 'delete', 'data': data}
+        self._communicate(msg)
+
+    def get_authoritative_zones(self):
+        msg = {'type': 'authoritative_zones', 'op': 'get'}
+        return self._communicate(msg)
+
     def add_search_domains(self, data):
         msg = {'type': 'search_domains', 'op': 'add', 'data': data}
         self._communicate(msg)

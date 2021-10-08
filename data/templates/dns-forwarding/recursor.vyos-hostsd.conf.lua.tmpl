@@ -22,3 +22,9 @@ addNTA("{{ zone }}", "static")
 {%   endfor %}
 {% endif %}
 
+{% if authoritative_zones is defined %}
+-- from 'service dns forwarding authoritative-domain'
+{%   for zone in authoritative_zones %}
+addNTA("{{ zone }}", "static")
+{%   endfor %}
+{% endif %}

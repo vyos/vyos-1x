@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from glob import glob
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -50,10 +51,12 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    dns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
+    # options which we need to update into the dictionary retrieved.
     default_values = defaults(base)
+    # T2665 due to how defaults under tag nodes work, we must clear these out before we merge
+    del default_values['authoritative_domain']
     dns = dict_merge(default_values, dns)
 
     # some additions to the default dictionary
@@ -65,6 +68,183 @@ def get_config(config=None):
         base_nameservers_dhcp = ['system', 'name-servers-dhcp']
         if conf.exists(base_nameservers_dhcp):
             dns.update({'system_name_server_dhcp': conf.return_values(base_nameservers_dhcp)})
+
+    if 'authoritative_domain' in dns:
+        dns['authoritative_zones'] = []
+        dns['authoritative_zone_errors'] = []
+        for node in dns['authoritative_domain']:
+            zonedata = dns['authoritative_domain'][node]
+            if ('disable' in zonedata) || (not 'records' in zonedata):
+                continue
+            zone = {
+                'name': node,
+                'file': "{}/zone.{}.conf".format(pdns_rec_run_dir, node),
+                'records': [],
+            }
+
+            recorddata = zonedata['records']
+
+            for rtype in [ 'a', 'aaaa', 'cname', 'mx', 'ptr', 'txt', 'spf', 'srv', 'naptr' ]:
+                if rtype not in recorddata:
+                    continue
+                for subnode in recorddata[rtype]:
+                    if 'disable' in recorddata[rtype][subnode]:
+                        continue
+
+                    rdata = recorddata[rtype][subnode]
+
+                    if rtype in [ 'a', 'aaaa' ]:
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'address' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: at least one address is required'.format(subnode, node))
+                            continue
+
+                        for address in rdata['address']:
+                            zone['records'].append({
+                                'name': subnode,
+                                'type': rtype.upper(),
+                                'ttl': rdata['ttl'],
+                                'value': address
+                            })
+                    elif rtype in ['cname', 'ptr']:
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'target' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: target is required'.format(subnode, node))
+                            continue
+
+                        zone['records'].append({
+                            'name': subnode,
+                            'type': rtype.upper(),
+                            'ttl': rdata['ttl'],
+                            'value': '{}.'.format(rdata['target'])
+                        })
+                    elif rtype == 'mx':
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        del rdefaults['server']
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'server' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: at least one server is required'.format(subnode, node))
+                            continue
+
+                        for servername in rdata['server']:
+                            serverdata = rdata['server'][servername]
+                            serverdefaults = defaults(base + ['authoritative-domain', rtype, 'server']) # T2665
+                            serverdata = dict_merge(serverdefaults, serverdata)
+                            zone['records'].append({
+                                'name': subnode,
+                                'type': rtype.upper(),
+                                'ttl': rdata['ttl'],
+                                'value': '{} {}.'.format(serverdata['priority'], servername)
+                            })
+                    elif rtype == 'txt':
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'value' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: at least one value is required'.format(subnode, node))
+                            continue
+
+                        for value in rdata['value']:
+                            zone['records'].append({
+                                'name': subnode,
+                                'type': rtype.upper(),
+                                'ttl': rdata['ttl'],
+                                'value': "\"{}\"".format(value.replace("\"", "\\\""))
+                            })
+                    elif rtype == 'spf':
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'value' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: value is required'.format(subnode, node))
+                            continue
+
+                        zone['records'].append({
+                            'name': subnode,
+                            'type': rtype.upper(),
+                            'ttl': rdata['ttl'],
+                            'value': '"{}"'.format(rdata['value'].replace("\"", "\\\""))
+                        })
+                    elif rtype == 'srv':
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        del rdefaults['entry']
+                        rdata = dict_merge(rdefaults, rdata)
+
+                        if not 'entry' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: at least one entry is required'.format(subnode, node))
+                            continue
+
+                        for entryno in rdata['entry']:
+                            entrydata = rdata['entry'][entryno]
+                            entrydefaults = defaults(base + ['authoritative-domain', rtype, 'entry']) # T2665
+                            entrydata = dict_merge(entrydefaults, entrydata)
+
+                            if not 'hostname' in entrydata:
+                                dns['authoritative_zone_errors'].append('{}.{}: hostname is required for entry {}'.format(subnode, node, entryno))
+                                continue
+
+                            if not 'port' in entrydata:
+                                dns['authoritative_zone_errors'].append('{}.{}: port is required for entry {}'.format(subnode, node, entryno))
+                                continue
+
+                            zone['records'].append({
+                                'name': subnode,
+                                'type': rtype.upper(),
+                                'ttl': rdata['ttl'],
+                                'value': '{} {} {} {}.'.format(entrydata['priority'], entrydata['weight'], entrydata['port'], entrydata['hostname'])
+                            })
+                    elif rtype == 'naptr':
+                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        del rdefaults['rule']
+                        rdata = dict_merge(rdefaults, rdata)
+
+
+                        if not 'rule' in rdata:
+                            dns['authoritative_zone_errors'].append('{}.{}: at least one rule is required'.format(subnode, node))
+                            continue
+
+                        for ruleno in rdata['rule']:
+                            ruledata = rdata['rule'][ruleno]
+                            ruledefaults = defaults(base + ['authoritative-domain', rtype, 'rule']) # T2665
+                            ruledata = dict_merge(ruledefaults, ruledata)
+                            flags = ""
+                            if 'lookup-srv' in ruledata:
+                                flags += "S"
+                            if 'lookup-a' in ruledata:
+                                flags += "A"
+                            if 'resolve-uri' in ruledata:
+                                flags += "U"
+                            if 'protocol-specific' in ruledata:
+                                flags += "P"
+
+                            if 'order' in ruledata:
+                                order = ruledata['order']
+                            else:
+                                order = ruleno
+
+                            if 'regexp' in ruledata:
+                                regexp= ruledata['regexp'].replace("\"", "\\\"")
+                            else:
+                                regexp = ''
+
+                            if ruledata['replacement']:
+                                replacement = '{}.'.format(ruledata['replacement'])
+                            else:
+                                replacement = ''
+
+                            zone['records'].append({
+                                'name': subnode,
+                                'type': rtype.upper(),
+                                'ttl': rdata['ttl'],
+                                'value': '{} {} "{}" "{}" "{}" {}'.format(order, ruledata['preference'], flags, ruledata['service'], regexp, replacement)
+                            })
+
+            dns['authoritative_zones'].append(zone)
 
     return dns
 
@@ -86,6 +266,11 @@ def verify(dns):
             if 'server' not in dns['domain'][domain]:
                 raise ConfigError(f'No server configured for domain {domain}!')
 
+    if dns['authoritative_zone_errors']:
+        for error in dns['authoritative_zone_errors']:
+            print(error)
+        raise ConfigError('Invalid authoritative records have been defined')
+
     if 'system' in dns:
         if not ('system_name_server' in dns or 'system_name_server_dhcp' in dns):
             print("Warning: No 'system name-server' or 'system " \
@@ -104,6 +289,14 @@ def generate(dns):
     render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
             dns, user=pdns_rec_user, group=pdns_rec_group)
 
+    for zone_filename in glob(f'{pdns_rec_run_dir}/zone.*.conf'):
+        os.unlink(zone_filename)
+
+    for zone in dns['authoritative_zones']:
+        render(zone['file'], 'dns-forwarding/recursor.zone.conf.tmpl',
+            zone, user=pdns_rec_user, group=pdns_rec_group)
+
+
     # if vyos-hostsd didn't create its files yet, create them (empty)
     for file in [pdns_rec_hostsd_lua_conf_file, pdns_rec_hostsd_zones_file]:
         with open(file, 'a'):
@@ -119,6 +312,9 @@ def apply(dns):
 
         if os.path.isfile(pdns_rec_config_file):
             os.unlink(pdns_rec_config_file)
+
+        for zone_filename in glob(f'{pdns_rec_run_dir}/zone.*.conf'):
+            os.unlink(zone_filename)
     else:
         ### first apply vyos-hostsd config
         hc = hostsd_client()
@@ -152,6 +348,12 @@ def apply(dns):
         hc.delete_forward_zones(list(hc.get_forward_zones().keys()))
         if 'domain' in dns:
             hc.add_forward_zones(dns['domain'])
+
+        # hostsd generates NTAs for the authoritative zones
+        # the list and keys() are required as get returns a dict, not list
+        hc.delete_authoritative_zones(list(hc.get_authoritative_zones()))
+        if 'authoritative_domain' in dns:
+            hc.add_authoritative_zones(list(dns['authoritative_domain'].keys()))
 
         # call hostsd to generate forward-zones and its lua-config-file
         hc.apply()
