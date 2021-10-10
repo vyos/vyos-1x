@@ -26,7 +26,6 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Address
 from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
-from pathlib import Path
 from netifaces import interfaces
 from secrets import SystemRandom
 from shutil import rmtree
@@ -386,9 +385,9 @@ def verify(openvpn):
 
         # add mfa users to the file the mfa plugin uses
         if dict_search('server.mfa.totp', openvpn):
-            if not Path(otp_file.format(**openvpn)).is_file():
-                Path(otp_path).mkdir(parents=True, exist_ok=True)
-                Path(otp_file.format(**openvpn)).touch()
+            if not os.path.isfile(otp_file.format(**openvpn)):
+                makedir(otp_path)
+                open(otp_file.format(**openvpn), 'a').close()
 
             with tempfile.TemporaryFile(mode='w+') as fp:
                 with open(otp_file.format(**openvpn), 'r+') as f:
