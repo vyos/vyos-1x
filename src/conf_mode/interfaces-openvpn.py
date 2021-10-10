@@ -403,7 +403,7 @@ def verify(openvpn):
                         if not exists:
                             random = SystemRandom()
                             totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
-                            fp.write("{0} otp totp:sha1:base32:{1}::xxx *\n".format(client, totp_secret))
+                            fp.write(f'{client} otp totp:sha1:base32:{totp_secret}::xxx *\n')
 
                     f.seek(0)
                     fp.seek(0)
