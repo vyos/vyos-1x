@@ -72,6 +72,7 @@ Depends:
   iw,
   keepalived (>=2.0.5),
   lcdproc,
+  lcdproc-extra-drivers,
   libatomic1,
   libcharon-extra-plugins (>=5.9),
   libcharon-extauth-plugins (>=5.9),
