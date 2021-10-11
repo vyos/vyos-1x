@@ -24,6 +24,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
+from vyos.util import read_file
 
 PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
@@ -121,6 +122,43 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dyndns_ipv6(self):
+        ddns = ['interface', 'eth0', 'service', 'dynv6']
+        hostname = 'test.ddns.vyos.io'
+        proto = 'dyndns2'
+        user = 'none'
+        password = 'paSS_4ord'
+        servr = 'ddns.vyos.io'
+
+        self.cli_set(base_path + ['interface', 'eth0', 'ipv6-enable'])
+        self.cli_set(base_path + ddns + ['host-name', hostname])
+        self.cli_set(base_path + ddns + ['login', user])
+        self.cli_set(base_path + ddns + ['password', password])
+        self.cli_set(base_path + ddns + ['protocol', proto])
+        self.cli_set(base_path + ddns + ['server', servr])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        config = read_file(DDCLIENT_CONF)
+
+        protocol = get_config_value('protocol')
+        login = get_config_value('login')
+        pwd = get_config_value('password')
+        server = get_config_value('server')
+
+        # Check some generating config parameters
+        self.assertTrue(protocol == proto)
+        self.assertTrue(login == user)
+        self.assertTrue(pwd == "'" + password + "'")
+        self.assertTrue(server == servr)
+
+        self.assertIn('usev6=if', config)
+        self.assertIn(hostname, config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
