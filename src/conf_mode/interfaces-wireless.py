@@ -82,11 +82,12 @@ def get_config(config=None):
     tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
     if not (dict_search('security.wpa.passphrase', tmp) or
             dict_search('security.wpa.radius', tmp)):
-        del wifi['security']['wpa']
+        if 'deleted' not in wifi:
+            del wifi['security']['wpa']
 
     # defaults include RADIUS server specifics per TAG node which need to be
     # added to individual RADIUS servers instead - so we can simply delete them
-    if dict_search('security.wpa.radius.server.port', wifi):
+    if dict_search('security.wpa.radius.server.port', wifi) != None:
         del wifi['security']['wpa']['radius']['server']['port']
         if not len(wifi['security']['wpa']['radius']['server']):
             del wifi['security']['wpa']['radius']
