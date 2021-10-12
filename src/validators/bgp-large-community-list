@@ -30,7 +30,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if not (re.match(pattern, sys.argv[1]) and
-           (is_ipv4(value[0]) or value[0].isdigit()) and value[1].isdigit()):
+           (is_ipv4(value[0]) or value[0].isdigit()) and (value[1].isdigit() or value[1] == '*')):
         sys.exit(1)
 
     sys.exit(0)
