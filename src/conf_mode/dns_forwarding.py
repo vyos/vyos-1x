@@ -94,7 +94,7 @@ def get_config(config=None):
                     rdata = recorddata[rtype][subnode]
 
                     if rtype in [ 'a', 'aaaa' ]:
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'address' in rdata:
@@ -109,7 +109,7 @@ def get_config(config=None):
                                 'value': address
                             })
                     elif rtype in ['cname', 'ptr']:
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'target' in rdata:
@@ -123,7 +123,7 @@ def get_config(config=None):
                             'value': '{}.'.format(rdata['target'])
                         })
                     elif rtype == 'mx':
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         del rdefaults['server']
                         rdata = dict_merge(rdefaults, rdata)
 
@@ -133,7 +133,7 @@ def get_config(config=None):
 
                         for servername in rdata['server']:
                             serverdata = rdata['server'][servername]
-                            serverdefaults = defaults(base + ['authoritative-domain', rtype, 'server']) # T2665
+                            serverdefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'server']) # T2665
                             serverdata = dict_merge(serverdefaults, serverdata)
                             zone['records'].append({
                                 'name': subnode,
@@ -142,7 +142,7 @@ def get_config(config=None):
                                 'value': '{} {}.'.format(serverdata['priority'], servername)
                             })
                     elif rtype == 'txt':
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'value' in rdata:
@@ -157,7 +157,7 @@ def get_config(config=None):
                                 'value': "\"{}\"".format(value.replace("\"", "\\\""))
                             })
                     elif rtype == 'spf':
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'value' in rdata:
@@ -171,7 +171,7 @@ def get_config(config=None):
                             'value': '"{}"'.format(rdata['value'].replace("\"", "\\\""))
                         })
                     elif rtype == 'srv':
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         del rdefaults['entry']
                         rdata = dict_merge(rdefaults, rdata)
 
@@ -181,7 +181,7 @@ def get_config(config=None):
 
                         for entryno in rdata['entry']:
                             entrydata = rdata['entry'][entryno]
-                            entrydefaults = defaults(base + ['authoritative-domain', rtype, 'entry']) # T2665
+                            entrydefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'entry']) # T2665
                             entrydata = dict_merge(entrydefaults, entrydata)
 
                             if not 'hostname' in entrydata:
@@ -199,7 +199,7 @@ def get_config(config=None):
                                 'value': '{} {} {} {}.'.format(entrydata['priority'], entrydata['weight'], entrydata['port'], entrydata['hostname'])
                             })
                     elif rtype == 'naptr':
-                        rdefaults = defaults(base + ['authoritative-domain', rtype]) # T2665
+                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         del rdefaults['rule']
                         rdata = dict_merge(rdefaults, rdata)
 
@@ -210,7 +210,7 @@ def get_config(config=None):
 
                         for ruleno in rdata['rule']:
                             ruledata = rdata['rule'][ruleno]
-                            ruledefaults = defaults(base + ['authoritative-domain', rtype, 'rule']) # T2665
+                            ruledefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'rule']) # T2665
                             ruledata = dict_merge(ruledefaults, ruledata)
                             flags = ""
                             if 'lookup-srv' in ruledata:

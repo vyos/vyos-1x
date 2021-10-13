@@ -360,7 +360,7 @@
                       </tagNode>
                       <tagNode name="srv">
                         <properties>
-                          <help>Host an DNS "SRV" record</help>
+                          <help>"SRV" record</help>
                           <valueHelp>
                             <format>text</format>
                             <description>A DNS name relative to the root record</description>
