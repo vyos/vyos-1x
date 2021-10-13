@@ -353,8 +353,8 @@ def apply(dns):
         # hostsd generates NTAs for the authoritative zones
         # the list and keys() are required as get returns a dict, not list
         hc.delete_authoritative_zones(list(hc.get_authoritative_zones()))
-        if 'authoritative_domain' in dns:
-            hc.add_authoritative_zones(list(dns['authoritative_domain'].keys()))
+        if 'authoritative_zones' in dns:
+            hc.add_authoritative_zones(list(map(lambda zone: zone['name'], dns['authoritative_zones'])))
 
         # call hostsd to generate forward-zones and its lua-config-file
         hc.apply()
