@@ -74,7 +74,7 @@ def get_config(config=None):
         dns['authoritative_zone_errors'] = []
         for node in dns['authoritative_domain']:
             zonedata = dns['authoritative_domain'][node]
-            if ('disable' in zonedata) || (not 'records' in zonedata):
+            if ('disable' in zonedata) or (not 'records' in zonedata):
                 continue
             zone = {
                 'name': node,
@@ -266,7 +266,7 @@ def verify(dns):
             if 'server' not in dns['domain'][domain]:
                 raise ConfigError(f'No server configured for domain {domain}!')
 
-    if dns['authoritative_zone_errors']:
+    if ('authoritative_zone_errors' in dns) and dns['authoritative_zone_errors']:
         for error in dns['authoritative_zone_errors']:
             print(error)
         raise ConfigError('Invalid authoritative records have been defined')
@@ -292,9 +292,10 @@ def generate(dns):
     for zone_filename in glob(f'{pdns_rec_run_dir}/zone.*.conf'):
         os.unlink(zone_filename)
 
-    for zone in dns['authoritative_zones']:
-        render(zone['file'], 'dns-forwarding/recursor.zone.conf.tmpl',
-            zone, user=pdns_rec_user, group=pdns_rec_group)
+    if 'authoritative_zones' in dns:
+        for zone in dns['authoritative_zones']:
+            render(zone['file'], 'dns-forwarding/recursor.zone.conf.tmpl',
+                    zone, user=pdns_rec_user, group=pdns_rec_group)
 
 
     # if vyos-hostsd didn't create its files yet, create them (empty)
