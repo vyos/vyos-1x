@@ -21,6 +21,30 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="cap-add">
+            <properties>
+              <help>Add capabilities</help>
+              <completionHelp>
+                <list>net-admin setpcap sys-time</list>
+              </completionHelp>
+              <valueHelp>
+                <format>net-admin</format>
+                <description>Net-admin option</description>
+              </valueHelp>
+              <valueHelp>
+                <format>setpcap</format>
+                <description>Setpcap option</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-time</format>
+                <description>Sys-time option</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(net-admin|setpcap|sys-time)$</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
           #include <include/generic-description.xml.i>
           #include <include/generic-disable-node.xml.i>
           <tagNode name="environment">
