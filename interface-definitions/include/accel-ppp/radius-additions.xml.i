@@ -5,7 +5,7 @@
       <properties>
         <help>Maximum jitter value in seconds to be applied to accounting information interval</help>
         <valueHelp>
-          <format>1-60</format>
+          <format>u32:1-60</format>
           <description>Maximum jitter value in seconds</description>
         </valueHelp>
         <constraint>
@@ -20,7 +20,7 @@
           <properties>
             <help>Accounting port</help>
             <valueHelp>
-              <format>1-65535</format>
+              <format>u32:1-65535</format>
               <description>Numeric IP port (default: 1813)</description>
             </valueHelp>
             <constraint>
@@ -34,7 +34,7 @@
           <properties>
             <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
             <valueHelp>
-              <format>0-600</format>
+              <format>u32:0-600</format>
               <description>Fail time penalty</description>
             </valueHelp>
             <constraint>
@@ -50,7 +50,7 @@
       <properties>
         <help>Timeout in seconds to wait response from RADIUS server</help>
         <valueHelp>
-          <format>1-60</format>
+          <format>u32:1-60</format>
           <description>Timeout in seconds</description>
         </valueHelp>
         <constraint>
@@ -64,7 +64,7 @@
       <properties>
         <help>Timeout for Interim-Update packets, terminate session afterwards (default 3 seconds)</help>
         <valueHelp>
-          <format>0-60</format>
+          <format>u32:0-60</format>
           <description>Timeout in seconds, 0 to keep active</description>
         </valueHelp>
         <constraint>
@@ -78,7 +78,7 @@
       <properties>
         <help>Number of tries to send Access-Request/Accounting-Request queries</help>
         <valueHelp>
-          <format>1-20</format>
+          <format>u32:1-20</format>
           <description>Maximum tries</description>
         </valueHelp>
         <constraint>

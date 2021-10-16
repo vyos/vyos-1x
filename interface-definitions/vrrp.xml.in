@@ -35,6 +35,7 @@
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <node name="authentication">
                 <properties>
@@ -45,7 +46,7 @@
                     <properties>
                       <help>VRRP password</help>
                       <valueHelp>
-                        <format>text</format>
+                        <format>txt</format>
                         <description>Password string (up to 8 characters)</description>
                       </valueHelp>
                       <constraint>
@@ -60,6 +61,14 @@
                       <completionHelp>
                         <list>plaintext-password ah</list>
                       </completionHelp>
+                      <valueHelp>
+                        <format>plaintext-password</format>
+                        <description>Simple password string</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ah</format>
+                        <description>AH - IPSEC (not recommended)</description>
+                      </valueHelp>
                       <constraint>
                         <regex>^(plaintext-password|ah)$</regex>
                       </constraint>
@@ -68,11 +77,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="description">
-                <properties>
-                  <help>Group description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
               <node name="health-check">
                 <properties>
@@ -86,6 +91,7 @@
                         <validator name="numeric" argument="--positive" />
                       </constraint>
                     </properties>
+                    <defaultValue>3</defaultValue>
                   </leafNode>
                   <leafNode name="interval">
                     <properties>
@@ -94,6 +100,7 @@
                         <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
+                    <defaultValue>60</defaultValue>
                   </leafNode>
                   <leafNode name="script">
                     <properties>
@@ -156,6 +163,7 @@
                     <validator name="numeric" argument="--range 0-1000"/>
                   </constraint>
                 </properties>
+                <defaultValue>0</defaultValue>
               </leafNode>
               <leafNode name="priority">
                 <properties>
@@ -168,64 +176,18 @@
                     <validator name="numeric" argument="--range 1-255"/>
                   </constraint>
                 </properties>
+                <defaultValue>100</defaultValue>
               </leafNode>
               <leafNode name="rfc3768-compatibility">
                 <properties>
-                  <valueless/>
                   <help>Use VRRP virtual MAC address as per RFC3768</help>
+                  <valueless/>
                 </properties>
               </leafNode>
-              <node name="transition-script">
+              #include <include/vrrp-transition-script.xml.i>
+              <leafNode name="address">
                 <properties>
-                  <help>VRRP transition scripts</help>
-                </properties>
-                <children>
-                  <leafNode name="master">
-                    <properties>
-                      <help>Script to run on VRRP state transition to master</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="backup">
-                    <properties>
-                      <help>Script to run on VRRP state transition to backup</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fault">
-                    <properties>
-                      <help>Script to run on VRRP state transition to fault</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="stop">
-                    <properties>
-                      <help>Script to run on VRRP state transition to stop</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="mode-force">
-                    <properties>
-                      <valueless/>
-                      <help>Disable VRRP state checking (deprecated, will be removed in VyOS 1.4)</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
-              <leafNode name="virtual-address">
-                <properties>
-                  <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
+                  <help>Virtual IP address</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 virtual address</description>
@@ -238,11 +200,10 @@
                     <validator name="ipv4-host"/>
                     <validator name="ipv6-host"/>
                   </constraint>
-                  <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
                   <multi/>
                 </properties>
               </leafNode>
-              <leafNode name="virtual-address-excluded">
+              <leafNode name="excluded-address">
                 <properties>
                   <help>Virtual address (If you need additional IPv4 and IPv6 in same group)</help>
                   <valueHelp>
@@ -285,7 +246,7 @@
                   <multi/>
                   <help>Sync group member</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>VRRP group name</description>
                   </valueHelp>
                   <completionHelp>
@@ -293,45 +254,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              <node name="transition-script">
-                <properties>
-                  <help>VRRP transition scripts</help>
-                </properties>
-                <children>
-                  <leafNode name="master">
-                    <properties>
-                      <help>Script to run on VRRP state transition to master</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="backup">
-                    <properties>
-                      <help>Script to run on VRRP state transition to backup</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="fault">
-                    <properties>
-                      <help>Script to run on VRRP state transition to fault</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="stop">
-                    <properties>
-                      <help>Script to run on VRRP state transition to stop</help>
-                      <constraint>
-                        <validator name="script"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
+              #include <include/vrrp-transition-script.xml.i>
             </children>
           </tagNode>
         </children>

@@ -1,5 +1,4 @@
 <?xml version="1.0"?>
-<!-- DHCPv6 server configuration -->
 <interfaceDefinition>
   <node name="service">
     <children>
@@ -15,26 +14,14 @@
               <help>Additional global parameters for DHCPv6 server</help>
             </properties>
             <children>
-              <leafNode name="name-server">
-                <properties>
-                  <help>IPv6 address of a Recursive DNS Server</help>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address of DNS name server</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv6.xml.i>
             </children>
           </node>
           <leafNode name="preference">
             <properties>
               <help>Preference of this DHCPv6 server compared with others</help>
               <valueHelp>
-                <format>0-255</format>
+                <format>u32:0-255</format>
                 <description>DHCPv6 server preference (0-255)</description>
               </valueHelp>
               <constraint>
@@ -53,6 +40,7 @@
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
+              #include <include/generic-description.xml.i>
               <node name="common-options">
                 <properties>
                   <help>Common options to distribute to all clients, including stateless clients</help>
@@ -62,7 +50,7 @@
                     <properties>
                       <help>Time (in seconds) that stateless clients should wait between refreshing the information they were given</help>
                       <valueHelp>
-                        <format>1-4294967295</format>
+                        <format>u32:1-4294967295</format>
                         <description>DHCPv6 information refresh time</description>
                       </valueHelp>
                       <constraint>
@@ -70,20 +58,8 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  #include <include/dhcp-server-domain-search.xml.i>
-                  <leafNode name="name-server">
-                    <properties>
-                      <help>IPv6 address of a Recursive DNS Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of DNS name server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp/domain-search.xml.i>
+                  #include <include/name-server-ipv6.xml.i>
                 </children>
               </node>
               <tagNode name="subnet">
@@ -151,7 +127,7 @@
                       </tagNode>
                     </children>
                   </node>
-                  #include <include/dhcp-server-domain-search.xml.i>
+                  #include <include/dhcp/domain-search.xml.i>
                   <node name="lease-time">
                     <properties>
                       <help>Parameters relating to the lease time</help>
@@ -161,7 +137,7 @@
                         <properties>
                           <help>Default time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>DHCPv6 valid lifetime</description>
                           </valueHelp>
                           <constraint>
@@ -173,7 +149,7 @@
                         <properties>
                           <help>Maximum time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>Maximum lease time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -185,7 +161,7 @@
                         <properties>
                           <help>Minimum time (in seconds) that will be assigned to a lease</help>
                           <valueHelp>
-                            <format>1-4294967295</format>
+                            <format>u32:1-4294967295</format>
                             <description>Minimum lease time in seconds</description>
                           </valueHelp>
                           <constraint>
@@ -195,19 +171,7 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="name-server">
-                    <properties>
-                      <help>IPv6 address of a Recursive DNS Server</help>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address of DNS name server</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv6-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/name-server-ipv6.xml.i>
                   <leafNode name="nis-domain">
                     <properties>
                       <help>NIS domain name for client to use</help>
@@ -273,7 +237,7 @@
                             <properties>
                               <help>Length in bits of prefixes to be delegated</help>
                               <valueHelp>
-                                <format>32-64</format>
+                                <format>u32:32-64</format>
                                 <description>Delagated prefix length (32-64)</description>
                               </valueHelp>
                               <constraint>

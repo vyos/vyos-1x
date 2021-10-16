@@ -17,12 +17,12 @@
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6.xml.i>
-          #include <include/interface/interface-description.xml.i>
-          #include <include/interface/interface-disable.xml.i>
-          #include <include/interface/interface-ipv4-options.xml.i>
-          #include <include/interface/interface-ipv6-options.xml.i>
-          #include <include/interface/interface-mac.xml.i>
-          #include <include/interface/interface-mtu-1450-16000.xml.i>
+          #include <include/interface/description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mtu-1450-16000.xml.i>
           <node name="parameters">
             <properties>
               <help>GENEVE tunnel parameters</help>
@@ -33,9 +33,9 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface/interface-parameters-dont-fragment.xml.i>
-                  #include <include/interface/interface-parameters-tos.xml.i>
-                  #include <include/interface/interface-parameters-ttl.xml.i>
+                  #include <include/interface/parameters-dont-fragment.xml.i>
+                  #include <include/interface/parameters-tos.xml.i>
+                  #include <include/interface/parameters-ttl.xml.i>
                 </children>
               </node>
               <node name="ipv6">
@@ -43,7 +43,7 @@
                   <help>IPv6 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface/interface-parameters-flowlabel.xml.i>
+                  #include <include/interface/parameters-flowlabel.xml.i>
                 </children>
               </node>
             </children>

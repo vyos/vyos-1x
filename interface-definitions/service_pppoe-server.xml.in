@@ -8,14 +8,8 @@
           <priority>900</priority>
         </properties>
         <children>
+          #include <include/pppoe-access-concentrator.xml.i>
           <leafNode name="access-concentrator">
-            <properties>
-              <help>Access concentrator name</help>
-              <constraint>
-                <regex>[a-zA-Z0-9]{1,100}</regex>
-              </constraint>
-              <constraintErrorMessage>access-concentrator name limited to alphanumerical characters only (max. 100)</constraintErrorMessage>
-            </properties>
             <defaultValue>vyos-ac</defaultValue>
           </leafNode>
           <node name="authentication">
@@ -65,7 +59,7 @@
             </children>
           </node>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
-          #include <include/accel-ppp/name-server.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           <tagNode name="interface">
             <properties>
               <help>interface(s) to listen on</help>
@@ -129,7 +123,7 @@
               <constraint>
                 <regex>[a-zA-Z0-9\-]{1,100}</regex>
               </constraint>
-              <constraintErrorMessage>servicename can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
+              <constraintErrorMessage>Service-name can contain aplhanumerical characters and dashes only (max. 100)</constraintErrorMessage>
               <multi/>
             </properties>
           </leafNode>
@@ -246,7 +240,7 @@
             <properties>
               <help>PADO delays</help>
               <valueHelp>
-                <format>1-999999</format>
+                <format>u32:1-999999</format>
                 <description>Number in ms</description>
               </valueHelp>
               <constraint>
@@ -259,7 +253,7 @@
                 <properties>
                   <help>Number of sessions</help>
                   <valueHelp>
-                    <format>1-999999</format>
+                    <format>u32:1-999999</format>
                     <description>Number of sessions</description>
                   </valueHelp>
                   <constraint>

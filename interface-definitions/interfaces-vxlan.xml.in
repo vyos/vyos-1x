@@ -17,8 +17,8 @@
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6.xml.i>
-          #include <include/interface/interface-description.xml.i>
-          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/description.xml.i>
+          #include <include/interface/disable.xml.i>
           <leafNode name="group">
             <properties>
               <help>Multicast group address for VXLAN interface</help>
@@ -31,14 +31,16 @@
                 <description>Multicast IPv6 group address</description>
               </valueHelp>
               <constraint>
-                <validator name="ip-address"/>
+                <validator name="ipv4-multicast"/>
+                <validator name="ipv6-multicast"/>
               </constraint>
+              <constraintErrorMessage>Multicast IPv4/IPv6 address required</constraintErrorMessage>
             </properties>
           </leafNode>
-          #include <include/interface/interface-ipv4-options.xml.i>
-          #include <include/interface/interface-ipv6-options.xml.i>
-          #include <include/interface/interface-mac.xml.i>
-          #include <include/interface/interface-mtu-1200-16000.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mtu-1200-16000.xml.i>
           <leafNode name="mtu">
             <defaultValue>1450</defaultValue>
           </leafNode>
@@ -52,9 +54,9 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface/interface-parameters-dont-fragment.xml.i>
-                  #include <include/interface/interface-parameters-tos.xml.i>
-                  #include <include/interface/interface-parameters-ttl.xml.i>
+                  #include <include/interface/parameters-dont-fragment.xml.i>
+                  #include <include/interface/parameters-tos.xml.i>
+                  #include <include/interface/parameters-ttl.xml.i>
                   <leafNode name="ttl">
                     <defaultValue>16</defaultValue>
                   </leafNode>
@@ -65,7 +67,7 @@
                   <help>IPv6 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface/interface-parameters-flowlabel.xml.i>
+                  #include <include/interface/parameters-flowlabel.xml.i>
                 </children>
               </node>
               <leafNode name="nolearning">
@@ -76,23 +78,14 @@
               </leafNode>
             </children>
           </node>
+          #include <include/port-number.xml.i>
           <leafNode name="port">
-            <properties>
-              <help>Destination port of VXLAN tunnel (default: 8472)</help>
-              <valueHelp>
-                <format>u32:1-65535</format>
-                <description>Numeric IP port</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-65535"/>
-              </constraint>
-            </properties>
             <defaultValue>8472</defaultValue>
           </leafNode>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/source-interface.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
-          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/vrf.xml.i>
           #include <include/vni.xml.i>
         </children>
       </tagNode>

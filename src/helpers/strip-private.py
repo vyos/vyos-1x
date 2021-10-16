@@ -47,7 +47,7 @@ ipv4_re = re.compile(r'(\d{1,3}\.){2}(\d{1,3}\.\d{1,3})')
 ipv4_subst = r'xxx.xxx.\2'
 
 # Censor all but the first two fields.
-ipv6_re = re.compile(r'([0-9a-fA-F]{1,4}\:){2}(\S+)')
+ipv6_re = re.compile(r'([0-9a-fA-F]{1,4}\:){2}([0-9a-fA-F:]+)')
 ipv6_subst = r'xxxx:xxxx:\2'
 
 def ip_match(match: re.Match, subst: str) -> str:
@@ -96,12 +96,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # Strict mode is the default and the absence of loose mode implies presence of strict mode.
     if not args.loose:
-        for arg in [args.mac, args.domain, args.hostname, args.username, args.dhcp, args.asn, args.snmp, args.lldp]:
-            arg = True
+        args.mac = args.domain = args.hostname = args.username = args.dhcp = args.asn = args.snmp = args.lldp = True
         if not args.public_address and not args.keep_address:
             args.address = True
     elif not args.address and not args.public_address:
         args.keep_address = True
+
     # (condition, precompiled regexp, substitution string)
     stripping_rules = [
         # Strip passwords
@@ -116,32 +116,33 @@ if __name__ == "__main__":
         (True, re.compile(r'pre-shared-secret \S+'), 'pre-shared-secret xxxxxx'),
         # Strip OSPF md5-key
         (True, re.compile(r'md5-key \S+'), 'md5-key xxxxxx'),
-        
+        # Strip WireGuard private-key
+        (True, re.compile(r'private-key \S+'), 'private-key xxxxxx'),
+
         # Strip MAC addresses
-        (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'XX:XX:XX:XX:XX:\2'),
+        (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'xx:xx:xx:xx:xx:\2'),
 
         # Strip host-name, domain-name, and domain-search
         (args.hostname, re.compile(r'(host-name|domain-name|domain-search) \S+'), r'\1 xxxxxx'),
-        
+
         # Strip user-names
         (args.username, re.compile(r'(user|username|user-id) \S+'), r'\1 xxxxxx'),
         # Strip full-name
         (args.username, re.compile(r'(full-name) [ -_A-Z a-z]+'), r'\1 xxxxxx'),
-        
+
         # Strip DHCP static-mapping and shared network names
         (args.dhcp, re.compile(r'(shared-network-name|static-mapping) \S+'), r'\1 xxxxxx'),
-        
+
         # Strip host/domain names
         (args.domain, re.compile(r' (peer|remote-host|local-host|server) ([\w-]+\.)+[\w-]+'), r' \1 xxxxx.tld'),
-        
+
         # Strip BGP ASNs
         (args.asn, re.compile(r'(bgp|remote-as) (\d+)'), r'\1 XXXXXX'),
-        
+
         # Strip LLDP location parameters
         (args.lldp, re.compile(r'(altitude|datum|latitude|longitude|ca-value|country-code) (\S+)'), r'\1 xxxxxx'),
-        
+
         # Strip SNMP location
         (args.snmp, re.compile(r'(location) \S+'), r'\1 xxxxxx'),
     ]
     strip_lines(stripping_rules)
-    

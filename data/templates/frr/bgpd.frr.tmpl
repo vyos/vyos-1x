@@ -46,8 +46,9 @@
  neighbor {{ neighbor }} {{ graceful_restart }}
 {%   endif %}
 {%   if config.local_as is defined and config.local_as is not none %}
-{%     for local_asn in config.local_as %}
- neighbor {{ neighbor }} local-as {{ local_asn }} {{ 'no-prepend' if config.local_as[local_asn].no_prepend is defined }}
+{%     for local_as, local_as_config in config.local_as.items() %}
+{#       There can be only one local-as value, this is checked in the Python code #}
+ neighbor {{ neighbor }} local-as {{ local_as }} {{ 'no-prepend' if local_as_config.no_prepend is defined }} {{ 'replace-as' if local_as_config.no_prepend is defined and local_as_config.no_prepend.replace_as is defined }}
 {%     endfor %}
 {%   endif %}
 {%   if config.override_capability is defined %}
@@ -88,6 +89,9 @@
 {%   if config.interface is defined and config.interface is not none %}
 {%     if config.interface.peer_group is defined and config.interface.peer_group is not none %}
  neighbor {{ neighbor }} interface peer-group {{ config.interface.peer_group }}
+{%     endif %}
+{%     if config.interface.source_interface is defined and config.interface.source_interface is not none %}
+ neighbor {{ neighbor }} interface {{ config.interface.source_interface }}
 {%     endif %}
 {%     if config.interface.v6only is defined and config.interface.v6only is not none %}
 {%       if config.interface.v6only.peer_group is defined and config.interface.v6only.peer_group is not none %}
@@ -226,10 +230,8 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {% else %}
  no bgp ebgp-requires-policy
 {% endif %}
-{% if parameters is defined and parameters.default is defined and parameters.default.no_ipv4_unicast is defined %}
 {#   Option must be set before any neighbor - see https://phabricator.vyos.net/T3463 #}
  no bgp default ipv4-unicast
-{% endif %}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
 {% if address_family is defined and address_family is not none %}
@@ -257,6 +259,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
  address-family ipv6 flowspec
 {%     elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
+{%     if afi_config.rd is defined and afi_config.rd is not none %}
+  rd {{ afi_config.rd }}
+{%     endif %}
 {%     endif %}
 {%     if afi_config.aggregate_address is defined and afi_config.aggregate_address is not none %}
 {%       for ip in afi_config.aggregate_address %}
@@ -294,23 +299,39 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     if afi_config.advertise is defined and afi_config.advertise is not none %}
 {%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
 {%         if adv_afi_config.unicast is defined and adv_afi_config.unicast is not none %}
- advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
+  advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is defined }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.distance is defined and afi_config.distance is not none %}
 {%       if afi_config.distance is defined and afi_config.distance.external is defined and afi_config.distance.internal is defined and afi_config.distance.local is defined %}
- distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
+  distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
 {%       endif %}
 {%       if afi_config.distance.prefix is defined and afi_config.distance.prefix is not none %}
 {%         for prefix in afi_config.distance.prefix %}
- distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
+  distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
 {%         endfor %}
 {%       endif %}
 {%     endif %}
+{%     if afi_config.export is defined and afi_config.export.vpn is defined %}
+  export vpn
+{%     endif %}
+{%     if afi_config.import is defined and afi_config.import is not none %}
+{%       if afi_config.import.vpn is defined %}
+  import vpn
+{%       endif %}
+{%       if afi_config.import.vrf is defined and afi_config.import.vrf is not none %}
+{%         for vrf in afi_config.import.vrf %}
+  import vrf {{ vrf }}
+{%         endfor %}
+{%       endif %}
+{%     endif %}
+{%     if afi_config.label is defined and afi_config.label.vpn is defined and afi_config.label.vpn.export is defined and afi_config.label.vpn.export is not none %}
+  label vpn export {{ afi_config.label.vpn.export }}
+{%     endif %}
 {%     if afi_config.local_install is defined and afi_config.local_install is not none %}
 {%       for interface in afi_config.local_install.interface %}
- local-install {{ interface }}
+  local-install {{ interface }}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.advertise_all_vni is defined %}
@@ -326,26 +347,47 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
   advertise-svi-ip
 {%     endif %}
 {%     if afi_config.rt_auto_derive is defined %}
- autort rfc8365-compatible
+  autort rfc8365-compatible
 {%     endif %}
 {%     if afi_config.flooding is defined and afi_config.flooding.disable is defined %}
- flooding disable
+  flooding disable
 {%     endif %}
 {%     if afi_config.flooding is defined and afi_config.flooding.head_end_replication is defined %}
- flooding head-end-replication
+  flooding head-end-replication
 {%     endif %}
-{%     if afi_config.rd is defined and afi_config.rd is not none %}
- rd {{ afi_config.rd }}
+{%     if afi_config.rd is defined and afi_config.rd.vpn is defined and afi_config.rd.vpn.export is defined %}
+  rd vpn export {{ afi_config.rd.vpn.export }}
 {%     endif %}
 {%     if afi_config.route_target is defined and afi_config.route_target is not none %}
+{%       if afi_config.route_target.vpn is defined and afi_config.route_target.vpn is not none %}
+{%         if afi_config.route_target.vpn.both is defined and afi_config.route_target.vpn.both is not none %}
+  route-target vpn both {{ afi_config.route_target.vpn.both }}
+{%         else %}
+{%           if afi_config.route_target.vpn.export is defined and afi_config.route_target.vpn.export is not none %}
+  route-target vpn export {{ afi_config.route_target.vpn.export }}
+{%           endif %}
+{%           if afi_config.route_target.vpn.import is defined and afi_config.route_target.vpn.import is not none %}
+  route-target vpn import {{ afi_config.route_target.vpn.import }}
+{%           endif %}
+{%         endif %}
+{%       endif %}
 {%       if afi_config.route_target.both is defined and afi_config.route_target.both is not none %}
- route-target both {{ afi_config.route_target.both }}
+  route-target both {{ afi_config.route_target.both }}
+{%       else %}
+{%         if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
+  route-target export {{ afi_config.route_target.export }}
+{%         endif %}
+{%         if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
+  route-target import {{ afi_config.route_target.import }}
+{%         endif %}
 {%       endif %}
-{%       if afi_config.route_target.export is defined and afi_config.route_target.export is not none %}
- route-target export {{ afi_config.route_target.export }}
+{%     endif %}
+{%     if afi_config.route_map is defined and afi_config.route_map.vpn is defined and afi_config.route_map.vpn is not none %}
+{%       if afi_config.route_map.vpn.export is defined and afi_config.route_map.vpn.export is not none %}
+  route-map vpn export {{ afi_config.route_map.vpn.export }}
 {%       endif %}
-{%       if afi_config.route_target.import is defined and afi_config.route_target.import is not none %}
- route-target import {{ afi_config.route_target.import }}
+{%       if afi_config.route_map.vpn.import is defined and afi_config.route_map.vpn.import is not none %}
+  route-map vpn import {{ afi_config.route_map.vpn.import }}
 {%       endif %}
 {%     endif %}
 {%     if afi_config.vni is defined and afi_config.vni is not none %}

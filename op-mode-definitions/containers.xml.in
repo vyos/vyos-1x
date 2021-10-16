@@ -17,6 +17,19 @@
       </node>
     </children>
   </node>
+  <node name="connect">
+    <children>
+      <tagNode name="container">
+        <properties>
+          <help>Attach to a running container</help>
+          <completionHelp>
+            <path>container name</path>
+          </completionHelp>
+        </properties>
+        <command>sudo podman exec --interactive --tty "$3" /bin/sh</command>
+      </tagNode>
+    </children>
+  </node>
   <node name="delete">
     <children>
       <node name="container">
@@ -27,6 +40,9 @@
           <tagNode name="image">
             <properties>
               <help>Delete container image</help>
+              <completionHelp>
+                <script>sudo podman image ls -q</script>
+              </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --remove "${4}"</command>
           </tagNode>
@@ -48,12 +64,67 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --image</command>
           </leafNode>
+          <tagNode name="log">
+            <properties>
+              <help>Show logs from a given container</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --names "$4"</command>
+          </tagNode>
           <leafNode name="network">
             <properties>
               <help>Show available container networks</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --networks</command>
           </leafNode>
+        </children>
+      </node>
+      <node name="log">
+        <children>
+          <tagNode name="container">
+            <properties>
+              <help>Show logs from a given container</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --names "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <tagNode name="container">
+        <properties>
+          <help>Restart a given container</help>
+          <completionHelp>
+            <path>container name</path>
+          </completionHelp>
+        </properties>
+        <command>sudo podman restart "$3"</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="update">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Update a container image</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Delete container image</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --update "${4}"</command>
+          </tagNode>
         </children>
       </node>
     </children>

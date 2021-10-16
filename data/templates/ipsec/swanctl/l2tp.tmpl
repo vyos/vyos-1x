@@ -20,7 +20,7 @@
         children {
             l2tp_remote_access_esp {
                 mode = transport
-                esp_proposals = {{ l2tp_esp | get_esp_ike_cipher | join(',') if l2tp_esp else l2tp_esp_default }}
+                esp_proposals = {{ l2tp_esp | get_esp_ike_cipher(l2tp_ike) | join(',') if l2tp_esp else l2tp_esp_default }}
                 life_time = {{ l2tp_esp.lifetime if l2tp_esp else l2tp.lifetime }}s
                 local_ts = dynamic[/1701]
                 remote_ts = dynamic

@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from argparse import ArgumentParser
+from vyos.template import is_ipv4
+
+parser = ArgumentParser()
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--single', action='store', help='Validate and allow only one route-target')
+group.add_argument('--multi', action='store', help='Validate multiple, whitespace separated route-targets')
+args = parser.parse_args()
+
+def is_valid_rt(rt):
+    # every route target needs to have a colon and must consists of two parts
+    value = rt.split(':')
+    if len(value) != 2:
+        return False
+    # A route target must either be only numbers, or the first part must be an
+    # IPv4 address
+    if (is_ipv4(value[0]) or value[0].isdigit()) and value[1].isdigit():
+        return True
+    return False
+
+if __name__ == '__main__':
+    if args.single:
+        if not is_valid_rt(args.single):
+            exit(1)
+
+    elif args.multi:
+        for rt in args.multi.split(' '):
+            if not is_valid_rt(rt):
+                exit(1)
+
+    else:
+        parser.print_help()
+        exit(1)
+
+    exit(0)

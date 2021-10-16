@@ -3,6 +3,7 @@ etc/dhcp
 etc/ipsec.d
 etc/netplug
 etc/opennhrp
+etc/ppp
 etc/rsyslog.d
 etc/securetty
 etc/security
@@ -10,6 +11,7 @@ etc/sudoers.d
 etc/systemd
 etc/sysctl.d
 etc/udev
+etc/update-motd.d
 etc/vyos
 lib/
 opt/

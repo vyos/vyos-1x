@@ -36,9 +36,15 @@ from starlette.datastructures import FormData, MutableHeaders
 from starlette.formparsers import FormParser, MultiPartParser
 from multipart.multipart import parse_options_header
 
+from ariadne import make_executable_schema, load_schema_from_path, snake_case_fallback_resolvers
+from ariadne.asgi import GraphQL
+
 import vyos.config
+import vyos.defaults
 
 from vyos.configsession import ConfigSession, ConfigSessionError
+
+import api.graphql.state
 
 DEFAULT_CONFIG_FILE = '/etc/vyos/http-api.conf'
 CFG_GROUP = 'vyattacfg'
@@ -603,6 +609,25 @@ def show_op(data: ShowModel):
 
     return success(res)
 
+###
+# GraphQL integration
+###
+
+api.graphql.state.init()
+
+from api.graphql.graphql.mutations import mutation
+from api.graphql.graphql.directives import DataDirective
+
+api_schema_dir = vyos.defaults.directories['api_schema']
+
+type_defs = load_schema_from_path(api_schema_dir)
+
+schema = make_executable_schema(type_defs, mutation, snake_case_fallback_resolvers, directives={"generate": DataDirective})
+
+app.add_route('/graphql', GraphQL(schema, debug=True))
+
+###
+
 if __name__ == '__main__':
     # systemd's user and group options don't work, do it by hand here,
     # else no one else will be able to commit
@@ -625,6 +650,8 @@ if __name__ == '__main__':
 
     app.state.vyos_debug = True if server_config['debug'] == 'true' else False
     app.state.vyos_strict = True if server_config['strict'] == 'true' else False
+
+    api.graphql.state.settings['app'] = app
 
     try:
         uvicorn.run(app, host=server_config["listen_address"],

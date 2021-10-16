@@ -361,6 +361,26 @@
     </constraint>
   </properties>
   <children>
+    <leafNode name="area">
+      <properties>
+        <help>Enable OSPF on this interface</help>
+        <completionHelp>
+          <path>protocols ospf area</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32</format>
+          <description>OSPF area ID as decimal notation</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ipv4</format>
+          <description>OSPF area ID in IP address notation</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+          <validator name="ip-address"/>
+        </constraint>
+      </properties>
+    </leafNode>
     #include <include/ospf/authentication.xml.i>
     #include <include/ospf/intervals.xml.i>
     #include <include/ospf/interface-common.xml.i>
@@ -418,19 +438,7 @@
     </leafNode>
   </children>
 </tagNode>
-<node name="log-adjacency-changes">
-  <properties>
-    <help>Log adjacency state changes</help>
-  </properties>
-  <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Log all state changes</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/ospf/log-adjacency-changes.xml.i>
 <node name="max-metric">
   <properties>
     <help>OSPF maximum and infinite-distance metric</help>
@@ -589,7 +597,7 @@
     #include <include/router-id.xml.i>
   </children>
 </node>
-#include <include/routing-passive-interface-xml.i>
+#include <include/routing-passive-interface.xml.i>
 <leafNode name="passive-interface-exclude">
   <properties>
     <help>Interface to exclude when using 'passive-interface default'</help>
@@ -648,7 +656,7 @@
     </node>
     <node name="kernel">
       <properties>
-        <help>Redistribute kernel routes</help>
+        <help>Redistribute Kernel routes</help>
       </properties>
       <children>
         #include <include/ospf/metric.xml.i>
@@ -668,7 +676,7 @@
     </node>
     <node name="static">
       <properties>
-        <help>Redistribute static routes</help>
+        <help>Redistribute statically configured routes</help>
       </properties>
       <children>
         #include <include/ospf/metric.xml.i>
@@ -676,6 +684,23 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <tagNode name="table">
+      <properties>
+        <help>Redistribute non-main Kernel Routing Table</help>
+        <completionHelp>
+          <path>protocols static table</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32:1-200</format>
+          <description>Policy route table number</description>
+        </valueHelp>
+      </properties>
+      <children>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
+        #include <include/route-map.xml.i>
+      </children>
+    </tagNode>
   </children>
 </node>
 <node name="refresh">

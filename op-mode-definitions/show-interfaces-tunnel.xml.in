@@ -6,7 +6,7 @@
         <children>
           <tagNode name="tunnel">
             <properties>
-              <help>Show tunnel interface information</help>
+              <help>Show specified Tunnel interface information</help>
               <completionHelp>
                 <path>interfaces tunnel</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="tunnel">
             <properties>
-              <help>Show tunnel interface information</help>
+              <help>Show Tunnel interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=tunnel --action=show-brief</command>
             <children>

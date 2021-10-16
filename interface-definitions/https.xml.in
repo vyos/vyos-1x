@@ -1,7 +1,5 @@
 <?xml version="1.0"?>
-<!-- HTTPS configuration -->
 <interfaceDefinition>
-  <syntaxVersion component='https' version='3'></syntaxVersion>
   <node name="service">
     <children>
       <node name="https" owner="${vyos_conf_scripts_dir}/https.py">
@@ -48,7 +46,7 @@
                 <properties>
                   <help>Port to listen for HTTPS requests; default 443</help>
                   <valueHelp>
-                    <format>1-65535</format>
+                    <format>u32:1-65535</format>
                     <description>Numeric IP port</description>
                   </valueHelp>
                   <constraint>
@@ -136,9 +134,9 @@
                     </properties>
                   </leafNode>
                   <leafNode name="email">
-                      <properties>
-                          <help>Email address to associate with certificate</help>
-                      </properties>
+                    <properties>
+                      <help>Email address to associate with certificate</help>
+                    </properties>
                   </leafNode>
                 </children>
               </node>

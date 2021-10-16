@@ -33,7 +33,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/description.xml.i>
           <leafNode name="device-type">
             <properties>
               <help>OpenVPN interface device-type (default: tun)</help>
@@ -54,7 +54,7 @@
             </properties>
             <defaultValue>tun</defaultValue>
           </leafNode>
-          #include <include/interface/interface-disable.xml.i>
+          #include <include/interface/disable.xml.i>
           <node name="encryption">
             <properties>
               <help>Data Encryption settings</help>
@@ -165,7 +165,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-ipv6-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
           <leafNode name="hash">
             <properties>
               <help>Hashing Algorithm</help>
@@ -206,7 +206,7 @@
                 <properties>
                   <help>Maximum number of keepalive packet failures (default: 60)</help>
                   <valueHelp>
-                    <format>0-1000</format>
+                    <format>u32:0-1000</format>
                     <description>Maximum number of keepalive packet failures</description>
                   </valueHelp>
                   <constraint>
@@ -219,7 +219,7 @@
                 <properties>
                   <help>Keepalive packet interval in seconds (default: 10)</help>
                   <valueHelp>
-                    <format>0-600</format>
+                    <format>u32:0-600</format>
                     <description>Keepalive packet interval (seconds)</description>
                   </valueHelp>
                   <constraint>
@@ -268,7 +268,7 @@
             <properties>
               <help>Local port number to accept connections</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -378,7 +378,7 @@
             <properties>
               <help>Remote port number to connect to</help>
               <valueHelp>
-                <format>1-65535</format>
+                <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
               </valueHelp>
               <constraint>
@@ -546,7 +546,7 @@
                 <properties>
                   <help>Number of maximum client connections</help>
                   <valueHelp>
-                    <format>1-4096</format>
+                    <format>u32:1-4096</format>
                     <description>Number of concurrent clients</description>
                   </valueHelp>
                   <constraint>
@@ -554,24 +554,8 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="name-server">
-                <properties>
-                  <help>Domain Name Server (DNS)</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>DNS server IPv4 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>DNS server IPv6 address</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ip-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="push-route">
+              #include <include/name-server-ipv4-ipv6.xml.i>
+              <tagNode name="push-route">
                 <properties>
                   <help>Route to be pushed to all clients</help>
                   <valueHelp>
@@ -585,9 +569,23 @@
                   <constraint>
                     <validator name="ip-prefix"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>Set metric for this route</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Metric for this route</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
               <leafNode name="reject-unconfigured-clients">
                 <properties>
                   <help>Reject connections from clients that are not explicitly configured</help>
@@ -680,7 +678,7 @@
                 <properties>
                   <help>Specify the minimum required TLS version</help>
                   <completionHelp>
-                    <list>1.0 1.1 1.2</list>
+                    <list>1.0 1.1 1.2 1.3</list>
                   </completionHelp>
                   <valueHelp>
                     <format>1.0</format>
@@ -694,8 +692,12 @@
                     <format>1.2</format>
                     <description>TLS v1.2</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>1.3</format>
+                    <description>TLS v1.3</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>^(1.0|1.1|1.2)$</regex>
+                    <regex>^(1.0|1.1|1.2|1.3)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -726,7 +728,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

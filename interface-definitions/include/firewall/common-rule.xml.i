@@ -110,7 +110,7 @@
       <description>Both TCP and UDP</description>
     </valueHelp>
     <valueHelp>
-      <format>0-255</format>
+      <format>u32:0-255</format>
       <description>IP protocol number</description>
     </valueHelp>
     <valueHelp>

@@ -29,13 +29,17 @@ _FILTERS = {}
 
 # reuse Environments with identical settings to improve performance
 @functools.lru_cache(maxsize=2)
-def _get_environment():
+def _get_environment(location=None):
+    if location is None:
+        loc_loader=FileSystemLoader(directories["templates"])
+    else:
+        loc_loader=FileSystemLoader(location)
     env = Environment(
         # Don't check if template files were modified upon re-rendering
         auto_reload=False,
         # Cache up to this number of templates for quick re-rendering
         cache_size=100,
-        loader=FileSystemLoader(directories["templates"]),
+        loader=loc_loader,
         trim_blocks=True,
     )
     env.filters.update(_FILTERS)
@@ -63,7 +67,7 @@ def register_filter(name, func=None):
     return func
 
 
-def render_to_string(template, content, formater=None):
+def render_to_string(template, content, formater=None, location=None):
     """Render a template from the template directory, raise on any errors.
 
     :param template: the path to the template relative to the template folder
@@ -78,7 +82,7 @@ def render_to_string(template, content, formater=None):
     package is build (recovering the load time and overhead caused by having the
     file out of the code).
     """
-    template = _get_environment().get_template(template)
+    template = _get_environment(location).get_template(template)
     rendered = template.render(content)
     if formater is not None:
         rendered = formater(rendered)
@@ -93,6 +97,7 @@ def render(
     permission=None,
     user=None,
     group=None,
+    location=None,
 ):
     """Render a template from the template directory to a file, raise on any errors.
 
@@ -109,7 +114,7 @@ def render(
 
     # As we are opening the file with 'w', we are performing the rendering before
     # calling open() to not accidentally erase the file if rendering fails
-    rendered = render_to_string(template, content, formater)
+    rendered = render_to_string(template, content, formater, location)
 
     # Write to file
     with open(destination, "w") as file:
@@ -388,8 +393,15 @@ def get_ip(interface):
     from vyos.ifconfig import Interface
     return Interface(interface).get_addr()
 
+def get_first_ike_dh_group(ike_group):
+    if ike_group and 'proposal' in ike_group:
+        for priority, proposal in ike_group['proposal'].items():
+            if 'dh_group' in proposal:
+                return 'dh-group' + proposal['dh_group']
+    return 'dh-group2' # Fallback on dh-group2
+
 @register_filter('get_esp_ike_cipher')
-def get_esp_ike_cipher(group_config):
+def get_esp_ike_cipher(group_config, ike_group=None):
     pfs_lut = {
         'dh-group1'  : 'modp768',
         'dh-group2'  : 'modp1024',
@@ -401,7 +413,7 @@ def get_esp_ike_cipher(group_config):
         'dh-group18' : 'modp8192',
         'dh-group19' : 'ecp256',
         'dh-group20' : 'ecp384',
-        'dh-group21' : 'ecp512',
+        'dh-group21' : 'ecp521',
         'dh-group22' : 'modp1024s160',
         'dh-group23' : 'modp2048s224',
         'dh-group24' : 'modp2048s256',
@@ -428,7 +440,7 @@ def get_esp_ike_cipher(group_config):
             elif 'pfs' in group_config and group_config['pfs'] != 'disable':
                 group = group_config['pfs']
                 if group_config['pfs'] == 'enable':
-                    group = 'dh-group2'
+                    group = get_first_ike_dh_group(ike_group)
                 tmp += '-' + pfs_lut[group]
 
             ciphers.append(tmp)

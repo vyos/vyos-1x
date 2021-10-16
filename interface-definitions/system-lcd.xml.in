@@ -12,7 +12,7 @@
             <properties>
               <help>Model of the display attached to this system [REQUIRED]</help>
               <completionHelp>
-                <list>cfa-533 cfa-631 cfa-633 cfa-635 sdec</list>
+                <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec</list>
               </completionHelp>
               <valueHelp>
                 <format>cfa-533</format>
@@ -31,11 +31,15 @@
                 <description>Crystalfontz CFA-635</description>
               </valueHelp>
               <valueHelp>
+                <format>hd44780</format>
+                <description>Hitachi HD44780, Caswell Appliances</description>
+              </valueHelp>
+              <valueHelp>
                 <format>sdec</format>
                 <description>Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances</description>
               </valueHelp>
               <constraint>
-                <regex>^(cfa-533|cfa-631|cfa-633|cfa-635|sdec)$</regex>
+                <regex>^(cfa-533|cfa-631|cfa-633|cfa-635|hd44780|sdec)$</regex>
               </constraint>
             </properties>
           </leafNode>

@@ -92,7 +92,7 @@ def generate(bfd):
         bfd['new_frr_config'] = ''
         return None
 
-    bfd['new_frr_config'] = render_to_string('frr/bfd.frr.tmpl', bfd)
+    bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.tmpl', bfd)
 
 def apply(bfd):
     # Save original configuration prior to starting any commit actions

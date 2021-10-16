@@ -366,5 +366,4 @@ class BridgeIf(Interface):
                         cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
                         self._cmd(cmd)
 
-        # call base class first
         super().update(config)

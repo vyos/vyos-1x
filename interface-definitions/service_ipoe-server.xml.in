@@ -111,7 +111,7 @@
               </leafNode>
             </children>
           </tagNode>
-          #include <include/accel-ppp/name-server.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           <node name="authentication">
             <properties>

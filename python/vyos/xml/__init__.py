@@ -46,6 +46,8 @@ def is_tag(lpath):
 def is_leaf(lpath, flat=True):
     return load_configuration().is_leaf(lpath, flat)
 
+def component_versions():
+    return load_configuration().component_versions()
 
 def defaults(lpath, flat=False):
     return load_configuration().defaults(lpath, flat)

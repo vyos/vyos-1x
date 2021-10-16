@@ -14,132 +14,107 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# T3619: mirror Linux Kernel defaults for ethernet offloading options into VyOS
+#        CLI. See https://phabricator.vyos.net/T3619#102254 for all the details.
+# T3787: Remove deprecated UDP fragmentation offloading option
+
 from sys import argv
-from sys import exit
+
+from vyos.ethtool import Ethtool
 from vyos.configtree import ConfigTree
 
-def migrate_ospf(config, path, interface):
-    path = path + ['ospf']
-    if config.exists(path):
-        new_base = ['protocols', 'ospf', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
 
-        # if "ip ospf" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
+file_name = argv[1]
+with open(file_name, 'r') as f:
+    config_file = f.read()
 
-def migrate_ospfv3(config, path, interface):
-    path = path + ['ospfv3']
-    if config.exists(path):
-        new_base = ['protocols', 'ospfv3', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
+base = ['interfaces', 'ethernet']
+config = ConfigTree(config_file)
 
-        # if "ipv6 ospfv3" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
+if not config.exists(base):
+    exit(0)
 
-def migrate_rip(config, path, interface):
-    path = path + ['rip']
-    if config.exists(path):
-        new_base = ['protocols', 'rip', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
+for ifname in config.list_nodes(base):
+    eth = Ethtool(ifname)
 
-        # if "ip rip" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
+    # If GRO is enabled by the Kernel - we reflect this on the CLI. If GRO is
+    # enabled via CLI but not supported by the NIC - we remove it from the CLI
+    configured = config.exists(base + [ifname, 'offload', 'gro'])
+    enabled, fixed = eth.get_generic_receive_offload()
+    if configured and fixed:
+        config.delete(base + [ifname, 'offload', 'gro'])
+    elif enabled and not fixed:
+        config.set(base + [ifname, 'offload', 'gro'])
 
-def migrate_ripng(config, path, interface):
-    path = path + ['ripng']
-    if config.exists(path):
-        new_base = ['protocols', 'ripng', 'interface']
-        config.set(new_base)
-        config.set_tag(new_base)
-        config.copy(path, new_base + [interface])
-        config.delete(path)
+    # If GSO is enabled by the Kernel - we reflect this on the CLI. If GSO is
+    # enabled via CLI but not supported by the NIC - we remove it from the CLI
+    configured = config.exists(base + [ifname, 'offload', 'gso'])
+    enabled, fixed = eth.get_generic_segmentation_offload()
+    if configured and fixed:
+        config.delete(base + [ifname, 'offload', 'gso'])
+    elif enabled and not fixed:
+        config.set(base + [ifname, 'offload', 'gso'])
 
-        # if "ipv6 ripng" was the only setting, we can clean out the empty
-        # ip node afterwards
-        if len(config.list_nodes(path[:-1])) == 0:
-            config.delete(path[:-1])
+    # If LRO is enabled by the Kernel - we reflect this on the CLI. If LRO is
+    # enabled via CLI but not supported by the NIC - we remove it from the CLI
+    configured = config.exists(base + [ifname, 'offload', 'lro'])
+    enabled, fixed = eth.get_large_receive_offload()
+    if configured and fixed:
+        config.delete(base + [ifname, 'offload', 'lro'])
+    elif enabled and not fixed:
+        config.set(base + [ifname, 'offload', 'lro'])
 
-if __name__ == '__main__':
-    if (len(argv) < 1):
-        print("Must specify file name!")
-        exit(1)
+    # If SG is enabled by the Kernel - we reflect this on the CLI. If SG is
+    # enabled via CLI but not supported by the NIC - we remove it from the CLI
+    configured = config.exists(base + [ifname, 'offload', 'sg'])
+    enabled, fixed = eth.get_scatter_gather()
+    if configured and fixed:
+        config.delete(base + [ifname, 'offload', 'sg'])
+    elif enabled and not fixed:
+        config.set(base + [ifname, 'offload', 'sg'])
 
-    file_name = argv[1]
-    with open(file_name, 'r') as f:
-        config_file = f.read()
+    # If TSO is enabled by the Kernel - we reflect this on the CLI. If TSO is
+    # enabled via CLI but not supported by the NIC - we remove it from the CLI
+    configured = config.exists(base + [ifname, 'offload', 'tso'])
+    enabled, fixed = eth.get_tcp_segmentation_offload()
+    if configured and fixed:
+        config.delete(base + [ifname, 'offload', 'tso'])
+    elif enabled and not fixed:
+        config.set(base + [ifname, 'offload', 'tso'])
 
-    config = ConfigTree(config_file)
+    # Remove deprecated UDP fragmentation offloading option
+    if config.exists(base + [ifname, 'offload', 'ufo']):
+        config.delete(base + [ifname, 'offload', 'ufo'])
 
-    #
-    # Migrate "interface ethernet eth0 ip ospf" to "protocols ospf interface eth0"
-    #
-    for type in config.list_nodes(['interfaces']):
-        for interface in config.list_nodes(['interfaces', type]):
-            ip_base = ['interfaces', type, interface, 'ip']
-            ipv6_base = ['interfaces', type, interface, 'ipv6']
-            migrate_rip(config, ip_base, interface)
-            migrate_ripng(config, ipv6_base, interface)
-            migrate_ospf(config, ip_base, interface)
-            migrate_ospfv3(config, ipv6_base, interface)
+    # Also while processing the interface configuration, not all adapters support
+    # changing the speed and duplex settings. If the desired speed and duplex
+    # values do not work for the NIC driver, we change them back to the default
+    # value of "auto" - which will be applied if the CLI node is deleted.
+    speed_path = base + [ifname, 'speed']
+    duplex_path = base + [ifname, 'duplex']
+    # speed and duplex must always be set at the same time if not set to "auto"
+    if config.exists(speed_path) and config.exists(duplex_path):
+        speed = config.return_value(speed_path)
+        duplex = config.return_value(duplex_path)
+        if speed != 'auto' and duplex != 'auto':
+            if not eth.check_speed_duplex(speed, duplex):
+                config.delete(speed_path)
+                config.delete(duplex_path)
 
-            vif_path = ['interfaces', type, interface, 'vif']
-            if config.exists(vif_path):
-                for vif in config.list_nodes(vif_path):
-                    vif_ip_base = vif_path + [vif, 'ip']
-                    vif_ipv6_base = vif_path + [vif, 'ipv6']
-                    ifname = f'{interface}.{vif}'
+    # Also while processing the interface configuration, not all adapters support
+    # changing disabling flow-control - or change this setting. If disabling
+    # flow-control is not supported by the NIC, we remove the setting from CLI
+    flow_control_path = base + [ifname, 'disable-flow-control']
+    if config.exists(flow_control_path):
+        if not eth.check_flow_control():
+            config.delete(flow_control_path)
 
-                    migrate_rip(config, vif_ip_base, ifname)
-                    migrate_ripng(config, vif_ipv6_base, ifname)
-                    migrate_ospf(config, vif_ip_base, ifname)
-                    migrate_ospfv3(config, vif_ipv6_base, ifname)
-
-
-            vif_s_path = ['interfaces', type, interface, 'vif-s']
-            if config.exists(vif_s_path):
-                for vif_s in config.list_nodes(vif_s_path):
-                    vif_s_ip_base = vif_s_path + [vif_s, 'ip']
-                    vif_s_ipv6_base = vif_s_path + [vif_s, 'ipv6']
-
-                    # vif-c interfaces MUST be migrated before their parent vif-s
-                    # interface as the migrate_*() functions delete the path!
-                    vif_c_path = ['interfaces', type, interface, 'vif-s', vif_s, 'vif-c']
-                    if config.exists(vif_c_path):
-                        for vif_c in config.list_nodes(vif_c_path):
-                            vif_c_ip_base = vif_c_path + [vif_c, 'ip']
-                            vif_c_ipv6_base = vif_c_path + [vif_c, 'ipv6']
-                            ifname = f'{interface}.{vif_s}.{vif_c}'
-
-                            migrate_rip(config, vif_c_ip_base, ifname)
-                            migrate_ripng(config, vif_c_ipv6_base, ifname)
-                            migrate_ospf(config, vif_c_ip_base, ifname)
-                            migrate_ospfv3(config, vif_c_ipv6_base, ifname)
-
-
-                    ifname = f'{interface}.{vif_s}'
-                    migrate_rip(config, vif_s_ip_base, ifname)
-                    migrate_ripng(config, vif_s_ipv6_base, ifname)
-                    migrate_ospf(config, vif_s_ip_base, ifname)
-                    migrate_ospfv3(config, vif_s_ipv6_base, ifname)
-
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

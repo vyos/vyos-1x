@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_prefix_list
 from vyos.configverify import verify_route_map
+from vyos.configverify import verify_vrf
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
@@ -129,7 +130,7 @@ def verify(bgp):
 
             if 'local_as' in peer_config:
                 if len(peer_config['local_as']) > 1:
-                    raise ConfigError('Only one local-as number may be specified!')
+                    raise ConfigError(f'Only one local-as number can be specified for peer "{peer}"!')
 
                 # Neighbor local-as override can not be the same as the local-as
                 # we use for this BGP instane!
@@ -139,7 +140,7 @@ def verify(bgp):
 
             # ttl-security and ebgp-multihop can't be used in the same configration
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
-                raise ConfigError('You can\'t set both ebgp-multihop and ttl-security hops')
+                raise ConfigError('You can not set both ebgp-multihop and ttl-security hops')
 
             # Check if neighbor has both override capability and strict capability match configured at the same time.
             if 'override_capability' in peer_config and 'strict_capability_match' in peer_config:
@@ -147,7 +148,7 @@ def verify(bgp):
 
             # Check spaces in the password
             if 'password' in peer_config and ' ' in peer_config['password']:
-                raise ConfigError('You can\'t use spaces in the password')
+                raise ConfigError('Whitespace is not allowed in passwords!')
 
             # Some checks can/must only be done on a neighbor and not a peer-group
             if neighbor == 'neighbor':
@@ -221,27 +222,47 @@ def verify(bgp):
             raise ConfigError(f'Peer-group "{peer_group}" requires remote-as to be set!')
 
     # Throw an error if the global administrative distance parameters aren't all filled out.
-    if dict_search('parameters.distance', bgp) == None:
-        pass
-    else:
-        if dict_search('parameters.distance.global', bgp):
-            for key in ['external', 'internal', 'local']:
-                if dict_search(f'parameters.distance.global.{key}', bgp) == None:
-                    raise ConfigError('Missing mandatory configuration option for '\
-                                     f'global administrative distance {key}!')
+    if dict_search('parameters.distance.global', bgp) != None:
+        for key in ['external', 'internal', 'local']:
+            if dict_search(f'parameters.distance.global.{key}', bgp) == None:
+                raise ConfigError('Missing mandatory configuration option for '\
+                                 f'global administrative distance {key}!')
 
-    # Throw an error if the address family specific administrative distance parameters aren't all filled out.
-    if dict_search('address_family', bgp) == None:
-        pass
-    else:
-        for address_family_name in dict_search('address_family', bgp):
-            if dict_search(f'address_family.{address_family_name}.distance', bgp) == None:
-                pass
-            else:
+    # Address Family specific validation
+    if 'address_family' in bgp:
+        for afi, afi_config in bgp['address_family'].items():
+            if 'distance' in afi_config:
+                # Throw an error if the address family specific administrative
+                # distance parameters aren't all filled out.
                 for key in ['external', 'internal', 'local']:
-                    if dict_search(f'address_family.{address_family_name}.distance.{key}', bgp) == None:
+                    if key not in afi_config['distance']:
                         raise ConfigError('Missing mandatory configuration option for '\
-                                         f'{address_family_name} administrative distance {key}!')
+                                         f'{afi} administrative distance {key}!')
+
+            if afi in ['ipv4_unicast', 'ipv6_unicast']:
+                if 'import' in afi_config and 'vrf' in afi_config['import']:
+                    # Check if VRF exists
+                    verify_vrf(afi_config['import']['vrf'])
+
+                    # FRR error: please unconfigure vpn to vrf commands before
+                    # using import vrf commands
+                    if 'vpn' in afi_config['import'] or dict_search('export.vpn', afi_config) != None:
+                        raise ConfigError('Please unconfigure VPN to VRF commands before '\
+                                          'using "import vrf" commands!')
+
+                # Verify that the export/import route-maps do exist
+                for export_import in ['export', 'import']:
+                    tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
+                    if tmp: verify_route_map(tmp, bgp)
+
+            if afi in ['l2vpn_evpn'] and 'vrf' not in bgp:
+                # Some L2VPN EVPN AFI options are only supported under VRF
+                if 'vni' in afi_config:
+                    for vni, vni_config in afi_config['vni'].items():
+                        if 'rd' in vni_config:
+                            raise ConfigError('VNI route-distinguisher is only supported under EVPN VRF')
+                        if 'route_target' in vni_config:
+                            raise ConfigError('VNI route-target is only supported under EVPN VRF')
 
     return None
 

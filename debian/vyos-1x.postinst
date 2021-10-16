@@ -76,3 +76,10 @@ if [ ! -x $POSTCONFIG_SCRIPT ]; then
 EOF
 fi
 
+# symlink destination is deleted during ISO assembly - this generates some noise
+# when the system boots: systemd-sysv-generator[1881]: stat() failed on
+# /etc/init.d/README, ignoring: No such file or directory. Thus we simply drop
+# the file.
+if [ -L /etc/init.d/README ]; then
+    rm -f /etc/init.d/README
+fi

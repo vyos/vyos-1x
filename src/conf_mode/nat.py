@@ -139,12 +139,10 @@ def verify(nat):
         for rule, config in dict_search('source.rule', nat).items():
             err_msg = f'Source NAT configuration error in rule {rule}:'
             if 'outbound_interface' not in config:
-                raise ConfigError(f'{err_msg}\n' \
-                                  'outbound-interface not specified')
-            else:
-                if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
-                    print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
+                raise ConfigError(f'{err_msg} outbound-interface not specified')
 
+            if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
+                print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
             addr = dict_search('translation.address', config)
             if addr != None:

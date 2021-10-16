@@ -21,11 +21,11 @@
             <properties>
               <help>MAC address aging interval</help>
               <valueHelp>
-                <format>0</format>
+                <format>u32:0</format>
                 <description>Disable MAC address learning (always flood)</description>
               </valueHelp>
               <valueHelp>
-                <format>10-1000000</format>
+                <format>u32:10-1000000</format>
                 <description>MAC address aging time in seconds (default: 300)</description>
               </valueHelp>
               <constraint>
@@ -34,18 +34,18 @@
             </properties>
             <defaultValue>300</defaultValue>
           </leafNode>
-          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/description.xml.i>
           #include <include/interface/dhcp-options.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
-          #include <include/interface/interface-disable-link-detect.xml.i>
-          #include <include/interface/interface-disable.xml.i>
-          #include <include/interface/interface-vrf.xml.i>
-          #include <include/interface/interface-mtu-68-16000.xml.i>
+          #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/mtu-68-16000.xml.i>
           <leafNode name="forwarding-delay">
             <properties>
               <help>Forwarding delay</help>
               <valueHelp>
-                <format>0-200</format>
+                <format>u32:0-200</format>
                 <description>Spanning Tree Protocol forwarding delay in seconds (default 15)</description>
               </valueHelp>
               <constraint>
@@ -59,7 +59,7 @@
             <properties>
               <help>Hello packet advertisment interval</help>
               <valueHelp>
-                <format>1-10</format>
+                <format>u32:1-10</format>
                 <description>Spanning Tree Protocol hello advertisement interval in seconds (default 2)</description>
               </valueHelp>
               <constraint>
@@ -82,10 +82,10 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/interface-ipv4-options.xml.i>
-          #include <include/interface/interface-ipv6-options.xml.i>
-          #include <include/interface/interface-mac.xml.i>
-          #include <include/interface/interface-mirror.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
+          #include <include/interface/mac.xml.i>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="enable-vlan">
             <properties>
               <help>Enable VLAN aware bridge</help>
@@ -96,7 +96,7 @@
             <properties>
               <help>Interval at which neighbor bridges are removed</help>
               <valueHelp>
-                <format>1-40</format>
+                <format>u32:1-40</format>
                 <description>Bridge maximum aging time in seconds (default 20)</description>
               </valueHelp>
               <constraint>
@@ -123,7 +123,7 @@
                     <properties>
                       <help>Specify VLAN id which should natively be present on the link</help>
                       <valueHelp>
-                        <format>1-4094</format>
+                        <format>u32:1-4094</format>
                         <description>Virtual Local Area Network (VLAN) ID</description>
                       </valueHelp>
                       <constraint>
@@ -154,7 +154,7 @@
                     <properties>
                       <help>Bridge port cost</help>
                       <valueHelp>
-                        <format>1-65535</format>
+                        <format>u32:1-65535</format>
                         <description>Path cost value for Spanning Tree Protocol</description>
                       </valueHelp>
                       <constraint>
@@ -168,7 +168,7 @@
                     <properties>
                       <help>Bridge port priority</help>
                       <valueHelp>
-                        <format>0-63</format>
+                        <format>u32:0-63</format>
                         <description>Bridge port priority</description>
                       </valueHelp>
                       <constraint>
@@ -192,7 +192,7 @@
             <properties>
               <help>Priority for this bridge</help>
               <valueHelp>
-                <format>0-65535</format>
+                <format>u32:0-65535</format>
                 <description>Bridge priority (default 32768)</description>
               </valueHelp>
               <constraint>

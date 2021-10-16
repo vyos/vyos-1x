@@ -53,6 +53,8 @@ DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
 Driver=CFontzPacket
 {%   elif model == 'sdec' %}
 Driver=sdeclcd
+{%   elif model == 'hd44780' %}
+Driver=hd44780
 {%   endif %}
 {% endif %}
 
@@ -128,5 +130,10 @@ USB=yes
 ## SDEC driver for Lanner, Watchguard, Sophos sppliances ##
 [sdeclcd]
 # No options
+{%   elif model == 'hd44780' %}
+[hd44780]
+ConnectionType=ezio
+Device={{ device }}
+Size=16x2
 {%   endif %}
 {% endif %}

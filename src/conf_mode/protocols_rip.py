@@ -93,7 +93,7 @@ def generate(rip):
         rip['new_frr_config'] = ''
         return None
 
-    rip['new_frr_config'] = render_to_string('frr/rip.frr.tmpl', rip)
+    rip['new_frr_config'] = render_to_string('frr/ripd.frr.tmpl', rip)
 
     return None
 

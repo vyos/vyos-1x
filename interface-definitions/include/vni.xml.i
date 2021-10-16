@@ -3,7 +3,7 @@
   <properties>
     <help>Virtual Network Identifier</help>
     <valueHelp>
-      <format>0-16777214</format>
+      <format>u32:0-16777214</format>
       <description>VXLAN virtual network identifier</description>
     </valueHelp>
     <constraint>

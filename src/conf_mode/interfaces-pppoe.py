@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,12 +22,16 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
+from vyos.ifconfig import PPPoEIf
 from vyos.template import render
 from vyos.util import call
+from vyos.util import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -43,6 +47,32 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'pppoe']
     pppoe = get_interface_dict(conf, base)
+
+    # We should only terminate the PPPoE session if critical parameters change.
+    # All parameters that can be changed on-the-fly (like interface description)
+    # should not lead to a reconnect!
+    tmp = leaf_node_changed(conf, ['access-concentrator'])
+    if tmp: pppoe.update({'shutdown_required': {}})
+
+    tmp = leaf_node_changed(conf, ['connect-on-demand'])
+    if tmp: pppoe.update({'shutdown_required': {}})
+
+    tmp = leaf_node_changed(conf, ['service-name'])
+    if tmp: pppoe.update({'shutdown_required': {}})
+
+    tmp = leaf_node_changed(conf, ['source-interface'])
+    if tmp: pppoe.update({'shutdown_required': {}})
+
+    tmp = leaf_node_changed(conf, ['vrf'])
+    # leaf_node_changed() returns a list, as VRF is a non-multi node, there
+    # will be only one list element
+    if tmp: pppoe.update({'vrf_old': tmp[0]})
+
+    tmp = leaf_node_changed(conf, ['authentication', 'user'])
+    if tmp: pppoe.update({'shutdown_required': {}})
+
+    tmp = leaf_node_changed(conf, ['authentication', 'password'])
+    if tmp: pppoe.update({'shutdown_required': {}})
 
     return pppoe
 
@@ -66,57 +96,42 @@ def generate(pppoe):
     # rendered into
     ifname = pppoe['ifname']
     config_pppoe = f'/etc/ppp/peers/{ifname}'
-    script_pppoe_pre_up = f'/etc/ppp/ip-pre-up.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ip_up = f'/etc/ppp/ip-up.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ip_down = f'/etc/ppp/ip-down.d/1000-vyos-pppoe-{ifname}'
-    script_pppoe_ipv6_up = f'/etc/ppp/ipv6-up.d/1000-vyos-pppoe-{ifname}'
-    config_wide_dhcp6c = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
-
-    config_files = [config_pppoe, script_pppoe_pre_up, script_pppoe_ip_up,
-                    script_pppoe_ip_down, script_pppoe_ipv6_up, config_wide_dhcp6c]
 
     if 'deleted' in pppoe or 'disable' in pppoe:
-        # stop DHCPv6-PD client
-        call(f'systemctl stop dhcp6c@{ifname}.service')
-        # Hang-up PPPoE connection
-        call(f'systemctl stop ppp@{ifname}.service')
-
-        # Delete PPP configuration files
-        for file in config_files:
-            if os.path.exists(file):
-                os.unlink(file)
+        if os.path.exists(config_pppoe):
+            os.unlink(config_pppoe)
 
         return None
 
     # Create PPP configuration files
-    render(config_pppoe, 'pppoe/peer.tmpl', pppoe, permission=0o755)
-
-    # Create script for ip-pre-up.d
-    render(script_pppoe_pre_up, 'pppoe/ip-pre-up.script.tmpl', pppoe,
-           permission=0o755)
-    # Create script for ip-up.d
-    render(script_pppoe_ip_up, 'pppoe/ip-up.script.tmpl', pppoe,
-           permission=0o755)
-    # Create script for ip-down.d
-    render(script_pppoe_ip_down, 'pppoe/ip-down.script.tmpl', pppoe,
-           permission=0o755)
-    # Create script for ipv6-up.d
-    render(script_pppoe_ipv6_up, 'pppoe/ipv6-up.script.tmpl', pppoe,
-           permission=0o755)
-
-    if 'dhcpv6_options' in pppoe and 'pd' in pppoe['dhcpv6_options']:
-        # ipv6.tmpl relies on ifname - this should be made consitent in the
-        # future better then double key-ing the same value
-        render(config_wide_dhcp6c, 'dhcp-client/ipv6.tmpl', pppoe)
+    render(config_pppoe, 'pppoe/peer.tmpl', pppoe, permission=0o640)
 
     return None
 
 def apply(pppoe):
+    ifname = pppoe['ifname']
     if 'deleted' in pppoe or 'disable' in pppoe:
-        call('systemctl stop ppp@{ifname}.service'.format(**pppoe))
+        if os.path.isdir(f'/sys/class/net/{ifname}'):
+            p = PPPoEIf(ifname)
+            p.remove()
+        call(f'systemctl stop ppp@{ifname}.service')
         return None
 
-    call('systemctl restart ppp@{ifname}.service'.format(**pppoe))
+    # reconnect should only be necessary when certain config options change,
+    # like ACS name, authentication, no-peer-dns, source-interface
+    if ((not is_systemd_service_running(f'ppp@{ifname}.service')) or
+        'shutdown_required' in pppoe):
+
+        # cleanup system (e.g. FRR routes first)
+        if os.path.isdir(f'/sys/class/net/{ifname}'):
+            p = PPPoEIf(ifname)
+            p.remove()
+
+        call(f'systemctl restart ppp@{ifname}.service')
+    else:
+        if os.path.isdir(f'/sys/class/net/{ifname}'):
+            p = PPPoEIf(ifname)
+            p.update(pppoe)
 
     return None
 

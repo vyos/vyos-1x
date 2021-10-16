@@ -1,0 +1,77 @@
+interfaces {
+    ethernet eth0 {
+        address 192.0.2.1/24
+        address 2001:db8::1/64
+    }
+    loopback lo {
+    }
+}
+protocols {
+    bgp 65001 {
+        address-family {
+            ipv4-unicast {
+                network 10.0.150.0/23 {
+                }
+            }
+            ipv6-unicast {
+                network 2001:db8:200::/40 {
+                }
+            }
+        }
+        neighbor 192.0.2.10 {
+            remote-as 65010
+        }
+        neighbor 192.0.2.11 {
+            remote-as 65011
+        }
+        neighbor 2001:db8::10 {
+            remote-as 65010
+        }
+        neighbor 2001:db8::11 {
+            remote-as 65011
+        }
+        parameters {
+            log-neighbor-changes
+        }
+    }
+}
+service {
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level notice
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@9:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.5 */

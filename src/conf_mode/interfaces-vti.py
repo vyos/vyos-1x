@@ -45,13 +45,13 @@ def generate(vti):
     return None
 
 def apply(vti):
-    if vti['ifname'] in interfaces():
-        # Always delete the VTI interface in advance
+    # Remove macsec interface
+    if 'deleted' in vti:
         VTIIf(**vti).remove()
+        return None
 
-    if 'deleted' not in vti:
-        tmp = VTIIf(**vti)
-        tmp.update(vti)
+    tmp = VTIIf(**vti)
+    tmp.update(vti)
 
     return None
 

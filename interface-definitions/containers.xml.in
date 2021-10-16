@@ -9,6 +9,10 @@
       <tagNode name="name">
         <properties>
           <help>Container name</help>
+          <constraint>
+            <regex>^[-a-zA-Z0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Container name must be alphanumeric and can contain hyphens</constraintErrorMessage>
         </properties>
         <children>
           <leafNode name="allow-host-networks">
@@ -17,14 +21,39 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="description">
+          <leafNode name="cap-add">
             <properties>
-              <help>Container description</help>
+              <help>Add capabilities</help>
+              <completionHelp>
+                <list>net-admin setpcap sys-time</list>
+              </completionHelp>
+              <valueHelp>
+                <format>net-admin</format>
+                <description>Net-admin option</description>
+              </valueHelp>
+              <valueHelp>
+                <format>setpcap</format>
+                <description>Setpcap option</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-time</format>
+                <description>Sys-time option</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(net-admin|setpcap|sys-time)$</regex>
+              </constraint>
+              <multi/>
             </properties>
           </leafNode>
+          #include <include/generic-description.xml.i>
+          #include <include/generic-disable-node.xml.i>
           <tagNode name="environment">
             <properties>
               <help>Add custom environment variables</help>
+              <constraint>
+                <regex>^[-_a-zA-Z0-9]+$</regex>
+              </constraint>
+              <constraintErrorMessage>Environment variable name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
             </properties>
             <children>
               <leafNode name="value">
@@ -43,6 +72,24 @@
               <help>Image name in the hub-registry</help>
             </properties>
           </leafNode>
+          <leafNode name="memory">
+            <properties>
+              <help>Constrain the memory available to a container (default: 512MB)</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>u32:1-16384</format>
+                <description>Container memory in megabytes (MB)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16384"/>
+              </constraint>
+              <constraintErrorMessage>Container memory must be in range 0 to 16384 MB</constraintErrorMessage>
+            </properties>
+            <defaultValue>512</defaultValue>
+          </leafNode>
           <tagNode name="network">
             <properties>
               <help>Attach user defined network to container</help>
@@ -53,10 +100,11 @@
             <children>
               <leafNode name="address">
                 <properties>
-                  <help>Set IPv4 static address to container (optional)</help>
+                  <!-- PODMAN currently does not support more then one IPv4 or IPv6 address assignments to a container -->
+                  <help>Assign static IP address to container</help>
                   <valueHelp>
                     <format>ipv4</format>
-                    <description>IPv4 address (x.x.x.1 reserved)</description>
+                    <description>IPv4 address</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
@@ -115,6 +163,30 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="restart">
+            <properties>
+              <help>Restart options for container</help>
+              <completionHelp>
+                <list>no on-failure always</list>
+              </completionHelp>
+              <valueHelp>
+                <format>no</format>
+                <description>Do not restart containers on exit</description>
+              </valueHelp>
+              <valueHelp>
+                <format>on-failure</format>
+                <description>Restart containers when they exit with a non-zero exit code, retrying indefinitely (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>always</format>
+                <description>Restart containers when they exit, regardless of status, retrying indefinitely</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(no|on-failure|always)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>on-failure</defaultValue>
+          </leafNode>
           <tagNode name="volume">
             <properties>
               <help>Mount a volume into the container</help>
@@ -159,8 +231,13 @@
                 <format>ipv4net</format>
                 <description>IPv4 network prefix</description>
               </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 network prefix</description>
+              </valueHelp>
               <constraint>
                 <validator name="ipv4-prefix"/>
+                <validator name="ipv6-prefix"/>
               </constraint>
               <multi/>
             </properties>

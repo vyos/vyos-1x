@@ -263,13 +263,14 @@
           </node>
           <node name="ospf">
             <properties>
-              <help>Monitor the Open Shortest Path First (OSPF) protocol</help>
+              <help>Monitor Open Shortest Path First (OSPF) protocol</help>
             </properties>
             <children>
               #include <include/monitor-background.xml.i>
-
-
               <node name="disable">
+                <properties>
+                  <help>Disable Open Shortest Path First (OSPF) debugging</help>
+                </properties>
                 <children>
                   <node name="event">
                     <properties>
@@ -458,6 +459,9 @@
                 </children>
               </node>
               <node name="enable">
+                <properties>
+                  <help>Enable Open Shortest Path First (OSPF) debugging</help>
+                </properties>
                 <children>
                   <node name="event">
                     <properties>

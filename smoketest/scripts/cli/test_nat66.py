@@ -31,10 +31,13 @@ src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 
 class TestNAT66(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.cli_delete(base_path)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -183,4 +186,4 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

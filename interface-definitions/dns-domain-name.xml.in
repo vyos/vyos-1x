@@ -1,35 +1,32 @@
 <?xml version="1.0"?>
-<!-- host-name configuration -->
 <interfaceDefinition>
   <node name="system">
     <children>
       <leafNode name="name-server" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
-          <help>Domain Name Servers (DNS) used by the system (resolv.conf)</help>
+          <help>System Domain Name Servers (DNS)</help>
           <priority>400</priority>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          </completionHelp>
           <valueHelp>
             <format>ipv4</format>
-            <description>Domain Name Server (DNS) address</description>
+            <description>Domain Name Server IPv4 address</description>
           </valueHelp>
           <valueHelp>
             <format>ipv6</format>
-            <description>Domain Name Server (DNS) address</description>
+            <description>Domain Name Server IPv6 address</description>
+          </valueHelp>
+          <valueHelp>
+            <format>txt</format>
+            <description>Use Domain Name Server from DHCP interface</description>
           </valueHelp>
           <multi/>
           <constraint>
             <validator name="ipv4-address"/>
             <validator name="ipv6-address"/>
+            <validator name="interface-name"/>
           </constraint>
-        </properties>
-      </leafNode>
-      <leafNode name="name-servers-dhcp" owner="${vyos_conf_scripts_dir}/host_name.py">
-        <properties>
-          <help>Interfaces whose DHCP client nameservers will be used by the system (resolv.conf)</help>
-          <priority>400</priority>
-          <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
-          </completionHelp>
-          <multi/>
         </properties>
       </leafNode>
       <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/host_name.py">

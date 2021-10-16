@@ -5,6 +5,7 @@
       <node name="l2tp" owner="${vyos_conf_scripts_dir}/vpn_l2tp.py">
         <properties>
           <help>L2TP Virtual Private Network (VPN)</help>
+          <priority>902</priority>
         </properties>
         <children>
           <node name="remote-access">
@@ -22,7 +23,7 @@
                 </properties>
               </leafNode>
               #include <include/accel-ppp/gateway-address.xml.i>
-              #include <include/accel-ppp/name-server.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
               <node name="lns">
                 <properties>
                   <help>L2TP Network Server (LNS)</help>
@@ -182,9 +183,9 @@
                           #include <include/accel-ppp/radius-additions-disable-accounting.xml.i>
                           <leafNode name="fail-time">
                             <properties>
-                              <help>Mark server unavailable for &lt;n&gt; seconds on failure</help>
+                              <help>Mark server unavailable for N seconds on failure</help>
                               <valueHelp>
-                                <format>0-600</format>
+                                <format>u32:0-600</format>
                                 <description>Fail time penalty</description>
                               </valueHelp>
                               <constraint>

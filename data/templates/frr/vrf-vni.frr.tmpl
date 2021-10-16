@@ -1,0 +1,7 @@
+{% if vrf is defined and vrf is not none %}
+vrf {{ vrf }}
+{%   if vni is defined and vni is not none %}
+ vni {{ vni }}
+{%   endif %}
+ exit-vrf
+{% endif %}

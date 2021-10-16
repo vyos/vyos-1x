@@ -80,7 +80,7 @@ def verify(static):
     return None
 
 def generate(static):
-    static['new_frr_config'] = render_to_string('frr/static.frr.tmpl', static)
+    static['new_frr_config'] = render_to_string('frr/staticd.frr.tmpl', static)
     return None
 
 def apply(static):

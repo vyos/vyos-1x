@@ -30,6 +30,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.ifconfig import WireGuardIf
 from vyos.util import check_kmod
+from vyos.util import check_port_availability
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -45,6 +46,9 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'wireguard']
     wireguard = get_interface_dict(conf, base)
+
+    # Check if a port was changed
+    wireguard['port_changed'] = leaf_node_changed(conf, ['port'])
 
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
@@ -72,6 +76,13 @@ def verify(wireguard):
 
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
+
+    if 'port' in wireguard and wireguard['port_changed']:
+        listen_port = int(wireguard['port'])
+        if check_port_availability('0.0.0.0', listen_port, 'udp') is not True:
+            raise ConfigError(
+                f'The UDP port {listen_port} is busy or unavailable and cannot be used for the interface'
+            )
 
     # run checks on individual configured WireGuard peer
     for tmp in wireguard['peer']:

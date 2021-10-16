@@ -28,11 +28,7 @@
       </node>
     </children>
   </node>
-
   <node name="reset">
-    <properties>
-      <help>Reset a service</help>
-    </properties>
     <children>
       <node name="ipv6">
         <properties>
@@ -64,7 +60,6 @@
               </tagNode>
             </children>
           </node>
-
           <node name="route">
             <properties>
               <help>Reset IPv6 route</help>
@@ -76,7 +71,6 @@
                 </properties>
                 <command>sudo ip -f inet6 route flush cache</command>
               </leafNode>
-
               <tagNode name="cache">
                 <properties>
                   <help>Flush the kernel IPv6 route cache for a given route</help>

@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 from netifaces import interfaces
+from ipaddress import IPv4Address
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -31,6 +32,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 from vyos.ifconfig import TunnelIf
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -93,6 +95,37 @@ def verify(tunnel):
                 raise ConfigError('ERSPAN version 2 does not index parameter!')
             if 'direction' not in tunnel['parameters']['erspan']:
                 raise ConfigError('ERSPAN version 2 requires direction to be set!')
+
+    # If tunnel source address any and key not set
+    if tunnel['encapsulation'] in ['gre'] and \
+       tunnel['source_address'] == '0.0.0.0' and \
+       dict_search('parameters.ip.key', tunnel) == None:
+        raise ConfigError('Tunnel parameters ip key must be set!')
+
+    if tunnel['encapsulation'] in ['gre', 'gretap']:
+        if dict_search('parameters.ip.key', tunnel) != None:
+            # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
+            # Prevent the same key for 2 tunnels with same source-address/encap. T2920
+            for tunnel_if in Section.interfaces('tunnel'):
+                tunnel_cfg = get_interface_config(tunnel_if)
+                # no match on encapsulation - bail out
+                if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
+                    continue
+                new_source_address = tunnel['source_address']
+                # Convert tunnel key to ip key, format "ip -j link show"
+                # 1 => 0.0.0.1, 999 => 0.0.3.231
+                orig_new_key = dict_search('parameters.ip.key', tunnel)
+                new_key = IPv4Address(int(orig_new_key))
+                new_key = str(new_key)
+                if dict_search('address', tunnel_cfg) == new_source_address and \
+                   dict_search('linkinfo.info_data.ikey', tunnel_cfg) == new_key:
+                    raise ConfigError(f'Key "{orig_new_key}" for source-address "{new_source_address}" ' \
+                                      f'is already used for tunnel "{tunnel_if}"!')
+
+    # Keys are not allowed with ipip and sit tunnels
+    if tunnel['encapsulation'] in ['ipip', 'sit']:
+        if dict_search('parameters.ip.key', tunnel) != None:
+            raise ConfigError('Keys are not allowed with ipip and sit tunnels!')
 
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)

@@ -67,22 +67,22 @@ def verify_mtu_ipv6(config):
         min_mtu = 1280
         if int(config['mtu']) < min_mtu:
             interface = config['ifname']
-            error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
-                        f'thus the minimum MTU requirement is {min_mtu}!'
+            error_msg = f'IPv6 address will be configured on interface "{interface}",\n' \
+                        f'the required minimum MTU is {min_mtu}!'
 
-            for address in (dict_search('address', config) or []):
-                if address in ['dhcpv6'] or is_ipv6(address):
-                    raise ConfigError(error_msg)
+            if 'address' in config:
+                for address in config['address']:
+                    if address in ['dhcpv6'] or is_ipv6(address):
+                        raise ConfigError(error_msg)
 
-            tmp = dict_search('ipv6.address', config)
-            if tmp and 'no_default_link_local' not in tmp:
-                raise ConfigError('link-local ' + error_msg)
+            tmp = dict_search('ipv6.address.no_default_link_local', config)
+            if tmp == None: raise ConfigError('link-local ' + error_msg)
 
-            if tmp and 'autoconf' in tmp:
-                raise ConfigError(error_msg)
+            tmp = dict_search('ipv6.address.autoconf', config)
+            if tmp != None: raise ConfigError(error_msg)
 
-            if tmp and 'eui64' in tmp:
-                raise ConfigError(error_msg)
+            tmp = dict_search('ipv6.address.eui64', config)
+            if tmp != None: raise ConfigError(error_msg)
 
 def verify_vrf(config):
     """
@@ -152,11 +152,10 @@ def verify_eapol(config):
         if 'certificate' not in config['eapol']:
             raise ConfigError('Certificate must be specified when using EAPoL!')
 
-        if 'certificate' not in config['pki']:
+        if 'pki' not in config or 'certificate' not in config['pki']:
             raise ConfigError('Invalid certificate specified for EAPoL')
 
         cert_name = config['eapol']['certificate']
-
         if cert_name not in config['pki']['certificate']:
             raise ConfigError('Invalid certificate specified for EAPoL')
 
@@ -237,8 +236,8 @@ def verify_interface_exists(ifname):
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists.
     """
-    from netifaces import interfaces
-    if ifname not in interfaces():
+    import os
+    if not os.path.exists(f'/sys/class/net/{ifname}'):
         raise ConfigError(f'Interface "{ifname}" does not exist!')
 
 def verify_source_interface(config):
@@ -344,7 +343,7 @@ def verify_accel_ppp_base_service(config):
     # vertify auth settings
     if dict_search('authentication.mode', config) == 'local':
         if not dict_search('authentication.local_users', config):
-            raise ConfigError('PPPoE local auth mode requires local users to be configured!')
+            raise ConfigError('Authentication mode local requires local users to be configured!')
 
         for user in dict_search('authentication.local_users.username', config):
             user_config = config['authentication']['local_users']['username'][user]
@@ -368,7 +367,7 @@ def verify_accel_ppp_base_service(config):
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
     if 'gateway_address' not in config:
-        raise ConfigError('PPPoE server requires gateway-address to be configured!')
+        raise ConfigError('Server requires gateway-address to be configured!')
 
     if 'name_server_ipv4' in config:
         if len(config['name_server_ipv4']) > 2:

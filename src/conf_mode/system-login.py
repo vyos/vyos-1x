@@ -59,7 +59,7 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'login']
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                 get_first_key=True)
+                                 no_tag_node_value_mangle=True, get_first_key=True)
 
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
@@ -79,12 +79,6 @@ def get_config(config=None):
     for server in dict_search('radius.server', login) or []:
         login['radius']['server'][server] = dict_merge(default_values,
             login['radius']['server'][server])
-
-    # XXX: for a yet unknown reason when we only have one source-address
-    # get_config_dict() will show a string over a string
-    if 'radius' in login and 'source_address' in login['radius']:
-        if isinstance(login['radius']['source_address'], str):
-            login['radius']['source_address'] = [login['radius']['source_address']]
 
     # create a list of all users, cli and users
     all_users = list(set(local_users + cli_users))
@@ -246,7 +240,9 @@ def apply(login):
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
                 render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.tmpl',
-                       user_config, permission=0o600, user=user, group='users')
+                       user_config, permission=0o600,
+                       formater=lambda _: _.replace("&quot;", '"'),
+                       user=user, group='users')
 
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')

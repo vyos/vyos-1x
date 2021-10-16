@@ -17,7 +17,7 @@ server {
         listen {{ server.port }} ssl;
         listen [::]:{{ server.port }} ssl;
 {% else %}
-        listen {{ server.address }}:{{ server.port }} ssl;
+        listen {{ server.address | bracketize_ipv6 }}:{{ server.port }} ssl;
 {% endif %}
 
 {% for name in server.name %}
@@ -39,9 +39,10 @@ server {
         #
         include snippets/snakeoil.conf;
 {% endif %}
+        ssl_protocols TLSv1.2 TLSv1.3;
 
         # proxy settings for HTTP API, if enabled; 503, if not
-        location ~ /(retrieve|configure|config-file|image|generate|show|docs|openapi.json|redoc) {
+        location ~ /(retrieve|configure|config-file|image|generate|show|docs|openapi.json|redoc|graphql) {
 {% if server.api %}
                 proxy_pass http://localhost:{{ server.api.port }};
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

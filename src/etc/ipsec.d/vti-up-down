@@ -19,23 +19,23 @@
 import os
 import sys
 
-from vyos.util import call, get_interface_config, get_interface_address
+from syslog import syslog
+from syslog import openlog
+from syslog import LOG_PID
+from syslog import LOG_INFO
 
-def get_dhcp_address(interface):
-    addr = get_interface_address(interface)
-    if not addr:
-        return None
-    if len(addr['addr_info']) == 0:
-        return None
-    return addr['addr_info'][0]['local']
+from vyos.configquery import ConfigTreeQuery
+from vyos.util import call
+from vyos.util import get_interface_config
+from vyos.util import get_interface_address
 
 if __name__ == '__main__':
     verb = os.getenv('PLUTO_VERB')
     connection = os.getenv('PLUTO_CONNECTION')
     interface = sys.argv[1]
-    dhcp_interface = sys.argv[2]
 
-    print(f'vti-up-down: start: {verb} {connection} {interface}')
+    openlog(ident=f'vti-up-down', logoption=LOG_PID, facility=LOG_INFO)
+    syslog(f'Interface {interface} {verb} {connection}')
 
     if verb in ['up-client', 'up-host']:
         call('sudo ip route delete default table 220')
@@ -43,19 +43,21 @@ if __name__ == '__main__':
     vti_link = get_interface_config(interface)
 
     if not vti_link:
-        print('vti-up-down: interface not found')
+        syslog(f'Interface {interface} not found')
         sys.exit(0)
 
-    vti_link_up = (vti_link['operstate'] == 'UP' if 'operstate' in vti_link else False)
+    vti_link_up = (vti_link['operstate'] != 'DOWN' if 'operstate' in vti_link else False)
+
+    config = ConfigTreeQuery()
+    vti_dict = config.get_config_dict(['interfaces', 'vti', interface],
+                                      get_first_key=True)
 
     if verb in ['up-client', 'up-host']:
         if not vti_link_up:
-            if dhcp_interface != 'no':
-                local_ip = get_dhcp_address(dhcp_interface)
-                call(f'sudo ip tunnel change {interface} local {local_ip}')
-            call(f'sudo ip link set {interface} up')
+            if 'disable' not in vti_dict:
+                call(f'sudo ip link set {interface} up')
+            else:
+                syslog(f'Interface {interface} is admin down ...')
     elif verb in ['down-client', 'down-host']:
         if vti_link_up:
             call(f'sudo ip link set {interface} down')
-
-    print('vti-up-down: finish')

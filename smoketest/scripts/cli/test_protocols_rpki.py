@@ -84,6 +84,7 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'rpki cache {peer} {port} preference {preference}', frrconfig)
 
     def test_rpki_ssh(self):
+        self.skipTest('Currently untested, see: https://github.com/FRRouting/frr/issues/7978')
         polling = '7200'
         cache = {
             '192.0.2.3' : {

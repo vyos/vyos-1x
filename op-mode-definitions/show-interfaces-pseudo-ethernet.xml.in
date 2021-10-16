@@ -6,7 +6,7 @@
         <children>
           <tagNode name="pseudo-ethernet">
             <properties>
-              <help>Show pseudo-ethernet/MACvlan interface information</help>
+              <help>Show specified Pseudo-Ethernet/MACvlan interface information</help>
               <completionHelp>
                 <path>interfaces pseudo-ethernet</path>
               </completionHelp>
@@ -23,7 +23,7 @@
           </tagNode>
           <node name="pseudo-ethernet">
             <properties>
-              <help>Show pseudo-ethernet/MACvlan interface information</help>
+              <help>Show Pseudo-Ethernet/MACvlan interface information</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=pseudo-ethernet --action=show-brief</command>
             <children>

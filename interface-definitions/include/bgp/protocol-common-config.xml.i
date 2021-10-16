@@ -93,6 +93,9 @@
             </tagNode>
           </children>
         </node>
+        #include <include/bgp/afi-export-import.xml.i>
+        #include <include/bgp/afi-label.xml.i>
+        #include <include/bgp/afi-maximum-paths.xml.i>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -114,7 +117,9 @@
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
-        #include <include/bgp/afi-maximum-paths.xml.i>
+        #include <include/bgp/afi-rd.xml.i>
+        #include <include/bgp/afi-route-map-vpn.xml.i>
+        #include <include/bgp/afi-route-target-vpn.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>
@@ -372,18 +377,7 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="rd">
-              <properties>
-                <help>Route Distinguisher</help>
-                <valueHelp>
-                  <format>txt</format>
-                  <description>Route Distinguisher, asn:xxx</description>
-                </valueHelp>
-                <constraint>
-                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/route-distinguisher.xml.i>
             <leafNode name="label">
               <properties>
                 <help>MPLS label value assigned to route</help>
@@ -489,6 +483,9 @@
             </tagNode>
           </children>
         </node>
+        #include <include/bgp/afi-export-import.xml.i>
+        #include <include/bgp/afi-label.xml.i>
+        #include <include/bgp/afi-maximum-paths.xml.i>
         <tagNode name="network">
           <properties>
             <help>BGP network</help>
@@ -501,22 +498,13 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="path-limit">
-              <properties>
-                <help>AS-path hopcount limit</help>
-                <valueHelp>
-                  <format>u32:0-255</format>
-                  <description>AS path hop count limit</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 0-255"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/afi-path-limit.xml.i>
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
-        #include <include/bgp/afi-maximum-paths.xml.i>
+        #include <include/bgp/afi-rd.xml.i>
+        #include <include/bgp/afi-route-map-vpn.xml.i>
+        #include <include/bgp/afi-route-target-vpn.xml.i>
         <node name="redistribute">
           <properties>
             <help>Redistribute routes from other protocols into BGP</help>
@@ -672,18 +660,7 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="path-limit">
-              <properties>
-                <help>AS-path hopcount limit</help>
-                <valueHelp>
-                  <format>u32:0-255</format>
-                  <description>AS path hop count limit</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 0-255"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/afi-path-limit.xml.i>
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
@@ -772,18 +749,7 @@
             </constraint>
           </properties>
           <children>
-            <leafNode name="rd">
-              <properties>
-                <help>Route Distinguisher</help>
-                <valueHelp>
-                  <format>txt</format>
-                  <description>Route Distinguisher, asn:xxx</description>
-                </valueHelp>
-                <constraint>
-                  <regex>^[0-9]{1,10}:[0-9]{1,5}$</regex>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/route-distinguisher.xml.i>
             <leafNode name="label">
               <properties>
                 <help>MPLS label value assigned to route</help>
@@ -994,9 +960,9 @@
         </constraint>
       </properties>
     </leafNode>
+    #include <include/generic-description.xml.i>
     #include <include/bgp/neighbor-bfd.xml.i>
     #include <include/bgp/neighbor-capability.xml.i>
-    #include <include/bgp/neighbor-description.xml.i>
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>
@@ -1008,6 +974,7 @@
       <children>
         #include <include/bgp/peer-group.xml.i>
         #include <include/bgp/remote-as.xml.i>
+        #include <include/source-interface.xml.i>
         <node name="v6only">
           <properties>
             <help>Enable BGP with v6 link-local only</help>
@@ -1286,12 +1253,6 @@
             </constraint>
           </properties>
         </leafNode>
-        <leafNode name="no-ipv4-unicast">
-          <properties>
-            <help>Deactivate IPv4 unicast for a peer by default</help>
-            <valueless/>
-          </properties>
-        </leafNode>
       </children>
     </node>
     <leafNode name="deterministic-med">
@@ -1452,9 +1413,9 @@
         #include <include/bgp/neighbor-afi-l2vpn-evpn.xml.i>
       </children>
     </node>
+    #include <include/generic-description.xml.i>
     #include <include/bgp/neighbor-bfd.xml.i>
     #include <include/bgp/neighbor-capability.xml.i>
-    #include <include/bgp/neighbor-description.xml.i>
     #include <include/bgp/neighbor-disable-capability-negotiation.xml.i>
     #include <include/bgp/neighbor-disable-connected-check.xml.i>
     #include <include/bgp/neighbor-ebgp-multihop.xml.i>

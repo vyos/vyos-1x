@@ -1,0 +1,7 @@
+#!/bin/vbash
+source /opt/vyatta/etc/functions/script-template
+if [ -f /run/systemd/shutdown/scheduled ]; then
+    echo
+    run show reboot
+fi
+exit

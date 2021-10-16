@@ -190,6 +190,7 @@ def apply(policy):
     frr_cfg.modify_section(r'^bgp community-list .*')
     frr_cfg.modify_section(r'^bgp extcommunity-list .*')
     frr_cfg.modify_section(r'^bgp large-community-list .*')
+    frr_cfg.modify_section(r'^route-map .*')
     frr_cfg.add_before('^line vty', policy['new_frr_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
