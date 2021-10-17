@@ -19,6 +19,7 @@ import os
 import re
 import jinja2
 from sys import exit
+from jinja2.filters import FILTERS, environmentfilter
 
 from vyos.config import Config
 from vyos import ConfigError
@@ -59,9 +60,9 @@ $outchannel {{file}},{{files[file]['log-file']}},{{files[file]['max-size']}},{{f
 {% endif %}
 {% else %}
 {% if hosts[host]['port'] %}
-{{hosts[host]['selectors']}} @{{host}}:{{hosts[host]['port']}}
+{{hosts[host]['selectors']}} @{{ host | bracketize_ipv6 }}:{{hosts[host]['port']}}
 {% else %}
-{{hosts[host]['selectors']}} @{{host}}
+{{hosts[host]['selectors']}} @{{ host | bracketize_ipv6 }}
 {% endif %}
 {% endif %}
 {% endfor %}
@@ -89,6 +90,23 @@ logrotate_configs = '''
 '''
 # config templates end
 
+
+# Bracketize filters for jinja2
+def is_ipv6(text):
+    """ Filter IP address, return True on IPv6 address, False otherwise """
+    from ipaddress import ip_interface
+    try: return ip_interface(text).version == 6
+    except: return False
+
+@environmentfilter
+def bracketize_ipv6(self, address):
+    """ Place a passed IPv6 address into [] brackets, do nothing for IPv4 """
+    if is_ipv6(address):
+        return '[{0}]'.format(address)
+    return address
+
+FILTERS['bracketize_ipv6'] = bracketize_ipv6
+# end bracketize
 
 def get_config():
     c = Config()
