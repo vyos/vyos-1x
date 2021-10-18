@@ -274,6 +274,12 @@
                       </leafNode>
                     </children>
                   </node>
+                  <leafNode name="ipv6-enable">
+                    <properties>
+                      <help>Allow explicit IPv6 addresses for Dynamic DNS for this interface</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
             </children>

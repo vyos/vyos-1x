@@ -9,7 +9,7 @@ ssl=yes
 {%     set web_skip = ", web-skip='" + interface[iface].use_web.skip + "'" if interface[iface].use_web.skip is defined else '' %}
 use=web, web='{{ interface[iface].use_web.url }}'{{ web_skip }}
 {%   else %}
-use=if, if={{ iface }}
+{{ 'usev6=if' if interface[iface].ipv6_enable is defined else 'use=if' }}, if={{ iface }}
 {%   endif %}
 
 {%   if interface[iface].rfc2136 is defined and interface[iface].rfc2136 is not none %}

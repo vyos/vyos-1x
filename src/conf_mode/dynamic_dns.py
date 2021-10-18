@@ -132,7 +132,7 @@ def generate(dyndns):
         return None
 
     render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns,
-           permission=0o600)
+           permission=0o644)
 
     return None
 
