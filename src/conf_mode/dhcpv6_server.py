@@ -128,7 +128,7 @@ def verify(dhcpv6):
 
             # Subnets must be unique
             if subnet in subnets:
-                raise ConfigError('DHCPv6 subnets must be unique! Subnet {0} defined multiple times!'.format(subnet['network']))
+                raise ConfigError(f'DHCPv6 subnets must be unique! Subnet {subnet} defined multiple times!')
             subnets.append(subnet)
 
         # DHCPv6 requires at least one configured address range or one static mapping
