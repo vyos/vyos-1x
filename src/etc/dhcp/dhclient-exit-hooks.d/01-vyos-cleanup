@@ -19,7 +19,7 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
     for router in $old_routers; do
         # check if we are bound to a VRF
         local vrf_name=$(basename /sys/class/net/${interface}/upper_* | sed -e 's/upper_//')
-        if [ -n $vrf_name ]; then
+        if [ "$vrf_name" != "*" ]; then
             vrf="vrf $vrf_name"
         fi
 
