@@ -78,7 +78,7 @@ def verify(tunnel):
 
     # If tunnel source address any and key not set
     if tunnel['encapsulation'] in ['gre'] and \
-       tunnel['source_address'] == '0.0.0.0' and \
+       dict_search('source_address', tunnel) == '0.0.0.0' and \
        dict_search('parameters.ip.key', tunnel) == None:
         raise ConfigError('Tunnel parameters ip key must be set!')
 
@@ -91,7 +91,7 @@ def verify(tunnel):
                 # no match on encapsulation - bail out
                 if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
                     continue
-                new_source_address = tunnel['source_address']
+                new_source_address = dict_search('source_address', tunnel)
                 # Convert tunnel key to ip key, format "ip -j link show"
                 # 1 => 0.0.0.1, 999 => 0.0.3.231
                 orig_new_key = dict_search('parameters.ip.key', tunnel)
