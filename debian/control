@@ -33,6 +33,7 @@ Architecture: amd64 arm64
 Depends:
   ${python3:Depends},
   accel-ppp,
+  avahi-daemon,
   beep,
   bmon,
   bsdmainutils,
@@ -87,7 +88,6 @@ Depends:
   lldpd,
   lm-sensors,
   lsscsi,
-  mdns-repeater,
   minisign,
   modemmanager,
   mtr-tiny,
