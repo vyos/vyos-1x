@@ -28,7 +28,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/etc/avahi/avahi-daemon.conf'
+config_file = '/run/avahi-daemon/avahi-daemon.conf'
 vrrp_running_file = '/run/mdns_vrrp_active'
 
 def get_config(config=None):
@@ -106,7 +106,7 @@ def apply(mdns):
     else:
         if 'vrrp_disable' not in mdns and os.path.exists(vrrp_running_file):
             os.unlink(vrrp_running_file)
-        
+
         if mdns['vrrp_exists'] and 'vrrp_disable' in mdns:
             if not os.path.exists(vrrp_running_file):
                 os.mknod(vrrp_running_file) # vrrp script looks for this file to update mdns repeater
