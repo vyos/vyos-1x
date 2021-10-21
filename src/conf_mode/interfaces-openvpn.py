@@ -50,6 +50,7 @@ from vyos.util import chown
 from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import makedir
+from vyos.util import read_file
 from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 
@@ -385,32 +386,26 @@ def verify(openvpn):
 
         # add mfa users to the file the mfa plugin uses
         if dict_search('server.mfa.totp', openvpn):
+            user_data = ''
             if not os.path.isfile(otp_file.format(**openvpn)):
-                makedir(otp_path)
-                open(otp_file.format(**openvpn), 'a').close()
+                write_file(otp_file.format(**openvpn), user_data,
+                           user=user, group=group, mode=0o644)
 
-            with tempfile.TemporaryFile(mode='w+') as fp:
-                with open(otp_file.format(**openvpn), 'r+') as f:
-                    ovpn_users = f.readlines()
-                    for client in (dict_search('server.client', openvpn) or []):
-                        exists = None
-                        for ovpn_user in ovpn_users:
-                            if re.search('^' + client + ' ', ovpn_user):
-                                fp.write(ovpn_user)
-                                exists = 'true'
+            ovpn_users = read_file(otp_file.format(**openvpn))
+            for client in (dict_search('server.client', openvpn) or []):
+                exists = None
+                for ovpn_user in ovpn_users.split('\n'):
+                    if re.search('^' + client + ' ', ovpn_user):
+                        user_data += f'{ovpn_user}\n'
+                        exists = 'true'
 
-                        if not exists:
-                            random = SystemRandom()
-                            totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
-                            fp.write(f'{client} otp totp:sha1:base32:{totp_secret}::xxx *\n')
+                if not exists:
+                    random = SystemRandom()
+                    totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
+                    user_data += f'{client} otp totp:sha1:base32:{totp_secret}::xxx *\n'
 
-                    f.seek(0)
-                    fp.seek(0)
-                    for tmp_user in fp.readlines():
-                        f.write(tmp_user)
-                    f.truncate()
-
-            chown(otp_file.format(**openvpn), user, group)
+            write_file(otp_file.format(**openvpn), user_data,
+                           user=user, group=group, mode=0o644)
 
     else:
         # checks for both client and site-to-site go here
