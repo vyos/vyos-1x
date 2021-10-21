@@ -232,7 +232,7 @@ def verify(dhcp):
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!
             if 'disable' not in network_config:
-                if is_subnet_connected(subnet, primary=True):
+                if is_subnet_connected(subnet, primary=False):
                     listen_ok = True
 
             # Subnets must be non overlapping
