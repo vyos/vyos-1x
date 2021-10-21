@@ -156,26 +156,6 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_delete(self._base_path + [interface])
             self.cli_commit()
 
-    def test_tunnel_verify_local_dhcp(self):
-        # We can not use source-address and dhcp-interface at the same time
-
-        interface = f'tun1020'
-        local_if_addr = f'10.0.0.1/24'
-
-        self.cli_set(self._base_path + [interface, 'address', local_if_addr])
-        self.cli_set(self._base_path + [interface, 'encapsulation', 'gre'])
-        self.cli_set(self._base_path + [interface, 'source-address', self.local_v4])
-        self.cli_set(self._base_path + [interface, 'remote', remote_ip4])
-        self.cli_set(self._base_path + [interface, 'dhcp-interface', 'eth0'])
-
-        # source-address and dhcp-interface can not be used at the same time
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_delete(self._base_path + [interface, 'dhcp-interface'])
-
-        # Check if commit is ok
-        self.cli_commit()
-
     def test_tunnel_parameters_gre(self):
         interface = f'tun1030'
         gre_key = '10'
