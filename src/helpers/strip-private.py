@@ -106,6 +106,7 @@ if __name__ == "__main__":
     stripping_rules = [
         # Strip passwords
         (True, re.compile(r'password \S+'), 'password xxxxxx'),
+        (True, re.compile(r'cisco-authentication \S+'), 'cisco-authentication xxxxxx'),
         # Strip public key information
         (True, re.compile(r'public-keys \S+'), 'public-keys xxxx@xxx.xxx'),
         (True, re.compile(r'type \'ssh-(rsa|dss)\''), 'type ssh-xxx'),
