@@ -317,7 +317,7 @@ hosts_add_schema = op_type_schema.extend({
     'data': {
         str: {
             str: {
-            'address': str,
+            'address': [str],
             'aliases': [str]
                 }
             }

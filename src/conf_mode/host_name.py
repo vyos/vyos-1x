@@ -79,7 +79,7 @@ def get_config(config=None):
     # system static-host-mapping
     for hn in conf.list_nodes(['system', 'static-host-mapping', 'host-name']):
         hosts['static_host_mapping'][hn] = {}
-        hosts['static_host_mapping'][hn]['address'] = conf.return_value(['system', 'static-host-mapping', 'host-name', hn, 'inet'])
+        hosts['static_host_mapping'][hn]['address'] = conf.return_values(['system', 'static-host-mapping', 'host-name', hn, 'inet'])
         hosts['static_host_mapping'][hn]['aliases'] = conf.return_values(['system', 'static-host-mapping', 'host-name', hn, 'alias'])
 
     return hosts
