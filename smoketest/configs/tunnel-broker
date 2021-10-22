@@ -56,13 +56,13 @@ interfaces {
     tunnel tun100 {
         address 172.16.0.1/30
         encapsulation gre-bridge
-        dhcp-interface eth0
+        local-ip 192.0.2.1
         remote-ip 192.0.2.100
     }
     tunnel tun200 {
         address 172.16.0.5/30
         encapsulation gre
-        local-ip 192.0.2.1
+        dhcp-interface eth0
         remote-ip 192.0.2.101
     }
     tunnel tun300 {
