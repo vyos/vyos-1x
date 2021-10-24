@@ -56,9 +56,6 @@ class Ethtool:
             link = os.readlink(sysfs_file)
             self._driver_name = os.path.basename(link)
 
-        if not self._driver_name:
-            raise ValueError(f'Could not determine driver for interface {ifname}!')
-
         # Build a dictinary of supported link-speed and dupley settings.
         out, err = popen(f'ethtool {ifname}')
         reading = False
