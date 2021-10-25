@@ -52,6 +52,7 @@ default_config_data = {
     'communities': [],
     'smux_peers': [],
     'location' : '',
+    'protocol' : 'udp',
     'description' : '',
     'contact' : '',
     'route_table': 'False',
@@ -150,6 +151,9 @@ def get_config():
 
     if conf.exists('location'):
         snmp['location'] = conf.return_value('location')
+
+    if conf.exists('protocol'):
+        snmp['protocol'] = conf.return_value('protocol')
 
     if conf.exists('smux-peer'):
         snmp['smux_peers'] = conf.return_values('smux-peer')
@@ -404,13 +408,14 @@ def verify(snmp):
     for listen in snmp['listen_address']:
         addr = listen[0]
         port = listen[1]
+        protocol = snmp['protocol']
 
         if is_ipv4(addr):
             # example: udp:127.0.0.1:161
-            listen = 'udp:' + addr + ':' + port
+            listen = f'{protocol}:{addr}:{port}'
         elif snmp['ipv6_enabled']:
             # example: udp6:[::1]:161
-            listen = 'udp6:' + '[' + addr + ']' + ':' + port
+            listen = f'{protocol}6:[{addr}]:{port}'
 
         # We only wan't to configure addresses that exist on the system.
         # Hint the user if they don't exist
