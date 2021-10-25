@@ -489,6 +489,40 @@ def seconds_to_human(s, separator=""):
 
     return result
 
+def bytes_to_human(bytes, initial_exponent=0):
+    """ Converts a value in bytes to a human-readable size string like 640 KB
+
+    The initial_exponent parameter is the exponent of 2,
+    e.g. 10 (1024) for kilobytes, 20 (1024 * 1024) for megabytes.
+    """
+
+    from math import log2
+
+    bytes = bytes * (2**initial_exponent)
+
+    # log2 is a float, while range checking requires an int
+    exponent = int(log2(bytes))
+
+    if exponent < 10:
+        value = bytes
+        suffix = "B"
+    elif exponent in range(10, 20):
+        value = bytes / 1024
+        suffix = "KB"
+    elif exponent in range(20, 30):
+        value = bytes / 1024**2
+        suffix = "MB"
+    elif exponent in range(30, 40):
+        value = bytes / 1024**3
+        suffix = "GB"
+    else:
+        value = bytes / 1024**4
+        suffix = "TB"
+    # Add a new case when the first machine with petabyte RAM
+    # hits the market.
+
+    size_string = "{0:.2f} {1}".format(value, suffix)
+    return size_string
 
 def get_cfg_group_id():
     from grp import getgrnam
