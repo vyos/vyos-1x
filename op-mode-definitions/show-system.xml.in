@@ -142,7 +142,7 @@
                 <properties>
                   <help>Show summary of system processes</help>
                 </properties>
-                <command>uptime</command>
+                <command>${vyos_op_scripts_dir}/show_uptime.py</command>
               </leafNode>
               <leafNode name="tree">
                 <properties>
