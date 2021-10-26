@@ -264,10 +264,10 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     endif %}
 {%     endif %}
 {%     if afi_config.aggregate_address is defined and afi_config.aggregate_address is not none %}
-{%       for ip in afi_config.aggregate_address %}
-  aggregate-address {{ ip }}{{ ' as-set' if afi_config.aggregate_address[ip].as_set is defined }}{{ ' summary-only' if afi_config.aggregate_address[ip].summary_only is defined }}
-{%         if afi_config.aggregate_address[ip].route_map is defined and afi_config.aggregate_address[ip].route_map is not none %}
-  aggregate-address {{ ip }} route-map {{ afi_config.aggregate_address[ip].route_map }}
+{%       for aggregate, aggregate_config in afi_config.aggregate_address.items() %}
+  aggregate-address {{ aggregate }}{{ ' as-set' if aggregate_config.as_set is defined }}{{ ' summary-only' if aggregate_config.summary_only is defined }}
+{%         if aggregate_config.route_map is defined and aggregate_config.route_map is not none %}
+  aggregate-address {{ aggregate }} route-map {{ aggregate_config.route_map }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
