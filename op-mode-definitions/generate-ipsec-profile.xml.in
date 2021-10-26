@@ -4,7 +4,7 @@
     <children>
       <node name="ipsec">
         <properties>
-          <help>Generate IPsec related configurations</help>
+          <help>Generate IPsec related configurations and archives</help>
         </properties>
         <children>
           <node name="profile">
