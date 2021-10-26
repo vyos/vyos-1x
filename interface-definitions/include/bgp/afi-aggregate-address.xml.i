@@ -5,6 +5,7 @@
     <valueless/>
   </properties>
 </leafNode>
+#include <include/route-map.xml.i>
 <leafNode name="summary-only">
   <properties>
     <help>Announce the aggregate summary network only</help>
