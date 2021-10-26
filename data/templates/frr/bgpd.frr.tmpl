@@ -266,6 +266,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%     if afi_config.aggregate_address is defined and afi_config.aggregate_address is not none %}
 {%       for ip in afi_config.aggregate_address %}
   aggregate-address {{ ip }}{{ ' as-set' if afi_config.aggregate_address[ip].as_set is defined }}{{ ' summary-only' if afi_config.aggregate_address[ip].summary_only is defined }}
+{%         if afi_config.aggregate_address[ip].route_map is defined and afi_config.aggregate_address[ip].route_map is not none %}
+  aggregate-address {{ ip }} route-map {{ afi_config.aggregate_address[ip].route_map }}
+{%         endif %}
 {%       endfor %}
 {%     endif %}
 {%     if afi_config.maximum_paths is defined and afi_config.maximum_paths.ebgp is defined and afi_config.maximum_paths.ebgp is not none %}
