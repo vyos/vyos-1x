@@ -57,10 +57,7 @@ for sa in sas:
         else:
             state = "down"
 
-        if state == "up":
-            uptime = vyos.util.seconds_to_human(parent_sa["established"].decode())
-        else:
-            uptime = "N/A"
+        uptime = "N/A"
 
         remote_host = parent_sa["remote-host"].decode()
         remote_id = parent_sa["remote-id"].decode()
@@ -87,6 +84,8 @@ for sa in sas:
                 pkts_str = "{0}/{1}".format(pkts_in, pkts_out)
                 # Remove B from <1K values
                 pkts_str = re.sub(r'B', r'', pkts_str)
+
+                uptime = vyos.util.seconds_to_human(isa['install-time'].decode())
 
                 enc = isa["encr-alg"].decode()
                 if "encr-keysize" in isa:
