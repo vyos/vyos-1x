@@ -46,7 +46,6 @@ def format_output(conns, sas):
 
         if parent_sa["state"] == b"ESTABLISHED" and installed_sas:
             state = "up"
-            uptime = vyos.util.seconds_to_human(parent_sa["established"].decode())
 
         remote_host = parent_sa["remote-host"].decode()
         remote_id = parent_sa["remote-id"].decode()
@@ -74,6 +73,8 @@ def format_output(conns, sas):
             pkts_str = "{0}/{1}".format(pkts_in, pkts_out)
             # Remove B from <1K values
             pkts_str = re.sub(r'B', r'', pkts_str)
+
+            uptime = vyos.util.seconds_to_human(isa['install-time'].decode())
 
             enc = isa["encr-alg"].decode()
             if "encr-keysize" in isa:
