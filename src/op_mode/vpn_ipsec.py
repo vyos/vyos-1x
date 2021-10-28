@@ -48,7 +48,7 @@ def reset_peer(peer, tunnel):
     result = True
     for conn in conns:
         try:
-            call(f'sudo /usr/sbin/ipsec down {conn}', timeout = 10)
+            call(f'sudo /usr/sbin/ipsec down {conn}{{*}}', timeout = 10)
             call(f'sudo /usr/sbin/ipsec up {conn}', timeout = 10)
         except TimeoutExpired as e:
             print(f'Timed out while resetting {conn}')
