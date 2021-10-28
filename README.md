@@ -1,4 +1,4 @@
-# vyos-1x: VyOS 1.2.0+ configuration scripts and data
+# vyos-1x: VyOS 1.2.0+ Configuration Scripts and Data
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=vyos%3Avyos-1x&metric=coverage)](https://sonarcloud.io/component_measures?id=vyos%3Avyos-1x&metric=coverage)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x?ref=badge_shield)
@@ -69,7 +69,7 @@ pipenv shell
 make test
 ```
 
-### Runtime (Smoketests)
+### Runtime (Smoke Tests)
 
 Runtime tests are executed by the CI system on a running VyOS instance inside
 QEMU. The testcases can be found inside the smoketest subdirectory which will
