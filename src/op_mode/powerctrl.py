@@ -97,7 +97,7 @@ def execute_shutdown(time, reboot = True, ask=True):
   elif len(time) == 1:
     # Assume the argument is just time
     ts = parse_time(time[0])
-    if ts:
+    if ts is not None:
       cmd = check_output(["/sbin/shutdown", action, time[0]], stderr=STDOUT)
     else:
       sys.exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
@@ -105,7 +105,7 @@ def execute_shutdown(time, reboot = True, ask=True):
     # Assume it's date and time
     ts = parse_time(time[0])
     ds = parse_date(time[1])
-    if ts and ds:
+    if ts is not None and ds:
       t = datetime.combine(ds, ts)
       td = t - datetime.now()
       t2 = 1 + int(td.total_seconds())//60 # Get total minutes
