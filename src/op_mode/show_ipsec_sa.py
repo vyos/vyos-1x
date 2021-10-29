@@ -7,6 +7,13 @@ import subprocess
 import tabulate
 import hurry.filesize
 
+
+def convert(text):
+    return int(text) if text.isdigit() else text.lower()
+
+def alphanum_key(key):
+    return [convert(c) for c in re.split('([0-9]+)', str(key))]
+
 def parse_conn_spec(s):
     try:
         # Example: ESTABLISHED 14 seconds ago, 10.0.0.2[foo]...10.0.0.1[10.0.0.1]
@@ -85,6 +92,7 @@ for conn in connections:
     status_line = list(map(lambda x: "N/A" if x is None else x, status_line))
     status_data.append(status_line)
 
+status_data = sorted(status_data, key=alphanum_key)
 headers = ["Connection", "State", "Up", "Bytes In/Out", "Remote address", "Remote ID", "Proposal"]
 output = tabulate.tabulate(status_data, headers)
 print(output)
