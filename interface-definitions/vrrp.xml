@@ -218,8 +218,8 @@
                   <multi/>
                   <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
                   <constraint>
-                    <validator name="ipv4-host"/>
-                    <validator name="ipv6-host"/>
+                    <validator name="ipv4"/>
+                    <validator name="ipv6"/>
                   </constraint>
                   <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
                   <valueHelp>
