@@ -19,7 +19,7 @@
               <help>generate a wireguard preshared key</help>
             </properties>
             <command>${vyos_op_scripts_dir}/wireguard.py --genpsk</command>
-          </leafNode> 
+          </leafNode>
         </children>
       </node>
     </children>
@@ -51,10 +51,10 @@
             <properties>
               <help>show wireguard interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py -t wireguard</script>
+                <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
             </properties>
-            <command>sudo wg show "$4"</command>
+            <command>${vyatta_bindir}/vyatta-show-interfaces.pl --intf="$4"</command>
             <children>
               <leafNode name="allowed-ips">
                 <properties>
@@ -74,12 +74,17 @@
                 </properties>
                 <command>sudo wg show "$4" peers</command>
               </leafNode>
-             <!-- more commands upon request --> 
+             <!-- more commands upon request -->
             </children>
           </tagNode>
+          <node name="wireguard">
+            <properties>
+              <help>Show WireGuard interface information</help>
+            </properties>
+            <command> ${vyatta_bindir}/vyatta-show-interfaces.pl --intf-type=wireguard --action=show-brief</command>
+          </node>
         </children>
       </node>
     </children>
   </node>
 </interfaceDefinition>
-
