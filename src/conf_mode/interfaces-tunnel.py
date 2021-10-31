@@ -107,6 +107,10 @@ def verify(tunnel):
             # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
             # Prevent the same key for 2 tunnels with same source-address/encap. T2920
             for tunnel_if in Section.interfaces('tunnel'):
+                # It makes no sense to run the test for re-used GRE keys on our
+                # own interface we are currently working on
+                if tunnel['ifname'] == tunnel_if:
+                    continue
                 tunnel_cfg = get_interface_config(tunnel_if)
                 # no match on encapsulation - bail out
                 if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
