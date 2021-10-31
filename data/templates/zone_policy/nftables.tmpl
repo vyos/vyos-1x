@@ -28,7 +28,7 @@ table ip filter {
     }
 {%     else %}
     chain VZONE_{{ zone_name }} {
-        iifname { {{ zone_conf.interface | join(",") }} } counter return
+        iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=False) }}
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.name is defined %}
 {%         if zone[from_zone].local_zone is not defined %}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
@@ -62,7 +62,7 @@ table ip6 filter {
     }
 {%     else %}
     chain VZONE6_{{ zone_name }} {
-        iifname { {{ zone_conf.interface | join(",") }} } counter return
+        iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=True) }}
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.ipv6_name is defined %}
 {%         if zone[from_zone].local_zone is not defined %}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}

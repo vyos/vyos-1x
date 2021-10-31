@@ -81,6 +81,55 @@
               <multi/>
             </properties>
           </leafNode>
+          <node name="intra-zone-filtering">
+            <properties>
+              <help>Intra-zone filtering</help>
+            </properties>
+            <children>
+              <leafNode name="action">
+                <properties>
+                  <help>Action for intra-zone traffic</help>
+                  <completionHelp>
+                    <list>accept drop</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>accept</format>
+                    <description>Accept traffic (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>drop</format>
+                    <description>Drop silently</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(accept|drop)$</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="firewall">
+                <properties>
+                  <help>Use the specified firewall chain</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <leafNode name="local-zone">
             <properties>
               <help>Zone to be local-zone</help>
