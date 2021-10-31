@@ -55,6 +55,41 @@
             </properties>
             <command>${vyos_op_scripts_dir}/show_interfaces.py --intf=$4</command>
             <children>
+              <tagNode name="user">
+                <properties>
+                  <help>Show OpenVPN interface users</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_completion_dir}/list_openvpn_users.py --interface ${COMP_WORDS[3]}</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="mfa">
+                    <properties>
+                      <help>Show multi-factor authentication information</help>
+                    </properties>
+                    <children>
+                      <leafNode name="secret">
+                        <properties>
+                          <help>Show multi-factor authentication secret</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=secret</command>
+                      </leafNode>
+                      <leafNode name="uri">
+                        <properties>
+                          <help>Show multi-factor authentication otpauth uri</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=uri</command>
+                      </leafNode>
+                      <leafNode name="qrcode">
+                        <properties>
+                          <help>Show multi-factor authentication QR code</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/show_openvpn_mfa.py --user="$6" --intf="$4" --action=qrcode</command>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of specified OpenVPN interface information</help>

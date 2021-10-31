@@ -16,6 +16,7 @@
 
 import os
 import re
+import tempfile
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from glob import glob
@@ -26,6 +27,7 @@ from ipaddress import IPv6Address
 from ipaddress import IPv6Network
 from ipaddress import summarize_address_range
 from netifaces import interfaces
+from secrets import SystemRandom
 from shutil import rmtree
 
 from vyos.config import Config
@@ -48,6 +50,7 @@ from vyos.util import chown
 from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import makedir
+from vyos.util import read_file
 from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 
@@ -60,6 +63,9 @@ group = 'openvpn'
 
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
+otp_path = '/config/auth/openvpn'
+otp_file = '/config/auth/openvpn/{ifname}-otp-secrets'
+secret_chars = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567')
 
 def get_config(config=None):
     """
@@ -75,12 +81,26 @@ def get_config(config=None):
     tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
 
+    # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
+    # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
+    tmp_openvpn = conf.get_config_dict(base + [os.environ['VYOS_TAGNODE_VALUE']], key_mangling=('-', '_'),
+                                get_first_key=True, no_tag_node_value_mangle=True)
+
     openvpn = get_interface_dict(conf, base)
 
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
+
+    # We have to cleanup the config dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: server mfa totp
+    # originate comes with defaults, which will enable the
+    # totp plugin, even when not set via CLI so we
+    # need to check this first and drop those keys
+    if 'totp' not in tmp_openvpn['server']:
+        del openvpn['server']['mfa']['totp']
+        
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
@@ -169,6 +189,10 @@ def verify_pki(openvpn):
 
 def verify(openvpn):
     if 'deleted' in openvpn:
+        # remove totp secrets file if totp is not configured
+        if os.path.isfile(otp_file.format(**openvpn)):
+            os.remove(otp_file.format(**openvpn))
+
         verify_bridge_delete(openvpn)
         return None
 
@@ -309,10 +333,10 @@ def verify(openvpn):
             if 'is_bridge_member' not in openvpn:
                 raise ConfigError('Must specify "server subnet" or add interface to bridge in server mode')
 
-
-        for client in (dict_search('client', openvpn) or []):
-            if len(client['ip']) > 1 or len(client['ipv6_ip']) > 1:
-                raise ConfigError(f'Server client "{client["name"]}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
+        if hasattr(dict_search('server.client', openvpn), '__iter__'):
+            for client_k, client_v in dict_search('server.client', openvpn).items():
+                if (client_v.get('ip') and len(client_v['ip']) > 1) or (client_v.get('ipv6_ip') and len(client_v['ipv6_ip']) > 1):
+                    raise ConfigError(f'Server client "{client_k}": cannot specify more than 1 IPv4 and 1 IPv6 IP')
 
         if dict_search('server.client_ip_pool', openvpn):
             if not (dict_search('server.client_ip_pool.start', openvpn) and dict_search('server.client_ip_pool.stop', openvpn)):
@@ -359,6 +383,29 @@ def verify(openvpn):
                             for v6PoolNet in v6PoolNets:
                                 if IPv6Address(client['ipv6_ip'][0]) in v6PoolNet:
                                     print(f'Warning: Client "{client["name"]}" IP {client["ipv6_ip"][0]} is in server IP pool, it is not reserved for this client.')
+
+        # add mfa users to the file the mfa plugin uses
+        if dict_search('server.mfa.totp', openvpn):
+            user_data = ''
+            if not os.path.isfile(otp_file.format(**openvpn)):
+                write_file(otp_file.format(**openvpn), user_data,
+                           user=user, group=group, mode=0o644)
+
+            ovpn_users = read_file(otp_file.format(**openvpn))
+            for client in (dict_search('server.client', openvpn) or []):
+                exists = None
+                for ovpn_user in ovpn_users.split('\n'):
+                    if re.search('^' + client + ' ', ovpn_user):
+                        user_data += f'{ovpn_user}\n'
+                        exists = 'true'
+
+                if not exists:
+                    random = SystemRandom()
+                    totp_secret = ''.join(random.choice(secret_chars) for _ in range(16))
+                    user_data += f'{client} otp totp:sha1:base32:{totp_secret}::xxx *\n'
+
+            write_file(otp_file.format(**openvpn), user_data,
+                           user=user, group=group, mode=0o644)
 
     else:
         # checks for both client and site-to-site go here
@@ -525,6 +572,7 @@ def generate_pki_files(openvpn):
 def generate(openvpn):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
+    plugin_dir = '/usr/lib/openvpn'
     # create base config directory on demand
     makedir(directory, user, group)
     # enforce proper permissions on /run/openvpn

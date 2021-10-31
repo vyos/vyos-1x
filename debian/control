@@ -106,6 +106,7 @@ Depends:
   openvpn,
   openvpn-auth-ldap,
   openvpn-auth-radius,
+  openvpn-otp,
   pciutils,
   pdns-recursor,
   pmacct (>= 1.6.0),
