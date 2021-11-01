@@ -99,7 +99,7 @@ def get_config(config=None):
     # originate comes with defaults, which will enable the
     # totp plugin, even when not set via CLI so we
     # need to check this first and drop those keys
-    if 'totp' not in tmp_openvpn['server']:
+    if dict_search('server.totp', tmp_openvpn) == None:
         del openvpn['server']['mfa']['totp']
         
     return openvpn
