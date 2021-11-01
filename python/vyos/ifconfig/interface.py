@@ -461,15 +461,19 @@ class Interface(Control):
 
         # Get processor ID number
         cpu_id = self._cmd('sudo dmidecode -t 4 | grep ID | head -n1 |  sed "s/.*ID://;s/ //g"')
-        # Get system eth0 base MAC address - every system has eth0
-        eth0_mac = Interface('eth0').get_mac()
+
+        # XXX: T3894 - it seems not all systems have eth0 - get a list of all
+        # available Ethernet interfaces on the system (without VLAN subinterfaces)
+        # and then take the first one.
+        all_eth_ifs = [x for x in Section.interfaces('ethernet') if '.' not in x]
+        first_mac = Interface(all_eth_ifs[0]).get_mac()
 
         sha = sha256()
         # Calculate SHA256 sum based on the CPU ID number, eth0 mac address and
         # this interface identifier - this is as predictable as an interface
         # MAC address and thus can be used in the same way
         sha.update(cpu_id.encode())
-        sha.update(eth0_mac.encode())
+        sha.update(first_mac.encode())
         sha.update(self.ifname.encode())
         # take the most significant 48 bits from the SHA256 string
         tmp = sha.hexdigest()[:12]

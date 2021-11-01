@@ -306,7 +306,7 @@ def verify(config):
                             source_ip_presented = True
                             break
             if not source_ip_presented:
-                raise ConfigError("Your \"netflow source-ip\" does not exist in the system")
+                print("Warning: your \"netflow source-ip\" does not exist in the system")
 
         # check if engine-id compatible with selected protocol version
         if config['netflow']['engine-id']:

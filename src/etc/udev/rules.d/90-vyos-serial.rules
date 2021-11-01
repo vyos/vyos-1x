@@ -22,7 +22,7 @@ IMPORT{builtin}="path_id", IMPORT{builtin}="usb_id"
 #   (tr -d -) does the replacement
 # - Replace the first group after ":" to represent the bus relation (sed -e 0,/:/s//b/) indicated by "b"
 # - Replace the next group after ":" to represent the port relation (sed -e 0,/:/s//p/) indicated by "p"
-ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="",   PROGRAM="/bin/sh -c 'echo $env{ID_PATH:17} | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
-ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="?*", PROGRAM="/bin/sh -c 'echo $env{ID_PATH:17} | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
+ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="",   PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
+ENV{ID_PATH}=="?*", ENV{.ID_PORT}=="?*", PROGRAM="/bin/sh -c 'echo $env{ID_PATH} | cut -d- -f3- | tr -d - | sed -e 0,/:/s//b/ | sed -e 0,/:/s//p/'", SYMLINK+="serial/by-bus/$result"
 
 LABEL="serial_end"

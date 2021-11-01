@@ -18,9 +18,14 @@ import os
 import re
 
 from vyos.config import Config
-from vyos.util import call, read_file, write_file
+from vyos.configdict import dict_merge
+from vyos.util import call
+from vyos.util import read_file
+from vyos.util import write_file
 from vyos.template import render
-from vyos import ConfigError, airbag
+from vyos.xml import defaults
+from vyos import ConfigError
+from vyos import airbag
 airbag.enable()
 
 by_bus_dir = '/dev/serial/by-bus'
@@ -36,21 +41,27 @@ def get_config(config=None):
     console = conf.get_config_dict(base, get_first_key=True)
 
     # bail out early if no serial console is configured
-    if 'device' not in console.keys():
+    if 'device' not in console:
         return console
 
     # convert CLI values to system values
-    for device in console['device'].keys():
-        # no speed setting has been configured - use default value
-        if not 'speed' in console['device'][device].keys():
-            tmp = { 'speed': '' }
-            if device.startswith('hvc'):
-                tmp['speed'] = 38400
-            else:
-                tmp['speed'] = 115200
+    default_values = defaults(base + ['device'])
+    for device, device_config in console['device'].items():
+        if 'speed' not in device_config and device.startswith('hvc'):
+            # XEN console has a different default console speed
+            console['device'][device]['speed'] = 38400
+        else:
+            # Merge in XML defaults - the proper way to do it
+            console['device'][device] = dict_merge(default_values,
+                                                   console['device'][device])
 
-            console['device'][device].update(tmp)
+    return console
 
+def verify(console):
+    if not console or 'device' not in console:
+        return None
+
+    for device in console['device']:
         if device.startswith('usb'):
             # It is much easiert to work with the native ttyUSBn name when using
             # getty, but that name may change across reboots - depending on the
@@ -58,13 +69,13 @@ def get_config(config=None):
             # to its dynamic device file - and create a new dict entry for it.
             by_bus_device = f'{by_bus_dir}/{device}'
             if os.path.isdir(by_bus_dir) and os.path.exists(by_bus_device):
-                tmp = os.path.basename(os.readlink(by_bus_device))
-                # updating the dict must come as last step in the loop!
-                console['device'][tmp] = console['device'].pop(device)
+                device = os.path.basename(os.readlink(by_bus_device))
 
-    return console
+        # If the device name still starts with usbXXX no matching tty was found
+        # and it can not be used as a serial interface
+        if device.startswith('usb'):
+            raise ConfigError(f'Device {device} does not support beeing used as tty')
 
-def verify(console):
     return None
 
 def generate(console):
@@ -76,20 +87,29 @@ def generate(console):
                 call(f'systemctl stop {basename}')
                 os.unlink(os.path.join(root, basename))
 
-    if not console:
+    if not console or 'device' not in console:
         return None
 
-    for device in console['device'].keys():
+    for device, device_config in console['device'].items():
+        if device.startswith('usb'):
+            # It is much easiert to work with the native ttyUSBn name when using
+            # getty, but that name may change across reboots - depending on the
+            # amount of connected devices. We will resolve the fixed device name
+            # to its dynamic device file - and create a new dict entry for it.
+            by_bus_device = f'{by_bus_dir}/{device}'
+            if os.path.isdir(by_bus_dir) and os.path.exists(by_bus_device):
+                device = os.path.basename(os.readlink(by_bus_device))
+
         config_file = base_dir + f'/serial-getty@{device}.service'
         getty_wants_symlink = base_dir + f'/getty.target.wants/serial-getty@{device}.service'
 
-        render(config_file, 'getty/serial-getty.service.tmpl', console['device'][device])
+        render(config_file, 'getty/serial-getty.service.tmpl', device_config)
         os.symlink(config_file, getty_wants_symlink)
 
     # GRUB
     # For existing serial line change speed (if necessary)
     # Only applys to ttyS0
-    if 'ttyS0' not in console['device'].keys():
+    if 'ttyS0' not in console['device']:
         return None
 
     speed = console['device']['ttyS0']['speed']
@@ -98,7 +118,6 @@ def generate(console):
         return None
 
     lines = read_file(grub_config).split('\n')
-
     p = re.compile(r'^(.* console=ttyS0),[0-9]+(.*)$')
     write = False
     newlines = []
@@ -122,9 +141,8 @@ def generate(console):
     return None
 
 def apply(console):
-    # reset screen blanking
+    # Reset screen blanking
     call('/usr/bin/setterm -blank 0 -powersave off -powerdown 0 -term linux </dev/tty1 >/dev/tty1 2>&1')
-
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
@@ -136,11 +154,11 @@ def apply(console):
         call('/usr/bin/setterm -blank 15 -powersave powerdown -powerdown 60 -term linux </dev/tty1 >/dev/tty1 2>&1')
 
     # Start getty process on configured serial interfaces
-    for device in console['device'].keys():
+    for device in console['device']:
         # Only start console if it exists on the running system. If a user
         # detaches a USB serial console and reboots - it should not fail!
         if os.path.exists(f'/dev/{device}'):
-            call(f'systemctl start serial-getty@{device}.service')
+            call(f'systemctl restart serial-getty@{device}.service')
 
     return None
 

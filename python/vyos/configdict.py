@@ -368,9 +368,11 @@ def get_interface_dict(config, base, ifname=''):
             del default_values['dhcpv6_options']
 
     # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary
-    # retrived.
-    dict = dict_merge(default_values, dict)
+    # default options which we need to update into the dictionary retrived.
+    # But we should only add them when interface is not deleted - as this might
+    # confuse parsers
+    if 'deleted' not in dict:
+        dict = dict_merge(default_values, dict)
 
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
@@ -423,9 +425,12 @@ def get_interface_dict(config, base, ifname=''):
         if not 'dhcpv6_options' in vif_config:
             del default_vif_values['dhcpv6_options']
 
-        dict['vif'][vif] = dict_merge(default_vif_values, vif_config)
-        # XXX: T2665: blend in proper DHCPv6-PD default values
-        dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
+        # Only add defaults if interface is not about to be deleted - this is
+        # to keep a cleaner config dict.
+        if 'deleted' not in dict:
+            dict['vif'][vif] = dict_merge(default_vif_values, vif_config)
+            # XXX: T2665: blend in proper DHCPv6-PD default values
+            dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
 
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
@@ -441,10 +446,12 @@ def get_interface_dict(config, base, ifname=''):
         if not 'dhcpv6_options' in vif_s_config:
             del default_vif_s_values['dhcpv6_options']
 
-        dict['vif_s'][vif_s] = dict_merge(default_vif_s_values, vif_s_config)
-        # XXX: T2665: blend in proper DHCPv6-PD default values
-        dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(
-            dict['vif_s'][vif_s])
+        # Only add defaults if interface is not about to be deleted - this is
+        # to keep a cleaner config dict.
+        if 'deleted' not in dict:
+            dict['vif_s'][vif_s] = dict_merge(default_vif_s_values, vif_s_config)
+            # XXX: T2665: blend in proper DHCPv6-PD default values
+            dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(dict['vif_s'][vif_s])
 
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
@@ -458,11 +465,14 @@ def get_interface_dict(config, base, ifname=''):
             if not 'dhcpv6_options' in vif_c_config:
                 del default_vif_c_values['dhcpv6_options']
 
-            dict['vif_s'][vif_s]['vif_c'][vif_c] = dict_merge(
+            # Only add defaults if interface is not about to be deleted - this is
+            # to keep a cleaner config dict.
+            if 'deleted' not in dict:
+                dict['vif_s'][vif_s]['vif_c'][vif_c] = dict_merge(
                     default_vif_c_values, vif_c_config)
-            # XXX: T2665: blend in proper DHCPv6-PD default values
-            dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
-                dict['vif_s'][vif_s]['vif_c'][vif_c])
+                # XXX: T2665: blend in proper DHCPv6-PD default values
+                dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
+                    dict['vif_s'][vif_s]['vif_c'][vif_c])
 
             # Check if we are a member of a bridge device
             bridge = is_member(config, f'{ifname}.{vif_s}.{vif_c}', 'bridge')

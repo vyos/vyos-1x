@@ -21,6 +21,38 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="cap-add">
+            <properties>
+              <help>Container capabilities/permissions</help>
+              <completionHelp>
+                <list>net-admin net-raw setpcap sys-admin sys-time</list>
+              </completionHelp>
+              <valueHelp>
+                <format>net-admin</format>
+                <description>Network operations (interface, firewall, routing tables)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>net-raw</format>
+                <description>Permission to create raw network sockets</description>
+              </valueHelp>
+              <valueHelp>
+                <format>setpcap</format>
+                <description>Capability sets (from bounded or inherited set)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-admin</format>
+                <description>Administation operations (quotactl, mount, sethostname, setdomainame)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-time</format>
+                <description>Permission to set system clock</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(net-admin|net-raw|setpcap|sys-admin|sys-time)$</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
           #include <include/generic-description.xml.i>
           #include <include/generic-disable-node.xml.i>
           <tagNode name="environment">
@@ -141,7 +173,7 @@
           </tagNode>
           <leafNode name="restart">
             <properties>
-              <help>Mount a volume into the container</help>
+              <help>Restart options for container</help>
               <completionHelp>
                 <list>no on-failure always</list>
               </completionHelp>

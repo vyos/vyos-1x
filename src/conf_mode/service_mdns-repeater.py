@@ -28,7 +28,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/default/mdns-repeater'
+config_file = '/run/avahi-daemon/avahi-daemon.conf'
 vrrp_running_file = '/run/mdns_vrrp_active'
 
 def get_config(config=None):
@@ -92,12 +92,12 @@ def generate(mdns):
         if len(mdns['interface']) < 2:
             return None
 
-    render(config_file, 'mdns-repeater/mdns-repeater.tmpl', mdns)
+    render(config_file, 'mdns-repeater/avahi-daemon.tmpl', mdns)
     return None
 
 def apply(mdns):
     if not mdns or 'disable' in mdns:
-        call('systemctl stop mdns-repeater.service')
+        call('systemctl stop avahi-daemon.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
 
@@ -106,16 +106,16 @@ def apply(mdns):
     else:
         if 'vrrp_disable' not in mdns and os.path.exists(vrrp_running_file):
             os.unlink(vrrp_running_file)
-        
+
         if mdns['vrrp_exists'] and 'vrrp_disable' in mdns:
             if not os.path.exists(vrrp_running_file):
                 os.mknod(vrrp_running_file) # vrrp script looks for this file to update mdns repeater
 
             if len(mdns['interface']) < 2:
-                call('systemctl stop mdns-repeater.service')
+                call('systemctl stop avahi-daemon.service')
                 return None
 
-        call('systemctl restart mdns-repeater.service')
+        call('systemctl restart avahi-daemon.service')
 
     return None
 

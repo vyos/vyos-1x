@@ -271,6 +271,14 @@ def apply(container):
             tmp = run(f'podman image exists {image}')
             if tmp != 0: print(os.system(f'podman pull {image}'))
 
+            # Add capability options. Should be in uppercase
+            cap_add = ''
+            if 'cap_add' in container_config:
+                for c in container_config['cap_add']:
+                    c = c.upper()
+                    c = c.replace('-', '_')
+                    cap_add += f' --cap-add={c}'
+
             # Check/set environment options "-e foo=bar"
             env_opt = ''
             if 'environment' in container_config:
@@ -299,7 +307,7 @@ def apply(container):
                     dvol = vol_config['destination']
                     volume += f' -v {svol}:{dvol}'
 
-            container_base_cmd = f'podman run --detach --interactive --tty --replace ' \
+            container_base_cmd = f'podman run --detach --interactive --tty --replace {cap_add} ' \
                                  f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
                                  f'--name {name} {port} {volume} {env_opt}'
             if 'allow_host_networks' in container_config:

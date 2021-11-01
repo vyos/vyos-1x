@@ -28,6 +28,7 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.util import write_file
 
 from vyos import airbag
 airbag.enable()
@@ -139,15 +140,18 @@ def generate(https):
         cert_path = os.path.join(cert_dir, f'{cert_name}.pem')
         key_path = os.path.join(key_dir, f'{cert_name}.pem')
 
-        with open(cert_path, 'w') as f:
-            f.write(wrap_certificate(pki_cert['certificate']))
+        server_cert = str(wrap_certificate(pki_cert['certificate']))
+        if 'ca-certificate' in cert_dict:
+            ca_cert = cert_dict['ca-certificate']
+            print(ca_cert)
+            server_cert += '\n' + str(wrap_certificate(https['pki']['ca'][ca_cert]['certificate']))
 
-        with open(key_path, 'w') as f:
-            f.write(wrap_private_key(pki_cert['private']['key']))
+        write_file(cert_path, server_cert)
+        write_file(key_path, wrap_private_key(pki_cert['private']['key']))
 
         vyos_cert_data = {
-            "crt": cert_path,
-            "key": key_path
+            'crt': cert_path,
+            'key': key_path
         }
 
         for block in server_block_list:

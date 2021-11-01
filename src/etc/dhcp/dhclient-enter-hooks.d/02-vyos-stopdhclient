@@ -23,10 +23,12 @@ if [ -z ${CONTROLLED_STOP} ] ; then
         if ([ $dhclient -ne $current_dhclient ] && [ $dhclient -ne $master_dhclient ]); then
             # get path to PID-file of dhclient process
             local dhclient_pidfile=`ps --no-headers --format args --pid $dhclient | awk 'match(\$0, ".*-pf (/.*pid) .*", PF) { print PF[1] }'`
+            # get path to lease-file of dhclient process
+            local dhclient_leasefile=`ps --no-headers --format args --pid $dhclient | awk 'match(\$0, ".*-lf (/\\\S*leases) .*", LF) { print LF[1] }'`
             # stop dhclient with native command - this will run dhclient-script with correct reason unlike simple kill
-            logmsg info "Stopping dhclient with PID: ${dhclient}, PID file: $dhclient_pidfile"
+            logmsg info "Stopping dhclient with PID: ${dhclient}, PID file: ${dhclient_pidfile}, Leases file: ${dhclient_leasefile}"
             if [[ -e $dhclient_pidfile ]]; then
-                dhclient -e CONTROLLED_STOP=yes -x -pf $dhclient_pidfile
+                dhclient -e CONTROLLED_STOP=yes -x -pf $dhclient_pidfile -lf $dhclient_leasefile
             else
                 logmsg error "PID file $dhclient_pidfile does not exists, killing dhclient with SIGTERM signal"
                 kill -s 15 ${dhclient}

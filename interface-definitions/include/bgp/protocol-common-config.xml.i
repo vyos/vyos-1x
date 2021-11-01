@@ -1253,12 +1253,6 @@
             </constraint>
           </properties>
         </leafNode>
-        <leafNode name="no-ipv4-unicast">
-          <properties>
-            <help>Deactivate IPv4 unicast for a peer by default</help>
-            <valueless/>
-          </properties>
-        </leafNode>
       </children>
     </node>
     <leafNode name="deterministic-med">

@@ -57,6 +57,9 @@ bind={{ outside_addr }}
 {% if lns_shared_secret %}
 secret={{ lns_shared_secret }}
 {% endif %}
+{% if lns_host_name %}
+host-name={{ lns_host_name }}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0

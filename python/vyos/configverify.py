@@ -110,14 +110,11 @@ def verify_tunnel(config):
         raise ConfigError('Must configure the tunnel encapsulation for '\
                           '{ifname}!'.format(**config))
 
-    if 'source_address' not in config and 'dhcp_interface' not in config:
-        raise ConfigError('source-address is mandatory for tunnel')
+    if 'source_address' not in config and 'source_interface' not in config:
+        raise ConfigError('source-address or source-interface required for tunnel!')
 
     if 'remote' not in config and config['encapsulation'] != 'gre':
         raise ConfigError('remote ip address is mandatory for tunnel')
-
-    if {'source_address', 'dhcp_interface'} <= set(config):
-        raise ConfigError('Can not use both source-address and dhcp-interface')
 
     if config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre', 'ip6gretap', 'ip6erspan']:
         error_ipv6 = 'Encapsulation mode requires IPv6'

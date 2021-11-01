@@ -121,6 +121,7 @@
               <help>TLS certificates</help>
             </properties>
             <children>
+              #include <include/pki/ca-certificate.xml.i>
               #include <include/pki/certificate.xml.i>
               <node name="certbot" owner="${vyos_conf_scripts_dir}/le_cert.py">
                 <properties>

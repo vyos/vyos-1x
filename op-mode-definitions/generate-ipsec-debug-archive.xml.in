@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="ipsec">
+        <children>
+          <node name="debug-archive">
+            <properties>
+              <help>Generate IPSec debug-archive</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/generate_ipsec_debug_archive.sh</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

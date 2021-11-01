@@ -17,8 +17,9 @@ ff02::2         ip6-allrouters
 {%   for tag, taghosts in hosts.items() %}
 # {{ tag }}
 {%     for host, hostprops in taghosts.items() if hostprops.address is defined %}
-{{ "%-15s" | format(hostprops.address) }} {{ host }} {{ hostprops.aliases|join(' ') if hostprops.aliases is defined }}
+{%       for addr in hostprops.address %}
+{{ "%-15s" | format(addr) }} {{ host }} {{ hostprops.aliases|join(' ') if hostprops.aliases is defined }}
+{%       endfor %}
 {%     endfor %}
 {%   endfor %}
 {% endif %}
-

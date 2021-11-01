@@ -35,6 +35,7 @@
       <properties>
         <help>Show BGP IPv4 unicast information</help>
       </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         <leafNode name="cidr-only">
           <properties>

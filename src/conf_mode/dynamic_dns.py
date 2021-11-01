@@ -131,9 +131,7 @@ def generate(dyndns):
     if not dyndns:
         return None
 
-    render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns,
-           permission=0o600)
-
+    render(config_file, 'dynamic-dns/ddclient.conf.tmpl', dyndns)
     return None
 
 def apply(dyndns):

@@ -42,7 +42,7 @@ class TestServiceMDNSrepeater(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for running process
-        self.assertTrue(process_named_running('mdns-repeater'))
+        self.assertTrue(process_named_running('avahi-daemon'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

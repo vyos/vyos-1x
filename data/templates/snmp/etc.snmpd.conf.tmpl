@@ -39,7 +39,7 @@ SysDescr {{ description }}
 {% endif %}
 
 # Listen
-agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},udp:161{% if ipv6_enabled %},udp6:161{% endif %}{% endif %}
+agentaddress unix:/run/snmpd.socket{% if listen_on %}{% for li in listen_on %},{{ li }}{% endfor %}{% else %},{{protocol}}:161{% if ipv6_enabled %},{{protocol}}6:161{% endif %}{% endif %}
 
 # SNMP communities
 {% for c in communities %}

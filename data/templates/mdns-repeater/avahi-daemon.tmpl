@@ -1,0 +1,18 @@
+[server]
+use-ipv4=yes
+use-ipv6=yes
+allow-interfaces={{ interface | join(', ') }}
+disallow-other-stacks=no
+
+[wide-area]
+enable-wide-area=yes
+
+[publish]
+disable-publishing=yes
+disable-user-service-publishing=yes
+publish-addresses=no
+publish-hinfo=no
+publish-workstation=no
+
+[reflector]
+enable-reflector=yes

@@ -24,10 +24,14 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running
+from vyos.util import read_file
 
 PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
+
 base_path = ['service', 'dns', 'dynamic']
+hostname = 'test.ddns.vyos.io'
+interface = 'eth0'
 
 def get_config_value(key):
     tmp = cmd(f'sudo cat {DDCLIENT_CONF}')
@@ -36,14 +40,13 @@ def get_config_value(key):
     return tmp
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
-
     def tearDown(self):
         # Delete DDNS configuration
         self.cli_delete(base_path)
         self.cli_commit()
 
     def test_dyndns_service(self):
-        ddns = ['interface', 'eth0', 'service']
+        ddns = ['interface', interface, 'service']
         services = ['cloudflare', 'afraid', 'dyndns', 'zoneedit']
 
         for service in services:
@@ -51,7 +54,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             password = 'vyos_pass'
             zone = 'vyos.io'
             self.cli_delete(base_path)
-            self.cli_set(base_path + ddns + [service, 'host-name', 'test.ddns.vyos.io'])
+            self.cli_set(base_path + ddns + [service, 'host-name', hostname])
             self.cli_set(base_path + ddns + [service, 'login', user])
             self.cli_set(base_path + ddns + [service, 'password', password])
             self.cli_set(base_path + ddns + [service, 'zone', zone])
@@ -94,7 +97,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def test_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
-        ddns = ['interface', 'eth0', 'rfc2136', 'vyos']
+        ddns = ['interface', interface, 'rfc2136', 'vyos']
         ddns_key_file = '/config/auth/my.key'
 
         self.cli_set(base_path + ddns + ['key', ddns_key_file])
@@ -121,6 +124,39 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_dyndns_ipv6(self):
+        ddns = ['interface', interface, 'service', 'dynv6']
+        proto = 'dyndns2'
+        user = 'none'
+        password = 'paSS_4ord'
+        srv = 'ddns.vyos.io'
+
+        self.cli_set(base_path + ['interface', interface, 'ipv6-enable'])
+        self.cli_set(base_path + ddns + ['host-name', hostname])
+        self.cli_set(base_path + ddns + ['login', user])
+        self.cli_set(base_path + ddns + ['password', password])
+        self.cli_set(base_path + ddns + ['protocol', proto])
+        self.cli_set(base_path + ddns + ['server', srv])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        protocol = get_config_value('protocol')
+        login = get_config_value('login')
+        pwd = get_config_value('password')
+        server = get_config_value('server')
+        usev6 = get_config_value('usev6')
+
+        # Check some generating config parameters
+        self.assertEqual(protocol, proto)
+        self.assertEqual(login, user)
+        self.assertEqual(pwd, f"'{password}'")
+        self.assertEqual(server, srv)
+        self.assertEqual(usev6, f"if, if={interface}")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
