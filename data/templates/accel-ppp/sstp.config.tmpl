@@ -52,9 +52,9 @@ verbose=1
 check-ip=1
 {# MTU #}
 mtu={{ mtu }}
-{% if client_ipv6_pool is defined %}
-ipv6=allow
-{% endif %}
+ipv6={{ 'allow' if ppp_options.ipv6 == "deny" and client_ipv6_pool is defined else ppp_options.ipv6 }}
+ipv4={{ ppp_options.ipv4 }}
+
 mppe={{ ppp_options.mppe }}
 lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
 lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
