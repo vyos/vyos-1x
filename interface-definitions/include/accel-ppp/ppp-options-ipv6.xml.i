@@ -26,5 +26,6 @@
       <list>deny allow prefer require</list>
     </completionHelp>
   </properties>
+  <defaultValue>deny</defaultValue>
 </leafNode>
 <!-- include end -->
