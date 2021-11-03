@@ -27,6 +27,7 @@
                 <validator name="numeric" argument="--range 48-128"/>
               </constraint>
             </properties>
+            <defaultValue>64</defaultValue>
           </leafNode>
       </children>
     </tagNode>

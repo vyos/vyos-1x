@@ -532,6 +532,11 @@ def get_accel_dict(config, base, chap_secrets):
     if dict_search('authentication.local_users.username', default_values):
         del default_values['authentication']['local_users']['username']
 
+    # T2665: defaults include IPv6 client-pool mask per TAG node which need to be
+    # added to individual local users instead - so we can simply delete them
+    if dict_search('client_ipv6_pool.prefix.mask', default_values):
+        del default_values['client_ipv6_pool']['prefix']['mask']
+
     dict = dict_merge(default_values, dict)
 
     # set CPUs cores to process requests
@@ -574,5 +579,14 @@ def get_accel_dict(config, base, chap_secrets):
         for username in dict_search('authentication.local_users.username', dict):
             dict['authentication']['local_users']['username'][username] = dict_merge(
                 default_values, dict['authentication']['local_users']['username'][username])
+
+    # Add individual IPv6 client-pool default mask if required
+    if dict_search('client_ipv6_pool.prefix', dict):
+        # T2665
+        default_values = defaults(base + ['client-ipv6-pool', 'prefix'])
+
+        for prefix in dict_search('client_ipv6_pool.prefix', dict):
+            dict['client_ipv6_pool']['prefix'][prefix] = dict_merge(
+                default_values, dict['client_ipv6_pool']['prefix'][prefix])
 
     return dict

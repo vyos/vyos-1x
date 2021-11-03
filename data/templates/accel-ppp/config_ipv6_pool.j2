@@ -5,7 +5,7 @@ AdvAutonomousFlag=1
 {%   if client_ipv6_pool.prefix is defined and client_ipv6_pool.prefix is not none %}
 [ipv6-pool]
 {%     for prefix, options in client_ipv6_pool.prefix.items() %}
-{{ prefix }},{{ '64 ' if options.mask is not defined else options.mask }}
+{{ prefix }},{{ options.mask }}
 {%     endfor %}
 {%     if client_ipv6_pool.delegate is defined and client_ipv6_pool.delegate is not none %}
 {%       for prefix, options in client_ipv6_pool.delegate.items() %}
