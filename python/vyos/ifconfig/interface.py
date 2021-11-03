@@ -1056,14 +1056,6 @@ class Interface(Control):
 
         addr_is_v4 = is_ipv4(addr)
 
-        # we can't have both DHCP and static IPv4 addresses assigned
-        for a in self._addr:
-            if ( ( addr == 'dhcp' and a != 'dhcpv6' and is_ipv4(a) ) or
-                    ( a == 'dhcp' and addr != 'dhcpv6' and addr_is_v4 ) ):
-                raise ConfigError((
-                    "Can't configure both static IPv4 and DHCP address "
-                    "on the same interface"))
-
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
