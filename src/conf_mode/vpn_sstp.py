@@ -26,6 +26,7 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -33,6 +34,10 @@ airbag.enable()
 cfg_dir = '/run/accel-pppd'
 sstp_conf = '/run/accel-pppd/sstp.conf'
 sstp_chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
+
+cert_file_path = os.path.join(cfg_dir, 'sstp-cert.pem')
+cert_key_path = os.path.join(cfg_dir, 'sstp-cert.key')
+ca_cert_file_path = os.path.join(cfg_dir, 'sstp-ca.pem')
 
 def get_config(config=None):
     if config:
@@ -72,21 +77,31 @@ def verify(sstp):
 
     ssl = sstp['ssl']
 
+    # CA
     if 'ca_certificate' not in ssl:
         raise ConfigError('SSL CA certificate missing on SSTP config')
 
+    ca_name = ssl['ca_certificate']
+
+    if ca_name not in sstp['pki']['ca']:
+        raise ConfigError('Invalid CA certificate on SSTP config')
+
+    if 'certificate' not in sstp['pki']['ca'][ca_name]:
+        raise ConfigError('Missing certificate data for CA certificate on SSTP config')
+
+    # Certificate
     if 'certificate' not in ssl:
         raise ConfigError('SSL certificate missing on SSTP config')
 
     cert_name = ssl['certificate']
 
-    if ssl['ca_certificate'] not in sstp['pki']['ca']:
-        raise ConfigError('Invalid CA certificate on SSTP config')
-
     if cert_name not in sstp['pki']['certificate']:
         raise ConfigError('Invalid certificate on SSTP config')
 
     pki_cert = sstp['pki']['certificate'][cert_name]
+
+    if 'certificate' not in pki_cert:
+        raise ConfigError('Missing certificate data for certificate on SSTP config')
 
     if 'private' not in pki_cert or 'key' not in pki_cert['private']:
         raise ConfigError('Missing private key for certificate on SSTP config')
@@ -98,27 +113,18 @@ def generate(sstp):
     if not sstp:
         return None
 
-    cert_file_path = os.path.join(cfg_dir, 'sstp-cert.pem')
-    cert_key_path = os.path.join(cfg_dir, 'sstp-cert.key')
-    ca_cert_file_path = os.path.join(cfg_dir, 'sstp-ca.pem')
+    # accel-cmd reload doesn't work so any change results in a restart of the daemon
+    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp)
 
     cert_name = sstp['ssl']['certificate']
     pki_cert = sstp['pki']['certificate'][cert_name]
 
-    with open(cert_file_path, 'w') as f:
-        f.write(wrap_certificate(pki_cert['certificate']))
-
-    with open(cert_key_path, 'w') as f:
-        f.write(wrap_private_key(pki_cert['private']['key']))
-
     ca_cert_name = sstp['ssl']['ca_certificate']
     pki_ca = sstp['pki']['ca'][ca_cert_name]
 
-    with open(ca_cert_file_path, 'w') as f:
-        f.write(wrap_certificate(pki_ca['certificate']))
-
-    # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp)
+    write_file(cert_file_path, wrap_certificate(pki_cert['certificate']))
+    write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
+    write_file(ca_cert_file_path, wrap_certificate(pki_ca['certificate']))
 
     if dict_search('authentication.mode', sstp) == 'local':
         render(sstp_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
