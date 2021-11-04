@@ -30,8 +30,6 @@ from vyos.util import cmd
 from vyos.util import run
 from vyos.util import read_file
 from vyos.util import write_file
-from vyos.util import is_systemd_service_active
-from vyos.util import is_systemd_service_running
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
