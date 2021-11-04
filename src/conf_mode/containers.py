@@ -237,17 +237,6 @@ def apply(container):
             if os.path.exists(tmp):
                 os.unlink(tmp)
 
-    service_name = 'podman.service'
-    if 'network' in container or 'name' in container:
-        # Start podman if it's required and not yet running
-        if not is_systemd_service_active(service_name):
-            _cmd(f'systemctl start {service_name}')
-        # Wait for podman to be running
-        while not is_systemd_service_running(service_name):
-            sleep(0.250)
-    else:
-        _cmd(f'systemctl stop {service_name}')
-
     # Add container
     if 'name' in container:
         for name, container_config in container['name'].items():
@@ -318,7 +307,17 @@ def apply(container):
                     if 'address' in container_config['network'][network]:
                         address = container_config['network'][network]['address']
                         ipparam = f'--ip {address}'
-                    _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
+
+                    counter = 0
+                    while True:
+                        if counter >= 10:
+                            break
+                        try:
+                            _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
+                            break
+                        except:
+                            counter = counter +1
+                            sleep(0.5)
 
     return None
 
