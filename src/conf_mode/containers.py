@@ -102,7 +102,7 @@ def verify(container):
                 # Check if the specified container network exists
                 network_name = list(container_config['network'])[0]
                 if network_name not in container['network']:
-                    raise ConfigError('Container network "{network_name}" does not exist!')
+                    raise ConfigError(f'Container network "{network_name}" does not exist!')
 
                 if 'address' in container_config['network'][network_name]:
                     if 'network' not in container_config:
