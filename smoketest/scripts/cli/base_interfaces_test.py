@@ -419,6 +419,16 @@ class BasicInterfaceTest:
                         tmp = read_file(f'/sys/class/net/{vif}/mtu')
                         self.assertEqual(tmp, self._mtu)
 
+            # T3972: remove vif-c interfaces from vif-s
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vif_s in self._qinq_range:
+                    base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c']
+                    self.cli_delete(base)
+
+            self.cli_commit()
+
+
         def test_interface_ip_options(self):
             if not self._test_ip:
                 self.skipTest('not supported')
