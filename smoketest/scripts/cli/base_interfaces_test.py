@@ -493,6 +493,16 @@ class BasicInterfaceTest:
                         tmp = get_interface_config(vif)
                         self.assertEqual(tmp['mtu'], int(self._mtu))
 
+            # T3972: remove vif-c interfaces from vif-s
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vif_s in self._qinq_range:
+                    base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c']
+                    self.cli_delete(base)
+
+            self.cli_commit()
+
+
         def test_vif_s_protocol_change(self):
             # XXX: This testcase is not allowed to run as first testcase, reason
             # is the Wireless test will first load the wifi kernel hwsim module
