@@ -82,26 +82,25 @@ def get_config(config=None):
     tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
 
-    # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
-    # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
-    tmp_openvpn = conf.get_config_dict(base + [os.environ['VYOS_TAGNODE_VALUE']], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
-
     openvpn = get_interface_dict(conf, base)
 
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
 
+        # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
+        # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
+        tmp = conf.get_config_dict(base + [openvpn['ifname']], get_first_key=True)
+
+        # We have to cleanup the config dict, as default values could enable features
+        # which are not explicitly enabled on the CLI. Example: server mfa totp
+        # originate comes with defaults, which will enable the
+        # totp plugin, even when not set via CLI so we
+        # need to check this first and drop those keys
+        if dict_search('server.mfa.totp', tmp) == None:
+            del openvpn['server']['mfa']
+
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
 
-    # We have to cleanup the config dict, as default values could enable features
-    # which are not explicitly enabled on the CLI. Example: server mfa totp
-    # originate comes with defaults, which will enable the
-    # totp plugin, even when not set via CLI so we
-    # need to check this first and drop those keys
-    if dict_search('server.totp', tmp_openvpn) == None and dict_search('server', tmp_openvpn) != None:
-        del openvpn['server']['mfa']['totp']
-        
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
