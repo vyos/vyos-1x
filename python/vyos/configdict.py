@@ -316,6 +316,41 @@ def is_source_interface(conf, interface, intftype=None):
     old_level = conf.set_level(old_level)
     return ret_val
 
+def get_dhcp_interfaces(conf, vrf=None):
+    """ Common helper functions to retrieve all interfaces from current CLI
+    sessions that have DHCP configured. """
+    dhcp_interfaces = []
+    dict = conf.get_config_dict(['interfaces'], get_first_key=True)
+    if not dict:
+        return dhcp_interfaces
+
+def check_dhcp(config, ifname):
+    out = []
+    if 'address' in config and 'dhcp' in config['address']:
+        if 'vrf' in config and vrf is config['vrf']:
+            out.append(ifname)
+        else:
+            out.append(ifname)
+    return out
+
+    for section, interface in dict.items():
+        for ifname, ifconfig in interface.items():
+            tmp = check_dhcp(ifconfig, ifname)
+            dhcp_interfaces.extend(tmp)
+            # check per VLAN interfaces
+            for vif, vif_config in ifconfig.get('vif', {}).items():
+                tmp = check_dhcp(vif_config, f'{ifname}.{vif}')
+                dhcp_interfaces.extend(tmp)
+            # check QinQ VLAN interfaces
+            for vif_s, vif_s_config in ifconfig.get('vif-s', {}).items():
+                tmp = check_dhcp(vif_s_config, f'{ifname}.{vif_s}')
+                dhcp_interfaces.extend(tmp)
+                for vif_c, vif_c_config in vif_s_config.get('vif-c', {}).items():
+                    tmp = check_dhcp(vif_c_config, f'{ifname}.{vif_s}.{vif_c}')
+                    dhcp_interfaces.extend(tmp)
+
+    return dhcp_interfaces
+
 def get_interface_dict(config, base, ifname=''):
     """
     Common utility function to retrieve and mangle the interfaces configuration

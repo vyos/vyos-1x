@@ -15,6 +15,15 @@ vrf {{ vrf }}
 {{ static_routes(ip_prefix, prefix, prefix_config) }}
 {%-   endfor -%}
 {% endif %}
+{# IPv4 default routes from DHCP interfaces #}
+{% if dhcp is defined and dhcp is not none %}
+{%   for interface in dhcp %}
+{%     set next_hop = interface | get_dhcp_router %}
+{%     if next_hop is defined and next_hop is not none %}
+{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 210
+{%     endif %}
+{%   endfor %}
+{% endif %}
 {# IPv6 routing #}
 {% if route6 is defined and route6 is not none %}
 {%   for prefix, prefix_config in route6.items() %}
