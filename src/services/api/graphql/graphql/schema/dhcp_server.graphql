@@ -2,7 +2,7 @@ input dhcpServerConfigInput {
     sharedNetworkName: String
     subnet: String
     defaultRouter: String
-    dnsServer: String
+    nameServer: String
     domainName: String
     lease: Int
     range: Int
@@ -17,7 +17,7 @@ type dhcpServerConfig {
     sharedNetworkName: String
     subnet: String
     defaultRouter: String
-    dnsServer: String
+    nameServer: String
     domainName: String
     lease: Int
     range: Int

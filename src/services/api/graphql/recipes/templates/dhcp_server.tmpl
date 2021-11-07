@@ -1,5 +1,5 @@
 set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} default-router {{ default_router }}
-set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} dns-server {{ dns_server }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} name-server {{ name_server }}
 set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} domain-name {{ domain_name }}
 set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} lease {{ lease }}
 set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} range {{ range }} start {{ start }}

@@ -25,7 +25,7 @@ mutation {
   createDhcpServer(data: {sharedNetworkName: "BOB",
                           subnet: "192.168.0.0/24",
                           defaultRouter: "192.168.0.1",
-                          dnsServer: "192.168.0.1",
+                          nameServer: "192.168.0.1",
                           domainName: "vyos.net",
                           lease: 86400,
                           range: 0,
