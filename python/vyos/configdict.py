@@ -324,14 +324,13 @@ def get_dhcp_interfaces(conf, vrf=None):
     if not dict:
         return dhcp_interfaces
 
-def check_dhcp(config, ifname):
-    out = []
-    if 'address' in config and 'dhcp' in config['address']:
-        if 'vrf' in config and vrf is config['vrf']:
-            out.append(ifname)
-        else:
-            out.append(ifname)
-    return out
+    def check_dhcp(config, ifname):
+        out = []
+        if 'address' in config and 'dhcp' in config['address']:
+            if 'vrf' in config:
+                if vrf is config['vrf']: out.append(ifname)
+            else: out.append(ifname)
+        return out
 
     for section, interface in dict.items():
         for ifname, ifconfig in interface.items():
