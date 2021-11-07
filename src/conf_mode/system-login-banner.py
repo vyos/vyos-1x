@@ -22,12 +22,15 @@ from vyos import airbag
 airbag.enable()
 
 motd="""
-The programs included with the Debian/VyOS GNU/Linux system are free software;
-the exact distribution terms for each program are described in the
-individual files in /usr/share/doc/*/copyright.
+Welcome to VyOS!
 
-Debian/VyOS GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
-permitted by applicable law.
+Check out project news at https://blog.vyos.io
+and feel free to report bugs at https://phabricator.vyos.net
+
+You can change this banner using "set system login banner post-login" command.
+
+VyOS is a free software distribution that includes multiple components,
+you can check individual component licenses under /usr/share/doc/*/copyright
 
 """
 
