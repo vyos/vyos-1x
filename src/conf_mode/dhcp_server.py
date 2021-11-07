@@ -664,9 +664,14 @@ def verify(dhcp):
     failover_names = []
     listen_ok = False
     subnets = []
+    shared_networks =  len(dhcp['shared_network'])
+    disabled_shared_networks = 0
 
     # A shared-network requires a subnet definition
     for network in dhcp['shared_network']:
+        if network['disabled']:
+            disabled_shared_networks += 1
+
         if len(network['subnet']) == 0:
             raise ConfigError('No DHCP lease subnets configured for {0}. At least one\n' \
                               'lease subnet must be configured for each shared network.'.format(network['name']))
@@ -792,6 +797,10 @@ def verify(dhcp):
                 if (net != net2):
                     if net.overlaps(net2):
                         raise ConfigError('DHCP conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
+
+    # Prevent 'disable' for shared-network if only one network is configured
+    if (shared_networks - disabled_shared_networks) < 1:
+        raise ConfigError('At least one shared network must be active!')
 
     if not listen_ok:
         raise ConfigError('DHCP server configuration error!\n' \
