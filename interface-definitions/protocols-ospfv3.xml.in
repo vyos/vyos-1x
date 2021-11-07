@@ -61,22 +61,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
-              <leafNode name="interface">
-                <properties>
-                  <help>Enable routing on an IPv6 interface</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>txt</format>
-                    <description>Interface used for routing information exchange</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="interface-name"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/generic-interface-multi.xml.i>
               <tagNode name="range">
                 <properties>
                   <help>Specify IPv6 prefix (border routers only)</help>

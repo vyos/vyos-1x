@@ -16,14 +16,7 @@
               <help>VRRP group</help>
             </properties>
             <children>
-              <leafNode name="interface">
-                <properties>
-                  <help>Network interface</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/generic-interface-broadcast.xml.i>
               <leafNode name="advertise-interval">
                 <properties>
                   <help>Advertise interval</help>

@@ -136,15 +136,7 @@
               </constraint>
             </properties>
           </leafNode>
-          <leafNode name="interface">
-            <properties>
-              <help>Interface for flow-accounting [REQUIRED]</help>
-                <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/generic-interface-multi.xml.i>
           <node name="netflow">
             <properties>
               <help>NetFlow settings</help>

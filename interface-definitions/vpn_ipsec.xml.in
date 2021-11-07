@@ -498,15 +498,7 @@
               <help>Sets to include an additional secrets file for strongSwan. Use an absolute path to specify the included file.</help>
             </properties>
           </leafNode>
-          <leafNode name="interface">
-            <properties>
-              <help>Onterface used for IPsec communication</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/generic-interface-multi.xml.i>
           <node name="log">
             <properties>
               <help>IPsec logging</help>
@@ -822,14 +814,7 @@
                   <help>DHCP pool options for remote-access</help>
                 </properties>
                 <children>
-                  <leafNode name="interface">
-                    <properties>
-                      <help>Interface with DHCP server to use</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-interface.xml.i>
                   <leafNode name="server">
                     <properties>
                       <help>DHCP server address</help>

@@ -14,15 +14,7 @@
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
-              <leafNode name="interface">
-                <properties>
-                  <help>Interface to repeat mDNS advertisements [REQUIRED]</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/generic-interface-multi.xml.i>
               <leafNode name="vrrp-disable">
                 <properties>
                   <help>Disables mDNS repeater on VRRP interfaces not in MASTER state</help>

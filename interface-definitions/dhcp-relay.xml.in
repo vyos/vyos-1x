@@ -9,15 +9,7 @@
           <priority>910</priority>
         </properties>
         <children>
-          <leafNode name="interface">
-            <properties>
-              <help>DHCP relay interface [REQUIRED]</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py -b</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/generic-interface-multi-broadcast.xml.i>
           <node name="relay-options">
             <properties>
               <help>Relay options</help>

@@ -39,15 +39,7 @@
                   <help>Description</help>
                 </properties>
               </leafNode>
-              <leafNode name="interface">
-                <properties>
-                  <help>Interface to repeat UDP broadcasts to [REQUIRED]</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/generic-interface-multi.xml.i>
               #include <include/port-number.xml.i>
             </children>
           </tagNode>

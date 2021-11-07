@@ -524,15 +524,7 @@
                   </node>
                 </children>
               </node>
-              <leafNode name="interface">
-                <properties>
-                  <help>Enable LDP and neighbor discovery on interface</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
-                  </completionHelp>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/generic-interface-multi.xml.i>
             </children>
           </node>
           <node name="parameters">
@@ -560,15 +552,7 @@
               </leafNode>
             </children>
           </node>
-          <leafNode name="interface">
-            <properties>
-              <help>Enable MPLS packet processing on interface</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/generic-interface-multi.xml.i>
         </children>
       </node>
     </children>

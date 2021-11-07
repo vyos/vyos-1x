@@ -43,14 +43,7 @@
                   <help>Bind listener to specified interface/address, mandatory for IPv6</help>
                 </properties>
                 <children>
-                  <leafNode name="interface">
-                    <properties>
-                      <help>Local interface to bind our peer listener to</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-interface.xml.i>
                   <leafNode name="address">
                     <properties>
                       <help>Local address to bind our peer listener to</help>
