@@ -597,14 +597,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
-                  <leafNode name="interface">
-                    <properties>
-                      <help>First hop interface of a route to match</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
-                      </completionHelp>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-interface.xml.i>
                   <node name="ip">
                     <properties>
                       <help>IP prefix parameters to match</help>
