@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,8 +22,6 @@ from vyos import airbag
 airbag.enable()
 
 motd="""
-Welcome to VyOS!
-
 Check out project news at https://blog.vyos.io
 and feel free to report bugs at https://phabricator.vyos.net
 
