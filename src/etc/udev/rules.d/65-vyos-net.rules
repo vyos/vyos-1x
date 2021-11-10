@@ -4,11 +4,8 @@
 ACTION!="add", 				GOTO="vyos_net_end"
 SUBSYSTEM!="net",			GOTO="vyos_net_end"
 
-# ignore the interface if a name has already been set
-NAME=="?*",				GOTO="vyos_net_end"
-
 # Do name change for ethernet and wireless devices only
-KERNEL!="eth*|wlan*", 			GOTO="vyos_net_end"
+KERNEL!="eth*|wlan*|e*", 			GOTO="vyos_net_end"
 
 # ignore "secondary" monitor interfaces of mac80211 drivers
 KERNEL=="wlan*", ATTRS{type}=="803",	GOTO="vyos_net_end"

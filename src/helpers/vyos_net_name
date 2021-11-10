@@ -77,10 +77,12 @@ def get_biosdevname(ifname: str) -> str:
     XXX: This throws an error, and likely has for a long time, unnoticed
     since vyatta_net_name redirected stderr to /dev/null.
     """
-    if 'eth' not in ifname:
-        return ifname
+    intf = f"eth{re.sub(r'[^0-9]', '', ifname)}" if 'e' == ifname[0] else ifname
+
+    if 'eth' not in intf:
+        return intf
     if os.path.isdir('/proc/xen'):
-        return ifname
+        return intf
 
     time.sleep(1)
 
@@ -90,7 +92,7 @@ def get_biosdevname(ifname: str) -> str:
         logging.error(f'biosdevname error: {e}')
         biosname = ''
 
-    return ifname if biosname == '' else biosname
+    return intf if biosname == '' else biosname
 
 def leave_rescan_hint(intf_name: str, hwid: str):
     """Write interface information reported by udev
@@ -186,9 +188,9 @@ def on_boot_event(intf_name: str, hwid: str, predefined: str = '') -> str:
     interfaces = get_configfile_interfaces()
     logging.debug(f"config file interfaces are {interfaces}")
 
-    if hwid in list(interfaces) and intf_name == interfaces[hwid]:
-        logging.info(f"use mapping from config file: '{hwid}' -> '{intf_name}'")
-        return intf_name
+    if hwid in list(interfaces):
+        logging.info(f"use mapping from config file: '{hwid}' -> '{interfaces[hwid]}'")
+        return interfaces[hwid]
 
     add_assigned_interfaces(interfaces)
     logging.debug(f"adding assigned interfaces: {interfaces}")
@@ -223,6 +225,7 @@ lock.acquire()
 if not boot_configuration_complete():
     res = on_boot_event(argv[1], argv[2], predefined=predef_name)
     logging.debug(f"on boot, returned name is {res}")
+    print(res)
 else:
     logging.debug("boot configuration complete")
 lock.release()

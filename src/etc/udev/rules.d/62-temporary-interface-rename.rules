@@ -1,0 +1,1 @@
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="eth*", DRIVERS=="?*", NAME="e$env{IFINDEX}"
