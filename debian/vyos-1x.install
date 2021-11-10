@@ -17,6 +17,7 @@ lib/
 opt/
 usr/sbin
 usr/bin/initial-setup
+usr/bin/root-part-auto-extention.sh
 usr/bin/vyos-config-file-query
 usr/bin/vyos-config-to-commands
 usr/bin/vyos-config-to-json

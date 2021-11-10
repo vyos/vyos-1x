@@ -1,0 +1,12 @@
+[Unit]
+Description=VyOS root partition auto extention
+After=multi-user.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/root-part-auto-extention.sh 
+
+[Install]
+WantedBy=vyos.target
