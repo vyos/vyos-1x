@@ -1,6 +1,7 @@
 etc/cron.hourly
 etc/dhcp
 etc/ipsec.d
+etc/logrotate.d
 etc/netplug
 etc/opennhrp
 etc/ppp
