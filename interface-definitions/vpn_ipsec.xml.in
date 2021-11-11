@@ -508,15 +508,15 @@
                 <properties>
                   <help>strongSwan Logger Level</help>
                   <valueHelp>
-                    <format>u32:0</format>
+                    <format>0</format>
                     <description>Very basic auditing logs e.g. SA up/SA down (default)</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>u32:1</format>
+                    <format>1</format>
                     <description>Generic control flow with errors, a good default to see whats going on</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>u32:2</format>
+                    <format>2</format>
                     <description>More detailed debugging control flow</description>
                   </valueHelp>
                   <constraint>
