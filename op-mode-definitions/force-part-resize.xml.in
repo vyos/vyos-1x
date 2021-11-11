@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <node name="resize-partition">
+        <properties>
+          <help>Resize the VyOS partition</help>
+        </properties>
+        <command>${vyos_op_scripts_dir}/force_part_resize.sh</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
