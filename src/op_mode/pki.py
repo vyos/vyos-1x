@@ -35,6 +35,7 @@ from vyos.pki import verify_certificate
 from vyos.xml import defaults
 from vyos.util import ask_input, ask_yes_no
 from vyos.util import cmd
+from vyos.util import install_into_config
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
@@ -142,48 +143,50 @@ def get_revoked_by_serial_numbers(serial_numbers=[]):
     return certs_out
 
 def install_certificate(name, cert='', private_key=None, key_type=None, key_passphrase=None, is_ca=False):
-    # Show conf commands for installing certificate
+    # Show/install conf commands for certificate
     prefix = 'ca' if is_ca else 'certificate'
-    print('Configure mode commands to install:')
 
-    base = f"set pki {prefix} {name}"
+    base = f"pki {prefix} {name}"
+    config_paths = []
     if cert:
         cert_pem = "".join(encode_certificate(cert).strip().split("\n")[1:-1])
-        print(f"{base} certificate '{cert_pem}'")
+        config_paths.append(f"{base} certificate '{cert_pem}'")
 
     if private_key:
         key_pem = "".join(encode_private_key(private_key, passphrase=key_passphrase).strip().split("\n")[1:-1])
-        print(f"{base} private key '{key_pem}'")
+        config_paths.append(f"{base} private key '{key_pem}'")
         if key_passphrase:
-            print(f"{base} private password-protected")
+            config_paths.append(f"{base} private password-protected")
+
+    install_into_config(conf, config_paths)
 
 def install_crl(ca_name, crl):
-    # Show conf commands for installing crl
-    print("Configure mode commands to install CRL:")
+    # Show/install conf commands for crl
     crl_pem = "".join(encode_certificate(crl).strip().split("\n")[1:-1])
-    print(f"set pki ca {ca_name} crl '{crl_pem}'")
+    install_into_config(conf, [f"pki ca {ca_name} crl '{crl_pem}'"])
 
 def install_dh_parameters(name, params):
-    # Show conf commands for installing dh params
-    print("Configure mode commands to install DH parameters:")
+    # Show/install conf commands for dh params
     dh_pem = "".join(encode_dh_parameters(params).strip().split("\n")[1:-1])
-    print(f"set pki dh {name} parameters '{dh_pem}'")
+    install_into_config(conf, [f"pki dh {name} parameters '{dh_pem}'"])
 
 def install_ssh_key(name, public_key, private_key, passphrase=None):
-    # Show conf commands for installing ssh key
+    # Show/install conf commands for ssh key
     key_openssh = encode_public_key(public_key, encoding='OpenSSH', key_format='OpenSSH')
     username = os.getlogin()
     type_key_split = key_openssh.split(" ")
 
-    base = f"set system login user {username} authentication public-keys {name}"
-    print("Configure mode commands to install SSH key:")
-    print(f"{base} key '{type_key_split[1]}'")
-    print(f"{base} type '{type_key_split[0]}'", end="\n\n")
+    base = f"system login user {username} authentication public-keys {name}"
+    install_into_config(conf, [
+        f"{base} key '{type_key_split[1]}'",
+        f"{base} type '{type_key_split[0]}'"
+    ])
     print(encode_private_key(private_key, encoding='PEM', key_format='OpenSSH', passphrase=passphrase))
 
 def install_keypair(name, key_type, private_key=None, public_key=None, passphrase=None):
-    # Show conf commands for installing key-pair
-    print("Configure mode commands to install key pair:")
+    # Show/install conf commands for key-pair
+    
+    config_paths = []
 
     if public_key:
         install_public_key = ask_yes_no('Do you want to install the public key?', default=True)
@@ -191,7 +194,7 @@ def install_keypair(name, key_type, private_key=None, public_key=None, passphras
 
         if install_public_key:
             install_public_pem = "".join(public_key_pem.strip().split("\n")[1:-1])
-            print(f"set pki key-pair {name} public key '{install_public_pem}'")
+            config_paths.append(f"pki key-pair {name} public key '{install_public_pem}'")
         else:
             print("Public key:")
             print(public_key_pem)
@@ -202,12 +205,14 @@ def install_keypair(name, key_type, private_key=None, public_key=None, passphras
 
         if install_private_key:
             install_private_pem = "".join(private_key_pem.strip().split("\n")[1:-1])
-            print(f"set pki key-pair {name} private key '{install_private_pem}'")
+            config_paths.append(f"pki key-pair {name} private key '{install_private_pem}'")
             if passphrase:
-                print(f"set pki key-pair {name} private password-protected")
+                config_paths.append(f"pki key-pair {name} private password-protected")
         else:
             print("Private key:")
             print(private_key_pem)
+
+    install_into_config(conf, config_paths)
 
 def install_wireguard_key(interface, private_key, public_key):
     # Show conf commands for installing wireguard key pairs
@@ -217,19 +222,9 @@ def install_wireguard_key(interface, private_key, public_key):
         exit(1)
 
     # Check if we are running in a config session - if yes, we can directly write to the CLI
-    cli_string = f"interfaces wireguard {interface} private-key '{private_key}'"
-    if Config().in_session():
-        cmd(f"/opt/vyatta/sbin/my_set {cli_string}")
-
-        print('"generate" CLI command executed from config session.\nGenerated private-key was imported to CLI!',end='\n\n')
-        print(f'Use the following command to verify: show interfaces wireguard {interface}')
-    else:
-        print('"generate" CLI command executed from operational level.\n'
-              'Generated private-key is not stored to CLI, use configure mode commands to install key:', end='\n\n')
-        print(f"set {cli_string}", end="\n\n")
+    install_into_config(conf, [f"interfaces wireguard {interface} private-key '{private_key}'"])
 
     print(f"Corresponding public-key to use on peer system is: '{public_key}'")
-
 
 def install_wireguard_psk(interface, peer, psk):
     from vyos.ifconfig import Section
@@ -238,17 +233,7 @@ def install_wireguard_psk(interface, peer, psk):
         exit(1)
 
     # Check if we are running in a config session - if yes, we can directly write to the CLI
-    cli_string = f"interfaces wireguard {interface} peer {peer} preshared-key '{psk}'"
-    if Config().in_session():
-        cmd(f"/opt/vyatta/sbin/my_set {cli_string}")
-
-        print('"generate" CLI command executed from config session.\nGenerated preshared-key was imported to CLI!',end='\n\n')
-        print(f'Use the following command to verify: show interfaces wireguard {interface}')
-    else:
-        print('"generate" CLI command executed from operational level.\n'
-              'Generated preshared-key is not stored to CLI, use configure mode commands to install key:', end='\n\n')
-        print(f"set {cli_string}", end="\n\n")
-
+    install_into_config(conf, [f"interfaces wireguard {interface} peer {peer} preshared-key '{psk}'"])
 
 def ask_passphrase():
     passphrase = None

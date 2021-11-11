@@ -664,7 +664,6 @@ def ask_yes_no(question, default=False) -> bool:
         except EOFError:
             stdout.write("\nPlease respond with yes/y or no/n\n")
 
-
 def is_admin() -> bool:
     """Look if current user is in sudo group"""
     from getpass import getuser
@@ -903,3 +902,32 @@ def check_port_availability(ipaddress, port, protocol):
         return True
     except:
         return False
+
+def install_into_config(conf, config_paths, override_prompt=True):
+    # Allows op-mode scripts to install values if called from an active config session
+    # config_paths: dict of config paths
+    # override_prompt: if True, user will be prompted before existing nodes are overwritten
+
+    if not config_paths:
+        return None
+
+    from vyos.config import Config
+
+    if not Config().in_session():
+        print('You are not in configure mode, commands to install manually from configure mode:')
+        for path in config_paths:
+            print(f'set {path}')
+        return None
+
+    count = 0
+
+    for path in config_paths:
+        if override_prompt and conf.exists(path) and not conf.is_multi(path):
+            if not ask_yes_no(f'Config node "{node}" already exists. Do you want to overwrite it?'):
+                continue
+
+        cmd(f'/opt/vyatta/sbin/my_set {path}')
+        count += 1
+
+    if count > 0:
+        print(f'{count} value(s) installed. Use "compare" to see the pending changes, and "commit" to apply.')
