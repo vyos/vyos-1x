@@ -21,7 +21,14 @@ if [ $AVAILABLE_EXTENSION_SIZE -lt 1 ]; then
     exit 0;
 fi
 
-parted -m ${ROOT_DEV} ---pretend-input-tty "u s resizepart ${ROOT_PART_NUM} Yes ${TARGET_END}s"
+parted -m ${ROOT_DEV} ---pretend-input-tty <<EOF 
+u
+s
+resizepart
+${ROOT_PART_NUM}
+Yes
+${TARGET_END}s 
+EOF
 resize2fs "$ROOT_PART_DEV"
 
 
