@@ -69,6 +69,19 @@ def find_available(intfs: dict, prefix: str) -> str:
 
     return f'{prefix}{len(index_list)}'
 
+def mod_ifname(ifname: str) -> str:
+    """ Check interface with names eX and return ifname on the next format eth{ifindex} - 2
+    """
+    if re.match("^e[0-9]+$", ifname):
+        intf = ifname.split("e")
+        if intf[1]:
+            if int(intf[1]) >= 2:
+                return "eth" + str(int(intf[1]) - 2)
+            else:
+               return "eth" + str(intf[1])
+
+    return ifname
+
 def get_biosdevname(ifname: str) -> str:
     """ Use legacy vyatta-biosdevname to query for name
 
@@ -77,7 +90,7 @@ def get_biosdevname(ifname: str) -> str:
     XXX: This throws an error, and likely has for a long time, unnoticed
     since vyatta_net_name redirected stderr to /dev/null.
     """
-    intf = f"eth{re.sub(r'[^0-9]', '', ifname)}" if 'e' == ifname[0] else ifname
+    intf = mod_ifname(ifname)
 
     if 'eth' not in intf:
         return intf
