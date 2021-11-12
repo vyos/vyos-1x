@@ -724,11 +724,11 @@
                           </completionHelp>
                           <valueHelp>
                             <format>pre-shared-secret</format>
-                            <description>pre-shared-secret_description</description>
+                            <description>Authentication pre-shared-secret</description>
                           </valueHelp>
                           <valueHelp>
                             <format>x509</format>
-                            <description>x509_description</description>
+                            <description>Authentication x509</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(pre-shared-secret|x509)$</regex>
@@ -928,15 +928,15 @@
                           </completionHelp>
                           <valueHelp>
                             <format>pre-shared-secret</format>
-                            <description>pre-shared-secret_description</description>
+                            <description>Use pre-shared secret key</description>
                           </valueHelp>
                           <valueHelp>
                             <format>rsa</format>
-                            <description>rsa_description</description>
+                            <description>Use RSA key</description>
                           </valueHelp>
                           <valueHelp>
                             <format>x509</format>
-                            <description>x509_description</description>
+                            <description>Use X.509 certificate</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(pre-shared-secret|rsa|x509)$</regex>
@@ -969,11 +969,11 @@
                       </completionHelp>
                       <valueHelp>
                         <format>initiate</format>
-                        <description>initiate_description</description>
+                        <description>Bring the connection up immediately</description>
                       </valueHelp>
                       <valueHelp>
                         <format>respond</format>
-                        <description>respond_description</description>
+                        <description>Bring the connection up only if traffic is detected</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(initiate|respond)$</regex>
