@@ -82,7 +82,7 @@ def get_all_interface_addr(prefix, filter_dev, filter_family):
                 for addr in addrs[netifaces.AF_INET6]:
                     if prefix:
                         # we need to manually assemble a list of IPv4 address/prefix
-                        bits = bin(int(addr['netmask'].replace(':', ''), 16)).count('1')
+                        bits = bin(int(addr['netmask'].replace(':', '').split('/')[0], 16)).count('1')
                         prefix = '/' + str(bits)
                         list_addr.append(addr['addr'] + prefix)
                     else:
