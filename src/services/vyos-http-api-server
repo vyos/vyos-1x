@@ -32,16 +32,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, StrictStr, validator
-from starlette.datastructures import FormData, MutableHeaders
+from starlette.datastructures import FormData
 from starlette.formparsers import FormParser, MultiPartParser
 from multipart.multipart import parse_options_header
 
-from ariadne import make_executable_schema, load_schema_from_path, snake_case_fallback_resolvers
 from ariadne.asgi import GraphQL
 
 import vyos.config
-import vyos.defaults
-
 from vyos.configsession import ConfigSession, ConfigSessionError
 
 import api.graphql.state
@@ -69,11 +66,11 @@ def load_server_config():
     return config
 
 def check_auth(key_list, key):
-    id = None
+    key_id = None
     for k in key_list:
         if k['key'] == key:
-            id = k['id']
-    return id
+            key_id = k['id']
+    return key_id
 
 def error(code, msg):
     resp = {"success": False, "error": msg, "data": None}
@@ -223,10 +220,10 @@ responses = {
 def auth_required(data: ApiModel):
     key = data.key
     api_keys = app.state.vyos_keys
-    id = check_auth(api_keys, key)
-    if not id:
+    key_id = check_auth(api_keys, key)
+    if not key_id:
         raise HTTPException(status_code=401, detail="Valid API key is required")
-    app.state.vyos_id = id
+    app.state.vyos_id = key_id
 
 # override Request and APIRoute classes in order to convert form request to json;
 # do all explicit validation here, for backwards compatability of error messages;
@@ -613,16 +610,11 @@ def show_op(data: ShowModel):
 # GraphQL integration
 ###
 
+from api.graphql.bindings import generate_schema
+
 api.graphql.state.init()
 
-from api.graphql.graphql.mutations import mutation
-from api.graphql.graphql.directives import DataDirective
-
-api_schema_dir = vyos.defaults.directories['api_schema']
-
-type_defs = load_schema_from_path(api_schema_dir)
-
-schema = make_executable_schema(type_defs, mutation, snake_case_fallback_resolvers, directives={"generate": DataDirective})
+schema = generate_schema()
 
 app.add_route('/graphql', GraphQL(schema, debug=True))
 
@@ -640,16 +632,16 @@ if __name__ == '__main__':
 
     try:
         server_config = load_server_config()
-    except Exception as e:
-        logger.critical("Failed to load the HTTP API server config: {0}".format(e))
+    except Exception as err:
+        logger.critical(f"Failed to load the HTTP API server config: {err}")
 
-    session = ConfigSession(os.getpid())
+    config_session = ConfigSession(os.getpid())
 
-    app.state.vyos_session = session
+    app.state.vyos_session = config_session
     app.state.vyos_keys = server_config['api_keys']
 
-    app.state.vyos_debug = True if server_config['debug'] == 'true' else False
-    app.state.vyos_strict = True if server_config['strict'] == 'true' else False
+    app.state.vyos_debug = bool(server_config['debug'] == 'true')
+    app.state.vyos_strict = bool(server_config['strict'] == 'true')
 
     api.graphql.state.settings['app'] = app
 
@@ -657,6 +649,6 @@ if __name__ == '__main__':
         uvicorn.run(app, host=server_config["listen_address"],
                          port=int(server_config["port"]),
                          proxy_headers=True)
-    except OSError as e:
-        logger.critical(f"OSError {e}")
+    except OSError as err:
+        logger.critical(f"OSError {err}")
         sys.exit(1)
