@@ -32,32 +32,23 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    # This script only works with a passed VRF name
-    if len(argv) < 1:
-        raise NotImplementedError
-    vrf = argv[1]
+    base = ['vrf']
+    vrf = conf.get_config_dict(base, get_first_key=True)
+    return vrf
 
-    # "assemble" dict - easier here then use a full blown get_config_dict()
-    # on a single leafNode
-    vni = { 'vrf' : vrf }
-    tmp = conf.return_value(['vrf', 'name', vrf, 'vni'])
-    if tmp: vni.update({ 'vni' : tmp })
-
-    return vni
-
-def verify(vni):
+def verify(vrf):
     return None
 
-def generate(vni):
-    vni['new_frr_config'] = render_to_string('frr/vrf-vni.frr.tmpl', vni)
+def generate(vrf):
+    vrf['new_frr_config'] = render_to_string('frr/vrf-vni.frr.tmpl', vrf)
     return None
 
-def apply(vni):
+def apply(vrf):
     # add configuration to FRR
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section(f'^vrf [a-zA-Z-]*$', '')
-    frr_cfg.add_before(r'(interface .*|line vty)', vni['new_frr_config'])
+    frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
