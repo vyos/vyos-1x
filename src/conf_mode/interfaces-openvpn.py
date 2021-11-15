@@ -634,10 +634,10 @@ def generate(openvpn):
 
 def apply(openvpn):
     interface = openvpn['ifname']
-    call(f'systemctl stop openvpn@{interface}.service')
 
     # Do some cleanup when OpenVPN is disabled/deleted
     if 'deleted' in openvpn or 'disable' in openvpn:
+        call(f'systemctl stop openvpn@{interface}.service')
         for cleanup_file in glob(f'/run/openvpn/{interface}.*'):
             if os.path.isfile(cleanup_file):
                 os.unlink(cleanup_file)
@@ -649,7 +649,7 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    call(f'systemctl start openvpn@{interface}.service')
+    call(f'systemctl reload-or-restart openvpn@{interface}.service')
 
     o = VTunIf(**openvpn)
     o.update(openvpn)
