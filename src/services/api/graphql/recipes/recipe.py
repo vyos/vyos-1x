@@ -46,4 +46,23 @@ class Recipe(object):
         except Exception as error:
             raise error
 
+    def save(self):
+        session = self._session
+        data = self.data
+        if 'file_name' not in data or not data['file_name']:
+            data['file_name'] = '/config/config.boot'
 
+        try:
+            session.save_config(data['file_name'])
+        except Exception as error:
+            raise error
+
+    def load(self):
+        session = self._session
+        data = self.data
+
+        try:
+            session.load_config(data['file_name'])
+            session.commit()
+        except Exception as error:
+            raise error
