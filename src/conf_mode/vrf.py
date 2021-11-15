@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from json import loads
-from tempfile import NamedTemporaryFile
 
 from vyos.config import Config
 from vyos.configdict import node_changed
@@ -31,10 +30,12 @@ from vyos.util import get_interface_config
 from vyos.util import popen
 from vyos.util import run
 from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/iproute2/rt_tables.d/vyos-vrf.conf'
+config_file = '/etc/iproute2/rt_tables.d/vyos-vrf.conf'
+nft_vrf_config = '/tmp/nftables-vrf-zones'
 
 def list_rules():
     command = 'ip -j -4 rule show'
@@ -128,8 +129,8 @@ def verify(vrf):
 def generate(vrf):
     render(config_file, 'vrf/vrf.conf.tmpl', vrf)
     # Render nftables zones config
-    vrf['nft_vrf_zones'] = NamedTemporaryFile().name
-    render(vrf['nft_vrf_zones'], 'firewall/nftables-vrf-zones.tmpl', vrf)
+
+    render(nft_vrf_config, 'firewall/nftables-vrf-zones.tmpl', vrf)
 
     return None
 
@@ -165,8 +166,9 @@ def apply(vrf):
         _, err = popen('nft list table inet vrf_zones')
         # If not, create a table
         if err:
-            cmd(f'nft -f {vrf["nft_vrf_zones"]}')
-            os.unlink(vrf['nft_vrf_zones'])
+            if os.path.exists(nft_vrf_config):
+                cmd(f'nft -f {nft_vrf_config}')
+                os.unlink(nft_vrf_config)
 
         for name, config in vrf['name'].items():
             table = config['table']
