@@ -42,6 +42,30 @@ mutation {
   }
 }
 
+mutation {
+  saveConfigFile(data: {fileName: "/config/config.boot"}) {
+    success
+    errors
+    data {
+      fileName
+    }
+  }
+}
+
+N.B. fileName can be empty (fileName: "") or data can be empty (data: {}) to save to
+/config/config.boot; to save to an alternative path, specify fileName.
+
+mutation {
+  loadConfigFile(data: {fileName: "/home/vyos/config.boot"}) {
+    success
+    errors
+    data {
+      fileName
+    }
+  }
+}
+
+
 The GraphQL playground will be found at:
 
 https://{{ host_address }}/graphql
