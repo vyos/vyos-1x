@@ -58,7 +58,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
 
-    def test_vrf_table_id(self):
+    def test_vrf_vni_and_table_id(self):
         table = '1000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
@@ -70,6 +70,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
                 self.cli_commit()
 
             self.cli_set(base + ['table', table])
+            self.cli_set(base + ['vni', table])
             if vrf == 'green':
                 self.cli_set(base + ['disable'])
 
@@ -101,6 +102,11 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             #  ...
             regex = f'{table}\s+{vrf}\s+#\s+{description}'
             self.assertTrue(re.findall(regex, iproute2_config))
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+
+            # Increment table ID for the next run
             table = str(int(table) + 1)
 
     def test_vrf_loopback_ips(self):
@@ -177,6 +183,43 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             # cleanup
             section = Section.section(interface)
             self.cli_delete(['interfaces', section, interface, 'vrf'])
+
+    def test_vrf_static_route(self):
+        table = '100'
+        for vrf in vrfs:
+            next_hop = f'192.0.{table}.1'
+            prefix = f'10.0.{table}.0/24'
+            base = base_path + ['name', vrf]
+
+            self.cli_set(base + ['vni', table])
+
+            # check validate() - a table ID is mandatory
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            self.cli_set(base + ['table', table])
+            self.cli_set(base + ['protocols', 'static', 'route', prefix, 'next-hop', next_hop])
+
+            table = str(int(table) + 1)
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = '100'
+        for vrf in vrfs:
+            next_hop = f'192.0.{table}.1'
+            prefix = f'10.0.{table}.0/24'
+
+            self.assertTrue(vrf in interfaces())
+            vrf_if = Interface(vrf)
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+            self.assertIn(f' ip route {prefix} {next_hop}', frrconfig)
+
+            # Increment table ID for the next run
+            table = str(int(table) + 1)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
