@@ -37,7 +37,7 @@ PRELOGIN_NET_FILE = r'/etc/issue.net'
 POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
-    'issue': 'Welcome to VyOS - \\n \\l\n',
+    'issue': 'Welcome to VyOS - \\n \\l\n\n',
     'issue_net': 'Welcome to VyOS\n',
     'motd': motd
 }
