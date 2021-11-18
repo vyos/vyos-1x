@@ -125,16 +125,11 @@
                 </properties>
                 <command>vtysh -c "show ip route tag $5"</command>
               </tagNode>
-              <node name="vrf">
-                <properties>
-                  <help>Show IP routes in VRF</help>
-                </properties>
-              </node>
               <tagNode name="vrf">
                 <properties>
                   <help>Show IP routes in VRF</help>
                   <completionHelp>
-                    <list>&lt;vrf&gt;</list>
+                    <list>all</list>
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
