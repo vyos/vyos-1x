@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,21 +17,19 @@
 import os
 import argparse
 
-from sys import exit
 from psutil import process_iter
-from time import strftime, localtime, time
 
 from vyos.util import call
+from vyos.util import DEVNULL
+from vyos.util import is_wwan_connected
 
-def check_interface(interface):
+def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):
-        print(f'Interface {interface}: invalid!')
+        print(f'Interface {interface} does not exist!')
         exit(1)
 
 def check_ppp_running(interface):
-    """
-    Check if ppp process is running in the interface in question
-    """
+    """ Check if PPP process is running in the interface in question """
     for p in process_iter():
         if "pppd" in p.name():
             if interface in p.cmdline():
@@ -40,32 +38,46 @@ def check_ppp_running(interface):
     return False
 
 def connect(interface):
-    """
-    Connect PPP interface
-    """
-    check_interface(interface)
+    """ Connect dialer interface """
 
-    # Check if interface is already dialed
-    if os.path.isdir(f'/sys/class/net/{interface}'):
-        print(f'Interface {interface}: already connected!')
-    elif check_ppp_running(interface):
-        print(f'Interface {interface}: connection is beeing established!')
+    if interface.startswith('ppp'):
+        check_ppp_interface(interface)
+        # Check if interface is already dialed
+        if os.path.isdir(f'/sys/class/net/{interface}'):
+            print(f'Interface {interface}: already connected!')
+        elif check_ppp_running(interface):
+            print(f'Interface {interface}: connection is beeing established!')
+        else:
+            print(f'Interface {interface}: connecting...')
+            call(f'systemctl restart ppp@{interface}.service')
+    elif interface.startswith('wwan'):
+        if is_wwan_connected(interface):
+            print(f'Interface {interface}: already connected!')
+        else:
+            call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces-wwan.py')
     else:
-        print(f'Interface {interface}: connecting...')
-        call(f'systemctl restart ppp@{interface}.service')
+        print(f'Unknown interface {interface}, can not connect. Aborting!')
 
 def disconnect(interface):
-    """
-    Disconnect PPP interface
-    """
-    check_interface(interface)
+    """ Disconnect dialer interface """
 
-    # Check if interface is already down
-    if not check_ppp_running(interface):
-        print(f'Interface {interface}: connection is already down')
+    if interface.startswith('ppp'):
+        check_ppp_interface(interface)
+
+        # Check if interface is already down
+        if not check_ppp_running(interface):
+            print(f'Interface {interface}: connection is already down')
+        else:
+            print(f'Interface {interface}: disconnecting...')
+            call(f'systemctl stop ppp@{interface}.service')
+    elif interface.startswith('wwan'):
+        if not is_wwan_connected(interface):
+            print(f'Interface {interface}: connection is already down')
+        else:
+            modem = interface.lstrip('wwan')
+            call(f'mmcli --modem {modem} --simple-disconnect', stdout=DEVNULL)
     else:
-        print(f'Interface {interface}: disconnecting...')
-        call(f'systemctl stop ppp@{interface}.service')
+        print(f'Unknown interface {interface}, can not disconnect. Aborting!')
 
 def main():
     parser = argparse.ArgumentParser()

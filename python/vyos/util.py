@@ -717,3 +717,19 @@ def is_systemd_service_running(service):
     Copied from: https://unix.stackexchange.com/a/435317 """
     tmp = cmd(f'systemctl show --value -p SubState {service}')
     return bool((tmp == 'running'))
+
+def is_wwan_connected(interface):
+    """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
+    carrier network or not """
+    import json
+
+    if not interface.startswith('wwan'):
+        raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
+
+    modem = interface.lstrip('wwan')
+
+    tmp = cmd(f'mmcli --modem {modem} --output-json')
+    tmp = json.loads(tmp)
+
+    # return True/False if interface is in connected state
+    return dict_search('modem.generic.state', tmp) == 'connected'
