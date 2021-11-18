@@ -2,7 +2,8 @@
 
 option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;
 timeout 60;
-retry 300;
+retry 60;
+initial-interval 2;
 
 interface "{{ ifname }}" {
     send host-name "{{ dhcp_options.host_name }}";
