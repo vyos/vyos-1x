@@ -25,7 +25,9 @@ from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
 from vyos.util import cmd
+from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import DEVNULL
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -89,7 +91,7 @@ def apply(wwan):
         options += ',user={user},password={password}'.format(**wwan['authentication'])
 
     command = f'{base_cmd} --simple-connect="{options}"'
-    cmd(command)
+    call(command, stdout=DEVNULL)
     w.update(wwan)
 
     return None
