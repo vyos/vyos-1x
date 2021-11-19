@@ -80,6 +80,23 @@ class EthernetIf(Interface):
         super().__init__(ifname, **kargs)
         self.ethtool = Ethtool(ifname)
 
+    def remove(self):
+        """
+        Remove interface from config. Removing the interface deconfigures all
+        assigned IP addresses.
+        Example:
+        >>> from vyos.ifconfig import WWANIf
+        >>> i = EthernetIf('eth0')
+        >>> i.remove()
+        """
+
+        if self.exists(self.ifname):
+            # interface is placed in A/D state when removed from config! It
+            # will remain visible for the operating system.
+            self.set_admin_state('down')
+
+        super().remove()
+
     def set_flow_control(self, enable):
         """
         Changes the pause parameters of the specified Ethernet device.
