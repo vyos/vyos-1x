@@ -1,7 +1,7 @@
 <!-- include start from bgp/route-target-both.xml.i -->
 <node name="route-target">
   <properties>
-    <help>Specify route distinguisher</help>
+    <help>Specify route target list</help>
   </properties>
   <children>
     <node name="vpn">
