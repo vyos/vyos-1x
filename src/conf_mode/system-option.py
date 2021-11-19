@@ -126,6 +126,12 @@ def apply(options):
     if 'keyboard_layout' in options:
         cmd('loadkeys {keyboard_layout}'.format(**options))
 
+    # Enable/diable root-partition-auto-resize SystemD service
+    if 'root_partition_auto_resize' in options:
+      cmd('systemctl enable root-partition-auto-resize.service')
+    else:
+      cmd('systemctl disable root-partition-auto-resize.service')
+
 if __name__ == '__main__':
     try:
         c = get_config()
