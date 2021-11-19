@@ -29,8 +29,8 @@ class WWANIf(Interface):
 
     def remove(self):
         """
-        Remove interface from operating system. Removing the interface
-        deconfigures all assigned IP addresses.
+        Remove interface from config. Removing the interface deconfigures all
+        assigned IP addresses.
         Example:
         >>> from vyos.ifconfig import WWANIf
         >>> i = WWANIf('wwan0')
@@ -38,7 +38,8 @@ class WWANIf(Interface):
         """
 
         if self.exists(self.ifname):
-            # interface is always A/D down. It needs to be enabled explicitly
+            # interface is placed in A/D state when removed from config! It
+            # will remain visible for the operating system.
             self.set_admin_state('down')
 
         super().remove()
