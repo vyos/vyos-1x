@@ -307,7 +307,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_lines = [
             f'proposals = aes128-sha1-modp1024,aes256-sha1-modp1024',
             f'version = 1',
-            f'life_time = {ike_lifetime}s',
+            f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
             f'esp_proposals = aes128-sha1-modp1024,aes256-sha1-modp1024,3des-md5-modp1024',
             f'local_ts = dynamic[gre]',
