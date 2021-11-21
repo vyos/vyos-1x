@@ -20,7 +20,6 @@ import unittest
 from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 
 config_file = '/etc/ppp/peers/{}'

@@ -19,7 +19,6 @@ import json
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_named_running

@@ -22,7 +22,6 @@ import unittest
 from netifaces import interfaces
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section

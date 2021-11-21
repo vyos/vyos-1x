@@ -18,7 +18,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.util import get_interface_config

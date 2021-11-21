@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 
 base_path = ['pki']

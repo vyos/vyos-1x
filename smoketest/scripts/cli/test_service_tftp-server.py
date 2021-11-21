@@ -19,7 +19,6 @@ import unittest
 from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 from vyos.util import process_named_running
