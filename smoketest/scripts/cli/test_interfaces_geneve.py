@@ -16,7 +16,6 @@
 
 import unittest
 
-from vyos.configsession import ConfigSession
 from base_interfaces_test import BasicInterfaceTest
 
 class GeneveInterfaceTest(BasicInterfaceTest.TestCase):

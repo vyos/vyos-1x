@@ -24,7 +24,6 @@ from distutils.version import LooseVersion
 from platform import release as kernel_version
 from subprocess import Popen, PIPE
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import read_file

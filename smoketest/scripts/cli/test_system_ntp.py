@@ -19,7 +19,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import address_from_cidr
 from vyos.template import netmask_from_cidr
