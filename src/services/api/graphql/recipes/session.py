@@ -2,7 +2,7 @@ from ariadne import convert_camel_case_to_snake
 import vyos.defaults
 from vyos.template import render
 
-class Recipe(object):
+class Session(object):
     def __init__(self, session, data):
         self._session = session
         self.data = data

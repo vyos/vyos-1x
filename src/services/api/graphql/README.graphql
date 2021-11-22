@@ -101,11 +101,8 @@ services
 │       │       └── schema.graphql
 │       ├── README.graphql
 │       ├── recipes
-│       │   ├── config_file.py
-│       │   ├── create_dhcp_server.py
-│       │   ├── create_interface_ethernet.py
 │       │   ├── __init__.py
-│       │   ├── recipe.py
+│       │   ├── session.py
 │       │   └── templates
 │       │       ├── create_dhcp_server.tmpl
 │       │       └── create_interface_ethernet.tmpl
