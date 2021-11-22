@@ -9,7 +9,7 @@ from .. import state
 
 mutation = ObjectType("Mutation")
 
-def make_resolver(mutation_name):
+def make_configure_resolver(mutation_name):
     """Dynamically generate a resolver for the mutation named in the
     schema by 'mutation_name'.
 
