@@ -10,7 +10,7 @@ to run with that address as default router by requesting these 'mutations'
 in the GraphQL playground:
 
 mutation {
-  createInterfaceEthernet (data: {interface: "eth1",
+  CreateInterfaceEthernet (data: {interface: "eth1",
                                   address: "192.168.0.1/24",
                                   description: "BOB"}) {
     success
@@ -22,7 +22,7 @@ mutation {
 }
 
 mutation {
-  createDhcpServer(data: {sharedNetworkName: "BOB",
+  CreateDhcpServer(data: {sharedNetworkName: "BOB",
                           subnet: "192.168.0.0/24",
                           defaultRouter: "192.168.0.1",
                           nameServer: "192.168.0.1",
@@ -45,7 +45,7 @@ mutation {
 To save the configuration, use the following mutation:
 
 mutation {
-  saveConfigFile(data: {fileName: "/config/config.boot"}) {
+  SaveConfigFile(data: {fileName: "/config/config.boot"}) {
     success
     errors
     data {
@@ -64,7 +64,7 @@ https://hostname/graphql), one can load an arbitrary config file from a
 path.
 
 mutation {
-  loadConfigFile(data: {fileName: "/home/vyos/config.boot"}) {
+  LoadConfigFile(data: {fileName: "/home/vyos/config.boot"}) {
     success
     errors
     data {
@@ -89,22 +89,26 @@ What's here:
 services
 ├── api
 │   └── graphql
+│       ├── bindings.py
 │       ├── graphql
 │       │   ├── directives.py
 │       │   ├── __init__.py
 │       │   ├── mutations.py
 │       │   └── schema
+│       │       ├── config_file.graphql
 │       │       ├── dhcp_server.graphql
 │       │       ├── interface_ethernet.graphql
 │       │       └── schema.graphql
+│       ├── README.graphql
 │       ├── recipes
-│       │   ├── dhcp_server.py
+│       │   ├── config_file.py
+│       │   ├── create_dhcp_server.py
+│       │   ├── create_interface_ethernet.py
 │       │   ├── __init__.py
-│       │   ├── interface_ethernet.py
 │       │   ├── recipe.py
 │       │   └── templates
-│       │       ├── dhcp_server.tmpl
-│       │       └── interface_ethernet.tmpl
+│       │       ├── create_dhcp_server.tmpl
+│       │       └── create_interface_ethernet.tmpl
 │       └── state.py
 ├── vyos-configd
 ├── vyos-hostsd

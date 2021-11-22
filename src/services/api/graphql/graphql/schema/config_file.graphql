@@ -1,27 +1,27 @@
-input saveConfigFileInput {
+input SaveConfigFileInput {
     fileName: String
 }
 
-type saveConfigFile {
+type SaveConfigFile {
     fileName: String
 }
 
-type saveConfigFileResult {
-    data: saveConfigFile
+type SaveConfigFileResult {
+    data: SaveConfigFile
     success: Boolean!
     errors: [String]
 }
 
-input loadConfigFileInput {
+input LoadConfigFileInput {
     fileName: String!
 }
 
-type loadConfigFile {
+type LoadConfigFile {
     fileName: String!
 }
 
-type loadConfigFileResult {
-    data: loadConfigFile
+type LoadConfigFileResult {
+    data: LoadConfigFile
     success: Boolean!
     errors: [String]
 }

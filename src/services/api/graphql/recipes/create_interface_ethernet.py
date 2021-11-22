@@ -1,7 +1,7 @@
 
 from . recipe import Recipe
 
-class DhcpServer(Recipe):
+class CreateInterfaceEthernet(Recipe):
     def __init__(self, session, command_file):
         super().__init__(session, command_file)
 

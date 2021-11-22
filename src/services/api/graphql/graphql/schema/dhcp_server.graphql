@@ -1,4 +1,4 @@
-input dhcpServerConfigInput {
+input DhcpServerConfigInput {
     sharedNetworkName: String
     subnet: String
     defaultRouter: String
@@ -13,7 +13,7 @@ input dhcpServerConfigInput {
     dnsForwardingListenAddress: String
 }
 
-type dhcpServerConfig {
+type DhcpServerConfig {
     sharedNetworkName: String
     subnet: String
     defaultRouter: String
@@ -28,8 +28,8 @@ type dhcpServerConfig {
     dnsForwardingListenAddress: String
 }
 
-type createDhcpServerResult {
-    data: dhcpServerConfig
+type CreateDhcpServerResult {
+    data: DhcpServerConfig
     success: Boolean!
     errors: [String]
 }
