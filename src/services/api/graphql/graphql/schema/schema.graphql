@@ -7,12 +7,12 @@ type Query {
     _dummy: String
 }
 
-directive @generate on FIELD_DEFINITION
+directive @configure on FIELD_DEFINITION
 directive @configfile on FIELD_DEFINITION
 
 type Mutation {
-    createDhcpServer(data: dhcpServerConfigInput) : createDhcpServerResult @generate
-    createInterfaceEthernet(data: interfaceEthernetConfigInput) : createInterfaceEthernetResult @generate
+    createDhcpServer(data: dhcpServerConfigInput) : createDhcpServerResult @configure
+    createInterfaceEthernet(data: interfaceEthernetConfigInput) : createInterfaceEthernetResult @configure
     saveConfigFile(data: saveConfigFileInput) : saveConfigFileResult @configfile
     loadConfigFile(data: loadConfigFileInput) : loadConfigFileResult @configfile
 }

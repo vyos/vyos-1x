@@ -1,9 +1,9 @@
 from ariadne import SchemaDirectiveVisitor, ObjectType
-from . mutations import make_resolver, make_config_file_resolver
+from . mutations import make_configure_resolver, make_config_file_resolver
 
-class DataDirective(SchemaDirectiveVisitor):
+class ConfigureDirective(SchemaDirectiveVisitor):
     """
-    Class providing implementation of 'generate' directive in schema.
+    Class providing implementation of 'configure' directive in schema.
 
     """
     def visit_field_definition(self, field, object_type):
@@ -12,7 +12,7 @@ class DataDirective(SchemaDirectiveVisitor):
         # to produce canonical name
         name = name.replace('Result', '', 1)
 
-        func = make_resolver(name)
+        func = make_configure_resolver(name)
         field.resolve = func
         return field
 
@@ -30,3 +30,5 @@ class ConfigFileDirective(SchemaDirectiveVisitor):
         func = make_config_file_resolver(name)
         field.resolve = func
         return field
+
+directives_dict = {"configure": ConfigureDirective, "configfile": ConfigFileDirective}

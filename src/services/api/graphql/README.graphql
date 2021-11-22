@@ -122,13 +122,14 @@ the Ur-data; the GraphQL schema is produced from those files, located in
 
 Resolvers for the schema Mutation fields are dynamically generated using a
 'directive' added to the respective schema field. The directive,
-'@generate', is handled by the class 'DataDirective' in
-'api/graphql/graphql/directives.py', which calls the 'make_resolver' function in
-'api/graphql/graphql/mutations.py'; the produced resolver calls the appropriate
-wrapper in 'api/graphql/recipes', with base class doing the (overridable)
-configuration steps of calling all defined 'set'/'delete' commands.
+'@configure', is handled by the class 'ConfigureDirective' in
+'api/graphql/graphql/directives.py', which calls the
+'make_configure_resolver' function in 'api/graphql/graphql/mutations.py';
+the produced resolver calls the appropriate wrapper in
+'api/graphql/recipes', with base class doing the (overridable) configuration
+steps of calling all defined 'set'/'delete' commands.
 
-Integrating the above with vyos-http-api-server is ~10 lines of code.
+Integrating the above with vyos-http-api-server is 4 lines of code.
 
 What needs to be done:
 
