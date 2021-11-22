@@ -1,18 +1,18 @@
-input interfaceEthernetConfigInput {
+input InterfaceEthernetConfigInput {
     interface: String
     address: String
     replace: Boolean = true
     description: String
 }
 
-type interfaceEthernetConfig {
+type InterfaceEthernetConfig {
     interface: String
     address: String
     description: String
 }
 
-type createInterfaceEthernetResult {
-    data: interfaceEthernetConfig
+type CreateInterfaceEthernetResult {
+    data: InterfaceEthernetConfig
     success: Boolean!
     errors: [String]
 }

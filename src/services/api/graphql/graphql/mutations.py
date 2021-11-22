@@ -21,9 +21,9 @@ def make_configure_resolver(mutation_name):
     :raise Exception:
         encapsulating ConfigErrors, or internal errors
     """
-    class_name = mutation_name.replace('create', '', 1).replace('delete', '', 1)
+    class_name = mutation_name
     func_base_name = convert_camel_case_to_snake(class_name)
-    resolver_name = f'resolve_create_{func_base_name}'
+    resolver_name = f'resolve_{func_base_name}'
     func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Dict)'
 
     @mutation.field(mutation_name)
@@ -59,12 +59,12 @@ def make_configure_resolver(mutation_name):
 
 def make_config_file_resolver(mutation_name):
     op = ''
-    if 'save' in mutation_name:
+    if 'Save' in mutation_name:
         op = 'save'
-    elif 'load' in mutation_name:
+    elif 'Load' in mutation_name:
         op = 'load'
 
-    class_name = mutation_name.replace('save', '', 1).replace('load', '', 1)
+    class_name = mutation_name.replace('Save', '', 1).replace('Load', '', 1)
     func_base_name = convert_camel_case_to_snake(class_name)
     resolver_name = f'resolve_{func_base_name}'
     func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Dict)'
