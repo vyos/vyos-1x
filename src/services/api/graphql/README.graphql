@@ -42,6 +42,8 @@ mutation {
   }
 }
 
+To save the configuration, use the following mutation:
+
 mutation {
   saveConfigFile(data: {fileName: "/config/config.boot"}) {
     success
@@ -52,8 +54,14 @@ mutation {
   }
 }
 
-N.B. fileName can be empty (fileName: "") or data can be empty (data: {}) to save to
-/config/config.boot; to save to an alternative path, specify fileName.
+N.B. fileName can be empty (fileName: "") or data can be empty (data: {}) to
+save to /config/config.boot; to save to an alternative path, specify
+fileName.
+
+Similarly, using the same 'endpoint' (meaning the form of the request and
+resolver; the actual enpoint for all GraphQL requests is
+https://hostname/graphql), one can load an arbitrary config file from a
+path.
 
 mutation {
   loadConfigFile(data: {fileName: "/home/vyos/config.boot"}) {
