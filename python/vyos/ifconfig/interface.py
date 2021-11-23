@@ -135,6 +135,9 @@ class Interface(Control):
             'validate': assert_mtu,
             'shellcmd': 'ip link set dev {ifname} mtu {value}',
         },
+        'netns': {
+            'shellcmd': 'ip link set dev {ifname} netns {value}',
+        },
         'vrf': {
             'convert': lambda v: f'master {v}' if v else 'nomaster',
             'shellcmd': 'ip link set dev {ifname} {value}',
@@ -511,6 +514,21 @@ class Interface(Control):
         # Turn an interface to the 'up' state if it was changed to 'down' by this fucntion
         if prev_state == 'up':
             self.set_admin_state('up')
+
+    def set_netns(self, netns):
+        """
+        Add/Remove interface from given NETNS.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('dum0').set_netns('foo')
+        """
+
+        #tmp = self.get_interface('netns')
+        #if tmp == netns:
+        #    return None
+
+        self.set_interface('netns', netns)
 
     def set_vrf(self, vrf):
         """
@@ -1404,6 +1422,13 @@ class Interface(Control):
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
             self.set_vrf(config.get('vrf', ''))
+
+        # If interface attached to NETNS we shouldn't check all other settings
+        # As interface placed to separate logical stack
+        # Configure NETNS
+        if dict_search('netns', config) != None:
+            self.set_netns(config.get('netns', ''))
+            return
 
         # Configure MSS value for IPv4 TCP connections
         tmp = dict_search('ip.adjust_mss', config)
