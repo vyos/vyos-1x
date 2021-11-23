@@ -1,27 +1,17 @@
 from ariadne import convert_camel_case_to_snake
 import vyos.defaults
+from vyos.config import Config
 from vyos.template import render
 
 class Session(object):
     def __init__(self, session, data):
         self._session = session
-        self.data = data
+        self._data = data
         self._name = convert_camel_case_to_snake(type(self).__name__)
-
-    @property
-    def data(self):
-        return self.__data
-
-    @data.setter
-    def data(self, data):
-        if isinstance(data, dict):
-            self.__data = data
-        else:
-            raise ValueError("data must be of type dict")
 
     def configure(self):
         session = self._session
-        data = self.data
+        data = self._data
         func_base_name = self._name
 
         tmpl_file = f'{func_base_name}.tmpl'
@@ -46,9 +36,16 @@ class Session(object):
         except Exception as error:
             raise error
 
+    def delete_path_if_childless(self, path):
+        session = self._session
+        config = Config(session.get_session_env())
+        if not config.list_nodes(path):
+            session.delete(path)
+            session.commit()
+
     def save(self):
         session = self._session
-        data = self.data
+        data = self._data
         if 'file_name' not in data or not data['file_name']:
             data['file_name'] = '/config/config.boot'
 
@@ -59,7 +56,7 @@ class Session(object):
 
     def load(self):
         session = self._session
-        data = self.data
+        data = self._data
 
         try:
             session.load_config(data['file_name'])
