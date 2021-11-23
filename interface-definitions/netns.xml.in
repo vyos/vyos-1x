@@ -9,13 +9,13 @@
       <tagNode name="name">
         <properties>
           <help>Network namespace name</help>
+          <constraint>
+            <regex>^[a-zA-Z0-9-_]{1,100}</regex>
+          </constraint>
+          <constraintErrorMessage>Netns name must be alphanumeric and can contain hyphens and underscores.</constraintErrorMessage>
         </properties>
         <children>
-          <leafNode name="descriprion">
-            <properties>
-              <help>Network namespace description</help>
-            </properties>
-          </leafNode>
+          #include <include/interface/description.xml.i>
         </children>
       </tagNode>
     </children>

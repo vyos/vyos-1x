@@ -37,6 +37,7 @@ from vyos.util import mac2eui64
 from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import get_interface_config
+from vyos.util import get_interface_namespace
 from vyos.util import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -515,18 +516,32 @@ class Interface(Control):
         if prev_state == 'up':
             self.set_admin_state('up')
 
+    def del_netns(self, netns):
+        """
+        Remove interface from given NETNS.
+        """
+
+        # If NETNS does not exist then there is nothing to delete
+        if not os.path.exists(f'/run/netns/{netns}'):
+            return None
+
+        # As a PoC we only allow 'dummy' interfaces
+        if 'dum' not in self.ifname:
+            return None
+
+        # Check if interface realy exists in namespace
+        if get_interface_namespace(self.ifname) != None:
+            self._cmd(f'ip netns exec {get_interface_namespace(self.ifname)} ip link del dev {self.ifname}')
+            return
+
     def set_netns(self, netns):
         """
-        Add/Remove interface from given NETNS.
+        Add interface from given NETNS.
 
         Example:
         >>> from vyos.ifconfig import Interface
         >>> Interface('dum0').set_netns('foo')
         """
-
-        #tmp = self.get_interface('netns')
-        #if tmp == netns:
-        #    return None
 
         self.set_interface('netns', netns)
 
@@ -1371,6 +1386,16 @@ class Interface(Control):
             if mac:
                 self.set_mac(mac)
 
+        # If interface is connected to NETNS we don't have to check all other
+        # settings like MTU/IPv6/sysctl values, etc.
+        # Since the interface is pushed onto a separate logical stack
+        # Configure NETNS
+        if dict_search('netns', config) != None:
+            self.set_netns(config.get('netns', ''))
+            return
+        else:
+            self.del_netns(config.get('netns', ''))
+
         # Update interface description
         self.set_alias(config.get('description', ''))
 
@@ -1422,13 +1447,6 @@ class Interface(Control):
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
             self.set_vrf(config.get('vrf', ''))
-
-        # If interface attached to NETNS we shouldn't check all other settings
-        # As interface placed to separate logical stack
-        # Configure NETNS
-        if dict_search('netns', config) != None:
-            self.set_netns(config.get('netns', ''))
-            return
 
         # Configure MSS value for IPv4 TCP connections
         tmp = dict_search('ip.adjust_mss', config)

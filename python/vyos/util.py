@@ -794,6 +794,24 @@ def get_interface_address(interface):
     tmp = loads(cmd(f'ip -d -j addr show {interface}'))[0]
     return tmp
 
+def get_interface_namespace(iface):
+    """
+       Returns wich netns the interface belongs to
+    """
+    from json import loads
+    # Check if netns exist
+    tmp = loads(cmd(f'ip --json netns ls'))
+    if len(tmp) == 0:
+        return None
+
+    for ns in tmp:
+        namespace = f'{ns["name"]}'
+        # Search interface in each netns
+        data = loads(cmd(f'ip netns exec {namespace} ip -j link show'))
+        for compare in data:
+            if iface == compare["ifname"]:
+                return namespace
+
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads
