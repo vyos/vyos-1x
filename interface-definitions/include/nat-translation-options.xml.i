@@ -16,7 +16,7 @@
         </valueHelp>
         <valueHelp>
           <format>random</format>
-          <description>Random source or destination address allocation for each connection (defaut)</description>
+          <description>Random source or destination address allocation for each connection (default)</description>
         </valueHelp>
         <constraint>
           <regex>^(persistent|random)$</regex>
