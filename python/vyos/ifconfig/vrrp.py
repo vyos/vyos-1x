@@ -32,14 +32,13 @@ class VRRPNoData(VRRPError):
 class VRRP(object):
     _vrrp_prefix = '00:00:5E:00:01:'
     location = {
-        'pid':      '/run/keepalived.pid',
-        'fifo':     '/run/keepalived_notify_fifo',
+        'pid':      '/run/keepalived/keepalived.pid',
+        'fifo':     '/run/keepalived/keepalived_notify_fifo',
         'state':    '/tmp/keepalived.data',
         'stats':    '/tmp/keepalived.stats',
         'json':     '/tmp/keepalived.json',
-        'daemon':   '/etc/default/keepalived',
-        'config':   '/etc/keepalived/keepalived.conf',
-        'vyos':     '/run/keepalived_config.dict',
+        'config':   '/run/keepalived/keepalived.conf',
+        'vyos':     '/run/keepalived/keepalived_config.dict',
     }
 
     _signal = {

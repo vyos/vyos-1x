@@ -18,11 +18,11 @@
                 <properties>
                   <help>DNS forwarding cache size (default: 10000)</help>
                   <valueHelp>
-                    <format>0-10000</format>
+                    <format>u32:0-2147483647</format>
                     <description>DNS forwarding cache size</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="numeric" argument="--range 0-10000"/>
+                    <validator name="numeric" argument="--range 0-2147483647"/>
                   </constraint>
                 </properties>
                 <defaultValue>10000</defaultValue>
@@ -111,6 +111,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="no-serve-rfc1918">
+                <properties>
+                  <help>Makes the server authoritatively not aware of RFC1918 addresses</help>
+		  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="allow-from">
                 <properties>
                   <help>Networks allowed to query this server</help>
@@ -133,7 +139,7 @@
                 <properties>
                   <help>Maximum amount of time negative entries are cached (default: 3600)</help>
                   <valueHelp>
-                    <format>0-7200</format>
+                    <format>u32:0-7200</format>
                     <description>Seconds to cache NXDOMAIN entries</description>
                   </valueHelp>
                   <constraint>
@@ -142,24 +148,7 @@
                 </properties>
                 <defaultValue>3600</defaultValue>
               </leafNode>
-              <leafNode name="name-server">
-                <properties>
-                  <help>Domain Name Servers (DNS) addresses [OPTIONAL]</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Domain Name Server (DNS) IPv4 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Domain Name Server (DNS) IPv6 address</description>
-                  </valueHelp>
-                  <multi/>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv4-ipv6.xml.i>
               <leafNode name="source-address">
                 <properties>
                   <help>Local addresses from which to send DNS queries</help>

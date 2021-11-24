@@ -12,7 +12,7 @@
             <properties>
               <help>Local user account information</help>
               <constraint>
-                <regex>[a-zA-Z0-9\-_\.]{1,100}</regex>
+                <regex>^[-_a-zA-Z0-9.]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>
@@ -52,7 +52,10 @@
                     <children>
                       <leafNode name="key">
                         <properties>
-                          <help>Public key value (base64-encoded)</help>
+                          <help>Public key value (Base64 encoded)</help>
+                          <constraint>
+                            <validator name="base64"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="options">
@@ -145,7 +148,7 @@
                   </leafNode>
                 </children>
               </tagNode>
-              #include <include/interface/interface-vrf.xml.i>
+              #include <include/interface/vrf.xml.i>
             </children>
           </node>
         </children>

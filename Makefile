@@ -46,7 +46,11 @@ interface_definitions: $(config_xml_obj)
 	rm -f $(TMPL_DIR)/system/node.def
 	rm -f $(TMPL_DIR)/vpn/node.def
 	rm -f $(TMPL_DIR)/vpn/ipsec/node.def
-	rm -rf $(TMPL_DIR)/vpn/nipsec
+
+	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
+	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
+	# unfortunately breaks with Intel QAT :(
+	rm -rf $(TMPL_DIR)/nat
 
 	# XXX: required until OSPF and RIP is migrated from vyatta-cfg-quagga to vyos-1x
 	mkdir $(TMPL_DIR)/interfaces/loopback/node.tag/ipv6
@@ -85,21 +89,25 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
 
+	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
+	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
+	# unfortunately breaks with Intel QAT :(
+	rm -rf $(OP_TMPL_DIR)/show/nat
+
 	# XXX: ping must be able to recursivly call itself as the
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
 
-.PHONY: component_versions
-.ONESHELL:
-component_versions: interface_definitions
-	$(CURDIR)/scripts/build-component-versions $(BUILD_DIR)/interface-definitions $(DATA_DIR)
+	# XXX: test if there are empty node.def files - this is not allowed as these
+	# could mask help strings or mandatory priority statements
+	find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
 
 .PHONY: vyshim
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions component_versions vyshim
+all: clean interface_definitions op_mode_definitions vyshim
 
 .PHONY: clean
 clean:

@@ -92,37 +92,40 @@ def cancel_shutdown():
         try:
             run('/sbin/shutdown -c --no-wall')
         except OSError as e:
-            exit("Could not cancel a reboot or poweroff: %s" % e)
+            exit(f'Could not cancel a reboot or poweroff: {e}')
 
-        message = 'Scheduled {} has been cancelled {}'.format(output['MODE'], timenow)
+        mode = output['MODE']
+        message = f'Scheduled {mode} has been cancelled {timenow}'
         run(f'wall {message} > /dev/null 2>&1')
     else:
         print("Reboot or poweroff is not scheduled")
 
 
 def execute_shutdown(time, reboot=True, ask=True):
+    action = "reboot" if reboot else "poweroff"
     if not ask:
-        action = "reboot" if reboot else "poweroff"
-        if not ask_yes_no("Are you sure you want to %s this system?" % action):
+        if not ask_yes_no(f"Are you sure you want to {action} this system?"):
             exit(0)
-
-    action = "-r" if reboot else "-P"
+    action_cmd = "-r" if reboot else "-P"
 
     if len(time) == 0:
         # T870 legacy reboot job support
         chk_vyatta_based_reboots()
         ###
 
-        out = cmd(f'/sbin/shutdown {action} now', stderr=STDOUT)
+        out = cmd(f'/sbin/shutdown {action_cmd} now', stderr=STDOUT)
         print(out.split(",", 1)[0])
         return
     elif len(time) == 1:
         # Assume the argument is just time
         ts = parse_time(time[0])
         if ts:
-            cmd(f'/sbin/shutdown {action} {time[0]}', stderr=STDOUT)
+            cmd(f'/sbin/shutdown {action_cmd} {time[0]}', stderr=STDOUT)
+            # Inform all other logged in users about the reboot/shutdown
+            wall_msg = f'System {action} is scheduled {time[0]}'
+            cmd(f'/usr/bin/wall "{wall_msg}"')
         else:
-            exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
+            exit(f'Invalid time "{time[0]}". The valid format is HH:MM')
     elif len(time) == 2:
         # Assume it's date and time
         ts = parse_time(time[0])
@@ -131,14 +134,18 @@ def execute_shutdown(time, reboot=True, ask=True):
             t = datetime.combine(ds, ts)
             td = t - datetime.now()
             t2 = 1 + int(td.total_seconds())//60  # Get total minutes
-            cmd('/sbin/shutdown {action} {t2}', stderr=STDOUT)
+
+            cmd(f'/sbin/shutdown {action_cmd} {t2}', stderr=STDOUT)
+            # Inform all other logged in users about the reboot/shutdown
+            wall_msg = f'System {action} is scheduled {time[1]} {time[0]}'
+            cmd(f'/usr/bin/wall "{wall_msg}"')
         else:
             if not ts:
-                exit("Invalid time \"{0}\". The valid format is HH:MM".format(time[0]))
+                exit(f'Invalid time "{time[0]}". The valid format is HH:MM')
             else:
-                exit("Invalid time \"{0}\". A valid format is YYYY-MM-DD [HH:MM]".format(time[1]))
+                exit(f'Invalid date "{time[1]}". A valid format is YYYY-MM-DD [HH:MM]')
     else:
-        exit("Could not decode date and time. Valids formats are HH:MM or YYYY-MM-DD HH:MM")
+        exit('Could not decode date and time. Valids formats are HH:MM or YYYY-MM-DD HH:MM')
     check_shutdown()
 
 

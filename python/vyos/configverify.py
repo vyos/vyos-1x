@@ -67,22 +67,22 @@ def verify_mtu_ipv6(config):
         min_mtu = 1280
         if int(config['mtu']) < min_mtu:
             interface = config['ifname']
-            error_msg = f'IPv6 address will be configured on interface "{interface}" ' \
-                        f'thus the minimum MTU requirement is {min_mtu}!'
+            error_msg = f'IPv6 address will be configured on interface "{interface}",\n' \
+                        f'the required minimum MTU is {min_mtu}!'
 
-            for address in (dict_search('address', config) or []):
-                if address in ['dhcpv6'] or is_ipv6(address):
-                    raise ConfigError(error_msg)
+            if 'address' in config:
+                for address in config['address']:
+                    if address in ['dhcpv6'] or is_ipv6(address):
+                        raise ConfigError(error_msg)
 
-            tmp = dict_search('ipv6.address', config)
-            if tmp and 'no_default_link_local' not in tmp:
-                raise ConfigError('link-local ' + error_msg)
+            tmp = dict_search('ipv6.address.no_default_link_local', config)
+            if tmp == None: raise ConfigError('link-local ' + error_msg)
 
-            if tmp and 'autoconf' in tmp:
-                raise ConfigError(error_msg)
+            tmp = dict_search('ipv6.address.autoconf', config)
+            if tmp != None: raise ConfigError(error_msg)
 
-            if tmp and 'eui64' in tmp:
-                raise ConfigError(error_msg)
+            tmp = dict_search('ipv6.address.eui64', config)
+            if tmp != None: raise ConfigError(error_msg)
 
 def verify_tunnel(config):
     """
@@ -95,14 +95,11 @@ def verify_tunnel(config):
         raise ConfigError('Must configure the tunnel encapsulation for '\
                           '{ifname}!'.format(**config))
 
-    if 'source_address' not in config and 'dhcp_interface' not in config:
-        raise ConfigError('source-address is mandatory for tunnel')
+    if 'source_address' not in config and 'source_interface' not in config:
+        raise ConfigError('source-address or source-interface required for tunnel!')
 
     if 'remote' not in config and config['encapsulation'] != 'gre':
         raise ConfigError('remote-ip address is mandatory for tunnel')
-
-    if {'source_address', 'dhcp_interface'} <= set(config):
-        raise ConfigError('Can not use both source-address and dhcp-interface')
 
     if config['encapsulation'] in ['ipip6', 'ip6ip6', 'ip6gre']:
         error_ipv6 = 'Encapsulation mode requires IPv6'
@@ -208,8 +205,8 @@ def verify_interface_exists(ifname):
     Common helper function used by interface implementations to perform
     recurring validation if an interface actually exists.
     """
-    from netifaces import interfaces
-    if ifname not in interfaces():
+    import os
+    if not os.path.exists(f'/sys/class/net/{ifname}'):
         raise ConfigError(f'Interface "{ifname}" does not exist!')
 
 def verify_source_interface(config):
@@ -384,4 +381,30 @@ def verify_diffie_hellman_length(file, min_keysize):
                 return True
 
     return False
+
+def verify_common_route_maps(config):
+    """
+    Common helper function used by routing protocol implementations to perform
+    recurring validation if the specified route-map for either zebra to kernel
+    installation exists (this is the top-level route_map key) or when a route
+    is redistributed with a route-map that it exists!
+    """
+    # XXX: This function is called in combination with a previous call to:
+    # tmp = conf.get_config_dict(['policy']) - see protocols_ospf.py as example.
+    # We should NOT call this with the key_mangling option as this would rename
+    # route-map hypens '-' to underscores '_' and one could no longer distinguish
+    # what should have been the "proper" route-map name, as foo-bar and foo_bar
+    # are two entire different route-map instances!
+    for route_map in ['route-map', 'route_map']:
+        if route_map not in config:
+            continue
+        tmp = config[route_map]
+        # Check if the specified route-map exists, if not error out
+        if dict_search(f'policy.route-map.{tmp}', config) == None:
+            raise ConfigError(f'Specified route-map "{tmp}" does not exist!')
+
+    if 'redistribute' in config:
+        for protocol, protocol_config in config['redistribute'].items():
+            if 'route_map' in protocol_config:
+                verify_route_map(protocol_config['route_map'], config)
 

@@ -37,7 +37,9 @@ from vyos.util import mac2eui64
 from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import get_interface_config
+from vyos.util import is_systemd_service_active
 from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 from vyos.validate import assert_boolean
@@ -51,6 +53,9 @@ from vyos.ifconfig.control import Control
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.operational import Operational
 from vyos.ifconfig import Section
+
+from netaddr import EUI
+from netaddr import mac_unix_expanded
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -103,6 +108,10 @@ class Interface(Control):
             'shellcmd': 'ip -json -detail link list dev {ifname}',
             'format': lambda j: jmespath.search('[*].operstate | [0]', json.loads(j)),
         },
+        'vrf': {
+            'shellcmd': 'ip -json -detail link list dev {ifname}',
+            'format': lambda j: jmespath.search('[*].master | [0]', json.loads(j)),
+        },
     }
 
     _command_set = {
@@ -134,7 +143,6 @@ class Interface(Control):
 
     _sysfs_set = {
         'arp_cache_tmo': {
-            'convert': lambda tmo: (int(tmo) * 1000),
             'location': '/proc/sys/net/ipv4/neigh/{ifname}/base_reachable_time_ms',
         },
         'arp_filter': {
@@ -200,6 +208,51 @@ class Interface(Control):
         # link_detect vs link_filter name weirdness
         'link_detect': {
             'validate': lambda link: assert_range(link,0,3),
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/link_filter',
+        },
+    }
+
+    _sysfs_get = {
+        'arp_cache_tmo': {
+            'location': '/proc/sys/net/ipv4/neigh/{ifname}/base_reachable_time_ms',
+        },
+        'arp_filter': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_filter',
+        },
+        'arp_accept': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_accept',
+        },
+        'arp_announce': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_announce',
+        },
+        'arp_ignore': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/arp_ignore',
+        },
+        'ipv4_forwarding': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/forwarding',
+        },
+        'rp_filter': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
+        },
+        'ipv6_accept_ra': {
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
+        },
+        'ipv6_autoconf': {
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/autoconf',
+        },
+        'ipv6_forwarding': {
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
+        },
+        'ipv6_dad_transmits': {
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
+        },
+        'proxy_arp': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp',
+        },
+        'proxy_arp_pvlan': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/proxy_arp_pvlan',
+        },
+        'link_detect': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/link_filter',
         },
     }
@@ -354,6 +407,9 @@ class Interface(Control):
         >>> Interface('eth0').get_mtu()
         '1400'
         """
+        tmp = self.get_interface('mtu')
+        if str(tmp) == mtu:
+            return None
         return self.set_interface('mtu', mtu)
 
     def get_mac(self):
@@ -366,6 +422,51 @@ class Interface(Control):
         '00:50:ab:cd:ef:00'
         """
         return self.get_interface('mac')
+
+    def get_mac_synthetic(self):
+        """
+        Get a synthetic MAC address. This is a common method which can be called
+        from derived classes to overwrite the get_mac() call in a generic way.
+
+        NOTE: Tunnel interfaces have no "MAC" address by default. The content
+              of the 'address' file in /sys/class/net/device contains the
+              local-ip thus we generate a random MAC address instead
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_mac()
+        '00:50:ab:cd:ef:00'
+        """
+        from hashlib import sha256
+
+        # Get processor ID number
+        cpu_id = self._cmd('sudo dmidecode -t 4 | grep ID | head -n1 |  sed "s/.*ID://;s/ //g"')
+
+        # XXX: T3894 - it seems not all systems have eth0 - get a list of all
+        # available Ethernet interfaces on the system (without VLAN subinterfaces)
+        # and then take the first one.
+        all_eth_ifs = [x for x in Section.interfaces('ethernet') if '.' not in x]
+        first_mac = Interface(all_eth_ifs[0]).get_mac()
+
+        sha = sha256()
+        # Calculate SHA256 sum based on the CPU ID number, eth0 mac address and
+        # this interface identifier - this is as predictable as an interface
+        # MAC address and thus can be used in the same way
+        sha.update(cpu_id.encode())
+        sha.update(first_mac.encode())
+        sha.update(self.ifname.encode())
+        # take the most significant 48 bits from the SHA256 string
+        tmp = sha.hexdigest()[:12]
+        # Convert pseudo random string into EUI format which now represents a
+        # MAC address
+        tmp = EUI(tmp).value
+        # set locally administered bit in MAC address
+        tmp |= 0xf20000000000
+        # convert integer to "real" MAC address representation
+        mac = EUI(hex(tmp).split('x')[-1])
+        # change dialect to use : as delimiter instead of -
+        mac.dialect = mac_unix_expanded
+        return str(mac)
 
     def set_mac(self, mac):
         """
@@ -391,7 +492,7 @@ class Interface(Control):
         if prev_state == 'up':
             self.set_admin_state('up')
 
-    def set_vrf(self, vrf=''):
+    def set_vrf(self, vrf):
         """
         Add/Remove interface from given VRF instance.
 
@@ -400,6 +501,11 @@ class Interface(Control):
         >>> Interface('eth0').set_vrf('foo')
         >>> Interface('eth0').set_vrf()
         """
+
+        tmp = self.get_interface('vrf')
+        if tmp == vrf:
+            return None
+
         self.set_interface('vrf', vrf)
 
     def set_arp_cache_tmo(self, tmo):
@@ -411,6 +517,10 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_arp_cache_tmo(40)
         """
+        tmo = str(int(tmo) * 1000)
+        tmp = self.get_interface('arp_cache_tmo')
+        if tmp == tmo:
+            return None
         return self.set_interface('arp_cache_tmo', tmo)
 
     def set_arp_filter(self, arp_filter):
@@ -431,6 +541,9 @@ class Interface(Control):
             particular interfaces. Only for more complex setups like load-
             balancing, does this behaviour cause problems.
         """
+        tmp = self.get_interface('arp_filter')
+        if tmp == arp_filter:
+            return None
         return self.set_interface('arp_filter', arp_filter)
 
     def set_arp_accept(self, arp_accept):
@@ -447,6 +560,9 @@ class Interface(Control):
         gratuitous arp frame, the arp table will be updated regardless
         if this setting is on or off.
         """
+        tmp = self.get_interface('arp_accept')
+        if tmp == arp_accept:
+            return None
         return self.set_interface('arp_accept', arp_accept)
 
     def set_arp_announce(self, arp_announce):
@@ -468,6 +584,9 @@ class Interface(Control):
         receiving answer from the resolved target while decreasing
         the level announces more valid sender's information.
         """
+        tmp = self.get_interface('arp_announce')
+        if tmp == arp_announce:
+            return None
         return self.set_interface('arp_announce', arp_announce)
 
     def set_arp_ignore(self, arp_ignore):
@@ -480,12 +599,16 @@ class Interface(Control):
         1 - reply only if the target IP address is local address
             configured on the incoming interface
         """
+        tmp = self.get_interface('arp_ignore')
+        if tmp == arp_ignore:
+            return None
         return self.set_interface('arp_ignore', arp_ignore)
 
     def set_ipv4_forwarding(self, forwarding):
-        """
-        Configure IPv4 forwarding.
-        """
+        """ Configure IPv4 forwarding. """
+        tmp = self.get_interface('ipv4_forwarding')
+        if tmp == forwarding:
+            return None
         return self.set_interface('ipv4_forwarding', forwarding)
 
     def set_ipv4_source_validation(self, value):
@@ -514,6 +637,9 @@ class Interface(Control):
             print(f'WARNING: Global source-validation is set to "{global_setting}\n"' \
                    'this overrides per interface setting!')
 
+        tmp = self.get_interface('rp_filter')
+        if int(tmp) == value:
+            return None
         return self.set_interface('rp_filter', value)
 
     def set_ipv6_accept_ra(self, accept_ra):
@@ -529,6 +655,9 @@ class Interface(Control):
         2 - Overrule forwarding behaviour. Accept Router Advertisements even if
             forwarding is enabled.
         """
+        tmp = self.get_interface('ipv6_accept_ra')
+        if tmp == accept_ra:
+            return None
         return self.set_interface('ipv6_accept_ra', accept_ra)
 
     def set_ipv6_autoconf(self, autoconf):
@@ -536,6 +665,9 @@ class Interface(Control):
         Autoconfigure addresses using Prefix Information in Router
         Advertisements.
         """
+        tmp = self.get_interface('ipv6_autoconf')
+        if tmp == autoconf:
+            return None
         return self.set_interface('ipv6_autoconf', autoconf)
 
     def add_ipv6_eui64_address(self, prefix):
@@ -559,9 +691,10 @@ class Interface(Control):
         Delete the address based on the interface's MAC-based EUI64
         combined with the prefix address.
         """
-        eui64 = mac2eui64(self.get_mac(), prefix)
-        prefixlen = prefix.split('/')[1]
-        self.del_addr(f'{eui64}/{prefixlen}')
+        if is_ipv6(prefix):
+            eui64 = mac2eui64(self.get_mac(), prefix)
+            prefixlen = prefix.split('/')[1]
+            self.del_addr(f'{eui64}/{prefixlen}')
 
     def set_ipv6_forwarding(self, forwarding):
         """
@@ -588,6 +721,9 @@ class Interface(Control):
         3. Router Advertisements are ignored unless accept_ra is 2.
         4. Redirects are ignored.
         """
+        tmp = self.get_interface('ipv6_forwarding')
+        if tmp == forwarding:
+            return None
         return self.set_interface('ipv6_forwarding', forwarding)
 
     def set_ipv6_dad_messages(self, dad):
@@ -595,6 +731,9 @@ class Interface(Control):
         The amount of Duplicate Address Detection probes to send.
         Default: 1
         """
+        tmp = self.get_interface('ipv6_dad_transmits')
+        if tmp == dad:
+            return None
         return self.set_interface('ipv6_dad_transmits', dad)
 
     def set_link_detect(self, link_filter):
@@ -617,6 +756,9 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_link_detect(1)
         """
+        tmp = self.get_interface('link_detect')
+        if tmp == link_filter:
+            return None
         return self.set_interface('link_detect', link_filter)
 
     def get_alias(self):
@@ -641,6 +783,9 @@ class Interface(Control):
 
         >>> Interface('eth0').set_ifalias('')
         """
+        tmp = self.get_interface('alias')
+        if tmp == ifalias:
+            return None
         self.set_interface('alias', ifalias)
 
     def get_admin_state(self):
@@ -716,6 +861,9 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_proxy_arp(1)
         """
+        tmp = self.get_interface('proxy_arp')
+        if tmp == enable:
+            return None
         self.set_interface('proxy_arp', enable)
 
     def set_proxy_arp_pvlan(self, enable):
@@ -742,6 +890,9 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_proxy_arp_pvlan(1)
         """
+        tmp = self.get_interface('proxy_arp_pvlan')
+        if tmp == enable:
+            return None
         self.set_interface('proxy_arp_pvlan', enable)
 
     def get_addr_v4(self):
@@ -878,6 +1029,8 @@ class Interface(Control):
         >>> j.get_addr()
         ['2001:db8::ffff/64']
         """
+        if not addr:
+            raise ValueError()
 
         # remove from interface
         if addr == 'dhcp':
@@ -984,7 +1137,9 @@ class Interface(Control):
         lease_file = f'{config_base}_{ifname}.leases'
 
         # Stop client with old config files to get the right IF_METRIC.
-        self._cmd(f'systemctl stop dhclient@{ifname}.service')
+        systemd_service = f'dhclient@{ifname}.service'
+        if is_systemd_service_active(systemd_service):
+            self._cmd(f'systemctl stop {systemd_service}')
 
         if enable and 'disable' not in self._config:
             if dict_search('dhcp_options.host_name', self._config) == None:
@@ -1004,7 +1159,7 @@ class Interface(Control):
             # 'up' check is mandatory b/c even if the interface is A/D, as soon as
             # the DHCP client is started the interface will be placed in u/u state.
             # This is not what we intended to do when disabling an interface.
-            return self._cmd(f'systemctl start dhclient@{ifname}.service')
+            return self._cmd(f'systemctl restart {systemd_service}')
         else:
             # cleanup old config files
             for file in [config_file, options_file, pid_file, lease_file]:
@@ -1021,17 +1176,18 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        systemd_service = f'dhcp6c@{ifname}.service'
 
         if enable and 'disable' not in self._config:
             render(config_file, 'dhcp-client/ipv6.tmpl',
                    self._config)
 
-            # We must ignore any return codes. This is required to enable DHCPv6-PD
-            # for interfaces which are yet not up and running.
-            return self._popen(f'systemctl restart dhcp6c@{ifname}.service')
+            # We must ignore any return codes. This is required to enable
+            # DHCPv6-PD for interfaces which are yet not up and running.
+            return self._popen(f'systemctl restart {systemd_service}')
         else:
-            self._popen(f'systemctl stop dhcp6c@{ifname}.service')
-
+            if is_systemd_service_active(systemd_service):
+                self._cmd(f'systemctl stop {systemd_service}')
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
@@ -1048,12 +1204,14 @@ class Interface(Control):
             source_if = next(iter(self._config['is_mirror_intf']))
             config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
-        # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
-        # Remove existing mirroring rules
-        delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
-        delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
-        delete_tc_cmd += 'set $?=0'
-        self._popen(delete_tc_cmd)
+        # Check configuration stored by old perl code before delete T3782
+        if not 'redirect' in self._config:
+            # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
+            # Remove existing mirroring rules
+            delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
+            delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
+            delete_tc_cmd += 'set $?=0'
+            self._popen(delete_tc_cmd)
 
         # Bail out early if nothing needs to be configured
         if not config:
@@ -1124,16 +1282,16 @@ class Interface(Control):
 
         # determine IP addresses which are assigned to the interface and build a
         # list of addresses which are no longer in the dict so they can be removed
-        cur_addr = self.get_addr()
-        for addr in list_diff(cur_addr, new_addr):
-            # we will delete all interface specific IP addresses if they are not
-            # explicitly configured on the CLI
-            if is_ipv6_link_local(addr):
-                eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
-                if addr != f'{eui64}/64':
+        if 'address_old' in config:
+            for addr in list_diff(config['address_old'], new_addr):
+                # we will delete all interface specific IP addresses if they are not
+                # explicitly configured on the CLI
+                if is_ipv6_link_local(addr):
+                    eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
+                    if addr != f'{eui64}/64':
+                        self.del_addr(addr)
+                else:
                     self.del_addr(addr)
-            else:
-                self.del_addr(addr)
 
         for addr in new_addr:
             self.add_addr(addr)
@@ -1224,16 +1382,11 @@ class Interface(Control):
             self.set_mtu(config.get('mtu'))
 
         # Delete old IPv6 EUI64 addresses before changing MAC
-        tmp = dict_search('ipv6.address.eui64_old', config)
-        if tmp:
-            for addr in tmp:
-                self.del_ipv6_eui64_address(addr)
+        for addr in (dict_search('ipv6.address.eui64_old', config) or []):
+            self.del_ipv6_eui64_address(addr)
 
         # Manage IPv6 link-local addresses
-        tmp = dict_search('ipv6.address.no_default_link_local', config)
-        # we must check explicitly for None type as if the key is set we will
-        # get an empty dict (<class 'dict'>)
-        if isinstance(tmp, dict):
+        if dict_search('ipv6.address.no_default_link_local', config) != None:
             self.del_ipv6_eui64_address('fe80::/64')
         else:
             self.add_ipv6_eui64_address('fe80::/64')

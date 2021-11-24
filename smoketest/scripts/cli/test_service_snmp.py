@@ -19,9 +19,9 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
+from vyos.template import address_from_cidr
 from vyos.util import read_file
 from vyos.util import process_named_running
 
@@ -36,16 +36,29 @@ def get_config_value(key):
     return tmp[0]
 
 class TestSNMPService(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+    def tearDown(self):
+        # delete testing SNMP config
         self.cli_delete(base_path)
+        self.cli_commit()
 
     def test_snmp_basic(self):
+        dummy_if = 'dum7312'
+        dummy_addr = '100.64.0.1/32'
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', dummy_addr])
+
         # Check if SNMP can be configured and service runs
         clients = ['192.0.2.1', '2001:db8::1']
         networks = ['192.0.2.128/25', '2001:db8:babe::/48']
-        listen = ['127.0.0.1', '::1']
+        listen = ['127.0.0.1', '::1', address_from_cidr(dummy_addr)]
+        port = '5000'
 
         for auth in ['ro', 'rw']:
             community = 'VyOS' + auth
@@ -56,7 +69,7 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['community', community, 'network', network])
 
         for addr in listen:
-            self.cli_set(base_path + ['listen-address', addr])
+            self.cli_set(base_path + ['listen-address', addr, 'port', port])
 
         self.cli_set(base_path + ['contact', 'maintainers@vyos.io'])
         self.cli_set(base_path + ['location', 'qemu'])
@@ -68,16 +81,18 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         # thus we need to transfor this into a proper list
         config = get_config_value('agentaddress')
         expected = 'unix:/run/snmpd.socket'
+        self.assertIn(expected, config)
+
         for addr in listen:
             if is_ipv4(addr):
-                expected += ',udp:{}:161'.format(addr)
+                expected = f'udp:{addr}:{port}'
             else:
-                expected += ',udp6:[{}]:161'.format(addr)
-
-        self.assertTrue(expected in config)
+                expected = f'udp6:[{addr}]:{port}'
+            self.assertIn(expected, config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
 
 
     def test_snmpv3_sha(self):
@@ -86,7 +101,7 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['v3', 'engineid', '000000000000000000000002'])
         self.cli_set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
-        # check validate() - a view must be created before this can be comitted
+        # check validate() - a view must be created before this can be committed
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
@@ -152,4 +167,3 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

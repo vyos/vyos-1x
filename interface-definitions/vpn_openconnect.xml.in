@@ -75,7 +75,7 @@
           </node>
           <node name="listen-ports">
             <properties>
-              <help>SSL Certificate, SSL Key and CA (/config/auth)</help>
+              <help>Specify custom ports to use for client connections</help>
             </properties>
             <children>
               <leafNode name="tcp">
@@ -190,7 +190,7 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/accel-ppp/name-server.xml.i>
+              #include <include/name-server-ipv4-ipv6.xml.i>
             </children>
           </node>
       </children>

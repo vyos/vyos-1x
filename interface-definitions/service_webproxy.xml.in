@@ -214,7 +214,7 @@
                 <properties>
                   <help>Cache peer options (default: "no-query default")</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>Cache peer options</description>
                   </valueHelp>
                 </properties>

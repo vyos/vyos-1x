@@ -18,6 +18,9 @@
         <leafNode name="static-ip">
           <properties>
             <help>Static client IP address</help>
+            <constraint>
+              <validator name="ipv4-address"/>
+            </constraint>
           </properties>
           <defaultValue>*</defaultValue>
         </leafNode>

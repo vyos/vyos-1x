@@ -1,0 +1,9 @@
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} default-router {{ default_router }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} name-server {{ name_server }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} domain-name {{ domain_name }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} lease {{ lease }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} range {{ range }} start {{ start }}
+set service dhcp-server shared-network-name {{ shared_network_name }} subnet {{ subnet }} range {{ range }} stop {{ stop }}
+set service dns forwarding allow-from {{ dns_forwarding_allow_from }}
+set service dns forwarding cache-size {{ dns_forwarding_cache_size }}
+set service dns forwarding listen-address {{ dns_forwarding_listen_address }}

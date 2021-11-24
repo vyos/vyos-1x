@@ -108,16 +108,20 @@ def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return a list containing the old
-    value(s). If nothing has been changed, None is returned
+    value(s). If nothing has been changed, None is returned.
+
+    NOTE: path must use the real CLI node name (e.g. with a hyphen!)
     """
     from vyos.configdiff import get_config_diff
     D = get_config_diff(conf, key_mangling=('-', '_'))
     D.set_level(conf.get_level())
     (new, old) = D.get_value_diff(path)
     if new != old:
+        if old is None:
+            return []
         if isinstance(old, str):
             return [old]
-        elif isinstance(old, list):
+        if isinstance(old, list):
             if isinstance(new, str):
                 new = [new]
             elif isinstance(new, type(None)):
@@ -151,18 +155,15 @@ def get_removed_vlans(conf, dict):
     D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(['vif'], expand_nodes=Diff.DELETE)['delete'].keys()
-    if keys:
-        dict.update({'vif_remove': [*keys]})
+    if keys: dict['vif_remove'] = [*keys]
 
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(['vif-s'], expand_nodes=Diff.DELETE)['delete'].keys()
-    if keys:
-        dict.update({'vif_s_remove': [*keys]})
+    if keys: dict['vif_s_remove'] = [*keys]
 
     for vif in dict.get('vif_s', {}).keys():
         keys = D.get_child_nodes_diff(['vif-s', vif, 'vif-c'], expand_nodes=Diff.DELETE)['delete'].keys()
-        if keys:
-            dict.update({'vif_s': { vif : {'vif_c_remove': [*keys]}}})
+        if keys: dict['vif_s'][vif]['vif_c_remove'] = [*keys]
 
     return dict
 
@@ -343,8 +344,8 @@ def get_interface_dict(config, base, ifname=''):
 
     # setup config level which is extracted in get_removed_vlans()
     config.set_level(base + [ifname])
-    dict = config.get_config_dict([], key_mangling=('-', '_'),
-                                  get_first_key=True)
+    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True,
+                                  no_tag_node_value_mangle=True)
 
     # Check if interface has been removed. We must use exists() as
     # get_config_dict() will always return {} - even when an empty interface
@@ -370,6 +371,9 @@ def get_interface_dict(config, base, ifname=''):
 
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
+
+    address = leaf_node_changed(config, ['address'])
+    if address: dict.update({'address_old' : address})
 
     # Check if we are a member of a bridge device
     bridge = is_member(config, ifname, 'bridge')
@@ -515,6 +519,11 @@ def get_accel_dict(config, base, chap_secrets):
     if dict_search('authentication.local_users.username', default_values):
         del default_values['authentication']['local_users']['username']
 
+    # T2665: defaults include IPv6 client-pool mask per TAG node which need to be
+    # added to individual local users instead - so we can simply delete them
+    if dict_search('client_ipv6_pool.prefix.mask', default_values):
+        del default_values['client_ipv6_pool']['prefix']['mask']
+
     dict = dict_merge(default_values, dict)
 
     # set CPUs cores to process requests
@@ -557,5 +566,14 @@ def get_accel_dict(config, base, chap_secrets):
         for username in dict_search('authentication.local_users.username', dict):
             dict['authentication']['local_users']['username'][username] = dict_merge(
                 default_values, dict['authentication']['local_users']['username'][username])
+
+    # Add individual IPv6 client-pool default mask if required
+    if dict_search('client_ipv6_pool.prefix', dict):
+        # T2665
+        default_values = defaults(base + ['client-ipv6-pool', 'prefix'])
+
+        for prefix in dict_search('client_ipv6_pool.prefix', dict):
+            dict['client_ipv6_pool']['prefix'][prefix] = dict_merge(
+                default_values, dict['client_ipv6_pool']['prefix'][prefix])
 
     return dict

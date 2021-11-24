@@ -18,7 +18,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.util import process_named_running
 
 base_path = ['service', 'mdns', 'repeater']

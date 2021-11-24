@@ -214,7 +214,7 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                self.assertTrue(AF_INET6 not in ifaddresses(interface))
+                self.assertNotIn(AF_INET6, ifaddresses(interface))
 
         def test_interface_mtu(self):
             if not self._test_mtu:
@@ -246,10 +246,18 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 base = self._base_path + [intf]
                 self.cli_set(base + ['mtu', self._mtu])
-                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
                 for option in self._options.get(intf, []):
                     self.cli_set(base + option.split())
+
+            # check validate() - can not set low MTU if 'no-default-link-local'
+            # is not set on CLI
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+
+            for intf in self._interfaces:
+                base = self._base_path + [intf]
+                self.cli_set(base + ['ipv6', 'address', 'no-default-link-local'])
 
             # commit interface changes
             self.cli_commit()
@@ -411,6 +419,16 @@ class BasicInterfaceTest:
                         tmp = read_file(f'/sys/class/net/{vif}/mtu')
                         self.assertEqual(tmp, self._mtu)
 
+            # T3972: remove vif-c interfaces from vif-s
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vif_s in self._qinq_range:
+                    base = self._base_path + [interface, 'vif-s', vif_s, 'vif-c']
+                    self.cli_delete(base)
+
+            self.cli_commit()
+
+
         def test_interface_ip_options(self):
             if not self._test_ip:
                 self.skipTest('not supported')
@@ -438,28 +456,30 @@ class BasicInterfaceTest:
                 tmp = read_file(f'/proc/sys/net/ipv4/neigh/{interface}/base_reachable_time_ms')
                 self.assertEqual(tmp, str((int(arp_tmo) * 1000))) # tmo value is in milli seconds
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_filter')
+                proc_base = f'/proc/sys/net/ipv4/conf/{interface}'
+
+                tmp = read_file(f'{proc_base}/arp_filter')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_accept')
+                tmp = read_file(f'{proc_base}/arp_accept')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_announce')
+                tmp = read_file(f'{proc_base}/arp_announce')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/arp_ignore')
+                tmp = read_file(f'{proc_base}/arp_ignore')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/forwarding')
+                tmp = read_file(f'{proc_base}/forwarding')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp')
+                tmp = read_file(f'{proc_base}/proxy_arp')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/proxy_arp_pvlan')
+                tmp = read_file(f'{proc_base}/proxy_arp_pvlan')
                 self.assertEqual('1', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv4/conf/{interface}/rp_filter')
+                tmp = read_file(f'{proc_base}/rp_filter')
                 self.assertEqual('2', tmp)
 
         def test_interface_ipv6_options(self):
@@ -479,10 +499,12 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/forwarding')
+                proc_base = f'/proc/sys/net/ipv6/conf/{interface}'
+
+                tmp = read_file(f'{proc_base}/forwarding')
                 self.assertEqual('0', tmp)
 
-                tmp = read_file(f'/proc/sys/net/ipv6/conf/{interface}/dad_transmits')
+                tmp = read_file(f'{proc_base}/dad_transmits')
                 self.assertEqual(dad_transmits, tmp)
 
         def test_dhcpv6_client_options(self):

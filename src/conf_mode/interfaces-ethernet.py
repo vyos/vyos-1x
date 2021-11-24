@@ -62,12 +62,6 @@ def verify(ethernet):
 
     ifname = ethernet['ifname']
     verify_interface_exists(ifname)
-
-    # No need to check speed and duplex keys as both have default values.
-    if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
-        (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
-            raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
-
     verify_mtu(ethernet)
     verify_mtu_ipv6(ethernet)
     verify_dhcpv6(ethernet)
@@ -76,25 +70,31 @@ def verify(ethernet):
     verify_eapol(ethernet)
     verify_mirror(ethernet)
 
-    # verify offloading capabilities
-    if dict_search('offload.rps', ethernet) != None:
-        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
-            raise ConfigError('Interface does not suport RPS!')
-
-    driver = EthernetIf(ifname).get_driver_name()
-    # T3342 - Xen driver requires special treatment
-    if driver == 'vif':
-        if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
-            raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
-                              'for MTU size larger then 1500 bytes')
-
     ethtool = Ethtool(ifname)
+    # No need to check speed and duplex keys as both have default values.
+    if ((ethernet['speed'] == 'auto' and ethernet['duplex'] != 'auto') or
+        (ethernet['speed'] != 'auto' and ethernet['duplex'] == 'auto')):
+            raise ConfigError('Speed/Duplex missmatch. Must be both auto or manually configured')
+
+    if ethernet['speed'] != 'auto' and ethernet['duplex'] != 'auto':
+        # We need to verify if the requested speed and duplex setting is
+        # supported by the underlaying NIC.
+        speed = ethernet['speed']
+        duplex = ethernet['duplex']
+        if not ethtool.check_speed_duplex(speed, duplex):
+            raise ConfigError(f'Adapter does not support changing speed and duplex '\
+                              f'settings to: {speed}/{duplex}!')
+
+    if 'disable_flow_control' in ethernet:
+        if not ethtool.check_flow_control():
+            raise ConfigError('Adapter does not support changing flow-control settings!')
+
     if 'ring_buffer' in ethernet:
-        max_rx = ethtool.get_rx_buffer()
+        max_rx = ethtool.get_ring_buffer_max('rx')
         if not max_rx:
             raise ConfigError('Driver does not support RX ring-buffer configuration!')
 
-        max_tx = ethtool.get_tx_buffer()
+        max_tx = ethtool.get_ring_buffer_max('tx')
         if not max_tx:
             raise ConfigError('Driver does not support TX ring-buffer configuration!')
 
@@ -107,6 +107,18 @@ def verify(ethernet):
         if tx and int(tx) > int(max_tx):
             raise ConfigError(f'Driver only supports a maximum TX ring-buffer '\
                               f'size of "{max_tx}" bytes!')
+
+    # verify offloading capabilities
+    if dict_search('offload.rps', ethernet) != None:
+        if not os.path.exists(f'/sys/class/net/{ifname}/queues/rx-0/rps_cpus'):
+            raise ConfigError('Interface does not suport RPS!')
+
+    driver = ethtool.get_driver_name()
+    # T3342 - Xen driver requires special treatment
+    if driver == 'vif':
+        if int(ethernet['mtu']) > 1500 and dict_search('offload.sg', ethernet) == None:
+            raise ConfigError('Xen netback drivers requires scatter-gatter offloading '\
+                              'for MTU size larger then 1500 bytes')
 
     if {'is_bond_member', 'mac'} <= set(ethernet):
         print(f'WARNING: changing mac address "{mac}" will be ignored as "{ifname}" '

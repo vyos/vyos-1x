@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,12 +22,13 @@ from vyos import airbag
 airbag.enable()
 
 motd="""
-The programs included with the Debian GNU/Linux system are free software;
-the exact distribution terms for each program are described in the
-individual files in /usr/share/doc/*/copyright.
+Check out project news at https://blog.vyos.io
+and feel free to report bugs at https://phabricator.vyos.net
 
-Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
-permitted by applicable law.
+You can change this banner using "set system login banner post-login" command.
+
+VyOS is a free software distribution that includes multiple components,
+you can check individual component licenses under /usr/share/doc/*/copyright
 
 """
 
@@ -36,7 +37,7 @@ PRELOGIN_NET_FILE = r'/etc/issue.net'
 POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
-    'issue': 'Welcome to VyOS - \n \l\n',
+    'issue': 'Welcome to VyOS - \\n \\l\n\n',
     'issue_net': 'Welcome to VyOS\n',
     'motd': motd
 }

@@ -16,9 +16,11 @@
 import os
 import re
 
+from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
 from vyos.util import dict_search
+from vyos.util import read_file
 from vyos.validate import assert_list
 
 @Interface.register
@@ -42,39 +44,29 @@ class EthernetIf(Interface):
 
     @staticmethod
     def feature(ifname, option, value):
-        run(f'ethtool -K {ifname} {option} {value}','ifconfig')
+        run(f'ethtool --features {ifname} {option} {value}')
         return False
 
     _command_set = {**Interface._command_set, **{
         'gro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gro', v),
-            # 'shellcmd': 'ethtool -K {ifname} gro {value}',
         },
         'gso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
-            # 'shellcmd': 'ethtool -K {ifname} gso {value}',
         },
         'lro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
-            # 'shellcmd': 'ethtool -K {ifname} lro {value}',
         },
         'sg': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'sg', v),
-            # 'shellcmd': 'ethtool -K {ifname} sg {value}',
         },
         'tso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
-            # 'shellcmd': 'ethtool -K {ifname} tso {value}',
-        },
-        'ufo': {
-            'validate': lambda v: assert_list(v, ['on', 'off']),
-            'possible': lambda i, v: EthernetIf.feature(i, 'ufo', v),
-            # 'shellcmd': 'ethtool -K {ifname} ufo {value}',
         },
     }}
 
@@ -85,24 +77,26 @@ class EthernetIf(Interface):
         },
     }}
 
-    def get_driver_name(self):
-        """
-        Return the driver name used by NIC. Some NICs don't support all
-        features e.g. changing link-speed, duplex
+    def __init__(self, ifname, **kargs):
+        super().__init__(ifname, **kargs)
+        self.ethtool = Ethtool(ifname)
 
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.get_driver_name()
-        'vmxnet3'
+    def remove(self):
         """
-        ifname = self.config['ifname']
-        sysfs_file = f'/sys/class/net/{ifname}/device/driver/module'
-        if os.path.exists(sysfs_file):
-            link = os.readlink(sysfs_file)
-            return os.path.basename(link)
-        else:
-            return None
+        Remove interface from config. Removing the interface deconfigures all
+        assigned IP addresses.
+        Example:
+        >>> from vyos.ifconfig import WWANIf
+        >>> i = EthernetIf('eth0')
+        >>> i.remove()
+        """
+
+        if self.exists(self.ifname):
+            # interface is placed in A/D state when removed from config! It
+            # will remain visible for the operating system.
+            self.set_admin_state('down')
+
+        super().remove()
 
     def set_flow_control(self, enable):
         """
@@ -120,44 +114,20 @@ class EthernetIf(Interface):
         if enable not in ['on', 'off']:
             raise ValueError("Value out of range")
 
-        driver_name = self.get_driver_name()
-        if driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
-            self._debug_msg(f'{driver_name} driver does not support changing '\
-                            'flow control settings!')
-            return
+        if not self.ethtool.check_flow_control():
+            self._debug_msg(f'NIC driver does not support changing flow control settings!')
+            return False
 
-        # Get current flow control settings:
-        cmd = f'ethtool --show-pause {ifname}'
-        output, code = self._popen(cmd)
-        if code == 76:
-            # the interface does not support it
-            return ''
-        if code:
-            # never fail here as it prevent vyos to boot
-            print(f'unexpected return code {code} from {cmd}')
-            return ''
-
-        # The above command returns - with tabs:
-        #
-        # Pause parameters for eth0:
-        # Autonegotiate:  on
-        # RX:             off
-        # TX:             off
-        if re.search("Autonegotiate:\ton", output):
-            if enable == "on":
-                # flowcontrol is already enabled - no need to re-enable it again
-                # this will prevent the interface from flapping as applying the
-                # flow-control settings will take the interface down and bring
-                # it back up every time.
-                return ''
-
-        # Assemble command executed on system. Unfortunately there is no way
-        # to change this setting via sysfs
-        cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
-        output, code = self._popen(cmd)
-        if code:
-            print(f'could not set flowcontrol for {ifname}')
-        return output
+        current = self.ethtool.get_flow_control()
+        if current != enable:
+            # Assemble command executed on system. Unfortunately there is no way
+            # to change this setting via sysfs
+            cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
+            output, code = self._popen(cmd)
+            if code:
+                print(f'Could not set flowcontrol for {ifname}')
+            return output
+        return None
 
     def set_speed_duplex(self, speed, duplex):
         """
@@ -179,40 +149,28 @@ class EthernetIf(Interface):
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError("Value out of range (duplex)")
 
-        driver_name = self.get_driver_name()
-        if driver_name in ['vmxnet3', 'virtio_net', 'xen_netfront']:
-            self._debug_msg(f'{driver_name} driver does not support changing '\
-                            'speed/duplex settings!')
+        if not self.ethtool.check_speed_duplex(speed, duplex):
+            self._debug_msg(f'NIC driver does not support changing speed/duplex settings!')
             return
 
         # Get current speed and duplex settings:
         ifname = self.config['ifname']
-        cmd = f'ethtool {ifname}'
-        tmp = self._cmd(cmd)
-
-        if re.search("\tAuto-negotiation: on", tmp):
+        if self.ethtool.get_auto_negotiation():
             if speed == 'auto' and duplex == 'auto':
                 # bail out early as nothing is to change
                 return
         else:
-            # read in current speed and duplex settings
-            cur_speed = 0
-            cur_duplex = ''
-            for line in tmp.splitlines():
-                if line.lstrip().startswith("Speed:"):
-                    non_decimal = re.compile(r'[^\d.]+')
-                    cur_speed = non_decimal.sub('', line)
-                    continue
-
-                if line.lstrip().startswith("Duplex:"):
-                    cur_duplex = line.split()[-1].lower()
-                    break
-
+            # XXX: read in current speed and duplex settings
+            # There are some "nice" NICs like AX88179 which do not support
+            # reading the speed thus we simply fallback to the supplied speed
+            # to not cause any change here and raise an exception.
+            cur_speed = read_file(f'/sys/class/net/{ifname}/speed', speed)
+            cur_duplex = read_file(f'/sys/class/net/{ifname}/duplex', duplex)
             if (cur_speed == speed) and (cur_duplex == duplex):
                 # bail out early as nothing is to change
                 return
 
-        cmd = f'ethtool -s {ifname}'
+        cmd = f'ethtool --change {ifname}'
         if speed == 'auto' or duplex == 'auto':
             cmd += ' autoneg on'
         else:
@@ -229,8 +187,15 @@ class EthernetIf(Interface):
         >>> i.set_gro(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('gro', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_generic_receive_offload()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gro', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing generic-receive-offload settings!')
+        return False
 
     def set_gso(self, state):
         """
@@ -241,8 +206,15 @@ class EthernetIf(Interface):
         >>> i.set_gso(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('gso', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_generic_segmentation_offload()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gso', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing generic-segmentation-offload settings!')
+        return False
 
     def set_lro(self, state):
         """
@@ -253,12 +225,19 @@ class EthernetIf(Interface):
         >>> i.set_lro(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('lro', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_large_receive_offload()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gro', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing large-receive-offload settings!')
+        return False
 
     def set_rps(self, state):
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
+            raise ValueError('Value out of range')
 
         rps_cpus = '0'
         if state:
@@ -283,8 +262,15 @@ class EthernetIf(Interface):
         >>> i.set_sg(True)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('sg', 'on' if state else 'off')
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_scatter_gather()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gro', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing scatter-gather settings!')
+        return False
 
     def set_tso(self, state):
         """
@@ -296,39 +282,37 @@ class EthernetIf(Interface):
         >>> i.set_tso(False)
         """
         if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('tso', 'on' if state else 'off')
+            raise ValueError('Value out of range')
 
-    def set_ufo(self, state):
-        """
-        Enable UDP fragmentation offloading. State can be either True or False.
+        enabled, fixed = self.ethtool.get_tcp_segmentation_offload()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('gro', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing tcp-segmentation-offload settings!')
+        return False
 
-        Example:
-        >>> from vyos.ifconfig import EthernetIf
-        >>> i = EthernetIf('eth0')
-        >>> i.set_udp_offload(True)
-        """
-        if not isinstance(state, bool):
-            raise ValueError("Value out of range")
-        return self.set_interface('ufo', 'on' if state else 'off')
-
-    def set_ring_buffer(self, b_type, b_size):
+    def set_ring_buffer(self, rx_tx, size):
         """
         Example:
         >>> from vyos.ifconfig import EthernetIf
         >>> i = EthernetIf('eth0')
         >>> i.set_ring_buffer('rx', '4096')
         """
+        current_size = self.ethtool.get_ring_buffer(rx_tx)
+        if current_size == size:
+            # bail out early if nothing is about to change
+            return None
+
         ifname = self.config['ifname']
-        cmd = f'ethtool -G {ifname} {b_type} {b_size}'
+        cmd = f'ethtool --set-ring {ifname} {rx_tx} {size}'
         output, code = self._popen(cmd)
         # ethtool error codes:
         #  80 - value already setted
         #  81 - does not possible to set value
         if code and code != 80:
-            print(f'could not set "{b_type}" ring-buffer for {ifname}')
+            print(f'could not set "{rx_tx}" ring-buffer for {ifname}')
         return output
-
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -358,9 +342,6 @@ class EthernetIf(Interface):
         # TSO (TCP segmentation offloading)
         self.set_tso(dict_search('offload.tso', config) != None)
 
-        # UDP fragmentation offloading
-        self.set_ufo(dict_search('offload.ufo', config) != None)
-
         # Set physical interface speed and duplex
         if {'speed', 'duplex'} <= set(config):
             speed = config.get('speed')
@@ -369,8 +350,8 @@ class EthernetIf(Interface):
 
         # Set interface ring buffer
         if 'ring_buffer' in config:
-            for b_type in config['ring_buffer']:
-                self.set_ring_buffer(b_type, config['ring_buffer'][b_type])
+            for rx_tx, size in config['ring_buffer'].items():
+                self.set_ring_buffer(rx_tx, size)
 
         # call base class first
         super().update(config)

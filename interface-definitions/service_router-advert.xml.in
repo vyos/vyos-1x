@@ -20,12 +20,12 @@
                 <properties>
                   <help>Set Hop Count field of the IP header for outgoing packets (default: 64)</help>
                   <valueHelp>
-                    <format>1-255</format>
-                    <description>Value should represent current diameter of the Internet</description>
+                    <format>u32:0</format>
+                    <description>Unspecified (by this router)</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>0</format>
-                    <description>Unspecified (by this router)</description>
+                    <format>u32:1-255</format>
+                    <description>Value should represent current diameter of the Internet</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 0-255"/>
@@ -38,7 +38,7 @@
                 <properties>
                   <help>Lifetime associated with the default router in units of seconds</help>
                   <valueHelp>
-                    <format>4-9000</format>
+                    <format>u32:4-9000</format>
                     <description>Router Lifetime in seconds</description>
                   </valueHelp>
                   <valueHelp>
@@ -86,7 +86,7 @@
                 <properties>
                   <help>Link MTU value placed in RAs, exluded in RAs if unset</help>
                   <valueHelp>
-                    <format>1280-9000</format>
+                    <format>u32:1280-9000</format>
                     <description>Link MTU value in RAs</description>
                   </valueHelp>
                   <constraint>
@@ -110,7 +110,7 @@
                     <properties>
                       <help>Maximum interval between unsolicited multicast RAs (default: 600)</help>
                       <valueHelp>
-                        <format>4-1800</format>
+                        <format>u32:4-1800</format>
                         <description>Maximum interval in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -124,7 +124,7 @@
                     <properties>
                       <help>Minimum interval between unsolicited multicast RAs</help>
                       <valueHelp>
-                        <format>3-1350</format>
+                        <format>u32:3-1350</format>
                         <description>Minimum interval in seconds</description>
                       </valueHelp>
                       <constraint>
@@ -135,19 +135,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="name-server">
-                <properties>
-                  <help>IPv6 address of recursive DNS server</help>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address of DNS name server</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/name-server-ipv6.xml.i>
               <leafNode name="other-config-flag">
                 <properties>
                   <help>Hosts use the administered (stateful) protocol for autoconfiguration of other (non-address) information</help>
@@ -173,7 +161,7 @@
                         <list>infinity</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>1-4294967295</format>
+                        <format>u32:1-4294967295</format>
                         <description>Time in seconds that the route will remain valid</description>
                       </valueHelp>
                       <valueHelp>
@@ -272,7 +260,7 @@
                         <list>infinity</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>1-4294967295</format>
+                        <format>u32:1-4294967295</format>
                         <description>Time in seconds that the prefix will remain valid</description>
                       </valueHelp>
                       <valueHelp>
@@ -292,12 +280,12 @@
                 <properties>
                   <help>Time, in milliseconds, that a node assumes a neighbor is reachable after having received a reachability confirmation</help>
                   <valueHelp>
-                    <format>1-3600000</format>
-                    <description>Reachable Time value in RAs (in milliseconds)</description>
+                    <format>u32:0</format>
+                    <description>Reachable Time unspecified by this router</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>0</format>
-                    <description>Reachable Time unspecified by this router</description>
+                    <format>u32:1-3600000</format>
+                    <description>Reachable Time value in RAs (in milliseconds)</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 0-0 --range 1-3600000"/>
@@ -310,12 +298,12 @@
                 <properties>
                   <help>Time in milliseconds between retransmitted Neighbor Solicitation messages</help>
                   <valueHelp>
-                    <format>1-4294967295</format>
-                    <description>Minimum interval in milliseconds</description>
+                    <format>u32:0</format>
+                    <description>Time, in milliseconds, between retransmitted Neighbor Solicitation messages</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>0</format>
-                    <description>Time, in milliseconds, between retransmitted Neighbor Solicitation messages</description>
+                    <format>u32:1-4294967295</format>
+                    <description>Minimum interval in milliseconds</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 0-0 --range 1-4294967295"/>

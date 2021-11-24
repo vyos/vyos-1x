@@ -16,7 +16,6 @@
 
 import unittest
 
-from vyos.configsession import ConfigSession
 from vyos.ifconfig import Interface
 from vyos.util import get_interface_config
 

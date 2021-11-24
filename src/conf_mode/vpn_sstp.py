@@ -50,16 +50,14 @@ def verify(sstp):
 
     verify_accel_ppp_base_service(sstp)
 
-    if not sstp['client_ip_pool']:
+    if 'client_ip_pool' not in sstp and 'client_ipv6_pool' not in sstp:
         raise ConfigError('Client IP subnet required')
 
     #
     # SSL certificate checks
     #
     tmp = dict_search('ssl.ca_cert_file', sstp)
-    if not tmp:
-        raise ConfigError(f'SSL CA certificate file required!')
-    else:
+    if tmp:
         if not os.path.isfile(tmp):
             raise ConfigError(f'SSL CA certificate "{tmp}" does not exist!')
 

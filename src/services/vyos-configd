@@ -133,8 +133,7 @@ def explicit_print(path, mode, msg):
         logger.critical("error explicit_print")
 
 def run_script(script, config, args) -> int:
-    if args:
-        script.argv = args
+    script.argv = args
     config.set_level([])
     try:
         c = script.get_config(config)
@@ -208,7 +207,7 @@ def process_node_data(config, data) -> int:
         return R_ERROR_DAEMON
 
     script_name = None
-    args = None
+    args = []
 
     res = re.match(r'^(VYOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):
@@ -221,7 +220,7 @@ def process_node_data(config, data) -> int:
         return R_ERROR_DAEMON
     if res.group(3):
         args = res.group(3).split()
-        args.insert(0, f'{script_name}.py')
+    args.insert(0, f'{script_name}.py')
 
     if script_name not in include_set:
         return R_PASS

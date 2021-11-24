@@ -45,11 +45,11 @@
     </children>
   </node>
   <node name="reset">
-    <properties>
-      <help>Reset a service</help>
-    </properties>
     <children>
       <node name="openvpn">
+        <properties>
+          <help>Reset OpenVPN client/server connections</help>
+        </properties>
         <children>
           <tagNode name="client">
             <properties>

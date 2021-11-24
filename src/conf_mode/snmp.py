@@ -20,13 +20,17 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
-from vyos.snmpv3_hashgen import plaintext_to_md5, plaintext_to_sha1, random
+from vyos.snmpv3_hashgen import plaintext_to_md5
+from vyos.snmpv3_hashgen import plaintext_to_sha1
+from vyos.snmpv3_hashgen import random
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.util import call, chmod_755
+from vyos.util import call
+from vyos.util import chmod_755
 from vyos.validate import is_addr_assigned
 from vyos.version import get_version_data
-from vyos import ConfigError, airbag
+from vyos import ConfigError
+from vyos import airbag
 airbag.enable()
 
 config_file_client  = r'/etc/snmp/snmp.conf'
@@ -401,19 +405,20 @@ def verify(snmp):
         addr = listen[0]
         port = listen[1]
 
+        tmp = None
         if is_ipv4(addr):
             # example: udp:127.0.0.1:161
-            listen = 'udp:' + addr + ':' + port
+            tmp = f'udp:{addr}:{port}'
         elif snmp['ipv6_enabled']:
             # example: udp6:[::1]:161
-            listen = 'udp6:' + '[' + addr + ']' + ':' + port
+            tmp = f'udp6:[{addr}]:{port}'
 
         # We only wan't to configure addresses that exist on the system.
         # Hint the user if they don't exist
         if is_addr_assigned(addr):
-            snmp['listen_on'].append(listen)
+            if tmp: snmp['listen_on'].append(tmp)
         else:
-            print('WARNING: SNMP listen address {0} not configured!'.format(addr))
+            print(f'WARNING: SNMP listen address {addr} not configured!')
 
     verify_vrf(snmp)
 

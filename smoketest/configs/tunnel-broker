@@ -1,0 +1,135 @@
+interfaces {
+    dummy dum0 {
+        address 192.0.2.0/32
+    }
+    dummy dum1 {
+        address 192.0.2.1/32
+    }
+    dummy dum2 {
+        address 192.0.2.2/32
+    }
+    dummy dum3 {
+        address 192.0.2.3/32
+    }
+    dummy dum4 {
+        address 192.0.2.4/32
+    }
+    ethernet eth0 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+        address 172.18.202.10/24
+    }
+    l2tpv3 l2tpeth10 {
+        destination-port 5010
+        encapsulation ip
+        local-ip 172.18.202.10
+        peer-session-id 110
+        peer-tunnel-id 10
+        remote-ip 172.18.202.110
+        session-id 110
+        source-port 5010
+        tunnel-id 10
+    }
+    l2tpv3 l2tpeth20 {
+        destination-port 5020
+        encapsulation ip
+        local-ip 172.18.202.10
+        peer-session-id 120
+        peer-tunnel-id 20
+        remote-ip 172.18.202.120
+        session-id 120
+        source-port 5020
+        tunnel-id 20
+    }
+    l2tpv3 l2tpeth30 {
+        destination-port 5030
+        encapsulation ip
+        local-ip 172.18.202.10
+        peer-session-id 130
+        peer-tunnel-id 30
+        remote-ip 172.18.202.130
+        session-id 130
+        source-port 5030
+        tunnel-id 30
+    }
+    tunnel tun100 {
+        address 172.16.0.1/30
+        encapsulation gre-bridge
+        local-ip 192.0.2.1
+        remote-ip 192.0.2.100
+    }
+    tunnel tun200 {
+        address 172.16.0.5/30
+        encapsulation gre
+        dhcp-interface eth0
+        remote-ip 192.0.2.101
+    }
+    tunnel tun300 {
+        address 172.16.0.9/30
+        encapsulation ipip
+        local-ip 192.0.2.2
+        remote-ip 192.0.2.102
+    }
+    tunnel tun400 {
+        address 172.16.0.13/30
+        encapsulation gre-bridge
+        local-ip 192.0.2.3
+        remote-ip 192.0.2.103
+    }
+    tunnel tun500 {
+        address 172.16.0.17/30
+        encapsulation gre
+        local-ip 192.0.2.4
+        remote-ip 192.0.2.104
+    }
+}
+protocols {
+    static {
+        route 0.0.0.0/0 {
+            next-hop 172.18.202.254 {
+            }
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+/* Warning: Do not remove the following line. */
+/* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@10:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
+/* Release version: 1.2.6-S1 */

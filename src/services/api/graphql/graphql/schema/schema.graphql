@@ -1,0 +1,18 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Query {
+    _dummy: String
+}
+
+directive @generate on FIELD_DEFINITION
+directive @configfile on FIELD_DEFINITION
+
+type Mutation {
+    createDhcpServer(data: dhcpServerConfigInput) : createDhcpServerResult @generate
+    createInterfaceEthernet(data: interfaceEthernetConfigInput) : createInterfaceEthernetResult @generate
+    saveConfigFile(data: saveConfigFileInput) : saveConfigFileResult @configfile
+    loadConfigFile(data: loadConfigFileInput) : loadConfigFileResult @configfile
+}

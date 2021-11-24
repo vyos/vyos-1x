@@ -17,7 +17,6 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.configsession import ConfigSession
 from vyos.util import run
 
 base_path = ['service', 'https']

@@ -6,7 +6,7 @@
         <children>
           <tagNode name="pppoe">
             <properties>
-              <help>Show PPPoE interface information</help>
+              <help>Show specified PPPoE interface information</help>
               <completionHelp>
                 <path>interfaces pppoe</path>
               </completionHelp>

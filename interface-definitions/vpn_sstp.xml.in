@@ -25,9 +25,9 @@
               </node>
             </children>
           </node>
-          #include <include/interface/interface-mtu-68-1500.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
           #include <include/accel-ppp/gateway-address.xml.i>
-          #include <include/accel-ppp/name-server.xml.i>
+          #include <include/name-server-ipv4-ipv6.xml.i>
           <node name="client-ip-pool">
             <properties>
               <help>Client IP pools and gateway setting</help>
@@ -43,6 +43,8 @@
             </properties>
             <children>
               #include <include/accel-ppp/ppp-mppe.xml.i>
+              #include <include/accel-ppp/ppp-options-ipv4.xml.i>
+              #include <include/accel-ppp/ppp-options-ipv6.xml.i>
               #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
               #include <include/accel-ppp/lcp-echo-timeout.xml.i>
             </children>

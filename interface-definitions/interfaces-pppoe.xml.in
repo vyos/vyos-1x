@@ -5,7 +5,7 @@
       <tagNode name="pppoe" owner="${vyos_conf_scripts_dir}/interfaces-pppoe.py">
         <properties>
           <help>Point-to-Point Protocol over Ethernet (PPPoE)</help>
-          <priority>321</priority>
+          <priority>322</priority>
           <constraint>
             <regex>^pppoe[0-9]+$</regex>
           </constraint>
@@ -16,17 +16,9 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="access-concentrator">
-            <properties>
-              <help>Access concentrator name (only connect to this concentrator)</help>
-              <constraint>
-                <regex>[a-zA-Z0-9]+$</regex>
-              </constraint>
-              <constraintErrorMessage>Access concentrator name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
-            </properties>
-          </leafNode>
+          #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
-          #include <include/interface/interface-dial-on-demand.xml.i>
+          #include <include/interface/dial-on-demand.xml.i>
           <leafNode name="default-route">
             <properties>
               <help>Default route insertion behaviour (default: auto)</help>
@@ -53,16 +45,20 @@
             <defaultValue>auto</defaultValue>
           </leafNode>
           #include <include/interface/dhcpv6-options.xml.i>
-          #include <include/interface/interface-description.xml.i>
-          #include <include/interface/interface-disable.xml.i>
-          #include <include/interface/interface-vrf.xml.i>
+          #include <include/interface/description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/vrf.xml.i>
           <leafNode name="idle-timeout">
             <properties>
               <help>Delay before disconnecting idle session (in seconds)</help>
               <valueHelp>
-                <format>n</format>
+                <format>u32:0-86400</format>
                 <description>Idle timeout in seconds</description>
               </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-86400"/>
+              </constraint>
+              <constraintErrorMessage>Timeout must be in range 0 to 86400</constraintErrorMessage>
             </properties>
           </leafNode>
           <node name="ip">
@@ -70,7 +66,7 @@
               <help>IPv4 routing parameters</help>
             </properties>
             <children>
-              #include <include/interface/interface-source-validation.xml.i>
+              #include <include/interface/source-validation.xml.i>
             </children>
           </node>
           <node name="ipv6">
@@ -88,14 +84,7 @@
               </node>
             </children>
           </node>
-          <leafNode name="source-interface">
-            <properties>
-              <help>Physical Interface used for this PPPoE session</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
-              </completionHelp>
-            </properties>
-          </leafNode>
+          #include <include/source-interface.xml.i>
           <leafNode name="local-address">
             <properties>
               <help>IPv4 address of local end of the PPPoE link</help>
@@ -108,7 +97,7 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface/interface-mtu-68-1500.xml.i>
+          #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
             <defaultValue>1492</defaultValue>
           </leafNode>
@@ -136,7 +125,7 @@
               <constraint>
                 <regex>[a-zA-Z0-9]+$</regex>
               </constraint>
-              <constraintErrorMessage>Service name must be composed of uppper and lower case letters or numbers only</constraintErrorMessage>
+              <constraintErrorMessage>Service name must be alphanumeric only</constraintErrorMessage>
             </properties>
           </leafNode>
         </children>

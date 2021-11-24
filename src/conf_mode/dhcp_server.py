@@ -148,20 +148,35 @@ def verify(dhcp):
                           'At least one DHCP shared network must be configured.')
 
     # Inspect shared-network/subnet
-    failover_names = []
     listen_ok = False
     subnets = []
+    failover_ok = False
+    shared_networks =  len(dhcp['shared_network_name'])
+    disabled_shared_networks = 0
+
 
     # A shared-network requires a subnet definition
     for network, network_config in dhcp['shared_network_name'].items():
+        if 'disable' in network_config:
+            disabled_shared_networks += 1
+
         if 'subnet' not in network_config:
             raise ConfigError(f'No subnets defined for {network}. At least one\n' \
                               'lease subnet must be configured.')
 
         for subnet, subnet_config in network_config['subnet'].items():
-            if 'static_route' in subnet_config and len(subnet_config['static_route']) != 2:
-                raise ConfigError('Missing DHCP static-route parameter(s):\n' \
-                                  'destination-subnet | router must be defined!')
+            # All delivered static routes require a next-hop to be set
+            if 'static_route' in subnet_config:
+                for route, route_option in subnet_config['static_route'].items():
+                    if 'next_hop' not in route_option:
+                        raise ConfigError(f'DHCP static-route "{route}" requires router to be defined!')
+
+            # DHCP failover needs at least one subnet that uses it
+            if 'enable_failover' in subnet_config:
+                if 'failover' not in dhcp:
+                    raise ConfigError(f'Can not enable failover for "{subnet}" in "{network}".\n' \
+                                      'Failover is not configured globally!')
+                failover_ok = True
 
             # Check if DHCP address range is inside configured subnet declaration
             if 'range' in subnet_config:
@@ -191,23 +206,6 @@ def verify(dhcp):
                     tmp = IPRange(range_config['start'], range_config['stop'])
                     networks.append(tmp)
 
-            if 'failover' in subnet_config:
-                for key in ['local_address', 'peer_address', 'name', 'status']:
-                    if key not in subnet_config['failover']:
-                        raise ConfigError(f'Missing DHCP failover parameter "{key}"!')
-
-                # Failover names must be uniquie
-                if subnet_config['failover']['name'] in failover_names:
-                    name = subnet_config['failover']['name']
-                    raise ConfigError(f'DHCP failover names must be unique:\n' \
-                                      f'{name} has already been configured!')
-                failover_names.append(subnet_config['failover']['name'])
-
-                # Failover requires start/stop ranges for pool
-                if 'range' not in subnet_config:
-                    raise ConfigError(f'DHCP failover requires at least one start-stop range to be configured\n'\
-                                      f'within shared-network "{network}, {subnet}" for using failover!')
-
             # Exclude addresses must be in bound
             if 'exclude' in subnet_config:
                 for exclude in subnet_config['exclude']:
@@ -234,7 +232,7 @@ def verify(dhcp):
             # There must be one subnet connected to a listen interface.
             # This only counts if the network itself is not disabled!
             if 'disable' not in network_config:
-                if is_subnet_connected(subnet, primary=True):
+                if is_subnet_connected(subnet, primary=False):
                     listen_ok = True
 
             # Subnets must be non overlapping
@@ -250,6 +248,19 @@ def verify(dhcp):
                 if (net != net2):
                     if net.overlaps(net2):
                         raise ConfigError('Conflicting subnet ranges: "{net}" overlaps "{net2}"!')
+
+    # Prevent 'disable' for shared-network if only one network is configured
+    if (shared_networks - disabled_shared_networks) < 1:
+        raise ConfigError(f'At least one shared network must be active!')
+
+    if 'failover' in dhcp:
+        if not failover_ok:
+            raise ConfigError('DHCP failover must be enabled for at least one subnet!')
+
+        for key in ['name', 'remote', 'source_address', 'status']:
+            if key not in dhcp['failover']:
+                tmp = key.replace('_', '-')
+                raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
 
     for address in (dict_search('listen_address', dhcp) or []):
         if is_addr_assigned(address):

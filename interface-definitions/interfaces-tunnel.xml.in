@@ -16,17 +16,17 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/interface/interface-description.xml.i>
+          #include <include/interface/description.xml.i>
           #include <include/interface/address-ipv4-ipv6.xml.i>
-          #include <include/interface/interface-disable.xml.i>
-          #include <include/interface/interface-disable-link-detect.xml.i>
-          #include <include/interface/interface-vrf.xml.i>
-          #include <include/interface/interface-mtu-64-8024.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/mtu-64-8024.xml.i>
           <leafNode name="mtu">
             <defaultValue>1476</defaultValue>
           </leafNode>
-          #include <include/interface/interface-ipv4-options.xml.i>
-          #include <include/interface/interface-ipv6-options.xml.i>
+          #include <include/interface/ipv4-options.xml.i>
+          #include <include/interface/ipv6-options.xml.i>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/tunnel-remote.xml.i>
           #include <include/source-interface.xml.i>
@@ -51,21 +51,6 @@
               </valueHelp>
               <constraint>
                 <validator name="ipv4-prefix"/>
-              </constraint>
-            </properties>
-          </leafNode>
-          <leafNode name="dhcp-interface">
-            <properties>
-              <help>dhcp interface</help>
-              <valueHelp>
-                <format>interface</format>
-                <description>DHCP interface that supplies the local IP address for this tunnel</description>
-              </valueHelp>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
-              </completionHelp>
-              <constraint>
-                <validator name="interface-name"/>
               </constraint>
             </properties>
           </leafNode>
@@ -151,9 +136,9 @@
                       <valueless/>
                     </properties>
                   </leafNode>
-                  #include <include/interface/interface-parameters-key.xml.i>
-                  #include <include/interface/interface-parameters-tos.xml.i>
-                  #include <include/interface/interface-parameters-ttl.xml.i>
+                  #include <include/interface/parameters-key.xml.i>
+                  #include <include/interface/parameters-tos.xml.i>
+                  #include <include/interface/parameters-ttl.xml.i>
                   <leafNode name="ttl">
                     <defaultValue>64</defaultValue>
                   </leafNode>
@@ -171,8 +156,8 @@
                         <list>none</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>0-255</format>
-                        <description>Encaplimit (default 4)</description>
+                        <format>u32:0-255</format>
+                        <description>Encaplimit (default: 4)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
@@ -186,12 +171,12 @@
                     </properties>
                     <defaultValue>4</defaultValue>
                   </leafNode>
-                  #include <include/interface/interface-parameters-flowlabel.xml.i>
+                  #include <include/interface/parameters-flowlabel.xml.i>
                   <leafNode name="hoplimit">
                     <properties>
                       <help>Hoplimit</help>
                       <valueHelp>
-                        <format>0-255</format>
+                        <format>u32:0-255</format>
                         <description>Hoplimit (default 64)</description>
                       </valueHelp>
                       <constraint>
@@ -205,7 +190,7 @@
                     <properties>
                       <help>Traffic class (Tclass)</help>
                       <valueHelp>
-                        <format>0x0-0x0FFFFF</format>
+                        <format>0x0-0x0fffff</format>
                         <description>Traffic class, 'inherit' or hex value</description>
                       </valueHelp>
                       <constraint>

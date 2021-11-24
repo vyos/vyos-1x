@@ -1,0 +1,5 @@
+!
+{% if route_map is defined and route_map is not none %}
+ip protocol {{ protocol }} route-map {{ route_map }}
+{% endif %}
+!

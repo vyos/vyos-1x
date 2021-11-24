@@ -16,6 +16,55 @@
               <valueless/>
             </properties>
           </leafNode>
+          <node name="failover">
+            <properties>
+              <help>DHCP failover configuration</help>
+            </properties>
+            <children>
+              #include <include/source-address-ipv4.xml.i>
+              <leafNode name="remote">
+                <properties>
+                  <help>IPv4 remote address used for connectio</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address of failover peer</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="name">
+                <properties>
+                  <help>Peer name used to identify connection</help>
+                  <constraint>
+                    <regex>[-_a-zA-Z0-9.]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid failover peer name. May only contain letters, numbers and .-_</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="status">
+                <properties>
+                  <help>Failover hierarchy</help>
+                  <completionHelp>
+                    <list>primary secondary</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>primary</format>
+                    <description>Configure this server to be the primary node</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>secondary</format>
+                    <description>Configure this server to be the secondary node</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(primary|secondary)$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="global-parameters">
             <properties>
               <help>Additional global parameters for DHCP server. You must
@@ -53,12 +102,13 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="description">
-                <properties>
-                  <help>Shared-network-name description</help>
-                </properties>
-              </leafNode>
+              #include <include/dhcp/domain-name.xml.i>
+              #include <include/dhcp/domain-search.xml.i>
+              #include <include/dhcp/ntp-server.xml.i>
+              #include <include/dhcp/ping-check.xml.i>
+              #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
+              #include <include/name-server-ipv4.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
                   <help>Additional shared-network parameters for DHCP server.
@@ -96,7 +146,7 @@
                     <properties>
                       <help>Specifies the clients subnet mask as per RFC 950. If unset, subnet declaration is used.</help>
                       <valueHelp>
-                        <format>0-32</format>
+                        <format>u32:0-32</format>
                         <description>DHCP client prefix length must be 0 to 32</description>
                       </valueHelp>
                       <constraint>
@@ -117,29 +167,16 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="dns-server">
+                  #include <include/dhcp/domain-name.xml.i>
+                  #include <include/dhcp/domain-search.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/name-server-ipv4.xml.i>
+                  <leafNode name="enable-failover">
                     <properties>
-                      <help>DNS server IPv4 address</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>DNS server IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <multi/>
+                      <help>Enable DHCP failover support for this subnet</help>
+                      <valueless/>
                     </properties>
                   </leafNode>
-                  <leafNode name="domain-name">
-                    <properties>
-                      <help>Client Domain Name</help>
-                      <constraint>
-                        <validator name="fqdn"/>
-                      </constraint>
-                      <constraintErrorMessage>Invalid domain name (RFC 1123 section 2).\nMay only contain letters, numbers and .-_</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  #include <include/dhcp-server-domain-search.xml.i>
                   <leafNode name="exclude">
                     <properties>
                       <help>IP address to exclude from DHCP lease range</help>
@@ -153,58 +190,6 @@
                       <multi/>
                     </properties>
                   </leafNode>
-                  <node name="failover">
-                    <properties>
-                      <help>DHCP failover parameters</help>
-                    </properties>
-                    <children>
-                      <leafNode name="local-address">
-                        <properties>
-                          <help>IP address for failover peer to connect [REQUIRED]</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address to exclude from lease range</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="name">
-                        <properties>
-                          <help>DHCP failover peer name [REQUIRED]</help>
-                          <constraint>
-                            <regex>[-_a-zA-Z0-9.]+</regex>
-                          </constraint>
-                          <constraintErrorMessage>Invalid failover peer name. May only contain letters, numbers and .-_</constraintErrorMessage>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="peer-address">
-                        <properties>
-                          <help>IP address of failover peer [REQUIRED]</help>
-                          <valueHelp>
-                            <format>ipv4</format>
-                            <description>IPv4 address of failover peer</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-address"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="status">
-                        <properties>
-                          <help>DHCP failover peer status (primary|secondary) [REQUIRED]</help>
-                          <completionHelp>
-                            <list>primary secondary</list>
-                          </completionHelp>
-                          <constraint>
-                            <regex>^(primary|secondary)$</regex>
-                          </constraint>
-                          <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
                   <leafNode name="ip-forwarding">
                     <properties>
                       <help>Enable IP forwarding on client</help>
@@ -225,19 +210,8 @@
                     </properties>
                     <defaultValue>86400</defaultValue>
                   </leafNode>
-                  <leafNode name="ntp-server">
-                    <properties>
-                      <help>IP address of NTP server</help>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>NTP server IPv4 address</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                      </constraint>
-                      <multi/>
-                    </properties>
-                  </leafNode>
+                  #include <include/dhcp/ntp-server.xml.i>
+                  #include <include/dhcp/ping-check.xml.i>
                   <leafNode name="pop-server">
                     <properties>
                       <help>IP address of POP3 server</help>
@@ -280,9 +254,9 @@
                     <properties>
                       <help>DHCP lease range</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
                       </constraint>
-                      <constraintErrorMessage>Invalid DHCP lease range name. May only contain letters, numbers and .-_</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>
                     <children>
                       <leafNode name="start">
@@ -315,9 +289,9 @@
                     <properties>
                       <help>Name of static mapping</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9.]+</regex>
+                        <regex>^[-_a-zA-Z0-9.]+$</regex>
                       </constraint>
-                      <constraintErrorMessage>Invalid static mapping name. May only contain letters, numbers and .-_</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid static mapping name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>
                     <children>
                       #include <include/generic-disable-node.xml.i>
@@ -357,26 +331,21 @@
                       </leafNode>
                     </children>
                   </tagNode>
-                  <node name="static-route">
+                  <tagNode name="static-route">
                     <properties>
-                      <help>Classless static route</help>
+                      <help>Classless static route destination subnet [REQUIRED]</help>
+                      <valueHelp>
+                        <format>ipv4net</format>
+                        <description>IPv4 address and prefix length</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-prefix"/>
+                      </constraint>
                     </properties>
                     <children>
-                      <leafNode name="destination-subnet">
+                      <leafNode name="next-hop">
                         <properties>
-                          <help>Destination subnet [REQUIRED]</help>
-                          <valueHelp>
-                            <format>ipv4net</format>
-                            <description>IPv4 address and prefix length</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="ipv4-prefix"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="router">
-                        <properties>
-                          <help>IP address of router to be used to reach the destination subnet [REQUIRED]</help>
+                          <help>IP address of router to be used to reach the destination subnet</help>
                           <valueHelp>
                             <format>ipv4</format>
                             <description>IPv4 address of router</description>
@@ -387,7 +356,7 @@
                         </properties>
                       </leafNode>
                     </children>
-                  </node>
+                  </tagNode >
                   <leafNode name="subnet-parameters">
                     <properties>
                       <help>Additional subnet parameters for DHCP server. You must

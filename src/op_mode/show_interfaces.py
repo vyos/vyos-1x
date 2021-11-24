@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2017, 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,7 @@ import os
 import re
 import sys
 import glob
-import datetime
 import argparse
-import netifaces
 
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
@@ -54,27 +52,27 @@ def filtered_interfaces(ifnames, iftypes, vif, vrrp):
     ifnames: a list of interfaces names to consider, empty do not filter
     return an instance of the interface class
     """
-    allnames = Section.interfaces()
+    if isinstance(iftypes, list):
+        for iftype in iftypes:
+            yield from filtered_interfaces(ifnames, iftype, vif, vrrp)
 
-    vrrp_interfaces = VRRP.active_interfaces() if vrrp else []
-
-    for ifname in allnames:
+    for ifname in Section.interfaces(iftypes):
+        # Bail out early if interface name not part of our search list
         if ifnames and ifname not in ifnames:
             continue
 
-        # return the class which can handle this interface name
-        klass = Section.klass(ifname)
-        # connect to the interface
-        interface = klass(ifname, create=False, debug=False)
+        # As we are only "reading" from the interface - we must use the
+        # generic base class which exposes all the data via a common API
+        interface = Interface(ifname, create=False, debug=False)
 
-        if iftypes and interface.definition['section'] not in iftypes:
-            continue
-
+        # VLAN interfaces have a '.' in their name by convention
         if vif and not '.' in ifname:
             continue
 
-        if vrrp and ifname not in vrrp_interfaces:
-            continue
+        if vrrp:
+            vrrp_interfaces = VRRP.active_interfaces()
+            if ifname not in vrrp_interfaces:
+                continue
 
         yield interface
 
@@ -87,10 +85,8 @@ def split_text(text, used=0):
     used: number of characted already used in the screen
     """
     no_tty = call('tty -s')
-    if no_tty:
-        return text.split()
 
-    returned = cmd('stty size')
+    returned = cmd('stty size') if not no_tty else ''
     if len(returned) == 2:
         rows, columns = [int(_) for _ in returned]
     else:

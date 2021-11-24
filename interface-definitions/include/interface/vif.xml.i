@@ -3,7 +3,7 @@
   <properties>
     <help>Virtual Local Area Network (VLAN) ID</help>
     <valueHelp>
-      <format>0-4094</format>
+      <format>u32:0-4094</format>
       <description>Virtual Local Area Network (VLAN) ID</description>
     </valueHelp>
     <constraint>
@@ -13,12 +13,12 @@
   </properties>
   <children>
     #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-    #include <include/interface/interface-description.xml.i>
+    #include <include/interface/description.xml.i>
     #include <include/interface/dhcp-options.xml.i>
     #include <include/interface/dhcpv6-options.xml.i>
-    #include <include/interface/interface-disable-link-detect.xml.i>
-    #include <include/interface/interface-disable.xml.i>
-    #include <include/interface/interface-vrf.xml.i>
+    #include <include/interface/disable-link-detect.xml.i>
+    #include <include/interface/disable.xml.i>
+    #include <include/interface/vrf.xml.i>
     <leafNode name="egress-qos">
       <properties>
         <help>VLAN egress QoS</help>
@@ -43,10 +43,10 @@
         <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
       </properties>
     </leafNode>
-    #include <include/interface/interface-ipv4-options.xml.i>
-    #include <include/interface/interface-ipv6-options.xml.i>
-    #include <include/interface/interface-mac.xml.i>
-    #include <include/interface/interface-mtu-68-16000.xml.i>
+    #include <include/interface/ipv4-options.xml.i>
+    #include <include/interface/ipv6-options.xml.i>
+    #include <include/interface/mac.xml.i>
+    #include <include/interface/mtu-68-16000.xml.i>
   </children>
 </tagNode>
 <!-- include end -->

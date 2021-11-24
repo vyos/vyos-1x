@@ -40,6 +40,7 @@ from vyos.util import call
 from vyos.util import chown
 from vyos.util import chmod_600
 from vyos.util import dict_search
+from vyos.util import makedir
 from vyos.validate import is_addr_assigned
 
 from vyos import ConfigError
@@ -50,6 +51,7 @@ user = 'openvpn'
 group = 'openvpn'
 
 cfg_file = '/run/openvpn/{ifname}.conf'
+service_file = '/run/systemd/system/openvpn@{ifname}.service.d/20-override.conf'
 
 def checkCertHeader(header, filename):
     """
@@ -79,9 +81,6 @@ def get_config(config=None):
     openvpn = get_interface_dict(conf, base)
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
-    openvpn['daemon_user'] = user
-    openvpn['daemon_group'] = group
-
     return openvpn
 
 def verify(openvpn):
@@ -425,6 +424,10 @@ def verify(openvpn):
 def generate(openvpn):
     interface = openvpn['ifname']
     directory = os.path.dirname(cfg_file.format(**openvpn))
+    # create base config directory on demand
+    makedir(directory, user, group)
+    # enforce proper permissions on /run/openvpn
+    chown(directory, user, group)
 
     # we can't know in advance which clients have been removed,
     # thus all client configs will be removed and re-added on demand
@@ -432,22 +435,28 @@ def generate(openvpn):
     if os.path.isdir(ccd_dir):
         rmtree(ccd_dir, ignore_errors=True)
 
+    # Remove systemd directories with overrides
+    service_dir = os.path.dirname(service_file.format(**openvpn))
+    if os.path.isdir(service_dir):
+        rmtree(service_dir, ignore_errors=True)
+
     if 'deleted' in openvpn or 'disable' in openvpn:
         return None
 
     # create client config directory on demand
-    if not os.path.exists(ccd_dir):
-        os.makedirs(ccd_dir, 0o755)
-        chown(ccd_dir, user, group)
+    makedir(ccd_dir, user, group)
 
-    # Fix file permissons for keys
-    fix_permissions = []
+    # Fix file permissons for site2site shared secret
+    if dict_search('shared_secret_key_file', openvpn):
+        chmod_600(openvpn['shared_secret_key_file'])
+        chown(openvpn['shared_secret_key_file'], user, group)
 
-    tmp = dict_search('shared_secret_key_file', openvpn)
-    if tmp: fix_permissions.append(openvpn['shared_secret_key_file'])
-
-    tmp = dict_search('tls.key_file', openvpn)
-    if tmp: fix_permissions.append(tmp)
+    # Fix file permissons for TLS certificate and keys
+    for tls in ['auth_file', 'ca_cert_file', 'cert_file', 'crl_file',
+                'crypt_file', 'dh_file', 'key_file']:
+        if dict_search(f'tls.{tls}', openvpn):
+            chmod_600(openvpn['tls'][tls])
+            chown(openvpn['tls'][tls], user, group)
 
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
@@ -474,18 +483,20 @@ def generate(openvpn):
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 
-    # Fixup file permissions
-    for file in fix_permissions:
-        chmod_600(file)
+    # Render 20-override.conf for OpenVPN service
+    render(service_file.format(**openvpn), 'openvpn/service-override.conf.tmpl', openvpn,
+           formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
+    # Reload systemd services config to apply an override
+    call(f'systemctl daemon-reload')
 
     return None
 
 def apply(openvpn):
     interface = openvpn['ifname']
-    call(f'systemctl stop openvpn@{interface}.service')
 
     # Do some cleanup when OpenVPN is disabled/deleted
     if 'deleted' in openvpn or 'disable' in openvpn:
+        call(f'systemctl stop openvpn@{interface}.service')
         for cleanup_file in glob(f'/run/openvpn/{interface}.*'):
             if os.path.isfile(cleanup_file):
                 os.unlink(cleanup_file)
@@ -497,7 +508,7 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    call(f'systemctl start openvpn@{interface}.service')
+    call(f'systemctl reload-or-restart openvpn@{interface}.service')
 
     conf = VTunIf.get_config()
     conf['device_type'] = openvpn['device_type']

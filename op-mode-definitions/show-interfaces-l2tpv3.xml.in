@@ -6,7 +6,7 @@
         <children>
           <tagNode name="l2tpv3">
             <properties>
-              <help>Show L2TPv3 interface information</help>
+              <help>Show specified L2TPv3 interface information</help>
               <completionHelp>
                 <path>interfaces l2tpv3</path>
               </completionHelp>

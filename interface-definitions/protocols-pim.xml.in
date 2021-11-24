@@ -21,7 +21,7 @@
                 <properties>
                   <help>Designated Router Election Priority</help>
                   <valueHelp>
-                    <format>1-4294967295</format>
+                    <format>u32:1-4294967295</format>
                     <description>Value of the new DR Priority</description>
                   </valueHelp>
                   <constraint>
@@ -33,7 +33,7 @@
                 <properties>
                   <help>Hello Interval</help>
                   <valueHelp>
-                    <format>1-180</format>
+                    <format>u32:1-180</format>
                     <description>Hello Interval in seconds</description>
                   </valueHelp>
                   <constraint>
@@ -79,7 +79,7 @@
                 <properties>
                   <help>Keep alive Timer</help>
                   <valueHelp>
-                    <format>31-60000</format>
+                    <format>u32:31-60000</format>
                     <description>Keep alive Timer in seconds</description>
                   </valueHelp>
                   <constraint>

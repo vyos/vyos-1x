@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 
 directories = {
   "data": "/usr/share/vyos/",
@@ -22,7 +23,10 @@ directories = {
   "migrate": "/opt/vyatta/etc/config-migrate/migrate",
   "log": "/var/log/vyatta",
   "templates": "/usr/share/vyos/templates/",
-  "certbot": "/config/auth/letsencrypt"
+  "certbot": "/config/auth/letsencrypt",
+  "api_schema": "/usr/libexec/vyos/services/api/graphql/graphql/schema/",
+  "api_templates": "/usr/libexec/vyos/services/api/graphql/recipes/templates/"
+
 }
 
 cfg_group = 'vyattacfg'
@@ -31,7 +35,7 @@ cfg_vintage = 'vyos'
 
 commit_lock = '/opt/vyatta/config/.lock'
 
-version_file = '/usr/share/vyos/component-versions.json'
+component_version_json = os.path.join(directories['data'], 'component-versions.json')
 
 https_data = {
     'listen_addresses' : { '*': ['_'] }

@@ -3,7 +3,7 @@
   <properties>
     <help>PPP interface cache</help>
     <valueHelp>
-      <format>1-256000</format>
+      <format>u32:1-256000</format>
       <description>Count of interfaces to keep in cache</description>
     </valueHelp>
     <constraint>
