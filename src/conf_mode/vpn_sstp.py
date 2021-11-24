@@ -56,24 +56,13 @@ def verify(sstp):
     #
     # SSL certificate checks
     #
-    tmp = dict_search('ssl.ca_cert_file', sstp)
-    if tmp:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL CA certificate "{tmp}" does not exist!')
-
     tmp = dict_search('ssl.cert_file', sstp)
     if not tmp:
         raise ConfigError(f'SSL public key file required!')
-    else:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL public key "{tmp}" does not exist!')
 
     tmp = dict_search('ssl.key_file', sstp)
     if not tmp:
         raise ConfigError(f'SSL private key file required!')
-    else:
-        if not os.path.isfile(tmp):
-            raise ConfigError(f'SSL private key "{tmp}" does not exist!')
 
 def generate(sstp):
     if not sstp:
