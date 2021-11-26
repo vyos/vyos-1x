@@ -18,10 +18,12 @@ import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.util import cmd
+from os import path, mkdir
 
-ca_cert = '/tmp/ca.crt'
-ssl_cert = '/tmp/server.crt'
-ssl_key = '/tmp/server.key'
+cert_dir = '/config/auth/'
+ca_cert  = f'{cert_dir}ca.crt'
+ssl_cert = f'{cert_dir}server.crt'
+ssl_key  = f'{cert_dir}server.key'
 
 class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
     def setUp(self):
@@ -41,6 +43,9 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         super().basic_config()
 
 if __name__ == '__main__':
+    if not path.exists(cert_dir):
+        mkdir(cert_dir)
+
     # Our SSL certificates need a subject ...
     subject = '/C=DE/ST=BY/O=VyOS/localityName=Cloud/commonName=vyos/' \
               'organizationalUnitName=VyOS/emailAddress=maintainers@vyos.io/'
