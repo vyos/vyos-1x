@@ -856,6 +856,20 @@ def make_incremental_progressbar(increment: float):
     while True:
         yield
 
+def begin(*args):
+    """
+    Evaluate arguments in order and return the result of the *last* argument.
+    For combining multiple expressions in one statement. Useful for lambdas.
+    """
+    return args[-1]
+
+def begin0(*args):
+    """
+    Evaluate arguments in order and return the result of the *first* argument.
+    For combining multiple expressions in one statement. Useful for lambdas.
+    """
+    return args[0]
+
 def is_systemd_service_active(service):
     """ Test is a specified systemd service is activated.
     Returns True if service is active, false otherwise.
