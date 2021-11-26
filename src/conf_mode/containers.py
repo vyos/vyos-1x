@@ -158,7 +158,7 @@ def verify(container):
             v6_prefix = 0
             # If ipv4-prefix not defined for user-defined network
             if 'prefix' not in network_config:
-                raise ConfigError(f'prefix for network "{net}" must be defined!')
+                raise ConfigError(f'prefix for network "{network}" must be defined!')
 
             for prefix in network_config['prefix']:
                 if is_ipv4(prefix): v4_prefix += 1
