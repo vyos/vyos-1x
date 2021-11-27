@@ -52,6 +52,7 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     if iface_config.passive is defined %}
  {{ 'no ' if iface_config.passive.disable is defined }}ip ospf passive
 {%     endif %}
+exit
 !
 {%   endfor %}
 {% endif %}
@@ -182,4 +183,5 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {#   Timer values have default values #}
  timers throttle spf {{ timers.throttle.spf.delay }} {{ timers.throttle.spf.initial_holdtime }} {{ timers.throttle.spf.max_holdtime }}
 {% endif %}
+exit
 !
