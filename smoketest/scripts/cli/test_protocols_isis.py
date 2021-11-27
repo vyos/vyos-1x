@@ -226,11 +226,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(base_path + ['spf-delay-ietf', 'long-delay', long_delay])
-        # verify() - All types of spf-delay must be configured
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
         self.cli_set(base_path + ['spf-delay-ietf', 'short-delay', short_delay])
         # verify() - All types of spf-delay must be configured
         with self.assertRaises(ConfigSessionError):
