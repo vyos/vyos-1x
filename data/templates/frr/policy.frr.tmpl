@@ -1,4 +1,3 @@
-!
 {% if access_list is defined and access_list is not none %}
 {%   for acl, acl_config in access_list.items() | natural_sort %}
 {%     if acl_config.description is defined and acl_config.description is not none %}
@@ -60,7 +59,7 @@ ipv6 access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ src }} {{ 
 {%   for acl, acl_config in as_path_list.items() | natural_sort %}
 {%     if acl_config.rule is defined and acl_config.rule is not none %}
 {%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
-bgp as-path access-list {{ acl }} {{ rule_config.action }} {{ rule_config.regex }}
+bgp as-path access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
@@ -314,9 +313,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
  set weight {{ rule_config.set.weight }}
 {%           endif %}
 {%         endif %}
-{%       endfor %}
+exit
 !
+{%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
-!
