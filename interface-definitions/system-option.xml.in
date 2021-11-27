@@ -113,6 +113,12 @@
                <valueless/>
              </properties>
            </leafNode>
+           <leafNode name="root-partition-auto-resize">
+             <properties>
+               <help>Enable root partition auto-extention on system boot</help>
+               <valueless/>
+             </properties>
+           </leafNode>
         </children>
       </node>
     </children>

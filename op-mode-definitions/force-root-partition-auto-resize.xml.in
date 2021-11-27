@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <node name="root-partition-auto-resize">
+        <properties>
+          <help>Resize the VyOS partition</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/force_root-partition-auto-resize.sh</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
