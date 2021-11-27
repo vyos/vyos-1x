@@ -216,13 +216,8 @@ def reload_configuration(config, daemon=None):
 
 
 def save_configuration():
-    """Save FRR configuration to /run/frr/config/frr.conf
-       It save configuration on each commit. T3217
-    """
-
-    cmd(f'{path_vtysh} -n -w')
-
-    return
+    """ T3217: Save FRR configuration to /run/frr/config/frr.conf """
+    return cmd(f'{path_vtysh} -n -w')
 
 
 def execute(command):
@@ -457,7 +452,16 @@ class FRRConfig:
         LOG.debug('commit_configuration:  Commiting configuration')
         for i, e in enumerate(self.config):
             LOG.debug(f'commit_configuration: new_config {i:3} {e}')
-        reload_configuration('\n'.join(self.config), daemon=daemon)
+
+        # https://github.com/FRRouting/frr/issues/10132
+        # https://github.com/FRRouting/frr/issues/10133
+        count = 0
+        while count <= 5:
+            count += 1
+            try:
+                reload_configuration('\n'.join(self.config), daemon=daemon)
+            except:
+                pass
 
     def modify_section(self, start_pattern, replacement='!', stop_pattern=r'\S+', remove_stop_mark=False, count=0):
         if isinstance(replacement, str):
