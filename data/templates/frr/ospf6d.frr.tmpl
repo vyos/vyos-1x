@@ -41,6 +41,7 @@ interface {{ iface }}
 {%     if iface_config.passive is defined %}
  ipv6 ospf6 passive
 {%     endif %}
+exit
 !
 {%   endfor %}
 {% endif %}
@@ -87,4 +88,5 @@ router ospf6
  redistribute {{ protocol }} {{ 'route-map ' + options.route_map if options.route_map is defined }}
 {%   endfor %}
 {% endif %}
+exit
 !

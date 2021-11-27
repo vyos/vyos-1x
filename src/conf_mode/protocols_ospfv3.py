@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.template import render_to_string
 from vyos.ifconfig import Interface
@@ -29,8 +30,6 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-frr_daemon = 'ospf6d'
-
 def get_config(config=None):
     if config:
         conf = config
@@ -39,8 +38,17 @@ def get_config(config=None):
     base = ['protocols', 'ospfv3']
     ospfv3 = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
+    # FRR has VRF support for different routing daemons. As interfaces belong
+    # to VRFs - or the global VRF, we need to check for changed interfaces so
+    # that they will be properly rendered for the FRR config. Also this eases
+    # removal of interfaces from the running configuration.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        ospfv3['interface_removed'] = list(interfaces_removed)
+
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
+        ospfv3.update({'deleted' : ''})
         return ospfv3
 
     # We also need some additional information from the config, prefix-lists
@@ -70,21 +78,29 @@ def verify(ospfv3):
     return None
 
 def generate(ospfv3):
-    if not ospfv3:
-        ospfv3['new_frr_config'] = ''
+    if not ospfv3 or 'deleted' in ospfv3:
         return None
 
     ospfv3['new_frr_config'] = render_to_string('frr/ospf6d.frr.tmpl', ospfv3)
     return None
 
 def apply(ospfv3):
+    ospf6_daemon = 'ospf6d'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'^interface \S+', '')
-    frr_cfg.modify_section('^router ospf6$', '')
-    frr_cfg.add_before(frr.default_add_before, ospfv3['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.load_configuration(ospf6_daemon)
+    frr_cfg.modify_section('^router ospf6', stop_pattern='^exit', remove_stop_mark=True)
+
+    for key in ['interface', 'interface_removed']:
+        if key not in ospfv3:
+            continue
+        for interface in ospfv3[key]:
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
+
+    if 'new_frr_config' in ospfv3:
+        frr_cfg.add_before(frr.default_add_before, ospfv3['new_frr_config'])
+    frr_cfg.commit_configuration(ospf6_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
