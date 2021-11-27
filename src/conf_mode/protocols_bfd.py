@@ -95,12 +95,14 @@ def generate(bfd):
     bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.tmpl', bfd)
 
 def apply(bfd):
+    bfd_daemon = 'bfdd'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration()
+    frr_cfg.load_configuration(bfd_daemon)
     frr_cfg.modify_section('^bfd', '')
     frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bfd['new_frr_config'])
-    frr_cfg.commit_configuration()
+    frr_cfg.commit_configuration(bfd_daemon)
 
     return None
 
