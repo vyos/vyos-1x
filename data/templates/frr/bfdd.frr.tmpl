@@ -1,4 +1,4 @@
-!
+{% if profile is defined or peer is defined %}
 bfd
 {% if profile is defined and profile is not none %}
 {%   for profile_name, profile_config in profile.items() %}
@@ -18,7 +18,8 @@ bfd
 {%     else %}
   no shutdown
 {%     endif %}
-  exit
+ exit
+ !
 {%   endfor %}
 {% endif %}
 {% if peer is defined and peer is not none %}
@@ -38,8 +39,10 @@ bfd
 {%     else %}
   no shutdown
 {%     endif %}
-  exit
+ exit
+ !
 {%   endfor %}
 {% endif %}
- end
+exit
 !
+{% endif %}
