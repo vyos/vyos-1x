@@ -189,31 +189,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for neighbor in neighbors:
             self.assertIn(f' neighbor {neighbor} priority {priority} poll-interval {poll_interval}', frrconfig) # default
 
-
-    def test_ospf_07_passive_interface(self):
-        self.cli_set(base_path + ['passive-interface', 'default'])
-        interfaces = Section.interfaces('ethernet')
-        for interface in interfaces:
-            self.cli_set(base_path + ['passive-interface-exclude', interface])
-
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
-        try:
-            self.assertIn(f'router ospf', frrconfig)
-            self.assertIn(f' passive-interface default', frrconfig) # default
-            for interface in interfaces:
-                self.assertIn(f' no passive-interface {interface}', frrconfig) # default
-        except:
-            log.debug(frrconfig)
-            log.debug(cmd('sudo dmesg'))
-            log.debug(cmd('sudo cat /var/log/messages'))
-            log.debug(cmd('vtysh -c "show run"'))
-            self.fail('Now we can hopefully see why OSPF fails!')
-
-    def test_ospf_08_redistribute(self):
+    def test_ospf_07_redistribute(self):
         metric = '15'
         metric_type = '1'
         redistribute = ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static']
@@ -238,7 +214,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             log.debug(cmd('vtysh -c "show run"'))
             self.fail('Now we can hopefully see why OSPF fails!')
 
-    def test_ospf_09_virtual_link(self):
+    def test_ospf_08_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
         area = '10'
         shortcut = 'enable'
@@ -268,7 +244,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' network {network} area {area}', frrconfig)
 
 
-    def test_ospf_10_interface_configuration(self):
+    def test_ospf_09_interface_configuration(self):
         interfaces = Section.interfaces('ethernet')
         password = 'vyos1234'
         bandwidth = '10000'
@@ -276,6 +252,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         network = 'point-to-point'
         priority = '200'
 
+        self.cli_set(base_path + ['passive-interface', 'default'])
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'authentication', 'plaintext-password', password])
             self.cli_set(base_path + ['interface', interface, 'bandwidth', bandwidth])
@@ -284,6 +261,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['interface', interface, 'mtu-ignore'])
             self.cli_set(base_path + ['interface', interface, 'network', network])
             self.cli_set(base_path + ['interface', interface, 'priority', priority])
+            self.cli_set(base_path + ['passive-interface-exclude', interface])
 
         # commit changes
         self.cli_commit()
@@ -297,10 +275,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip ospf mtu-ignore', config)
             self.assertIn(f' ip ospf network {network}', config)
             self.assertIn(f' ip ospf priority {priority}', config)
+            self.assertIn(f' no ip ospf passive', config)
             self.assertIn(f' bandwidth {bandwidth}', config)
 
 
-    def test_ospf_11_vrfs(self):
+    def test_ospf_10_vrfs(self):
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
@@ -331,7 +310,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 
-    def test_ospf_12_zebra_route_map(self):
+    def test_ospf_11_zebra_route_map(self):
         # Implemented because of T3328
         self.cli_set(base_path + ['route-map', route_map])
         # commit changes
@@ -351,7 +330,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(zebra_route_map)
         self.assertNotIn(zebra_route_map, frrconfig)
 
-    def test_ospf_13_interface_area(self):
+    def test_ospf_12_interface_area(self):
         area = '0'
         interfaces = Section.interfaces('ethernet')
 
