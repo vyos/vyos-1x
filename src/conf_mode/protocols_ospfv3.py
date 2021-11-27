@@ -100,7 +100,15 @@ def apply(ospfv3):
 
     if 'new_frr_config' in ospfv3:
         frr_cfg.add_before(frr.default_add_before, ospfv3['new_frr_config'])
-    frr_cfg.commit_configuration(ospf6_daemon)
+
+    # https://github.com/FRRouting/frr/issues/10132
+    count = 0
+    while count <= 5:
+        count += 1
+        try:
+            frr_cfg.commit_configuration(ospf6_daemon)
+        except:
+            pass
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
