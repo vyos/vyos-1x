@@ -27,7 +27,7 @@ bfd
   receive-interval {{ peer_config.interval.receive }}
   transmit-interval {{ peer_config.interval.transmit }}
 {%     if peer_config.interval['echo-interval'] is defined and peer_config.interval['echo-interval'] is not none %}
- echo-interval {{ peer_config.interval['echo-interval'] }}
+  echo-interval {{ peer_config.interval['echo-interval'] }}
 {%     endif %}
 {%     if peer_config['echo-mode'] is defined %}
   echo-mode
