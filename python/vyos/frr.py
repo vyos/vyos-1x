@@ -456,12 +456,19 @@ class FRRConfig:
         # https://github.com/FRRouting/frr/issues/10132
         # https://github.com/FRRouting/frr/issues/10133
         count = 0
-        while count <= 5:
+        count_max = 5
+        while count < count_max:
             count += 1
             try:
                 reload_configuration('\n'.join(self.config), daemon=daemon)
+                break
             except:
+                # we just need to re-try the commit of the configuration
+                # for the listed FRR issues above
                 pass
+        if count >= count_max:
+            raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded')
+
 
     def modify_section(self, start_pattern, replacement='!', stop_pattern=r'\S+', remove_stop_mark=False, count=0):
         if isinstance(replacement, str):
