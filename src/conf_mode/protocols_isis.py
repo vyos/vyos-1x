@@ -234,7 +234,15 @@ def apply(isis):
 
     if 'frr_isisd_config' in isis:
         frr_cfg.add_before(frr.default_add_before, isis['frr_isisd_config'])
-    frr_cfg.commit_configuration(isis_daemon)
+
+    # https://github.com/FRRouting/frr/issues/XXXX
+    count = 0
+    while count <= 5:
+        count += 1
+        try:
+            frr_cfg.commit_configuration(isis_daemon)
+        except:
+            pass
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
