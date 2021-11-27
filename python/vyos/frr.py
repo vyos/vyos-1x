@@ -91,6 +91,7 @@ path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'
 path_config = '/run/frr'
 
+default_add_before = r'(ip prefix-list .*|route-map .*|line vty|end)'
 
 class FrrError(Exception):
     pass

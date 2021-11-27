@@ -191,7 +191,7 @@ def apply(policy):
     frr_cfg.modify_section(r'^bgp extcommunity-list .*')
     frr_cfg.modify_section(r'^bgp large-community-list .*')
     frr_cfg.modify_section(r'^route-map .*')
-    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
@@ -201,7 +201,7 @@ def apply(policy):
     frr_cfg.modify_section(r'^ip prefix-list .*')
     frr_cfg.modify_section(r'^ipv6 prefix-list .*')
     frr_cfg.modify_section(r'^route-map .*')
-    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # If FRR config is blank, rerun the blank commit x times due to frr-reload

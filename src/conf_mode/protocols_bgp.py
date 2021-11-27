@@ -288,7 +288,7 @@ def apply(bgp):
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
     frr_cfg.modify_section(r'(\s+)?ip protocol bgp route-map [-a-zA-Z0-9.]+$', '', '(\s|!)')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['frr_zebra_config'])
+    frr_cfg.add_before(frr.default_add_before, bgp['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
@@ -299,7 +299,7 @@ def apply(bgp):
 
     frr_cfg.load_configuration(bgp_daemon)
     frr_cfg.modify_section(f'^router bgp \d+{vrf}$', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bgp['frr_bgpd_config'])
+    frr_cfg.add_before(frr.default_add_before, bgp['frr_bgpd_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
     # Save configuration to /run/frr/config/frr.conf

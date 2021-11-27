@@ -114,7 +114,7 @@ def apply(rip):
     frr_cfg.modify_section(r'interface \S+', '')
     frr_cfg.modify_section('^router rip$', '')
 
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rip['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, rip['new_frr_config'])
     frr_cfg.commit_configuration(rip_daemon)
 
     # Save configuration to /run/frr/config/frr.conf

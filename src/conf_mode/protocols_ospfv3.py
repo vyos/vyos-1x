@@ -83,7 +83,7 @@ def apply(ospfv3):
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section(r'^interface \S+', '')
     frr_cfg.modify_section('^router ospf6$', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ospfv3['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, ospfv3['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
     # Save configuration to /run/frr/config/frr.conf

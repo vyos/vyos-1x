@@ -48,7 +48,7 @@ def apply(vrf):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section(f'^vrf .+$', '')
-    frr_cfg.add_before(r'(interface .*|line vty)', vrf['new_frr_config'])
+    frr_cfg.add_before(r'(interface .*|line vty|end)', vrf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
     # Save configuration to /run/frr/config/frr.conf

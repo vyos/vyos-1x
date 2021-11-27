@@ -101,7 +101,7 @@ def apply(bfd):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(bfd_daemon)
     frr_cfg.modify_section('^bfd', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bfd['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, bfd['new_frr_config'])
     frr_cfg.commit_configuration(bfd_daemon)
 
     return None

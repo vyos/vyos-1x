@@ -87,7 +87,7 @@ def apply(rpki):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
     frr_cfg.modify_section('rpki', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rpki['new_frr_config'])
+    frr_cfg.add_before(frr.default_add_before, rpki['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
     return None
