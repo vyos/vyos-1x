@@ -254,14 +254,15 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['passive-interface', 'default'])
         for interface in interfaces:
-            self.cli_set(base_path + ['interface', interface, 'authentication', 'plaintext-password', password])
-            self.cli_set(base_path + ['interface', interface, 'bandwidth', bandwidth])
-            self.cli_set(base_path + ['interface', interface, 'bfd'])
-            self.cli_set(base_path + ['interface', interface, 'cost', cost])
-            self.cli_set(base_path + ['interface', interface, 'mtu-ignore'])
-            self.cli_set(base_path + ['interface', interface, 'network', network])
-            self.cli_set(base_path + ['interface', interface, 'priority', priority])
-            self.cli_set(base_path + ['passive-interface-exclude', interface])
+            base_interface = base_path + ['interface', interface]
+            self.cli_set(base_interface + ['authentication', 'plaintext-password', password])
+            self.cli_set(base_interface + ['bandwidth', bandwidth])
+            self.cli_set(base_interface + ['bfd'])
+            self.cli_set(base_interface + ['cost', cost])
+            self.cli_set(base_interface + ['mtu-ignore'])
+            self.cli_set(base_interface + ['network', network])
+            self.cli_set(base_interface + ['priority', priority])
+            self.cli_set(base_interface + ['passive', 'disable'])
 
         # commit changes
         self.cli_commit()

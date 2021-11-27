@@ -49,10 +49,8 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     if iface_config.network is defined and iface_config.network is not none %}
  ip ospf network {{ iface_config.network }}
 {%     endif %}
-{%     if passive_interface_exclude is defined and passive_interface_exclude is not none %}
-{%       if iface in passive_interface_exclude %}
- no ip ospf passive
-{%       endif %}
+{%     if iface_config.passive is defined %}
+ {{ 'no ' if iface_config.passive.disable is defined }}ip ospf passive
 {%     endif %}
 !
 {%   endfor %}
@@ -163,10 +161,8 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ospf router-id {{ parameters.router_id }}
 {%   endif %}
 {% endif %}
-{% if passive_interface is defined and passive_interface is not none %}
-{%   for interface in passive_interface %}
- passive-interface {{ interface }}
-{%   endfor %}
+{% if passive_interface is defined and passive_interface.default is defined %}
+ passive-interface default
 {% endif %}
 {% if redistribute is defined and redistribute is not none %}
 {%   for protocol, protocols_options in redistribute.items() %}
