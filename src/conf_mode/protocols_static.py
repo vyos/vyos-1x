@@ -85,6 +85,8 @@ def verify(static):
     return None
 
 def generate(static):
+    if not static:
+        return None
     static['new_frr_config'] = render_to_string('frr/staticd.frr.tmpl', static)
     return None
 
@@ -97,19 +99,19 @@ def apply(static):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^ip protocol static route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.modify_section(r'^ip protocol static route-map [-a-zA-Z0-9.]+', '')
     frr_cfg.commit_configuration(zebra_daemon)
-
     frr_cfg.load_configuration(static_daemon)
 
     if 'vrf' in static:
         vrf = static['vrf']
-        frr_cfg.modify_section(f'^vrf {vrf}$', '')
+        frr_cfg.modify_section(f'^vrf {vrf}', stop_pattern='^exit', remove_stop_mark=True)
     else:
-        frr_cfg.modify_section(r'^ip route .*', '')
-        frr_cfg.modify_section(r'^ipv6 route .*', '')
+        frr_cfg.modify_section(r'^ip route .*')
+        frr_cfg.modify_section(r'^ipv6 route .*')
 
-    frr_cfg.add_before(r'(interface .*|line vty)', static['new_frr_config'])
+    if 'new_frr_config' in static:
+        frr_cfg.add_before(frr.default_add_before, static['new_frr_config'])
     frr_cfg.commit_configuration(static_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
