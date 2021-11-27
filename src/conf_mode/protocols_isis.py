@@ -56,10 +56,10 @@ def get_config(config=None):
     # instead of the VRF instance.
     if vrf: isis['vrf'] = vrf
 
-    # As we no re-use this Python handler for both VRF and non VRF instances for
-    # IS-IS we need to find out if any interfaces changed so properly adjust
-    # the FRR configuration and not by acctident change interfaces from a
-    # different VRF.
+    # FRR has VRF support for different routing daemons. As interfaces belong
+    # to VRFs - or the global VRF, we need to check for changed interfaces so
+    # that they will be properly rendered for the FRR config. Also this eases
+    # removal of interfaces from the running configuration.
     interfaces_removed = node_changed(conf, base + ['interface'])
     if interfaces_removed:
         isis['interface_removed'] = list(interfaces_removed)
@@ -196,8 +196,6 @@ def verify(isis):
 
 def generate(isis):
     if not isis or 'deleted' in isis:
-        isis['frr_isisd_config'] = ''
-        isis['frr_zebra_config'] = ''
         return None
 
     isis['protocol'] = 'isis' # required for frr/vrf.route-map.frr.tmpl
@@ -214,8 +212,9 @@ def apply(isis):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'(\s+)?ip protocol isis route-map [-a-zA-Z0-9.]+$', '', '(\s|!)')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['frr_zebra_config'])
+    frr_cfg.modify_section('(\s+)?ip protocol isis route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    if 'frr_zebra_config' in isis:
+        frr_cfg.add_before(frr.default_add_before, isis['frr_zebra_config'])
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
@@ -225,17 +224,18 @@ def apply(isis):
         vrf = ' vrf ' + isis['vrf']
 
     frr_cfg.load_configuration(isis_daemon)
-    frr_cfg.modify_section(f'^router isis VyOS{vrf}$', '')
+    frr_cfg.modify_section(f'^router isis VyOS{vrf}', stop_pattern='^exit', remove_stop_mark=True)
 
     for key in ['interface', 'interface_removed']:
         if key not in isis:
             continue
         for interface in isis[key]:
-            frr_cfg.modify_section(f'^interface {interface}{vrf}$', '')
+            frr_cfg.modify_section(f'^interface {interface}{vrf}', stop_pattern='^exit', remove_stop_mark=True)
 
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', isis['frr_isisd_config'])
+    if 'frr_isisd_config' in isis:
+        frr_cfg.add_before(frr.default_add_before, isis['frr_isisd_config'])
+
     frr_cfg.commit_configuration(isis_daemon)
-
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()
 

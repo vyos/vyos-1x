@@ -84,12 +84,14 @@ if DEBUG:
     LOG.addHandler(ch2)
 
 _frr_daemons = ['zebra', 'bgpd', 'fabricd', 'isisd', 'ospf6d', 'ospfd', 'pbrd',
-                'pimd', 'ripd', 'ripngd', 'sharpd', 'staticd', 'vrrpd', 'ldpd']
+                'pimd', 'ripd', 'ripngd', 'sharpd', 'staticd', 'vrrpd', 'ldpd',
+                'bfdd']
 
 path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'
 path_config = '/run/frr'
 
+default_add_before = r'(ip prefix-list .*|route-map .*|line vty|end)'
 
 class FrrError(Exception):
     pass
@@ -214,13 +216,8 @@ def reload_configuration(config, daemon=None):
 
 
 def save_configuration():
-    """Save FRR configuration to /run/frr/config/frr.conf
-       It save configuration on each commit. T3217
-    """
-
-    cmd(f'{path_vtysh} -n -w')
-
-    return
+    """ T3217: Save FRR configuration to /run/frr/config/frr.conf """
+    return cmd(f'{path_vtysh} -n -w')
 
 
 def execute(command):
@@ -455,9 +452,18 @@ class FRRConfig:
         LOG.debug('commit_configuration:  Commiting configuration')
         for i, e in enumerate(self.config):
             LOG.debug(f'commit_configuration: new_config {i:3} {e}')
-        reload_configuration('\n'.join(self.config), daemon=daemon)
 
-    def modify_section(self, start_pattern, replacement=[], stop_pattern=r'\S+', remove_stop_mark=False, count=0):
+        # https://github.com/FRRouting/frr/issues/10132
+        # https://github.com/FRRouting/frr/issues/10133
+        count = 0
+        while count <= 5:
+            count += 1
+            try:
+                reload_configuration('\n'.join(self.config), daemon=daemon)
+            except:
+                pass
+
+    def modify_section(self, start_pattern, replacement='!', stop_pattern=r'\S+', remove_stop_mark=False, count=0):
         if isinstance(replacement, str):
             replacement = replacement.split('\n')
         elif not isinstance(replacement, list):

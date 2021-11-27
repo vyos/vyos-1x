@@ -436,6 +436,14 @@
         <constraintErrorMessage>Must be broadcast, non-broadcast, point-to-multipoint or point-to-point</constraintErrorMessage>
       </properties>
     </leafNode>
+    <node name="passive">
+      <properties>
+        <help>Suppress routing updates on an interface</help>
+      </properties>
+      <children>
+        #include <include/generic-disable-node.xml.i>
+      </children>
+    </node>
   </children>
 </tagNode>
 #include <include/ospf/log-adjacency-changes.xml.i>
@@ -597,26 +605,19 @@
     #include <include/router-id.xml.i>
   </children>
 </node>
-#include <include/routing-passive-interface.xml.i>
-<leafNode name="passive-interface-exclude">
+<leafNode name="passive-interface">
   <properties>
-    <help>Interface to exclude when using 'passive-interface default'</help>
+    <help>Suppress routing updates on an interface</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <list>default</list>
     </completionHelp>
     <valueHelp>
-      <format>txt</format>
-      <description>Interface to exclude when suppressing routing updates</description>
-    </valueHelp>
-    <valueHelp>
-      <format>vlinkN</format>
-      <description>Virtual-link interface to exclude when suppressing routing updates</description>
+      <format>default</format>
+      <description>Default to suppress routing updates on all interfaces</description>
     </valueHelp>
     <constraint>
-      <validator name="interface-name"/>
-      <regex>^(vlink[0-9]+)$</regex>
+      <regex>^(default)$</regex>
     </constraint>
-    <multi/>
   </properties>
 </leafNode>
 <node name="redistribute">

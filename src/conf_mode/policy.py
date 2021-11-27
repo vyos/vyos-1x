@@ -171,9 +171,7 @@ def verify(policy):
 
 def generate(policy):
     if not policy:
-        policy['new_frr_config'] = ''
         return None
-
     policy['new_frr_config'] = render_to_string('frr/policy.frr.tmpl', policy)
     return None
 
@@ -190,8 +188,9 @@ def apply(policy):
     frr_cfg.modify_section(r'^bgp community-list .*')
     frr_cfg.modify_section(r'^bgp extcommunity-list .*')
     frr_cfg.modify_section(r'^bgp large-community-list .*')
-    frr_cfg.modify_section(r'^route-map .*')
-    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.modify_section(r'^route-map .*', stop_pattern='^exit', remove_stop_mark=True)
+    if 'new_frr_config' in policy:
+        frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
     frr_cfg.commit_configuration(bgp_daemon)
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
@@ -200,15 +199,10 @@ def apply(policy):
     frr_cfg.modify_section(r'^ipv6 access-list .*')
     frr_cfg.modify_section(r'^ip prefix-list .*')
     frr_cfg.modify_section(r'^ipv6 prefix-list .*')
-    frr_cfg.modify_section(r'^route-map .*')
-    frr_cfg.add_before('^line vty', policy['new_frr_config'])
+    frr_cfg.modify_section(r'^route-map .*', stop_pattern='^exit', remove_stop_mark=True)
+    if 'new_frr_config' in policy:
+        frr_cfg.add_before(frr.default_add_before, policy['new_frr_config'])
     frr_cfg.commit_configuration(zebra_daemon)
-
-    # If FRR config is blank, rerun the blank commit x times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if policy['new_frr_config'] == '':
-        for a in range(5):
-            frr_cfg.commit_configuration(zebra_daemon)
 
     # Save configuration to /run/frr/config/frr.conf
     frr.save_configuration()

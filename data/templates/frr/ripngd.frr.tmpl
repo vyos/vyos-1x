@@ -1,4 +1,3 @@
-!
 {# Interface specific configuration #}
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
@@ -9,6 +8,7 @@ interface {{ iface }}
 {%     if iface_config.split_horizon is defined and iface_config.split_horizon.poison_reverse is defined %}
  ipv6 rip split-horizon poisoned-reverse
 {%     endif %}
+exit
 {%   endfor %}
 {% endif %}
 !
@@ -57,4 +57,9 @@ router ripng
 {%   endif %}
 {% endif %}
 {% include 'frr/rip_ripng.frr.j2' %}
+exit
+!
+{% if route_map is defined and route_map is not none %}
+ipv6 protocol ripng route-map {{ route_map }}
+{% endif %}
 !
