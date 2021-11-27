@@ -231,9 +231,6 @@ def apply(ospf):
         frr_cfg.add_before(frr.default_add_before, ospf['frr_ospfd_config'])
     frr_cfg.commit_configuration(ospf_daemon)
 
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
-
     return None
 
 if __name__ == '__main__':

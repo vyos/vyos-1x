@@ -116,9 +116,6 @@ def apply(ripng):
         frr_cfg.add_before(frr.default_add_before, ripng['new_frr_config'])
     frr_cfg.commit_configuration(ripng_daemon)
 
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
-
     return None
 
 if __name__ == '__main__':

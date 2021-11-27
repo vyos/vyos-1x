@@ -445,9 +445,11 @@ class FRRConfig:
         mark_configuration('\n'.join(self.config))
 
     def commit_configuration(self, daemon=None):
-        '''Commit the current configuration to FRR
-           daemon: str with name of the FRR daemon to commit to or
-                   None to use the consolidated config
+        '''
+        Commit the current configuration to FRR daemon: str with name of the
+        FRR daemon to commit to or None to use the consolidated config.
+
+        Configuration is automatically saved after apply
         '''
         LOG.debug('commit_configuration:  Commiting configuration')
         for i, e in enumerate(self.config):
@@ -468,6 +470,9 @@ class FRRConfig:
                 pass
         if count >= count_max:
             raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded')
+
+        # Save configuration to /run/frr/config/frr.conf
+        save_configuration()
 
 
     def modify_section(self, start_pattern, replacement='!', stop_pattern=r'\S+', remove_stop_mark=False, count=0):

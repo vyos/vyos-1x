@@ -131,9 +131,6 @@ def apply(rip):
         frr_cfg.add_before(frr.default_add_before, rip['new_frr_config'])
     frr_cfg.commit_configuration(rip_daemon)
 
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
-
     return None
 
 if __name__ == '__main__':
