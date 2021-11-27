@@ -28,8 +28,6 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-frr_daemon = 'bgpd'
-
 def get_config(config=None):
     if config:
         conf = config
@@ -38,7 +36,9 @@ def get_config(config=None):
     base = ['protocols', 'rpki']
 
     rpki = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # Bail out early if configuration tree does not exist
     if not conf.exists(base):
+        rpki.update({'deleted' : ''})
         return rpki
 
     # We have gathered the dict representation of the CLI, but there are default
@@ -79,16 +79,21 @@ def verify(rpki):
     return None
 
 def generate(rpki):
+    if not rpki:
+        return
     rpki['new_frr_config'] = render_to_string('frr/rpki.frr.tmpl', rpki)
     return None
 
 def apply(rpki):
+    bgp_daemon = 'bgpd'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section('rpki', '')
-    frr_cfg.add_before(frr.default_add_before, rpki['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
+    frr_cfg.load_configuration(bgp_daemon)
+    frr_cfg.modify_section('^rpki')
+    if 'new_frr_config' in rpki:
+        frr_cfg.add_before(frr.default_add_before, rpki['new_frr_config'])
+    frr_cfg.commit_configuration(bgp_daemon)
 
     return None
 
