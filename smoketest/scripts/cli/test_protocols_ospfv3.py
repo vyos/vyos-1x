@@ -49,7 +49,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
-            self.cli_set(base_path + ['area', default_area, 'interface', interface])
+            self.cli_set(base_path + ['interface', interface, 'area', default_area])
 
         # commit changes
         self.cli_commit()
@@ -63,7 +63,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {default_area} export-list {acl_name}', frrconfig)
 
         for interface in interfaces:
-            self.assertIn(f' interface {interface} area {default_area}', frrconfig)
+            if_config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'ipv6 ospf6 area {default_area}', if_config)
 
         self.cli_delete(['policy', 'access-list6', acl_name])
 

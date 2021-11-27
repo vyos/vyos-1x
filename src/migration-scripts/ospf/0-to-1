@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3753: upgrade to FRR8 and move CLI options to better fit with the new FRR CLI
+
+from sys import argv
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+ospfv3_base = ['protocols', 'ospfv3']
+config = ConfigTree(config_file)
+
+if config.exists(ospfv3_base):
+    area_base = ospfv3_base + ['area']
+    if config.exists(area_base):
+        for area in config.list_nodes(area_base):
+            if not config.exists(area_base + [area, 'interface']):
+                continue
+
+            for interface in config.return_values(area_base + [area, 'interface']):
+                config.set(ospfv3_base + ['interface', interface, 'area', area])
+                config.set_tag(ospfv3_base + ['interface'])
+
+            config.delete(area_base + [area, 'interface'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)
