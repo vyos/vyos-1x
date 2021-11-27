@@ -459,7 +459,7 @@ class FRRConfig:
             LOG.debug(f'commit_configuration: new_config {i:3} {e}')
         reload_configuration('\n'.join(self.config), daemon=daemon)
 
-    def modify_section(self, start_pattern, replacement=[], stop_pattern=r'\S+', remove_stop_mark=False, count=0):
+    def modify_section(self, start_pattern, replacement='!', stop_pattern=r'\S+', remove_stop_mark=False, count=0):
         if isinstance(replacement, str):
             replacement = replacement.split('\n')
         elif not isinstance(replacement, list):
