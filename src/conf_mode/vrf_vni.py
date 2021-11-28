@@ -47,7 +47,7 @@ def apply(vrf):
     # add configuration to FRR
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'^vrf .+', '')
+    frr_cfg.modify_section(f'^vrf .+', stop_pattern='^exit-vrf', remove_stop_mark=True)
     if 'new_frr_config' in vrf:
         frr_cfg.add_before(frr.default_add_before, vrf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
