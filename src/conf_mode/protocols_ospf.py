@@ -177,11 +177,11 @@ def verify(ospf):
                         raise ConfigError('Can not use OSPF interface area and area ' \
                                           'network configuration at the same time!')
 
-            if 'vrf' in ospf:
             # If interface specific options are set, we must ensure that the
             # interface is bound to our requesting VRF. Due to the VyOS
             # priorities the interface is bound to the VRF after creation of
             # the VRF itself, and before any routing protocol is configured.
+            if 'vrf' in ospf:
                 vrf = ospf['vrf']
                 tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
