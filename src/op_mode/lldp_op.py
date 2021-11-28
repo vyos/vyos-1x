@@ -55,6 +55,9 @@ def parse_data(data, interface):
             if interface is not None and local_if != interface:
                 continue
             for chassis, c_value in values.get('chassis', {}).items():
+                # bail out early if no capabilities found
+                if 'capability' not in c_value:
+                    continue
                 capabilities = c_value['capability']
                 if isinstance(capabilities, dict):
                     capabilities = [capabilities]
