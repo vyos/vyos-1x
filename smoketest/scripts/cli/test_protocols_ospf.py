@@ -279,8 +279,51 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' no ip ospf passive', config)
             self.assertIn(f' bandwidth {bandwidth}', config)
 
+    def test_ospf_10_zebra_route_map(self):
+        # Implemented because of T3328
+        self.cli_set(base_path + ['route-map', route_map])
+        # commit changes
+        self.cli_commit()
 
-    def test_ospf_10_vrfs(self):
+        # Verify FRR configuration
+        zebra_route_map = f'ip protocol ospf route-map {route_map}'
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertIn(zebra_route_map, frrconfig)
+
+        # Remove the route-map again
+        self.cli_delete(base_path + ['route-map'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig(zebra_route_map)
+        self.assertNotIn(zebra_route_map, frrconfig)
+
+    def test_ospf_11_interface_area(self):
+        area = '0'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['area', area, 'network', '10.0.0.0/8'])
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'area', area])
+
+        # we can not have bot area network and interface area set
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area', area, 'network'])
+
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+
+        for interface in interfaces:
+            config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf area {area}', config)
+
+    def test_ospf_12_vrfs(self):
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
@@ -307,53 +350,9 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
+        # cleanup
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
-
-
-    def test_ospf_11_zebra_route_map(self):
-        # Implemented because of T3328
-        self.cli_set(base_path + ['route-map', route_map])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol ospf route-map {route_map}'
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertIn(zebra_route_map, frrconfig)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertNotIn(zebra_route_map, frrconfig)
-
-    def test_ospf_12_interface_area(self):
-        area = '0'
-        interfaces = Section.interfaces('ethernet')
-
-        self.cli_set(base_path + ['area', area, 'network', '10.0.0.0/8'])
-        for interface in interfaces:
-            self.cli_set(base_path + ['interface', interface, 'area', area])
-
-        # we can not have bot area network and interface area set
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_delete(base_path + ['area', area, 'network'])
-
-        self.cli_commit()
-
-        # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
-        self.assertIn(f'router ospf', frrconfig)
-
-        for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}')
-            self.assertIn(f'interface {interface}', config)
-            self.assertIn(f' ip ospf area {area}', config)
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
