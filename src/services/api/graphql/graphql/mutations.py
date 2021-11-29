@@ -70,6 +70,10 @@ def make_configure_resolver(mutation_name):
     class_name = mutation_name
     return make_resolver(mutation_name, class_name, 'configure')
 
+def make_show_config_resolver(mutation_name):
+    class_name = mutation_name
+    return make_resolver(mutation_name, class_name, 'show_config')
+
 def make_config_file_resolver(mutation_name):
     if 'Save' in mutation_name:
         class_name = mutation_name.replace('Save', '', 1)

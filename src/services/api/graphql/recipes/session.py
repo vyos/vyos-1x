@@ -1,6 +1,10 @@
+import json
+
 from ariadne import convert_camel_case_to_snake
+
 import vyos.defaults
 from vyos.config import Config
+from vyos.configtree import ConfigTree
 from vyos.template import render
 
 class Session(object):
@@ -42,6 +46,21 @@ class Session(object):
         if not config.list_nodes(path):
             session.delete(path)
             session.commit()
+
+    def show_config(self):
+        session = self._session
+        data = self._data
+        out = ''
+
+        try:
+            out = session.show_config(data['path'])
+            if data.get('config_format', '') == 'json':
+                config_tree = vyos.configtree.ConfigTree(out)
+                out = json.loads(config_tree.to_json())
+        except Exception as error:
+            raise error
+
+        return out
 
     def save(self):
         session = self._session
