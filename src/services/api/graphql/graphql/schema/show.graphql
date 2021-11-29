@@ -1,0 +1,14 @@
+input ShowInput {
+    path: [String!]!
+}
+
+type Show {
+    path: [String]
+    result: String
+}
+
+type ShowResult {
+    data: Show
+    success: Boolean!
+    errors: [String]
+}

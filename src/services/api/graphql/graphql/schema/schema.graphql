@@ -9,6 +9,7 @@ type Query {
 
 directive @configure on FIELD_DEFINITION
 directive @configfile on FIELD_DEFINITION
+directive @show on FIELD_DEFINITION
 
 type Mutation {
     CreateDhcpServer(data: DhcpServerConfigInput) : CreateDhcpServerResult @configure
@@ -18,4 +19,5 @@ type Mutation {
     RemoveFirewallAddressGroupMembers(data: RemoveFirewallAddressGroupMembersInput) : RemoveFirewallAddressGroupMembersResult @configure
     SaveConfigFile(data: SaveConfigFileInput) : SaveConfigFileResult @configfile
     LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configfile
+    Show(data: ShowInput) : ShowResult @show
 }

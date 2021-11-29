@@ -63,3 +63,15 @@ class Session(object):
             session.commit()
         except Exception as error:
             raise error
+
+    def show(self):
+        session = self._session
+        data = self._data
+        out = ''
+
+        try:
+            out = session.show(data['path'])
+        except Exception as error:
+            raise error
+
+        return out
