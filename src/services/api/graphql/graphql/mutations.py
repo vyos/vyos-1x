@@ -51,7 +51,8 @@ def make_resolver(mutation_name, class_name, session_func):
                 klass = type(class_name, (Session,), {})
             k = klass(session, data)
             method = getattr(k, session_func)
-            method()
+            result = method()
+            data['result'] = result
 
             return {
                 "success": True,
@@ -78,3 +79,7 @@ def make_config_file_resolver(mutation_name):
         return make_resolver(mutation_name, class_name, 'load')
     else:
         raise Exception
+
+def make_show_resolver(mutation_name):
+    class_name = mutation_name
+    return make_resolver(mutation_name, class_name, 'show')

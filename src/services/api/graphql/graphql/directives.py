@@ -1,5 +1,5 @@
 from ariadne import SchemaDirectiveVisitor, ObjectType
-from . mutations import make_configure_resolver, make_config_file_resolver
+from . mutations import *
 
 def non(arg):
     pass
@@ -19,7 +19,6 @@ class VyosDirective(SchemaDirectiveVisitor):
 class ConfigureDirective(VyosDirective):
     """
     Class providing implementation of 'configure' directive in schema.
-
     """
     def visit_field_definition(self, field, object_type):
         super().visit_field_definition(field, object_type,
@@ -28,10 +27,19 @@ class ConfigureDirective(VyosDirective):
 class ConfigFileDirective(VyosDirective):
     """
     Class providing implementation of 'configfile' directive in schema.
-
     """
     def visit_field_definition(self, field, object_type):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_config_file_resolver)
 
-directives_dict = {"configure": ConfigureDirective, "configfile": ConfigFileDirective}
+class ShowDirective(VyosDirective):
+    """
+    Class providing implementation of 'show' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_show_resolver)
+
+directives_dict = {"configure": ConfigureDirective,
+                   "configfile": ConfigFileDirective,
+                   "show": ShowDirective}
