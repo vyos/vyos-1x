@@ -24,6 +24,14 @@ class ConfigureDirective(VyosDirective):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_configure_resolver)
 
+class ShowConfigDirective(VyosDirective):
+    """
+    Class providing implementation of 'show' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_show_config_resolver)
+
 class ConfigFileDirective(VyosDirective):
     """
     Class providing implementation of 'configfile' directive in schema.
@@ -41,5 +49,6 @@ class ShowDirective(VyosDirective):
                                        make_resolver=make_show_resolver)
 
 directives_dict = {"configure": ConfigureDirective,
+                   "showconfig": ShowConfigDirective,
                    "configfile": ConfigFileDirective,
                    "show": ShowDirective}

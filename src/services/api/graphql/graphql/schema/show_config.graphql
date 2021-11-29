@@ -1,0 +1,21 @@
+"""
+Use 'scalar Generic' for show config output, to avoid attempts to
+JSON-serialize in case of JSON output.
+"""
+scalar Generic
+
+input ShowConfigInput {
+    path: [String!]!
+    configFormat: String
+}
+
+type ShowConfig {
+    path: [String]
+    result: Generic
+}
+
+type ShowConfigResult {
+    data: ShowConfig
+    success: Boolean!
+    errors: [String]
+}
