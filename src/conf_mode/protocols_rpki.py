@@ -90,7 +90,7 @@ def apply(rpki):
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(bgp_daemon)
-    frr_cfg.modify_section('^rpki')
+    frr_cfg.modify_section('^rpki', stop_pattern='^exit', remove_stop_mark=True)
     if 'new_frr_config' in rpki:
         frr_cfg.add_before(frr.default_add_before, rpki['new_frr_config'])
 
