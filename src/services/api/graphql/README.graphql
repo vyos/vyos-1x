@@ -73,6 +73,20 @@ mutation {
   }
 }
 
+Op-mode 'show' commands may be requested by path, e.g.:
+
+mutation {
+  Show (data: {path: ["interfaces", "ethernet", "detail"]}) {
+    success
+    errors
+    data {
+      result
+    }
+  }
+}
+
+N.B. to see the output the 'data' field 'result' must be present in the
+request.
 
 The GraphQL playground will be found at:
 
@@ -97,15 +111,22 @@ services
 │       │   └── schema
 │       │       ├── config_file.graphql
 │       │       ├── dhcp_server.graphql
+│       │       ├── firewall_group.graphql
 │       │       ├── interface_ethernet.graphql
-│       │       └── schema.graphql
+│       │       ├── schema.graphql
+│       │       ├── show_config.graphql
+│       │       └── show.graphql
 │       ├── README.graphql
 │       ├── recipes
 │       │   ├── __init__.py
+│       │   ├── remove_firewall_address_group_members.py
 │       │   ├── session.py
 │       │   └── templates
 │       │       ├── create_dhcp_server.tmpl
-│       │       └── create_interface_ethernet.tmpl
+│       │       ├── create_firewall_address_group.tmpl
+│       │       ├── create_interface_ethernet.tmpl
+│       │       ├── remove_firewall_address_group_members.tmpl
+│       │       └── update_firewall_address_group_members.tmpl
 │       └── state.py
 ├── vyos-configd
 ├── vyos-hostsd
