@@ -100,7 +100,7 @@ def apply(http_api):
         call('systemctl stop vyos-http-api.service')
 
     # Let uvicorn settle before restarting Nginx
-    time.sleep(2)
+    time.sleep(1)
 
     cmd(f'{vyos_conf_scripts_dir}/https.py', raising=ConfigError)
 
