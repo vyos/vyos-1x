@@ -11,6 +11,7 @@ directive @configure on FIELD_DEFINITION
 directive @configfile on FIELD_DEFINITION
 directive @show on FIELD_DEFINITION
 directive @showconfig on FIELD_DEFINITION
+directive @image on FIELD_DEFINITION
 
 type Mutation {
     CreateDhcpServer(data: DhcpServerConfigInput) : CreateDhcpServerResult @configure
@@ -22,4 +23,6 @@ type Mutation {
     LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configfile
     Show(data: ShowInput) : ShowResult @show
     ShowConfig(data: ShowConfigInput) : ShowConfigResult @showconfig
+    AddSystemImage(data: AddSystemImageInput) : AddSystemImageResult @image
+    DeleteSystemImage(data: DeleteSystemImageInput) : DeleteSystemImageResult @image
 }

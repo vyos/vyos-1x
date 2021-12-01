@@ -87,3 +87,13 @@ def make_config_file_resolver(mutation_name):
 def make_show_resolver(mutation_name):
     class_name = mutation_name
     return make_resolver(mutation_name, class_name, 'show')
+
+def make_image_resolver(mutation_name):
+    if 'Add' in mutation_name:
+        class_name = mutation_name.replace('Add', '', 1)
+        return make_resolver(mutation_name, class_name, 'add')
+    elif 'Delete' in mutation_name:
+        class_name = mutation_name.replace('Delete', '', 1)
+        return make_resolver(mutation_name, class_name, 'delete')
+    else:
+        raise Exception

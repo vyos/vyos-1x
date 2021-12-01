@@ -7,7 +7,12 @@ from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.template import render
 
-class Session(object):
+class Session:
+    """
+    Wrapper for calling configsession functions based on GraphQL requests.
+    Non-nullable fields in the respective schema allow avoiding a key check
+    in 'data'.
+    """
     def __init__(self, session, data):
         self._session = session
         self._data = data
@@ -94,3 +99,25 @@ class Session(object):
             raise error
 
         return out
+
+    def add(self):
+        session = self._session
+        data = self._data
+
+        try:
+            res = session.install_image(data['location'])
+        except Exception as error:
+            raise error
+
+        return res
+
+    def delete(self):
+        session = self._session
+        data = self._data
+
+        try:
+            res = session.remove_image(data['name'])
+        except Exception as error:
+            raise error
+
+        return res
