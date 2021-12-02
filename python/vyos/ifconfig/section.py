@@ -52,12 +52,12 @@ class Section:
         name: name of the interface
         vlan: if vlan is True, do not stop at the vlan number
         """
-        name = name.rstrip('0123456789')
-        name = name.rstrip('.')
-        if vlan:
-            name = name.rstrip('0123456789.')
         if vrrp:
-            name = name.rstrip('0123456789v')
+            name = re.sub(r'\d(\d|v|\.)*$', '', name)
+        elif vlan:
+            name = re.sub(r'\d(\d|\.)*$', '', name)
+        else:
+            name = re.sub(r'\d+$', '', name)
         return name
 
     @classmethod
