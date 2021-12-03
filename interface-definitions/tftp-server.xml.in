@@ -33,7 +33,7 @@
             </properties>
             <defaultValue>69</defaultValue>
           </leafNode>
-          #include <include/listen-address.xml.i>
+          #include <include/listen-address-vrf.xml.i>
         </children>
       </node>
     </children>
