@@ -31,7 +31,7 @@ the box, please use [x]
 <!---
 Please describe in detail how you tested your changes. Include details of your testing
 environment, and the tests you ran. When pasting configs, logs, shell output, backtraces,
-and other large chunks of text, surround this text with triple backtics
+and other large chunks of text, surround this text with triple backticks
 ```
 like this
 ```
