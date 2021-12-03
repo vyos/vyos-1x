@@ -7,8 +7,9 @@ RequiresMountsFor=/run
 Type=forking
 #NotifyAccess=main
 EnvironmentFile=-/etc/default/tftpd%I
-ExecStart=/usr/sbin/in.tftpd "$DAEMON_ARGS"
-Restart=on-failure
+ExecStart=/bin/sh -c "${VRF_ARGS} /usr/sbin/in.tftpd ${DAEMON_ARGS}"
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

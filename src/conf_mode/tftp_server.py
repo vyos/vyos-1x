@@ -24,6 +24,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.util import call
@@ -65,10 +66,11 @@ def verify(tftpd):
     if 'listen_address' not in tftpd:
         raise ConfigError('TFTP server listen address must be configured!')
 
-    for address in tftpd['listen_address']:
+    for address, address_config in tftpd['listen_address'].items():
         if not is_addr_assigned(address):
             print(f'WARNING: TFTP server listen address "{address}" not ' \
                   'assigned to any interface!')
+        verify_vrf(address_config)
 
     return None
 
@@ -83,13 +85,16 @@ def generate(tftpd):
         return None
 
     idx = 0
-    for address in tftpd['listen_address']:
+    for address, address_config in tftpd['listen_address'].items():
         config = deepcopy(tftpd)
         port = tftpd['port']
         if is_ipv4(address):
             config['listen_address'] = f'{address}:{port} -4'
         else:
             config['listen_address'] = f'[{address}]:{port} -6'
+
+        if 'vrf' in address_config:
+            config['vrf'] = address_config['vrf']
 
         file = config_file + str(idx)
         render(file, 'tftp-server/default.tmpl', config)
