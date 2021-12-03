@@ -110,7 +110,7 @@ class VbashOpRun(GenericOpRun):
 
     def run(self, path: list, **kwargs):
         cmd = ' '.join(path)
-        (out, err) = vyos.util.popen(f'.  /opt/vyatta/share/vyatta-op/functions/interpreter/vyatta-op-run; _vyatta_op_run {cmd}', stderr=STDOUT, **kwargs)
+        (out, err) = vyos.util.popen(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}', stderr=STDOUT, **kwargs)
         if err:
             raise ConfigQueryError(out)
         return out
