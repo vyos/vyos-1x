@@ -289,7 +289,7 @@ base_schema = Schema({
     Required('op'): Any('add', 'delete', 'set', 'get', 'apply'),
     'type': Any('name_servers',
         'name_server_tags_recursor', 'name_server_tags_system',
-        'forward_zones', 'authoritative_zones' 'search_domains',
+        'forward_zones', 'authoritative_zones', 'search_domains',
         'hosts', 'host_name'),
     'data': Any(list, dict),
     'tag': str,
