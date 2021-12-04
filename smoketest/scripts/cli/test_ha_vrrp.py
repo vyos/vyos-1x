@@ -108,7 +108,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
             # Authentication
             self.cli_set(group_base + ['authentication', 'type', 'plaintext-password'])
-            self.cli_set(group_base + ['authentication', 'password', f'vyos-{group}'])
+            self.cli_set(group_base + ['authentication', 'password', f'{group}'])
 
         # commit changes
         self.cli_commit()
@@ -129,7 +129,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'    {vip}', config)
 
             # Authentication
-            self.assertIn(f'auth_pass "vyos-{group}"', config)
+            self.assertIn(f'auth_pass "{group}"', config)
             self.assertIn(f'auth_type PASS', config)
 
     def test_03_sync_group(self):
