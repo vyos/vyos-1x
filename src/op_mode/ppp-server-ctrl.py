@@ -60,7 +60,7 @@ def main():
         output, err = popen(cmd_dict['cmd_base'].format(cmd_dict['vpn_types'][args.proto]) + args.action + ses_pattern, stderr=DEVNULL, decode='utf-8')
         if not err:
             try:
-                print(output)
+                print(f' {output}')
             except:
                 sys.exit(0)
         else:
