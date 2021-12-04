@@ -17,7 +17,7 @@
               <description>Space separated route target list (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
             </valueHelp>
             <constraint>
-              <validator name="bgp-route-target" argument="--multi"/>
+              <validator name="bgp-rd-rt" argument="--route-target-multi"/>
             </constraint>
           </properties>
         </leafNode>
@@ -29,7 +29,7 @@
               <description>Space separated route target list (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
             </valueHelp>
             <constraint>
-              <validator name="bgp-route-target" argument="--multi"/>
+              <validator name="bgp-rd-rt" argument="--route-target-multi"/>
             </constraint>
           </properties>
         </leafNode>
@@ -41,7 +41,7 @@
               <description>Space separated route target list (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
             </valueHelp>
             <constraint>
-              <validator name="bgp-route-target" argument="--multi"/>
+              <validator name="bgp-rd-rt" argument="--route-target-multi"/>
             </constraint>
           </properties>
         </leafNode>

@@ -19,8 +19,8 @@ from vyos.template import is_ipv4
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--single', action='store', help='Validate and allow only one route-target')
-group.add_argument('--multi', action='store', help='Validate multiple, whitespace separated route-targets')
+group.add_argument('--route-target', action='store', help='Validate one BGP route-target')
+group.add_argument('--route-target-multi', action='store', help='Validate multiple, whitespace separated BGP route-targets')
 args = parser.parse_args()
 
 def is_valid_rt(rt):
@@ -35,12 +35,12 @@ def is_valid_rt(rt):
     return False
 
 if __name__ == '__main__':
-    if args.single:
-        if not is_valid_rt(args.single):
+    if args.route_target:
+        if not is_valid_rt(args.route_target):
             exit(1)
 
-    elif args.multi:
-        for rt in args.multi.split(' '):
+    elif args.route_target_multi:
+        for rt in args.route_target_multi.split(' '):
             if not is_valid_rt(rt):
                 exit(1)
 

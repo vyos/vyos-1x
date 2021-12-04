@@ -25,7 +25,7 @@
           <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
         </valueHelp>
         <constraint>
-          <validator name="bgp-route-target" argument="--single"/>
+          <validator name="bgp-rd-rt" argument="--route-target"/>
         </constraint>
       </properties>
     </leafNode>
@@ -37,7 +37,7 @@
           <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
         </valueHelp>
         <constraint>
-          <validator name="bgp-route-target" argument="--single"/>
+          <validator name="bgp-rd-rt" argument="--route-target"/>
         </constraint>
       </properties>
     </leafNode>
@@ -49,7 +49,7 @@
           <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
         </valueHelp>
         <constraint>
-          <validator name="bgp-route-target" argument="--single"/>
+          <validator name="bgp-rd-rt" argument="--route-target"/>
         </constraint>
       </properties>
     </leafNode>
