@@ -20,7 +20,7 @@
                 <script>${vyos_completion_dir}/list_disks.py --exclude ${COMP_WORDS[2]}</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/format_disk.py --target $3 --proto $5</command>
+            <command>sudo ${vyos_op_scripts_dir}/format_disk.py --target $3 --proto $5</command>
           </tagNode>
         </children>
       </tagNode>
