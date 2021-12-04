@@ -43,10 +43,11 @@ def is_busy(disk: str):
 def backup_partitions(disk: str):
     """Save sfdisk partitions output to a backup file"""
 
-    device_path = '/dev/' + disk
-    backup_ts = datetime.now().strftime('%Y-%m-%d-%H:%M')
-    backup_file = '/var/tmp/backup_{}.{}'.format(disk, backup_ts)
-    cmd(f'sudo /sbin/sfdisk -d {device_path} > {backup_file}')
+    device_path = f'/dev/{disk}'
+    backup_ts = datetime.now().strftime('%Y%m%d-%H%M')
+    backup_file = f'/var/tmp/backup_{disk}.{backup_ts}'
+    call(f'sfdisk -d {device_path} > {backup_file}')
+    print(f'Partition table backup saved to {backup_file}')
 
 
 def list_partitions(disk: str):
