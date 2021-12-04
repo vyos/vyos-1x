@@ -255,14 +255,6 @@ def verify(bgp):
                     tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
                     if tmp: verify_route_map(tmp, bgp)
 
-            if afi in ['l2vpn_evpn'] and 'vrf' not in bgp:
-                # Some L2VPN EVPN AFI options are only supported under VRF
-                if 'vni' in afi_config:
-                    for vni, vni_config in afi_config['vni'].items():
-                        if 'rd' in vni_config:
-                            raise ConfigError('VNI route-distinguisher is only supported under EVPN VRF')
-                        if 'route_target' in vni_config:
-                            raise ConfigError('VNI route-target is only supported under EVPN VRF')
 
     return None
 
