@@ -16,7 +16,7 @@
                 <description>Domain to use for urls that do not contain a '.'</description>
               </valueHelp>
               <constraint>
-                <regex>^[\.][a-z0-9-][$]?</regex>
+                <regex>[.][A-Za-z0-9][-.A-Za-z0-9]*</regex>
               </constraint>
               <constraintErrorMessage>Must start append-domain with a '.'</constraintErrorMessage>
             </properties>
