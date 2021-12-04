@@ -63,6 +63,12 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="passive">
+  <properties>
+    <help>Do not attempt to start sessions</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <leafNode name="shutdown">
   <properties>
     <help>Disable this peer</help>

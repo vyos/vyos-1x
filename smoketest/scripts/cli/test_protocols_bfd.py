@@ -38,6 +38,7 @@ peers = {
         'intv_mult'  : '100',
         'intv_rx'    : '222',
         'intv_tx'    : '333',
+        'passive'    : '',
         'shutdown'   : '',
         'source_intf': dum_if,
         },
@@ -63,6 +64,7 @@ profiles = {
     'bar' : {
         'intv_mult'  : '102',
         'intv_rx'    : '444',
+        'passive'    : '',
         },
 }
 
@@ -89,6 +91,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
             if 'multihop' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'multihop'])
+            if 'passive' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'passive'])
             if 'shutdown' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'shutdown'])
             if 'source_addr' in peer_config:
@@ -128,6 +132,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'receive-interval {peer_config["intv_rx"]}', peerconfig)
             if 'intv_tx' in peer_config:
                 self.assertIn(f'transmit-interval {peer_config["intv_tx"]}', peerconfig)
+            if 'passive' in peer_config:
+                self.assertIn(f'passive-mode', peerconfig)
             if 'shutdown' in peer_config:
                 self.assertIn(f'shutdown', peerconfig)
             else:
@@ -149,6 +155,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['profile', profile, 'interval', 'receive', profile_config["intv_rx"]])
             if 'intv_tx' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'interval', 'transmit', profile_config["intv_tx"]])
+            if 'passive' in profile_config:
+                self.cli_set(base_path + ['profile', profile, 'passive'])
             if 'shutdown' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'shutdown'])
 
@@ -171,6 +179,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'receive-interval {profile_config["intv_rx"]}', config)
             if 'intv_tx' in profile_config:
                 self.assertIn(f'transmit-interval {profile_config["intv_tx"]}', config)
+            if 'passive' in profile_config:
+                self.assertIn(f'passive-mode', config)
             if 'shutdown' in profile_config:
                 self.assertIn(f'shutdown', config)
             else:
