@@ -6,11 +6,11 @@ bfd
   detect-multiplier {{ profile_config.interval.multiplier }}
   receive-interval {{ profile_config.interval.receive }}
   transmit-interval {{ profile_config.interval.transmit }}
-{%     if profile_config.interval['echo-interval'] is defined and profile_config.interval['echo-interval'] is not none %}
-  echo transmit-interval {{ profile_config.interval['echo-interval'] }}
-  echo receive-interval {{ profile_config.interval['echo-interval'] }}
+{%     if profile_config.interval.echo_interval is defined and profile_config.interval.echo_interval is not none %}
+  echo transmit-interval {{ profile_config.interval.echo_interval }}
+  echo receive-interval {{ profile_config.interval.echo_interval }}
 {%     endif %}
-{%     if profile_config['echo-mode'] is defined %}
+{%     if profile_config.echo_mode is defined %}
   echo-mode
 {%     endif %}
 {%     if profile_config.shutdown is defined %}
@@ -24,14 +24,15 @@ bfd
 {% endif %}
 {% if peer is defined and peer is not none %}
 {%   for peer_name, peer_config in peer.items() %}
- peer {{ peer_name }}{{ ' multihop' if peer_config.multihop is defined }}{{ ' local-address ' + peer_config.source.address if peer_config.source is defined and peer_config.source.address is defined }}{{ ' interface ' + peer_config.source.interface if peer_config.source is defined and peer_config.source.interface is defined }}
+ peer {{ peer_name }}{{ ' multihop' if peer_config.multihop is defined }}{{ ' local-address ' + peer_config.source.address if peer_config.source is defined and peer_config.source.address is defined }}{{ ' interface ' + peer_config.source.interface if peer_config.source is defined and peer_config.source.interface is defined }} {{ ' vrf ' + peer_config.vrf if peer_config.vrf is defined and peer_config.vrf is not none }}
   detect-multiplier {{ peer_config.interval.multiplier }}
   receive-interval {{ peer_config.interval.receive }}
   transmit-interval {{ peer_config.interval.transmit }}
-{%     if peer_config.interval['echo-interval'] is defined and peer_config.interval['echo-interval'] is not none %}
-  echo-interval {{ peer_config.interval['echo-interval'] }}
+{%     if peer_config.interval.echo_interval is defined and peer_config.interval.echo_interval is not none %}
+  echo transmit-interval {{ peer_config.interval.echo_interval }}
+  echo receive-interval {{ peer_config.interval.echo_interval }}
 {%     endif %}
-{%     if peer_config['echo-mode'] is defined %}
+{%     if peer_config.echo_mode is defined %}
   echo-mode
 {%     endif %}
 {%     if peer_config.shutdown is defined %}

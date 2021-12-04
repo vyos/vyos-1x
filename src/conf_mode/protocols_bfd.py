@@ -33,7 +33,8 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['protocols', 'bfd']
-    bfd = conf.get_config_dict(base, get_first_key=True)
+    bfd = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True)
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         return bfd
