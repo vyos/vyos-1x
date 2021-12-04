@@ -44,7 +44,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
-            self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id])
+            self.cli_delete(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id])
 
         self.cli_delete(base_path)
         self.cli_commit()
