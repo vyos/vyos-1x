@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      #include <include/bfd-common.xml.i>
+    </children>
+  </node>
+</interfaceDefinition>
