@@ -18,7 +18,6 @@ from vyos.configquery import VbashOpRun
 from vyos.configquery import ConfigTreeQuery
 
 from vyos.util import is_wwan_connected
-from vyos.util import call
 
 conf = ConfigTreeQuery()
 dict = conf.get_config_dict(['interfaces', 'wwan'], key_mangling=('-', '_'),
@@ -30,8 +29,7 @@ for interface, interface_config in dict.items():
             # do not restart this interface as it's disabled by the user
             continue
 
-        #op = VbashOpRun()
-        #op.run(['connect', 'interface', interface])
-        call(f'VYOS_TAGNODE_VALUE={interface} /usr/libexec/vyos/conf_mode/interfaces-wwan.py')
+        op = VbashOpRun()
+        op.run(['connect', 'interface', interface])
 
 exit(0)
