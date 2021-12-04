@@ -73,6 +73,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              #include <include/interface/vrf.xml.i>
             </children>
           </tagNode>
           <tagNode name="profile">

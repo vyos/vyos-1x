@@ -24,6 +24,7 @@ PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']
 
 dum_if = 'dum1001'
+vrf_name = 'red'
 peers = {
     '192.0.2.10' : {
         'intv_rx'    : '500',
@@ -42,7 +43,7 @@ peers = {
         },
     '2001:db8::a' : {
         'source_addr': '2001:db8::1',
-        'source_intf': dum_if,
+        'vrf'        : vrf_name,
         },
     '2001:db8::b' : {
         'source_addr': '2001:db8::1',
@@ -73,6 +74,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_bfd_peer(self):
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '1000'])
+
         for peer, peer_config in peers.items():
             if 'echo_mode' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'echo-mode'])
@@ -92,6 +95,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
             if 'source_intf' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
+            if 'vrf' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'vrf', peer_config["vrf"]])
 
         # commit changes
         self.cli_commit()
@@ -106,6 +111,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' local-address {peer_config["source_addr"]}'
             if 'source_intf' in peer_config:
                 tmp += f' interface {peer_config["source_intf"]}'
+            if 'vrf' in peer_config:
+                tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
             peerconfig = self.getFRRconfig(f' peer {peer}', end='')
@@ -125,6 +132,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'shutdown', peerconfig)
             else:
                 self.assertNotIn(f'shutdown', peerconfig)
+
+        self.cli_delete(['vrf', 'name', vrf_name])
 
     def test_bfd_profile(self):
         peer = '192.0.2.10'

@@ -18,6 +18,7 @@ import os
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import is_ipv6
 from vyos.template import render_to_string
 from vyos.validate import is_ipv6_link_local
@@ -82,6 +83,9 @@ def verify(bfd):
                 # multihop doesn't accept interface names
                 if 'source' in peer_config and 'interface' in peer_config['source']:
                     raise ConfigError('Multihop and source interface cannot be used together')
+
+            if 'vrf' in peer_config:
+                verify_vrf(peer_config)
 
     return None
 
