@@ -29,6 +29,7 @@ from logging.handlers import SysLogHandler
 from vyos.ifconfig.vrrp import VRRP
 from vyos.configquery import ConfigTreeQuery
 from vyos.util import cmd
+from vyos.util import dict_search
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -69,22 +70,10 @@ class KeepalivedFifo:
                 raise ValueError()
 
             # Read VRRP configuration directly from CLI
-            vrrp_config_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                                    get_first_key=True)
-            self.vrrp_config = {'vrrp_groups': {}, 'sync_groups': {}}
-            for key in ['group', 'sync_group']:
-                if key not in vrrp_config_dict:
-                    continue
-                for group, group_config in vrrp_config_dict[key].items():
-                    if 'transition_script' not in group_config:
-                        continue
-                    self.vrrp_config['vrrp_groups'][group] = {
-                        'STOP': group_config['transition_script'].get('stop'),
-                        'FAULT': group_config['transition_script'].get('fault'),
-                        'BACKUP': group_config['transition_script'].get('backup'),
-                        'MASTER': group_config['transition_script'].get('master'),
-                    }
-            logger.info(f'Loaded configuration: {self.vrrp_config}')
+            self.vrrp_config_dict = conf.get_config_dict(base,
+                                     key_mangling=('-', '_'), get_first_key=True)
+
+            logger.debug(f'Loaded configuration: {self.vrrp_config_dict}')
         except Exception as err:
             logger.error(f'Unable to load configuration: {err}')
 
@@ -129,20 +118,17 @@ class KeepalivedFifo:
                             if os.path.exists(mdns_running_file):
                                 cmd(mdns_update_command)
 
-                            if n_name in self.vrrp_config['vrrp_groups'] and n_state in self.vrrp_config['vrrp_groups'][n_name]:
-                                n_script = self.vrrp_config['vrrp_groups'][n_name].get(n_state)
-                                if n_script:
-                                    self._run_command(n_script)
+                            tmp = dict_search(f'group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
+                            if tmp != None:
+                                self._run_command(tmp)
                         # check and run commands for VRRP sync groups
-                        # currently, this is not available in VyOS CLI
-                        if n_type == 'GROUP':
+                        elif n_type == 'GROUP':
                             if os.path.exists(mdns_running_file):
                                 cmd(mdns_update_command)
 
-                            if n_name in self.vrrp_config['sync_groups'] and n_state in self.vrrp_config['sync_groups'][n_name]:
-                                n_script = self.vrrp_config['sync_groups'][n_name].get(n_state)
-                                if n_script:
-                                    self._run_command(n_script)
+                            tmp = dict_search(f'sync_group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
+                            if tmp != None:
+                                self._run_command(tmp)
                     # mark task in queue as done
                     self.message_queue.task_done()
             except Exception as err:
