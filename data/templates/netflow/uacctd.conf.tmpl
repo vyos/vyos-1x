@@ -68,5 +68,8 @@ sfprobe_agentip[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['agent-addr
 {% if templatecfg['sflow']['sampling-rate'] != none %}
 sampling_rate[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['sampling-rate'] }}
 {% endif %}
+{% if templatecfg['sflow']['source-address'] != none %}
+sfprobe_source_ip[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['source-address'] }}
+{% endif %}
 {% endfor %}
 {% endif %}
