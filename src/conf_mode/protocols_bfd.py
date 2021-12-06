@@ -84,6 +84,11 @@ def verify(bfd):
                 if 'source' in peer_config and 'interface' in peer_config['source']:
                     raise ConfigError('Multihop and source interface cannot be used together')
 
+            if 'profile' in peer_config:
+                profile_name = peer_config['profile']
+                if 'profile' not in bfd or profile_name not in bfd['profile']:
+                    raise ConfigError(f'BFD profile "{profile_name}" does not exist!')
+
             if 'vrf' in peer_config:
                 verify_vrf(peer_config)
 

@@ -41,6 +41,9 @@ bfd
 {%     if peer_config.passive is defined %}
   passive-mode
 {%     endif %}
+{%     if peer_config.profile is defined and peer_config.profile is not none %}
+  profile {{ peer_config.profile }}
+{%     endif %}
 {%     if peer_config.shutdown is defined %}
   shutdown
 {%     else %}
