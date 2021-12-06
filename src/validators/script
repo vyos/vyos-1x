@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     # File outside the config dir is just a warning
     if not vyos.util.file_is_persistent(script):
-        sys.exit(
+        sys.exit(0)(
             f'Warning: file {script} is outside the "/config" directory\n'
             'It will not be automatically migrated to a new image on system update'
         )
