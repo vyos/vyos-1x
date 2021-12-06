@@ -143,7 +143,6 @@ def generate(https):
         server_cert = str(wrap_certificate(pki_cert['certificate']))
         if 'ca-certificate' in cert_dict:
             ca_cert = cert_dict['ca-certificate']
-            print(ca_cert)
             server_cert += '\n' + str(wrap_certificate(https['pki']['ca'][ca_cert]['certificate']))
 
         write_file(cert_path, server_cert)
