@@ -66,36 +66,24 @@ def verify(mpls):
 
 def generate(mpls):
     # If there's no MPLS config generated, create dictionary key with no value.
-    if not mpls:
-        mpls['new_frr_config'] = ''
+    if not mpls or 'deleted' in mpls:
         return None
 
-    mpls['new_frr_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls)
+    mpls['frr_ldpd_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls)
     return None
 
 def apply(mpls):
-    # Define dictionary that will load FRR config
-    frr_cfg = {}
+    ldpd_damon = 'ldpd'
+
     # Save original configuration prior to starting any commit actions
-    frr_cfg['original_config'] = frr.get_configuration(daemon='ldpd')
-    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], mpls['new_frr_config'], from_re='mpls.*')
+    frr_cfg = frr.FRRConfig()
 
-    # If FRR config is blank, rerun the blank commit three times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if mpls['new_frr_config'] == '':
-        for x in range(3):
-            frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
-    elif not 'ldp' in mpls:
-        for x in range(3):
-            frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
-    else:
-        # FRR mark configuration will test for syntax errors and throws an
-        # exception if any syntax errors is detected
-        frr.mark_configuration(frr_cfg['modified_config'])
+    frr_cfg.load_configuration(ldpd_damon)
+    frr_cfg.modify_section(f'^mpls ldp', stop_pattern='^exit', remove_stop_mark=True)
 
-        # Commit resulting configuration to FRR, this will throw CommitError
-        # on failure
-        frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
+    if 'frr_ldpd_config' in mpls:
+        frr_cfg.add_before(frr.default_add_before, mpls['frr_ldpd_config'])
+    frr_cfg.commit_configuration(ldpd_damon)
 
     # Set number of entries in the platform label tables
     labels = '0'
@@ -122,7 +110,7 @@ def apply(mpls):
         system_interfaces = []
         # Populate system interfaces list with local MPLS capable interfaces
         for interface in glob('/proc/sys/net/mpls/conf/*'):
-            system_interfaces.append(os.path.basename(interface))   
+            system_interfaces.append(os.path.basename(interface))
         # This is where the comparison is done on if an interface needs to be enabled/disabled.
         for system_interface in system_interfaces:
             interface_state = read_file(f'/proc/sys/net/mpls/conf/{system_interface}/input')
@@ -138,7 +126,7 @@ def apply(mpls):
         system_interfaces = []
         # If MPLS interfaces are not configured, set MPLS processing disabled
         for interface in glob('/proc/sys/net/mpls/conf/*'):
-            system_interfaces.append(os.path.basename(interface)) 
+            system_interfaces.append(os.path.basename(interface))
         for system_interface in system_interfaces:
             system_interface = system_interface.replace('.', '/')
             call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
