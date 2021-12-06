@@ -169,7 +169,8 @@ def get_config():
             'configured': vc.exists('system flow-accounting sflow'),
             'agent-address': vc.return_value('system flow-accounting sflow agent-address'),
             'sampling-rate': vc.return_value('system flow-accounting sflow sampling-rate'),
-            'servers': None
+            'servers': None,
+            'source-address': vc.return_value('system flow-accounting sflow source-address')
         },
         'netflow': {
             'configured': vc.exists('system flow-accounting netflow'),
