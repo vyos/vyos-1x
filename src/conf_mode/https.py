@@ -23,6 +23,7 @@ import vyos.defaults
 import vyos.certbot_util
 
 from vyos.config import Config
+from vyos.configverify import verify_vrf
 from vyos import ConfigError
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
@@ -34,6 +35,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/nginx/sites-available/default'
+systemd_override = r'/etc/systemd/system/nginx.service.d/override.conf'
 cert_dir = '/etc/ssl/certs'
 key_dir = '/etc/ssl/private'
 certbot_dir = vyos.defaults.directories['certbot']
@@ -103,6 +105,8 @@ def verify(https):
             if not domains_found:
                 raise ConfigError("At least one 'virtual-host <id> server-name' "
                               "matching the 'certbot domain-name' is required.")
+
+    verify_vrf(https)
     return None
 
 def generate(https):
@@ -208,10 +212,12 @@ def generate(https):
     }
 
     render(config_file, 'https/nginx.default.tmpl', data)
-
+    render(systemd_override, 'https/override.conf.tmpl', https)
     return None
 
 def apply(https):
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
     if https is not None:
         call('systemctl restart nginx.service')
     else:
