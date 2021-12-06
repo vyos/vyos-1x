@@ -54,12 +54,13 @@
         <help>Echo receive transmission interval</help>
         <valueHelp>
           <format>u32:10-60000</format>
-          <description>The minimal echo receive transmission interval that this system is capable of handling</description>
+          <description>The minimal echo receive transmission interval that this system is capable of handling (default: 50)</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 10-60000"/>
         </constraint>
       </properties>
+      <defaultValue>50</defaultValue>
     </leafNode>
   </children>
 </node>
