@@ -22,6 +22,7 @@ import vyos.defaults
 import vyos.certbot_util
 
 from vyos.config import Config
+from vyos.configverify import verify_vrf
 from vyos import ConfigError
 from vyos.util import call
 from vyos.template import render
@@ -30,6 +31,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/nginx/sites-available/default'
+systemd_override = r'/etc/systemd/system/nginx.service.d/override.conf'
 certbot_dir = vyos.defaults.directories['certbot']
 
 # https config needs to coordinate several subsystems: api, certbot,
@@ -150,6 +152,8 @@ def verify(https):
                 return None
         raise ConfigError("At least one 'virtual-host <id> server-name' "
                           "matching the 'certbot domain-name' is required.")
+
+    verify_vrf(https)
     return None
 
 def generate(https):
@@ -160,10 +164,13 @@ def generate(https):
         https['server_block_list'] = [default_server_block]
 
     render(config_file, 'https/nginx.default.tmpl', https)
+    render(systemd_override, 'https/override.conf.tmpl', https)
 
     return None
 
 def apply(https):
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
     if https is not None:
         call('systemctl restart nginx.service')
     else:
