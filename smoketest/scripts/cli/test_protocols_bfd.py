@@ -40,6 +40,7 @@ peers = {
         'intv_tx'    : '333',
         'passive'    : '',
         'shutdown'   : '',
+        'profile'    : 'foo',
         'source_intf': dum_if,
         },
     '2001:db8::a' : {
@@ -160,7 +161,16 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             if 'shutdown' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'shutdown'])
 
-        self.cli_set(base_path + ['peer', peer, 'profile', list(profiles)[0]])
+        for peer, peer_config in peers.items():
+            if 'profile' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'profile', peer_config["profile"] + 'wrong'])
+
+        # BFD profile does not exist!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        for peer, peer_config in peers.items():
+            if 'profile' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'profile', peer_config["profile"]])
 
         # commit changes
         self.cli_commit()
@@ -169,22 +179,27 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         for profile, profile_config in profiles.items():
             config = self.getFRRconfig(f' profile {profile}', endsection='^ !')
             if 'echo_mode' in profile_config:
-                self.assertIn(f'echo-mode', config)
+                self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
-                self.assertIn(f'echo receive-interval {profile_config["intv_echo"]}', config)
-                self.assertIn(f'echo transmit-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f' echo receive-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f' echo transmit-interval {profile_config["intv_echo"]}', config)
             if 'intv_mult' in profile_config:
-                self.assertIn(f'detect-multiplier {profile_config["intv_mult"]}', config)
+                self.assertIn(f' detect-multiplier {profile_config["intv_mult"]}', config)
             if 'intv_rx' in profile_config:
-                self.assertIn(f'receive-interval {profile_config["intv_rx"]}', config)
+                self.assertIn(f' receive-interval {profile_config["intv_rx"]}', config)
             if 'intv_tx' in profile_config:
-                self.assertIn(f'transmit-interval {profile_config["intv_tx"]}', config)
+                self.assertIn(f' transmit-interval {profile_config["intv_tx"]}', config)
             if 'passive' in profile_config:
-                self.assertIn(f'passive-mode', config)
+                self.assertIn(f' passive-mode', config)
             if 'shutdown' in profile_config:
-                self.assertIn(f'shutdown', config)
+                self.assertIn(f' shutdown', config)
             else:
                 self.assertNotIn(f'shutdown', config)
+
+        for peer, peer_config in peers.items():
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='')
+            if 'profile' in peer_config:
+                self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
