@@ -78,11 +78,11 @@ def verify(bfd):
 
                 # multihop and echo-mode cannot be used together
                 if 'echo_mode' in peer_config:
-                    raise ConfigError('Multihop and echo-mode cannot be used together')
+                    raise ConfigError('BFD multihop and echo-mode cannot be used together')
 
                 # multihop doesn't accept interface names
                 if 'source' in peer_config and 'interface' in peer_config['source']:
-                    raise ConfigError('Multihop and source interface cannot be used together')
+                    raise ConfigError('BFD multihop and source interface cannot be used together')
 
             if 'profile' in peer_config:
                 profile_name = peer_config['profile']
