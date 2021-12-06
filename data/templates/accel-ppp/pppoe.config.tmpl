@@ -108,19 +108,17 @@ ac-name={{ access_concentrator }}
 {%     if iface_config.vlan_id is not defined and iface_config.vlan_range is not defined %}
 interface={{ iface }}
 {%     endif %}
-{%     if iface_config.vlan_id is defined and iface_config.vlan_range is not defined %}
-{%       for vlan in iface_config.vlan_id %}
-interface={{ iface }}.{{ vlan }}
-vlan-mon={{ iface }},{{ vlan }}
+{%     if iface_config.vlan_range is defined %}
+{%       for regex in iface_config.regex %}
+interface=re:^{{ iface | replace('.', '\\.') }}\.({{ regex }})$
 {%       endfor %}
-{%     endif %}
-{%     if iface_config.vlan_range is defined and iface_config.vlan_id is not defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
-interface=re:{{ iface | replace('.', '\\.') }}\.\d+
 {%     endif %}
-{%     if iface_config.vlan_id is defined and iface_config.vlan_range is defined %}
-vlan-mon={{ iface }},{{ iface_config.vlan_id | join(',') }},{{ iface_config.vlan_range | join(',') }}
-interface=re:{{ iface | replace('.', '\\.') }}\.\d+
+{%     if iface_config.vlan_id is defined %}
+{%       for vlan in iface_config.vlan_id %}
+vlan-mon={{ iface }},{{ vlan }}
+interface=re:^{{ iface | replace('.', '\\.') }}\.{{ vlan }}$
+{%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
