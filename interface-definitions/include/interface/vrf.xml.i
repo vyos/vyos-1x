@@ -3,7 +3,7 @@
   <properties>
     <help>VRF instance name</help>
     <valueHelp>
-      <format>text</format>
+      <format>txt</format>
       <description>VRF instance name</description>
     </valueHelp>
     <completionHelp>
