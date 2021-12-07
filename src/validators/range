@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+import sys
+import argparse
+
+class MalformedRange(Exception):
+    pass
+
+def validate_range(value, min=None, max=None):
+    try:
+        lower, upper = re.match(r'^(\d+)-(\d+)$', value).groups()
+
+        lower, upper = int(lower), int(upper)
+
+        if int(lower) > int(upper):
+            raise MalformedRange("the lower bound exceeds the upper bound".format(value))
+
+        if min is not None:
+            if lower < min:
+                raise MalformedRange("the lower bound must not be less than {}".format(min))
+
+        if max is not None:
+            if upper > max:
+                raise MalformedRange("the upper bound must not be greater than {}".format(max))
+
+    except (AttributeError, ValueError):
+        raise MalformedRange("range syntax error")
+
+parser = argparse.ArgumentParser(description='Range validator.')
+parser.add_argument('--min', type=int, action='store')
+parser.add_argument('--max', type=int, action='store')
+parser.add_argument('value', action='store')
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    try:
+        validate_range(args.value, min=args.min, max=args.max)
+    except MalformedRange as e:
+        print("Incorrect range '{}': {}".format(args.value, e))
+        sys.exit(1)
