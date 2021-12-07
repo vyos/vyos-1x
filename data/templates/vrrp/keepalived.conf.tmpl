@@ -5,9 +5,6 @@
 global_defs {
     dynamic_interfaces
     script_user root
-    # Don't run scripts configured to be run as root if any part of the path
-    # is writable by a non-root user.
-    enable_script_security
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
