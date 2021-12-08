@@ -29,6 +29,8 @@ directories = {
   "vyos_udev_dir": "/run/udev/vyos"
 }
 
+config_status = '/tmp/vyos-config-status'
+
 cfg_group = 'vyattacfg'
 
 cfg_vintage = 'vyos'

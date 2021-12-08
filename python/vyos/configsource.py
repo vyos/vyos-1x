@@ -19,6 +19,7 @@ import re
 import subprocess
 
 from vyos.configtree import ConfigTree
+from vyos.util import boot_configuration_complete
 
 class VyOSError(Exception):
     """
@@ -117,7 +118,7 @@ class ConfigSourceSession(ConfigSource):
         # Running config can be obtained either from op or conf mode, it always succeeds
         # once the config system is initialized during boot;
         # before initialization, set to empty string
-        if os.path.isfile('/tmp/vyos-config-status'):
+        if boot_configuration_complete():
             try:
                 running_config_text = self._run([self._cli_shell_api, '--show-active-only', '--show-show-defaults', '--show-ignore-edit', 'showConfig'])
             except VyOSError:
