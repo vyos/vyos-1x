@@ -18,16 +18,15 @@ A small library that allows querying existence or value(s) of config
 settings from op mode, and execution of arbitrary op mode commands.
 '''
 
-import re
-import json
-from copy import deepcopy
+import os
 from subprocess import STDOUT
 
-import vyos.util
-import vyos.xml
+from  vyos.util import popen, boot_configuration_complete
 from vyos.config import Config
-from vyos.configtree import ConfigTree
-from vyos.configsource import ConfigSourceSession
+from vyos.configsource import ConfigSourceSession, ConfigSourceString
+from vyos.defaults import directories
+
+config_file = os.path.join(directories['config'], 'config.boot')
 
 class ConfigQueryError(Exception):
     pass
@@ -58,21 +57,21 @@ class CliShellApiConfigQuery(GenericConfigQuery):
 
     def exists(self, path: list):
         cmd = ' '.join(path)
-        (_, err) = vyos.util.popen(f'cli-shell-api existsActive {cmd}')
+        (_, err) = popen(f'cli-shell-api existsActive {cmd}')
         if err:
             return False
         return True
 
     def value(self, path: list):
         cmd = ' '.join(path)
-        (out, err) = vyos.util.popen(f'cli-shell-api returnActiveValue {cmd}')
+        (out, err) = popen(f'cli-shell-api returnActiveValue {cmd}')
         if err:
             raise ConfigQueryError('No value for given path')
         return out
 
     def values(self, path: list):
         cmd = ' '.join(path)
-        (out, err) = vyos.util.popen(f'cli-shell-api returnActiveValues {cmd}')
+        (out, err) = popen(f'cli-shell-api returnActiveValues {cmd}')
         if err:
             raise ConfigQueryError('No values for given path')
         return out
@@ -81,25 +80,36 @@ class ConfigTreeQuery(GenericConfigQuery):
     def __init__(self):
         super().__init__()
 
-        config_source = ConfigSourceSession()
-        self.configtree = Config(config_source=config_source)
+        if boot_configuration_complete():
+            config_source = ConfigSourceSession()
+            self.config = Config(config_source=config_source)
+        else:
+            try:
+                with open(config_file) as f:
+                    config_string = f.read()
+            except OSError as err:
+                raise ConfigQueryError('No config file available') from err
+
+            config_source = ConfigSourceString(running_config_text=config_string,
+                                               session_config_text=config_string)
+            self.config = Config(config_source=config_source)
 
     def exists(self, path: list):
-        return self.configtree.exists(path)
+        return self.config.exists(path)
 
     def value(self, path: list):
-        return self.configtree.return_value(path)
+        return self.config.return_value(path)
 
     def values(self, path: list):
-        return self.configtree.return_values(path)
+        return self.config.return_values(path)
 
     def list_nodes(self, path: list):
-        return self.configtree.list_nodes(path)
+        return self.config.list_nodes(path)
 
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
                         get_first_key=False, no_multi_convert=False,
                         no_tag_node_value_mangle=False):
-        return self.configtree.get_config_dict(path, effective=effective,
+        return self.config.get_config_dict(path, effective=effective,
                 key_mangling=key_mangling, get_first_key=get_first_key,
                 no_multi_convert=no_multi_convert,
                 no_tag_node_value_mangle=no_tag_node_value_mangle)
@@ -110,7 +120,7 @@ class VbashOpRun(GenericOpRun):
 
     def run(self, path: list, **kwargs):
         cmd = ' '.join(path)
-        (out, err) = vyos.util.popen(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}', stderr=STDOUT, **kwargs)
+        (out, err) = popen(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}', stderr=STDOUT, **kwargs)
         if err:
             raise ConfigQueryError(out)
         return out
