@@ -74,28 +74,15 @@ def generate(mpls):
     return None
 
 def apply(mpls):
-    # Define dictionary that will load FRR config
-    frr_cfg = {}
+    ldpd_damon = 'ldpd'
     # Save original configuration prior to starting any commit actions
-    frr_cfg['original_config'] = frr.get_configuration(daemon='ldpd')
-    frr_cfg['modified_config'] = frr.replace_section(frr_cfg['original_config'], mpls['new_frr_config'], from_re='mpls.*')
+    frr_cfg = frr.FRRConfig()
 
-    # If FRR config is blank, rerun the blank commit three times due to frr-reload
-    # behavior/bug not properly clearing out on one commit.
-    if mpls['new_frr_config'] == '':
-        for x in range(3):
-            frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
-    elif not 'ldp' in mpls:
-        for x in range(3):
-            frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
-    else:
-        # FRR mark configuration will test for syntax errors and throws an
-        # exception if any syntax errors is detected
-        frr.mark_configuration(frr_cfg['modified_config'])
-
-        # Commit resulting configuration to FRR, this will throw CommitError
-        # on failure
-        frr.reload_configuration(frr_cfg['modified_config'], daemon='ldpd')
+    frr_cfg.load_configuration(ldpd_damon)
+    frr_cfg.modify_section(f'^mpls ldp')
+    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty|end)', mpls['new_frr_config'])
+    for x in range(3):
+        frr_cfg.commit_configuration(ldpd_damon)
 
     # Set number of entries in the platform label tables
     labels = '0'
