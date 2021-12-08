@@ -76,9 +76,9 @@ class VyOSUnitTestSHIM:
             while run(f'sudo lsof | grep -q {commit_lock}') == 0:
                 sleep(0.250)
 
-        def getFRRconfig(self, string, end='$'):
+        def getFRRconfig(self, string, end='$', endsection='^!', daemon=''):
             """ Retrieve current "running configuration" from FRR """
-            command = f'vtysh -c "show run" | sed -n "/^{string}{end}/,/^!/p"'
+            command = f'vtysh -c "show run {daemon} no-header" | sed -n "/^{string}{end}/,/{endsection}/p"'
             out = cmd(command)
             if self.debug:
                 import pprint
