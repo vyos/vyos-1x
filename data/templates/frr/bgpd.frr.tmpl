@@ -17,6 +17,12 @@
 {%   endif %}
 {%   if config.bfd is defined %}
  neighbor {{ neighbor }} bfd
+{%     if config.bfd.check_control_plane_failure is defined %}
+ neighbor {{ neighbor }} bfd check-control-plane-failure
+{%     endif %}
+{%     if config.bfd.profile is defined and config.bfd.profile is not none %}
+ neighbor {{ neighbor }} bfd profile {{ config.bfd.profile }}
+{%     endif %}
 {%   endif %}
 {%   if config.capability is defined and config.capability is not none %}
 {%     if config.capability.dynamic is defined %}

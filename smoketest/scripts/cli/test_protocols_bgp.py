@@ -32,9 +32,11 @@ prefix_list_in = 'pfx-foo-in'
 prefix_list_out = 'pfx-foo-out'
 prefix_list_in6 = 'pfx-foo-in6'
 prefix_list_out6 = 'pfx-foo-out6'
+bfd_profile = 'foo-bar-baz'
 
 neighbor_config = {
     '192.0.2.1' : {
+        'bfd'          : '',
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '100',
@@ -51,6 +53,7 @@ neighbor_config = {
         'addpath_all' : '',
         },
     '192.0.2.2' : {
+        'bfd_profile'  : bfd_profile,
         'remote_as'    : '200',
         'shutdown'     : '',
         'no_cap_nego'  : '',
@@ -98,6 +101,7 @@ neighbor_config = {
 
 peer_group_config = {
     'foo' : {
+        'bfd'          : '',
         'remote_as'    : '100',
         'passive'      : '',
         'password'     : 'VyOS-Secure123',
@@ -116,6 +120,7 @@ peer_group_config = {
         'no_send_comm_ext' : '',
         },
     'baz' : {
+        'bfd_profile'  : bfd_profile,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '200',
@@ -154,6 +159,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
     def verify_frr_config(self, peer, peer_config, frrconfig):
         # recurring patterns to verify for both a simple neighbor and a peer-group
+        if 'bfd' in peer_config:
+            self.assertIn(f' neighbor {peer} bfd', frrconfig)
+        if 'bfd_profile' in peer_config:
+            self.assertIn(f' neighbor {peer} bfd profile {peer_config["bfd_profile"]}', frrconfig)
+            self.assertIn(f' neighbor {peer} bfd check-control-plane-failure', frrconfig)
         if 'cap_dynamic' in peer_config:
             self.assertIn(f' neighbor {peer} capability dynamic', frrconfig)
         if 'cap_ext_next' in peer_config:
@@ -270,6 +280,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
             if 'adv_interv' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'advertisement-interval', peer_config["adv_interv"]])
+            if 'bfd' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'bfd'])
+            if 'bfd_profile' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'bfd', 'profile', peer_config["bfd_profile"]])
+                self.cli_set(base_path + ['neighbor', peer, 'bfd', 'check-control-plane-failure'])
             if 'cap_dynamic' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'dynamic'])
             if 'cap_ext_next' in peer_config:
@@ -339,6 +354,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_03_peer_groups(self):
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
+            if 'bfd' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd'])
+            if 'bfd_profile' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd', 'profile', config["bfd_profile"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd', 'check-control-plane-failure'])
             if 'cap_dynamic' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'dynamic'])
             if 'cap_ext_next' in config:
