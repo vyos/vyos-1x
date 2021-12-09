@@ -29,6 +29,8 @@ directories = {
 
 }
 
+config_status = '/tmp/vyos-config-status'
+
 cfg_group = 'vyattacfg'
 
 cfg_vintage = 'vyos'

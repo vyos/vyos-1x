@@ -733,3 +733,12 @@ def is_wwan_connected(interface):
 
     # return True/False if interface is in connected state
     return dict_search('modem.generic.state', tmp) == 'connected'
+
+def boot_configuration_complete() -> bool:
+    """ Check if the boot config loader has completed
+    """
+    from vyos.defaults import config_status
+
+    if os.path.isfile(config_status):
+        return True
+    return False

@@ -23,12 +23,12 @@ import grp
 import traceback
 from datetime import datetime
 
-from vyos.defaults import directories
+from vyos.defaults import directories, config_status
 from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos.configtree import ConfigTree
 from vyos.util import cmd
 
-STATUS_FILE = '/tmp/vyos-config-status'
+STATUS_FILE = config_status
 TRACE_FILE = '/tmp/boot-config-trace'
 
 CFG_GROUP = 'vyattacfg'
