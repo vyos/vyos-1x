@@ -1,5 +1,5 @@
 <!-- include start from ospf/interface-common.xml.i -->
-#include <include/bfd.xml.i>
+#include <include/bfd/bfd.xml.i>
 <leafNode name="cost">
   <properties>
     <help>Interface cost</help>

@@ -648,7 +648,7 @@
     </completionHelp>
   </properties>
   <children>
-    #include <include/bfd.xml.i>
+    #include <include/bfd/bfd.xml.i>
     <leafNode name="circuit-type">
       <properties>
         <help>Configure circuit type for interface</help>

@@ -66,7 +66,7 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/bfd-common.xml.i>
+              #include <include/bfd/common.xml.i>
               <leafNode name="multihop">
                 <properties>
                   <help>Allow this BFD peer to not be directly connected</help>
@@ -88,7 +88,7 @@
               </constraint>
             </properties>
             <children>
-              #include <include/bfd-common.xml.i>
+              #include <include/bfd/common.xml.i>
             </children>
           </tagNode>
         </children>

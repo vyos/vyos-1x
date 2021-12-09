@@ -1,4 +1,4 @@
-<!-- include start from bfd-common.xml.i -->
+<!-- include start from bfd/common.xml.i -->
 <leafNode name="echo-mode">
   <properties>
     <help>Enables the echo transmission mode</help>
