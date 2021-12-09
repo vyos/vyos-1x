@@ -420,7 +420,10 @@ def get_interface_dict(config, base, ifname=''):
         if not 'dhcpv6_options' in vif_config:
             del default_vif_values['dhcpv6_options']
 
-        dict['vif'][vif] = dict_merge(default_vif_values, vif_config)
+        address = leaf_node_changed(config, ['vif', vif, 'address'])
+        if address: dict['vif'][vif].update({'address_old' : address})
+
+        dict['vif'][vif] = dict_merge(default_vif_values, dict['vif'][vif])
         # XXX: T2665: blend in proper DHCPv6-PD default values
         dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
 
@@ -438,7 +441,11 @@ def get_interface_dict(config, base, ifname=''):
         if not 'dhcpv6_options' in vif_s_config:
             del default_vif_s_values['dhcpv6_options']
 
-        dict['vif_s'][vif_s] = dict_merge(default_vif_s_values, vif_s_config)
+        address = leaf_node_changed(config, ['vif-s', vif_s, 'address'])
+        if address: dict['vif_s'][vif_s].update({'address_old' : address})
+
+        dict['vif_s'][vif_s] = dict_merge(default_vif_s_values,
+                dict['vif_s'][vif_s])
         # XXX: T2665: blend in proper DHCPv6-PD default values
         dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(
             dict['vif_s'][vif_s])
@@ -455,8 +462,12 @@ def get_interface_dict(config, base, ifname=''):
             if not 'dhcpv6_options' in vif_c_config:
                 del default_vif_c_values['dhcpv6_options']
 
+            address = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c, 'address'])
+            if address: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
+                    {'address_old' : address})
+
             dict['vif_s'][vif_s]['vif_c'][vif_c] = dict_merge(
-                    default_vif_c_values, vif_c_config)
+                    default_vif_c_values, dict['vif_s'][vif_s]['vif_c'][vif_c])
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
                 dict['vif_s'][vif_s]['vif_c'][vif_c])
