@@ -53,7 +53,7 @@ class KeepalivedFifo:
         # parse arguments
         cmd_args = cmd_args_parser.parse_args()
 
-        self.vrrp_config_dict = None
+        self._config_load()
         self.pipe_path = cmd_args.PIPE
 
         # create queue for messages and events for syncronization
@@ -97,11 +97,6 @@ class KeepalivedFifo:
         logger.debug('Message processing start')
         regex_notify = re.compile(r'^(?P<type>\w+) "(?P<name>[\w-]+)" (?P<state>\w+) (?P<priority>\d+)$', re.MULTILINE)
         while self.stopme.is_set() is False:
-            # XXX: T4059 - do a "late" read of the CLI configuration as this would fail in __init__.
-            # Thus we simply read the configuration the first time it really becomes necessary
-            # and a message requireing the data needs it actually.
-            if self.vrrp_config_dict == None:
-                self._config_load()
             # wait for a new message event from pipe_wait
             self.message_event.wait()
             try:
