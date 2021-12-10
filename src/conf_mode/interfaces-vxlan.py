@@ -55,8 +55,8 @@ def get_config(config=None):
     ifname = vxlan['ifname']
     if ifname in vxlan['other_tunnels']:
         del vxlan['other_tunnels'][ifname]
-        if len(vxlan['other_tunnels']) == 0:
-            del vxlan['other_tunnels']
+    if len(vxlan['other_tunnels']) == 0:
+        del vxlan['other_tunnels']
 
     return vxlan
 
