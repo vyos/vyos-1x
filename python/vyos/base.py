@@ -1,4 +1,4 @@
-# Copyright 2018 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2021 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,6 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from textwrap import fill
 
 class ConfigError(Exception):
-    pass
+    def __init__(self, message):
+        # Reformat the message and trim it to 72 characters in length
+        message = fill(message, width=72)
+        # Call the base class constructor with the parameters it needs
+        super().__init__(message)
