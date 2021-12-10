@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -28,10 +29,13 @@ from vyos.util import cmd
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import DEVNULL
+from vyos.util import is_systemd_service_active
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+service_name = 'ModemManager.service'
 
 def get_config(config=None):
     """
@@ -44,6 +48,20 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'wwan']
     wwan = get_interface_dict(conf, base)
+
+    # We need to know the amount of other WWAN interfaces as ModemManager needs
+    # to be started or stopped.
+    conf.set_level(base)
+    wwan['other_interfaces'] = conf.get_config_dict([], key_mangling=('-', '_'),
+                                                    get_first_key=True,
+                                                    no_tag_node_value_mangle=True)
+
+    # This if-clause is just to be sure - it will always evaluate to true
+    ifname = wwan['ifname']
+    if ifname in wwan['other_interfaces']:
+        del wwan['other_interfaces'][ifname]
+    if len(wwan['other_interfaces']) == 0:
+        del wwan['other_interfaces']
 
     return wwan
 
@@ -65,6 +83,18 @@ def generate(wwan):
     return None
 
 def apply(wwan):
+    if not is_systemd_service_active(service_name):
+        cmd(f'systemctl start {service_name}')
+
+        counter = 100
+        # Wait until a modem is detected and then we can continue
+        while counter > 0:
+            counter -= 1
+            tmp = cmd('mmcli -L')
+            if tmp != 'No modems were found':
+                break
+            sleep(0.250)
+
     # we only need the modem number. wwan0 -> 0, wwan1 -> 1
     modem = wwan['ifname'].lstrip('wwan')
     base_cmd = f'mmcli --modem {modem}'
@@ -74,6 +104,11 @@ def apply(wwan):
     w = WWANIf(wwan['ifname'])
     if 'deleted' in wwan or 'disable' in wwan:
         w.remove()
+
+        # There are no other WWAN interfaces - stop the daemon
+        if 'other_interfaces' not in wwan:
+            cmd(f'systemctl stop {service_name}')
+
         return None
 
     ip_type = 'ipv4'
@@ -93,6 +128,9 @@ def apply(wwan):
     command = f'{base_cmd} --simple-connect="{options}"'
     call(command, stdout=DEVNULL)
     w.update(wwan)
+
+    if 'other_interfaces' not in wwan and 'deleted' in wwan:
+        cmd(f'systemctl start {service_name}')
 
     return None
 
