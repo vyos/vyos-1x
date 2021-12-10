@@ -31,7 +31,6 @@ from vyos.util import dict_search
 from vyos.util import DEVNULL
 from vyos.util import is_systemd_service_active
 from vyos.util import write_file
-from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
