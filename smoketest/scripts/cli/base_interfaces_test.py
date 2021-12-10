@@ -171,10 +171,10 @@ class BasicInterfaceTest:
         def test_add_multiple_ip_addresses(self):
             # Add address
             for intf in self._interfaces:
+                for option in self._options.get(intf, []):
+                    self.cli_set(self._base_path + [intf] + option.split())
                 for addr in self._test_addr:
                     self.cli_set(self._base_path + [intf, 'address', addr])
-                    for option in self._options.get(intf, []):
-                        self.cli_set(self._base_path + [intf] + option.split())
 
             self.cli_commit()
 
