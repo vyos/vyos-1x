@@ -30,12 +30,14 @@ from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import DEVNULL
 from vyos.util import is_systemd_service_active
+from vyos.util import write_file
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 service_name = 'ModemManager.service'
+cron_script = '/etc/cron.d/wwan'
 
 def get_config(config=None):
     """
@@ -80,6 +82,11 @@ def verify(wwan):
     return None
 
 def generate(wwan):
+    if 'deleted' in wwan:
+        return None
+
+    if not os.path.exists(cron_script):
+        write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py')
     return None
 
 def apply(wwan):
@@ -108,6 +115,10 @@ def apply(wwan):
         # There are no other WWAN interfaces - stop the daemon
         if 'other_interfaces' not in wwan:
             cmd(f'systemctl stop {service_name}')
+            # Clean CRON helper script which is used for to re-connect when
+            # RF signal is lost
+            if os.path.exists(cron_script):
+                os.unlink(cron_script)
 
         return None
 
