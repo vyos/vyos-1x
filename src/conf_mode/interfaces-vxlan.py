@@ -81,6 +81,9 @@ def verify(vxlan):
         raise ConfigError(
             'Must either configure VXLAN "vni" or use "external" CLI option!')
 
+    if {'external', 'vni'} <= set(vxlan):
+        raise ConfigError('Can not specify both "external" and "VNI"!')
+
     if {'external', 'other_tunnels'} <= set(vxlan):
         other_tunnels = ', '.join(vxlan['other_tunnels'])
         raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\

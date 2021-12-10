@@ -95,6 +95,12 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_set(self._base_path + [interface, 'external'])
         self.cli_set(self._base_path + [interface, 'source-address', source_address])
 
+        # Both 'VNI' and 'external' can not be specified at the same time.
+        self.cli_set(self._base_path + [interface, 'vni', '111'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'vni'])
+
         # Now add some more interfaces - this must fail and a CLI error needs
         # to be generated as Linux can only handle one VXLAN tunnel when using
         # external mode.
