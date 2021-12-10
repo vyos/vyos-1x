@@ -19,6 +19,12 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
+          <leafNode name="external">
+            <properties>
+              <help>Use external control plane</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="group">
             <properties>
               <help>Multicast group address for VXLAN interface</help>

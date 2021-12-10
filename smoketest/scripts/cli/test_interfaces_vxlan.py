@@ -16,6 +16,7 @@
 
 import unittest
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.util import get_interface_config
 
@@ -78,12 +79,40 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
                 label = options['linkinfo']['info_data']['label']
                 self.assertIn(f'parameters ipv6 flowlabel {label}', self._options[interface])
 
+            if any('external' in s for s in self._options[interface]):
+                self.assertTrue(options['linkinfo']['info_data']['external'])
+
             self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
             self.assertEqual('set',      options['linkinfo']['info_data']['df'])
             self.assertEqual(f'0x{tos}', options['linkinfo']['info_data']['tos'])
             self.assertEqual(ttl,        options['linkinfo']['info_data']['ttl'])
             self.assertEqual(Interface(interface).get_admin_state(), 'up')
             ttl += 10
+
+    def test_vxlan_external(self):
+        interface = 'vxlan0'
+        source_address = '192.0.2.1'
+        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'source-address', source_address])
+
+        # Now add some more interfaces - this must fail and a CLI error needs
+        # to be generated as Linux can only handle one VXLAN tunnel when using
+        # external mode.
+        for intf in self._interfaces:
+            for option in self._options.get(intf, []):
+                self.cli_set(self._base_path + [intf] + option.split())
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Remove those test interfaces again
+        for intf in self._interfaces:
+            self.cli_delete(self._base_path + [intf])
+
+        self.cli_commit()
+
+        options = get_interface_config(interface)
+        self.assertTrue(options['linkinfo']['info_data']['external'])
+        self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
