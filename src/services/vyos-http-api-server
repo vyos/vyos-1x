@@ -640,15 +640,19 @@ if __name__ == '__main__':
     app.state.vyos_session = config_session
     app.state.vyos_keys = server_config['api_keys']
 
-    app.state.vyos_debug = bool(server_config['debug'] == 'true')
-    app.state.vyos_strict = bool(server_config['strict'] == 'true')
+    app.state.vyos_debug = server_config['debug']
+    app.state.vyos_strict = server_config['strict']
 
     api.graphql.state.settings['app'] = app
 
     try:
-        uvicorn.run(app, host=server_config["listen_address"],
-                         port=int(server_config["port"]),
-                         proxy_headers=True)
+        if not server_config['socket']:
+            uvicorn.run(app, host=server_config["listen_address"],
+                             port=int(server_config["port"]),
+                             proxy_headers=True)
+        else:
+            uvicorn.run(app, uds="/run/api.sock",
+                             proxy_headers=True)
     except OSError as err:
         logger.critical(f"OSError {err}")
         sys.exit(1)
