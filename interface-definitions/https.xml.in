@@ -101,6 +101,12 @@
                   <hidden/>
                 </properties>
               </leafNode>
+              <leafNode name="socket">
+                <properties>
+                  <help>Run server on Unix domain socket</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <node name="api-restrict">

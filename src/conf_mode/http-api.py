@@ -31,7 +31,7 @@ from vyos.util import call
 from vyos import airbag
 airbag.enable()
 
-config_file = '/etc/vyos/http-api.conf'
+api_conf_file = '/etc/vyos/http-api.conf'
 
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 
@@ -55,10 +55,13 @@ def get_config(config=None):
         conf.set_level('service https api')
 
     if conf.exists('strict'):
-        http_api['strict'] = 'true'
+        http_api['strict'] = True
 
     if conf.exists('debug'):
-        http_api['debug'] = 'true'
+        http_api['debug'] = True
+
+    if conf.exists('socket'):
+        http_api['socket'] = True
 
     if conf.exists('port'):
         port = conf.return_value('port')
@@ -88,7 +91,7 @@ def generate(http_api):
     if not os.path.exists('/etc/vyos'):
         os.mkdir('/etc/vyos')
 
-    with open(config_file, 'w') as f:
+    with open(api_conf_file, 'w') as f:
         json.dump(http_api, f, indent=2)
 
     return None
