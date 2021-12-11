@@ -114,7 +114,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('bfd')
+        frrconfig = self.getFRRconfig('bfd', daemon=PROCESS_NAME)
         for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
@@ -127,7 +127,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='')
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
 
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
@@ -206,7 +206,7 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertNotIn(f'shutdown', config)
 
         for peer, peer_config in peers.items():
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='')
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
             if 'profile' in peer_config:
                 self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 
