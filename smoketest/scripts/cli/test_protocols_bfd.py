@@ -31,7 +31,8 @@ peers = {
         'intv_tx'    : '600',
         'multihop'   : '',
         'source_addr': '192.0.2.254',
-        },
+        'profile'    : 'foo-bar-baz',
+    },
     '192.0.2.20' : {
         'echo_mode'  : '',
         'intv_echo'  : '100',
@@ -42,15 +43,16 @@ peers = {
         'shutdown'   : '',
         'profile'    : 'foo',
         'source_intf': dum_if,
-        },
-    '2001:db8::a' : {
+    },
+    '2001:db8::1000:1' : {
         'source_addr': '2001:db8::1',
         'vrf'        : vrf_name,
-        },
-    '2001:db8::b' : {
+    },
+    '2001:db8::2000:1' : {
         'source_addr': '2001:db8::1',
         'multihop'   : '',
-        },
+        'profile'    : 'baz_foo',
+    },
 }
 
 profiles = {
@@ -62,7 +64,12 @@ profiles = {
         'intv_tx'    : '333',
         'shutdown'   : '',
         },
-    'bar' : {
+    'foo-bar-baz' : {
+        'intv_mult'  : '4',
+        'intv_rx'    : '400',
+        'intv_tx'    : '400',
+        },
+    'baz_foo' : {
         'intv_mult'  : '102',
         'intv_rx'    : '444',
         'passive'    : '',
@@ -143,8 +150,6 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf_name])
 
     def test_bfd_profile(self):
-        peer = '192.0.2.10'
-
         for profile, profile_config in profiles.items():
             if 'echo_mode' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'echo-mode'])
@@ -164,6 +169,10 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in peers.items():
             if 'profile' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'profile', peer_config["profile"] + 'wrong'])
+            if 'source_addr' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
+            if 'source_intf' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
 
         # BFD profile does not exist!
         with self.assertRaises(ConfigSessionError):
