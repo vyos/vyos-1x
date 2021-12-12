@@ -46,6 +46,7 @@ neighbor_config = {
         'no_cap_nego' : '',
         'port'        : '667',
         'cap_strict'  : '',
+        'peer_group'  : 'foo',
         },
     '192.0.2.3' : {
 #        XXX: not available in current Perl backend
@@ -54,6 +55,7 @@ neighbor_config = {
         'passive'     : '',
         'multi_hop'   : '5',
         'update_src'  : 'lo',
+        'peer_group'  : 'foo_bar_baz',
         },
 }
 
@@ -67,7 +69,8 @@ peer_group_config = {
 #        XXX: not available in current Perl backend
 #       'ttl_security': '5',
         },
-    'bar' : {
+#       XXX: Perl backend supports no hyphens in peer-group names
+    'foo_bar' : {
 #        XXX: not available in current Perl backend
 #       'description' : 'foo peer bar group',
         'remote_as'   : '200',
@@ -75,7 +78,8 @@ peer_group_config = {
         'no_cap_nego' : '',
         'local_as'    : '300',
         },
-    'baz' : {
+#       XXX: Perl backend supports no hyphens in peer-group names
+    'foo_bar_baz' : {
         'cap_dynamic' : '',
         'cap_ext_next': '',
         'remote_as'   : '200',
@@ -84,6 +88,7 @@ peer_group_config = {
         'update_src'  : 'lo',
         },
 }
+
 
 def getFRRBGPconfig():
     return cmd(f'vtysh -c "show run" | sed -n "/router bgp {ASN}/,/^!/p"')
@@ -231,6 +236,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'update_src' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'update-source', config["update_src"]])
 
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'peer-group', peer_config['peer_group']])
+
         # commit changes
         self.cli_commit()
 
@@ -241,6 +250,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in peer_group_config.items():
             self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
             self.verify_frr_config(peer, peer_config, frrconfig)
+
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.assertIn(f' neighbor {peer} peer-group {peer_config["peer_group"]}', frrconfig)
 
 
     def test_bgp_04_afi_ipv4(self):
@@ -313,7 +326,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                                           'network', network])
             if 'summary_only' in network_config:
                 self.cli_set(base_path + ['address-family', 'ipv6-unicast',
-                                              'aggregate-address', network, 'summary-only'])
+                                          'aggregate-address', network, 'summary-only'])
 
         # commit changes
         self.cli_commit()
