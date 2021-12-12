@@ -510,6 +510,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%       endfor %}
 {%     endif %}
 {%   endif %}
+{%   if parameters.fast_convergence is defined %}
+  bgp fast-convergence
+{%   endif %}
 {%   if parameters.graceful_restart is defined %}
  bgp graceful-restart {{ 'stalepath-time ' ~ parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
 {%   endif %}

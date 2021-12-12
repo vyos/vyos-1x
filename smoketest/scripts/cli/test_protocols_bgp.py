@@ -241,6 +241,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'bestpath', 'compare-routerid'])
 
         self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
+        self.cli_set(base_path + ['parameters', 'fast-convergence'])
 
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
@@ -258,6 +259,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
         self.assertIn(f' bgp conditional-advertisement timer {cond_adv_timer}', frrconfig)
+        self.assertIn(f' bgp fast-convergence', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)

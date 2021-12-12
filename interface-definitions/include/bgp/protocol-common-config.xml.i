@@ -1363,6 +1363,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="fast-convergence">
+      <properties>
+        <help>Teardown sessions immediately whenever peer becomes unreachable</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <node name="graceful-restart">
       <properties>
         <help>Graceful restart capability parameters</help>
