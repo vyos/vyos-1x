@@ -20,6 +20,9 @@ type Mutation {
     CreateFirewallAddressGroup(data: CreateFirewallAddressGroupInput) : CreateFirewallAddressGroupResult @configure
     UpdateFirewallAddressGroupMembers(data: UpdateFirewallAddressGroupMembersInput) : UpdateFirewallAddressGroupMembersResult @configure
     RemoveFirewallAddressGroupMembers(data: RemoveFirewallAddressGroupMembersInput) : RemoveFirewallAddressGroupMembersResult @configure
+    CreateFirewallAddressIpv6Group(data: CreateFirewallAddressIpv6GroupInput) : CreateFirewallAddressIpv6GroupResult @configure
+    UpdateFirewallAddressIpv6GroupMembers(data: UpdateFirewallAddressIpv6GroupMembersInput) : UpdateFirewallAddressIpv6GroupMembersResult @configure
+    RemoveFirewallAddressIpv6GroupMembers(data: RemoveFirewallAddressIpv6GroupMembersInput) : RemoveFirewallAddressIpv6GroupMembersResult @configure
     SaveConfigFile(data: SaveConfigFileInput) : SaveConfigFileResult @configfile
     LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configfile
     AddSystemImage(data: AddSystemImageInput) : AddSystemImageResult @image

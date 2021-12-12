@@ -128,6 +128,12 @@ coercion':
 
 http://spec.graphql.org/October2021/#sec-Scalars.Input-Coercion
 
+Similarly, IPv6 versions of the above:
+
+CreateFirewallAddressIpv6Group
+UpdateFirewallAddressIpv6GroupMembers
+RemoveFirewallAddressIpv6GroupMembers
+
 
 Instead of using the GraphQL playground, an equivalent curl command to the
 first example above would be:

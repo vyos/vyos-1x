@@ -1,0 +1,4 @@
+set firewall group ipv6-address-group {{ name }}
+{% for add in address %}
+set firewall group ipv6-address-group {{ name }} address {{ add }}
+{% endfor %}
