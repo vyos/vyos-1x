@@ -534,6 +534,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.no_fast_external_failover is defined %}
  no bgp fast-external-failover
 {%   endif %}
+{%   if parameters.reject_as_sets is defined %}
+ bgp reject-as-sets
+{%   endif %}
 {%   if parameters.router_id is defined and parameters.router_id is not none %}
  bgp router-id {{ parameters.router_id }}
 {%   endif %}

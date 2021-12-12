@@ -1430,6 +1430,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="reject-as-sets">
+      <properties>
+        <help>Reject routes with AS_SET or AS_CONFED_SET flag</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     #include <include/router-id.xml.i>
   </children>
 </node>
