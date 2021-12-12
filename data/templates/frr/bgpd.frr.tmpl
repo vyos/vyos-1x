@@ -540,6 +540,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.router_id is defined and parameters.router_id is not none %}
  bgp router-id {{ parameters.router_id }}
 {%   endif %}
+{%   if parameters.shutdown is defined %}
+ bgp shutdown
+{%   endif %}
 {% endif %}
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}

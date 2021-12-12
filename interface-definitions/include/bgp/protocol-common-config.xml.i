@@ -1436,6 +1436,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="shutdown">
+      <properties>
+        <help>Administrative shutdown of the BGP instance</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     #include <include/router-id.xml.i>
   </children>
 </node>
