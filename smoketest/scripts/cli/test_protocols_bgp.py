@@ -69,6 +69,7 @@ neighbor_config = {
         'passive'      : '',
         'multi_hop'    : '5',
         'update_src'   : 'lo',
+        'peer_group'   : 'foo',
         },
     '2001:db8::1' : {
         'cap_dynamic'  : '',
@@ -86,6 +87,7 @@ neighbor_config = {
         'route_map_out': route_map_out,
         'no_send_comm_std' : '',
         'addpath_per_as'   : '',
+        'peer_group'   : 'foo-bar',
         },
     '2001:db8::2' : {
         'remote_as'    : '456',
@@ -96,6 +98,7 @@ neighbor_config = {
         'pfx_list_in'  : prefix_list_in6,
         'pfx_list_out' : prefix_list_out6,
         'no_send_comm_ext' : '',
+        'peer_group'   : 'foo-bar_baz',
         },
 }
 
@@ -109,7 +112,7 @@ peer_group_config = {
         'cap_over'     : '',
         'ttl_security': '5',
         },
-    'bar' : {
+    'foo-bar' : {
         'description'  : 'foo peer bar group',
         'remote_as'    : '200',
         'shutdown'     : '',
@@ -120,6 +123,7 @@ peer_group_config = {
         'no_send_comm_ext' : '',
         },
     'baz' : {
+    'foo-bar_baz' : {
         'bfd_profile'  : bfd_profile,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
@@ -417,6 +421,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'addpath_per_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
 
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'peer-group', peer_config['peer_group']])
+
         # commit changes
         self.cli_commit()
 
@@ -427,6 +435,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in peer_group_config.items():
             self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
             self.verify_frr_config(peer, peer_config, frrconfig)
+
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.assertIn(f' neighbor {peer} peer-group {peer_config["peer_group"]}', frrconfig)
 
 
     def test_bgp_04_afi_ipv4(self):
