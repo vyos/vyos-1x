@@ -219,6 +219,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         max_path_v6 = '8'
         max_path_v6ibgp = '16'
         cond_adv_timer = '30'
+        min_hold_time = '2'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -242,6 +243,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
         self.cli_set(base_path + ['parameters', 'fast-convergence'])
+        self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
 
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
@@ -265,6 +267,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
         self.assertIn(f' bgp bestpath bandwidth default-weight-for-missing', frrconfig)
         self.assertIn(f' bgp bestpath compare-routerid', frrconfig)
+        self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')

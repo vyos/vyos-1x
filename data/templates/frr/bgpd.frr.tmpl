@@ -522,6 +522,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.log_neighbor_changes is defined %}
  bgp log-neighbor-changes
 {%   endif %}
+{%   if parameters.minimum_holdtime is defined and parameters.minimum_holdtime is not none %}
+ bgp minimum-holdtime {{ parameters.minimum_holdtime }}
+{%   endif %}
 {%   if parameters.network_import_check is defined %}
  bgp network import-check
 {%   endif %}
