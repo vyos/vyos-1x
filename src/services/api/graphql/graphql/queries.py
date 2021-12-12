@@ -22,11 +22,11 @@ from makefun import with_signature
 from .. import state
 from api.graphql.recipes.session import Session
 
-mutation = ObjectType("Mutation")
+query = ObjectType("Query")
 
-def make_mutation_resolver(mutation_name, class_name, session_func):
-    """Dynamically generate a resolver for the mutation named in the
-    schema by 'mutation_name'.
+def make_query_resolver(query_name, class_name, session_func):
+    """Dynamically generate a resolver for the query named in the
+    schema by 'query_name'.
 
     Dynamic generation is provided using the package 'makefun' (via the
     decorator 'with_signature'), which provides signature-preserving
@@ -41,7 +41,7 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
     resolver_name = f'resolve_{func_base_name}'
     func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Dict)'
 
-    @mutation.field(mutation_name)
+    @query.field(query_name)
     @convert_kwargs_to_snake_case
     @with_signature(func_sig, func_name=resolver_name)
     async def func_impl(*args, **kwargs):
@@ -80,20 +80,10 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
     return func_impl
 
-def make_prefix_resolver(mutation_name, prefix=[]):
-    for pre in prefix:
-        Pre = pre.capitalize()
-        if Pre in mutation_name:
-            class_name = mutation_name.replace(Pre, '', 1)
-            return make_mutation_resolver(mutation_name, class_name, pre)
-    raise Exception
+def make_show_config_resolver(query_name):
+    class_name = query_name
+    return make_query_resolver(query_name, class_name, 'show_config')
 
-def make_configure_resolver(mutation_name):
-    class_name = mutation_name
-    return make_mutation_resolver(mutation_name, class_name, 'configure')
-
-def make_config_file_resolver(mutation_name):
-    return make_prefix_resolver(mutation_name, prefix=['save', 'load'])
-
-def make_image_resolver(mutation_name):
-    return make_prefix_resolver(mutation_name, prefix=['add', 'delete'])
+def make_show_resolver(query_name):
+    class_name = query_name
+    return make_query_resolver(query_name, class_name, 'show')

@@ -1,7 +1,12 @@
 
+The following examples are in the form as entered in the GraphQL
+'playground', which is found at:
+
+https://{{ host_address }}/graphql
+
 Example using GraphQL mutations to configure a DHCP server:
 
-This assumes that the http-api is running:
+All examples assume that the http-api is running:
 
 'set service https api'
 
@@ -58,8 +63,8 @@ N.B. fileName can be empty (fileName: "") or data can be empty (data: {}) to
 save to /config/config.boot; to save to an alternative path, specify
 fileName.
 
-Similarly, using the same 'endpoint' (meaning the form of the request and
-resolver; the actual enpoint for all GraphQL requests is
+Similarly, using an analogous 'endpoint' (meaning the form of the request
+and resolver; the actual enpoint for all GraphQL requests is
 https://hostname/graphql), one can load an arbitrary config file from a
 path.
 
@@ -75,7 +80,7 @@ mutation {
 
 Op-mode 'show' commands may be requested by path, e.g.:
 
-mutation {
+query {
   Show (data: {path: ["interfaces", "ethernet", "detail"]}) {
     success
     errors
@@ -88,15 +93,51 @@ mutation {
 N.B. to see the output the 'data' field 'result' must be present in the
 request.
 
-The GraphQL playground will be found at:
+Mutations to manipulate firewall address groups:
 
-https://{{ host_address }}/graphql
+mutation {
+  CreateFirewallAddressGroup (data: {name: "ADDR-GRP", address: "10.0.0.1"}) {
+    success
+    errors
+  }
+}
 
-An equivalent curl command to the first example above would be:
+mutation {
+  UpdateFirewallAddressGroupMembers (data: {name: "ADDR-GRP",
+                                            address: ["10.0.0.1-10.0.0.8", "192.168.0.1"]}) {
+    success
+    errors
+  }
+}
+
+mutation {
+  RemoveFirewallAddressGroupMembers (data: {name: "ADDR-GRP",
+                                            address: "192.168.0.1"}) {
+    success
+    errors
+  }
+}
+
+N.B. The schema for the above specify that 'address' be of the form 'list of
+strings' (SDL type [String!]! for UpdateFirewallAddressGroupMembers, where
+the ! indicates that the input is required; SDL type [String] in
+CreateFirewallAddressGroup, since a group may be created without any
+addresses). However, notice that a single string may be passed without being
+a member of a list, in which case the specification allows for 'input
+coercion':
+
+http://spec.graphql.org/October2021/#sec-Scalars.Input-Coercion
+
+
+Instead of using the GraphQL playground, an equivalent curl command to the
+first example above would be:
 
 curl -k 'https://192.168.100.168/graphql' -H 'Content-Type: application/json' --data-binary '{"query": "mutation {createInterfaceEthernet (data: {interface: \"eth1\", address: \"192.168.0.1/24\", description: \"BOB\"}) {success errors data {address}}}"}'
 
 Note that the 'mutation' term is prefaced by 'query' in the curl command.
+
+Curl equivalents may be read from within the GraphQL playground at the 'copy
+curl' button.
 
 What's here:
 
