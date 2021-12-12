@@ -45,3 +45,51 @@ type RemoveFirewallAddressGroupMembersResult {
     success: Boolean!
     errors: [String]
 }
+
+input CreateFirewallAddressIpv6GroupInput {
+    name: String!
+    address: [String]
+}
+
+type CreateFirewallAddressIpv6Group {
+    name: String!
+    address: [String]
+}
+
+type CreateFirewallAddressIpv6GroupResult {
+    data: CreateFirewallAddressIpv6Group
+    success: Boolean!
+    errors: [String]
+}
+
+input UpdateFirewallAddressIpv6GroupMembersInput {
+    name: String!
+    address: [String!]!
+}
+
+type UpdateFirewallAddressIpv6GroupMembers {
+    name: String!
+    address: [String!]!
+}
+
+type UpdateFirewallAddressIpv6GroupMembersResult {
+    data: UpdateFirewallAddressIpv6GroupMembers
+    success: Boolean!
+    errors: [String]
+}
+
+input RemoveFirewallAddressIpv6GroupMembersInput {
+    name: String!
+    address: [String!]!
+}
+
+type RemoveFirewallAddressIpv6GroupMembers {
+    name: String!
+    address: [String!]!
+}
+
+type RemoveFirewallAddressIpv6GroupMembersResult {
+    data: RemoveFirewallAddressIpv6GroupMembers
+    success: Boolean!
+    errors: [String]
+}
