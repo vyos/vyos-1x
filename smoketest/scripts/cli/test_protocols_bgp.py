@@ -59,11 +59,14 @@ neighbor_config = {
         'no_cap_nego'  : '',
         'port'         : '667',
         'cap_strict'   : '',
+        'advertise_map': route_map_in,
+        'non_exist_map': route_map_out,
         'pfx_list_in'  : prefix_list_in,
         'pfx_list_out' : prefix_list_out,
         'no_send_comm_std' : '',
         },
     '192.0.2.3' : {
+        'advertise_map': route_map_in,
         'description'  : 'foo bar baz',
         'remote_as'    : '200',
         'passive'      : '',
@@ -72,6 +75,8 @@ neighbor_config = {
         'peer_group'   : 'foo',
         },
     '2001:db8::1' : {
+        'advertise_map': route_map_in,
+        'exist_map'    : route_map_out,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '123',
@@ -104,6 +109,8 @@ neighbor_config = {
 
 peer_group_config = {
     'foo' : {
+        'advertise_map': route_map_in,
+        'exist_map'    : route_map_out,
         'bfd'          : '',
         'remote_as'    : '100',
         'passive'      : '',
@@ -113,6 +120,7 @@ peer_group_config = {
         'ttl_security': '5',
         },
     'foo-bar' : {
+        'advertise_map': route_map_in,
         'description'  : 'foo peer bar group',
         'remote_as'    : '200',
         'shutdown'     : '',
@@ -122,8 +130,9 @@ peer_group_config = {
         'pfx_list_out' : prefix_list_out,
         'no_send_comm_ext' : '',
         },
-    'baz' : {
     'foo-bar_baz' : {
+        'advertise_map': route_map_in,
+        'non_exist_map': route_map_out,
         'bfd_profile'  : bfd_profile,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
@@ -137,23 +146,34 @@ peer_group_config = {
 }
 
 class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+        cls.cli_set(cls, ['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'prefix', '192.0.2.0/25'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
+
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['policy'])
+
     def setUp(self):
-        self.cli_set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'prefix', '192.0.2.0/25'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
-
-        self.cli_set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
-
         self.cli_set(base_path + ['local-as', ASN])
 
     def tearDown(self):
-        self.cli_delete(['policy'])
         self.cli_delete(['vrf'])
         self.cli_delete(base_path)
         self.cli_commit()
@@ -212,7 +232,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
         if 'addpath_per_as' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
-
+        if 'advertise_map' in peer_config:
+            base = f' neighbor {peer} advertise-map {peer_config["advertise_map"]}'
+            if 'exist_map' in peer_config:
+                base = f'{base} exist-map {peer_config["exist_map"]}'
+            if 'non_exist_map' in peer_config:
+                base = f'{base} non-exist-map {peer_config["non_exist_map"]}'
+            self.assertIn(base, frrconfig)
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -353,6 +379,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'addpath_per_as' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-per-as'])
 
+            # Conditional advertisement
+            if 'advertise_map' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'advertise-map', peer_config["advertise_map"]])
+                # Either exist-map or non-exist-map needs to be specified
+                if 'exist_map' not in peer_config and 'non_exist_map' not in peer_config:
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'exist-map', route_map_in])
+
+                if 'exist_map' in peer_config:
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'exist-map', peer_config["exist_map"]])
+                if 'non_exist_map' in peer_config:
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'non-exist-map', peer_config["non_exist_map"]])
+
         # commit changes
         self.cli_commit()
 
@@ -420,6 +460,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-all'])
             if 'addpath_per_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
+
+            # Conditional advertisement
+            if 'advertise_map' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'advertise-map', config["advertise_map"]])
+                # Either exist-map or non-exist-map needs to be specified
+                if 'exist_map' not in config and 'non_exist_map' not in config:
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'exist-map', route_map_in])
+
+                if 'exist_map' in config:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'exist-map', config["exist_map"]])
+                if 'non_exist_map' in config:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'non-exist-map', config["non_exist_map"]])
 
         for peer, peer_config in neighbor_config.items():
             if 'peer_group' in peer_config:

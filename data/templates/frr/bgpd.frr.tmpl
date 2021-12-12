@@ -146,6 +146,17 @@
 {%       if afi_config.as_override is defined %}
   neighbor {{ neighbor }} as-override
 {%       endif %}
+{%       if afi_config.conditionally_advertise is defined and afi_config.conditionally_advertise is not none %}
+{%         if afi_config.conditionally_advertise.advertise_map is defined and afi_config.conditionally_advertise.advertise_map is not none %}
+{%           set exist_non_exist_map = 'exist-map' %}
+{%           if afi_config.conditionally_advertise.exist_map is defined and afi_config.conditionally_advertise.exist_map is not none %}
+{%             set exist_non_exist_map = 'exist-map ' ~ afi_config.conditionally_advertise.exist_map %}
+{%           elif afi_config.conditionally_advertise.non_exist_map is defined and afi_config.conditionally_advertise.non_exist_map is not none %}
+{%             set exist_non_exist_map = 'non-exist-map ' ~ afi_config.conditionally_advertise.non_exist_map %}
+{%           endif %}
+  neighbor {{ neighbor }} advertise-map {{ afi_config.conditionally_advertise.advertise_map }} {{ exist_non_exist_map }}
+{%         endif %}
+{%       endif %}
 {%       if afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
 {%       endif %}

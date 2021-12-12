@@ -183,6 +183,28 @@ def verify(bgp):
                     raise ConfigError(f'Neighbor "{peer}" cannot have both ipv6-unicast and ipv6-labeled-unicast configured at the same time!')
 
                 afi_config = peer_config['address_family'][afi]
+
+                if 'conditionally_advertise' in afi_config:
+                    if 'advertise_map' not in afi_config['conditionally_advertise']:
+                        raise ConfigError('Must speficy advertise-map when conditionally-advertise is in use!')
+                    # Verify advertise-map (which is a route-map) exists
+                    verify_route_map(afi_config['conditionally_advertise']['advertise_map'], bgp)
+
+                    if ('exist_map' not in afi_config['conditionally_advertise'] and
+                        'non_exist_map' not in afi_config['conditionally_advertise']):
+                        raise ConfigError('Must either speficy exist-map or non-exist-map when ' \
+                                          'conditionally-advertise is in use!')
+
+                    if {'exist_map', 'non_exist_map'} <= set(afi_config['conditionally_advertise']):
+                        raise ConfigError('Can not specify both exist-map and non-exist-map for ' \
+                                          'conditionally-advertise!')
+
+                    if 'exist_map' in afi_config['conditionally_advertise']:
+                        verify_route_map(afi_config['conditionally_advertise']['exist_map'], bgp)
+
+                    if 'non_exist_map' in afi_config['conditionally_advertise']:
+                        verify_route_map(afi_config['conditionally_advertise']['non_exist_map'], bgp)
+
                 # Validate if configured Prefix list exists
                 if 'prefix_list' in afi_config:
                     for tmp in ['import', 'export']:
