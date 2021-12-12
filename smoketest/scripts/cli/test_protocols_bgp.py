@@ -246,6 +246,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
+        self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
 
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
@@ -272,6 +273,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
         self.assertIn(f' bgp reject-as-sets', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
+        self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')

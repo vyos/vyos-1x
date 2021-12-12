@@ -543,6 +543,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.shutdown is defined %}
  bgp shutdown
 {%   endif %}
+{%   if parameters.suppress_fib_pending is defined %}
+ bgp suppress-fib-pending
+{%   endif %}
 {% endif %}
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}

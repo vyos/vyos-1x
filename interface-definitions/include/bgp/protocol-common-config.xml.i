@@ -1442,6 +1442,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="suppress-fib-pending">
+      <properties>
+        <help>Advertise only routes that are programmed in kernel to peers</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     #include <include/router-id.xml.i>
   </children>
 </node>
