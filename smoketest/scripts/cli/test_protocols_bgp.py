@@ -218,6 +218,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         max_path_v4ibgp = '4'
         max_path_v6 = '8'
         max_path_v6ibgp = '16'
+        cond_adv_timer = '30'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -239,6 +240,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'bestpath', 'bandwidth', 'default-weight-for-missing'])
         self.cli_set(base_path + ['parameters', 'bestpath', 'compare-routerid'])
 
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
+
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
@@ -254,6 +257,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
+        self.assertIn(f' bgp conditional-advertisement timer {cond_adv_timer}', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)

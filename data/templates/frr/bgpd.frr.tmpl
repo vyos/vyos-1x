@@ -475,6 +475,11 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.cluster_id is defined and parameters.cluster_id is not none %}
  bgp cluster-id {{ parameters.cluster_id }}
 {%   endif %}
+{%   if parameters.conditional_advertisement is defined and parameters.conditional_advertisement is not none %}
+{%     if parameters.conditional_advertisement.timer is defined and parameters.conditional_advertisement.timer is not none %}
+ bgp conditional-advertisement timer {{ parameters.conditional_advertisement.timer }}
+{%     endif %}
+{%   endif %}
 {%   if parameters.confederation is defined and parameters.confederation is not none %}
 {%     if parameters.confederation.identifier is defined and parameters.confederation.identifier is not none %}
  bgp confederation identifier {{ parameters.confederation.identifier }}

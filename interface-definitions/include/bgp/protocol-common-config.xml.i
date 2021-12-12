@@ -1181,6 +1181,26 @@
         </leafNode>
       </children>
     </node>
+    <node name="conditional-advertisement">
+      <properties>
+        <help>Conditional advertisement settings</help>
+      </properties>
+      <children>
+        <leafNode name="timer">
+          <properties>
+            <help>Set period to rescan BGP table to check if condition is met</help>
+            <valueHelp>
+              <format>u32:5-240</format>
+              <description>Period to rerun the conditional advertisement scanner process (default: 60)</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 5-240"/>
+            </constraint>
+          </properties>
+          <defaultValue>60</defaultValue>
+        </leafNode>
+      </children>
+    </node>
     <node name="dampening">
       <properties>
         <help>Enable route-flap dampening</help>
