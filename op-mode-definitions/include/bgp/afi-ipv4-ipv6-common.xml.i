@@ -230,4 +230,5 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
+#include <include/vtysh-generic-wide.xml.i>
 <!-- included end -->

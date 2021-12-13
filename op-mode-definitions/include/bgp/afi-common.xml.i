@@ -61,5 +61,4 @@
     </leafNode>
   </children>
 </node>
-#include <include/vtysh-generic-wide.xml.i>
 <!-- included end -->
