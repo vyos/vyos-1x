@@ -191,6 +191,8 @@ def generate(https):
         vhosts = https.get('api-restrict', {}).get('virtual-host', [])
         if vhosts:
             api_data['vhost'] = vhosts[:]
+        if 'socket' in list(api_settings):
+            api_data['socket'] = True
 
     if api_data:
         vhost_list = api_data.get('vhost', [])
