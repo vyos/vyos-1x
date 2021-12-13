@@ -20,8 +20,8 @@ from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
 from vyos.logger import syslog
-from vyos.template import render_to_string
-from vyos.util import read_file, write_file
+from vyos.template import render
+from vyos.util import dict_search
 airbag.enable()
 
 # path to logrotate config for atop
@@ -47,17 +47,13 @@ def verify(logs_config):
 
 def generate(logs_config):
     # get configuration for logrotate atop
-    logrotate_atop = logs_config.get('logs', {}).get('logrotate',
-                                                     {}).get('atop', {})
-    # read current config file for atop
-    logrotate_atop_current = read_file(logrotate_atop_file)
+    logrotate_atop = dict_search('logs.logrotate.atop', logs_config)
+    # provide an empty dictionary if there is no config
+    if not logrotate_atop:
+        logrotate_atop = {}
     # generate new config file for atop
-    logrotate_atop_new = render_to_string('logs/logrotate/vyos-atop.tmpl',
-                                          logrotate_atop)
-    # update configuration files if this is necessary
-    if logrotate_atop_new != logrotate_atop_current:
-        syslog.debug('Adding logrotate config for atop')
-        write_file(logrotate_atop_file, logrotate_atop_new)
+    syslog.debug('Adding logrotate config for atop')
+    render(logrotate_atop_file, 'logs/logrotate/vyos-atop.tmpl', logrotate_atop)
 
 
 def apply(logs_config):
