@@ -19,11 +19,14 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.util import read_file
 
-# path to logrotate config for atop
+# path to logrotate configs
 logrotate_atop_file = '/etc/logrotate.d/vyos-atop'
+logrotate_rsyslog_file = '/etc/logrotate.d/vyos-rsyslog'
 # default values
 default_atop_maxsize = '10M'
 default_atop_rotate = '10'
+default_rsyslog_size = '1M'
+default_rsyslog_rotate = '10'
 
 base_path = ['system', 'logs']
 
@@ -64,13 +67,18 @@ class TestSystemLogs(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # read the config file and check content
-        logrotate_config = logrotate_config_parse(logrotate_atop_file)
-        self.assertEqual(logrotate_config['maxsize'], default_atop_maxsize)
-        self.assertEqual(logrotate_config['rotate'], default_atop_rotate)
+        logrotate_config_atop = logrotate_config_parse(logrotate_atop_file)
+        logrotate_config_rsyslog = logrotate_config_parse(
+            logrotate_rsyslog_file)
+        self.assertEqual(logrotate_config_atop['maxsize'], default_atop_maxsize)
+        self.assertEqual(logrotate_config_atop['rotate'], default_atop_rotate)
+        self.assertEqual(logrotate_config_rsyslog['size'], default_rsyslog_size)
+        self.assertEqual(logrotate_config_rsyslog['rotate'],
+                         default_rsyslog_rotate)
 
     def test_logs_atop_maxsize(self):
         # test for maxsize option
-        self.cli_set(base_path + ['logrotate', 'atop', 'maxsize', '50'])
+        self.cli_set(base_path + ['logrotate', 'atop', 'max-size', '50'])
         self.cli_commit()
 
         # read the config file and check content
@@ -84,6 +92,24 @@ class TestSystemLogs(VyOSUnitTestSHIM.TestCase):
 
         # read the config file and check content
         logrotate_config = logrotate_config_parse(logrotate_atop_file)
+        self.assertEqual(logrotate_config['rotate'], '50')
+
+    def test_logs_rsyslog_size(self):
+        # test for size option
+        self.cli_set(base_path + ['logrotate', 'messages', 'max-size', '50'])
+        self.cli_commit()
+
+        # read the config file and check content
+        logrotate_config = logrotate_config_parse(logrotate_rsyslog_file)
+        self.assertEqual(logrotate_config['size'], '50M')
+
+    def test_logs_rsyslog_rotate(self):
+        # test for rotate option
+        self.cli_set(base_path + ['logrotate', 'messages', 'rotate', '50'])
+        self.cli_commit()
+
+        # read the config file and check content
+        logrotate_config = logrotate_config_parse(logrotate_rsyslog_file)
         self.assertEqual(logrotate_config['rotate'], '50')
 
 

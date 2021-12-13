@@ -18,12 +18,47 @@
                   <help>Atop logs options (system resources usage)</help>
                 </properties>
                 <children>
-                  <leafNode name="maxsize">
+                  <leafNode name="max-size">
                     <properties>
                       <help>Size of a single log file that triggers rotation</help>
                       <valueHelp>
                         <format>u32:1-1024</format>
                         <description>Size in MB (default: 10)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-1024" />
+                      </constraint>
+                      <constraintErrorMessage>The size must be between 1 and 1024 MB</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>10</defaultValue>
+                  </leafNode>
+                  <leafNode name="rotate">
+                    <properties>
+                      <help>Count of rotations before old logs will be deleted</help>
+                      <valueHelp>
+                        <format>u32:1-100</format>
+                        <description>Rotations (default: 10)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-100" />
+                      </constraint>
+                      <constraintErrorMessage>The count must be between 1 and 100</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>10</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="messages">
+                <properties>
+                  <help>The /var/log/messages file rotation</help>
+                </properties>
+                <children>
+                  <leafNode name="max-size">
+                    <properties>
+                      <help>Size of a single log file that triggers rotation</help>
+                      <valueHelp>
+                        <format>u32:1-1024</format>
+                        <description>Size in MB (default: 1)</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-1024" />

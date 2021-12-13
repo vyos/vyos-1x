@@ -24,8 +24,9 @@ from vyos.template import render
 from vyos.util import dict_search
 airbag.enable()
 
-# path to logrotate config for atop
+# path to logrotate configs
 logrotate_atop_file = '/etc/logrotate.d/vyos-atop'
+logrotate_rsyslog_file = '/etc/logrotate.d/vyos-rsyslog'
 
 
 def get_config(config=None):
@@ -35,7 +36,7 @@ def get_config(config=None):
         conf = Config()
 
     base = ['system', 'logs']
-    logs_config = conf.get_config_dict(base)
+    logs_config = conf.get_config_dict(base, key_mangling=('-', '_'))
 
     return logs_config
 
@@ -54,6 +55,16 @@ def generate(logs_config):
     # generate new config file for atop
     syslog.debug('Adding logrotate config for atop')
     render(logrotate_atop_file, 'logs/logrotate/vyos-atop.tmpl', logrotate_atop)
+
+    # get configuration for logrotate rsyslog
+    logrotate_rsyslog = dict_search('logs.logrotate.messages', logs_config)
+    # provide an empty dictionary if there is no config
+    if not logrotate_rsyslog:
+        logrotate_rsyslog = {}
+    # generate new config file for rsyslog
+    syslog.debug('Adding logrotate config for rsyslog')
+    render(logrotate_rsyslog_file, 'logs/logrotate/vyos-rsyslog.tmpl',
+           logrotate_rsyslog)
 
 
 def apply(logs_config):

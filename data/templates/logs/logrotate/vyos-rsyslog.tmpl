@@ -1,0 +1,13 @@
+/var/log/messages {
+    create
+    missingok
+    nomail
+    notifempty
+    rotate {{ rotate|default('10') }}
+    size {{ max_size|default('1') }}M
+    postrotate
+        # restart rsyslog service
+        systemctl restart rsyslog.service
+    endscript
+}
+
