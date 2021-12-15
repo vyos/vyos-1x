@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="bfd">
+        <properties>
+          <help>Show Bidirectional Forwarding Detection (BFD)</help>
+        </properties>
+        <children>
+          <node name="peer">
+            <properties>
+              <help>Show all Bidirectional Forwarding Detection (BFD) peer status</help>
+            </properties>
+          </node>
+          <tagNode name="peer">
+            <properties>
+              <help>Show Bidirectional Forwarding Detection (BFD) peer status</help>
+              <completionHelp>
+                <script>vtysh -c "show bfd peers" | awk '/[:blank:]*peer/ { printf "%s\n", $2 }'</script>
+              </completionHelp>
+            </properties>
+            <command>vtysh -c "show bfd peers" | sed -n "/peer $4 /,/^$/p"</command>
+            <children>
+              <leafNode name="counters">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peer counters</help>
+                </properties>
+                <command>vtysh -c "show bfd peers counters" | sed -n "/peer $4 /,/^$/p"</command>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="peers">
+            <properties>
+              <help>Show Bidirectional Forwarding Detection peers</help>
+            </properties>
+            <command>vtysh -c "show bfd peers"</command>
+            <children>
+              <leafNode name="counters">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peer counters</help>
+                </properties>
+                <command>vtysh -c "show bfd peers counters"</command>
+              </leafNode>
+              <leafNode name="brief">
+                <properties>
+                  <help>Show Bidirectional Forwarding Detection (BFD) peers brief</help>
+                </properties>
+                <command>vtysh -c "show bfd peers brief"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
