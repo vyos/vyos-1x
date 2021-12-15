@@ -32,6 +32,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, StrictStr, validator
+from starlette.middleware.cors import CORSMiddleware
 from starlette.datastructures import FormData
 from starlette.formparsers import FormParser, MultiPartParser
 from multipart.multipart import parse_options_header
@@ -610,13 +611,19 @@ def show_op(data: ShowModel):
 # GraphQL integration
 ###
 
-from api.graphql.bindings import generate_schema
+def graphql_init(fast_api_app):
+    from api.graphql.bindings import generate_schema
 
-api.graphql.state.init()
+    api.graphql.state.init()
+    api.graphql.state.settings['app'] = app
 
-schema = generate_schema()
+    schema = generate_schema()
 
-app.add_route('/graphql', GraphQL(schema, debug=True))
+    if app.state.vyos_origins:
+        origins = app.state.vyos_origins
+        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, debug=True), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
+    else:
+        app.add_route('/graphql', GraphQL(schema, debug=True))
 
 ###
 
@@ -642,8 +649,9 @@ if __name__ == '__main__':
 
     app.state.vyos_debug = server_config['debug']
     app.state.vyos_strict = server_config['strict']
+    app.state.vyos_origins = server_config.get('cors', {}).get('origins', [])
 
-    api.graphql.state.settings['app'] = app
+    graphql_init(app)
 
     try:
         if not server_config['socket']:
