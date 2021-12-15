@@ -7,7 +7,6 @@
           <help>Show protocol specific information</help>
         </properties>
         <children>
-          #include <include/bfd-common.xml.i>
           <node name="static">
             <properties>
               <help>Show static protocol parameters</help>
