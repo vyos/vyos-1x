@@ -99,12 +99,22 @@ unit-cache={{ ppp_options.interface_cache }}
 verbose=1
 ac-name={{ access_concentrator }}
 
-{% if interface %}
-{%   for iface in interface %}
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+{%     if iface_config.vlan_id is not defined and iface_config.vlan_range is not defined %}
 interface={{ iface }}
-{%     if interface[iface].vlan_id is defined or interface[iface].vlan_range is defined %}
-vlan-mon={{ iface }},{{ interface[iface].vlan_id | join(',') }},{{ interface[iface].vlan_range | join(',') }}
-interface=re:{{ interface.name }}\.\d+
+{%     endif %}
+{%     if iface_config.vlan_range is defined %}
+{%       for regex in iface_config.regex %}
+interface=re:^{{ iface | replace('.', '\\.') }}\.({{ regex }})$
+{%       endfor %}
+vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
+{%     endif %}
+{%     if iface_config.vlan_id is defined %}
+{%       for vlan in iface_config.vlan_id %}
+vlan-mon={{ iface }},{{ vlan }}
+interface=re:^{{ iface | replace('.', '\\.') }}\.{{ vlan }}$
+{%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
