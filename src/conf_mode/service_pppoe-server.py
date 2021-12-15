@@ -24,6 +24,8 @@ from vyos.configverify import verify_accel_ppp_base_service
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import get_interface_config
+from vyos.range_regex import range_to_regex
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -56,6 +58,11 @@ def verify(pppoe):
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')
 
+    # Check is interface exists in the system
+    for iface in pppoe['interface']:
+        if not get_interface_config(iface):
+            raise ConfigError(f'Interface {iface} does not exist!')
+
     # local ippool and gateway settings config checks
     if not (dict_search('client_ip_pool.subnet', pppoe) or
            (dict_search('client_ip_pool.start', pppoe) and
@@ -72,6 +79,13 @@ def verify(pppoe):
 def generate(pppoe):
     if not pppoe:
         return None
+
+    # Generate special regex for dynamic interfaces
+    for iface, iface_options in pppoe['interface'].items():
+        if 'vlan_range' in iface_options:
+            pppoe['interface'][iface]['regex'] = []
+            for vlan_range in iface_options['vlan_range']:
+                pppoe['interface'][iface]['regex'].append(range_to_regex(vlan_range))
 
     render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe)
 
