@@ -704,6 +704,69 @@ def get_interface_config(interface):
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
 
+def print_error(str='', end='\n'):
+    """
+    Print `str` to stderr, terminated with `end`.
+    Used for warnings and out-of-band messages to avoid mangling precious
+     stdout output.
+    """
+    sys.stderr.write(str)
+    sys.stderr.write(end)
+    sys.stderr.flush()
+
+def make_progressbar():
+    """
+    Make a procedure that takes two arguments `done` and `total` and prints a
+     progressbar based on the ratio thereof, whose length is determined by the
+     width of the terminal.
+    """
+    import shutil, math
+    col, _ = shutil.get_terminal_size()
+    col = max(col - 15, 20)
+    def print_progressbar(done, total):
+        if done <= total:
+            increment = total / col
+            length = math.ceil(done / increment)
+            percentage = str(math.ceil(100 * done / total)).rjust(3)
+            print_error(f'[{length * "#"}{(col - length) * "_"}] {percentage}%', '\r')
+            # Print a newline so that the subsequent prints don't overwrite the full bar.
+        if done == total:
+            print_error()
+    return print_progressbar
+
+def make_incremental_progressbar(increment: float):
+    """
+    Make a generator that displays a progressbar that grows monotonically with
+     every iteration.
+    First call displays it at 0% and every subsequent iteration displays it
+     at `increment` increments where 0.0 < `increment` < 1.0.
+    Intended for FTP and HTTP transfers with stateless callbacks.
+    """
+    print_progressbar = make_progressbar()
+    total = 0.0
+    while total < 1.0:
+        print_progressbar(total, 1.0)
+        yield
+        total += increment
+    print_progressbar(1, 1)
+    # Ignore further calls.
+    while True:
+        yield
+
+def begin(*args):
+    """
+    Evaluate arguments in order and return the result of the *last* argument.
+    For combining multiple expressions in one statement. Useful for lambdas.
+    """
+    return args[-1]
+
+def begin0(*args):
+    """
+    Evaluate arguments in order and return the result of the *first* argument.
+    For combining multiple expressions in one statement. Useful for lambdas.
+    """
+    return args[0]
+
 def is_systemd_service_active(service):
     """ Test is a specified systemd service is activated.
     Returns True if service is active, false otherwise.
