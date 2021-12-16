@@ -67,6 +67,12 @@ def get_config(config=None):
         port = conf.return_value('port')
         http_api['port'] = port
 
+    if conf.exists('cors'):
+        http_api['cors'] = {}
+        if conf.exists('cors allow-origin'):
+            origins = conf.return_values('cors allow-origin')
+            http_api['cors']['origins'] = origins[:]
+
     if conf.exists('keys'):
         for name in conf.list_nodes('keys id'):
             if conf.exists('keys id {0} key'.format(name)):

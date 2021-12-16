@@ -107,6 +107,19 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="cors">
+                <properties>
+                  <help>Set CORS options</help>
+                </properties>
+                <children>
+                  <leafNode name="allow-origin">
+                    <properties>
+                      <help>Allow resource request from origin</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <node name="api-restrict">
