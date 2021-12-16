@@ -241,11 +241,9 @@ class HttpC:
                 # Abort early if the destination is inaccessible.
                 r.raise_for_status()
                 # If the request got redirected, keep the last URL we ended up with.
+                final_urlstring = r.url
                 if r.history:
-                    final_urlstring = r.history[-1].url
                     print_error('Redirecting to ' + final_urlstring)
-                else:
-                    final_urlstring = self.urlstring
                 # Check for the prospective file size.
                 try:
                     size = int(r.headers['Content-Length'])
