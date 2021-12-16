@@ -199,8 +199,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
 
     def test_isis_06_spf_delay(self):
-        self.isis_base_config()
-
         network = 'point-to-point'
         holddown = '10'
         init_delay = '50'
@@ -208,6 +206,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         short_delay = '100'
         time_to_learn = '75'
 
+        self.cli_set(base_path + ['net', net])
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'network', network])
 
@@ -217,11 +216,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
         self.cli_set(base_path + ['spf-delay-ietf', 'init-delay', init_delay])
-        # verify() - All types of spf-delay must be configured
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(base_path + ['spf-delay-ietf', 'long-delay', long_delay])
         # verify() - All types of spf-delay must be configured
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()

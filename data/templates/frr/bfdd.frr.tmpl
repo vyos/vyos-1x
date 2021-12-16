@@ -1,4 +1,4 @@
-!
+{% if profile is defined or peer is defined %}
 bfd
 {% if profile is defined and profile is not none %}
 {%   for profile_name, profile_config in profile.items() %}
@@ -7,7 +7,8 @@ bfd
   receive-interval {{ profile_config.interval.receive }}
   transmit-interval {{ profile_config.interval.transmit }}
 {%     if profile_config.interval['echo-interval'] is defined and profile_config.interval['echo-interval'] is not none %}
-  echo-interval {{ profile_config.interval['echo-interval'] }}
+  echo transmit-interval {{ profile_config.interval['echo-interval'] }}
+  echo receive-interval {{ profile_config.interval['echo-interval'] }}
 {%     endif %}
 {%     if profile_config['echo-mode'] is defined %}
   echo-mode
@@ -17,7 +18,8 @@ bfd
 {%     else %}
   no shutdown
 {%     endif %}
-  exit
+ exit
+ !
 {%   endfor %}
 {% endif %}
 {% if peer is defined and peer is not none %}
@@ -27,7 +29,7 @@ bfd
   receive-interval {{ peer_config.interval.receive }}
   transmit-interval {{ peer_config.interval.transmit }}
 {%     if peer_config.interval['echo-interval'] is defined and peer_config.interval['echo-interval'] is not none %}
- echo-interval {{ peer_config.interval['echo-interval'] }}
+  echo-interval {{ peer_config.interval['echo-interval'] }}
 {%     endif %}
 {%     if peer_config['echo-mode'] is defined %}
   echo-mode
@@ -37,8 +39,10 @@ bfd
 {%     else %}
   no shutdown
 {%     endif %}
-  exit
+ exit
+ !
 {%   endfor %}
 {% endif %}
- end
+exit
 !
+{% endif %}

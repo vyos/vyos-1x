@@ -23,9 +23,11 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.util import is_systemd_service_running
 from vyos.xml import defaults
 from vyos import ConfigError
 from crypt import crypt, mksalt, METHOD_SHA512
+from time import sleep
 
 from vyos import airbag
 airbag.enable()
@@ -172,6 +174,16 @@ def apply(ocserv):
                 os.unlink(file)
     else:
         call('systemctl restart ocserv.service')
+        counter = 0
+        while True:
+            # exit early when service runs
+            if is_systemd_service_running("ocserv.service"):
+                break
+            sleep(0.250)
+            if counter > 5:
+                raise ConfigError('openconnect failed to start, check the logs for details')
+                break
+            counter += 1
 
 
 if __name__ == '__main__':

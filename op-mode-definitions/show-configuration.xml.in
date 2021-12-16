@@ -30,6 +30,21 @@
             <!-- no admin check -->
             <command>${vyos_op_scripts_dir}/show_configuration_files.sh</command>
           </node>
+          <node name="json">
+            <properties>
+              <help>Show running configuration in JSON format</help>
+            </properties>
+            <!-- no admin check -->
+            <command>${vyos_op_scripts_dir}/show_configuration_json.py</command>
+            <children>
+              <node name="pretty">
+                <properties>
+                  <help>Show running configuration in readable JSON format</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_configuration_json.py --pretty</command>
+              </node>
+            </children>
+          </node>
         </children>
       </node>
     </children>

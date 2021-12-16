@@ -49,7 +49,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
-            self.cli_set(base_path + ['area', default_area, 'interface', interface])
+            self.cli_set(base_path + ['interface', interface, 'area', default_area])
 
         # commit changes
         self.cli_commit()
@@ -63,7 +63,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {default_area} export-list {acl_name}', frrconfig)
 
         for interface in interfaces:
-            self.assertIn(f' interface {interface} area {default_area}', frrconfig)
+            if_config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'ipv6 ospf6 area {default_area}', if_config)
 
         self.cli_delete(['policy', 'access-list6', acl_name])
 
@@ -165,6 +166,45 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' area {area_stub} stub', frrconfig)
         self.assertIn(f' area {area_stub_nosum} stub no-summary', frrconfig)
+
+
+    def test_ospfv3_06_vrfs(self):
+        # It is safe to assume that when the basic VRF test works, all
+        # other OSPF related features work, as we entirely inherit the CLI
+        # templates and Jinja2 FRR template.
+        table = '1000'
+        vrf = 'blue'
+        vrf_base = ['vrf', 'name', vrf]
+        vrf_iface = 'eth1'
+        router_id = '1.2.3.4'
+        router_id_vrf = '1.2.3.5'
+
+        self.cli_set(vrf_base + ['table', table])
+        self.cli_set(vrf_base + ['protocols', 'ospfv3', 'interface', vrf_iface, 'bfd'])
+        self.cli_set(vrf_base + ['protocols', 'ospfv3', 'parameters', 'router-id', router_id_vrf])
+
+        self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
+
+        # Also set a default VRF OSPF config
+        self.cli_set(base_path + ['parameters', 'router-id', router_id])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f'router ospf6', frrconfig)
+        self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
+
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface} vrf {vrf}')
+        self.assertIn(f'interface {vrf_iface} vrf {vrf}', frrconfig)
+        self.assertIn(f' ipv6 ospf6 bfd', frrconfig)
+
+        frrconfig = self.getFRRconfig(f'router ospf6 vrf {vrf}')
+        self.assertIn(f'router ospf6 vrf {vrf}', frrconfig)
+        self.assertIn(f' ospf6 router-id {router_id_vrf}', frrconfig)
+
+        # cleanup
+        self.cli_delete(['vrf', 'name', vrf])
+        self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

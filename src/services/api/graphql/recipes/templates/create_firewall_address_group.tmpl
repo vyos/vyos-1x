@@ -1,0 +1,4 @@
+set firewall group address-group {{ name }}
+{% for add in address %}
+set firewall group address-group {{ name }} address {{ add }}
+{% endfor %}

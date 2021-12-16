@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
@@ -39,8 +40,17 @@ def get_config(config=None):
     base = ['protocols', 'rip']
     rip = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
+    # FRR has VRF support for different routing daemons. As interfaces belong
+    # to VRFs - or the global VRF, we need to check for changed interfaces so
+    # that they will be properly rendered for the FRR config. Also this eases
+    # removal of interfaces from the running configuration.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        rip['interface_removed'] = list(interfaces_removed)
+
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
+        rip.update({'deleted' : ''})
         return rip
 
     # We have gathered the dict representation of the CLI, but there are default
@@ -89,12 +99,10 @@ def verify(rip):
                                       f'with "split-horizon disable" for "{interface}"!')
 
 def generate(rip):
-    if not rip:
-        rip['new_frr_config'] = ''
+    if not rip or 'deleted' in rip:
         return None
 
     rip['new_frr_config'] = render_to_string('frr/ripd.frr.tmpl', rip)
-
     return None
 
 def apply(rip):
@@ -106,19 +114,22 @@ def apply(rip):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^ip protocol rip route-map [-a-zA-Z0-9.]+$', '')
+    frr_cfg.modify_section('^ip protocol rip route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
     frr_cfg.commit_configuration(zebra_daemon)
 
     frr_cfg.load_configuration(rip_daemon)
-    frr_cfg.modify_section(r'key chain \S+', '')
-    frr_cfg.modify_section(r'interface \S+', '')
-    frr_cfg.modify_section('^router rip$', '')
+    frr_cfg.modify_section('^key chain \S+', stop_pattern='^exit', remove_stop_mark=True)
+    frr_cfg.modify_section('^router rip', stop_pattern='^exit', remove_stop_mark=True)
 
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', rip['new_frr_config'])
+    for key in ['interface', 'interface_removed']:
+        if key not in rip:
+            continue
+        for interface in rip[key]:
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
+
+    if 'new_frr_config' in rip:
+        frr_cfg.add_before(frr.default_add_before, rip['new_frr_config'])
     frr_cfg.commit_configuration(rip_daemon)
-
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
 
     return None
 

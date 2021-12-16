@@ -1,4 +1,50 @@
 !
+{% if interface is defined and interface is not none %}
+{%   for iface, iface_config in interface.items() %}
+interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
+ ip router isis VyOS
+ ipv6 router isis VyOS
+{%     if iface_config.bfd is defined %}
+ isis bfd
+{%     endif %}
+{%     if iface_config.network is defined and iface_config.network.point_to_point is defined %}
+ isis network point-to-point
+{%     endif %}
+{%     if iface_config.circuit_type is defined %}
+ isis circuit-type {{ iface_config.circuit_type }}
+{%     endif %}
+{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
+ isis hello-interval {{ iface_config.hello_interval }}
+{%     endif %}
+{%     if iface_config.hello_multiplier is defined and iface_config.hello_multiplier is not none %}
+ isis hello-multiplier {{ iface_config.hello_multiplier }}
+{%     endif %}
+{%     if iface_config.hello_padding is defined %}
+ isis hello padding
+{%     endif %}
+{%     if iface_config.metric is defined and iface_config.metric is not none %}
+ isis metric {{ iface_config.metric }}
+{%     endif %}
+{%     if iface_config.passive is defined %}
+ isis passive
+{%     endif %}
+{%     if iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
+ isis password clear {{ iface_config.password.plaintext_password }}
+{%     endif %}
+{%     if iface_config.priority is defined and iface_config.priority is not none %}
+ isis priority {{ iface_config.priority }}
+{%     endif %}
+{%     if iface_config.psnp_interval is defined and iface_config.psnp_interval is not none %}
+ isis psnp-interval {{ iface_config.psnp_interval }}
+{%     endif %}
+{%     if iface_config.no_three_way_handshake is defined %}
+ no isis three-way-handshake
+{%     endif %}
+exit
+!
+{%   endfor %}
+{% endif %}
+!
 router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  net {{ net }}
 {% if dynamic_hostname is defined %}
@@ -151,48 +197,5 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  is-type {{ level }}
 {%   endif %}
 {% endif %}
-!
-{% if interface is defined and interface is not none %}
-{%   for iface, iface_config in interface.items() %}
-interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
- ip router isis VyOS
- ipv6 router isis VyOS
-{%     if iface_config.bfd is defined %}
- isis bfd
-{%     endif %}
-{%     if iface_config.network is defined and iface_config.network.point_to_point is defined %}
- isis network point-to-point
-{%     endif %}
-{%     if iface_config.circuit_type is defined %}
- isis circuit-type {{ iface_config.circuit_type }}
-{%     endif %}
-{%     if iface_config.hello_interval is defined and iface_config.hello_interval is not none %}
- isis hello-interval {{ iface_config.hello_interval }}
-{%     endif %}
-{%     if iface_config.hello_multiplier is defined and iface_config.hello_multiplier is not none %}
- isis hello-multiplier {{ iface_config.hello_multiplier }}
-{%     endif %}
-{%     if iface_config.hello_padding is defined %}
- isis hello padding
-{%     endif %}
-{%     if iface_config.metric is defined and iface_config.metric is not none %}
- isis metric {{ iface_config.metric }}
-{%     endif %}
-{%     if iface_config.passive is defined %}
- isis passive
-{%     endif %}
-{%     if iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
- isis password clear {{ iface_config.password.plaintext_password }}
-{%     endif %}
-{%     if iface_config.priority is defined and iface_config.priority is not none %}
- isis priority {{ iface_config.priority }}
-{%     endif %}
-{%     if iface_config.psnp_interval is defined and iface_config.psnp_interval is not none %}
- isis psnp-interval {{ iface_config.psnp_interval }}
-{%     endif %}
-{%     if iface_config.no_three_way_handshake is defined %}
- no isis three-way-handshake
-{%     endif %}
-{%   endfor %}
-{% endif %}
+exit
 !

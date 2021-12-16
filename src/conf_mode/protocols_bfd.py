@@ -16,8 +16,6 @@
 
 import os
 
-from sys import exit
-
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import is_ipv6
@@ -36,7 +34,6 @@ def get_config(config=None):
         conf = Config()
     base = ['protocols', 'bfd']
     bfd = conf.get_config_dict(base, get_first_key=True)
-
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         return bfd
@@ -89,18 +86,19 @@ def verify(bfd):
 
 def generate(bfd):
     if not bfd:
-        bfd['new_frr_config'] = ''
         return None
-
     bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.tmpl', bfd)
 
 def apply(bfd):
+    bfd_daemon = 'bfdd'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration()
-    frr_cfg.modify_section('^bfd', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', bfd['new_frr_config'])
-    frr_cfg.commit_configuration()
+    frr_cfg.load_configuration(bfd_daemon)
+    frr_cfg.modify_section('^bfd', stop_pattern='^exit', remove_stop_mark=True)
+    if 'new_frr_config' in bfd:
+        frr_cfg.add_before(frr.default_add_before, bfd['new_frr_config'])
+    frr_cfg.commit_configuration(bfd_daemon)
 
     return None
 

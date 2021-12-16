@@ -113,7 +113,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
             if 'intv_echo' in peer_config:
-                self.assertIn(f'echo-interval {peer_config["intv_echo"]}', peerconfig)
+                self.assertIn(f'echo receive-interval {peer_config["intv_echo"]}', peerconfig)
+                self.assertIn(f'echo transmit-interval {peer_config["intv_echo"]}', peerconfig)
             if 'intv_mult' in peer_config:
                 self.assertIn(f'detect-multiplier {peer_config["intv_mult"]}', peerconfig)
             if 'intv_rx' in peer_config:
@@ -153,7 +154,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
             if 'echo_mode' in profile_config:
                 self.assertIn(f'echo-mode', config)
             if 'intv_echo' in profile_config:
-                self.assertIn(f'echo-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f'echo receive-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f'echo transmit-interval {profile_config["intv_echo"]}', config)
             if 'intv_mult' in profile_config:
                 self.assertIn(f'detect-multiplier {profile_config["intv_mult"]}', config)
             if 'intv_rx' in profile_config:

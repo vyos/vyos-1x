@@ -49,6 +49,10 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     if iface_config.network is defined and iface_config.network is not none %}
  ip ospf network {{ iface_config.network }}
 {%     endif %}
+{%     if iface_config.passive is defined %}
+ {{ 'no ' if iface_config.passive.disable is defined }}ip ospf passive
+{%     endif %}
+exit
 !
 {%   endfor %}
 {% endif %}
@@ -158,18 +162,8 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ospf router-id {{ parameters.router_id }}
 {%   endif %}
 {% endif %}
-{% if passive_interface is defined and passive_interface is not none %}
-{%   for interface in passive_interface %}
- passive-interface {{ interface }}
-{%   endfor %}
-{% endif %}
-{% if passive_interface_exclude is defined and passive_interface_exclude is not none %}
-{%   for interface in passive_interface_exclude if passive_interface_exclude is defined %}
-{%     if interface.startswith('vlink') %}
-{%     set interface = interface.upper() %}
-{%     endif %}
- no passive-interface {{ interface }}
-{%   endfor %}
+{% if passive_interface is defined and passive_interface.default is defined %}
+ passive-interface default
 {% endif %}
 {% if redistribute is defined and redistribute is not none %}
 {%   for protocol, protocols_options in redistribute.items() %}
@@ -189,4 +183,5 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {#   Timer values have default values #}
  timers throttle spf {{ timers.throttle.spf.delay }} {{ timers.throttle.spf.initial_holdtime }} {{ timers.throttle.spf.max_holdtime }}
 {% endif %}
+exit
 !

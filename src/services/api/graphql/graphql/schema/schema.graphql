@@ -9,10 +9,20 @@ type Query {
 
 directive @configure on FIELD_DEFINITION
 directive @configfile on FIELD_DEFINITION
+directive @show on FIELD_DEFINITION
+directive @showconfig on FIELD_DEFINITION
+directive @image on FIELD_DEFINITION
 
 type Mutation {
     CreateDhcpServer(data: DhcpServerConfigInput) : CreateDhcpServerResult @configure
     CreateInterfaceEthernet(data: InterfaceEthernetConfigInput) : CreateInterfaceEthernetResult @configure
+    CreateFirewallAddressGroup(data: CreateFirewallAddressGroupInput) : CreateFirewallAddressGroupResult @configure
+    UpdateFirewallAddressGroupMembers(data: UpdateFirewallAddressGroupMembersInput) : UpdateFirewallAddressGroupMembersResult @configure
+    RemoveFirewallAddressGroupMembers(data: RemoveFirewallAddressGroupMembersInput) : RemoveFirewallAddressGroupMembersResult @configure
     SaveConfigFile(data: SaveConfigFileInput) : SaveConfigFileResult @configfile
     LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configfile
+    Show(data: ShowInput) : ShowResult @show
+    ShowConfig(data: ShowConfigInput) : ShowConfigResult @showconfig
+    AddSystemImage(data: AddSystemImageInput) : AddSystemImageResult @image
+    DeleteSystemImage(data: DeleteSystemImageInput) : DeleteSystemImageResult @image
 }

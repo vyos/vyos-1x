@@ -1,0 +1,29 @@
+input AddSystemImageInput {
+    location: String!
+}
+
+type AddSystemImage {
+    location: String
+    result: String
+}
+
+type AddSystemImageResult {
+    data: AddSystemImage
+    success: Boolean!
+    errors: [String]
+}
+
+input DeleteSystemImageInput {
+    name: String!
+}
+
+type DeleteSystemImage {
+    name: String
+    result: String
+}
+
+type DeleteSystemImageResult {
+    data: DeleteSystemImage
+    success: Boolean!
+    errors: [String]
+}

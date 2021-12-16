@@ -51,7 +51,8 @@ def make_resolver(mutation_name, class_name, session_func):
                 klass = type(class_name, (Session,), {})
             k = klass(session, data)
             method = getattr(k, session_func)
-            method()
+            result = method()
+            data['result'] = result
 
             return {
                 "success": True,
@@ -69,6 +70,10 @@ def make_configure_resolver(mutation_name):
     class_name = mutation_name
     return make_resolver(mutation_name, class_name, 'configure')
 
+def make_show_config_resolver(mutation_name):
+    class_name = mutation_name
+    return make_resolver(mutation_name, class_name, 'show_config')
+
 def make_config_file_resolver(mutation_name):
     if 'Save' in mutation_name:
         class_name = mutation_name.replace('Save', '', 1)
@@ -76,5 +81,19 @@ def make_config_file_resolver(mutation_name):
     elif 'Load' in mutation_name:
         class_name = mutation_name.replace('Load', '', 1)
         return make_resolver(mutation_name, class_name, 'load')
+    else:
+        raise Exception
+
+def make_show_resolver(mutation_name):
+    class_name = mutation_name
+    return make_resolver(mutation_name, class_name, 'show')
+
+def make_image_resolver(mutation_name):
+    if 'Add' in mutation_name:
+        class_name = mutation_name.replace('Add', '', 1)
+        return make_resolver(mutation_name, class_name, 'add')
+    elif 'Delete' in mutation_name:
+        class_name = mutation_name.replace('Delete', '', 1)
+        return make_resolver(mutation_name, class_name, 'delete')
     else:
         raise Exception

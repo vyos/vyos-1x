@@ -1,4 +1,3 @@
-!
 {# RIP key-chain definition #}
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
@@ -9,7 +8,9 @@ key chain {{ iface }}-rip
 {%         if key_options.password is defined and key_options.password is not none %}
   key-string {{ key_options.password }}
 {%         endif %}
+ exit
 {%       endfor %}
+exit
 {%     endif %}
 {%   endfor %}
 {% endif %}
@@ -31,6 +32,8 @@ interface {{ iface }}
 {%     if iface_config.split_horizon is defined and iface_config.split_horizon.poison_reverse is defined %}
  ip rip split-horizon poisoned-reverse
 {%     endif %}
+exit
+!
 {%   endfor %}
 {% endif %}
 !
@@ -89,6 +92,7 @@ router rip
 {%   endif %}
 {% endif %}
 {% include 'frr/rip_ripng.frr.j2' %}
+exit
 !
 {% if route_map is defined and route_map is not none %}
 ip protocol rip route-map {{ route_map }}

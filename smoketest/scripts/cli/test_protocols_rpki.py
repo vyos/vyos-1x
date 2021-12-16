@@ -36,8 +36,6 @@ class TestProtocolsRPKI(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Nothing RPKI specific should be left over in the config
-        #
-        # Disabled until T3266 is resolved
         # frrconfig = self.getFRRconfig('rpki')
         # self.assertNotIn('rpki', frrconfig)
 

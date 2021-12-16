@@ -307,7 +307,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                 continue
 
             for rule, rule_config in as_path_config['rule'].items():
-                tmp = f'bgp as-path access-list {as_path}'
+                tmp = f'bgp as-path access-list {as_path} seq {rule}'
                 if rule_config['action'] == 'permit':
                     tmp += ' permit'
                 else:

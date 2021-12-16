@@ -31,8 +31,6 @@ from vyos import frr
 from vyos import airbag
 airbag.enable()
 
-frr_daemon = 'ripngd'
-
 def get_config(config=None):
     if config:
         conf = config
@@ -99,17 +97,24 @@ def generate(ripng):
     return None
 
 def apply(ripng):
+    ripng_daemon = 'ripngd'
+    zebra_daemon = 'zebra'
+
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-    frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(r'key chain \S+', '')
-    frr_cfg.modify_section(r'interface \S+', '')
-    frr_cfg.modify_section('router ripng', '')
-    frr_cfg.add_before(r'(ip prefix-list .*|route-map .*|line vty)', ripng['new_frr_config'])
-    frr_cfg.commit_configuration(frr_daemon)
 
-    # Save configuration to /run/frr/config/frr.conf
-    frr.save_configuration()
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section('^ipv6 protocol ripng route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    frr_cfg.load_configuration(ripng_daemon)
+    frr_cfg.modify_section('key chain \S+', stop_pattern='^exit', remove_stop_mark=True)
+    frr_cfg.modify_section('interface \S+', stop_pattern='^exit', remove_stop_mark=True)
+    frr_cfg.modify_section('^router ripng', stop_pattern='^exit', remove_stop_mark=True)
+    if 'new_frr_config' in ripng:
+        frr_cfg.add_before(frr.default_add_before, ripng['new_frr_config'])
+    frr_cfg.commit_configuration(ripng_daemon)
 
     return None
 

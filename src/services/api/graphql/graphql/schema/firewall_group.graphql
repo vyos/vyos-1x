@@ -1,0 +1,47 @@
+input CreateFirewallAddressGroupInput {
+    name: String!
+    address: [String]
+}
+
+type CreateFirewallAddressGroup {
+    name: String!
+    address: [String]
+}
+
+type CreateFirewallAddressGroupResult {
+    data: CreateFirewallAddressGroup
+    success: Boolean!
+    errors: [String]
+}
+
+input UpdateFirewallAddressGroupMembersInput {
+    name: String!
+    address: [String!]!
+}
+
+type UpdateFirewallAddressGroupMembers {
+    name: String!
+    address: [String!]!
+}
+
+type UpdateFirewallAddressGroupMembersResult {
+    data: UpdateFirewallAddressGroupMembers
+    success: Boolean!
+    errors: [String]
+}
+
+input RemoveFirewallAddressGroupMembersInput {
+    name: String!
+    address: [String!]!
+}
+
+type RemoveFirewallAddressGroupMembers {
+    name: String!
+    address: [String!]!
+}
+
+type RemoveFirewallAddressGroupMembersResult {
+    data: RemoveFirewallAddressGroupMembers
+    success: Boolean!
+    errors: [String]
+}

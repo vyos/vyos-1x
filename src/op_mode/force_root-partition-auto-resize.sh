@@ -44,7 +44,13 @@ fi
 #
 # Resize the partition and grow the filesystem.
 #
+# "print" and "Fix" directives were added to fix GPT table if it corrupted after virtual drive extension.
+# If GPT table is corrupted we'll get Fix/Ignore dialogue after "print" command.
+# "Fix" will be the answer for this dialogue. 
+# If GPT table is fine and no auto-fix dialogue appeared the directive "Fix" simply will print parted utility help info.  
 parted -m ${ROOT_DEV} ---pretend-input-tty > /dev/null 2>&1 <<EOF 
+print
+Fix
 resizepart
 ${ROOT_PART_NUM}
 Yes
