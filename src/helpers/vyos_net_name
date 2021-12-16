@@ -25,14 +25,13 @@ from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
-from vyos.util import cmd
+from vyos.util import cmd, boot_configuration_complete
 
 vyos_udev_dir = directories['vyos_udev_dir']
 vyos_log_dir = '/run/udev/log'
 vyos_log_file = os.path.join(vyos_log_dir, 'vyos-net-name')
 
 config_path = '/opt/vyatta/etc/config/config.boot'
-config_status = '/tmp/vyos-config-status'
 
 lock = threading.Lock()
 
@@ -42,13 +41,6 @@ except FileExistsError:
     pass
 
 logging.basicConfig(filename=vyos_log_file, level=logging.DEBUG)
-
-def boot_configuration_complete() -> bool:
-    """ Check if vyos-router has completed, hence hotplug event
-    """
-    if os.path.isfile(config_status):
-        return True
-    return False
 
 def is_available(intfs: dict, intf_name: str) -> bool:
     """ Check if interface name is already assigned

@@ -28,6 +28,7 @@ import zmq
 from contextlib import contextmanager
 
 from vyos.defaults import directories
+from vyos.util import boot_configuration_complete
 from vyos.configsource import ConfigSourceString, ConfigSourceError
 from vyos.config import Config
 from vyos import ConfigError
@@ -186,7 +187,7 @@ def initialization(socket):
         session_out = None
 
     # if not a 'live' session, for example on boot, write to file
-    if not session_out or not os.path.isfile('/tmp/vyos-config-status'):
+    if not session_out or not boot_configuration_complete():
         session_out = script_stdout_log
         session_mode = 'a'
 

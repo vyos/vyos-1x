@@ -139,6 +139,27 @@
 # }
 #
 #
+### authoritative_zones
+## Additional zones hosted authoritatively by pdns-recursor.
+## We add NTAs for these zones but do not do much else here.
+#
+# { 'type': 'authoritative_zones',
+#   'op': 'add',
+#   'data': ['<str zone>', ...]
+# }
+#
+# { 'type': 'authoritative_zones',
+#   'op': 'delete',
+#   'data': ['<str zone>', ...]
+# }
+#
+# { 'type': 'authoritative_zones',
+#   'op': 'get',
+# }
+# response:
+# { 'data': ['<str zone>', ...] }
+#
+#
 ### search_domains
 #
 # { 'type': 'search_domains',
@@ -255,6 +276,7 @@ STATE = {
     "name_server_tags_recursor": [],
     "name_server_tags_system": [],
     "forward_zones": {},
+    "authoritative_zones": [],
     "hosts": {},
     "host_name": "vyos",
     "domain_name": "",
@@ -267,7 +289,8 @@ base_schema = Schema({
     Required('op'): Any('add', 'delete', 'set', 'get', 'apply'),
     'type': Any('name_servers',
         'name_server_tags_recursor', 'name_server_tags_system',
-        'forward_zones', 'search_domains', 'hosts', 'host_name'),
+        'forward_zones', 'authoritative_zones', 'search_domains',
+        'hosts', 'host_name'),
     'data': Any(list, dict),
     'tag': str,
     'tag_regex': str
@@ -344,6 +367,11 @@ msg_schema_map = {
         },
     'forward_zones': {
         'add': forward_zone_add_schema,
+        'delete': data_list_schema,
+        'get': op_type_schema
+        },
+    'authoritative_zones': {
+        'add': data_list_schema,
         'delete': data_list_schema,
         'get': op_type_schema
         },
@@ -522,7 +550,7 @@ def handle_message(msg):
         data = get_option(msg, 'data')
         if _type in ['name_servers', 'forward_zones', 'search_domains', 'hosts']:
             delete_items_from_dict(STATE[_type], data)
-        elif _type in ['name_server_tags_recursor', 'name_server_tags_system']:
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system', 'authoritative_zones']:
             delete_items_from_list(STATE[_type], data)
         else:
             raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
@@ -534,7 +562,7 @@ def handle_message(msg):
         elif _type in ['forward_zones', 'hosts']:
             add_items_to_dict(STATE[_type], data)
             # maybe we need to rec_control clear-nta each domain that was removed here?
-        elif _type in ['name_server_tags_recursor', 'name_server_tags_system']:
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system', 'authoritative_zones']:
             add_items_to_list(STATE[_type], data)
         else:
             raise ValueError(f'Operation "{op}" unknown data type "{_type}"')
@@ -550,7 +578,7 @@ def handle_message(msg):
         if _type in ['name_servers', 'search_domains', 'hosts']:
             tag_regex = get_option(msg, 'tag_regex')
             result = get_items_from_dict_regex(STATE[_type], tag_regex)
-        elif _type in ['name_server_tags_recursor', 'name_server_tags_system', 'forward_zones']:
+        elif _type in ['name_server_tags_recursor', 'name_server_tags_system', 'forward_zones', 'authoritative_zones']:
             result = STATE[_type]
         else:
             raise ValueError(f'Operation "{op}" unknown data type "{_type}"')

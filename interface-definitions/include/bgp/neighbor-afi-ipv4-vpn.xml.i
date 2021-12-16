@@ -5,7 +5,7 @@
   </properties>
   <children>
     #include <include/bgp/afi-ipv4-prefix-list.xml.i>
-    #include <include/bgp/afi-common.xml.i>
+    #include <include/bgp/neighbor-afi-ipv4-ipv6-common.xml.i>
   </children>
 </node>
 <!-- include end -->

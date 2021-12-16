@@ -6,6 +6,9 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  ipv6 router isis VyOS
 {%     if iface_config.bfd is defined %}
  isis bfd
+{%       if iface_config.bfd.profile is defined and iface_config.bfd.profile is not none %}
+ isis bfd profile {{ iface_config.bfd.profile }}
+{%       endif %}
 {%     endif %}
 {%     if iface_config.network is defined and iface_config.network.point_to_point is defined %}
  isis network point-to-point

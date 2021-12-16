@@ -42,6 +42,9 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     endif %}
 {%     if iface_config.bfd is defined %}
  ip ospf bfd
+{%       if iface_config.bfd.profile is defined and iface_config.bfd.profile is not none %}
+ ip ospf bfd profile {{ iface_config.bfd.profile }}
+{%       endif %}
 {%     endif %}
 {%     if iface_config.mtu_ignore is defined %}
  ip ospf mtu-ignore

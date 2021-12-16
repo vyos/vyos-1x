@@ -54,18 +54,20 @@ class VXLANIf(Interface):
         # arguments used by iproute2. For more information please refer to:
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
-            'source_address'             : 'local',
-            'source_interface'           : 'dev',
-            'remote'                     : 'remote',
             'group'                      : 'group',
+            'external'                   : 'external',
             'parameters.ip.dont_fragment': 'df set',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
             'parameters.nolearning'      : 'nolearning',
+            'remote'                     : 'remote',
+            'source_address'             : 'local',
+            'source_interface'           : 'dev',
+            'vni'                        : 'id',
         }
 
-        cmd = 'ip link add {ifname} type {type} id {vni} dstport {port}'
+        cmd = 'ip link add {ifname} type {type} dstport {port}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
             # "parameters.nolearning" - thus we need to test the nodes existence

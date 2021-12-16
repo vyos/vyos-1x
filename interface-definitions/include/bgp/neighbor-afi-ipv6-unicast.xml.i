@@ -14,7 +14,7 @@
     </node>
     #include <include/bgp/afi-ipv6-nexthop-local.xml.i>
     #include <include/bgp/afi-ipv6-prefix-list.xml.i>
-    #include <include/bgp/afi-common.xml.i>
+    #include <include/bgp/neighbor-afi-ipv4-ipv6-common.xml.i>
     #include <include/bgp/afi-default-originate.xml.i>
   </children>
 </node>

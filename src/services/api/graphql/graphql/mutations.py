@@ -1,3 +1,17 @@
+# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from importlib import import_module
 from typing import Any, Dict
@@ -10,7 +24,7 @@ from api.graphql.recipes.session import Session
 
 mutation = ObjectType("Mutation")
 
-def make_resolver(mutation_name, class_name, session_func):
+def make_mutation_resolver(mutation_name, class_name, session_func):
     """Dynamically generate a resolver for the mutation named in the
     schema by 'mutation_name'.
 
@@ -66,34 +80,20 @@ def make_resolver(mutation_name, class_name, session_func):
 
     return func_impl
 
+def make_prefix_resolver(mutation_name, prefix=[]):
+    for pre in prefix:
+        Pre = pre.capitalize()
+        if Pre in mutation_name:
+            class_name = mutation_name.replace(Pre, '', 1)
+            return make_mutation_resolver(mutation_name, class_name, pre)
+    raise Exception
+
 def make_configure_resolver(mutation_name):
     class_name = mutation_name
-    return make_resolver(mutation_name, class_name, 'configure')
-
-def make_show_config_resolver(mutation_name):
-    class_name = mutation_name
-    return make_resolver(mutation_name, class_name, 'show_config')
+    return make_mutation_resolver(mutation_name, class_name, 'configure')
 
 def make_config_file_resolver(mutation_name):
-    if 'Save' in mutation_name:
-        class_name = mutation_name.replace('Save', '', 1)
-        return make_resolver(mutation_name, class_name, 'save')
-    elif 'Load' in mutation_name:
-        class_name = mutation_name.replace('Load', '', 1)
-        return make_resolver(mutation_name, class_name, 'load')
-    else:
-        raise Exception
-
-def make_show_resolver(mutation_name):
-    class_name = mutation_name
-    return make_resolver(mutation_name, class_name, 'show')
+    return make_prefix_resolver(mutation_name, prefix=['save', 'load'])
 
 def make_image_resolver(mutation_name):
-    if 'Add' in mutation_name:
-        class_name = mutation_name.replace('Add', '', 1)
-        return make_resolver(mutation_name, class_name, 'add')
-    elif 'Delete' in mutation_name:
-        class_name = mutation_name.replace('Delete', '', 1)
-        return make_resolver(mutation_name, class_name, 'delete')
-    else:
-        raise Exception
+    return make_prefix_resolver(mutation_name, prefix=['add', 'delete'])

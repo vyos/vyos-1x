@@ -198,17 +198,19 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area-password clear {password}', tmp)
 
 
-    def test_isis_06_spf_delay(self):
+    def test_isis_06_spf_delay_bfd(self):
         network = 'point-to-point'
         holddown = '10'
         init_delay = '50'
         long_delay = '200'
         short_delay = '100'
         time_to_learn = '75'
+        bfd_profile = 'isis-bfd'
 
         self.cli_set(base_path + ['net', net])
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'network', network])
+            self.cli_set(base_path + ['interface', interface, 'bfd', 'profile', bfd_profile])
 
         self.cli_set(base_path + ['spf-delay-ietf', 'holddown', holddown])
         # verify() - All types of spf-delay must be configured
@@ -244,6 +246,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip router isis {domain}', tmp)
             self.assertIn(f' ipv6 router isis {domain}', tmp)
             self.assertIn(f' isis network {network}', tmp)
+            self.assertIn(f' isis bfd', tmp)
+            self.assertIn(f' isis bfd profile {bfd_profile}', tmp)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

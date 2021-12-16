@@ -1,4 +1,4 @@
-<!-- include start from bfd-common.xml.i -->
+<!-- include start from bfd/common.xml.i -->
 <leafNode name="echo-mode">
   <properties>
     <help>Enables the echo transmission mode</help>
@@ -15,7 +15,7 @@
         <help>Minimum interval of receiving control packets</help>
         <valueHelp>
           <format>u32:10-60000</format>
-          <description>Interval in milliseconds</description>
+          <description>Interval in milliseconds (default: 300)</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 10-60000"/>
@@ -28,7 +28,7 @@
         <help>Minimum interval of transmitting control packets</help>
         <valueHelp>
           <format>u32:10-60000</format>
-          <description>Interval in milliseconds</description>
+          <description>Interval in milliseconds (default: 300)</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 10-60000"/>
@@ -41,7 +41,7 @@
         <help>Multiplier to determine packet loss</help>
         <valueHelp>
           <format>u32:2-255</format>
-          <description>Remote transmission interval will be multiplied by this value</description>
+          <description>Remote transmission interval will be multiplied by this value (default: 3)</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 2-255"/>
@@ -63,6 +63,12 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="passive">
+  <properties>
+    <help>Do not attempt to start sessions</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <leafNode name="shutdown">
   <properties>
     <help>Disable this peer</help>

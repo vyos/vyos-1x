@@ -101,6 +101,25 @@
                   <hidden/>
                 </properties>
               </leafNode>
+              <leafNode name="socket">
+                <properties>
+                  <help>Run server on Unix domain socket</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="cors">
+                <properties>
+                  <help>Set CORS options</help>
+                </properties>
+                <children>
+                  <leafNode name="allow-origin">
+                    <properties>
+                      <help>Allow resource request from origin</help>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </node>
           <node name="api-restrict">
@@ -143,6 +162,7 @@
               </node>
             </children>
           </node>
+          #include <include/interface/vrf.xml.i>
         </children>
       </node>
     </children>

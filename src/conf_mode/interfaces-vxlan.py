@@ -44,6 +44,20 @@ def get_config(config=None):
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
 
+    # We need to verify that no other VXLAN tunnel is configured when external
+    # mode is in use - Linux Kernel limitation
+    conf.set_level(base)
+    vxlan['other_tunnels'] = conf.get_config_dict([], key_mangling=('-', '_'),
+                                                  get_first_key=True,
+                                                  no_tag_node_value_mangle=True)
+
+    # This if-clause is just to be sure - it will always evaluate to true
+    ifname = vxlan['ifname']
+    if ifname in vxlan['other_tunnels']:
+        del vxlan['other_tunnels'][ifname]
+    if len(vxlan['other_tunnels']) == 0:
+        del vxlan['other_tunnels']
+
     return vxlan
 
 def verify(vxlan):
@@ -63,8 +77,17 @@ def verify(vxlan):
     if not any(tmp in ['group', 'remote', 'source_address'] for tmp in vxlan):
         raise ConfigError('Group, remote or source-address must be configured')
 
-    if 'vni' not in vxlan:
-        raise ConfigError('Must configure VNI for VXLAN')
+    if 'vni' not in vxlan and 'external' not in vxlan:
+        raise ConfigError(
+            'Must either configure VXLAN "vni" or use "external" CLI option!')
+
+    if {'external', 'vni'} <= set(vxlan):
+        raise ConfigError('Can not specify both "external" and "VNI"!')
+
+    if {'external', 'other_tunnels'} <= set(vxlan):
+        other_tunnels = ', '.join(vxlan['other_tunnels'])
+        raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
+                          f'CLI option is used. Additional tunnels: {other_tunnels}')
 
     if 'source_interface' in vxlan:
         # VXLAN adds at least an overhead of 50 byte - we need to check the

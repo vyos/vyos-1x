@@ -1,4 +1,4 @@
-<!-- include start from bgp/afi-common.xml.i -->
+<!-- include start from bgp/neighbor-afi-ipv4-ipv6-common.xml.i -->
 <leafNode name="addpath-tx-all">
   <properties>
     <help>Use addpath to advertise all paths to a neighbor</help>
@@ -11,6 +11,61 @@
     <valueless/>
   </properties>
 </leafNode>
+<node name="conditionally-advertise">
+  <properties>
+    <help>Use route-map to conditionally advertise routes</help>
+  </properties>
+  <children>
+    <leafNode name="advertise-map">
+      <properties>
+        <help>Route-map to conditionally advertise routes</help>
+        <completionHelp>
+          <path>policy route-map</path>
+        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route map name</description>
+        </valueHelp>
+        <constraint>
+          <regex>^[-_a-zA-Z0-9.]+$</regex>
+        </constraint>
+        <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+      </properties>
+    </leafNode>
+    <leafNode name="exist-map">
+      <properties>
+        <help>Advertise routes only if prefixes in exist-map are installed in BGP table</help>
+        <completionHelp>
+          <path>policy route-map</path>
+        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route map name</description>
+        </valueHelp>
+        <constraint>
+          <regex>^[-_a-zA-Z0-9.]+$</regex>
+        </constraint>
+        <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+      </properties>
+    </leafNode>
+    <leafNode name="non-exist-map">
+      <properties>
+        <help>Advertise routes only if prefixes in non-exist-map are not installed in BGP table</help>
+        <completionHelp>
+          <path>policy route-map</path>
+        </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Route map name</description>
+        </valueHelp>
+        <constraint>
+          <regex>^[-_a-zA-Z0-9.]+$</regex>
+        </constraint>
+        <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 #include <include/bgp/afi-allowas-in.xml.i>
 <leafNode name="as-override">
   <properties>

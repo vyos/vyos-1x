@@ -19,29 +19,37 @@ from vyos.template import is_ipv4
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group()
-group.add_argument('--single', action='store', help='Validate and allow only one route-target')
-group.add_argument('--multi', action='store', help='Validate multiple, whitespace separated route-targets')
+group.add_argument('--route-distinguisher', action='store', help='Validate BGP route distinguisher')
+group.add_argument('--route-target', action='store', help='Validate one BGP route-target')
+group.add_argument('--route-target-multi', action='store', help='Validate multiple, whitespace separated BGP route-targets')
 args = parser.parse_args()
 
-def is_valid_rt(rt):
-    # every route target needs to have a colon and must consists of two parts
+def is_valid(rt):
+    """ Verify BGP RD/RT - both can be verified using the same logic """
+    # every RD/RT (route distinguisher/route target) needs to have a colon and
+    # must consists of two parts
     value = rt.split(':')
     if len(value) != 2:
         return False
-    # A route target must either be only numbers, or the first part must be an
-    # IPv4 address
+
+    # An RD/RT must either be only numbers, or the first part must be an IPv4
+    # address
     if (is_ipv4(value[0]) or value[0].isdigit()) and value[1].isdigit():
         return True
     return False
 
 if __name__ == '__main__':
-    if args.single:
-        if not is_valid_rt(args.single):
+    if args.route_distinguisher:
+        if not is_valid(args.route_distinguisher):
             exit(1)
 
-    elif args.multi:
-        for rt in args.multi.split(' '):
-            if not is_valid_rt(rt):
+    elif args.route_target:
+        if not is_valid(args.route_target):
+            exit(1)
+
+    elif args.route_target_multi:
+        for rt in args.route_target_multi.split(' '):
+            if not is_valid(rt):
                 exit(1)
 
     else:

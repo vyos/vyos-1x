@@ -18,6 +18,7 @@ import os
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.template import is_ipv6
 from vyos.template import render_to_string
 from vyos.validate import is_ipv6_link_local
@@ -33,7 +34,9 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['protocols', 'bfd']
-    bfd = conf.get_config_dict(base, get_first_key=True)
+    bfd = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True,
+                               no_tag_node_value_mangle=True)
     # Bail out early if configuration tree does not exist
     if not conf.exists(base):
         return bfd
@@ -76,11 +79,19 @@ def verify(bfd):
 
                 # multihop and echo-mode cannot be used together
                 if 'echo_mode' in peer_config:
-                    raise ConfigError('Multihop and echo-mode cannot be used together')
+                    raise ConfigError('BFD multihop and echo-mode cannot be used together')
 
                 # multihop doesn't accept interface names
                 if 'source' in peer_config and 'interface' in peer_config['source']:
-                    raise ConfigError('Multihop and source interface cannot be used together')
+                    raise ConfigError('BFD multihop and source interface cannot be used together')
+
+            if 'profile' in peer_config:
+                profile_name = peer_config['profile']
+                if 'profile' not in bfd or profile_name not in bfd['profile']:
+                    raise ConfigError(f'BFD profile "{profile_name}" does not exist!')
+
+            if 'vrf' in peer_config:
+                verify_vrf(peer_config)
 
     return None
 

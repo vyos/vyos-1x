@@ -24,30 +24,35 @@ PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']
 
 dum_if = 'dum1001'
+vrf_name = 'red'
 peers = {
     '192.0.2.10' : {
         'intv_rx'    : '500',
         'intv_tx'    : '600',
         'multihop'   : '',
         'source_addr': '192.0.2.254',
-        },
+        'profile'    : 'foo-bar-baz',
+    },
     '192.0.2.20' : {
         'echo_mode'  : '',
         'intv_echo'  : '100',
         'intv_mult'  : '100',
         'intv_rx'    : '222',
         'intv_tx'    : '333',
+        'passive'    : '',
         'shutdown'   : '',
+        'profile'    : 'foo',
         'source_intf': dum_if,
-        },
-    '2001:db8::a' : {
+    },
+    '2001:db8::1000:1' : {
         'source_addr': '2001:db8::1',
-        'source_intf': dum_if,
-        },
-    '2001:db8::b' : {
+        'vrf'        : vrf_name,
+    },
+    '2001:db8::2000:1' : {
         'source_addr': '2001:db8::1',
         'multihop'   : '',
-        },
+        'profile'    : 'baz_foo',
+    },
 }
 
 profiles = {
@@ -59,9 +64,15 @@ profiles = {
         'intv_tx'    : '333',
         'shutdown'   : '',
         },
-    'bar' : {
+    'foo-bar-baz' : {
+        'intv_mult'  : '4',
+        'intv_rx'    : '400',
+        'intv_tx'    : '400',
+        },
+    'baz_foo' : {
         'intv_mult'  : '102',
         'intv_rx'    : '444',
+        'passive'    : '',
         },
 }
 
@@ -73,6 +84,8 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_bfd_peer(self):
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '1000'])
+
         for peer, peer_config in peers.items():
             if 'echo_mode' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'echo-mode'])
@@ -86,18 +99,22 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer', peer, 'interval', 'transmit', peer_config["intv_tx"]])
             if 'multihop' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'multihop'])
+            if 'passive' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'passive'])
             if 'shutdown' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'shutdown'])
             if 'source_addr' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
             if 'source_intf' in peer_config:
                 self.cli_set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
+            if 'vrf' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'vrf', peer_config["vrf"]])
 
         # commit changes
         self.cli_commit()
 
         # Verify FRR bgpd configuration
-        frrconfig = self.getFRRconfig('bfd')
+        frrconfig = self.getFRRconfig('bfd', daemon=PROCESS_NAME)
         for peer, peer_config in peers.items():
             tmp = f'peer {peer}'
             if 'multihop' in peer_config:
@@ -106,9 +123,11 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 tmp += f' local-address {peer_config["source_addr"]}'
             if 'source_intf' in peer_config:
                 tmp += f' interface {peer_config["source_intf"]}'
+            if 'vrf' in peer_config:
+                tmp += f' vrf {peer_config["vrf"]}'
 
             self.assertIn(tmp, frrconfig)
-            peerconfig = self.getFRRconfig(f' peer {peer}', end='')
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
 
             if 'echo_mode' in peer_config:
                 self.assertIn(f'echo-mode', peerconfig)
@@ -121,14 +140,16 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'receive-interval {peer_config["intv_rx"]}', peerconfig)
             if 'intv_tx' in peer_config:
                 self.assertIn(f'transmit-interval {peer_config["intv_tx"]}', peerconfig)
+            if 'passive' in peer_config:
+                self.assertIn(f'passive-mode', peerconfig)
             if 'shutdown' in peer_config:
                 self.assertIn(f'shutdown', peerconfig)
             else:
                 self.assertNotIn(f'shutdown', peerconfig)
 
-    def test_bfd_profile(self):
-        peer = '192.0.2.10'
+        self.cli_delete(['vrf', 'name', vrf_name])
 
+    def test_bfd_profile(self):
         for profile, profile_config in profiles.items():
             if 'echo_mode' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'echo-mode'])
@@ -140,10 +161,25 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['profile', profile, 'interval', 'receive', profile_config["intv_rx"]])
             if 'intv_tx' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'interval', 'transmit', profile_config["intv_tx"]])
+            if 'passive' in profile_config:
+                self.cli_set(base_path + ['profile', profile, 'passive'])
             if 'shutdown' in profile_config:
                 self.cli_set(base_path + ['profile', profile, 'shutdown'])
 
-        self.cli_set(base_path + ['peer', peer, 'profile', list(profiles)[0]])
+        for peer, peer_config in peers.items():
+            if 'profile' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'profile', peer_config["profile"] + 'wrong'])
+            if 'source_addr' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'source', 'address', peer_config["source_addr"]])
+            if 'source_intf' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'source', 'interface', peer_config["source_intf"]])
+
+        # BFD profile does not exist!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        for peer, peer_config in peers.items():
+            if 'profile' in peer_config:
+                self.cli_set(base_path + ['peer', peer, 'profile', peer_config["profile"]])
 
         # commit changes
         self.cli_commit()
@@ -152,20 +188,27 @@ class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
         for profile, profile_config in profiles.items():
             config = self.getFRRconfig(f' profile {profile}', endsection='^ !')
             if 'echo_mode' in profile_config:
-                self.assertIn(f'echo-mode', config)
+                self.assertIn(f' echo-mode', config)
             if 'intv_echo' in profile_config:
-                self.assertIn(f'echo receive-interval {profile_config["intv_echo"]}', config)
-                self.assertIn(f'echo transmit-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f' echo receive-interval {profile_config["intv_echo"]}', config)
+                self.assertIn(f' echo transmit-interval {profile_config["intv_echo"]}', config)
             if 'intv_mult' in profile_config:
-                self.assertIn(f'detect-multiplier {profile_config["intv_mult"]}', config)
+                self.assertIn(f' detect-multiplier {profile_config["intv_mult"]}', config)
             if 'intv_rx' in profile_config:
-                self.assertIn(f'receive-interval {profile_config["intv_rx"]}', config)
+                self.assertIn(f' receive-interval {profile_config["intv_rx"]}', config)
             if 'intv_tx' in profile_config:
-                self.assertIn(f'transmit-interval {profile_config["intv_tx"]}', config)
+                self.assertIn(f' transmit-interval {profile_config["intv_tx"]}', config)
+            if 'passive' in profile_config:
+                self.assertIn(f' passive-mode', config)
             if 'shutdown' in profile_config:
-                self.assertIn(f'shutdown', config)
+                self.assertIn(f' shutdown', config)
             else:
                 self.assertNotIn(f'shutdown', config)
+
+        for peer, peer_config in peers.items():
+            peerconfig = self.getFRRconfig(f' peer {peer}', end='', daemon=PROCESS_NAME)
+            if 'profile' in peer_config:
+                self.assertIn(f' profile {peer_config["profile"]}', peerconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

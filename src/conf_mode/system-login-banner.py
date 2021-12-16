@@ -15,13 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from vyos.config import Config
-from vyos import ConfigError
 
+from vyos.config import Config
+from vyos.util import write_file
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 motd="""
+Welcome to VyOS
+
 Check out project news at https://blog.vyos.io
 and feel free to report bugs at https://phabricator.vyos.net
 
@@ -38,7 +41,7 @@ POSTLOGIN_FILE = r'/etc/motd'
 
 default_config_data = {
     'issue': 'Welcome to VyOS - \\n \\l\n\n',
-    'issue_net': 'Welcome to VyOS\n',
+    'issue_net': '',
     'motd': motd
 }
 
@@ -92,14 +95,9 @@ def generate(banner):
     pass
 
 def apply(banner):
-    with open(PRELOGIN_FILE, 'w') as f:
-        f.write(banner['issue'])
-
-    with open(PRELOGIN_NET_FILE, 'w') as f:
-        f.write(banner['issue_net'])
-
-    with open(POSTLOGIN_FILE, 'w') as f:
-        f.write(banner['motd'])
+    write_file(PRELOGIN_FILE, banner['issue'])
+    write_file(PRELOGIN_NET_FILE, banner['issue_net'])
+    write_file(POSTLOGIN_FILE, banner['motd'])
 
     return None
 

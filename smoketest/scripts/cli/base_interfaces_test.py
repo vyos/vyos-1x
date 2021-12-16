@@ -171,10 +171,10 @@ class BasicInterfaceTest:
         def test_add_multiple_ip_addresses(self):
             # Add address
             for intf in self._interfaces:
+                for option in self._options.get(intf, []):
+                    self.cli_set(self._base_path + [intf] + option.split())
                 for addr in self._test_addr:
                     self.cli_set(self._base_path + [intf, 'address', addr])
-                    for option in self._options.get(intf, []):
-                        self.cli_set(self._base_path + [intf] + option.split())
 
             self.cli_commit()
 
@@ -296,6 +296,23 @@ class BasicInterfaceTest:
                         self.assertTrue(is_intf_addr_assigned(vif, address))
 
                     self.assertEqual(Interface(vif).get_admin_state(), 'up')
+
+            # T4064: Delete interface addresses, keep VLAN interface
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vlan in self._vlan_range:
+                    base = self._base_path + [interface, 'vif', vlan]
+                    self.cli_delete(base + ['address'])
+
+            self.cli_commit()
+
+            # Verify no IP address is assigned
+            for interface in self._interfaces:
+                for vlan in self._vlan_range:
+                    vif = f'{intf}.{vlan}'
+                    for address in self._test_addr:
+                        self.assertFalse(is_intf_addr_assigned(vif, address))
+
 
         def test_vif_8021q_mtu_limits(self):
             # XXX: This testcase is not allowed to run as first testcase, reason
@@ -492,6 +509,24 @@ class BasicInterfaceTest:
 
                         tmp = get_interface_config(vif)
                         self.assertEqual(tmp['mtu'], int(self._mtu))
+
+
+            # T4064: Delete interface addresses, keep VLAN interface
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vif_s in self._qinq_range:
+                    for vif_c in self._vlan_range:
+                        self.cli_delete(self._base_path + [interface, 'vif-s', vif_s, 'vif-c', vif_c, 'address'])
+
+            self.cli_commit()
+            # Verify no IP address is assigned
+            for interface in self._interfaces:
+                base = self._base_path + [interface]
+                for vif_s in self._qinq_range:
+                    for vif_c in self._vlan_range:
+                        vif = f'{interface}.{vif_s}.{vif_c}'
+                        for address in self._test_addr:
+                            self.assertFalse(is_intf_addr_assigned(vif, address))
 
             # T3972: remove vif-c interfaces from vif-s
             for interface in self._interfaces:

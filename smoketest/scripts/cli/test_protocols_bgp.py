@@ -32,9 +32,11 @@ prefix_list_in = 'pfx-foo-in'
 prefix_list_out = 'pfx-foo-out'
 prefix_list_in6 = 'pfx-foo-in6'
 prefix_list_out6 = 'pfx-foo-out6'
+bfd_profile = 'foo-bar-baz'
 
 neighbor_config = {
     '192.0.2.1' : {
+        'bfd'          : '',
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '100',
@@ -51,23 +53,30 @@ neighbor_config = {
         'addpath_all' : '',
         },
     '192.0.2.2' : {
+        'bfd_profile'  : bfd_profile,
         'remote_as'    : '200',
         'shutdown'     : '',
         'no_cap_nego'  : '',
         'port'         : '667',
         'cap_strict'   : '',
+        'advertise_map': route_map_in,
+        'non_exist_map': route_map_out,
         'pfx_list_in'  : prefix_list_in,
         'pfx_list_out' : prefix_list_out,
         'no_send_comm_std' : '',
         },
     '192.0.2.3' : {
+        'advertise_map': route_map_in,
         'description'  : 'foo bar baz',
         'remote_as'    : '200',
         'passive'      : '',
         'multi_hop'    : '5',
         'update_src'   : 'lo',
+        'peer_group'   : 'foo',
         },
     '2001:db8::1' : {
+        'advertise_map': route_map_in,
+        'exist_map'    : route_map_out,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '123',
@@ -83,6 +92,7 @@ neighbor_config = {
         'route_map_out': route_map_out,
         'no_send_comm_std' : '',
         'addpath_per_as'   : '',
+        'peer_group'   : 'foo-bar',
         },
     '2001:db8::2' : {
         'remote_as'    : '456',
@@ -93,11 +103,15 @@ neighbor_config = {
         'pfx_list_in'  : prefix_list_in6,
         'pfx_list_out' : prefix_list_out6,
         'no_send_comm_ext' : '',
+        'peer_group'   : 'foo-bar_baz',
         },
 }
 
 peer_group_config = {
     'foo' : {
+        'advertise_map': route_map_in,
+        'exist_map'    : route_map_out,
+        'bfd'          : '',
         'remote_as'    : '100',
         'passive'      : '',
         'password'     : 'VyOS-Secure123',
@@ -105,7 +119,8 @@ peer_group_config = {
         'cap_over'     : '',
         'ttl_security': '5',
         },
-    'bar' : {
+    'foo-bar' : {
+        'advertise_map': route_map_in,
         'description'  : 'foo peer bar group',
         'remote_as'    : '200',
         'shutdown'     : '',
@@ -115,7 +130,10 @@ peer_group_config = {
         'pfx_list_out' : prefix_list_out,
         'no_send_comm_ext' : '',
         },
-    'baz' : {
+    'foo-bar_baz' : {
+        'advertise_map': route_map_in,
+        'non_exist_map': route_map_out,
+        'bfd_profile'  : bfd_profile,
         'cap_dynamic'  : '',
         'cap_ext_next' : '',
         'remote_as'    : '200',
@@ -128,23 +146,34 @@ peer_group_config = {
 }
 
 class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+        cls.cli_set(cls, ['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'prefix', '192.0.2.0/25'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
+
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
+        cls.cli_set(cls, ['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['policy'])
+
     def setUp(self):
-        self.cli_set(['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_in, 'rule', '10', 'prefix', '192.0.2.0/25'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list', prefix_list_out, 'rule', '10', 'prefix', '192.0.2.128/25'])
-
-        self.cli_set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_in6, 'rule', '10', 'prefix', '2001:db8:1000::/64'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'action', 'deny'])
-        self.cli_set(['policy', 'prefix-list6', prefix_list_out6, 'rule', '10', 'prefix', '2001:db8:2000::/64'])
-
         self.cli_set(base_path + ['local-as', ASN])
 
     def tearDown(self):
-        self.cli_delete(['policy'])
         self.cli_delete(['vrf'])
         self.cli_delete(base_path)
         self.cli_commit()
@@ -154,6 +183,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
     def verify_frr_config(self, peer, peer_config, frrconfig):
         # recurring patterns to verify for both a simple neighbor and a peer-group
+        if 'bfd' in peer_config:
+            self.assertIn(f' neighbor {peer} bfd', frrconfig)
+        if 'bfd_profile' in peer_config:
+            self.assertIn(f' neighbor {peer} bfd profile {peer_config["bfd_profile"]}', frrconfig)
+            self.assertIn(f' neighbor {peer} bfd check-control-plane-failure', frrconfig)
         if 'cap_dynamic' in peer_config:
             self.assertIn(f' neighbor {peer} capability dynamic', frrconfig)
         if 'cap_ext_next' in peer_config:
@@ -198,7 +232,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
         if 'addpath_per_as' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
-
+        if 'advertise_map' in peer_config:
+            base = f' neighbor {peer} advertise-map {peer_config["advertise_map"]}'
+            if 'exist_map' in peer_config:
+                base = f'{base} exist-map {peer_config["exist_map"]}'
+            if 'non_exist_map' in peer_config:
+                base = f'{base} non-exist-map {peer_config["non_exist_map"]}'
+            self.assertIn(base, frrconfig)
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -208,6 +248,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         max_path_v4ibgp = '4'
         max_path_v6 = '8'
         max_path_v6ibgp = '16'
+        cond_adv_timer = '30'
+        min_hold_time = '2'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -229,6 +271,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'bestpath', 'bandwidth', 'default-weight-for-missing'])
         self.cli_set(base_path + ['parameters', 'bestpath', 'compare-routerid'])
 
+        self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
+        self.cli_set(base_path + ['parameters', 'fast-convergence'])
+        self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
+        self.cli_set(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_set(base_path + ['parameters', 'shutdown'])
+        self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
+
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
@@ -244,11 +293,17 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp router-id {router_id}', frrconfig)
         self.assertIn(f' bgp log-neighbor-changes', frrconfig)
         self.assertIn(f' bgp default local-preference {local_pref}', frrconfig)
+        self.assertIn(f' bgp conditional-advertisement timer {cond_adv_timer}', frrconfig)
+        self.assertIn(f' bgp fast-convergence', frrconfig)
         self.assertIn(f' bgp graceful-restart stalepath-time {stalepath_time}', frrconfig)
         self.assertIn(f' bgp graceful-shutdown', frrconfig)
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
         self.assertIn(f' bgp bestpath bandwidth default-weight-for-missing', frrconfig)
         self.assertIn(f' bgp bestpath compare-routerid', frrconfig)
+        self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
+        self.assertIn(f' bgp reject-as-sets', frrconfig)
+        self.assertIn(f' bgp shutdown', frrconfig)
+        self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
@@ -270,6 +325,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
             if 'adv_interv' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'advertisement-interval', peer_config["adv_interv"]])
+            if 'bfd' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'bfd'])
+            if 'bfd_profile' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'bfd', 'profile', peer_config["bfd_profile"]])
+                self.cli_set(base_path + ['neighbor', peer, 'bfd', 'check-control-plane-failure'])
             if 'cap_dynamic' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'dynamic'])
             if 'cap_ext_next' in peer_config:
@@ -319,6 +379,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'addpath_per_as' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-per-as'])
 
+            # Conditional advertisement
+            if 'advertise_map' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'advertise-map', peer_config["advertise_map"]])
+                # Either exist-map or non-exist-map needs to be specified
+                if 'exist_map' not in peer_config and 'non_exist_map' not in peer_config:
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'exist-map', route_map_in])
+
+                if 'exist_map' in peer_config:
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'exist-map', peer_config["exist_map"]])
+                if 'non_exist_map' in peer_config:
+                    self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'conditionally-advertise', 'non-exist-map', peer_config["non_exist_map"]])
+
         # commit changes
         self.cli_commit()
 
@@ -339,6 +413,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_03_peer_groups(self):
         # Test out individual peer-group configuration items
         for peer_group, config in peer_group_config.items():
+            if 'bfd' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd'])
+            if 'bfd_profile' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd', 'profile', config["bfd_profile"]])
+                self.cli_set(base_path + ['peer-group', peer_group, 'bfd', 'check-control-plane-failure'])
             if 'cap_dynamic' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'dynamic'])
             if 'cap_ext_next' in config:
@@ -382,6 +461,24 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'addpath_per_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
 
+            # Conditional advertisement
+            if 'advertise_map' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'advertise-map', config["advertise_map"]])
+                # Either exist-map or non-exist-map needs to be specified
+                if 'exist_map' not in config and 'non_exist_map' not in config:
+                    with self.assertRaises(ConfigSessionError):
+                        self.cli_commit()
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'exist-map', route_map_in])
+
+                if 'exist_map' in config:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'exist-map', config["exist_map"]])
+                if 'non_exist_map' in config:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'conditionally-advertise', 'non-exist-map', config["non_exist_map"]])
+
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'peer-group', peer_config['peer_group']])
+
         # commit changes
         self.cli_commit()
 
@@ -392,6 +489,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in peer_group_config.items():
             self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
             self.verify_frr_config(peer, peer_config, frrconfig)
+
+        for peer, peer_config in neighbor_config.items():
+            if 'peer_group' in peer_config:
+                self.assertIn(f' neighbor {peer} peer-group {peer_config["peer_group"]}', frrconfig)
 
 
     def test_bgp_04_afi_ipv4(self):

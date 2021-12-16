@@ -251,13 +251,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         cost = '150'
         network = 'point-to-point'
         priority = '200'
+        bfd_profile = 'vyos-test'
 
         self.cli_set(base_path + ['passive-interface', 'default'])
         for interface in interfaces:
             base_interface = base_path + ['interface', interface]
             self.cli_set(base_interface + ['authentication', 'plaintext-password', password])
             self.cli_set(base_interface + ['bandwidth', bandwidth])
-            self.cli_set(base_interface + ['bfd'])
+            self.cli_set(base_interface + ['bfd', 'profile', bfd_profile])
             self.cli_set(base_interface + ['cost', cost])
             self.cli_set(base_interface + ['mtu-ignore'])
             self.cli_set(base_interface + ['network', network])
@@ -272,6 +273,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf authentication-key {password}', config)
             self.assertIn(f' ip ospf bfd', config)
+            self.assertIn(f' ip ospf bfd profile {bfd_profile}', config)
             self.assertIn(f' ip ospf cost {cost}', config)
             self.assertIn(f' ip ospf mtu-ignore', config)
             self.assertIn(f' ip ospf network {network}', config)

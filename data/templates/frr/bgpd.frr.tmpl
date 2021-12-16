@@ -17,6 +17,12 @@
 {%   endif %}
 {%   if config.bfd is defined %}
  neighbor {{ neighbor }} bfd
+{%     if config.bfd.check_control_plane_failure is defined %}
+ neighbor {{ neighbor }} bfd check-control-plane-failure
+{%     endif %}
+{%     if config.bfd.profile is defined and config.bfd.profile is not none %}
+ neighbor {{ neighbor }} bfd profile {{ config.bfd.profile }}
+{%     endif %}
 {%   endif %}
 {%   if config.capability is defined and config.capability is not none %}
 {%     if config.capability.dynamic is defined %}
@@ -139,6 +145,17 @@
 {%       endif %}
 {%       if afi_config.as_override is defined %}
   neighbor {{ neighbor }} as-override
+{%       endif %}
+{%       if afi_config.conditionally_advertise is defined and afi_config.conditionally_advertise is not none %}
+{%         if afi_config.conditionally_advertise.advertise_map is defined and afi_config.conditionally_advertise.advertise_map is not none %}
+{%           set exist_non_exist_map = 'exist-map' %}
+{%           if afi_config.conditionally_advertise.exist_map is defined and afi_config.conditionally_advertise.exist_map is not none %}
+{%             set exist_non_exist_map = 'exist-map ' ~ afi_config.conditionally_advertise.exist_map %}
+{%           elif afi_config.conditionally_advertise.non_exist_map is defined and afi_config.conditionally_advertise.non_exist_map is not none %}
+{%             set exist_non_exist_map = 'non-exist-map ' ~ afi_config.conditionally_advertise.non_exist_map %}
+{%           endif %}
+  neighbor {{ neighbor }} advertise-map {{ afi_config.conditionally_advertise.advertise_map }} {{ exist_non_exist_map }}
+{%         endif %}
 {%       endif %}
 {%       if afi_config.remove_private_as is defined %}
   neighbor {{ neighbor }} remove-private-AS
@@ -469,6 +486,11 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.cluster_id is defined and parameters.cluster_id is not none %}
  bgp cluster-id {{ parameters.cluster_id }}
 {%   endif %}
+{%   if parameters.conditional_advertisement is defined and parameters.conditional_advertisement is not none %}
+{%     if parameters.conditional_advertisement.timer is defined and parameters.conditional_advertisement.timer is not none %}
+ bgp conditional-advertisement timer {{ parameters.conditional_advertisement.timer }}
+{%     endif %}
+{%   endif %}
 {%   if parameters.confederation is defined and parameters.confederation is not none %}
 {%     if parameters.confederation.identifier is defined and parameters.confederation.identifier is not none %}
  bgp confederation identifier {{ parameters.confederation.identifier }}
@@ -499,6 +521,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%       endfor %}
 {%     endif %}
 {%   endif %}
+{%   if parameters.fast_convergence is defined %}
+  bgp fast-convergence
+{%   endif %}
 {%   if parameters.graceful_restart is defined %}
  bgp graceful-restart {{ 'stalepath-time ' ~ parameters.graceful_restart.stalepath_time if parameters.graceful_restart.stalepath_time is defined }}
 {%   endif %}
@@ -507,6 +532,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   endif %}
 {%   if parameters.log_neighbor_changes is defined %}
  bgp log-neighbor-changes
+{%   endif %}
+{%   if parameters.minimum_holdtime is defined and parameters.minimum_holdtime is not none %}
+ bgp minimum-holdtime {{ parameters.minimum_holdtime }}
 {%   endif %}
 {%   if parameters.network_import_check is defined %}
  bgp network import-check
@@ -517,8 +545,17 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.no_fast_external_failover is defined %}
  no bgp fast-external-failover
 {%   endif %}
+{%   if parameters.reject_as_sets is defined %}
+ bgp reject-as-sets
+{%   endif %}
 {%   if parameters.router_id is defined and parameters.router_id is not none %}
  bgp router-id {{ parameters.router_id }}
+{%   endif %}
+{%   if parameters.shutdown is defined %}
+ bgp shutdown
+{%   endif %}
+{%   if parameters.suppress_fib_pending is defined %}
+ bgp suppress-fib-pending
 {%   endif %}
 {% endif %}
 {% if timers is defined and timers.keepalive is defined and timers.holdtime is defined %}

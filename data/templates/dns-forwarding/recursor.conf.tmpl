@@ -31,5 +31,8 @@ dnssec={{ dnssec }}
 # serve rfc1918 records
 serve-rfc1918={{ 'no' if no_serve_rfc1918 is defined else 'yes' }}
 
+# zones
+auth-zones={% for z in authoritative_zones %}{{ z.name }}={{ z.file }}{{- "," if not loop.last -}}{% endfor %}
+
 forward-zones-file=recursor.forward-zones.conf
 

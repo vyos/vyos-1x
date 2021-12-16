@@ -1181,6 +1181,26 @@
         </leafNode>
       </children>
     </node>
+    <node name="conditional-advertisement">
+      <properties>
+        <help>Conditional advertisement settings</help>
+      </properties>
+      <children>
+        <leafNode name="timer">
+          <properties>
+            <help>Set period to rescan BGP table to check if condition is met</help>
+            <valueHelp>
+              <format>u32:5-240</format>
+              <description>Period to rerun the conditional advertisement scanner process (default: 60)</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 5-240"/>
+            </constraint>
+          </properties>
+          <defaultValue>60</defaultValue>
+        </leafNode>
+      </children>
+    </node>
     <node name="dampening">
       <properties>
         <help>Enable route-flap dampening</help>
@@ -1343,6 +1363,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="fast-convergence">
+      <properties>
+        <help>Teardown sessions immediately whenever peer becomes unreachable</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <node name="graceful-restart">
       <properties>
         <help>Graceful restart capability parameters</help>
@@ -1374,6 +1400,18 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="minimum-holdtime">
+      <properties>
+        <help>BGP minimum holdtime</help>
+        <valueHelp>
+          <format>u32:1-65535</format>
+          <description>Minimum holdtime in seconds</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-65535"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <leafNode name="network-import-check">
       <properties>
         <help>Enable IGP route check for network statements</help>
@@ -1389,6 +1427,24 @@
     <leafNode name="no-fast-external-failover">
       <properties>
         <help>Disable immediate session reset on peer link down event</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="reject-as-sets">
+      <properties>
+        <help>Reject routes with AS_SET or AS_CONFED_SET flag</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="shutdown">
+      <properties>
+        <help>Administrative shutdown of the BGP instance</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="suppress-fib-pending">
+      <properties>
+        <help>Advertise only routes that are programmed in kernel to peers</help>
         <valueless/>
       </properties>
     </leafNode>

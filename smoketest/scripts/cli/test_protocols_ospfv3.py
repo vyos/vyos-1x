@@ -110,6 +110,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' redistribute {protocol} route-map {route_map}', frrconfig)
 
     def test_ospfv3_04_interfaces(self):
+        bfd_profile = 'vyos-ipv6'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['area', default_area])
@@ -119,7 +120,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         interfaces = Section.interfaces('ethernet')
         for interface in interfaces:
             if_base = base_path + ['interface', interface]
-            self.cli_set(if_base + ['bfd'])
+            self.cli_set(if_base + ['bfd', 'profile', bfd_profile])
             self.cli_set(if_base + ['cost', cost])
             self.cli_set(if_base + ['instance-id', '0'])
             self.cli_set(if_base + ['mtu-ignore'])
@@ -142,6 +143,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
             if_config = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f'interface {interface}', if_config)
             self.assertIn(f' ipv6 ospf6 bfd', if_config)
+            self.assertIn(f' ipv6 ospf6 bfd profile {bfd_profile}', if_config)
             self.assertIn(f' ipv6 ospf6 cost {cost}', if_config)
             self.assertIn(f' ipv6 ospf6 mtu-ignore', if_config)
             self.assertIn(f' ipv6 ospf6 network point-to-point', if_config)

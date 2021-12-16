@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="netns">
+        <properties>
+          <help>Show network namespace information</help>
+        </properties>
+        <command>ip netns ls</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
