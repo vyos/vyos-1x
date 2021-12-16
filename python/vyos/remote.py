@@ -74,21 +74,6 @@ class SourceAdapter(HTTPAdapter):
             num_pools=connections, maxsize=maxsize,
             block=block, source_address=self._source_pair)
 
-class WrappedFile:
-    def __init__(self, obj, size=None, chunk_size=CHUNK_SIZE):
-        self._obj = obj
-        self._progress = size and make_incremental_progressbar(chunk_size / size)
-    def read(self, size=-1):
-        if self._progress:
-            next(self._progress)
-        self._obj.read(size)
-    def write(self, size=-1):
-        if self._progress:
-            next(self._progress)
-        self._obj.write(size)
-    def __getattr__(self, attr):
-         return getattr(self._obj, attr)
-
 
 def check_storage(path, size):
     """
@@ -264,10 +249,9 @@ class HttpC:
                     shutil.copyfileobj(r.raw, f)
 
     def upload(self, location: str):
-        size = os.path.getsize(location) if self.progressbar else None
-        # Keep in mind that `data` can be a file-like or iterable object.
-        with self._establish() as s, file(location, 'rb') as f:
-            s.post(self.urlstring, data=WrappedFile(f, size), allow_redirects=True)
+        # Does not yet support progressbars.
+        with self._establish() as s, open(location, 'rb') as f:
+            s.post(self.urlstring, data=f, allow_redirects=True)
 
 
 class TftpC:
