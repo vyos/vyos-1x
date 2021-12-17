@@ -65,7 +65,7 @@
                       </constraint>
                       <constraintErrorMessage>The size must be between 1 and 1024 MB</constraintErrorMessage>
                     </properties>
-                    <defaultValue>10</defaultValue>
+                    <defaultValue>1</defaultValue>
                   </leafNode>
                   <leafNode name="rotate">
                     <properties>

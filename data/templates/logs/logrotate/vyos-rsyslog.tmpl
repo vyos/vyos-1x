@@ -3,11 +3,11 @@
     missingok
     nomail
     notifempty
-    rotate {{ rotate|default('10') }}
-    size {{ max_size|default('1') }}M
+    rotate {{ rotate }}
+    size {{ max_size }}M
     postrotate
-        # restart rsyslog service
-        systemctl restart rsyslog.service
+        # inform rsyslog service about rotation
+        /usr/lib/rsyslog/rsyslog-rotate
     endscript
 }
 

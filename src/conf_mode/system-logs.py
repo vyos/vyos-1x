@@ -19,9 +19,11 @@ from sys import exit
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.logger import syslog
 from vyos.template import render
 from vyos.util import dict_search
+from vyos.xml import defaults
 airbag.enable()
 
 # path to logrotate configs
@@ -36,7 +38,11 @@ def get_config(config=None):
         conf = Config()
 
     base = ['system', 'logs']
-    logs_config = conf.get_config_dict(base, key_mangling=('-', '_'))
+    default_values = defaults(base)
+    logs_config = conf.get_config_dict(base,
+                                       key_mangling=('-', '_'),
+                                       get_first_key=True)
+    logs_config = dict_merge(default_values, logs_config)
 
     return logs_config
 
@@ -48,19 +54,13 @@ def verify(logs_config):
 
 def generate(logs_config):
     # get configuration for logrotate atop
-    logrotate_atop = dict_search('logs.logrotate.atop', logs_config)
-    # provide an empty dictionary if there is no config
-    if not logrotate_atop:
-        logrotate_atop = {}
+    logrotate_atop = dict_search('logrotate.atop', logs_config)
     # generate new config file for atop
     syslog.debug('Adding logrotate config for atop')
     render(logrotate_atop_file, 'logs/logrotate/vyos-atop.tmpl', logrotate_atop)
 
     # get configuration for logrotate rsyslog
-    logrotate_rsyslog = dict_search('logs.logrotate.messages', logs_config)
-    # provide an empty dictionary if there is no config
-    if not logrotate_rsyslog:
-        logrotate_rsyslog = {}
+    logrotate_rsyslog = dict_search('logrotate.messages', logs_config)
     # generate new config file for rsyslog
     syslog.debug('Adding logrotate config for rsyslog')
     render(logrotate_rsyslog_file, 'logs/logrotate/vyos-rsyslog.tmpl',
