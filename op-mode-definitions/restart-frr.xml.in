@@ -26,6 +26,12 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon isisd</command>
       </leafNode>
+      <leafNode name="ldp">
+        <properties>
+          <help>Restart the Label Distribution Protocol (LDP) daemon</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ldpd</command>
+      </leafNode>
       <leafNode name="ospf">
         <properties>
           <help>Restart Open Shortest Path First (OSPF) routing daemon</help>
