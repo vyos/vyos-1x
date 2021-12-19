@@ -25,6 +25,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="gpe">
+            <properties>
+              <help>Enable Generic Protocol extension (VXLAN-GPE)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="group">
             <properties>
               <help>Multicast group address for VXLAN interface</help>
