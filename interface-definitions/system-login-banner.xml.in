@@ -15,12 +15,12 @@
             <children>
               <leafNode name="post-login">
                 <properties>
-                  <help>System loging banner post-login</help>
+                  <help>A system banner after the user logs in </help>
                 </properties>
               </leafNode>
               <leafNode name="pre-login">
                 <properties>
-                  <help>System loging banner pre-login</help>
+                  <help>A system banner before the user logs in</help>
                 </properties>
               </leafNode>
             </children>
