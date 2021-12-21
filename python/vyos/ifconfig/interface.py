@@ -1304,8 +1304,8 @@ class Interface(Control):
             source_if = next(iter(self._config['is_mirror_intf']))
             config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
-        # Check configuration stored by old perl code before delete T3782
-        if not 'redirect' in self._config:
+        # Check configuration stored by old perl code before delete T3782/T4056
+        if not 'redirect' in self._config and not 'traffic_policy' in self._config:
             # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
             # Remove existing mirroring rules
             delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
