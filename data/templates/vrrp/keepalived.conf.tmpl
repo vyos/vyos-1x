@@ -83,15 +83,24 @@ vrrp_instance {{ name }} {
 {% endif %}
 
 {% if sync_group is defined and sync_group is not none %}
-{%   for name, group_config in sync_group.items() if group_config.disable is not defined %}
+{%   for name, sync_group_config in sync_group.items() if sync_group_config.disable is not defined %}
 vrrp_sync_group {{ name }} {
     group {
-{%     if group_config.member is defined and group_config.member is not none %}
-{%       for member in group_config.member %}
+{%     if sync_group_config.member is defined and sync_group_config.member is not none %}
+{%       for member in sync_group_config.member %}
         {{ member }}
 {%       endfor %}
 {%     endif %}
     }
+
+{# Health-check scripts should be in section sync-group if member is part of the sync-group T4081 #}
+{%   for name, group_config in group.items() if group_config.disable is not defined %}
+{%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none and name in sync_group_config.member %}
+    track_script {
+        healthcheck_{{ name }}
+    }
+{%     endif %}
+{%   endfor %}
 {%     if conntrack_sync_group is defined and conntrack_sync_group == name %}
 {%     set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
     notify_master "{{ vyos_helper }} master {{ name }}"
