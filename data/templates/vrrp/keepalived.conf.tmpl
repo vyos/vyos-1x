@@ -98,6 +98,13 @@ vrrp_sync_group {{ name }} {
     notify_backup "{{ vyos_helper }} backup {{ name }}"
     notify_fault "{{ vyos_helper }} fault {{ name }}"
 {%     endif %}
+{%     for name, group_config in group.items() if group_config.disable is not defined %}
+{%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none %}
+    track_script {
+        healthcheck_{{ name }}
+    }
+{%     endif %}
+{%     endfor %}
 }
 {%   endfor %}
 {% endif %}
