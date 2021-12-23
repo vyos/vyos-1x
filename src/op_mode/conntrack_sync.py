@@ -20,12 +20,15 @@ import xmltodict
 
 from argparse import ArgumentParser
 from vyos.configquery import CliShellApiConfigQuery
+from vyos.configquery import ConfigTreeQuery
+from vyos.util import call
 from vyos.util import cmd
 from vyos.util import run
 from vyos.template import render_to_string
 
 conntrackd_bin = '/usr/sbin/conntrackd'
 conntrackd_config = '/run/conntrackd/conntrackd.conf'
+failover_state_file = '/var/run/vyatta-conntrackd-failover-state'
 
 parser = ArgumentParser(description='Conntrack Sync')
 group = parser.add_mutually_exclusive_group()
@@ -36,6 +39,8 @@ group.add_argument('--show-internal', help='Show internal (main) tracking cache'
 group.add_argument('--show-external', help='Show external (main) tracking cache', action='store_true')
 group.add_argument('--show-internal-expect', help='Show internal (expect) tracking cache', action='store_true')
 group.add_argument('--show-external-expect', help='Show external (expect) tracking cache', action='store_true')
+group.add_argument('--show-statistics', help='Show connection syncing statistics', action='store_true')
+group.add_argument('--show-status', help='Show conntrack-sync status', action='store_true')
 
 def is_configured():
     """ Check if conntrack-sync service is configured """
@@ -130,6 +135,46 @@ if __name__ == '__main__':
             print('Expect Table Entries:')
         out = cmd(f'sudo {conntrackd_bin} -C {conntrackd_config} {opt} -x')
         xml_to_stdout(out)
+
+    elif args.show_statistics:
+        is_configured()
+        config = ConfigTreeQuery()
+        print('\nMain Table Statistics:\n')
+        call(f'sudo {conntrackd_bin} -C {conntrackd_config} -s')
+        print()
+        if config.exists(['service', 'conntrack-sync', 'expect-sync']):
+            print('\nExpect Table Statistics:\n')
+            call(f'sudo {conntrackd_bin} -C {conntrackd_config} -s exp')
+            print()
+
+    elif args.show_status:
+        is_configured()
+        config = ConfigTreeQuery()
+        ct_sync_intf = config.list_nodes(['service', 'conntrack-sync', 'interface'])
+        ct_sync_intf = ', '.join(ct_sync_intf)
+        failover_state = "no transition yet!"
+        expect_sync_protocols = "disabled"
+
+        if config.exists(['service', 'conntrack-sync', 'failover-mechanism', 'vrrp']):
+            failover_mechanism = "vrrp"
+            vrrp_sync_grp = config.value(['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group'])
+
+        if os.path.isfile(failover_state_file):
+            with open(failover_state_file, "r") as f:
+                failover_state = f.readline()
+
+        if config.exists(['service', 'conntrack-sync', 'expect-sync']):
+            expect_sync_protocols = config.values(['service', 'conntrack-sync', 'expect-sync'])
+            if 'all' in expect_sync_protocols:
+                expect_sync_protocols = ["ftp", "sip", "h323", "nfs", "sqlnet"]
+            expect_sync_protocols = ', '.join(expect_sync_protocols)
+
+        show_status = (f'\nsync-interface        : {ct_sync_intf}\n'
+                       f'failover-mechanism    : {failover_mechanism} [sync-group {vrrp_sync_grp}]\n'
+                       f'last state transition : {failover_state}'
+                       f'ExpectationSync       : {expect_sync_protocols}')
+
+        print(show_status)
 
     else:
         parser.print_help()
