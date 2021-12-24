@@ -199,8 +199,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
             self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
+        # enable FRR debugging to find the root cause of failing testcases
+        cmd('touch /tmp/vyos.frr.debug')
+
         # commit changes
         self.cli_commit()
+
+        # disable FRR debugging
+        cmd('rm -f /tmp/vyos.frr.debug')
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
@@ -210,8 +216,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
         except:
             log.debug(frrconfig)
-            log.debug(cmd('sudo cat /var/log/messages'))
-            log.debug(cmd('vtysh -c "show run"'))
+            log.debug(cmd('sudo cat /tmp/vyos-configd-script-stdout'))
             self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_08_virtual_link(self):
