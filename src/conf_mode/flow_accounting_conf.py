@@ -239,9 +239,9 @@ def verify(flow_config):
             raise ConfigError('You need to configure at least one NetFlow server!')
 
         # check if configured netflow source-ip exist in the system
-        if 'source_ip' in flow_config['netflow']:
-            if not is_addr_assigned(flow_config['netflow']['source_ip']):
-                print(f'Warning: your "netflow source-ip" does not exist in the system!')
+        if 'source_address' in flow_config['netflow']:
+            if not is_addr_assigned(flow_config['netflow']['source_address']):
+                print(f'Warning: Configured "netflow source-address" does not exist on the system!')
 
         # check if engine-id compatible with selected protocol version
         if 'engine_id' in flow_config['netflow']:

@@ -183,23 +183,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="source-ip">
-                <properties>
-                  <help>IPv4 or IPv6 source address of NetFlow packets</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 source address of NetFlow packets</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 source address of NetFlow packets</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
               <leafNode name="version">
                 <properties>
                   <help>NetFlow version to export</help>

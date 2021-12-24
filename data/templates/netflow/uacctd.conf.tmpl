@@ -48,8 +48,8 @@ nfprobe_maxflows[nf_{{ server }}]: {{ netflow.max_flows }}
 {%     if netflow.sampling_rate is defined and netflow.sampling_rate is not none %}
 sampling_rate[nf_{{ server }}]: {{ netflow.sampling_rate }}
 {%     endif %}
-{%     if netflow.source_ip is defined and netflow.source_ip is not none %}
-nfprobe_source_ip[nf_{{ server }}]: {{ netflow.source_ip }}
+{%     if netflow.source_address is defined and netflow.source_address is not none %}
+nfprobe_source_ip[nf_{{ server }}]: {{ netflow.source_address }}
 {%     endif %}
 {%     if netflow.timeout is defined and netflow.timeout is not none %}
 nfprobe_timeouts[nf_{{ server }}]: expint={{ netflow.timeout.expiry_interval }}:general={{ netflow.timeout.flow_generic }}:icmp={{ netflow.timeout.icmp }}:maxlife={{ netflow.timeout.max_active_life }}:tcp.fin={{ netflow.timeout.tcp_fin }}:tcp={{ netflow.timeout.tcp_generic }}:tcp.rst={{ netflow.timeout.tcp_rst }}:udp={{ netflow.timeout.udp }}
