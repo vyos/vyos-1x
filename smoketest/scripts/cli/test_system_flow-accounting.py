@@ -201,11 +201,11 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
         uacctd = read_file(uacctd_conf)
 
-        tmp = 'plugins: '
+        tmp = []
+        tmp.append('memory')
         for server, server_config in netflow_server.items():
-            tmp += f'nfprobe[nf_{server}],'
-        tmp += 'memory'
-        self.assertIn(f'{tmp}', uacctd)
+            tmp.append(f'nfprobe[nf_{server}]')
+        self.assertIn('plugins: ' + ','.join(tmp), uacctd)
 
         for server, server_config in netflow_server.items():
             self.assertIn(f'nfprobe_engine[nf_{server}]: {engine_id}', uacctd)
