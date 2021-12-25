@@ -11,7 +11,7 @@
             <properties>
               <help>Show IPv6 Open Shortest Path First (OSPF)</help>
             </properties>
-            <command>vtysh -c "show ipv6 ospf6"</command>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             <children>
               <node name="area">
                 <properties>
@@ -26,7 +26,7 @@
                     <path>protocols ospfv3 area</path>
                   </completionHelp>
                 </properties>
-                <command>vtysh -c "show ipv6 ospf6 area $5 spf tree"</command>
+                <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
                 <children>
                   <tagNode name="router">
                     <properties>
@@ -35,471 +35,58 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>vtysh -c "show ipv6 ospf6 simulate spf-tree $7 $4 $5"</command>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@ spf tree</command>
                   </tagNode>
                 </children>
               </tagNode>
-              <node name="border-routers">
+              #include <include/ospfv3/border-routers.xml.i>
+              #include <include/ospfv3/database.xml.i>
+              #include <include/ospfv3/interface.xml.i>
+              #include <include/ospfv3/linkstate.xml.i>
+              #include <include/ospfv3/neighbor.xml.i>
+              #include <include/ospfv3/redistribute.xml.i>
+              #include <include/ospfv3/route.xml.i>
+              <node name="vrf">
                 <properties>
-                  <help>Show OSPFv3 border-router (ABR and ASBR) information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  #include <include/ospfv3/detail.xml.i>
-                </children>
-              </node>
-              <tagNode name="border-routers">
-                <properties>
-                  <help>Border router ID</help>
+                  <help>Specify the VRF</help>
                   <completionHelp>
-                    <list>&lt;x.x.x.x&gt;</list>
+                    <list>all</list>
+                    <path>vrf name</path>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </tagNode>
-              <node name="database">
-                <properties>
-                  <help>Show OSPFv3 Link state database information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  <tagNode name="adv-router">
-                    <properties>
-                      <help>Search by Advertising Router ID</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <children>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                    </children>
-                  </tagNode>
-                  <node name="any">
-                    <properties>
-                      <help>Search by Any Link state Type</help>
-                    </properties>
-                    <children>
-                      <tagNode name="any">
-                        <properties>
-                          <help>Search by Link state ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <children>
-                          #include <include/ospfv3/detail.xml.i>
-                          #include <include/ospfv3/dump.xml.i>
-                          #include <include/ospfv3/internal.xml.i>
-                        </children>
-                      </tagNode>
-                    </children>
-                  </node>
-                  <tagNode name="any">
-                    <properties>
-                      <help>Search by Link state ID</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>vtysh -c "show ipv6 ospf6 database * $6"</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/adv-router-id-node-tag.xml.i>
-                    </children>
-                  </tagNode>
-                  <node name="as-external">
-                    <properties>
-                      <help>Show AS-External LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      <tagNode name="any">
-                        <properties>
-                          <help>Search by Advertising Router ID</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <command>vtysh -c "show ipv6 ospf6 database as-external * $7"</command>
-                        <children>
-                          #include <include/ospfv3/detail.xml.i>
-                          #include <include/ospfv3/dump.xml.i>
-                          #include <include/ospfv3/internal.xml.i>
-                        </children>
-                      </tagNode>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <tagNode name="as-external">
-                    <properties>
-                      <help>Search by Advertising Router IDs</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                      #include <include/ospfv3/adv-router-id-node-tag.xml.i>
-                    </children>
-                  </tagNode>
-                  #include <include/ospfv3/detail.xml.i>
-                  #include <include/ospfv3/internal.xml.i>
-                  #include <include/ospfv3/linkstate-id.xml.i>
-                  #include <include/ospfv3/self-originated.xml.i>
-                  <node name="group-membership">
-                    <properties>
-                      <help>Show Group-Membership LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="inter-prefix">
-                    <properties>
-                      <help>Show Inter-Area-Prefix LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="inter-router">
-                    <properties>
-                      <help>Show Inter-Area-Router LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="intra-prefix">
-                    <properties>
-                      <help>Show Intra-Area-Prefix LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="link">
-                    <properties>
-                      <help>Show Link LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="network">
-                    <properties>
-                      <help>Show Network LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="node.tag">
-                    <properties>
-                      <help>Show LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="router">
-                    <properties>
-                      <help>Show router LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                  <node name="type-7">
-                    <properties>
-                      <help>Show Type-7 LSAs</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/adv-router.xml.i>
-                      #include <include/ospfv3/detail.xml.i>
-                      #include <include/ospfv3/dump.xml.i>
-                      #include <include/ospfv3/internal.xml.i>
-                      #include <include/ospfv3/linkstate-id.xml.i>
-                      #include <include/ospfv3/linkstate-id-node-tag.xml.i>
-                      #include <include/ospfv3/self-originated.xml.i>
-                    </children>
-                  </node>
-                </children>
               </node>
-              <node name="interface">
+              <tagNode name="vrf">
                 <properties>
-                  <help>Show OSPFv3 interface information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  <node name="prefix">
-                    <properties>
-                      <help>Show connected prefixes to advertise</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                  <tagNode name="prefix">
-                    <properties>
-                      <help>Show interface prefix route specific information</help>
-                      <completionHelp>
-                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                      <node name="match">
-                        <properties>
-                          <help>Matched interface prefix information</help>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                      </node>
-                    </children>
-                  </tagNode>
-                </children>
-              </node>
-              <tagNode name="interface">
-                <properties>
-                  <help>Specific insterface to examine</help>
+                  <help>VRF name</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <list>all</list>
+                    <path>vrf name</path>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
                 <children>
-                  <node name="prefix">
+                  <node name="area">
                     <properties>
-                      <help>Show connected prefixes to advertise</help>
+                      <help>Show Shortest Path First tree information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
+                    <command>vtysh -c "show ipv6 ospf6 vrf $5 spf tree"</command>
                   </node>
-                  <tagNode name="prefix">
-                    <properties>
-                      <help>Show interface prefix route specific information</help>
-                      <completionHelp>
-                        <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                      <node name="match">
-                        <properties>
-                          <help>Matched interface prefix information</help>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                      </node>
-                    </children>
-                  </tagNode>
+                  #include <include/ospfv3/border-routers.xml.i>
+                  #include <include/ospfv3/database.xml.i>
+                  #include <include/ospfv3/interface.xml.i>
+                  #include <include/ospfv3/linkstate.xml.i>
+                  #include <include/ospfv3/neighbor.xml.i>
+                  #include <include/ospfv3/redistribute.xml.i>
+                  #include <include/ospfv3/route.xml.i>
                 </children>
               </tagNode>
-              <node name="linkstate">
+              <leafNode name="vrfs">
                 <properties>
-                  <help>Show OSPFv3 linkstate routing information</help>
-                </properties>
-                <children>
-                  #include <include/ospfv3/detail.xml.i>
-                  <tagNode name="network">
-                    <properties>
-                      <help>Show linkstate Network information</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <children>
-                      <node name="node.tag">
-                        <properties>
-                          <help>Specify Link state ID as IPv4 address notation</help>
-                          <completionHelp>
-                            <list>&lt;x.x.x.x&gt;</list>
-                          </completionHelp>
-                        </properties>
-                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                      </node>
-                    </children>
-                  </tagNode>
-                  <tagNode name="router">
-                    <properties>
-                      <help>Show linkstate Router information</help>
-                      <completionHelp>
-                        <list>&lt;x.x.x.x&gt;</list>
-                      </completionHelp>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                  </tagNode>
-                </children>
-              </node>
-              <node name="neighbor">
-                <properties>
-                  <help>Show OSPFv3 neighbor information</help>
+                  <help>Show OSPFv3 VRFs</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  #include <include/ospfv3/detail.xml.i>
-                  <node name="drchoice">
-                    <properties>
-                      <help>Show neighbor DR choice information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                  </node>
-                </children>
-              </node>
-              <node name="redistribute">
-                <properties>
-                  <help>Show OSPFv3 redistribute external information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </node>
-              <node name="route">
-                <properties>
-                  <help>Show OSPFv3 routing table information</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  <node name="external-1">
-                    <properties>
-                      <help>Show Type-1 External route information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                  <node name="external-2">
-                    <properties>
-                      <help>Show Type-2 External route information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                  <node name="inter-area">
-                    <properties>
-                      <help>Show Inter-Area route information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                  <node name="intra-area">
-                    <properties>
-                      <help>Show Intra-Area route information</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                  #include <include/ospfv3/detail.xml.i>
-                  <node name="summary">
-                    <properties>
-                      <help>Show route table summary</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                  </node>
-                </children>
-              </node>
-              <tagNode name="route">
-                <properties>
-                  <help>Show specified route/prefix information</help>
-                  <completionHelp>
-                    <list>&lt;h:h:h:h:h:h:h:h&gt; &lt;h:h:h:h:h:h:h:h/x&gt;</list>
-                  </completionHelp>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                <children>
-                  <node name="longer">
-                    <properties>
-                      <help>Show routes longer than specified prefix</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                  </node>
-                  <node name="match">
-                    <properties>
-                      <help>Show routes matching specified prefix</help>
-                    </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                    <children>
-                      #include <include/ospfv3/detail.xml.i>
-                    </children>
-                  </node>
-                </children>
-              </tagNode>
+              </leafNode>
             </children>
           </node>
         </children>
