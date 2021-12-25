@@ -34,9 +34,6 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-# default values
-default_captured_packet_size = 128
-
 uacctd_conf_path = '/etc/pmacct/uacctd.conf'
 iptables_nflog_table = 'raw'
 iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
@@ -67,7 +64,7 @@ def _iptables_get_nflog(chain, table):
     return rules
 
 # modify iptables rules
-def _iptables_config(configured_ifaces, direction):
+def _iptables_config(configured_ifaces, direction, length):
     # define list of iptables commands to modify settings
     iptable_commands = []
     iptables_chain = iptables_nflog_chain
@@ -114,7 +111,7 @@ def _iptables_config(configured_ifaces, direction):
         if direction == "egress":
             iptables_op = "-o"
 
-        rule_definition = f'{iptables_chain} {iptables_op} {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {default_captured_packet_size} --nflog-threshold 100'
+        rule_definition = f'{iptables_chain} {iptables_op} {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {length} --nflog-threshold 100'
         iptable_commands.append(f'{iptables} -t {iptables_table} -I {rule_definition}')
 
     # change iptables
@@ -157,8 +154,6 @@ def get_config(config=None):
                 for server in flow_accounting[flow_type]['server']:
                     flow_accounting[flow_type]['server'][server] = dict_merge(
                         default_values,flow_accounting[flow_type]['server'][server])
-
-    flow_accounting['snaplen'] = default_captured_packet_size
 
     return flow_accounting
 
@@ -253,8 +248,8 @@ def apply(flow_config):
     action = 'restart'
     # Check if flow-accounting was removed and define command
     if not flow_config:
-        _iptables_config([], 'ingress')
-        _iptables_config([], 'egress')
+        _iptables_config([], 'ingress', flow_config['packet_length'])
+        _iptables_config([], 'egress', flow_config['packet_length'])
 
         # Stop flow-accounting daemon
         cmd('systemctl stop uacctd.service')
@@ -265,13 +260,13 @@ def apply(flow_config):
 
     # configure iptables rules for defined interfaces
     if 'interface' in flow_config:
-        _iptables_config(flow_config['interface'], 'ingress')
+        _iptables_config(flow_config['interface'], 'ingress', flow_config['packet_length'])
 
         # configure egress the same way if configured otherwise remove it
         if 'enable_egress' in flow_config:
-            _iptables_config(flow_config['interface'], 'egress')
+            _iptables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
         else:
-            _iptables_config([], 'egress')
+            _iptables_config([], 'egress', flow_config['packet_length'])
 
 if __name__ == '__main__':
     try:

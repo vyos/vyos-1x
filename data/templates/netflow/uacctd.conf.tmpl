@@ -4,7 +4,7 @@ promisc: false
 pidfile: /var/run/uacctd.pid
 uacctd_group: 2
 uacctd_nl_size: 2097152
-snaplen: {{ snaplen }}
+snaplen: {{ packet_length }}
 aggregate: in_iface{{ ',out_iface' if enable_egress is defined }},src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
 {% set pipe_size = buffer_size | int *1024 *1024 %}
 plugin_pipe_size: {{ pipe_size }}

@@ -22,6 +22,19 @@
             </properties>
             <defaultValue>10</defaultValue>
           </leafNode>
+          <leafNode name="packet-length">
+            <properties>
+              <help>Specifies the maximum number of bytes to capture for each packet</help>
+              <valueHelp>
+                <format>u32:128-750</format>
+                <description>Packet length in bytes (default: 128)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 128-750"/>
+              </constraint>
+            </properties>
+            <defaultValue>128</defaultValue>
+          </leafNode>
           <leafNode name="enable-egress">
             <properties>
               <help>Enable egress flow accounting</help>
