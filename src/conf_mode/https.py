@@ -61,10 +61,11 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    if not conf.exists('service https'):
+    base = ['service', 'https']
+    if not conf.exists(base):
         return None
 
-    https = conf.get_config_dict('service https', get_first_key=True)
+    https = conf.get_config_dict(base, get_first_key=True)
 
     if https:
         https['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
