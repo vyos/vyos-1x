@@ -26,7 +26,7 @@
                     <path>protocols ospfv3 area</path>
                   </completionHelp>
                 </properties>
-                <command>vtysh -c "show ipv6 ospf6 spf tree"</command>
+                <command>vtysh -c "show ipv6 ospf6 area $5 spf tree"</command>
                 <children>
                   <tagNode name="router">
                     <properties>
@@ -35,7 +35,7 @@
                         <list>&lt;x.x.x.x&gt;</list>
                       </completionHelp>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@ spf tree</command>
+                    <command>vtysh -c "show ipv6 ospf6 simulate spf-tree $7 $4 $5"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -72,6 +72,26 @@
                     </properties>
                     <command>vtysh -c "show ipv6 ospf6 vrf $5 spf tree"</command>
                   </node>
+                  <tagNode name="area">
+                    <properties>
+                      <help>Area ID (as an IPv4 notation)</help>
+                      <completionHelp>
+                        <path>protocols ospfv3 area</path>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "show ipv6 ospf6 vrf $5 area $7 spf tree"</command>
+                    <children>
+                      <tagNode name="router">
+                        <properties>
+                          <help> Simulate view point (Router ID)</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>vtysh -c "show ipv6 ospf6 vrf $5 simulate spf-tree $9 $6 $7"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
                   #include <include/ospfv3/border-routers.xml.i>
                   #include <include/ospfv3/database.xml.i>
                   #include <include/ospfv3/interface.xml.i>

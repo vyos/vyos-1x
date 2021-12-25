@@ -21,17 +21,26 @@
         <help>OSPFv3 Area type</help>
       </properties>
       <children>
+        <node name="nssa">
+          <properties>
+            <help>NSSA OSPFv3 area</help>
+          </properties>
+          <children>
+            <leafNode name="default-information-originate">
+              <properties>
+                <help>Originate Type 7 default into NSSA area</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            #include <include/ospfv3/no-summary.xml.i>
+          </children>
+        </node>
         <node name="stub">
           <properties>
             <help>Stub OSPFv3 area</help>
           </properties>
           <children>
-            <leafNode name="no-summary">
-              <properties>
-                <help>Do not inject inter-area routes into the stub</help>
-                <valueless/>
-              </properties>
-            </leafNode>
+            #include <include/ospfv3/no-summary.xml.i>
           </children>
         </node>
       </children>
