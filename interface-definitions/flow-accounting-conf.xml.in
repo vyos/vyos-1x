@@ -363,19 +363,13 @@
                     <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
                   </completionHelp>
                   <valueHelp>
-                    <format>auto</format>
-                    <description>auto select sFlow agent-address (default)</description>
-                  </valueHelp>
-                  <valueHelp>
                     <format>ipv4</format>
                     <description>sFlow IPv4 agent address</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>^auto$</regex>
                   </constraint>
                 </properties>
-                <defaultValue>auto</defaultValue>
               </leafNode>
               <leafNode name="sampling-rate">
                 <properties>

@@ -43,29 +43,6 @@ iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
 egress_iptables_nflog_table = 'mangle'
 egress_iptables_nflog_chain = 'FORWARD'
 
-# get sFlow agent-ip if agent-address is "auto" (default behaviour)
-def _sflow_default_agentip(config):
-    # check if any of BGP, OSPF, OSPFv3 protocols are configured and use router-id from there
-    if config.exists('protocols bgp'):
-        bgp_router_id = config.return_value("protocols bgp {} parameters router-id".format(config.list_nodes('protocols bgp')[0]))
-        if bgp_router_id:
-            return bgp_router_id
-    if config.return_value('protocols ospf parameters router-id'):
-        return config.return_value('protocols ospf parameters router-id')
-    if config.return_value('protocols ospfv3 parameters router-id'):
-        return config.return_value('protocols ospfv3 parameters router-id')
-
-    # if router-id was not found, use first available ip of any interface
-    for iface in Section.interfaces():
-        for address in Interface(iface).get_addr():
-            # return an IP, if this is not loopback
-            regex_filter = re.compile('^(?!(127)|(::1)|(fe80))(?P<ipaddr>[a-f\d\.:]+)/\d+$')
-            if regex_filter.search(address):
-                return regex_filter.search(address).group('ipaddr')
-
-    # return nothing by default
-    return None
-
 # get iptables rule dict for chain in table
 def _iptables_get_nflog(chain, table):
     # define list with rules
@@ -223,14 +200,16 @@ def verify(flow_config):
 
         # check agent-id for sFlow: we should avoid mixing IPv4 agent-id with IPv6 collectors and vice-versa
         for server in flow_config['sflow']['server']:
-            if flow_config['sflow']['agent_address'] != 'auto':
+            if 'agent_address' in flow_config['sflow']:
                 if ip_address(server).version != ip_address(flow_config['sflow']['agent_address']).version:
-                    raise ConfigError("Different IP address versions cannot be mixed in \"sflow agent-address\" and \"sflow server\". You need to set manually the same IP version for \"agent-address\" as for all sFlow servers")
+                    raise ConfigError('IPv4 and IPv6 addresses can not be mixed in "sflow agent-address" and "sflow '\
+                                      'server". You need to set the same IP version for both "agent-address" and '\
+                                      'all sFlow servers')
 
         if 'agent_address' in flow_config['sflow']:
-            agent_address = flow_config['sflow']['agent_address']
-            if agent_address != 'auto' and not is_addr_assigned(agent_address):
-                print(f'Warning: Configured "sflow agent-address" does not exist in the system!')
+            if not is_addr_assigned(agent_address):
+                tmp = flow_config['sflow']['agent_address']
+                print(f'Warning: Configured "sflow agent-address {tmp}" does not exist in the system!')
 
     # check NetFlow configuration
     if 'netflow' in flow_config:
@@ -241,7 +220,8 @@ def verify(flow_config):
         # check if configured netflow source-ip exist in the system
         if 'source_address' in flow_config['netflow']:
             if not is_addr_assigned(flow_config['netflow']['source_address']):
-                print(f'Warning: Configured "netflow source-address" does not exist on the system!')
+                tmp = flow_config['netflow']['source_address']
+                print(f'Warning: Configured "netflow source-address {tmp}" does not exist on the system!')
 
         # check if engine-id compatible with selected protocol version
         if 'engine_id' in flow_config['netflow']:

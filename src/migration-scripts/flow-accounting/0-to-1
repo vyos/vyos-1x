@@ -16,6 +16,7 @@
 
 # T4099: flow-accounting: sync "source-ip" and "source-address" between netflow
 #        and sflow ion CLI
+# T4105: flow-accounting: drop "sflow agent-address auto"
 
 from sys import argv
 from vyos.configtree import ConfigTree
@@ -40,6 +41,25 @@ if not config.exists(base):
 tmp = base + ['netflow', 'source-ip']
 if config.exists(tmp):
     config.rename(tmp, 'source-address')
+
+# T4105
+tmp = base + ['sflow', 'agent-address']
+if config.exists(tmp):
+    value = config.return_value(tmp)
+    if value == 'auto':
+        # delete the "auto"
+        config.delete(tmp)
+
+        # 1) check if BGP router-id is set
+        # 2) check if OSPF router-id is set
+        # 3) check if OSPFv3 router-id is set
+        router_id = None
+        for protocol in ['bgp', 'ospf', 'ospfv3']:
+            if config.exists(['protocols', protocol, 'parameters', 'router-id']):
+                router_id = config.return_value(['protocols', protocol, 'parameters', 'router-id'])
+                break
+        if router_id:
+            config.set(tmp, value=router_id)
 
 try:
     with open(file_name, 'w') as f:
