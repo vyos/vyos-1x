@@ -1819,6 +1819,12 @@ system {
             }
             version 9
         }
+        sflow {
+            agent-address auto
+            server 1.2.3.4 {
+                port 1234
+            }
+        }
         syslog-facility daemon
     }
     host-name vyos

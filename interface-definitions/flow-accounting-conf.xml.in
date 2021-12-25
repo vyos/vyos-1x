@@ -14,12 +14,26 @@
               <help>Buffer size</help>
               <valueHelp>
                 <format>u32</format>
-                <description>Buffer size in MiB</description>
+                <description>Buffer size in MiB (default: 10)</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-4294967295"/>
               </constraint>
             </properties>
+            <defaultValue>10</defaultValue>
+          </leafNode>
+          <leafNode name="packet-length">
+            <properties>
+              <help>Specifies the maximum number of bytes to capture for each packet</help>
+              <valueHelp>
+                <format>u32:128-750</format>
+                <description>Packet length in bytes (default: 128)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 128-750"/>
+              </constraint>
+            </properties>
+            <defaultValue>128</defaultValue>
           </leafNode>
           <leafNode name="enable-egress">
             <properties>
@@ -182,23 +196,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="source-ip">
-                <properties>
-                  <help>IPv4 or IPv6 source address of NetFlow packets</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 source address of NetFlow packets</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 source address of NetFlow packets</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/source-address-ipv4-ipv6.xml.i>
               <leafNode name="version">
                 <properties>
                   <help>NetFlow version to export</help>
@@ -218,6 +216,7 @@
                     <description>Internet Protocol Flow Information Export (IPFIX)</description>
                   </valueHelp>
                 </properties>
+                <defaultValue>9</defaultValue>
               </leafNode>
               <tagNode name="server">
                 <properties>
@@ -247,6 +246,7 @@
                        <validator name="numeric" argument="--range 1025-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>2055</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>
@@ -266,6 +266,7 @@
                         <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>60</defaultValue>
                   </leafNode>
                   <leafNode name="flow-generic">
                     <properties>
@@ -278,6 +279,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>3600</defaultValue>
                   </leafNode>
                   <leafNode name="icmp">
                     <properties>
@@ -290,6 +292,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>300</defaultValue>
                   </leafNode>
                   <leafNode name="max-active-life">
                     <properties>
@@ -302,6 +305,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>604800</defaultValue>
                   </leafNode>
                   <leafNode name="tcp-fin">
                     <properties>
@@ -314,6 +318,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>300</defaultValue>
                   </leafNode>
                   <leafNode name="tcp-generic">
                     <properties>
@@ -326,6 +331,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>3600</defaultValue>
                   </leafNode>
                   <leafNode name="tcp-rst">
                     <properties>
@@ -338,6 +344,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>120</defaultValue>
                   </leafNode>
                   <leafNode name="udp">
                     <properties>
@@ -350,6 +357,7 @@
                        <validator name="numeric" argument="--range 0-2147483647"/>
                       </constraint>
                     </properties>
+                    <defaultValue>300</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -368,16 +376,11 @@
                     <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
                   </completionHelp>
                   <valueHelp>
-                    <format>auto</format>
-                    <description>auto select sFlow agent-address (default)</description>
-                  </valueHelp>
-                  <valueHelp>
                     <format>ipv4</format>
                     <description>sFlow IPv4 agent address</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
-                    <regex>^auto$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -421,6 +424,7 @@
                        <validator name="numeric" argument="--range 1025-65535"/>
                       </constraint>
                     </properties>
+                    <defaultValue>6343</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>

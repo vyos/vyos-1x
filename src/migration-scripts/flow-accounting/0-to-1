@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4099: flow-accounting: sync "source-ip" and "source-address" between netflow
+#        and sflow ion CLI
+# T4105: flow-accounting: drop "sflow agent-address auto"
+
+from sys import argv
+from vyos.configtree import ConfigTree
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['system', 'flow-accounting']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+# T4099
+tmp = base + ['netflow', 'source-ip']
+if config.exists(tmp):
+    config.rename(tmp, 'source-address')
+
+# T4105
+tmp = base + ['sflow', 'agent-address']
+if config.exists(tmp):
+    value = config.return_value(tmp)
+    if value == 'auto':
+        # delete the "auto"
+        config.delete(tmp)
+
+        # 1) check if BGP router-id is set
+        # 2) check if OSPF router-id is set
+        # 3) check if OSPFv3 router-id is set
+        router_id = None
+        for protocol in ['bgp', 'ospf', 'ospfv3']:
+            if config.exists(['protocols', protocol, 'parameters', 'router-id']):
+                router_id = config.return_value(['protocols', protocol, 'parameters', 'router-id'])
+                break
+        if router_id:
+            config.set(tmp, value=router_id)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
