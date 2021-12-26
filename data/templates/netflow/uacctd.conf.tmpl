@@ -1,7 +1,7 @@
 # Genereated from VyOS configuration
 daemonize: true
 promisc: false
-pidfile: /var/run/uacctd.pid
+pidfile: /run/pmacct/uacctd.pid
 uacctd_group: 2
 uacctd_nl_size: 2097152
 snaplen: {{ packet_length }}
@@ -54,6 +54,7 @@ nfprobe_source_ip[nf_{{ server }}]: {{ netflow.source_address }}
 {%     if netflow.timeout is defined and netflow.timeout is not none %}
 nfprobe_timeouts[nf_{{ server }}]: expint={{ netflow.timeout.expiry_interval }}:general={{ netflow.timeout.flow_generic }}:icmp={{ netflow.timeout.icmp }}:maxlife={{ netflow.timeout.max_active_life }}:tcp.fin={{ netflow.timeout.tcp_fin }}:tcp={{ netflow.timeout.tcp_generic }}:tcp.rst={{ netflow.timeout.tcp_rst }}:udp={{ netflow.timeout.udp }}
 {%     endif %}
+
 {%   endfor %}
 {% endif %}
 
@@ -68,5 +69,6 @@ sampling_rate[sf_{{ server }}]: {{ sflow.sampling_rate }}
 {%     if sflow.source_address is defined and sflow.source_address is not none %}
 sfprobe_source_ip[sf_{{ server }}]: {{ sflow.source_address }}
 {%     endif %}
+
 {%   endfor %}
 {% endif %}

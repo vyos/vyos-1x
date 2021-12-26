@@ -27,7 +27,7 @@ from vyos.util import read_file
 PROCESS_NAME = 'uacctd'
 base_path = ['system', 'flow-accounting']
 
-uacctd_conf = '/etc/pmacct/uacctd.conf'
+uacctd_conf = '/run/pmacct/uacctd.conf'
 
 class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
     @classmethod

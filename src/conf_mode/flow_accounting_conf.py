@@ -34,7 +34,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-uacctd_conf_path = '/etc/pmacct/uacctd.conf'
+uacctd_conf_path = '/run/pmacct/uacctd.conf'
 iptables_nflog_table = 'raw'
 iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
 egress_iptables_nflog_table = 'mangle'
@@ -252,8 +252,10 @@ def apply(flow_config):
         _iptables_config([], 'ingress')
         _iptables_config([], 'egress')
 
-        # Stop flow-accounting daemon
+        # Stop flow-accounting daemon and remove configuration file
         cmd('systemctl stop uacctd.service')
+        if os.path.exists(uacctd_conf_path):
+            os.unlink(uacctd_conf_path)
         return
 
     # Start/reload flow-accounting daemon
