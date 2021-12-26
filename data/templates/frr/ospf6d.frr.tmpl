@@ -69,7 +69,10 @@ router ospf6 {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  area {{ area_id }} import-list {{ area_config.import_list }}
 {%     endif %}
 {%   endfor %}
+{% endif %}
  auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
+{% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
+ default-information originate {{ 'always' if default_information.originate.always is defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is defined }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is defined }}
 {% endif %}
 {% if distance is defined and distance is not none %}
 {%   if distance.global is defined and distance.global is not none %}

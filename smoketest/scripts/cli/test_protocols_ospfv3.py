@@ -25,10 +25,24 @@ from vyos.util import process_named_running
 PROCESS_NAME = 'ospf6d'
 base_path = ['protocols', 'ospfv3']
 
+route_map = 'foo-bar-baz-0815'
+
 router_id = '192.0.2.1'
 default_area = '0'
 
 class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['policy', 'route-map', route_map])
+        super(cls, cls).tearDownClass()
+
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -199,7 +213,33 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {area_nssa_default} nssa default-information-originate', frrconfig)
 
 
-    def test_ospfv3_07_vrfs(self):
+    def test_ospfv3_07_default_originate(self):
+        seq = '100'
+        metric = '50'
+        metric_type = '1'
+
+        self.cli_set(base_path + ['default-information', 'originate', 'metric', metric])
+        self.cli_set(base_path + ['default-information', 'originate', 'metric-type', metric_type])
+        self.cli_set(base_path + ['default-information', 'originate', 'route-map', route_map])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f'router ospf6', frrconfig)
+        self.assertIn(f' default-information originate metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+
+        # Now set 'always'
+        self.cli_set(base_path + ['default-information', 'originate', 'always'])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+
+
+    def test_ospfv3_08_vrfs(self):
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.

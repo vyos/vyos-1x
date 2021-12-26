@@ -23,6 +23,8 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
+from vyos.configverify import verify_route_map
+from vyos.configverify import verify_interface_exists
 from vyos.template import render_to_string
 from vyos.ifconfig import Interface
 from vyos.util import dict_search
@@ -74,6 +76,14 @@ def get_config(config=None):
     # both the non-vrf and vrf version this is absolutely safe!
     default_values = defaults(base_path)
 
+    # We have to cleanup the default dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: default-information
+    # originate comes with a default metric-type of 2, which will enable the
+    # entire default-information originate tree, even when not set via CLI so we
+    # need to check this first and probably drop that key.
+    if dict_search('default_information.originate', ospfv3) is None:
+        del default_values['default_information']
+
     # XXX: T2665: we currently have no nice way for defaults under tag nodes,
     # clean them out and add them manually :(
     del default_values['interface']
@@ -98,6 +108,10 @@ def verify(ospfv3):
 
     verify_common_route_maps(ospfv3)
 
+    # As we can have a default-information route-map, we need to validate it!
+    route_map_name = dict_search('default_information.originate.route_map', ospfv3)
+    if route_map_name: verify_route_map(route_map_name, ospfv3)
+
     if 'area' in ospfv3:
         for area, area_config in ospfv3['area'].items():
             if 'area_type' in area_config:
@@ -106,6 +120,7 @@ def verify(ospfv3):
 
     if 'interface' in ospfv3:
         for interface, interface_config in ospfv3['interface'].items():
+            verify_interface_exists(interface)
             if 'ifmtu' in interface_config:
                 mtu = Interface(interface).get_mtu()
                 if int(interface_config['ifmtu']) > int(mtu):

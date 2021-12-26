@@ -90,6 +90,7 @@
   </children>
 </tagNode>
 #include <include/ospf/auto-cost.xml.i>
+#include <include/ospf/default-information.xml.i>
 <node name="distance">
   <properties>
     <help>Administrative distance</help>
