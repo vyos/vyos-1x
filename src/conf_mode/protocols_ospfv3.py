@@ -88,10 +88,6 @@ def verify(ospfv3):
             if 'area_type' in area_config:
                 if len(area_config['area_type']) > 1:
                     raise ConfigError(f'Can only configure one area-type for OSPFv3 area "{area}"!')
-                for area_type, area_type_config in area_config['area_type'].items():
-                    if {'default_information_originate', 'no_summary'} <= set(area_type_config):
-                        raise ConfigError(f'Can either set "default-information-originate" '\
-                                          f'or "no-summary", but not both!')
 
     if 'interface' in ospfv3:
         for interface, interface_config in ospfv3['interface'].items():

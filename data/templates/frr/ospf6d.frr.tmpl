@@ -54,7 +54,7 @@ router ospf6 {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   for area_id, area_config in area.items() %}
 {%     if area_config.area_type is defined and area_config.area_type is not none %}
 {%       for type, type_config in area_config.area_type.items() %}
- area {{ area_id }} {{ type }} {{ 'no-summary' if type_config.no_summary is defined }} {{ 'default-information-originate' if type_config.default_information_originate is defined }}
+ area {{ area_id }} {{ type }} {{ 'default-information-originate' if type_config.default_information_originate is defined }} {{ 'no-summary' if type_config.no_summary is defined }}
 {%       endfor %}
 {%     endif %}
 {%     if area_config.range is defined and area_config.range is not none %}

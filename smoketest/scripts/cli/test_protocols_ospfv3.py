@@ -29,9 +29,6 @@ router_id = '192.0.2.1'
 default_area = '0'
 
 class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.debug = True
-
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -175,7 +172,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {area_stub_nosum} stub no-summary', frrconfig)
 
 
-    def test_ospfv3_05_area_nssa(self):
+    def test_ospfv3_06_area_nssa(self):
         area_nssa = '1.1.1.1'
         area_nssa_nosum = '2.2.2.2'
         area_nssa_default = '3.3.3.3'
@@ -189,12 +186,6 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['area', area_nssa_nosum, 'area-type', 'nssa', 'no-summary'])
         self.cli_set(base_path + ['area', area_nssa_nosum, 'area-type', 'nssa', 'default-information-originate'])
-
-        # can not set both no-summary and default-information-originate at the same time
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_delete(base_path + ['area', area_nssa_nosum, 'area-type', 'nssa', 'default-information-originate'])
-
         self.cli_set(base_path + ['area', area_nssa_default, 'area-type', 'nssa', 'default-information-originate'])
 
         # commit changes
@@ -204,8 +195,9 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('router ospf6')
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' area {area_nssa} nssa', frrconfig)
-        self.assertIn(f' area {area_nssa_nosum} nssa no-summary', frrconfig)
+        self.assertIn(f' area {area_nssa_nosum} nssa default-information-originate no-summary', frrconfig)
         self.assertIn(f' area {area_nssa_default} nssa default-information-originate', frrconfig)
+
 
     def test_ospfv3_07_vrfs(self):
         # It is safe to assume that when the basic VRF test works, all
