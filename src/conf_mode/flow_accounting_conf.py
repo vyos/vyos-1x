@@ -64,7 +64,7 @@ def _iptables_get_nflog(chain, table):
     return rules
 
 # modify iptables rules
-def _iptables_config(configured_ifaces, direction, length):
+def _iptables_config(configured_ifaces, direction, length=None):
     # define list of iptables commands to modify settings
     iptable_commands = []
     iptables_chain = iptables_nflog_chain
@@ -202,8 +202,8 @@ def verify(flow_config):
                                       'all sFlow servers')
 
         if 'agent_address' in flow_config['sflow']:
-            if not is_addr_assigned(agent_address):
-                tmp = flow_config['sflow']['agent_address']
+            tmp = flow_config['sflow']['agent_address']
+            if not is_addr_assigned(tmp):
                 print(f'Warning: Configured "sflow agent-address {tmp}" does not exist in the system!')
 
     # check NetFlow configuration
@@ -212,13 +212,13 @@ def verify(flow_config):
         if 'server' not in flow_config['netflow']:
             raise ConfigError('You need to configure at least one NetFlow server!')
 
-        # check if configured netflow source-ip exist in the system
+        # Check if configured netflow source-address exist in the system
         if 'source_address' in flow_config['netflow']:
             if not is_addr_assigned(flow_config['netflow']['source_address']):
                 tmp = flow_config['netflow']['source_address']
                 print(f'Warning: Configured "netflow source-address {tmp}" does not exist on the system!')
 
-        # check if engine-id compatible with selected protocol version
+        # Check if engine-id compatible with selected protocol version
         if 'engine_id' in flow_config['netflow']:
             v5_filter = '^(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5]):(\d|[1-9]\d|1\d{2}|2[0-4]\d|25[0-5])$'
             v9v10_filter = '^(\d|[1-9]\d{1,8}|[1-3]\d{9}|4[01]\d{8}|42[0-8]\d{7}|429[0-3]\d{6}|4294[0-8]\d{5}|42949[0-5]\d{4}|429496[0-6]\d{3}|4294967[01]\d{2}|42949672[0-8]\d|429496729[0-5])$'
@@ -233,7 +233,8 @@ def verify(flow_config):
             else:
                 regex_filter = re.compile(v9v10_filter)
                 if not regex_filter.search(flow_config['netflow']['engine_id']):
-                    raise ConfigError("You cannot use NetFlow engine-id {} together with NetFlow protocol version {}".format(config['netflow']['engine-id'], config['netflow']['version']))
+                    raise ConfigError(f'Can not use NetFlow engine-id "{engine_id}" together '\
+                                      f'with NetFlow protocol version "{version}"!')
 
     # return True if all checks were passed
     return True
@@ -248,8 +249,8 @@ def apply(flow_config):
     action = 'restart'
     # Check if flow-accounting was removed and define command
     if not flow_config:
-        _iptables_config([], 'ingress', flow_config['packet_length'])
-        _iptables_config([], 'egress', flow_config['packet_length'])
+        _iptables_config([], 'ingress')
+        _iptables_config([], 'egress')
 
         # Stop flow-accounting daemon
         cmd('systemctl stop uacctd.service')
@@ -266,7 +267,7 @@ def apply(flow_config):
         if 'enable_egress' in flow_config:
             _iptables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
         else:
-            _iptables_config([], 'egress', flow_config['packet_length'])
+            _iptables_config([], 'egress')
 
 if __name__ == '__main__':
     try:
