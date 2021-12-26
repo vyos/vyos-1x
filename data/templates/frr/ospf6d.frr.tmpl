@@ -69,6 +69,7 @@ router ospf6 {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  area {{ area_id }} import-list {{ area_config.import_list }}
 {%     endif %}
 {%   endfor %}
+ auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
 {% endif %}
 {% if distance is defined and distance is not none %}
 {%   if distance.global is defined and distance.global is not none %}

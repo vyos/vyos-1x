@@ -275,26 +275,6 @@
     </tagNode>
   </children>
 </tagNode>
-<node name="auto-cost">
-  <properties>
-    <help>Calculate OSPF interface cost according to bandwidth (default: 100)</help>
-  </properties>
-  <children>
-    <leafNode name="reference-bandwidth">
-      <properties>
-        <help>Reference bandwidth method to assign OSPF cost</help>
-        <valueHelp>
-          <format>u32:1-4294967</format>
-          <description>Reference bandwidth cost in Mbits/sec</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 1-4294967"/>
-        </constraint>
-      </properties>
-      <defaultValue>100</defaultValue>
-    </leafNode>
-  </children>
-</node>
 <node name="default-information">
   <properties>
     <help>Default route advertisment settings</help>
@@ -318,6 +298,7 @@
     </node>
   </children>
 </node>
+#include <include/ospf/auto-cost.xml.i>
 <leafNode name="default-metric">
   <properties>
     <help>Metric of redistributed routes</help>

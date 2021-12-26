@@ -25,6 +25,7 @@ from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.template import render_to_string
 from vyos.ifconfig import Interface
+from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -65,6 +66,20 @@ def get_config(config=None):
     if not conf.exists(base):
         ospfv3.update({'deleted' : ''})
         return ospfv3
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    # XXX: Note that we can not call defaults(base), as defaults does not work
+    # on an instance of a tag node. As we use the exact same CLI definition for
+    # both the non-vrf and vrf version this is absolutely safe!
+    default_values = defaults(base_path)
+
+    # XXX: T2665: we currently have no nice way for defaults under tag nodes,
+    # clean them out and add them manually :(
+    del default_values['interface']
+
+    # merge in remaining default values
+    ospfv3 = dict_merge(default_values, ospfv3)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
