@@ -174,7 +174,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['netflow', 'engine-id', engine_id])
         self.cli_set(base_path + ['netflow', 'max-flows', max_flows])
         self.cli_set(base_path + ['netflow', 'sampling-rate', sampling_rate])
-        self.cli_set(base_path + ['netflow', 'source-ip', source_address])
+        self.cli_set(base_path + ['netflow', 'source-address', source_address])
         self.cli_set(base_path + ['netflow', 'version', version])
 
         # timeouts
