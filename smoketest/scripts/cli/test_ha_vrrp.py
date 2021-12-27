@@ -27,7 +27,7 @@ from vyos.template import inc_ip
 
 PROCESS_NAME = 'keepalived'
 KEEPALIVED_CONF = VRRP.location['config']
-base_path = ['high-availability', 'vrrp']
+base_path = ['high-availability']
 
 vrrp_interface = 'eth1'
 groups = ['VLAN77', 'VLAN78', 'VLAN201']
@@ -56,7 +56,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         for group in groups:
             vlan_id = group.lstrip('VLAN')
             vip = f'100.64.{vlan_id}.1/24'
-            group_base = base_path + ['group', group]
+            group_base = base_path + ['vrrp', 'group', group]
 
             self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
 
@@ -91,7 +91,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         for group in groups:
             vlan_id = group.lstrip('VLAN')
             vip = f'100.64.{vlan_id}.1/24'
-            group_base = base_path + ['group', group]
+            group_base = base_path + ['vrrp', 'group', group]
 
             self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
 
@@ -138,7 +138,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         for group in groups:
             vlan_id = group.lstrip('VLAN')
             vip = f'100.64.{vlan_id}.1/24'
-            group_base = base_path + ['group', group]
+            group_base = base_path + ['vrrp', 'group', group]
 
             self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
 
@@ -146,7 +146,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(group_base + ['address', vip])
             self.cli_set(group_base + ['vrid', vlan_id])
 
-            self.cli_set(base_path + ['sync-group', sync_group, 'member', group])
+            self.cli_set(base_path + ['vrrp', 'sync-group', sync_group, 'member', group])
 
         # commit changes
         self.cli_commit()
