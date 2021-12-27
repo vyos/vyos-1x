@@ -25,12 +25,18 @@ $outchannel {{ file }},{{ file_options['log-file'] }},{{ file_options['max-size'
 {%     if host_options.proto == 'tcp' %}
 {%       if host_options.port is defined %}
 {%         if host_options.oct_count is defined %}
-{{ host_options.selectors }} @@(o){{ host }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
+{{ host_options.selectors }} @@(o){{ host | bracketize_ipv6 }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
 {%         else %}
-{{ host_options.selectors }} @@{{ host }}:{{ host_options.port }}
+{{ host_options.selectors }} @@{{ host | bracketize_ipv6 }}:{{ host_options.port }}
 {%         endif %}
 {%       else %}
-{{ host_options.selectors }} @@{{ host }}
+{{ host_options.selectors }} @@{{ host | bracketize_ipv6 }}
+{%       endif %}
+{%     elif host_options.proto == 'udp' %}
+{%       if host_options.port is defined %}
+{{ host_options.selectors }} @{{ host | bracketize_ipv6 }}:{{ host_options.port }}{{ ';RSYSLOG_SyslogProtocol23Format' if host_options.oct_count is sameas true }}
+{%       else %}
+{{ host_options.selectors }} @{{ host | bracketize_ipv6 }}
 {%       endif %}
 {%     else %}
 {%       if host_options['port'] %}
