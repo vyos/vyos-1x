@@ -312,7 +312,7 @@
           </leafNode>
           <leafNode name="forward-method">
             <properties>
-              <help>Forwarding method (default - NAT)</help>
+              <help>Forwarding method (default: NAT)</help>
               <completionHelp>
                 <list>direct nat tunnel</list>
               </completionHelp>
@@ -340,7 +340,7 @@
               <help>Timeout for persistent connections</help>
               <valueHelp>
                 <format>u32:1-86400</format>
-                <description>Timeout for persistent connections (default 300)</description>
+                <description>Timeout for persistent connections (default: 300)</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-86400"/>
@@ -350,17 +350,17 @@
           </leafNode>
           <leafNode name="protocol">
             <properties>
-              <help>Protocol for port checks (default TCP)</help>
+              <help>Protocol for port checks (default: TCP)</help>
               <completionHelp>
                 <list>tcp udp</list>
               </completionHelp>
               <valueHelp>
                 <format>tcp</format>
-                <description>Protocol TCP</description>
+                <description>TCP</description>
               </valueHelp>
               <valueHelp>
                 <format>udp</format>
-                <description>Protocol UDP</description>
+                <description>UDP</description>
               </valueHelp>
               <constraint>
                 <regex>^(tcp|udp)$</regex>
@@ -376,7 +376,7 @@
               #include <include/port-number.xml.i>
               <leafNode name="connection-timeout">
                 <properties>
-                  <help>Connection timeout to remote server</help>
+                  <help>Server connection timeout</help>
                   <valueHelp>
                     <format>u32:1-86400</format>
                     <description>Connection timeout to remote server</description>
