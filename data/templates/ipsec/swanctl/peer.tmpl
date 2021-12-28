@@ -1,5 +1,5 @@
 {% macro conn(peer, peer_conf, ike_group, esp_group) %}
-{%   set name = peer.replace(".", "-").replace("@", "") %}
+{%   set name = peer.replace("@", "") | dot_colon_to_dash %}
 {#   peer needs to reference the global IKE configuration for certain values #}
 {%   set ike = ike_group[peer_conf.ike_group] %}
     peer_{{ name }} {
