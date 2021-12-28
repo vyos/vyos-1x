@@ -151,6 +151,16 @@ def bracketize_ipv6(address):
         return f'[{address}]'
     return address
 
+@register_filter('dot_colon_to_dash')
+def dot_colon_to_dash(text):
+    """ Replace dot and colon to dash for string
+    Example:
+    192.0.2.1 => 192-0-2-1, 2001:db8::1 => 2001-db8--1
+    """
+    text = text.replace(":", "-")
+    text = text.replace(".", "-")
+    return text
+
 @register_filter('netmask_from_cidr')
 def netmask_from_cidr(prefix):
     """ Take CIDR prefix and convert the prefix length to a "subnet mask".
