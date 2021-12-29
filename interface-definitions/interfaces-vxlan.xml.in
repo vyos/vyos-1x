@@ -59,7 +59,7 @@
           </leafNode>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/source-interface.xml.i>
-          #include <include/tunnel-remote.xml.i>
+          #include <include/interface/tunnel-remotes.xml.i>
           <leafNode name="vni">
             <properties>
               <help>Virtual Network Identifier</help>

@@ -79,3 +79,10 @@ class VXLANIf(Interface):
         self._cmd(cmd.format(**self.config))
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
+
+        other_remotes = self.config.get('other_remotes')
+        if other_remotes:
+            for rem in other_remotes:
+                self.config['rem'] = rem
+                cmd2 = 'bridge fdb append to 00:00:00:00:00:00 dst {rem} port {port} dev {ifname}'
+                self._cmd(cmd2.format(**self.config))

@@ -32,6 +32,8 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             'vxlan10': ['vni 10', 'remote 127.0.0.2'],
             'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
             'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1'],
+            'vxlan40': ['vni 40', 'remote 127.0.0.2', 'remote 127.0.0.3'],
+            'vxlan50': ['vni 50', 'remote 2001:db8:2000::1', 'remote 2001:db8:2000::2', 'parameters ipv6 flowlabel 0x1000'],
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
