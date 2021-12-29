@@ -270,8 +270,9 @@
                           </leafNode>
                           <leafNode name="port">
                             <properties>
-                              <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
+                              <help>Port for Dynamic Authorization Extension server (DM/CoA) default: 3799</help>
                             </properties>
+                            <defaultValue>3799</defaultValue>
                           </leafNode>
                           <leafNode name="secret">
                             <properties>
