@@ -4,14 +4,19 @@
 # NOTE: here we use 'ip' wrapper, therefore a route will be actually deleted via /usr/sbin/ip or vtysh, according to the system state
 hostsd_client="/usr/bin/vyos-hostsd-client"
 hostsd_changes=
+# check vyos-hostsd status
+/usr/bin/systemctl -q is-active vyos-hostsd
+hostsd_status=$?
 
 if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
-    # delete search domains and nameservers via vyos-hostsd
-    logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
-    $hostsd_client --delete-search-domains --tag "dhcp-$interface"
-    logmsg info "Deleting nameservers with tag \"dhcp-${interface}\" via vyos-hostsd-client"
-    $hostsd_client --delete-name-servers --tag "dhcp-${interface}"
-    hostsd_changes=y
+    if [[ $hostsd_status -eq 0 ]]; then
+        # delete search domains and nameservers via vyos-hostsd
+        logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
+        $hostsd_client --delete-search-domains --tag "dhcp-$interface"
+        logmsg info "Deleting nameservers with tag \"dhcp-${interface}\" via vyos-hostsd-client"
+        $hostsd_client --delete-name-servers --tag "dhcp-${interface}"
+        hostsd_changes=y
+    fi
 
     if_metric="$IF_METRIC"
 
@@ -92,12 +97,14 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
 fi
 
 if [[ $reason =~ (EXPIRE6|RELEASE6|STOP6) ]]; then
-    # delete search domains and nameservers via vyos-hostsd
-    logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-    $hostsd_client --delete-search-domains --tag "dhcpv6-$interface"
-    logmsg info "Deleting nameservers with tag \"dhcpv6-${interface}\" via vyos-hostsd-client"
-    $hostsd_client --delete-name-servers --tag "dhcpv6-${interface}"
-    hostsd_changes=y
+    if [[ $hostsd_status -eq 0 ]]; then
+        # delete search domains and nameservers via vyos-hostsd
+        logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+        $hostsd_client --delete-search-domains --tag "dhcpv6-$interface"
+        logmsg info "Deleting nameservers with tag \"dhcpv6-${interface}\" via vyos-hostsd-client"
+        $hostsd_client --delete-name-servers --tag "dhcpv6-${interface}"
+        hostsd_changes=y
+    fi
 fi
 
 if [ $hostsd_changes ]; then
