@@ -7,7 +7,7 @@ DefaultDependencies=no
 
 # Seemingly sensible way to say "as early as the system is ready"
 # All vyos-hostsd needs is read/write mounted root
-After=systemd-remount-fs.service
+After=systemd-remount-fs.service cloud-init.service
 
 [Service]
 WorkingDirectory=/run/vyos-hostsd
