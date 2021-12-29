@@ -51,7 +51,7 @@ def verify(frr_config):
 
 def generate(frr_config):
     # read daemons config file
-    daemons_config_current = read_file(config_file, strip_end=False)
+    daemons_config_current = read_file(config_file)
     # generate new config file
     daemons_config_new = render_to_string('frr/daemons.frr.tmpl', frr_config)
     # update configuration file if this is necessary

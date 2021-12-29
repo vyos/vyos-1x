@@ -182,20 +182,16 @@ def call(command, flag='', shell=None, input=None, timeout=None, env=None,
     return code
 
 
-def read_file(fname, defaultonfailure=None, strip_end=True):
+def read_file(fname, defaultonfailure=None):
     """
-    read the content of a file, optionally stripping any end characters (space, newlines)
+    read the content of a file, stripping any end characters (space, newlines)
     should defaultonfailure be not None, it is returned on failure to read
     """
     try:
         """ Read a file to string """
         with open(fname, 'r') as f:
-            data = f.read()
-
-        if strip_end:
-            return data.strip()
-        else:
-            return data
+            data = f.read().strip()
+        return data
     except Exception as e:
         if defaultonfailure is not None:
             return defaultonfailure

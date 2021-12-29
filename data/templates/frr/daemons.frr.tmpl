@@ -34,9 +34,13 @@ ripd_options="   --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.ripd is defined %} -M snmp{% endif -%}
 "
 ripngd_options=" --daemon -A ::1"
-isisd_options="  --daemon -A 127.0.0.1"
+isisd_options="  --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.isisd is defined %} -M snmp{% endif -%}
+"
 pimd_options="  --daemon -A 127.0.0.1"
-ldpd_options="  --daemon -A 127.0.0.1"
+ldpd_options="  --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.ldpd is defined %} -M snmp{% endif -%}
+"
 nhrpd_options="  --daemon -A 127.0.0.1"
 eigrpd_options="  --daemon -A 127.0.0.1"
 babeld_options="  --daemon -A 127.0.0.1"
