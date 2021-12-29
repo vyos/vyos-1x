@@ -1,4 +1,4 @@
-<!-- include start from interface/tunnel-remote.xml.i -->
+<!-- include start from interface/tunnel-remotes.xml.i -->
 <leafNode name="remote">
   <properties>
     <help>Tunnel remote address</help>
@@ -13,6 +13,7 @@
     <constraint>
       <validator name="ip-address"/>
     </constraint>
+    <multi/>
   </properties>
 </leafNode>
 <!-- include end -->

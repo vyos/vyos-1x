@@ -58,6 +58,13 @@ def get_config(config=None):
     if len(vxlan['other_tunnels']) == 0:
         del vxlan['other_tunnels']
 
+    # leave first remote in dict and put the other ones (if they exists) to "other_remotes"
+    remotes = vxlan.get('remote')
+    if remotes:
+        vxlan['remote'] = remotes[0]
+        if len(remotes) > 1:
+            del remotes[0]
+            vxlan['other_remotes'] = remotes
     return vxlan
 
 def verify(vxlan):
@@ -107,6 +114,33 @@ def verify(vxlan):
         if lower_mtu < (int(vxlan['mtu']) + vxlan_overhead):
             raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
                               f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)')
+
+    # Check for mixed IPv4 and IPv6 addresses
+    protocol = None
+    if 'source_address' in vxlan:
+        if is_ipv6(vxlan['source_address']):
+            protocol = 'ipv6'
+        else:
+            protocol = 'ipv4'
+    if 'remote' in vxlan:
+        if is_ipv6(vxlan['remote']):
+            if protocol == 'ipv4':
+                raise ConfigError('IPv4 and IPV6 cannot be mixed')
+            protocol = 'ipv6'
+        else:
+            if protocol == 'ipv6':
+                raise ConfigError('IPv4 and IPV6 cannot be mixed')
+            protocol = 'ipv4'
+    if 'other_remotes' in vxlan:
+        for rem in vxlan['other_remotes']:
+            if is_ipv6(rem):
+                if protocol == 'ipv4':
+                    raise ConfigError('IPv4 and IPV6 cannot be mixed')
+                protocol = 'ipv6'
+            else:
+                if protocol == 'ipv6':
+                    raise ConfigError('IPv4 and IPV6 cannot be mixed')
+                protocol = 'ipv4'
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
