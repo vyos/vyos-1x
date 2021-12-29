@@ -62,7 +62,6 @@ class VXLANIf(Interface):
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
             'parameters.nolearning'      : 'nolearning',
-            'remote'                     : 'remote',
             'source_address'             : 'local',
             'source_interface'           : 'dev',
             'vni'                        : 'id',
@@ -82,3 +81,8 @@ class VXLANIf(Interface):
         self._cmd(cmd.format(**self.config))
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
+        remote = dict_search('remote', self.config)
+        for rem in remote:
+            self.config["rem"] = rem
+            cmd2 = 'bridge fdb append to 00:00:00:00:00:00 dst {rem} port {port} dev {ifname}'
+            self._cmd(cmd2.format(**self.config))
