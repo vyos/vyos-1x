@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
+from copy import deepcopy
 
 from vyos.config import Config
 from vyos.util import write_file
@@ -40,7 +41,7 @@ default_config_data = {
 }
 
 def get_config(config=None):
-    banner = default_config_data
+    banner = deepcopy(default_config_data)
     if config:
         conf = config
     else:
