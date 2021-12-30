@@ -58,6 +58,13 @@ def get_config(config=None):
     if len(vxlan['other_tunnels']) == 0:
         del vxlan['other_tunnels']
 
+    # leave first remote in dict and put the other ones (if they exists) to "other_remotes"
+    remotes = vxlan.get('remote')
+    if remotes:
+        vxlan['remote'] = remotes[0]
+        if len(remotes) > 1:
+            del remotes[0]
+            vxlan['other_remotes'] = remotes
     return vxlan
 
 def verify(vxlan):
