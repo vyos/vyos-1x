@@ -489,3 +489,17 @@ def get_openvpn_ncp_ciphers(ciphers):
         else:
             out.append(cipher)
     return ':'.join(out).upper()
+
+@register_filter('snmp_auth_oid')
+def snmp_auth_oid(type):
+    if type not in ['md5', 'sha', 'aes', 'des', 'none']:
+        raise ValueError()
+
+    OIDs = {
+        'md5' : '.1.3.6.1.6.3.10.1.1.2',
+        'sha' : '.1.3.6.1.6.3.10.1.1.3',
+        'aes' : '.1.3.6.1.6.3.10.1.2.4',
+        'des' : '.1.3.6.1.6.3.10.1.2.2',
+        'none': '.1.3.6.1.6.3.10.1.2.1'
+    }
+    return OIDs[type]

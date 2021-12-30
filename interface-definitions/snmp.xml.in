@@ -20,23 +20,24 @@
             <children>
               <leafNode name="authorization">
                 <properties>
-                  <help>Authorization type (default: 'ro')</help>
+                  <help>Authorization type</help>
                   <completionHelp>
                     <list>ro rw</list>
                   </completionHelp>
                   <valueHelp>
                     <format>ro</format>
-                    <description>read only</description>
+                    <description>Read-Only (default)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>rw</format>
-                    <description>read write</description>
+                    <description>Read-Write</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(ro|rw)$</regex>
                   </constraint>
                   <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
                 </properties>
+                <defaultValue>ro</defaultValue>
               </leafNode>
               <leafNode name="client">
                 <properties>
@@ -105,18 +106,9 @@
               </constraint>
             </properties>
             <children>
+              #include <include/port-number.xml.i>
               <leafNode name="port">
-                <properties>
-                  <help>Port for SNMP service (default: '161')</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>Numeric IP port</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                  <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
-                </properties>
+                <defaultValue>161</defaultValue>
               </leafNode>
             </children>
           </tagNode>
@@ -131,50 +123,27 @@
           </leafNode>
           <leafNode name="oid-enable">
             <properties>
-              <help>Enable specific oids</help>
-              <valueHelp>
-                <format>txt</format>
-                <description>Enable specific oids</description>
-              </valueHelp>
-              <valueHelp>
-                <format>route-table</format>
-                <description>Enable route table oids (ipCidrRouteTable inetCidrRouteTable)</description>
-              </valueHelp>
+              <help>Enable specific OIDs</help>
               <completionHelp>
                 <list>route-table</list>
               </completionHelp>
+              <valueHelp>
+                <format>route-table</format>
+                <description>Enable routing table OIDs (ipCidrRouteTable inetCidrRouteTable)</description>
+              </valueHelp>
               <constraint>
                 <regex>^(route-table)$</regex>
               </constraint>
-              <constraintErrorMessage>Oid must be 'route-table'</constraintErrorMessage>
+              <constraintErrorMessage>OID must be 'route-table'</constraintErrorMessage>
             </properties>
           </leafNode>
-          <leafNode name="protocol">
-            <properties>
-              <help>Listen protocol for SNMP</help>
-              <completionHelp>
-                <list>udp tcp</list>
-              </completionHelp>
-              <valueHelp>
-                <format>udp</format>
-                <description>Listen protocol UDP (default)</description>
-              </valueHelp>
-              <valueHelp>
-                <format>tcp</format>
-                <description>Listen protocol TCP</description>
-              </valueHelp>
-              <constraint>
-                <regex>^(udp|tcp)$</regex>
-              </constraint>
-            </properties>
-            <defaultValue>udp</defaultValue>
-          </leafNode>
+          #include <include/snmp/protocol.xml.i>
           <leafNode name="smux-peer">
             <properties>
               <help>Register a subtree for SMUX-based processing</help>
               <valueHelp>
-                <format>oid</format>
-                <description>Object Identifier</description>
+                <format>txt</format>
+                <description>SNMP Object Identifier</description>
               </valueHelp>
               <multi/>
             </properties>
@@ -218,18 +187,9 @@
                   <help>Community used when sending trap information</help>
                 </properties>
               </leafNode>
+              #include <include/port-number.xml.i>
               <leafNode name="port">
-                <properties>
-                  <help>Destination port used for trap notification</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>Numeric IP port</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                  <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
-                </properties>
+                <defaultValue>162</defaultValue>
               </leafNode>
             </children>
           </tagNode>
@@ -246,32 +206,14 @@
                   </constraint>
                   <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
                 </properties>
+                <defaultValue></defaultValue>
               </leafNode>
               <tagNode name="group">
                 <properties>
                   <help>Specifies the group with name groupname</help>
                 </properties>
                 <children>
-                  <leafNode name="mode">
-                    <properties>
-                      <help>Define group access permission (default: 'ro')</help>
-                      <completionHelp>
-                        <list>ro rw</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ro</format>
-                        <description>read only</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>rw</format>
-                        <description>read write</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(ro|rw)$</regex>
-                      </constraint>
-                      <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
+                  #include <include/snmp/access-mode.xml.i>
                   <leafNode name="seclevel">
                     <properties>
                       <help>Security levels</help>
@@ -284,7 +226,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>auth</format>
-                        <description>Messages are authenticated but not encrypted (authNoPriv)</description>
+                        <description>Messages are authenticated but not encrypted (authNoPriv, default)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>priv</format>
@@ -294,6 +236,7 @@
                         <regex>^(noauth|auth|priv)$</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>auth</defaultValue>
                   </leafNode>
                   <leafNode name="view">
                     <properties>
@@ -345,39 +288,12 @@
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="type">
-                        <properties>
-                          <help>Defines the protocol used for authentication (default: 'md5')</help>
-                          <completionHelp>
-                            <list>md5 sha</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>md5</format>
-                            <description>Message Digest 5</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>sha</format>
-                            <description>Secure Hash Algorithm</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(md5|sha)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/snmp/authentication-type.xml.i>
                     </children>
                   </node>
+                  #include <include/port-number.xml.i>
                   <leafNode name="port">
-                    <properties>
-                      <help>Specifies TCP/UDP port of destination SNMP traps/informs (default: '162')</help>
-                      <valueHelp>
-                        <format>u32:1-65535</format>
-                        <description>Numeric IP port</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="numeric" argument="--range 1-65535"/>
-                      </constraint>
-                      <constraintErrorMessage>Port number must be in range 1 to 65535</constraintErrorMessage>
-                    </properties>
+                    <defaultValue>162</defaultValue>
                   </leafNode>
                   <node name="privacy">
                     <properties>
@@ -402,54 +318,18 @@
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="type">
-                        <properties>
-                          <help>Defines the protocol for privacy (default: 'des')</help>
-                          <completionHelp>
-                            <list>des aes</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>des</format>
-                            <description>Data Encryption Standard</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>aes</format>
-                            <description>Advanced Encryption Standard</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(des|aes)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/snmp/privacy-type.xml.i>
                     </children>
                   </node>
-                  <leafNode name="protocol">
-                    <properties>
-                      <help>Defines protocol for notification between TCP and UDP</help>
-                      <completionHelp>
-                        <list>tcp udp</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>tcp</format>
-                        <description>Use Transmission Control Protocol for notifications</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>udp</format>
-                        <description>Use User Datagram Protocol for notifications</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(tcp|udp)$</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/snmp/protocol.xml.i>
                   <leafNode name="type">
                     <properties>
-                      <help>Specifies the type of notification between inform and trap (default: 'inform')</help>
+                      <help>Specifies the type of notification between inform and trap</help>
                       <completionHelp>
                         <list>inform trap</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>inform</format>
+                        <format>inform (default)</format>
                         <description>Use INFORM</description>
                       </valueHelp>
                       <valueHelp>
@@ -460,6 +340,7 @@
                         <regex>^(inform|trap)$</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>inform</defaultValue>
                   </leafNode>
                   <leafNode name="user">
                     <properties>
@@ -503,25 +384,7 @@
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="type">
-                        <properties>
-                          <help>Defines the protocol used for authentication (default: 'md5')</help>
-                          <completionHelp>
-                            <list>md5 sha</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>md5</format>
-                            <description>Message Digest 5</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>sha</format>
-                            <description>Secure Hash Algorithm</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(md5|sha)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/snmp/authentication-type.xml.i>
                     </children>
                   </node>
                   <leafNode name="group">
@@ -532,26 +395,7 @@
                       </completionHelp>
                     </properties>
                   </leafNode>
-                  <leafNode name="mode">
-                    <properties>
-                      <help>Define users access permission (default: 'ro')</help>
-                      <completionHelp>
-                        <list>ro rw</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ro</format>
-                        <description>read only</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>rw</format>
-                        <description>read write</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(ro|rw)$</regex>
-                      </constraint>
-                      <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
+                  #include <include/snmp/access-mode.xml.i>
                   <node name="privacy">
                     <properties>
                       <help>Defines the privacy</help>
@@ -575,25 +419,7 @@
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="type">
-                        <properties>
-                          <help>Defines the protocol for privacy (default: 'des')</help>
-                          <completionHelp>
-                            <list>des aes</list>
-                          </completionHelp>
-                          <valueHelp>
-                            <format>des</format>
-                            <description>Data Encryption Standard</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>aes</format>
-                            <description>Advanced Encryption Standard</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>^(des|aes)$</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/snmp/privacy-type.xml.i>
                     </children>
                   </node>
                 </children>
