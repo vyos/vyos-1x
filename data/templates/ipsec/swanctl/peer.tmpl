@@ -101,6 +101,9 @@
 {%           set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
                 remote_ts = {{ remote_prefix | join(remote_suffix + ",") }}{{ remote_suffix }}
 {%         endif %}
+{%         if tunnel_conf.priority is defined and tunnel_conf.priority is not none %}
+                priority = {{ tunnel_conf.priority }}
+{%         endif %}
 {%       elif tunnel_esp.mode == 'transport' %}
                 local_ts = {{ peer_conf.local_address }}{{ local_suffix }}
                 remote_ts = {{ peer }}{{ remote_suffix }}
