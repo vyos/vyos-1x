@@ -17,7 +17,9 @@ from enum import IntFlag, auto
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import list_diff
 from vyos.util import get_sub_dict, mangle_dict_keys
+from vyos.util import dict_search_args
 from vyos.xml import defaults
 
 class ConfigDiffError(Exception):
@@ -133,6 +135,34 @@ class ConfigDiff(object):
         config_dict = mangle_dict_keys(config_dict, self._key_mangling[0],
                                                     self._key_mangling[1])
         return config_dict
+
+    def get_child_nodes_diff_str(self, path=[]):
+        ret = {'add': {}, 'change': {}, 'delete': {}}
+
+        diff = self.get_child_nodes_diff(path,
+                                expand_nodes=Diff.ADD | Diff.DELETE | Diff.MERGE | Diff.STABLE,
+                                no_defaults=True)
+
+        def parse_dict(diff_dict, diff_type, prefix=[]):
+            for k, v in diff_dict.items():
+                if isinstance(v, dict):
+                    parse_dict(v, diff_type, prefix + [k])
+                else:
+                    path_str = ' '.join(prefix + [k])
+                    if diff_type == 'add' or diff_type == 'delete':
+                        if isinstance(v, list):
+                            v = ', '.join(v)
+                        ret[diff_type][path_str] = v
+                    elif diff_type == 'merge':
+                        old_value = dict_search_args(diff['stable'], *prefix, k)
+                        if old_value and old_value != v:
+                            ret['change'][path_str] = [old_value, v]
+
+        parse_dict(diff['merge'], 'merge')
+        parse_dict(diff['add'], 'add')
+        parse_dict(diff['delete'], 'delete')
+
+        return ret
 
     def get_child_nodes_diff(self, path=[], expand_nodes=Diff(0), no_defaults=False):
         """

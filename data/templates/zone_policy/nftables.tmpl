@@ -1,0 +1,97 @@
+#!/usr/sbin/nft -f
+
+{% if cleanup_commands is defined %}
+{%   for command in cleanup_commands %}
+{{ command }}
+{%   endfor %}
+{% endif %}
+
+{% if zone is defined %}
+table ip filter {
+{%   for zone_name, zone_conf in zone.items() if zone_conf.ipv4 %}
+{%     if zone_conf.local_zone is defined %}
+    chain VZONE_{{ zone_name }}_IN {
+        iifname lo counter return
+{%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.name is defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%       endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+    chain VZONE_{{ zone_name }}_OUT {
+        oifname lo counter return
+{%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall.name is defined %}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+{%     else %}
+    chain VZONE_{{ zone_name }} {
+        iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=False) }}
+{%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.name is defined %}
+{%         if zone[from_zone].local_zone is not defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endif %}
+{%       endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+{%     endif %}
+{%   endfor %}
+}
+
+table ip6 filter {
+{%   for zone_name, zone_conf in zone.items() if zone_conf.ipv6 %}
+{%     if zone_conf.local_zone is defined %}
+    chain VZONE6_{{ zone_name }}_IN {
+        iifname lo counter return
+{%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.ipv6_name is defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%       endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+    chain VZONE6_{{ zone_name }}_OUT {
+        oifname lo counter return
+{%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall.ipv6_name is defined %}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+{%     else %}
+    chain VZONE6_{{ zone_name }} {
+        iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=True) }}
+{%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.ipv6_name is defined %}
+{%         if zone[from_zone].local_zone is not defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endif %}
+{%       endfor %}
+        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+    }
+{%     endif %}
+{%   endfor %}
+}
+
+{%   for zone_name, zone_conf in zone.items() %}
+{%     if zone_conf.ipv4 %}
+{%       if 'local_zone' in zone_conf %}
+insert rule ip filter VYOS_FW_LOCAL counter jump VZONE_{{ zone_name }}_IN
+insert rule ip filter VYOS_FW_OUTPUT counter jump VZONE_{{ zone_name }}_OUT
+{%       else %}
+insert rule ip filter VYOS_FW_OUT oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE_{{ zone_name }}
+{%       endif %}
+{%     endif %}
+{%     if zone_conf.ipv6 %}
+{%       if 'local_zone' in zone_conf %}
+insert rule ip6 filter VYOS_FW6_LOCAL counter jump VZONE6_{{ zone_name }}_IN
+insert rule ip6 filter VYOS_FW6_OUTPUT counter jump VZONE6_{{ zone_name }}_OUT
+{%       else %}
+insert rule ip6 filter VYOS_FW6_OUT oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE6_{{ zone_name }}
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+
+{% endif %}

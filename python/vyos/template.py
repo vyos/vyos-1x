@@ -22,6 +22,7 @@ from jinja2 import FileSystemLoader
 from vyos.defaults import directories
 from vyos.util import chmod
 from vyos.util import chown
+from vyos.util import dict_search_args
 from vyos.util import makedir
 
 # Holds template filters registered via register_filter()
@@ -503,3 +504,43 @@ def snmp_auth_oid(type):
         'none': '.1.3.6.1.6.3.10.1.2.1'
     }
     return OIDs[type]
+
+@register_filter('nft_action')
+def nft_action(vyos_action):
+    if vyos_action == 'accept':
+        return 'return'
+    return vyos_action
+
+@register_filter('nft_rule')
+def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
+    from vyos.firewall import parse_rule
+    return parse_rule(rule_conf, fw_name, rule_id, ip_name)
+
+@register_filter('nft_state_policy')
+def nft_state_policy(conf, state):
+    out = [f'ct state {state}']
+
+    if 'log' in conf and 'enable' in conf['log']:
+        out.append('log')
+
+    out.append('counter')
+
+    if 'action' in conf:
+        out.append(conf['action'])
+
+    return " ".join(out)
+
+@register_filter('nft_intra_zone_action')
+def nft_intra_zone_action(zone_conf, ipv6=False):
+    if 'intra_zone_filtering' in zone_conf:
+        intra_zone = zone_conf['intra_zone_filtering']
+        fw_name = 'ipv6_name' if ipv6 else 'name'
+
+        if 'action' in intra_zone:
+            if intra_zone['action'] == 'accept':
+                return 'return'
+            return intra_zone['action']
+        elif dict_search_args(intra_zone, 'firewall', fw_name):
+            name = dict_search_args(intra_zone, 'firewall', fw_name)
+            return f'jump {name}'
+    return 'return'

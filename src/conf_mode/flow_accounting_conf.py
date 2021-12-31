@@ -35,67 +35,64 @@ from vyos import airbag
 airbag.enable()
 
 uacctd_conf_path = '/run/pmacct/uacctd.conf'
-iptables_nflog_table = 'raw'
-iptables_nflog_chain = 'VYATTA_CT_PREROUTING_HOOK'
-egress_iptables_nflog_table = 'mangle'
-egress_iptables_nflog_chain = 'FORWARD'
+nftables_nflog_table = 'raw'
+nftables_nflog_chain = 'VYOS_CT_PREROUTING_HOOK'
+egress_nftables_nflog_table = 'inet mangle'
+egress_nftables_nflog_chain = 'FORWARD'
 
-# get iptables rule dict for chain in table
-def _iptables_get_nflog(chain, table):
+# get nftables rule dict for chain in table
+def _nftables_get_nflog(chain, table):
     # define list with rules
     rules = []
 
     # prepare regex for parsing rules
-    rule_pattern = "^-A (?P<rule_definition>{0} (\-i|\-o) (?P<interface>[\w\.\*\-]+).*--comment FLOW_ACCOUNTING_RULE.* -j NFLOG.*$)".format(chain)
+    rule_pattern = '[io]ifname "(?P<interface>[\w\.\*\-]+)".*handle (?P<handle>[\d]+)'
     rule_re = re.compile(rule_pattern)
 
-    for iptables_variant in ['iptables', 'ip6tables']:
-        # run iptables, save output and split it by lines
-        iptables_command = f'{iptables_variant} -t {table} -S {chain}'
-        tmp = cmd(iptables_command, message='Failed to get flows list')
-
-        # parse each line and add information to list
-        for current_rule in tmp.splitlines():
-            current_rule_parsed = rule_re.search(current_rule)
-            if current_rule_parsed:
-                rules.append({ 'interface': current_rule_parsed.groupdict()["interface"], 'iptables_variant': iptables_variant, 'table': table, 'rule_definition': current_rule_parsed.groupdict()["rule_definition"] })
+    # run nftables, save output and split it by lines
+    nftables_command = f'nft -a list chain {table} {chain}'
+    tmp = cmd(nftables_command, message='Failed to get flows list')
+    # parse each line and add information to list
+    for current_rule in tmp.splitlines():
+        if 'FLOW_ACCOUNTING_RULE' not in current_rule:
+            continue
+        current_rule_parsed = rule_re.search(current_rule)
+        if current_rule_parsed:
+            groups = current_rule_parsed.groupdict()
+            rules.append({ 'interface': groups["interface"], 'table': table, 'handle': groups["handle"] })
 
     # return list with rules
     return rules
 
-# modify iptables rules
-def _iptables_config(configured_ifaces, direction, length=None):
-    # define list of iptables commands to modify settings
-    iptable_commands = []
-    iptables_chain = iptables_nflog_chain
-    iptables_table = iptables_nflog_table
+def _nftables_config(configured_ifaces, direction, length=None):
+    # define list of nftables commands to modify settings
+    nftable_commands = []
+    nftables_chain = nftables_nflog_chain
+    nftables_table = nftables_nflog_table
 
     if direction == "egress":
-        iptables_chain = egress_iptables_nflog_chain
-        iptables_table = egress_iptables_nflog_table
+        nftables_chain = egress_nftables_nflog_chain
+        nftables_table = egress_nftables_nflog_table
 
     # prepare extended list with configured interfaces
     configured_ifaces_extended = []
     for iface in configured_ifaces:
-        configured_ifaces_extended.append({ 'iface': iface, 'iptables_variant': 'iptables' })
-        configured_ifaces_extended.append({ 'iface': iface, 'iptables_variant': 'ip6tables' })
+        configured_ifaces_extended.append({ 'iface': iface })
 
-    # get currently configured interfaces with iptables rules
-    active_nflog_rules = _iptables_get_nflog(iptables_chain, iptables_table)
+    # get currently configured interfaces with nftables rules
+    active_nflog_rules = _nftables_get_nflog(nftables_chain, nftables_table)
 
     # compare current active list with configured one and delete excessive interfaces, add missed
     active_nflog_ifaces = []
     for rule in active_nflog_rules:
-        iptables = rule['iptables_variant']
         interface = rule['interface']
         if interface not in configured_ifaces:
             table = rule['table']
-            rule = rule['rule_definition']
-            iptable_commands.append(f'{iptables} -t {table} -D {rule}')
+            handle = rule['handle']
+            nftable_commands.append(f'nft delete rule {table} {nftables_chain} handle {handle}')
         else:
             active_nflog_ifaces.append({
                 'iface': interface,
-                'iptables_variant': iptables,
             })
 
     # do not create new rules for already configured interfaces
@@ -106,16 +103,12 @@ def _iptables_config(configured_ifaces, direction, length=None):
     # create missed rules
     for iface_extended in configured_ifaces_extended:
         iface = iface_extended['iface']
-        iptables = iface_extended['iptables_variant']
-        iptables_op = "-i"
-        if direction == "egress":
-            iptables_op = "-o"
+        iface_prefix = "o" if direction == "egress" else "i"
+        rule_definition = f'{iface_prefix}ifname "{iface}" counter log group 2 snaplen {length} queue-threshold 100 comment "FLOW_ACCOUNTING_RULE"'
+        nftable_commands.append(f'nft insert rule {nftables_table} {nftables_chain} {rule_definition}')
 
-        rule_definition = f'{iptables_chain} {iptables_op} {iface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size {length} --nflog-threshold 100'
-        iptable_commands.append(f'{iptables} -t {iptables_table} -I {rule_definition}')
-
-    # change iptables
-    for command in iptable_commands:
+    # change nftables
+    for command in nftable_commands:
         cmd(command, raising=ConfigError)
 
 
@@ -249,8 +242,8 @@ def apply(flow_config):
     action = 'restart'
     # Check if flow-accounting was removed and define command
     if not flow_config:
-        _iptables_config([], 'ingress')
-        _iptables_config([], 'egress')
+        _nftables_config([], 'ingress')
+        _nftables_config([], 'egress')
 
         # Stop flow-accounting daemon and remove configuration file
         cmd('systemctl stop uacctd.service')
@@ -261,15 +254,15 @@ def apply(flow_config):
     # Start/reload flow-accounting daemon
     cmd(f'systemctl restart uacctd.service')
 
-    # configure iptables rules for defined interfaces
+    # configure nftables rules for defined interfaces
     if 'interface' in flow_config:
-        _iptables_config(flow_config['interface'], 'ingress', flow_config['packet_length'])
+        _nftables_config(flow_config['interface'], 'ingress', flow_config['packet_length'])
 
         # configure egress the same way if configured otherwise remove it
         if 'enable_egress' in flow_config:
-            _iptables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
+            _nftables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
         else:
-            _iptables_config([], 'egress')
+            _nftables_config([], 'egress')
 
 if __name__ == '__main__':
     try:

@@ -3,18 +3,22 @@
   <properties>
     <help>Rule action [REQUIRED]</help>
     <completionHelp>
-      <list>permit deny</list>
+      <list>accept reject drop</list>
     </completionHelp>
     <valueHelp>
-      <format>permit</format>
-      <description>Permit matching entries</description>
+      <format>accept</format>
+      <description>Accept matching entries</description>
     </valueHelp>
     <valueHelp>
-      <format>deny</format>
-      <description>Deny matching entries</description>
+      <format>reject</format>
+      <description>Reject matching entries</description>
+    </valueHelp>
+    <valueHelp>
+      <format>drop</format>
+      <description>Drop matching entries</description>
     </valueHelp>
     <constraint>
-      <regex>^(permit|deny)$</regex>
+      <regex>^(accept|reject|drop)$</regex>
     </constraint>
   </properties>
 </leafNode>

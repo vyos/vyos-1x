@@ -62,9 +62,20 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify configuration
-        tmp = cmd('sudo iptables-save -t raw')
+        nftables_output = cmd('sudo nft list chain raw VYOS_CT_PREROUTING_HOOK').splitlines()
         for interface in Section.interfaces('ethernet'):
-            self.assertIn(f'-A VYATTA_CT_PREROUTING_HOOK -i {interface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size 128 --nflog-threshold 100', tmp)
+            rule_found = False
+            ifname_search = f'iifname "{interface}"'
+
+            for nftables_line in nftables_output:
+                if 'FLOW_ACCOUNTING_RULE' in nftables_line and ifname_search in nftables_line:
+                    self.assertIn('group 2', nftables_line)
+                    self.assertIn('snaplen 128', nftables_line)
+                    self.assertIn('queue-threshold 100', nftables_line)
+                    rule_found = True
+                    break
+
+            self.assertTrue(rule_found)
 
         uacctd = read_file(uacctd_conf)
         # circular queue size - buffer_size

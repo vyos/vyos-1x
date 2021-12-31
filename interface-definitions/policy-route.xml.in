@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="policy">
+    <children>
+      <tagNode name="ipv6-route" owner="${vyos_conf_scripts_dir}/policy-route.py">
+        <properties>
+          <help>IPv6 policy route rule set name</help>
+          <priority>201</priority>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/name-default-log.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number (1-9999)</help>
+            </properties>
+            <children>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/policy/route-common-rule-ipv6.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <tagNode name="route" owner="${vyos_conf_scripts_dir}/policy-route.py">
+        <properties>
+          <help>Policy route rule set name</help>
+          <priority>201</priority>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/name-default-log.xml.i>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number (1-9999)</help>
+            </properties>
+            <children>
+              <node name="destination">
+                <properties>
+                  <help>Destination parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>Source parameters</help>
+                </properties>
+                <children>
+                  #include <include/firewall/address.xml.i>
+                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/port.xml.i>
+                </children>
+              </node>
+              #include <include/policy/route-common-rule.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
