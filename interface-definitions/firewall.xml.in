@@ -214,7 +214,15 @@
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
-              <help>Rule number (1-9999)</help>
+              <help>Firewall rule number (IPv6)</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this Firewall rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
@@ -582,7 +590,15 @@
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
-              <help>Rule number (1-9999)</help>
+              <help>Firewall rule number (IPv4)</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this Firewall rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
