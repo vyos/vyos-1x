@@ -111,9 +111,22 @@ rgiyCHemtMepq57Pl1Nmj49eEA==
 """
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(base_path + ['interface', f'{interface}.{vif}'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
+        cls.cli_set(cls, base_path + ['interface', f'{interface}.{vif}'])
+
+    @classmethod
+    def tearDownClass(cls):
+        super(cls, cls).tearDownClass()
+
+        cls.cli_delete(cls, base_path + ['interface', f'{interface}.{vif}'])
+
+    def setUp(self):
         # Set IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
@@ -127,7 +140,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
-        self.cli_delete(ethernet_path)
         self.cli_commit()
 
         # Check for no longer running process
