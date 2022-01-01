@@ -42,7 +42,7 @@ if LooseVersion(kernel_version()) > LooseVersion('5.1'):
 else:
     k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
-iptables_nat_config = '/tmp/vyos-nat-rules.nft'
+nftables_nat_config = '/tmp/vyos-nat-rules.nft'
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -179,14 +179,14 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat,
+    render(nftables_nat_config, 'firewall/nftables-nat.tmpl', nat,
            permission=0o755)
     return None
 
 def apply(nat):
-    cmd(f'{iptables_nat_config}')
-    if os.path.isfile(iptables_nat_config):
-        os.unlink(iptables_nat_config)
+    cmd(f'{nftables_nat_config}')
+    if os.path.isfile(nftables_nat_config):
+        os.unlink(nftables_nat_config)
 
     return None
 
