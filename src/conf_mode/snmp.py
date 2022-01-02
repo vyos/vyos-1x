@@ -625,10 +625,6 @@ def verify(snmp):
             # Group must exist prior to mapping it into a group
             # seclevel will be extracted from group
             #
-            if 'group' not in user or user['group'] == '':
-                username = user['name']
-                raise ConfigError(f'Group membership required for user "{username}"!')
-
             if user['group']:
                 error = True
                 if 'v3_groups' in snmp.keys():
