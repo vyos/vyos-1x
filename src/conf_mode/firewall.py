@@ -205,13 +205,20 @@ def verify(firewall):
 def cleanup_commands(firewall):
     commands = []
     for table in ['ip filter', 'ip6 filter']:
+        state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
         json_str = cmd(f'nft -j list table {table}')
         obj = loads(json_str)
         if 'nftables' not in obj:
             continue
         for item in obj['nftables']:
             if 'chain' in item:
-                if item['chain']['name'] not in preserve_chains:
+                if item['chain']['name'] in ['VYOS_STATE_POLICY', 'VYOS_STATE_POLICY6']:
+                    chain = item['chain']['name']
+                    if 'state_policy' not in firewall:
+                        commands.append(f'delete chain {table} {chain}')
+                    else:
+                        commands.append(f'flush chain {table} {chain}')
+                elif item['chain']['name'] not in preserve_chains:
                     chain = item['chain']['name']
                     if table == 'ip filter' and dict_search_args(firewall, 'name', chain):
                         commands.append(f'flush chain {table} {chain}')
@@ -219,6 +226,14 @@ def cleanup_commands(firewall):
                         commands.append(f'flush chain {table} {chain}')
                     else:
                         commands.append(f'delete chain {table} {chain}')
+            elif 'rule' in item:
+                rule = item['rule']
+                if rule['chain'] in ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL', 'VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
+                    if 'expr' in rule and any([True for expr in rule['expr'] if dict_search_args(expr, 'jump', 'target') == state_chain]):
+                        if 'state_policy' not in firewall:
+                            chain = rule['chain']
+                            handle = rule['handle']
+                            commands.append(f'delete rule {table} {chain} handle {handle}')
     return commands
 
 def generate(firewall):
@@ -286,6 +301,11 @@ def post_apply_trap(firewall):
 
                 cmd(base_cmd + ' '.join(objects))
 
+def state_policy_rule_exists():
+    # Determine if state policy rules already exist in nft
+    search_str = cmd(f'nft list chain ip filter VYOS_FW_IN')
+    return 'VYOS_STATE_POLICY' in search_str
+
 def apply(firewall):
     if 'first_install' in firewall:
         run('nfct helper add rpc inet tcp')
@@ -296,9 +316,11 @@ def apply(firewall):
     if install_result == 1:
         raise ConfigError('Failed to apply firewall')
 
-    if 'state_policy' in firewall:
-        for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
+    if 'state_policy' in firewall and not state_policy_rule_exists():
+        for chain in ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']:
             cmd(f'nft insert rule ip filter {chain} jump VYOS_STATE_POLICY')
+
+        for chain in ['VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
             cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)

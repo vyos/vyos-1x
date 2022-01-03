@@ -107,6 +107,15 @@ def cleanup_rule(table, chain, ifname, new_name=None):
                 run(f'nft delete rule {table} {chain} handle {handle_search[1]}')
     return retval
 
+def state_policy_handle(table, chain):
+    results = cmd(f'nft -a list chain {table} {chain}').split("\n")
+    for line in results:
+        if 'jump VYOS_STATE_POLICY' in line:
+            handle_search = re.search('handle (\d+)', line)
+            if handle_search:
+                return handle_search[1]
+    return None
+
 def apply(if_firewall):
     ifname = if_firewall['ifname']
 
@@ -118,18 +127,32 @@ def apply(if_firewall):
         name = dict_search_args(if_firewall, direction, 'name')
         if name:
             rule_exists = cleanup_rule('ip filter', chain, ifname, name)
+            rule_action = 'insert'
+            rule_prefix = ''
 
             if not rule_exists:
-                run(f'nft insert rule ip filter {chain} {if_prefix}ifname {ifname} counter jump {name}')
+                handle = state_policy_handle('ip filter', chain)
+                if handle:
+                    rule_action = 'add'
+                    rule_prefix = f'position {handle}'
+
+                run(f'nft {rule_action} rule ip filter {chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {name}')
         else:
             cleanup_rule('ip filter', chain, ifname)
 
         ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
         if ipv6_name:
             rule_exists = cleanup_rule('ip6 filter', ipv6_chain, ifname, ipv6_name)
+            rule_action = 'insert'
+            rule_prefix = ''
 
             if not rule_exists:
-                run(f'nft insert rule ip6 filter {ipv6_chain} {if_prefix}ifname {ifname} counter jump {ipv6_name}')
+                handle = state_policy_handle('ip filter', chain)
+                if handle:
+                    rule_action = 'add'
+                    rule_prefix = f'position {handle}'
+
+                run(f'nft {rule_action} rule ip6 filter {ipv6_chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {ipv6_name}')
         else:
             cleanup_rule('ip6 filter', ipv6_chain, ifname)
 
