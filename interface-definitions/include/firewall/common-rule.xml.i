@@ -99,7 +99,7 @@
   <properties>
     <help>Protocol to match (protocol name, number, or "all")</help>
     <completionHelp>
-      <script>cat /etc/protocols | sed -e '/^#.*/d' | awk '{ print $1 }'</script>
+      <script>${vyos_completion_dir}/list_protocols.sh</script>
     </completionHelp>
     <valueHelp>
       <format>all</format>
