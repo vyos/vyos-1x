@@ -134,6 +134,23 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(matched)
 
+    def test_state_policy(self):
+        self.cli_set(['firewall', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'state-policy', 'related', 'action', 'accept'])
+        self.cli_set(['firewall', 'state-policy', 'invalid', 'action', 'drop'])
+
+        self.cli_commit()
+
+        chains = {
+            'ip filter': ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL'],
+            'ip6 filter': ['VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
+        }
+
+        for table in ['ip filter', 'ip6 filter']:
+            for chain in chains[table]:
+                nftables_output = cmd(f'sudo nft list chain {table} {chain}')
+                self.assertTrue('jump VYOS_STATE_POLICY' in nftables_output)
+
     def test_sysfs(self):
         for name, conf in sysfs_config.items():
             paths = glob(conf['sysfs'])
