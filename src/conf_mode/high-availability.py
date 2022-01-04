@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -40,33 +40,41 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['high-availability', 'vrrp']
+    base = ['high-availability']
+    base_vrrp = ['high-availability', 'vrrp']
     if not conf.exists(base):
         return None
 
-    vrrp = conf.get_config_dict(base, key_mangling=('-', '_'),
+    ha = conf.get_config_dict(base, key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    if 'group' in vrrp:
-        default_values = defaults(base + ['group'])
-        for group in vrrp['group']:
-            vrrp['group'][group] = dict_merge(default_values, vrrp['group'][group])
+    if 'vrrp' in ha:
+        if 'group' in ha['vrrp']:
+            default_values_vrrp = defaults(base_vrrp + ['group'])
+            for group in ha['vrrp']['group']:
+                ha['vrrp']['group'][group] = dict_merge(default_values_vrrp, ha['vrrp']['group'][group])
+
+    # Merge per virtual-server default values
+    if 'virtual_server' in ha:
+        default_values = defaults(base + ['virtual-server'])
+        for vs in ha['virtual_server']:
+            ha['virtual_server'][vs] = dict_merge(default_values, ha['virtual_server'][vs])
 
     ## Get the sync group used for conntrack-sync
     conntrack_path = ['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group']
     if conf.exists(conntrack_path):
-        vrrp['conntrack_sync_group'] = conf.return_value(conntrack_path)
+        ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-    return vrrp
+    return ha
 
-def verify(vrrp):
-    if not vrrp:
+def verify(ha):
+    if not ha:
         return None
 
     used_vrid_if = []
-    if 'group' in vrrp:
-        for group, group_config in vrrp['group'].items():
+    if 'vrrp' in ha and 'group' in ha['vrrp']:
+        for group, group_config in ha['vrrp']['group'].items():
             # Check required fields
             if 'vrid' not in group_config:
                 raise ConfigError(f'VRID is required but not set in VRRP group "{group}"')
@@ -119,24 +127,37 @@ def verify(vrrp):
                     if is_ipv4(group_config['peer_address']):
                         raise ConfigError(f'VRRP group "{group}" uses IPv6 but peer-address is IPv4!')
     # Check sync groups
-    if 'sync_group' in vrrp:
-        for sync_group, sync_config in vrrp['sync_group'].items():
+    if 'vrrp' in ha and 'sync_group' in ha['vrrp']:
+        for sync_group, sync_config in ha['vrrp']['sync_group'].items():
             if 'member' in sync_config:
                 for member in sync_config['member']:
-                    if member not in vrrp['group']:
+                    if member not in ha['vrrp']['group']:
                         raise ConfigError(f'VRRP sync-group "{sync_group}" refers to VRRP group "{member}", '\
                                           'but it does not exist!')
 
-def generate(vrrp):
-    if not vrrp:
+    # Virtual-server
+    if 'virtual_server' in ha:
+        for vs, vs_config in ha['virtual_server'].items():
+            if 'port' not in vs_config:
+                raise ConfigError(f'Port is required but not set for virtual-server "{vs}"')
+            if 'real_server' not in vs_config:
+                raise ConfigError(f'Real-server ip is required but not set for virtual-server "{vs}"')
+        # Real-server
+        for rs, rs_config in vs_config['real_server'].items():
+            if 'port' not in rs_config:
+                raise ConfigError(f'Port is required but not set for virtual-server "{vs}" real-server "{rs}"')
+
+
+def generate(ha):
+    if not ha:
         return None
 
-    render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl', vrrp)
+    render(VRRP.location['config'], 'high-availability/keepalived.conf.tmpl', ha)
     return None
 
-def apply(vrrp):
+def apply(ha):
     service_name = 'keepalived.service'
-    if not vrrp:
+    if not ha:
         call(f'systemctl stop {service_name}')
         return None
 

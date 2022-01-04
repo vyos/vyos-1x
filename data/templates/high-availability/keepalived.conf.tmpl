@@ -9,8 +9,8 @@ global_defs {
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
 
-{% if group is defined and group is not none %}
-{%   for name, group_config in group.items() if group_config.disable is not defined %}
+{% if vrrp is defined and vrrp.group is defined and vrrp.group is not none %}
+{%   for name, group_config in vrrp.group.items() if group_config.disable is not defined %}
 {%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none %}
 vrrp_script healthcheck_{{ name }} {
     script "{{ group_config.health_check.script }}"
@@ -82,8 +82,8 @@ vrrp_instance {{ name }} {
 {%   endfor %}
 {% endif %}
 
-{% if sync_group is defined and sync_group is not none %}
-{%   for name, sync_group_config in sync_group.items() if sync_group_config.disable is not defined %}
+{% if vrrp is defined and vrrp.sync_group is defined and vrrp.sync_group is not none %}
+{%   for name, sync_group_config in vrrp.sync_group.items() if sync_group_config.disable is not defined %}
 vrrp_sync_group {{ name }} {
     group {
 {%     if sync_group_config.member is defined and sync_group_config.member is not none %}
@@ -94,19 +94,64 @@ vrrp_sync_group {{ name }} {
     }
 
 {# Health-check scripts should be in section sync-group if member is part of the sync-group T4081 #}
-{%   for name, group_config in group.items() if group_config.disable is not defined %}
+{%   for name, group_config in vrrp.group.items() if group_config.disable is not defined %}
 {%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none and name in sync_group_config.member %}
     track_script {
         healthcheck_{{ name }}
     }
 {%     endif %}
 {%   endfor %}
-{%     if conntrack_sync_group is defined and conntrack_sync_group == name %}
+{%     if vrrp.conntrack_sync_group is defined and vrrp.conntrack_sync_group == name %}
 {%     set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
     notify_master "{{ vyos_helper }} master {{ name }}"
     notify_backup "{{ vyos_helper }} backup {{ name }}"
     notify_fault "{{ vyos_helper }} fault {{ name }}"
 {%     endif %}
+}
+{%   endfor %}
+{% endif %}
+
+# Virtual-server configuration
+{% if virtual_server is defined and virtual_server is not none %}
+{%   for vserver, vserver_config in virtual_server.items() %}
+virtual_server {{ vserver }} {{ vserver_config.port }} {
+    delay_loop {{ vserver_config.delay_loop }}
+{%     if vserver_config.algorithm == 'round-robin' %}
+    lb_algo rr
+{%     elif vserver_config.algorithm == 'weighted-round-robin' %}
+    lb_algo wrr
+{%     elif vserver_config.algorithm == 'least-connection' %}
+    lb_algo lc
+{%     elif vserver_config.algorithm == 'weighted-least-connection' %}
+    lb_algo wlc
+{%     elif vserver_config.algorithm == 'source-hashing' %}
+    lb_algo sh
+{%     elif vserver_config.algorithm == 'destination-hashing' %}
+    lb_algo dh
+{%     elif vserver_config.algorithm == 'locality-based-least-connection' %}
+    lb_algo lblc
+{%     endif %}
+{%     if vserver_config.forward_method == "nat" %}
+    lb_kind NAT
+{%     elif vserver_config.forward_method == "direct" %}
+    lb_kind DR
+{%     elif vserver_config.forward_method == "tunnel" %}
+    lb_kind TUN
+{%     endif %}
+    persistence_timeout {{ vserver_config.persistence_timeout }}
+    protocol {{ vserver_config.protocol | upper }}
+{%     if vserver_config.real_server is defined and vserver_config.real_server is not none %}
+{%       for rserver, rserver_config in vserver_config.real_server.items() %}
+    real_server {{ rserver }} {{ rserver_config.port }} {
+        weight 1
+        {{ vserver_config.protocol | upper }}_CHECK {
+{%         if rserver_config.connection_timeout is defined and rserver_config.connection_timeout is not none %}
+            connect_timeout {{ rserver_config.connection_timeout }}
+{%         endif %}
+        }
+    }
+{%        endfor %}
+{%      endif %}
 }
 {%   endfor %}
 {% endif %}

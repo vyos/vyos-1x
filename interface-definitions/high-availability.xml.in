@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="high-availability">
+  <node name="high-availability" owner="${vyos_conf_scripts_dir}/high-availability.py">
     <properties>
+      <priority>800</priority> <!-- after all interfaces and conntrack-sync -->
       <help>High availability settings</help>
     </properties>
     <children>
-      <node name="vrrp" owner="${vyos_conf_scripts_dir}/vrrp.py">
+      <node name="vrrp">
         <properties>
-          <priority>800</priority> <!-- after all interfaces and conntrack-sync -->
           <help>Virtual Router Redundancy Protocol settings</help>
         </properties>
         <children>
@@ -252,6 +252,144 @@
           </tagNode>
         </children>
       </node>
+      <tagNode name="virtual-server">
+        <properties>
+          <help>Load-balancing virtual server address</help>
+        </properties>
+        <children>
+          <leafNode name="algorithm">
+            <properties>
+              <help>Schedule algorithm (default - least-connection)</help>
+              <completionHelp>
+                <list>round-robin weighted-round-robin least-connection weighted-least-connection source-hashing destination-hashing locality-based-least-connection</list>
+              </completionHelp>
+              <valueHelp>
+                <format>round-robin</format>
+                <description>Round robin</description>
+              </valueHelp>
+              <valueHelp>
+                <format>weighted-round-robin</format>
+                <description>Weighted round robin</description>
+              </valueHelp>
+              <valueHelp>
+                <format>least-connection</format>
+                <description>Least connection</description>
+              </valueHelp>
+              <valueHelp>
+                <format>weighted-least-connection</format>
+                <description>Weighted least connection</description>
+              </valueHelp>
+              <valueHelp>
+                <format>source-hashing</format>
+                <description>Source hashing</description>
+              </valueHelp>
+              <valueHelp>
+                <format>destination-hashing</format>
+                <description>Destination hashing</description>
+              </valueHelp>
+              <valueHelp>
+                <format>locality-based-least-connection</format>
+                <description>Locality-Based least connection</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(round-robin|weighted-round-robin|least-connection|weighted-least-connection|source-hashing|destination-hashing|locality-based-least-connection)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>least-connection</defaultValue>
+          </leafNode>
+          <leafNode name="delay-loop">
+            <properties>
+              <help>Interval between health-checks (in seconds)</help>
+              <valueHelp>
+                <format>u32:1-600</format>
+                <description>Interval in seconds (default: 10)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-3600"/>
+              </constraint>
+            </properties>
+            <defaultValue>10</defaultValue>
+          </leafNode>
+          <leafNode name="forward-method">
+            <properties>
+              <help>Forwarding method (default: NAT)</help>
+              <completionHelp>
+                <list>direct nat tunnel</list>
+              </completionHelp>
+              <valueHelp>
+                <format>direct</format>
+                <description>Direct routing</description>
+              </valueHelp>
+              <valueHelp>
+                <format>nat</format>
+                <description>NAT</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tunnel</format>
+                <description>Tunneling</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(direct|nat|tunnel)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>nat</defaultValue>
+          </leafNode>
+          #include <include/port-number.xml.i>
+          <leafNode name="persistence-timeout">
+            <properties>
+              <help>Timeout for persistent connections</help>
+              <valueHelp>
+                <format>u32:1-86400</format>
+                <description>Timeout for persistent connections (default: 300)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-86400"/>
+              </constraint>
+            </properties>
+            <defaultValue>300</defaultValue>
+          </leafNode>
+          <leafNode name="protocol">
+            <properties>
+              <help>Protocol for port checks (default: TCP)</help>
+              <completionHelp>
+                <list>tcp udp</list>
+              </completionHelp>
+              <valueHelp>
+                <format>tcp</format>
+                <description>TCP</description>
+              </valueHelp>
+              <valueHelp>
+                <format>udp</format>
+                <description>UDP</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(tcp|udp)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>tcp</defaultValue>
+          </leafNode>
+          <tagNode name="real-server">
+            <properties>
+              <help>Real server address</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="connection-timeout">
+                <properties>
+                  <help>Server connection timeout</help>
+                  <valueHelp>
+                    <format>u32:1-86400</format>
+                    <description>Connection timeout to remote server</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-86400"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

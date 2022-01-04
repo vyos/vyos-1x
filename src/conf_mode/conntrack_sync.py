@@ -36,7 +36,7 @@ airbag.enable()
 config_file = '/run/conntrackd/conntrackd.conf'
 
 def resync_vrrp():
-    tmp = run('/usr/libexec/vyos/conf_mode/vrrp.py')
+    tmp = run('/usr/libexec/vyos/conf_mode/high-availability.py')
     if tmp > 0:
         print('ERROR: error restarting VRRP daemon!')
 
