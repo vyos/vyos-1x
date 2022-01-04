@@ -81,7 +81,7 @@ table ip6 filter {
 insert rule ip filter VYOS_FW_LOCAL counter jump VZONE_{{ zone_name }}_IN
 insert rule ip filter VYOS_FW_OUTPUT counter jump VZONE_{{ zone_name }}_OUT
 {%       else %}
-insert rule ip filter VYOS_FW_OUT oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE_{{ zone_name }}
+insert rule ip filter VYOS_FW_FORWARD oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE_{{ zone_name }}
 {%       endif %}
 {%     endif %}
 {%     if zone_conf.ipv6 %}
@@ -89,9 +89,19 @@ insert rule ip filter VYOS_FW_OUT oifname { {{ zone_conf.interface | join(',') }
 insert rule ip6 filter VYOS_FW6_LOCAL counter jump VZONE6_{{ zone_name }}_IN
 insert rule ip6 filter VYOS_FW6_OUTPUT counter jump VZONE6_{{ zone_name }}_OUT
 {%       else %}
-insert rule ip6 filter VYOS_FW6_OUT oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE6_{{ zone_name }}
+insert rule ip6 filter VYOS_FW6_FORWARD oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE6_{{ zone_name }}
 {%       endif %}
 {%     endif %}
 {%   endfor %}
+
+{# Ensure that state-policy rule is first in the chain #}
+{%   if firewall.state_policy is defined %}
+{%     for chain in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL'] %}
+insert rule ip filter {{ chain }} jump VYOS_STATE_POLICY
+{%     endfor %}
+{%     for chain in ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL'] %}
+insert rule ip6 filter {{ chain }} jump VYOS_STATE_POLICY6
+{%     endfor %}
+{%   endif %}
 
 {% endif %}
