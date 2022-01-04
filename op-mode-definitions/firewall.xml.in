@@ -112,11 +112,24 @@
           <help>Show firewall information</help>
         </properties>
         <children>
+          <tagNode name="group">
+            <properties>
+              <help>Show firewall group</help>
+              <completionHelp>
+                <path>firewall group address-group</path>
+                <path>firewall group network-group</path>
+                <path>firewall group port-group</path>
+                <path>firewall group ipv6-address-group</path>
+                <path>firewall group ipv6-network-group</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>
+          </tagNode>
           <leafNode name="group">
             <properties>
               <help>Show firewall group</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group</command>
           </leafNode>
           <tagNode name="ipv6-name">
             <properties>
