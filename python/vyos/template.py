@@ -517,7 +517,7 @@ def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
     return parse_rule(rule_conf, fw_name, rule_id, ip_name)
 
 @register_filter('nft_state_policy')
-def nft_state_policy(conf, state):
+def nft_state_policy(conf, state, ipv6=False):
     out = [f'ct state {state}']
 
     if 'log' in conf and 'enable' in conf['log']:
@@ -526,7 +526,11 @@ def nft_state_policy(conf, state):
     out.append('counter')
 
     if 'action' in conf:
-        out.append(conf['action'])
+        if conf['action'] == 'accept':
+            jump_target = 'VYOS_POST_FW6' if ipv6 else 'VYOS_POST_FW'
+            out.append(f'jump {jump_target}')
+        else:
+            out.append(conf['action'])
 
     return " ".join(out)
 
