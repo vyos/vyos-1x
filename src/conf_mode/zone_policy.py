@@ -95,6 +95,9 @@ def verify(zone_policy):
 
             if 'from' in zone_conf:
                 for from_zone, from_conf in zone_conf['from'].items():
+                    if from_zone not in zone_policy['zone']:
+                        raise ConfigError(f'Zone "{zone}" refers to a non-existent or deleted zone "{from_zone}"')
+
                     v4_name = dict_search_args(from_conf, 'firewall', 'name')
                     if v4_name:
                         if 'name' not in zone_policy['firewall']:
