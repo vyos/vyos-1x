@@ -162,7 +162,7 @@ class ConfigSourceSession(ConfigSource):
         if p.returncode != 0:
             raise VyOSError()
         else:
-            return out.decode('ascii', 'ignore')
+            return out.decode()
 
     def set_level(self, path):
         """
