@@ -7,6 +7,7 @@
 "dns_forwarding.py",
 "dynamic_dns.py",
 "flow_accounting_conf.py",
+"high-availability.py",
 "host_name.py",
 "https.py",
 "igmp_proxy.py",
@@ -69,6 +70,5 @@
 "vpn_pptp.py",
 "vpn_sstp.py",
 "vrf.py",
-"vrf_vni.py",
-"vrrp.py"
+"vrf_vni.py"
 ]
