@@ -183,6 +183,9 @@ def verify(firewall):
                 if name_id in preserve_chains:
                     raise ConfigError(f'Firewall name "{name_id}" is reserved for VyOS')
 
+                if name_id.startswith("VZONE"):
+                    raise ConfigError(f'Firewall name "{name_id}" uses reserved prefix')
+
                 if 'rule' in name_conf:
                     for rule_id, rule_conf in name_conf['rule'].items():
                         verify_rule(firewall, rule_conf, name == 'ipv6_name')
@@ -210,14 +213,13 @@ def cleanup_commands(firewall):
             continue
         for item in obj['nftables']:
             if 'chain' in item:
-                if item['chain']['name'] in ['VYOS_STATE_POLICY', 'VYOS_STATE_POLICY6']:
-                    chain = item['chain']['name']
+                chain = item['chain']['name']
+                if chain in ['VYOS_STATE_POLICY', 'VYOS_STATE_POLICY6']:
                     if 'state_policy' not in firewall:
                         commands.append(f'delete chain {table} {chain}')
                     else:
                         commands.append(f'flush chain {table} {chain}')
-                elif item['chain']['name'] not in preserve_chains:
-                    chain = item['chain']['name']
+                elif chain not in preserve_chains and not chain.startswith("VZONE"):
                     if table == 'ip filter' and dict_search_args(firewall, 'name', chain):
                         commands.append(f'flush chain {table} {chain}')
                     elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
