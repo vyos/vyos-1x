@@ -73,7 +73,7 @@ class VyOSUnitTestSHIM:
         def cli_commit(self):
             self._session.commit()
             # during a commit there is a process opening commit_lock, and run() returns 0
-            while run(f'sudo lsof | grep -q {commit_lock}') == 0:
+            while run(f'sudo lsof -nP {commit_lock}') == 0:
                 sleep(0.250)
 
         def getFRRconfig(self, string, end='$', endsection='^!', daemon=''):
