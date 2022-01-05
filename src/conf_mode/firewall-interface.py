@@ -32,13 +32,13 @@ from vyos import airbag
 airbag.enable()
 
 NFT_CHAINS = {
-    'in': 'VYOS_FW_IN',
-    'out': 'VYOS_FW_OUT',
+    'in': 'VYOS_FW_FORWARD',
+    'out': 'VYOS_FW_FORWARD',
     'local': 'VYOS_FW_LOCAL'
 }
 NFT6_CHAINS = {
-    'in': 'VYOS_FW6_IN',
-    'out': 'VYOS_FW6_OUT',
+    'in': 'VYOS_FW6_FORWARD',
+    'out': 'VYOS_FW6_FORWARD',
     'local': 'VYOS_FW6_LOCAL'
 }
 
@@ -91,11 +91,11 @@ def verify(if_firewall):
 def generate(if_firewall):
     return None
 
-def cleanup_rule(table, chain, ifname, new_name=None):
+def cleanup_rule(table, chain, prefix, ifname, new_name=None):
     results = cmd(f'nft -a list chain {table} {chain}').split("\n")
     retval = None
     for line in results:
-        if f'ifname "{ifname}"' in line:
+        if f'{prefix}ifname "{ifname}"' in line:
             if new_name and f'jump {new_name}' in line:
                 # new_name is used to clear rules for any previously referenced chains
                 # returns true when rule exists and doesn't need to be created
@@ -108,6 +108,7 @@ def cleanup_rule(table, chain, ifname, new_name=None):
     return retval
 
 def state_policy_handle(table, chain):
+    # Find any state-policy rule to ensure interface rules are only inserted afterwards
     results = cmd(f'nft -a list chain {table} {chain}').split("\n")
     for line in results:
         if 'jump VYOS_STATE_POLICY' in line:
@@ -126,11 +127,12 @@ def apply(if_firewall):
 
         name = dict_search_args(if_firewall, direction, 'name')
         if name:
-            rule_exists = cleanup_rule('ip filter', chain, ifname, name)
-            rule_action = 'insert'
-            rule_prefix = ''
+            rule_exists = cleanup_rule('ip filter', chain, if_prefix, ifname, name)
 
             if not rule_exists:
+                rule_action = 'insert'
+                rule_prefix = ''
+
                 handle = state_policy_handle('ip filter', chain)
                 if handle:
                     rule_action = 'add'
@@ -138,15 +140,16 @@ def apply(if_firewall):
 
                 run(f'nft {rule_action} rule ip filter {chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {name}')
         else:
-            cleanup_rule('ip filter', chain, ifname)
+            cleanup_rule('ip filter', chain, if_prefix, ifname)
 
         ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
         if ipv6_name:
-            rule_exists = cleanup_rule('ip6 filter', ipv6_chain, ifname, ipv6_name)
-            rule_action = 'insert'
-            rule_prefix = ''
+            rule_exists = cleanup_rule('ip6 filter', ipv6_chain, if_prefix, ifname, ipv6_name)
 
             if not rule_exists:
+                rule_action = 'insert'
+                rule_prefix = ''
+
                 handle = state_policy_handle('ip filter', chain)
                 if handle:
                     rule_action = 'add'
@@ -154,7 +157,7 @@ def apply(if_firewall):
 
                 run(f'nft {rule_action} rule ip6 filter {ipv6_chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {ipv6_name}')
         else:
-            cleanup_rule('ip6 filter', ipv6_chain, ifname)
+            cleanup_rule('ip6 filter', ipv6_chain, if_prefix, ifname)
 
     return None
 

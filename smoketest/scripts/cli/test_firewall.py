@@ -142,8 +142,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         chains = {
-            'ip filter': ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL'],
-            'ip6 filter': ['VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
+            'ip filter': ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL'],
+            'ip6 filter': ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
         }
 
         for table in ['ip filter', 'ip6 filter']:

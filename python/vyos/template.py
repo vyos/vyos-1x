@@ -526,11 +526,7 @@ def nft_state_policy(conf, state, ipv6=False):
     out.append('counter')
 
     if 'action' in conf:
-        if conf['action'] == 'accept':
-            jump_target = 'VYOS_POST_FW6' if ipv6 else 'VYOS_POST_FW'
-            out.append(f'jump {jump_target}')
-        else:
-            out.append(conf['action'])
+        out.append(conf['action'])
 
     return " ".join(out)
 

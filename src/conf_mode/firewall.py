@@ -53,14 +53,12 @@ preserve_chains = [
     'INPUT',
     'FORWARD',
     'OUTPUT',
-    'VYOS_FW_IN',
-    'VYOS_FW_OUT',
+    'VYOS_FW_FORWARD',
     'VYOS_FW_LOCAL',
     'VYOS_FW_OUTPUT',
     'VYOS_POST_FW',
     'VYOS_FRAG_MARK',
-    'VYOS_FW6_IN',
-    'VYOS_FW6_OUT',
+    'VYOS_FW6_FORWARD',
     'VYOS_FW6_LOCAL',
     'VYOS_FW6_OUTPUT',
     'VYOS_POST_FW6',
@@ -228,7 +226,7 @@ def cleanup_commands(firewall):
                         commands.append(f'delete chain {table} {chain}')
             elif 'rule' in item:
                 rule = item['rule']
-                if rule['chain'] in ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL', 'VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
+                if rule['chain'] in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL', 'VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
                     if 'expr' in rule and any([True for expr in rule['expr'] if dict_search_args(expr, 'jump', 'target') == state_chain]):
                         if 'state_policy' not in firewall:
                             chain = rule['chain']
@@ -303,7 +301,7 @@ def post_apply_trap(firewall):
 
 def state_policy_rule_exists():
     # Determine if state policy rules already exist in nft
-    search_str = cmd(f'nft list chain ip filter VYOS_FW_IN')
+    search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
     return 'VYOS_STATE_POLICY' in search_str
 
 def apply(firewall):
@@ -317,10 +315,10 @@ def apply(firewall):
         raise ConfigError('Failed to apply firewall')
 
     if 'state_policy' in firewall and not state_policy_rule_exists():
-        for chain in ['VYOS_FW_IN', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']:
+        for chain in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']:
             cmd(f'nft insert rule ip filter {chain} jump VYOS_STATE_POLICY')
 
-        for chain in ['VYOS_FW6_IN', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
+        for chain in ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
             cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)

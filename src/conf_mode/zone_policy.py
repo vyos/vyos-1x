@@ -152,7 +152,9 @@ def cleanup_commands():
                     continue
                 for expr in item['rule']['expr']:
                     target = dict_search_args(expr, 'jump', 'target')
-                    if target and target.startswith("VZONE"):
+                    if not target:
+                        continue
+                    if target.startswith("VZONE") or target.startswith("VYOS_STATE_POLICY"):
                         commands.append(f'delete rule {table} {chain} handle {handle}')
         for item in obj['nftables']:
             if 'chain' in item:
@@ -180,7 +182,7 @@ def generate(zone_policy):
 
 def apply(zone_policy):
     install_result = run(f'nft -f {nftables_conf}')
-    if install_result == 1:
+    if install_result != 0:
         raise ConfigError('Failed to apply zone-policy')
 
     return None
