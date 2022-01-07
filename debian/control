@@ -94,6 +94,7 @@ Depends:
   ndisc6,
   ndppd,
   netplug,
+  nfct,
   nftables (>= 0.9.3),
   nginx-light,
   ntp,
