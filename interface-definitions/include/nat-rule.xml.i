@@ -4,7 +4,7 @@
     <help>Rule number for NAT</help>
     <valueHelp>
       <format>u32:1-999999</format>
-      <description>Number for this NAT rule</description>
+      <description>Number of NAT rule</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-999999"/>
@@ -12,11 +12,7 @@
     <constraintErrorMessage>NAT rule number must be between 1 and 999999</constraintErrorMessage>
   </properties>
   <children>
-    <leafNode name="description">
-      <properties>
-        <help>Rule description</help>
-      </properties>
-    </leafNode>
+    #include <include/generic-description.xml.i>
     <node name="destination">
       <properties>
         <help>NAT destination parameters</help>
