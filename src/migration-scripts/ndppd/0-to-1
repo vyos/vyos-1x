@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2020 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import argv, exit
+from vyos.configtree import ConfigTree
+
+if len(argv) < 1:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+def merge_ndp(config, base):
+    merge_base = ['service', 'ndp-proxy', 'interface']
+
+    interface = ""
+    if config.exists(base + ['outbound-interface']):
+        interface = config.return_value(base + ['outbound-interface'])
+    else:
+        return None
+
+    if config.exists(base + ['source', 'prefix']):
+        prefix = config.return_value(base + ['source', 'prefix'])
+        config.set(merge_base + [interface, 'prefix', prefix, 'mode'], value='static')
+        if config.exists(base + ['disable']):
+            config.set(merge_base + [interface, 'prefix', prefix], value='disable')
+
+if not config.exists(['nat66', 'source']):
+    # Nothing to do
+    exit(0)
+
+base = ['nat66', 'source', 'rule']
+for rule in config.list_nodes(base):
+    base_rule = base + [rule]
+    # Merge 'nat66 source' to 'service ndp-proxy'
+    merge_ndp(config, base_rule)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)

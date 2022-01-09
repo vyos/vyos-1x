@@ -36,7 +36,6 @@ airbag.enable()
 k_mod = ['nft_nat', 'nft_chain_nat']
 
 nftables_nat66_config = '/tmp/vyos-nat66-rules.nft'
-ndppd_config = '/run/ndppd/ndppd.conf'
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -146,19 +145,12 @@ def verify(nat):
 
 def generate(nat):
     render(nftables_nat66_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
-    render(ndppd_config, 'ndppd/ndppd.conf.tmpl', nat, permission=0o755)
     return None
 
 def apply(nat):
     if not nat:
         return None
     cmd(f'{nftables_nat66_config}')
-    if 'deleted' in nat or not dict_search('source.rule', nat):
-        cmd('systemctl stop ndppd')
-        if os.path.isfile(ndppd_config):
-            os.unlink(ndppd_config)
-    else:
-        cmd('systemctl restart ndppd')
     if os.path.isfile(nftables_nat66_config):
         os.unlink(nftables_nat66_config)
 

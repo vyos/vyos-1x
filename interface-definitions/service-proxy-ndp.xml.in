@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<!-- NDP Proxy configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="ndp-proxy" owner="${vyos_conf_scripts_dir}/ndp_proxy.py">
+        <properties>
+          <help>NDP Proxy Daemon (NDPPD)</help>
+          <priority>220</priority>
+        </properties>
+        <children>
+          <leafNode name="disable">
+            <properties>
+              <help>Disable all NDP proxy rules</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface for NDP proxy listener [REQUIRED]</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="disable">
+                <properties>
+                  <help>Disable NDP proxy rules</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="router">
+                <properties>
+                  <help>Set the router flag for Neighbor Advertisement messages (default: yes)</help>
+                  <completionHelp>
+                    <list>yes no</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>yes</format>
+                    <description>Set router flag</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no</format>
+                    <description>Do not set router flag</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>yes</defaultValue>
+              </leafNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Wait time for a Neighbor Advertisement message before invalidating the entry</help>
+                  <valueHelp>
+                      <format>&lt;timeout&gt;</format>
+                      <description>Timeout in milliseconds (default: 500)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>500</defaultValue>
+              </leafNode>
+              <leafNode name="ttl">
+                <properties>
+                  <help>TTL for valid or invalid entries in the cache</help>
+                  <valueHelp>
+                      <format>&lt;ttl&gt;</format>
+                      <description>TTL in milliseconds (default: 30000)</description>
+                  </valueHelp>
+                </properties>
+                <defaultValue>30000</defaultValue>
+              </leafNode>
+              <tagNode name="prefix">
+                <properties>
+                  <help>Prefix target addresses are matched against</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 network prefix</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable NDP proxy for prefix</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Specify the running mode of the rule (default: static)</help>
+                      <completionHelp>
+                        <list>static auto iface</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>static</format>
+                        <description>Immediately answer any Neighbor Solicitation Messages</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>auto</format>
+                        <description>Check for a matching route in /proc/net/ipv6_route</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>iface</format>
+                        <description>Forward the Neighbor Solicitation message through specified interface, only respond if a matching Neighbor Advertisement message is received</description>
+                      </valueHelp>
+                    </properties>
+                    <defaultValue>static</defaultValue>
+                  </leafNode>
+                  <leafNode name="iface">
+                    <properties>
+                      <help>Interface to forward Neighbor Solicitation message through. Required for "iface" mode</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
