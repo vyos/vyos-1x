@@ -158,6 +158,9 @@ shared-network {{ network | replace('_','-') }} {
 {%         if subnet_config.bootfile_server is defined and subnet_config.bootfile_server is not none %}
         next-server {{ subnet_config.bootfile_server }};
 {%         endif %}
+{%         if subnet_config.bootfile_size is defined and subnet_config.bootfile_size is not none %}
+        option boot-size {{ subnet_config.bootfile_size }};
+{%         endif %}
 {%         if subnet_config.time_offset is defined and subnet_config.time_offset is not none %}
         option time-offset {{ subnet_config.time_offset }};
 {%         endif %}

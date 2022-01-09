@@ -142,6 +142,11 @@
                 boot file is to be loaded</help>
                     </properties>
                   </leafNode>
+                  <leafNode name="bootfile-size">
+                    <properties>
+                      <help>Bootstrap file size in 512 byte blocks</help>
+                    </properties>
+                  </leafNode>
                   <leafNode name="client-prefix-length">
                     <properties>
                       <help>Specifies the clients subnet mask as per RFC 950. If unset, subnet declaration is used.</help>
