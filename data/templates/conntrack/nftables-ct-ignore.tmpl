@@ -1,0 +1,40 @@
+#!/usr/sbin/nft -f
+
+# we first flush the chains content and then render the new statements from CLI
+# if applicable
+{% set nft_ct_ignore_name = 'VYOS_CT_IGNORE' %}
+flush chain raw {{ nft_ct_ignore_name }}
+table raw {
+    chain {{ nft_ct_ignore_name }} {
+{% if ignore is defined and ignore.rule is defined and ignore.rule is not none %}
+{%   for rule, rule_config in ignore.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is defined and rule_config.description is not none }}
+{%     set nft_command = '' %}
+{%     if rule_config.inbound_interface is defined and rule_config.inbound_interface is not none %}
+{%       set nft_command = nft_command ~ ' iifname ' ~ rule_config.inbound_interface %}
+{%     endif %}
+{%     if rule_config.protocol is defined and rule_config.protocol is not none %}
+{%       set nft_command = nft_command ~ ' ip protocol ' ~ rule_config.protocol %}
+{%     endif %}
+{%     if rule_config.destination is defined and rule_config.destination is not none %}
+{%       if rule_config.destination.address is defined and rule_config.destination.address is not none %}
+{%         set nft_command = nft_command ~ ' ip daddr ' ~ rule_config.destination.address %}
+{%       endif %}
+{%       if rule_config.destination.port is defined and rule_config.destination.port is not none %}
+{%         set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' dport { ' ~ rule_config.destination.port ~ ' }' %}
+{%       endif %}
+{%     endif %}
+{%     if rule_config.source is defined and rule_config.source is not none %}
+{%       if rule_config.source.address is defined and rule_config.source.address is not none %}
+{%         set nft_command = nft_command ~ ' ip saddr ' ~ rule_config.source.address %}
+{%       endif %}
+{%       if rule_config.source.port is defined and rule_config.source.port is not none %}
+{%         set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' sport { ' ~ rule_config.source.port ~ ' }' %}
+{%       endif %}
+{%     endif %}
+       {{ nft_command }} counter return comment ignore-{{ rule }}
+{%   endfor %}
+{% endif %}
+        return
+    }
+}

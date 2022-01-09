@@ -35,6 +35,7 @@ airbag.enable()
 
 conntrack_config = r'/etc/modprobe.d/vyatta_nf_conntrack.conf'
 sysctl_file = r'/run/sysctl/10-vyos-conntrack.conf'
+nftables_ct_ignore_file = r'/run/nftables-ct-ignore.conf'
 
 # Every ALG (Application Layer Gateway) consists of either a Kernel Object
 # also called a Kernel Module/Driver or some rules present in iptables
@@ -86,11 +87,19 @@ def get_config(config=None):
     return conntrack
 
 def verify(conntrack):
+    if dict_search('ignore.rule', conntrack) != None:
+        for rule, rule_config in conntrack['ignore']['rule'].items():
+            if dict_search('destination.port', rule_config) or \
+               dict_search('source.port', rule_config):
+               if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
+                   raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
+
     return None
 
 def generate(conntrack):
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.tmpl', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.tmpl', conntrack)
+    render(nftables_ct_ignore_file, 'conntrack/nftables-ct-ignore.tmpl', conntrack)
 
     return None
 
@@ -126,6 +135,9 @@ def apply(conntrack):
                 for rule in module_config['nftables']:
                     if not find_nftables_ct_rule(rule):
                         cmd(f'nft insert rule ip raw VYOS_CT_HELPER {rule}')
+
+    # Load new nftables ruleset
+    cmd(f'nft -f {nftables_ct_ignore_file}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values
