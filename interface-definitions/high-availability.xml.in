@@ -177,8 +177,37 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="track">
+                <properties>
+                  <help>Track settings</help>
+                </properties>
+                <children>
+                  <leafNode name="exclude-vrrp-interface">
+                    <properties>
+                      <valueless/>
+                      <help>Disable track state of main interface</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Interface name state check</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="interface-name"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/vrrp-transition-script.xml.i>
-              <leafNode name="address">
+              <tagNode name="address">
                 <properties>
                   <help>Virtual IP address</help>
                   <valueHelp>
@@ -193,9 +222,11 @@
                     <validator name="ipv4-host"/>
                     <validator name="ipv6-host"/>
                   </constraint>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-interface-broadcast.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="excluded-address">
                 <properties>
                   <help>Virtual address (If you need additional IPv4 and IPv6 in same group)</help>

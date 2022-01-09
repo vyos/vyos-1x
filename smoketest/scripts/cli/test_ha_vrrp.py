@@ -166,5 +166,35 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         for group in groups:
             self.assertIn(f'{group}', config)
 
+    def test_04_exclude_vrrp_interface(self):
+        group = 'VyOS-WAN'
+        none_vrrp_interface = 'eth2'
+        vlan_id = '24'
+        vip = '100.64.24.1/24'
+        vip_dev = '192.0.2.2/24'
+        vrid = '150'
+        group_base = base_path + ['vrrp', 'group', group]
+
+        self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', '100.64.24.11/24'])
+        self.cli_set(group_base + ['interface', f'{vrrp_interface}.{vlan_id}'])
+        self.cli_set(group_base + ['address', vip])
+        self.cli_set(group_base + ['address', vip_dev, 'interface', none_vrrp_interface])
+        self.cli_set(group_base + ['track', 'exclude-vrrp-interface'])
+        self.cli_set(group_base + ['track', 'interface', none_vrrp_interface])
+        self.cli_set(group_base + ['vrid', vrid])
+
+        # commit changes
+        self.cli_commit()
+
+        config = getConfig(f'vrrp_instance {group}')
+
+        self.assertIn(f'interface {vrrp_interface}.{vlan_id}', config)
+        self.assertIn(f'virtual_router_id {vrid}', config)
+        self.assertIn(f'dont_track_primary', config)
+        self.assertIn(f'    {vip}', config)
+        self.assertIn(f'    {vip_dev} dev {none_vrrp_interface}', config)
+        self.assertIn(f'track_interface', config)
+        self.assertIn(f'    {none_vrrp_interface}', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
