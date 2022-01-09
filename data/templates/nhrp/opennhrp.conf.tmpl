@@ -33,7 +33,7 @@ interface {{ name }} #{{ type }} {{ profile_name }}
 {%     endfor %}
 {%     if tunnel_conf.shortcut_target is defined and tunnel_conf.shortcut_target is not none %}
 {%       for target, shortcut_conf in tunnel_conf.shortcut_target.items() %}
-    shortcut-target {{ target }} {{ shortcut_conf.holding_time if shortcut_conf.holding_time is defined else '' }}
+    shortcut-target {{ target }}{{ ' holding-time ' + shortcut_conf.holding_time if shortcut_conf.holding_time is defined }}
 {%       endfor %}
 {%     endif %}
 
