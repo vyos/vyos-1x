@@ -103,7 +103,7 @@ vrrp_sync_group {{ name }} {
 {%         endif %}
 {%       endfor %}
 {%     endif %}
-{%     if vrrp.conntrack_sync_group is defined and vrrp.conntrack_sync_group == name %}
+{%     if conntrack_sync_group is defined and conntrack_sync_group == name %}
 {%     set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
     notify_master "{{ vyos_helper }} master {{ name }}"
     notify_backup "{{ vyos_helper }} backup {{ name }}"
