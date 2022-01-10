@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import ipaddress
 import json
 import re
 import tabulate
@@ -266,13 +267,15 @@ def show_firewall_group(name=None):
                 continue
 
             references = find_references(group_type, group_name)
-            row = [group_name, group_type, ', '.join(references)]
+            row = [group_name, group_type, '\n'.join(references) or 'N/A']
             if 'address' in group_conf:
-                row.append(", ".join(group_conf['address']))
+                row.append("\n".join(sorted(group_conf['address'], key=ipaddress.ip_address)))
             elif 'network' in group_conf:
-                row.append(", ".join(group_conf['network']))
+                row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
             elif 'port' in group_conf:
-                row.append(", ".join(group_conf['port']))
+                row.append("\n".join(sorted(group_conf['port'])))
+            else:
+                row.append('N/A')
             rows.append(row)
 
     if rows:
@@ -302,7 +305,7 @@ def show_summary():
         for name, name_conf in firewall['ipv6_name'].items():
             description = name_conf.get('description', '')
             interfaces = ", ".join(name_conf['interface'])
-            v6_out.append([name, description, interfaces])
+            v6_out.append([name, description, interfaces or 'N/A'])
 
     if v6_out:
         print('\nIPv6 name:\n')
