@@ -1,3 +1,10 @@
 #!/bin/sh
 
 ipaddrcheck --is-ipv4-single $1
+
+if [ $? -gt 0 ]; then
+    echo "Error: $1 is not a valid IPv4 address"
+    exit 1
+fi
+
+exit 0

@@ -38,4 +38,5 @@ if __name__ == '__main__':
     if re.match(pattern, input):
         exit(0)
 
+    print(f'Error: {input} is not a valid IP protocol')
     exit(1)
