@@ -73,15 +73,15 @@ from vyos.util import cmd
 import logging
 from logging.handlers import SysLogHandler
 import os
-LOG = logging.getLogger(__name__)
+import sys
 
-DEBUG = os.path.exists('/tmp/vyos.frr.debug')
-if DEBUG:
-    LOG.setLevel(logging.DEBUG)
-    ch = SysLogHandler(address='/dev/log')
-    ch2 = logging.StreamHandler()
-    LOG.addHandler(ch)
-    LOG.addHandler(ch2)
+LOG = logging.getLogger(__name__)
+DEBUG = False
+
+ch = SysLogHandler(address='/dev/log')
+ch2 = logging.StreamHandler(stream=sys.stdout)
+LOG.addHandler(ch)
+LOG.addHandler(ch2)
 
 _frr_daemons = ['zebra', 'bgpd', 'fabricd', 'isisd', 'ospf6d', 'ospfd', 'pbrd',
                 'pimd', 'ripd', 'ripngd', 'sharpd', 'staticd', 'vrrpd', 'ldpd',
@@ -121,6 +121,12 @@ class ConfigSectionNotFound(FrrError):
     """
     pass
 
+def init_debugging():
+    global DEBUG
+
+    DEBUG = os.path.exists('/tmp/vyos.frr.debug')
+    if DEBUG:
+        LOG.setLevel(logging.DEBUG)
 
 def get_configuration(daemon=None, marked=False):
     """ Get current running FRR configuration
@@ -424,6 +430,8 @@ class FRRConfig:
 
         Using this overwrites the current loaded config objects and replaces the original loaded config
         '''
+        init_debugging()
+
         self.imported_config = get_configuration(daemon=daemon)
         if daemon:
             LOG.debug(f'load_configuration: Configuration loaded from FRR daemon {daemon}')
