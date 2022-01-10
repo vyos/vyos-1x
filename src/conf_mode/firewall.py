@@ -22,6 +22,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.template import render
 from vyos.util import cmd
@@ -32,6 +33,8 @@ from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
 nftables_defines_conf = '/run/nftables_defines.conf'
@@ -111,6 +114,7 @@ def get_config(config=None):
     default_values = defaults(base)
     firewall = dict_merge(default_values, firewall)
 
+    firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     firewall['interfaces'] = get_firewall_interfaces(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
@@ -119,6 +123,7 @@ def get_config(config=None):
         firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
                                         key_mangling=('-', '_'), get_first_key=True,
                                         no_tag_node_value_mangle=True)
+
     return firewall
 
 def verify_rule(firewall, rule_conf, ipv6):
@@ -301,6 +306,12 @@ def state_policy_rule_exists():
     search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
     return 'VYOS_STATE_POLICY' in search_str
 
+def resync_policy_route():
+    # Update policy route as firewall groups were updated
+    tmp = run(policy_route_conf_script)
+    if tmp > 0:
+        print('Warning: Failed to re-apply policy route configuration')
+
 def apply(firewall):
     if 'first_install' in firewall:
         run('nfct helper add rpc inet tcp')
@@ -319,6 +330,9 @@ def apply(firewall):
             cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)
+
+    if firewall['policy_resync']:
+        resync_policy_route()
 
     post_apply_trap(firewall)
 
