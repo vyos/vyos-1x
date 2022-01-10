@@ -105,6 +105,13 @@ def generate(conntrack):
     render(sysctl_file, 'conntrack/sysctl.conf.tmpl', conntrack)
     render(nftables_ct_file, 'conntrack/nftables-ct.tmpl', conntrack)
 
+    # dry-run newly generated configuration
+    tmp = run(f'nft -c -f {nftables_ct_file}')
+    if tmp > 0:
+        if os.path.exists(nftables_ct_file):
+            os.unlink(nftables_ct_file)
+        raise ConfigError('Configuration file errors encountered!')
+
     return None
 
 def find_nftables_ct_rule(rule):
