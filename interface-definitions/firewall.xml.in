@@ -182,6 +182,9 @@
                     <description>Numbered port range (e.g. 1001-1050)</description>
                   </valueHelp>
                   <multi/>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>

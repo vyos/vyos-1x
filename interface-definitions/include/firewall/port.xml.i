@@ -16,8 +16,11 @@
     </valueHelp>
     <valueHelp>
       <format> </format>
-      <description>\n\n  Multiple destination ports can be specified as a comma-separated list.\n  The whole list can also be negated using '!'.\n  For example: '!22,telnet,http,123,1001-1005'</description>
+      <description>\n\n  Multiple destination ports can be specified as a comma-separated list.\n  For example: 'telnet,http,123,1001-1005'</description>
     </valueHelp>
+    <constraint>
+      <validator name="port-multi"/>
+    </constraint>
   </properties>
 </leafNode>
 <!-- include end -->
