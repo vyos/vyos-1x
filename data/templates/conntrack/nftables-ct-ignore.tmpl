@@ -32,7 +32,7 @@ table raw {
 {%         set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' sport { ' ~ rule_config.source.port ~ ' }' %}
 {%       endif %}
 {%     endif %}
-       {{ nft_command }} counter return comment ignore-{{ rule }}
+       {{ nft_command }} counter notrack comment ignore-{{ rule }}
 {%   endfor %}
 {% endif %}
         return
