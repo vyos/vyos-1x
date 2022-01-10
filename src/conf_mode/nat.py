@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import is_ip_network
 from vyos.util import cmd
+from vyos.util import run
 from vyos.util import check_kmod
 from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
@@ -179,12 +180,19 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(nftables_nat_config, 'firewall/nftables-nat.tmpl', nat,
-           permission=0o755)
+    render(nftables_nat_config, 'firewall/nftables-nat.tmpl', nat)
+
+    # dry-run newly generated configuration
+    tmp = run(f'nft -c -f {nftables_nat_config}')
+    if tmp > 0:
+        if os.path.exists(nftables_ct_file):
+            os.unlink(nftables_ct_file)
+        raise ConfigError('Configuration file errors encountered!')
+
     return None
 
 def apply(nat):
-    cmd(f'{nftables_nat_config}')
+    cmd(f'nft -f {nftables_nat_config}')
     if os.path.isfile(nftables_nat_config):
         os.unlink(nftables_nat_config)
 
