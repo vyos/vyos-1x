@@ -153,16 +153,15 @@ def verify_rule(firewall, rule_conf, ipv6):
                 for group in valid_groups:
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
-
                         fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
+                        error_group = fw_group.replace("_", "-")
+                        group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
 
-                        if not dict_search_args(firewall, 'group', fw_group):
-                            error_group = fw_group.replace("_", "-")
-                            raise ConfigError(f'Group defined in rule but {error_group} is not configured')
-
-                        if group_name not in firewall['group'][fw_group]:
-                            error_group = group.replace("_", "-")
+                        if group_obj is None:
                             raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+
+                        if not group_obj:
+                            print(f'WARNING: {error_group} "{group_name}" has no members')
 
             if 'port' in side_conf or dict_search_args(side_conf, 'group', 'port_group'):
                 if 'protocol' not in rule_conf:
