@@ -104,9 +104,6 @@ def get_config(config=None):
         conf = Config()
     base = ['firewall']
 
-    if not conf.exists(base):
-        return {}
-
     firewall = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
@@ -169,10 +166,6 @@ def verify_rule(firewall, rule_conf, ipv6):
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
 def verify(firewall):
-    # bail out early - looks like removal from running config
-    if not firewall:
-        return None
-
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         if not firewall['trap_targets']:
             raise ConfigError(f'Firewall config-trap enabled but "service snmp trap-target" is not defined')

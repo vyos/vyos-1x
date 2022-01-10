@@ -209,7 +209,7 @@ def parse_policy_set(set_conf, def_suffix):
         table = set_conf['table']
         if table == 'main':
             table = '254'
-        mark = 0x7FFFFFFF - int(set_conf['table'])
+        mark = 0x7FFFFFFF - int(table)
         out.append(f'meta mark set {mark}')
     if 'tcp_mss' in set_conf:
         mss = set_conf['tcp_mss']
