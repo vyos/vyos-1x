@@ -34,6 +34,7 @@ from vyos import airbag
 airbag.enable()
 
 nftables_conf = '/run/nftables.conf'
+nftables_defines_conf = '/run/nftables_defines.conf'
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
@@ -236,6 +237,7 @@ def generate(firewall):
         firewall['cleanup_commands'] = cleanup_commands(firewall)
 
     render(nftables_conf, 'firewall/nftables.tmpl', firewall)
+    render(nftables_defines_conf, 'firewall/nftables-defines.tmpl', firewall)
     return None
 
 def apply_sysfs(firewall):

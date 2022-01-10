@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
 
+include "/run/nftables_defines.conf"
+
 table ip mangle {
 {% if first_install is defined %}
     chain VYOS_PBR_PREROUTING {
