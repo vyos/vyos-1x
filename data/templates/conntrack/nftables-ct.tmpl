@@ -1,9 +1,13 @@
 #!/usr/sbin/nft -f
 
-# we first flush the chains content and then render the new statements from CLI
-# if applicable
 {% set nft_ct_ignore_name = 'VYOS_CT_IGNORE' %}
+{% set nft_ct_timeout_name = 'VYOS_CT_TIMEOUT' %}
+
+# we first flush all chains and render the content from scratch - this makes
+# any delta check obsolete
 flush chain raw {{ nft_ct_ignore_name }}
+flush chain raw {{ nft_ct_timeout_name }}
+
 table raw {
     chain {{ nft_ct_ignore_name }} {
 {% if ignore is defined and ignore.rule is defined and ignore.rule is not none %}
@@ -33,6 +37,14 @@ table raw {
 {%       endif %}
 {%     endif %}
        {{ nft_command }} counter notrack comment ignore-{{ rule }}
+{%   endfor %}
+{% endif %}
+        return
+    }
+    chain {{ nft_ct_timeout_name }} {
+{% if timeout is defined and timeout.custom is defined and timeout.custom.rule is defined and timeout.custom.rule is not none %}
+{%   for rule, rule_config in timeout.custom.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is defined and rule_config.description is not none }}
 {%   endfor %}
 {% endif %}
         return

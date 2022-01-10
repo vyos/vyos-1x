@@ -35,7 +35,7 @@ airbag.enable()
 
 conntrack_config = r'/etc/modprobe.d/vyatta_nf_conntrack.conf'
 sysctl_file = r'/run/sysctl/10-vyos-conntrack.conf'
-nftables_ct_ignore_file = r'/run/nftables-ct-ignore.conf'
+nftables_ct_file = r'/run/nftables-ct.conf'
 
 # Every ALG (Application Layer Gateway) consists of either a Kernel Object
 # also called a Kernel Module/Driver or some rules present in iptables
@@ -82,6 +82,10 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if 'timeout' in default_values and 'custom' in default_values['timeout']:
+        del default_values['timeout']['custom']
     conntrack = dict_merge(default_values, conntrack)
 
     return conntrack
@@ -99,7 +103,7 @@ def verify(conntrack):
 def generate(conntrack):
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.tmpl', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.tmpl', conntrack)
-    render(nftables_ct_ignore_file, 'conntrack/nftables-ct-ignore.tmpl', conntrack)
+    render(nftables_ct_file, 'conntrack/nftables-ct.tmpl', conntrack)
 
     return None
 
@@ -137,7 +141,7 @@ def apply(conntrack):
                         cmd(f'nft insert rule ip raw VYOS_CT_HELPER {rule}')
 
     # Load new nftables ruleset
-    cmd(f'nft -f {nftables_ct_ignore_file}')
+    cmd(f'nft -f {nftables_ct_file}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values
