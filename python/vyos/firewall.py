@@ -45,13 +45,19 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'state' in rule_conf and rule_conf['state']:
         states = ",".join([s for s, v in rule_conf['state'].items() if v == 'enable'])
-        output.append(f'ct state {{{states}}}')
+
+        if states:
+            output.append(f'ct state {{{states}}}')
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
         proto = rule_conf['protocol']
+        operator = ''
+        if proto[0] == '!':
+            operator = '!='
+            proto = proto[1:]
         if proto == 'tcp_udp':
             proto = '{tcp, udp}'
-        output.append('meta l4proto ' + proto)
+        output.append(f'meta l4proto {operator} {proto}')
 
     for side in ['destination', 'source']:
         if side in rule_conf:
@@ -59,7 +65,10 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
             side_conf = rule_conf[side]
 
             if 'address' in side_conf:
-                output.append(f'{ip_name} {prefix}addr {side_conf["address"]}')
+                suffix = side_conf['address']
+                if suffix[0] == '!':
+                    suffix = f'!= {suffix[1:]}'
+                output.append(f'{ip_name} {prefix}addr {suffix}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf["mac_address"]
@@ -69,15 +78,27 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
             if 'port' in side_conf:
                 proto = rule_conf['protocol']
-                port = side_conf["port"]
+                port = side_conf['port'].split(',')
 
-                if isinstance(port, list):
-                    port = ",".join(port)
+                ports = []
+                negated_ports = []
+
+                for p in port:
+                    if p[0] == '!':
+                        negated_ports.append(p[1:])
+                    else:
+                        ports.append(p)
 
                 if proto == 'tcp_udp':
                     proto = 'th'
 
-                output.append(f'{proto} {prefix}port {{{port}}}')
+                if ports:
+                    ports_str = ','.join(ports)
+                    output.append(f'{proto} {prefix}port {{{ports_str}}}')
+
+                if negated_ports:
+                    negated_ports_str = ','.join(negated_ports)
+                    output.append(f'{proto} {prefix}port != {{{negated_ports_str}}}')
 
             if 'group' in side_conf:
                 group = side_conf['group']
