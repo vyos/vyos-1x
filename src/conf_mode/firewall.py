@@ -22,6 +22,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.template import render
 from vyos.util import cmd
@@ -33,7 +34,10 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
+
 nftables_conf = '/run/nftables.conf'
+nftables_defines_conf = '/run/nftables_defines.conf'
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
@@ -110,6 +114,7 @@ def get_config(config=None):
     default_values = defaults(base)
     firewall = dict_merge(default_values, firewall)
 
+    firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     firewall['interfaces'] = get_firewall_interfaces(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
@@ -118,6 +123,7 @@ def get_config(config=None):
         firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
                                         key_mangling=('-', '_'), get_first_key=True,
                                         no_tag_node_value_mangle=True)
+
     return firewall
 
 def verify_rule(firewall, rule_conf, ipv6):
@@ -147,16 +153,15 @@ def verify_rule(firewall, rule_conf, ipv6):
                 for group in valid_groups:
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
-
                         fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
+                        error_group = fw_group.replace("_", "-")
+                        group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
 
-                        if not dict_search_args(firewall, 'group', fw_group):
-                            error_group = fw_group.replace("_", "-")
-                            raise ConfigError(f'Group defined in rule but {error_group} is not configured')
-
-                        if group_name not in firewall['group'][fw_group]:
-                            error_group = group.replace("_", "-")
+                        if group_obj is None:
                             raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+
+                        if not group_obj:
+                            print(f'WARNING: {error_group} "{group_name}" has no members')
 
             if 'port' in side_conf or dict_search_args(side_conf, 'group', 'port_group'):
                 if 'protocol' not in rule_conf:
@@ -236,6 +241,7 @@ def generate(firewall):
         firewall['cleanup_commands'] = cleanup_commands(firewall)
 
     render(nftables_conf, 'firewall/nftables.tmpl', firewall)
+    render(nftables_defines_conf, 'firewall/nftables-defines.tmpl', firewall)
     return None
 
 def apply_sysfs(firewall):
@@ -299,6 +305,12 @@ def state_policy_rule_exists():
     search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
     return 'VYOS_STATE_POLICY' in search_str
 
+def resync_policy_route():
+    # Update policy route as firewall groups were updated
+    tmp = run(policy_route_conf_script)
+    if tmp > 0:
+        print('Warning: Failed to re-apply policy route configuration')
+
 def apply(firewall):
     if 'first_install' in firewall:
         run('nfct helper add rpc inet tcp')
@@ -317,6 +329,9 @@ def apply(firewall):
             cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)
+
+    if firewall['policy_resync']:
+        resync_policy_route()
 
     post_apply_trap(firewall)
 

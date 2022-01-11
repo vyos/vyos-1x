@@ -109,8 +109,13 @@
                     <format>ipv6</format>
                     <description>IPv6 address to match</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv6range</format>
+                    <description>IPv6 range to match (e.g. 2002::1-2002::ff)</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv6-address"/>
+                    <validator name="ipv6-range"/>
                   </constraint>
                   <multi/>
                 </properties>

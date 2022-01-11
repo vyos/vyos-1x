@@ -13,11 +13,11 @@
         </completionHelp>
       </properties>
     </leafNode>
-    <leafNode name="ipv6-route">
+    <leafNode name="route6">
       <properties>
         <help>IPv6 policy route ruleset for interface</help>
         <completionHelp>
-          <path>policy ipv6-route</path>
+          <path>policy route6</path>
         </completionHelp>
       </properties>
     </leafNode>

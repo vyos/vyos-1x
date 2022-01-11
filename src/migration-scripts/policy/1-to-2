@@ -41,6 +41,24 @@ if not config.exists(base):
 config.rename(base, 'route6')
 config.set_tag(['policy', 'route6'])
 
+if config.exists(['interfaces']):
+    def if_policy_rename(config, path):
+        if config.exists(path + ['policy', 'ipv6-route']):
+            config.rename(path + ['policy', 'ipv6-route'], 'route6')
+
+    for if_type in config.list_nodes(['interfaces']):
+        for ifname in config.list_nodes(['interfaces', if_type]):
+            if_path = ['interfaces', if_type, ifname]
+            if_policy_rename(config, if_path)
+
+        for vif_type in ['vif', 'vif-s']:
+            if config.exists(if_path + [vif_type]):
+                for vifname in config.list_nodes(if_path + [vif_type]):
+                    if_policy_rename(config, if_path + [vif_type, vifname])
+
+                    if config.exists(if_path + [vif_type, vifname, 'vif-c']):
+                        for vifcname in config.list_nodes(if_path + [vif_type, vifname, 'vif-c']):
+                            if_policy_rename(config, if_path + [vif_type, vifname, 'vif-c', vifcname])
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

@@ -1,3 +1,10 @@
 #!/bin/sh
 
 ipaddrcheck --is-any-host $1
+
+if [ $? -gt 0 ]; then
+    echo "Error: $1 is not a valid IP host"
+    exit 1
+fi
+
+exit 0

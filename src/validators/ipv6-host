@@ -1,3 +1,10 @@
 #!/bin/sh
 
 ipaddrcheck --is-ipv6-host $1
+
+if [ $? -gt 0 ]; then
+    echo "Error: $1 is not a valid IPv6 host"
+    exit 1
+fi
+
+exit 0

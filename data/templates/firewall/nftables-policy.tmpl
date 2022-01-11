@@ -1,5 +1,13 @@
 #!/usr/sbin/nft -f
 
+{% if cleanup_commands is defined %}
+{%   for command in cleanup_commands %}
+{{ command }}
+{%   endfor %}
+{% endif %}
+
+include "/run/nftables_defines.conf"
+
 table ip mangle {
 {% if first_install is defined %}
     chain VYOS_PBR_PREROUTING {

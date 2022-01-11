@@ -31,8 +31,9 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         self.cli_delete(['interfaces', 'ethernet', 'eth0'])
+        self.cli_delete(['protocols', 'static'])
         self.cli_delete(['policy', 'route'])
-        self.cli_delete(['policy', 'ipv6-route'])
+        self.cli_delete(['policy', 'route6'])
         self.cli_commit()
 
     def test_pbr_mark(self):
@@ -65,12 +66,18 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'port', '8888'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'table', table_id])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'destination', 'port', '8888'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'set', 'table', table_id])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'policy', 'route', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'policy', 'route6', 'smoketest6'])
 
         self.cli_commit()
 
         mark_hex = "{0:#010x}".format(table_mark_offset - int(table_id))
+
+        # IPv4
 
         nftables_search = [
             ['iifname "eth0"', 'jump VYOS_PBR_smoketest'],
@@ -86,6 +93,25 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
                     matched = True
                     break
             self.assertTrue(matched)
+
+        # IPv6
+
+        nftables6_search = [
+            ['iifname "eth0"', 'jump VYOS_PBR6_smoketest'],
+            ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'meta mark set ' + mark_hex]
+        ]
+
+        nftables6_output = cmd('sudo nft list table ip6 mangle')
+
+        for search in nftables6_search:
+            matched = False
+            for line in nftables6_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(matched)
+
+        # IP rule fwmark -> table
 
         ip_rule_search = [
             ['fwmark ' + hex(table_mark_offset - int(table_id)), 'lookup ' + table_id]
