@@ -65,7 +65,7 @@ def get_config_policy(conf, name=None, ipv6=False, interfaces=True):
                     route_conf['interface'] = []
 
             if 'route6' in policy:
-                for route_name, route_conf in policy['ipv6_route'].items():
+                for route_name, route_conf in policy['route6'].items():
                     route_conf['interface'] = []
 
         get_policy_interfaces(conf, policy, name, ipv6)
