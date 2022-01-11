@@ -88,7 +88,9 @@ verbose=1
 {% for r in radius_server %}
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
 {% endfor %}
-
+{% if radius_dynamic_author.server is defined and radius_dynamic_author.server is not none %}
+dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
+{% endif %}
 {% if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
 {% endif %}

@@ -65,7 +65,7 @@ default_config_data = {
     'radius_source_address': '',
     'radius_shaper_attr': '',
     'radius_shaper_vendor': '',
-    'radius_dynamic_author': '',
+    'radius_dynamic_author': {},
     'wins': [],
     'ip6_column': [],
     'thread_cnt': get_half_cpus()
@@ -206,21 +206,21 @@ def get_config(config=None):
             l2tp['radius_source_address'] = conf.return_value(['source-address'])
 
         # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
-        if conf.exists(['dynamic-author']):
+        if conf.exists(['dae-server']):
             dae = {
-                'port' : '',
                 'server' : '',
+                'port' : '3799',
                 'key' : ''
             }
 
-            if conf.exists(['dynamic-author', 'server']):
-                dae['server'] = conf.return_value(['dynamic-author', 'server'])
+            if conf.exists(['dae-server', 'ip-address']):
+                dae['server'] = conf.return_value(['dae-server', 'ip-address'])
 
-            if conf.exists(['dynamic-author', 'port']):
-                dae['port'] = conf.return_value(['dynamic-author', 'port'])
+            if conf.exists(['dae-server', 'port']):
+                dae['port'] = conf.return_value(['dae-server', 'port'])
 
-            if conf.exists(['dynamic-author', 'key']):
-                dae['key'] = conf.return_value(['dynamic-author', 'key'])
+            if conf.exists(['dae-server', 'secret']):
+                dae['key'] = conf.return_value(['dae-server', 'secret'])
 
             l2tp['radius_dynamic_author'] = dae
 
@@ -329,6 +329,12 @@ def verify(l2tp):
         for radius in l2tp['radius_server']:
             if not radius['key']:
                 raise ConfigError(f"Missing RADIUS secret for server { radius['key'] }")
+
+        if l2tp['radius_dynamic_author']:
+            if not l2tp['radius_dynamic_author']['server']:
+                raise ConfigError("Missing ip-address for dae-server")
+            if not l2tp['radius_dynamic_author']['key']:
+                raise ConfigError("Missing secret for dae-server")
 
     # check for the existence of a client ip pool
     if not (l2tp['client_ip_pool'] or l2tp['client_ip_subnets']):

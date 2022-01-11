@@ -87,6 +87,18 @@
               </node>
             </children>
           </node>
+          <leafNode name="statistics">
+            <properties>
+              <help>Show connection syncing statistics</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-statistics</command>
+          </leafNode>
+          <leafNode name="status">
+            <properties>
+              <help>Show conntrack-sync status</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack_sync.py --show-status</command>
+          </leafNode>
         </children>
       </node>
     </children>

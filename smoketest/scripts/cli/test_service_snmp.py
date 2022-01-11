@@ -133,22 +133,31 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
     def test_snmpv3_md5(self):
         # Check if SNMPv3 can be configured with MD5 authentication
         # and service runs
+        snmpv3_group = 'default_group'
+        snmpv3_view = 'default_view'
+        snmpv3_view_oid = '1'
+        snmpv3_user = 'vyos'
 
         self.cli_set(base_path + ['v3', 'engineid', '000000000000000000000002'])
-        self.cli_set(base_path + ['v3', 'group', 'default', 'mode', 'ro'])
+
+        # create user
+        self.cli_set(base_path + ['v3', 'user', snmpv3_user, 'auth', 'plaintext-password', 'vyos12345678'])
+        self.cli_set(base_path + ['v3', 'user', snmpv3_user, 'auth', 'type', 'md5'])
+        self.cli_set(base_path + ['v3', 'user', snmpv3_user, 'privacy', 'plaintext-password', 'vyos12345678'])
+        self.cli_set(base_path + ['v3', 'user', snmpv3_user, 'privacy', 'type', 'des'])
+
+        # check validate() - user requires a group to be created
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['v3', 'user', 'vyos', 'group', snmpv3_group])
+
+        self.cli_set(base_path + ['v3', 'group', snmpv3_group, 'mode', 'ro'])
         # check validate() - a view must be created before this can be comitted
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
 
-        self.cli_set(base_path + ['v3', 'view', 'default', 'oid', '1'])
-        self.cli_set(base_path + ['v3', 'group', 'default', 'view', 'default'])
-
-        # create user
-        self.cli_set(base_path + ['v3', 'user', 'vyos', 'auth', 'plaintext-password', 'vyos12345678'])
-        self.cli_set(base_path + ['v3', 'user', 'vyos', 'auth', 'type', 'md5'])
-        self.cli_set(base_path + ['v3', 'user', 'vyos', 'privacy', 'plaintext-password', 'vyos12345678'])
-        self.cli_set(base_path + ['v3', 'user', 'vyos', 'privacy', 'type', 'des'])
-        self.cli_set(base_path + ['v3', 'user', 'vyos', 'group', 'default'])
+        self.cli_set(base_path + ['v3', 'view', snmpv3_view, 'oid', snmpv3_view_oid])
+        self.cli_set(base_path + ['v3', 'group', snmpv3_group, 'view', snmpv3_view])
 
         self.cli_commit()
 
@@ -160,7 +169,13 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         tmp = self._session.show_config(base_path + ['v3', 'user', 'vyos', 'privacy', 'encrypted-password']).split()[1]
         self.assertEqual(tmp, hashed_password)
 
-        # TODO: read in config file and check values
+        tmp = read_file(SNMPD_CONF)
+        # views
+        self.assertIn(f'view {snmpv3_view} included .{snmpv3_view_oid}', tmp)
+        # group
+        self.assertIn(f'group {snmpv3_group} usm {snmpv3_user}', tmp)
+        # access
+        self.assertIn(f'access {snmpv3_group} "" usm auth exact {snmpv3_view} none none', tmp)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

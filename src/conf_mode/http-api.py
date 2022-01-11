@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2021 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,25 +13,26 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
 import sys
 import os
 import json
-import time
+
+from time import sleep
 from copy import deepcopy
 
 import vyos.defaults
+
 from vyos.config import Config
-from vyos import ConfigError
+from vyos.template import render
 from vyos.util import cmd
 from vyos.util import call
-
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 api_conf_file = '/etc/vyos/http-api.conf'
+systemd_service = '/run/systemd/system/vyos-http-api.service'
 
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 
@@ -49,11 +50,16 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    if not conf.exists('service https api'):
+    base = ['service', 'https', 'api']
+    if not conf.exists(base):
         return None
-    else:
-        conf.set_level('service https api')
 
+    # Do we run inside a VRF context?
+    vrf_path = ['service', 'https', 'vrf']
+    if conf.exists(vrf_path):
+        http_api['vrf'] = conf.return_value(vrf_path)
+
+    conf.set_level('service https api')
     if conf.exists('strict'):
         http_api['strict'] = True
 
@@ -66,6 +72,12 @@ def get_config(config=None):
     if conf.exists('port'):
         port = conf.return_value('port')
         http_api['port'] = port
+
+    if conf.exists('cors'):
+        http_api['cors'] = {}
+        if conf.exists('cors allow-origin'):
+            origins = conf.return_values('cors allow-origin')
+            http_api['cors']['origins'] = origins[:]
 
     if conf.exists('keys'):
         for name in conf.list_nodes('keys id'):
@@ -86,6 +98,8 @@ def verify(http_api):
 
 def generate(http_api):
     if http_api is None:
+        if os.path.exists(systemd_service):
+            os.unlink(systemd_service)
         return None
 
     if not os.path.exists('/etc/vyos'):
@@ -94,16 +108,21 @@ def generate(http_api):
     with open(api_conf_file, 'w') as f:
         json.dump(http_api, f, indent=2)
 
+    render(systemd_service, 'https/vyos-http-api.service.tmpl', http_api)
     return None
 
 def apply(http_api):
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+    service_name = 'vyos-http-api.service'
+
     if http_api is not None:
-        call('systemctl restart vyos-http-api.service')
+        call(f'systemctl restart {service_name}')
     else:
-        call('systemctl stop vyos-http-api.service')
+        call(f'systemctl stop {service_name}')
 
     # Let uvicorn settle before restarting Nginx
-    time.sleep(1)
+    sleep(1)
 
     cmd(f'{vyos_conf_scripts_dir}/https.py', raising=ConfigError)
 
