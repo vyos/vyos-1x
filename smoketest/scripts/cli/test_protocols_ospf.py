@@ -33,14 +33,21 @@ route_map = 'foo-bar-baz10'
 log = logging.getLogger('TestProtocolsOSPF')
 
 class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
-        self.cli_set(['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['policy', 'route-map', route_map])
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
-        self.cli_delete(['policy', 'route-map', route_map])
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -199,8 +206,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
             self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
+        # enable FRR debugging to find the root cause of failing testcases
+        cmd('touch /tmp/vyos.frr.debug')
+
         # commit changes
         self.cli_commit()
+
+        # disable FRR debugging
+        cmd('rm -f /tmp/vyos.frr.debug')
 
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
@@ -210,8 +223,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
         except:
             log.debug(frrconfig)
-            log.debug(cmd('sudo cat /var/log/messages'))
-            log.debug(cmd('vtysh -c "show run"'))
+            log.debug(cmd('sudo cat /tmp/vyos-configd-script-stdout'))
             self.fail('Now we can hopefully see why OSPF fails!')
 
     def test_ospf_08_virtual_link(self):

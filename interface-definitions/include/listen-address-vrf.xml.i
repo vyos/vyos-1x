@@ -1,13 +1,13 @@
 <!-- include start from listen-address-vrf.xml.i -->
 <tagNode name="listen-address">
   <properties>
-    <help>Local IP addresses for service to listen on</help>
+    <help>Local IP addresses to listen on</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
     </completionHelp>
     <valueHelp>
       <format>ipv4</format>
-      <description>IP address to listen for incoming connections</description>
+      <description>IPv4 address to listen for incoming connections</description>
     </valueHelp>
     <valueHelp>
       <format>ipv6</format>

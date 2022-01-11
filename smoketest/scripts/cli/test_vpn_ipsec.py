@@ -111,9 +111,22 @@ rgiyCHemtMepq57Pl1Nmj49eEA==
 """
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(base_path + ['interface', f'{interface}.{vif}'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
+        cls.cli_set(cls, base_path + ['interface', f'{interface}.{vif}'])
+
+    @classmethod
+    def tearDownClass(cls):
+        super(cls, cls).tearDownClass()
+
+        cls.cli_delete(cls, base_path + ['interface', f'{interface}.{vif}'])
+
+    def setUp(self):
         # Set IKE/ESP Groups
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'encryption', 'aes128'])
         self.cli_set(base_path + ['esp-group', esp_group, 'proposal', '1', 'hash', 'sha1'])
@@ -127,7 +140,6 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
-        self.cli_delete(ethernet_path)
         self.cli_commit()
 
         # Check for no longer running process
@@ -158,6 +170,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         # Site to site
         local_address = '192.0.2.10'
+        priority = '20'
         peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
 
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
@@ -173,6 +186,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'prefix', '172.17.11.0/24'])
         self.cli_set(peer_base_path + ['tunnel', '1', 'remote', 'port', '443'])
 
+        self.cli_set(peer_base_path + ['tunnel', '2', 'local', 'prefix', '10.1.0.0/16'])
+        self.cli_set(peer_base_path + ['tunnel', '2', 'remote', 'prefix', '10.2.0.0/16'])
+        self.cli_set(peer_base_path + ['tunnel', '2', 'priority', priority])
+
         self.cli_commit()
 
         # Verify strongSwan configuration
@@ -187,8 +204,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
             f'mode = tunnel',
+            f'peer_{peer_ip.replace(".","-")}_tunnel_1',
             f'local_ts = 172.16.10.0/24[tcp/443],172.16.11.0/24[tcp/443]',
-            f'remote_ts = 172.17.10.0/24[tcp/443],172.17.11.0/24[tcp/443]'
+            f'remote_ts = 172.17.10.0/24[tcp/443],172.17.11.0/24[tcp/443]',
+            f'mode = tunnel',
+            f'peer_{peer_ip.replace(".","-")}_tunnel_2',
+            f'local_ts = 10.1.0.0/16',
+            f'remote_ts = 10.2.0.0/16',
+            f'priority = {priority}',
+            f'mode = tunnel',
         ]
         for line in swanctl_conf_lines:
             self.assertIn(line, swanctl_conf)

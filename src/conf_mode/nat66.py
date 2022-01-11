@@ -35,7 +35,7 @@ airbag.enable()
 
 k_mod = ['nft_nat', 'nft_chain_nat']
 
-iptables_nat_config = '/tmp/vyos-nat66-rules.nft'
+nftables_nat66_config = '/tmp/vyos-nat66-rules.nft'
 ndppd_config = '/run/ndppd/ndppd.conf'
 
 def get_handler(json, chain, target):
@@ -79,9 +79,9 @@ def get_config(config=None):
 
     if not conf.exists(base):
         nat['helper_functions'] = 'remove'
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_HELPER')
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_HELPER')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
         nat['deleted'] = ''
         return nat
@@ -92,10 +92,10 @@ def get_config(config=None):
         nat['helper_functions'] = 'add'
 
         # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_IGNORE')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_IGNORE')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_IGNORE')
+        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_PREROUTING_HOOK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_IGNORE')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_OUTPUT_HOOK')
     else:
         nat['helper_functions'] = 'has'
 
@@ -145,22 +145,22 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(iptables_nat_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
+    render(nftables_nat66_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
     render(ndppd_config, 'ndppd/ndppd.conf.tmpl', nat, permission=0o755)
     return None
 
 def apply(nat):
     if not nat:
         return None
-    cmd(f'{iptables_nat_config}')
+    cmd(f'{nftables_nat66_config}')
     if 'deleted' in nat or not dict_search('source.rule', nat):
         cmd('systemctl stop ndppd')
         if os.path.isfile(ndppd_config):
             os.unlink(ndppd_config)
     else:
         cmd('systemctl restart ndppd')
-    if os.path.isfile(iptables_nat_config):
-        os.unlink(iptables_nat_config)
+    if os.path.isfile(nftables_nat66_config):
+        os.unlink(nftables_nat66_config)
 
     return None
 

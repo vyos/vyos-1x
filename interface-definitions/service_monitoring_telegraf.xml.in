@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="monitoring">
+        <properties>
+          <help>Monitoring services</help>
+          <priority>1280</priority>
+        </properties>
+        <children>
+          <node name="telegraf" owner="${vyos_conf_scripts_dir}/service_monitoring_telegraf.py">
+            <properties>
+              <help>Telegraf monitoring</help>
+            </properties>
+            <children>
+              <node name="authentication">
+                <properties>
+                  <help>Authentication parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="organization">
+                    <properties>
+                      <help>Authentication organization for InfluxDB v2 [REQUIRED]</help>
+                      <constraint>
+                        <regex>^[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Organization name must be alphanumeric and can contain hyphens, underscores and at symbol.</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="token">
+                    <properties>
+                      <help>Authentication token for InfluxDB v2 [REQUIRED]</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Authentication token</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^[a-zA-Z0-9-_]{86}==$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Token must be 88 characters long and must contain only [a-zA-Z0-9-_] and '==' characters.</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="bucket">
+                <properties>
+                  <help>Remote bucket, by default (main)</help>
+                </properties>
+                <defaultValue>main</defaultValue>
+              </leafNode>
+              <leafNode name="source">
+                <properties>
+                  <help>Source parameters for monitoring (default: all)</help>
+                  <completionHelp>
+                    <list>all hardware-utilization logs network system telegraf</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>all</format>
+                    <description>All parameters (default)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>hardware-utilization</format>
+                    <description>Hardware-utilization parameters (CPU, disk, memory)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>logs</format>
+                    <description>Logs parameters</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>network</format>
+                    <description>Network parameters (net, netstat, nftables)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>system</format>
+                    <description>System parameters (system, processes, interrupts)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>telegraf</format>
+                    <description>Telegraf internal statistics</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(all|hardware-utilization|logs|network|system|telegraf)$</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+                <defaultValue>all</defaultValue>
+              </leafNode>
+              <leafNode name="url">
+                <properties>
+                  <help>Remote URL [REQUIRED]</help>
+                  <valueHelp>
+                    <format>url</format>
+                    <description>Remote URL to InfluxDB v2</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?$</regex>
+                  </constraint>
+                  <constraintErrorMessage>Incorrect URL format.</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Remote port (default: 8086)</help>
+                </properties>
+                <defaultValue>8086</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -32,7 +32,7 @@ args = parser.parse_args()
 if args.source or args.destination:
     tmp = cmd('sudo nft -j list table ip nat')
     tmp = json.loads(tmp)
-    
+
     format_nat_rule = '{0: <10} {1: <50} {2: <50} {3: <10}'
     print(format_nat_rule.format("Rule", "Source" if args.source else "Destination", "Translation", "Outbound Interface" if args.source else "Inbound Interface"))
     print(format_nat_rule.format("----", "------" if args.source else "-----------", "-----------", "------------------" if args.source else "-----------------"))
@@ -40,7 +40,7 @@ if args.source or args.destination:
     data_json = jmespath.search('nftables[?rule].rule[?chain]', tmp)
     for idx in range(0, len(data_json)):
         data = data_json[idx]
-        
+
         # The following key values must exist
         # When the rule JSON does not have some keys, this is not a rule we can work with
         continue_rule = False
@@ -50,9 +50,9 @@ if args.source or args.destination:
                 continue
         if continue_rule:
             continue
-        
+
         comment = data['comment']
-        
+
         # Check the annotation to see if the annotation format is created by VYOS
         continue_rule = True
         for comment_prefix in ['SRC-NAT-', 'DST-NAT-']:
@@ -60,7 +60,7 @@ if args.source or args.destination:
                 continue_rule = False
         if continue_rule:
             continue
-        
+
         rule = int(''.join(list(filter(str.isdigit, comment))))
         chain = data['chain']
         if not ((args.source and chain == 'POSTROUTING') or (not args.source and chain == 'PREROUTING')):
@@ -88,7 +88,7 @@ if args.source or args.destination:
                     else:
                         port_range = srcdest_json['set'][0]['range']
                         srcdest += 'port ' + str(port_range[0]) + '-' + str(port_range[1]) + ' '
-            
+
             tran_addr_json = dict_search('snat' if args.source else 'dnat', data['expr'][i])
             if tran_addr_json:
                 if isinstance(tran_addr_json['addr'],str):
@@ -98,10 +98,10 @@ if args.source or args.destination:
                     len_tmp = dict_search('snat.addr.prefix.len' if args.source else 'dnat.addr.prefix.len', data['expr'][3])
                     if addr_tmp and len_tmp:
                         tran_addr += addr_tmp + '/' + str(len_tmp) + ' '
-            
+
                 if isinstance(tran_addr_json['port'],int):
-                    tran_addr += 'port ' + tran_addr_json['port']
-            
+                    tran_addr += 'port ' + str(tran_addr_json['port'])
+
             else:
                 if 'masquerade' in data['expr'][i]:
                     tran_addr = 'masquerade'
@@ -112,10 +112,10 @@ if args.source or args.destination:
             srcdests.append(srcdest)
             srcdest = ''
         print(format_nat_rule.format(rule, srcdests[0], tran_addr, interface))
-        
+
         for i in range(1, len(srcdests)):
             print(format_nat_rule.format(' ', srcdests[i], ' ', ' '))
-    
+
     exit(0)
 else:
     parser.print_help()

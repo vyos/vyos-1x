@@ -56,6 +56,7 @@ class VXLANIf(Interface):
         mapping = {
             'group'                      : 'group',
             'external'                   : 'external',
+            'gpe'                        : 'gpe',
             'parameters.ip.dont_fragment': 'df set',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',

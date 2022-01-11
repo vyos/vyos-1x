@@ -94,6 +94,7 @@ Depends:
   ndisc6,
   ndppd,
   netplug,
+  nfct,
   nftables (>= 0.9.3),
   nginx-light,
   ntp,
@@ -151,6 +152,7 @@ Depends:
   strongswan-swanctl (>= 5.9),
   sudo,
   systemd,
+  telegraf (>= 1.20),
   tcpdump,
   tcptraceroute,
   telnet,
@@ -183,5 +185,6 @@ Description: VyOS configuration scripts and data for VMware
 Package: vyos-1x-smoketest
 Architecture: all
 Depends:
+ snmp,
  vyos-1x
 Description: VyOS build sanity checking toolkit

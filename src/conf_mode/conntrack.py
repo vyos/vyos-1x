@@ -15,11 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.firewall import find_nftables_rule
+from vyos.firewall import remove_nftables_rule
 from vyos.util import cmd
 from vyos.util import run
 from vyos.util import process_named_running
@@ -32,6 +35,7 @@ airbag.enable()
 
 conntrack_config = r'/etc/modprobe.d/vyatta_nf_conntrack.conf'
 sysctl_file = r'/run/sysctl/10-vyos-conntrack.conf'
+nftables_ct_file = r'/run/nftables-ct.conf'
 
 # Every ALG (Application Layer Gateway) consists of either a Kernel Object
 # also called a Kernel Module/Driver or some rules present in iptables
@@ -43,8 +47,8 @@ module_map = {
         'ko' : ['nf_nat_h323', 'nf_conntrack_h323'],
     },
     'nfs' : {
-        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 111 --jump CT --helper rpc',
-                      'VYATTA_CT_HELPER --table raw --proto udp --dport 111 --jump CT --helper rpc'],
+        'nftables' : ['ct helper set "rpc_tcp" tcp dport "{111}" return',
+                      'ct helper set "rpc_udp" udp dport "{111}" return']
     },
     'pptp' : {
         'ko' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
@@ -53,9 +57,7 @@ module_map = {
         'ko' : ['nf_nat_sip', 'nf_conntrack_sip'],
      },
     'sqlnet' : {
-        'iptables' : ['VYATTA_CT_HELPER --table raw --proto tcp --dport 1521 --jump CT --helper tns',
-                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1525 --jump CT --helper tns',
-                      'VYATTA_CT_HELPER --table raw --proto tcp --dport 1536 --jump CT --helper tns'],
+        'nftables' : ['ct helper set "tns_tcp" tcp dport "{1521,1525,1536}" return']
     },
     'tftp' : {
         'ko' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
@@ -80,18 +82,48 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if 'timeout' in default_values and 'custom' in default_values['timeout']:
+        del default_values['timeout']['custom']
     conntrack = dict_merge(default_values, conntrack)
 
     return conntrack
 
 def verify(conntrack):
+    if dict_search('ignore.rule', conntrack) != None:
+        for rule, rule_config in conntrack['ignore']['rule'].items():
+            if dict_search('destination.port', rule_config) or \
+               dict_search('source.port', rule_config):
+               if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
+                   raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
+
     return None
 
 def generate(conntrack):
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.tmpl', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.tmpl', conntrack)
+    render(nftables_ct_file, 'conntrack/nftables-ct.tmpl', conntrack)
+
+    # dry-run newly generated configuration
+    tmp = run(f'nft -c -f {nftables_ct_file}')
+    if tmp > 0:
+        if os.path.exists(nftables_ct_file):
+            os.unlink(nftables_ct_file)
+        raise ConfigError('Configuration file errors encountered!')
 
     return None
+
+def find_nftables_ct_rule(rule):
+    helper_search = re.search('ct helper set "(\w+)"', rule)
+    if helper_search:
+        rule = helper_search[1]
+    return find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule])
+
+def find_remove_rule(rule):
+    handle = find_nftables_ct_rule(rule)
+    if handle:
+        remove_nftables_rule('raw', 'VYOS_CT_HELPER', handle)
 
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
@@ -103,20 +135,20 @@ def apply(conntrack):
                     # Only remove the module if it's loaded
                     if os.path.exists(f'/sys/module/{mod}'):
                         cmd(f'rmmod {mod}')
-            if 'iptables' in module_config:
-                for rule in module_config['iptables']:
-                    # Only install iptables rule if it does not exist
-                    tmp = run(f'iptables --check {rule}')
-                    if tmp == 0: cmd(f'iptables --delete {rule}')
+            if 'nftables' in module_config:
+                for rule in module_config['nftables']:
+                    find_remove_rule(rule)
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     cmd(f'modprobe {mod}')
-            if 'iptables' in module_config:
-                for rule in module_config['iptables']:
-                    # Only install iptables rule if it does not exist
-                    tmp = run(f'iptables --check {rule}')
-                    if tmp > 0: cmd(f'iptables --insert {rule}')
+            if 'nftables' in module_config:
+                for rule in module_config['nftables']:
+                    if not find_nftables_ct_rule(rule):
+                        cmd(f'nft insert rule ip raw VYOS_CT_HELPER {rule}')
+
+    # Load new nftables ruleset
+    cmd(f'nft -f {nftables_ct_file}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values

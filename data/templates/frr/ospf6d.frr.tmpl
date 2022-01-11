@@ -54,7 +54,7 @@ router ospf6 {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%   for area_id, area_config in area.items() %}
 {%     if area_config.area_type is defined and area_config.area_type is not none %}
 {%       for type, type_config in area_config.area_type.items() %}
- area {{ area_id }} {{ type }} {{ 'no-summary' if type_config.no_summary is defined }}
+ area {{ area_id }} {{ type }} {{ 'default-information-originate' if type_config.default_information_originate is defined }} {{ 'no-summary' if type_config.no_summary is defined }}
 {%       endfor %}
 {%     endif %}
 {%     if area_config.range is defined and area_config.range is not none %}
@@ -69,6 +69,10 @@ router ospf6 {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
  area {{ area_id }} import-list {{ area_config.import_list }}
 {%     endif %}
 {%   endfor %}
+{% endif %}
+ auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
+{% if default_information is defined and default_information.originate is defined and default_information.originate is not none %}
+ default-information originate {{ 'always' if default_information.originate.always is defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is defined }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is defined }}
 {% endif %}
 {% if distance is defined and distance is not none %}
 {%   if distance.global is defined and distance.global is not none %}

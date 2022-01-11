@@ -1,0 +1,13 @@
+[Unit]
+Description=Keepalive Daemon (LVS and VRRP)
+After=vyos-router.service
+# Only start if there is a configuration file
+ConditionFileNotEmpty=/run/keepalived/keepalived.conf
+
+[Service]
+KillMode=process
+Type=simple
+# Read configuration variable file if it is present
+ExecStart=/usr/sbin/keepalived --use-file /run/keepalived/keepalived.conf --pid /run/keepalived/keepalived.pid --dont-fork --snmp
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/run/keepalived/keepalived.pid

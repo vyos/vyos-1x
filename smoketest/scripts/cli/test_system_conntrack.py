@@ -15,10 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.firewall import find_nftables_rule
 from vyos.util import cmd
 from vyos.util import read_file
 
@@ -156,8 +158,8 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                 'driver' : ['nf_nat_h323', 'nf_conntrack_h323'],
             },
             'nfs' : {
-                'iptables' : ['-A VYATTA_CT_HELPER -p udp -m udp --dport 111 -j CT --helper rpc',
-                              '-A VYATTA_CT_HELPER -p tcp -m tcp --dport 111 -j CT --helper rpc'],
+                'nftables' : ['ct helper set "rpc_tcp"',
+                              'ct helper set "rpc_udp"']
             },
             'pptp' : {
                 'driver' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
@@ -166,9 +168,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                 'driver' : ['nf_nat_sip', 'nf_conntrack_sip'],
              },
             'sqlnet' : {
-                'iptables' : ['-A VYATTA_CT_HELPER -p tcp -m tcp --dport 1536 -j CT --helper tns',
-                              '-A VYATTA_CT_HELPER -p tcp -m tcp --dport 1525 -j CT --helper tns',
-                              '-A VYATTA_CT_HELPER -p tcp -m tcp --dport 1521 -j CT --helper tns'],
+                'nftables' : ['ct helper set "tns_tcp"']
             },
             'tftp' : {
                 'driver' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
@@ -187,10 +187,9 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             if 'driver' in module_options:
                 for driver in module_options['driver']:
                     self.assertTrue(os.path.isdir(f'/sys/module/{driver}'))
-            if 'iptables' in module_options:
-                rules = cmd('sudo iptables-save -t raw')
-                for ruleset in module_options['iptables']:
-                    self.assertIn(ruleset, rules)
+            if 'nftables' in module_options:
+                for rule in module_options['nftables']:
+                    self.assertTrue(find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule]) != None)
 
         # unload modules
         for module in modules:
@@ -204,10 +203,9 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             if 'driver' in module_options:
                 for driver in module_options['driver']:
                     self.assertFalse(os.path.isdir(f'/sys/module/{driver}'))
-            if 'iptables' in module_options:
-                rules = cmd('sudo iptables-save -t raw')
-                for ruleset in module_options['iptables']:
-                    self.assertNotIn(ruleset, rules)
+            if 'nftables' in module_options:
+                for rule in module_options['nftables']:
+                    self.assertTrue(find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule]) == None)
 
     def test_conntrack_hash_size(self):
         hash_size = '65536'

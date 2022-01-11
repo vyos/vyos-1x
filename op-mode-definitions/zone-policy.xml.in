@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="zone-policy">
+        <properties>
+          <help>Show zone policy information</help>
+        </properties>
+        <children>
+          <tagNode name="zone">
+            <properties>
+              <help>Show summary of zone policy for a specific zone</help>
+              <completionHelp>
+                <path>zone-policy zone</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/zone_policy.py --action show --name $4</command>
+          </tagNode>
+        </children>
+        <command>sudo ${vyos_op_scripts_dir}/zone_policy.py --action show</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

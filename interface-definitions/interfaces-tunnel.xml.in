@@ -30,6 +30,8 @@
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
           #include <include/source-interface.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
+          #include <include/interface/interface-policy.xml.i>
           <leafNode name="6rd-prefix">
             <properties>
               <help>6rd network prefix</help>
@@ -66,39 +68,39 @@
               </valueHelp>
               <valueHelp>
                 <format>gre</format>
-                <description>Generic Routing Encapsulation</description>
+                <description>Generic Routing Encapsulation (network layer)</description>
               </valueHelp>
               <valueHelp>
                 <format>gretap</format>
-                <description>Generic Routing Encapsulation (virtual L2 tunnel)</description>
+                <description>Generic Routing Encapsulation (datalink layer)</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6erspan</format>
-                <description>Encapsulated Remote Switched Port Analyzer over IPv6 network</description>
+                <description>Encapsulated Remote Switched Port Analyzer over IPv6</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6gre</format>
-                <description>GRE over IPv6 network</description>
+                <description>GRE over IPv6 (network layer)</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6gretap</format>
-                <description>Generic Routing Encapsulation over IPv6 (virtual L2 tunnel)</description>
+                <description>GRE over IPv6 (datalink layer)</description>
               </valueHelp>
               <valueHelp>
                 <format>ip6ip6</format>
-                <description>IP6 in IP6 encapsulation</description>
+                <description>IPv6 in IPv6 encapsulation</description>
               </valueHelp>
               <valueHelp>
                 <format>ipip</format>
-                <description>IP in IP encapsulation</description>
+                <description>IPv4 in IPv4 encapsulation</description>
               </valueHelp>
               <valueHelp>
                 <format>ipip6</format>
-                <description>IP in IP6 encapsulation</description>
+                <description>IPv4 in IP6 encapsulation</description>
               </valueHelp>
               <valueHelp>
                 <format>sit</format>
-                <description>Simple Internet Transition encapsulation</description>
+                <description>Simple Internet Transition (IPv6 in IPv4)</description>
               </valueHelp>
               <constraint>
                 <regex>^(erspan|gre|gretap|ip6erspan|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)$</regex>
@@ -114,11 +116,11 @@
               </completionHelp>
               <valueHelp>
                 <format>enable</format>
-                <description>Enable Multicast</description>
+                <description>Enable multicast</description>
               </valueHelp>
               <valueHelp>
                 <format>disable</format>
-                <description>Disable Multicast (default)</description>
+                <description>Disable multicast (default)</description>
               </valueHelp>
               <constraint>
                 <regex>^(enable|disable)$</regex>
@@ -133,22 +135,22 @@
             <children>
               <node name="erspan">
                 <properties>
-                  <help>ERSPAN Tunnel parameters</help>
+                  <help>ERSPAN tunnel parameters</help>
                 </properties>
                 <children>
                   <leafNode name="direction">
                     <properties>
-                      <help>Specifies mirrored traffic direction</help>
+                      <help>Mirrored traffic direction</help>
                       <completionHelp>
                         <list>ingress egress</list>
                       </completionHelp>
                       <valueHelp>
                         <format>ingress</format>
-                        <description>Mirror ingress direction</description>
+                        <description>Mirror ingress traffic</description>
                       </valueHelp>
                       <valueHelp>
                         <format>egress</format>
-                        <description>Mirror egress direction</description>
+                        <description>Mirror egress traffic</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(ingress|egress)$</regex>
@@ -157,10 +159,10 @@
                   </leafNode>
                   <leafNode name="hw-id">
                     <properties>
-                      <help>Unique identifier of ERSPAN engine within a system</help>
+                      <help>Unique identifier of an ERSPAN engine within a system</help>
                       <valueHelp>
                         <format>u32:0-1048575</format>
-                        <description>Unique identifier of ERSPAN engine</description>
+                        <description>Unique identifier of an ERSPAN engine</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-1048575"/>
@@ -169,7 +171,7 @@
                   </leafNode>
                   <leafNode name="index">
                     <properties>
-                      <help>Specifify ERSPAN version 1 index field</help>
+                      <help>ERSPAN version 1 index field</help>
                       <valueHelp>
                         <format>u32:0-63</format>
                         <description>Platform-depedent field for specifying port number and direction</description>
@@ -203,18 +205,18 @@
               </node>
               <node name="ip">
                 <properties>
-                  <help>IPv4 specific tunnel parameters</help>
+                  <help>IPv4-specific tunnel parameters</help>
                 </properties>
                 <children>
                   <leafNode name="no-pmtu-discovery">
                     <properties>
-                      <help>Disable Path MTU Discovery on this tunnel</help>
+                      <help>Disable path MTU discovery</help>
                       <valueless/>
                     </properties>
                   </leafNode>
                   <leafNode name="ignore-df">
                     <properties>
-                      <help>Enable IPv4 DF suppression on this tunnel</help>
+                      <help>Ignore the DF (don't fragment) bit</help>
                       <valueless/>
                     </properties>
                   </leafNode>
@@ -228,7 +230,7 @@
               </node>
               <node name="ipv6">
                 <properties>
-                  <help>IPv6 specific tunnel parameters</help>
+                  <help>IPv6-specific tunnel parameters</help>
                 </properties>
                 <children>
                   <leafNode name="encaplimit">
@@ -239,11 +241,11 @@
                       </completionHelp>
                       <valueHelp>
                         <format>u32:0-255</format>
-                        <description>Encaplimit (default: 4)</description>
+                        <description>Encapsulation limit (default: 4)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
-                        <description>Encaplimit disabled</description>
+                        <description>Disable encapsulation limit</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(none)$</regex>
@@ -259,12 +261,12 @@
                       <help>Hoplimit</help>
                       <valueHelp>
                         <format>u32:0-255</format>
-                        <description>Hoplimit (default 64)</description>
+                        <description>Hop limit (default: 64)</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-255"/>
                       </constraint>
-                      <constraintErrorMessage>hoplimit must be between 0-255</constraintErrorMessage>
+                      <constraintErrorMessage>hop limit must be between 0-255</constraintErrorMessage>
                     </properties>
                     <defaultValue>64</defaultValue>
                   </leafNode>

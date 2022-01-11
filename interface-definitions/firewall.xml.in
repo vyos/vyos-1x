@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="nfirewall" owner="${vyos_conf_scripts_dir}/firewall.py">
+  <node name="firewall" owner="${vyos_conf_scripts_dir}/firewall.py">
     <properties>
       <priority>199</priority>
       <help>Firewall</help>
@@ -24,6 +24,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>enable</defaultValue>
       </leafNode>
       <leafNode name="broadcast-ping">
         <properties>
@@ -43,6 +44,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <leafNode name="config-trap">
         <properties>
@@ -62,6 +64,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <node name="group">
         <properties>
@@ -179,6 +182,9 @@
                     <description>Numbered port range (e.g. 1001-1050)</description>
                   </valueHelp>
                   <multi/>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>
@@ -203,6 +209,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <tagNode name="ipv6-name">
         <properties>
@@ -214,7 +221,15 @@
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
-              <help>Rule number (1-9999)</help>
+              <help>Firewall rule number (IPv6)</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this Firewall rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
@@ -225,7 +240,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
-                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>
               </node>
@@ -235,7 +250,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
-                  #include <include/firewall/source-destination-group.xml.i>
+                  #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>
               </node>
@@ -292,7 +307,7 @@
                     <properties>
                       <help>ICMP type-name</help>
                       <completionHelp>
-                        <list>any echo-reply pong destination-unreachable network-unreachable host-unreachable protocol-unreachable port-unreachable fragmentation-needed source-route-failed network-unknown host-unknown network-prohibited host-prohibited TOS-network-unreachable TOS-host-unreachable communication-prohibited host-precedence-violation precedence-cutoff source-quench redirect network-redirect host-redirect TOS-network-redirect TOS host-redirect echo-request ping router-advertisement router-solicitation time-exceeded ttl-exceeded ttl-zero-during-transit ttl-zero-during-reassembly parameter-problem ip-header-bad required-option-missing timestamp-request timestamp-reply address-mask-request address-mask-reply</list>
+                        <list>any echo-reply pong destination-unreachable network-unreachable host-unreachable protocol-unreachable port-unreachable fragmentation-needed source-route-failed network-unknown host-unknown network-prohibited host-prohibited TOS-network-unreachable TOS-host-unreachable communication-prohibited host-precedence-violation precedence-cutoff source-quench redirect network-redirect host-redirect TOS-network-redirect TOS host-redirect echo-request ping router-advertisement router-solicitation time-exceeded ttl-exceeded ttl-zero-during-transit ttl-zero-during-reassembly parameter-problem ip-header-bad required-option-missing timestamp-request timestamp-reply address-mask-request address-mask-reply packet-too-big</list>
                       </completionHelp>
                       <valueHelp>
                         <format>any</format>
@@ -454,59 +469,14 @@
                         <format>address-mask-reply</format>
                         <description>ICMP type/code name</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>packet-too-big</format>
+                        <description>ICMP type/code name</description>
+                      </valueHelp>
                       <constraint>
-                        <regex>^(any|echo-reply|pong|destination-unreachable|network-unreachable|host-unreachable|protocol-unreachable|port-unreachable|fragmentation-needed|source-route-failed|network-unknown|host-unknown|network-prohibited|host-prohibited|TOS-network-unreachable|TOS-host-unreachable|communication-prohibited|host-precedence-violation|precedence-cutoff|source-quench|redirect|network-redirect|host-redirect|TOS-network-redirect|TOS host-redirect|echo-request|ping|router-advertisement|router-solicitation|time-exceeded|ttl-exceeded|ttl-zero-during-transit|ttl-zero-during-reassembly|parameter-problem|ip-header-bad|required-option-missing|timestamp-request|timestamp-reply|address-mask-request|address-mask-reply)$</regex>
+                        <regex>^(any|echo-reply|pong|destination-unreachable|network-unreachable|host-unreachable|protocol-unreachable|port-unreachable|fragmentation-needed|source-route-failed|network-unknown|host-unknown|network-prohibited|host-prohibited|TOS-network-unreachable|TOS-host-unreachable|communication-prohibited|host-precedence-violation|precedence-cutoff|source-quench|redirect|network-redirect|host-redirect|TOS-network-redirect|TOS host-redirect|echo-request|ping|router-advertisement|router-solicitation|time-exceeded|ttl-exceeded|ttl-zero-during-transit|ttl-zero-during-reassembly|parameter-problem|ip-header-bad|required-option-missing|timestamp-request|timestamp-reply|address-mask-request|address-mask-reply|packet-too-big)$</regex>
                         <validator name="numeric" argument="--range 0-255"/>
                       </constraint>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
-              <node name="p2p">
-                <properties>
-                  <help>P2P application packets</help>
-                </properties>
-                <children>
-                  <leafNode name="all">
-                    <properties>
-                      <help>AppleJuice/BitTorrent/Direct Connect/eDonkey/eMule/Gnutella/KaZaA application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="applejuice">
-                    <properties>
-                      <help>AppleJuice application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="bittorrent">
-                    <properties>
-                      <help>BitTorrent application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="directconnect">
-                    <properties>
-                      <help>Direct Connect application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="edonkey">
-                    <properties>
-                      <help>eDonkey/eMule application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="gnutella">
-                    <properties>
-                      <help>Gnutella application packets</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="kazaa">
-                    <properties>
-                      <help>KaZaA application packets</help>
-                      <valueless/>
                     </properties>
                   </leafNode>
                 </children>
@@ -533,6 +503,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <leafNode name="ipv6-src-route">
         <properties>
@@ -552,6 +523,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <leafNode name="log-martians">
         <properties>
@@ -571,6 +543,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>enable</defaultValue>
       </leafNode>
       <tagNode name="name">
         <properties>
@@ -582,7 +555,15 @@
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
-              <help>Rule number (1-9999)</help>
+              <help>Firewall rule number (IPv4)</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this Firewall rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
               #include <include/firewall/action.xml.i>
@@ -662,6 +643,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <leafNode name="send-redirects">
         <properties>
@@ -681,6 +663,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>enable</defaultValue>
       </leafNode>
       <leafNode name="source-validation">
         <properties>
@@ -704,6 +687,7 @@
             <regex>^(strict|loose|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
       <node name="state-policy">
         <properties>
@@ -757,6 +741,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>enable</defaultValue>
       </leafNode>
       <leafNode name="twa-hazards-protection">
         <properties>
@@ -776,6 +761,7 @@
             <regex>^(enable|disable)$</regex>
           </constraint>
         </properties>
+        <defaultValue>disable</defaultValue>
       </leafNode>
     </children>
   </node>

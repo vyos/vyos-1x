@@ -30,8 +30,12 @@ class TestVyOSValidate(TestCase):
         self.assertFalse(vyos.validate.is_ipv6_link_local('169.254.0.1'))
         self.assertTrue(vyos.validate.is_ipv6_link_local('fe80::'))
         self.assertTrue(vyos.validate.is_ipv6_link_local('fe80::affe:1'))
+        self.assertTrue(vyos.validate.is_ipv6_link_local('fe80::affe:1%eth0'))
         self.assertFalse(vyos.validate.is_ipv6_link_local('2001:db8::'))
+        self.assertFalse(vyos.validate.is_ipv6_link_local('2001:db8::%eth0'))
         self.assertFalse(vyos.validate.is_ipv6_link_local('VyOS'))
+        self.assertFalse(vyos.validate.is_ipv6_link_local('::1'))
+        self.assertFalse(vyos.validate.is_ipv6_link_local('::1%lo'))
 
     def test_is_ipv6_link_local(self):
         self.assertTrue(vyos.validate.is_loopback_addr('127.0.0.1'))

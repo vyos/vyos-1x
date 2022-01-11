@@ -55,7 +55,7 @@
         <help>Maximum number of packets to allow in excess of rate</help>
         <valueHelp>
           <format>u32:0-4294967295</format>
-          <description>burst__change_me</description>
+          <description>Maximum number of packets to allow in excess of rate</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-4294967295"/>
@@ -67,7 +67,7 @@
         <help>Maximum average matching rate</help>
         <valueHelp>
           <format>u32:0-4294967295</format>
-          <description>rate__change_me</description>
+          <description>Maximum average matching rate</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-4294967295"/>
@@ -99,7 +99,8 @@
   <properties>
     <help>Protocol to match (protocol name, number, or "all")</help>
     <completionHelp>
-      <script>cat /etc/protocols | sed -e '/^#.*/d' | awk '{ print $1 }'</script>
+      <script>${vyos_completion_dir}/list_protocols.sh</script>
+      <list>all tcp_udp</list>
     </completionHelp>
     <valueHelp>
       <format>all</format>
@@ -114,14 +115,17 @@
       <description>IP protocol number</description>
     </valueHelp>
     <valueHelp>
+      <format>&lt;protocol&gt;</format>
+      <description>IP protocol name</description>
+    </valueHelp>
+    <valueHelp>
       <format>!&lt;protocol&gt;</format>
-      <description>IP protocol number</description>
+      <description>IP protocol name</description>
     </valueHelp>
     <constraint>
       <validator name="ip-protocol"/>
     </constraint>
   </properties>
-  <defaultValue>all</defaultValue>
 </leafNode>
 <node name="recent">
   <properties>
@@ -285,40 +289,65 @@
     <help>Time to match rule</help>
   </properties>
   <children>
-    <leafNode name="monthdays">
-      <properties>
-        <help>Monthdays to match rule on</help>
-      </properties>
-    </leafNode>
     <leafNode name="startdate">
       <properties>
         <help>Date to start matching rule</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Enter date using following notation - YYYY-MM-DD</description>
+        </valueHelp>
+        <constraint>
+          <regex>^(\d{4}\-\d{2}\-\d{2})$</regex>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="starttime">
       <properties>
         <help>Time of day to start matching rule</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Enter time using using 24 hour notation - hh:mm:ss</description>
+        </valueHelp>
+        <constraint>
+          <regex>^([0-2][0-9](\:[0-5][0-9]){1,2})$</regex>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="stopdate">
       <properties>
         <help>Date to stop matching rule</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Enter date using following notation - YYYY-MM-DD</description>
+        </valueHelp>
+        <constraint>
+          <regex>^(\d{4}\-\d{2}\-\d{2})$</regex>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="stoptime">
       <properties>
         <help>Time of day to stop matching rule</help>
-      </properties>
-    </leafNode>
-    <leafNode name="utc">
-      <properties>
-        <help>Interpret times for startdate, stopdate, starttime and stoptime to be UTC</help>
-        <valueless/>
+        <valueHelp>
+          <format>txt</format>
+          <description>Enter time using using 24 hour notation - hh:mm:ss</description>
+        </valueHelp>
+        <constraint>
+          <regex>^([0-2][0-9](\:[0-5][0-9]){1,2})$</regex>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="weekdays">
       <properties>
-        <help>Weekdays to match rule on</help>
+        <help>Comma separated weekdays to match rule on</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Name of day (Monday, Tuesday, Wednesday, Thursdays, Friday, Saturday, Sunday)</description>
+        </valueHelp>
+        <valueHelp>
+          <format>u32:0-6</format>
+          <description>Day number (0 = Sunday ... 6 = Saturday)</description>
+        </valueHelp>
       </properties>
     </leafNode>
   </children>

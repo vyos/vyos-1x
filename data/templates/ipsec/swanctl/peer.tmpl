@@ -1,5 +1,5 @@
 {% macro conn(peer, peer_conf, ike_group, esp_group) %}
-{%   set name = peer.replace(".", "-").replace("@", "") %}
+{%   set name = peer.replace("@", "") | dot_colon_to_dash %}
 {#   peer needs to reference the global IKE configuration for certain values #}
 {%   set ike = ike_group[peer_conf.ike_group] %}
     peer_{{ name }} {
@@ -100,6 +100,9 @@
 {%         if tunnel_conf.remote is defined and tunnel_conf.remote.prefix is defined %}
 {%           set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
                 remote_ts = {{ remote_prefix | join(remote_suffix + ",") }}{{ remote_suffix }}
+{%         endif %}
+{%         if tunnel_conf.priority is defined and tunnel_conf.priority is not none %}
+                priority = {{ tunnel_conf.priority }}
 {%         endif %}
 {%       elif tunnel_esp.mode == 'transport' %}
                 local_ts = {{ peer_conf.local_address }}{{ local_suffix }}

@@ -157,8 +157,8 @@ delete chain ip raw NAT_CONNTRACK
 add chain ip raw NAT_CONNTRACK
 add rule ip raw NAT_CONNTRACK counter accept
 {%   set base_command = 'add rule ip raw' %}
-{{ base_command }} PREROUTING position {{ pre_ct_ignore }}    counter jump VYATTA_CT_HELPER
-{{ base_command }} OUTPUT     position {{ out_ct_ignore }}    counter jump VYATTA_CT_HELPER
+{{ base_command }} PREROUTING position {{ pre_ct_ignore }}    counter jump VYOS_CT_HELPER
+{{ base_command }} OUTPUT     position {{ out_ct_ignore }}    counter jump VYOS_CT_HELPER
 {{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
 {{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}

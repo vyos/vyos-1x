@@ -31,6 +31,8 @@
           </leafNode>
           #include <include/interface/disable-link-detect.xml.i>
           #include <include/interface/disable.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
+          #include <include/interface/interface-policy.xml.i>
           <leafNode name="duplex">
             <properties>
               <help>Duplex mode</help>

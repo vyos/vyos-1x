@@ -1,0 +1,20 @@
+/var/log/atop/atop.log {
+    daily
+    dateext
+    dateformat _%Y-%m-%d_%H-%M-%S
+    maxsize {{ max_size }}M
+    missingok
+    nocompress
+    nocreate
+    nomail
+    rotate {{ rotate }}
+    prerotate
+        # stop the service
+        systemctl stop atop.service
+    endscript
+    postrotate
+        # start atop service again
+        systemctl start atop.service
+    endscript
+}
+

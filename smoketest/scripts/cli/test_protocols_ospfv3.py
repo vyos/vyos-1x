@@ -18,16 +18,31 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import process_named_running
 
 PROCESS_NAME = 'ospf6d'
 base_path = ['protocols', 'ospfv3']
 
+route_map = 'foo-bar-baz-0815'
+
 router_id = '192.0.2.1'
 default_area = '0'
 
 class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+        cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['policy', 'route-map', route_map])
+        super(cls, cls).tearDownClass()
+
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
@@ -109,6 +124,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         for protocol in redistribute:
             self.assertIn(f' redistribute {protocol} route-map {route_map}', frrconfig)
 
+
     def test_ospfv3_04_interfaces(self):
         bfd_profile = 'vyos-ipv6'
 
@@ -170,7 +186,60 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' area {area_stub_nosum} stub no-summary', frrconfig)
 
 
-    def test_ospfv3_06_vrfs(self):
+    def test_ospfv3_06_area_nssa(self):
+        area_nssa = '1.1.1.1'
+        area_nssa_nosum = '2.2.2.2'
+        area_nssa_default = '3.3.3.3'
+
+        self.cli_set(base_path + ['area', area_nssa, 'area-type', 'nssa'])
+        self.cli_set(base_path + ['area', area_nssa, 'area-type', 'stub'])
+        # can only set one area-type per OSPFv3 area
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['area', area_nssa, 'area-type', 'stub'])
+
+        self.cli_set(base_path + ['area', area_nssa_nosum, 'area-type', 'nssa', 'no-summary'])
+        self.cli_set(base_path + ['area', area_nssa_nosum, 'area-type', 'nssa', 'default-information-originate'])
+        self.cli_set(base_path + ['area', area_nssa_default, 'area-type', 'nssa', 'default-information-originate'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f'router ospf6', frrconfig)
+        self.assertIn(f' area {area_nssa} nssa', frrconfig)
+        self.assertIn(f' area {area_nssa_nosum} nssa default-information-originate no-summary', frrconfig)
+        self.assertIn(f' area {area_nssa_default} nssa default-information-originate', frrconfig)
+
+
+    def test_ospfv3_07_default_originate(self):
+        seq = '100'
+        metric = '50'
+        metric_type = '1'
+
+        self.cli_set(base_path + ['default-information', 'originate', 'metric', metric])
+        self.cli_set(base_path + ['default-information', 'originate', 'metric-type', metric_type])
+        self.cli_set(base_path + ['default-information', 'originate', 'route-map', route_map])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f'router ospf6', frrconfig)
+        self.assertIn(f' default-information originate metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+
+        # Now set 'always'
+        self.cli_set(base_path + ['default-information', 'originate', 'always'])
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf6')
+        self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
+
+
+    def test_ospfv3_08_vrfs(self):
         # It is safe to assume that when the basic VRF test works, all
         # other OSPF related features work, as we entirely inherit the CLI
         # templates and Jinja2 FRR template.
@@ -209,4 +278,4 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

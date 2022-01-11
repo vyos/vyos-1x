@@ -22,6 +22,7 @@ from jinja2 import FileSystemLoader
 from vyos.defaults import directories
 from vyos.util import chmod
 from vyos.util import chown
+from vyos.util import dict_search_args
 from vyos.util import makedir
 
 # Holds template filters registered via register_filter()
@@ -150,6 +151,16 @@ def bracketize_ipv6(address):
     if is_ipv6(address):
         return f'[{address}]'
     return address
+
+@register_filter('dot_colon_to_dash')
+def dot_colon_to_dash(text):
+    """ Replace dot and colon to dash for string
+    Example:
+    192.0.2.1 => 192-0-2-1, 2001:db8::1 => 2001-db8--1
+    """
+    text = text.replace(":", "-")
+    text = text.replace(".", "-")
+    return text
 
 @register_filter('netmask_from_cidr')
 def netmask_from_cidr(prefix):
@@ -479,3 +490,57 @@ def get_openvpn_ncp_ciphers(ciphers):
         else:
             out.append(cipher)
     return ':'.join(out).upper()
+
+@register_filter('snmp_auth_oid')
+def snmp_auth_oid(type):
+    if type not in ['md5', 'sha', 'aes', 'des', 'none']:
+        raise ValueError()
+
+    OIDs = {
+        'md5' : '.1.3.6.1.6.3.10.1.1.2',
+        'sha' : '.1.3.6.1.6.3.10.1.1.3',
+        'aes' : '.1.3.6.1.6.3.10.1.2.4',
+        'des' : '.1.3.6.1.6.3.10.1.2.2',
+        'none': '.1.3.6.1.6.3.10.1.2.1'
+    }
+    return OIDs[type]
+
+@register_filter('nft_action')
+def nft_action(vyos_action):
+    if vyos_action == 'accept':
+        return 'return'
+    return vyos_action
+
+@register_filter('nft_rule')
+def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
+    from vyos.firewall import parse_rule
+    return parse_rule(rule_conf, fw_name, rule_id, ip_name)
+
+@register_filter('nft_state_policy')
+def nft_state_policy(conf, state, ipv6=False):
+    out = [f'ct state {state}']
+
+    if 'log' in conf and 'enable' in conf['log']:
+        out.append('log')
+
+    out.append('counter')
+
+    if 'action' in conf:
+        out.append(conf['action'])
+
+    return " ".join(out)
+
+@register_filter('nft_intra_zone_action')
+def nft_intra_zone_action(zone_conf, ipv6=False):
+    if 'intra_zone_filtering' in zone_conf:
+        intra_zone = zone_conf['intra_zone_filtering']
+        fw_name = 'ipv6_name' if ipv6 else 'name'
+
+        if 'action' in intra_zone:
+            if intra_zone['action'] == 'accept':
+                return 'return'
+            return intra_zone['action']
+        elif dict_search_args(intra_zone, 'firewall', fw_name):
+            name = dict_search_args(intra_zone, 'firewall', fw_name)
+            return f'jump {name}'
+    return 'return'

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import is_ip_network
 from vyos.util import cmd
+from vyos.util import run
 from vyos.util import check_kmod
 from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
@@ -42,7 +43,7 @@ if LooseVersion(kernel_version()) > LooseVersion('5.1'):
 else:
     k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
-iptables_nat_config = '/tmp/vyos-nat-rules.nft'
+nftables_nat_config = '/tmp/vyos-nat-rules.nft'
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -93,7 +94,6 @@ def get_config(config=None):
                 nat[direction]['rule'][rule] = dict_merge(default_values,
                     nat[direction]['rule'][rule])
 
-
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table raw')
     nftable_json = json.loads(tmp)
@@ -106,9 +106,9 @@ def get_config(config=None):
         nat['helper_functions'] = 'remove'
 
         # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_HELPER')
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
         nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_HELPER')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
         nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
         nat['deleted'] = ''
         return nat
@@ -119,10 +119,10 @@ def get_config(config=None):
         nat['helper_functions'] = 'add'
 
         # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_IGNORE')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYATTA_CT_PREROUTING_HOOK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_IGNORE')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYATTA_CT_OUTPUT_HOOK')
+        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_IGNORE')
+        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_PREROUTING_HOOK')
+        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_IGNORE')
+        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_OUTPUT_HOOK')
 
     return nat
 
@@ -180,14 +180,21 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(iptables_nat_config, 'firewall/nftables-nat.tmpl', nat,
-           permission=0o755)
+    render(nftables_nat_config, 'firewall/nftables-nat.tmpl', nat)
+
+    # dry-run newly generated configuration
+    tmp = run(f'nft -c -f {nftables_nat_config}')
+    if tmp > 0:
+        if os.path.exists(nftables_ct_file):
+            os.unlink(nftables_ct_file)
+        raise ConfigError('Configuration file errors encountered!')
+
     return None
 
 def apply(nat):
-    cmd(f'{iptables_nat_config}')
-    if os.path.isfile(iptables_nat_config):
-        os.unlink(iptables_nat_config)
+    cmd(f'nft -f {nftables_nat_config}')
+    if os.path.isfile(nftables_nat_config):
+        os.unlink(nftables_nat_config)
 
     return None
 

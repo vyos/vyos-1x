@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
+from copy import deepcopy
 
 from vyos.config import Config
 from vyos.util import write_file
@@ -22,18 +23,12 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-motd="""
-Welcome to VyOS
-
-Check out project news at https://blog.vyos.io
-and feel free to report bugs at https://phabricator.vyos.net
-
-You can change this banner using "set system login banner post-login" command.
-
-VyOS is a free software distribution that includes multiple components,
-you can check individual component licenses under /usr/share/doc/*/copyright
-
-"""
+try:
+    with open('/usr/share/vyos/default_motd') as f:
+        motd = f.read()
+except:
+    # Use an empty banner if the default banner file cannot be read
+    motd = "\n"
 
 PRELOGIN_FILE = r'/etc/issue'
 PRELOGIN_NET_FILE = r'/etc/issue.net'
@@ -46,7 +41,7 @@ default_config_data = {
 }
 
 def get_config(config=None):
-    banner = default_config_data
+    banner = deepcopy(default_config_data)
     if config:
         conf = config
     else:

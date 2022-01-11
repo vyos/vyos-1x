@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+import sys
+from vyos.validate import is_ipv6_link_local
+
+if __name__ == '__main__':
+    if len(sys.argv)>1:
+        addr = sys.argv[1]
+        if not is_ipv6_link_local(addr):
+            sys.exit(1)
+
+    sys.exit(0)

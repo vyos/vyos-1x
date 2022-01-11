@@ -1,5 +1,5 @@
 {% set vrf_command = 'ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
-{% set oid_route_table = ' ' if route_table is sameas true else '-I -ipCidrRouteTable,inetCidrRouteTable' %}
+{% set oid_route_table = ' ' if oid_enable is defined and oid_enable == 'route-table' else '-I -ipCidrRouteTable,inetCidrRouteTable' %}
 [Unit]
 StartLimitIntervalSec=0
 After=vyos-router.service

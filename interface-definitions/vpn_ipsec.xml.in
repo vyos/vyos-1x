@@ -13,13 +13,13 @@
         <children>
           <leafNode name="disable-uniqreqids">
             <properties>
-              <help>Option to disable requirement for unique IDs in the Security Database</help>
+              <help>Disable requirement for unique IDs in the Security Database</help>
               <valueless/>
             </properties>
           </leafNode>
           <tagNode name="esp-group">
             <properties>
-              <help>Name of Encapsulating Security Payload (ESP) group</help>
+              <help>Encapsulated Security Payload (ESP) group name</help>
             </properties>
             <children>
               <leafNode name="compression">
@@ -47,7 +47,7 @@
                   <help>ESP lifetime</help>
                   <valueHelp>
                     <format>u32:30-86400</format>
-                    <description>ESP lifetime in seconds (default 3600)</description>
+                    <description>ESP lifetime in seconds (default: 3600)</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 30-86400"/>
@@ -83,7 +83,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Inherit Diffie-Hellman group from IKE group - default</description>
+                    <description>Inherit Diffie-Hellman group from the IKE group (default)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group1</format>
@@ -185,10 +185,10 @@
               </leafNode>
               <tagNode name="proposal">
                 <properties>
-                  <help>ESP-group proposal [REQUIRED]</help>
+                  <help>ESP group proposal [REQUIRED]</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
-                    <description>ESP-group proposal number</description>
+                    <description>ESP group proposal number</description>
                   </valueHelp>
                 </properties>
                 <children>
@@ -200,30 +200,30 @@
           </tagNode>
           <tagNode name="ike-group">
             <properties>
-              <help>Name of Internet Key Exchange (IKE) group</help>
+              <help>Internet Key Exchange (IKE) group name</help>
             </properties>
             <children>
               <leafNode name="close-action">
                 <properties>
-                  <help>close-action_help</help>
+                  <help>Action to take if a child SA is unexpectedly closed</help>
                   <completionHelp>
                     <list>none hold clear restart</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
-                    <description>Set action to none (default)</description>
+                    <description>Do nothing (default)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>hold</format>
-                    <description>Set action to hold</description>
+                    <description>Attempt to re-negotiate when matching traffic is seen</description>
                   </valueHelp>
                   <valueHelp>
                     <format>clear</format>
-                    <description>Set action to clear</description>
+                    <description>Remove the connection immediately</description>
                   </valueHelp>
                   <valueHelp>
                     <format>restart</format>
-                    <description>Set action to restart</description>
+                    <description>Attempt to re-negotiate the connection immediately</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(none|hold|clear|restart)$</regex>
@@ -243,15 +243,15 @@
                       </completionHelp>
                       <valueHelp>
                         <format>hold</format>
-                        <description>Set action to hold (default)</description>
+                        <description>Attempt to re-negotiate the connection when matching traffic is seen (default)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>clear</format>
-                        <description>Set action to clear</description>
+                        <description>Remove the connection immediately</description>
                       </valueHelp>
                       <valueHelp>
                         <format>restart</format>
-                        <description>Set action to restart</description>
+                        <description>Attempt to re-negotiate the connection immediately</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(hold|clear|restart)$</regex>
@@ -263,7 +263,7 @@
                       <help>Keep-alive interval</help>
                       <valueHelp>
                         <format>u32:2-86400</format>
-                        <description>Keep-alive interval in seconds (default 30)</description>
+                        <description>Keep-alive interval in seconds (default: 30)</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 2-86400"/>
@@ -272,7 +272,7 @@
                   </leafNode>
                   <leafNode name="timeout">
                     <properties>
-                      <help>Dead-Peer-Detection keep-alive timeout (IKEv1 only)</help>
+                      <help>Dead Peer Detection keep-alive timeout (IKEv1 only)</help>
                       <valueHelp>
                         <format>u32:2-86400</format>
                         <description>Keep-alive timeout in seconds (default 120)</description>
@@ -296,7 +296,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>no</format>
-                    <description>Disable remote host re-authenticaton during an IKE rekey. (Default)</description>
+                    <description>Disable remote host re-authenticaton during an IKE rekey. (default)</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(yes|no)$</regex>
@@ -305,17 +305,17 @@
               </leafNode>
               <leafNode name="key-exchange">
                 <properties>
-                  <help>Key Exchange Version</help>
+                  <help>IKE version</help>
                   <completionHelp>
                     <list>ikev1 ikev2</list>
                   </completionHelp>
                   <valueHelp>
                     <format>ikev1</format>
-                    <description>Use IKEv1 for Key Exchange [DEFAULT]</description>
+                    <description>Use IKEv1 for key exchange [DEFAULT]</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ikev2</format>
-                    <description>Use IKEv2 for Key Exchange</description>
+                    <description>Use IKEv2 for key exchange</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(ikev1|ikev2)$</regex>
@@ -327,7 +327,7 @@
                   <help>IKE lifetime</help>
                   <valueHelp>
                     <format>u32:30-86400</format>
-                    <description>IKE lifetime in seconds (default 28800)</description>
+                    <description>IKE lifetime in seconds (default: 28800)</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 30-86400"/>
@@ -337,7 +337,7 @@
               </leafNode>
               <leafNode name="mobike">
                 <properties>
-                  <help>Enable MOBIKE Support. MOBIKE is only available for IKEv2.</help>
+                  <help>Enable MOBIKE Support (IKEv2 only)</help>
                   <completionHelp>
                     <list>enable disable</list>
                   </completionHelp>
@@ -356,17 +356,17 @@
               </leafNode>
               <leafNode name="mode">
                 <properties>
-                  <help>IKEv1 Phase 1 Mode Selection</help>
+                  <help>IKEv1 phase 1 mode selection</help>
                   <completionHelp>
                     <list>main aggressive</list>
                   </completionHelp>
                   <valueHelp>
                     <format>main</format>
-                    <description>Use Main mode for Key Exchanges in the IKEv1 Protocol (Recommended Default)</description>
+                    <description>Use the main mode (recommended, default)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>aggressive</format>
-                    <description>Use Aggressive mode for Key Exchanges in the IKEv1 protocol - We do not recommend users to use aggressive mode as it is much more insecure compared to Main mode.</description>
+                    <description>Use the aggressive mode (insecure, not recommended)</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(main|aggressive)$</regex>
@@ -375,10 +375,10 @@
               </leafNode>
               <tagNode name="proposal">
                 <properties>
-                  <help>proposal_help</help>
+                  <help>IKE proposal</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
-                    <description>IKE-group proposal</description>
+                    <description>IKE group proposal</description>
                   </valueHelp>
                 </properties>
                 <children>
@@ -490,12 +490,12 @@
           </tagNode>
           <leafNode name="include-ipsec-conf">
             <properties>
-              <help>Sets to include an additional configuration directive file for strongSwan. Use an absolute path to specify the included file</help>
+              <help>Absolute path to specify a strongSwan config include file</help>
             </properties>
           </leafNode>
           <leafNode name="include-ipsec-secrets">
             <properties>
-              <help>Sets to include an additional secrets file for strongSwan. Use an absolute path to specify the included file.</help>
+              <help>Absolute path to a strongSwan secrets include file</help>
             </properties>
           </leafNode>
           #include <include/generic-interface-multi.xml.i>
@@ -506,7 +506,7 @@
             <children>
               <leafNode name="level">
                 <properties>
-                  <help>strongSwan Logger Level</help>
+                  <help>strongSwan logging Level</help>
                   <valueHelp>
                     <format>0</format>
                     <description>Very basic auditing logs e.g. SA up/SA down (default)</description>
@@ -527,7 +527,7 @@
               </leafNode>
               <leafNode name="subsystem">
                 <properties>
-                  <help>Subsystem in the daemon the log comes from</help>
+                  <help>Subsystem logging levels</help>
                   <completionHelp>
                     <list>dmn mgr ike chd job cfg knl net asn enc lib esp tls tnc imc imv pts any</list>
                   </completionHelp>
@@ -626,7 +626,7 @@
           </node>
           <tagNode name="profile">
             <properties>
-              <help>VPN IPSec Profile</help>
+              <help>VPN IPSec profile</help>
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
@@ -643,7 +643,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>pre-shared-secret</format>
-                        <description>Use pre shared secret key</description>
+                        <description>Use a pre-shared secret key</description>
                       </valueHelp>
                     </properties>
                   </leafNode>
@@ -657,13 +657,13 @@
                 <children>
                   <leafNode name="tunnel">
                     <properties>
-                      <help>Tunnel interface associated with this configuration profile</help>
+                      <help>Tunnel interface associated with this profile</help>
                       <completionHelp>
                         <path>interfaces tunnel</path>
                       </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Associated interface to this configuration profile</description>
+                        <description>Associated interface to this profile</description>
                       </valueHelp>
                       <multi/>
                     </properties>
@@ -699,15 +699,15 @@
                           </completionHelp>
                           <valueHelp>
                             <format>eap-tls</format>
-                            <description>Client uses EAP-TLS authentication</description>
+                            <description>Use EAP-TLS authentication</description>
                           </valueHelp>
                           <valueHelp>
                             <format>eap-mschapv2</format>
-                            <description>Client uses EAP-MSCHAPv2 authentication</description>
+                            <description>Use EAP-MSCHAPv2 authentication</description>
                           </valueHelp>
                           <valueHelp>
                             <format>eap-radius</format>
-                            <description>Client uses EAP-RADIUS authentication</description>
+                            <description>Use EAP-RADIUS authentication</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(eap-tls|eap-mschapv2|eap-radius)$</regex>
@@ -724,11 +724,11 @@
                           </completionHelp>
                           <valueHelp>
                             <format>pre-shared-secret</format>
-                            <description>Authentication pre-shared-secret</description>
+                            <description>Use a pre-shared secret key</description>
                           </valueHelp>
                           <valueHelp>
                             <format>x509</format>
-                            <description>Authentication x509</description>
+                            <description>Use x.509 certificate</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(pre-shared-secret|x509)$</regex>
@@ -754,7 +754,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>u32:1-86400</format>
-                        <description>Timeout in seconds (default 28800)</description>
+                        <description>Timeout in seconds (default: 28800)</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-86400"/>
@@ -764,14 +764,14 @@
                   </leafNode>
                   <leafNode name="pool">
                     <properties>
-                      <help>Pool name used for IP address assignments</help>
+                      <help>IP address pool</help>
                       <completionHelp>
                         <path>vpn ipsec remote-access pool</path>
                         <list>dhcp radius</list>
                       </completionHelp>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Name of predefined IP pool</description>
+                        <description>Predefined IP pool name</description>
                       </valueHelp>
                       <valueHelp>
                         <format>dhcp</format>
@@ -786,17 +786,17 @@
                   </leafNode>
                   <leafNode name="unique">
                     <properties>
-                      <help>Connection uniqueness policy to enforce</help>
+                      <help>Connection uniqueness enforcement policy</help>
                       <completionHelp>
                         <list>never keep replace</list>
                       </completionHelp>
                       <valueHelp>
                         <format>never</format>
-                        <description>Never enforce connection uniqueness policy</description>
+                        <description>Never enforce connection uniqueness</description>
                       </valueHelp>
                       <valueHelp>
                         <format>keep</format>
-                        <description>Rejects new connection attempts if the same user already has an active connection</description>
+                        <description>Reject new connection attempts if the same user already has an active connection</description>
                       </valueHelp>
                       <valueHelp>
                         <format>replace</format>
@@ -811,7 +811,7 @@
               </tagNode>
               <node name="dhcp">
                 <properties>
-                  <help>DHCP pool options for remote-access</help>
+                  <help>DHCP pool options for remote access</help>
                 </properties>
                 <children>
                   #include <include/generic-interface.xml.i>
@@ -831,7 +831,7 @@
               </node>
               <tagNode name="pool">
                 <properties>
-                  <help>IP address pool for remote-access users</help>
+                  <help>IP address pool for remote access users</help>
                 </properties>
                 <children>
                   <leafNode name="exclude">
@@ -936,7 +936,7 @@
                           </valueHelp>
                           <valueHelp>
                             <format>x509</format>
-                            <description>Use X.509 certificate</description>
+                            <description>Use x.509 certificate</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(pre-shared-secret|rsa|x509)$</regex>
@@ -992,17 +992,17 @@
                   #include <include/dhcp-interface.xml.i>
                   <leafNode name="force-encapsulation">
                     <properties>
-                      <help>Force UDP Encapsulation for ESP Payloads</help>
+                      <help>Force UDP Encapsulation for ESP payloads</help>
                       <completionHelp>
                         <list>enable disable</list>
                       </completionHelp>
                       <valueHelp>
                         <format>enable</format>
-                        <description>This endpoint will force UDP encapsulation for this peer</description>
+                        <description>Force UDP encapsulation</description>
                       </valueHelp>
                       <valueHelp>
                         <format>disable</format>
-                        <description>This endpoint will not force UDP encapsulation for this peer</description>
+                        <description>Do not force UDP encapsulation</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(enable|disable)$</regex>
@@ -1012,7 +1012,7 @@
                   #include <include/ipsec/ike-group.xml.i>
                   <leafNode name="ikev2-reauth">
                     <properties>
-                      <help>Re-authentication of the remote peer during an IKE re-key.  IKEv2 option only</help>
+                      <help>Re-authentication of the remote peer during an IKE re-key (IKEv2 only)</help>
                       <completionHelp>
                         <list>yes no inherit</list>
                       </completionHelp>
@@ -1026,7 +1026,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>inherit</format>
-                        <description>Inherit the reauth configuration form your IKE-group (Default)</description>
+                        <description>Inherit the reauth configuration form your IKE-group (default)</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(yes|no|inherit)$</regex>
@@ -1047,9 +1047,21 @@
                       #include <include/ipsec/esp-group.xml.i>
                       #include <include/ipsec/local-traffic-selector.xml.i>
                       #include <include/ip-protocol.xml.i>
+                      <leafNode name="priority">
+                        <properties>
+                          <help>Priority for IPSec policy (lowest value more preferable)</help>
+                          <valueHelp>
+                            <format>u32:1-100</format>
+                            <description>Priority for IPSec policy (lowest value more preferable)</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-100"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
                       <node name="remote">
                         <properties>
-                          <help>Remote parameters for interesting traffic</help>
+                          <help>Match remote addresses</help>
                         </properties>
                         <children>
                           #include <include/port-number.xml.i>

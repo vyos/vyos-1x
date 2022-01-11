@@ -89,6 +89,10 @@ def verify(vxlan):
         raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
                           f'CLI option is used. Additional tunnels: {other_tunnels}')
 
+    if 'gpe' in vxlan and 'external' not in vxlan:
+        raise ConfigError(f'VXLAN-GPE is only supported when "external" '\
+                          f'CLI option is used.')
+
     if 'source_interface' in vxlan:
         # VXLAN adds at least an overhead of 50 byte - we need to check the
         # underlaying device if our VXLAN package is not going to be fragmented!

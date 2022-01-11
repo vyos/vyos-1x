@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+<!--
+  <node name="clear">
+    <children>
+      <node name="firewall">
+        <properties>
+          <help>Clear firewall statistics</help>
+        </properties>
+        <children>
+          <tagNode name="ipv6-name">
+            <properties>
+              <help>Clear firewall statistics for chain</help>
+              <completionHelp>
+                <path>firewall ipv6-name</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="counters">
+                <properties>
+                  <help>Clear counters for specified chain</help>
+                </properties>
+                <command>echo "TODO"</command>
+              </leafNode>
+              <tagNode name="rule">
+                <properties>
+                  <help>Clear firewall statistics for a rule</help>
+                  <completionHelp>
+                    <path>firewall ipv6-name ${COMP_WORDS[4]} rule</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="counters">
+                    <properties>
+                      <help>Clear counters for specified rule</help>
+                    </properties>
+                    <command>echo "TODO"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="name">
+            <properties>
+              <help>Clear firewall statistics for chain</help>
+              <completionHelp>
+                <path>firewall name</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="counters">
+                <properties>
+                  <help>Clear counters for specified chain</help>
+                </properties>
+                <command>echo "TODO"</command>
+              </leafNode>
+              <tagNode name="rule">
+                <properties>
+                  <help>Clear firewall statistics for a rule</help>
+                  <completionHelp>
+                    <path>firewall name ${COMP_WORDS[4]} rule</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="counters">
+                    <properties>
+                      <help>Clear counters for specified rule</help>
+                    </properties>
+                    <command>echo "TODO"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+-->
+<!--
+  <node name="reset">
+    <children>
+      <node name="firewall">
+        <properties>
+          <help>Reset a firewall group</help>
+        </properties>
+        <children>
+          <tagNode name="address-group">
+            <properties>
+              <help>Reset a firewall address group</help>
+            </properties>
+          </tagNode>
+          <tagNode name="network-group">
+            <properties>
+              <help>Reset a firewall network group</help>
+            </properties>
+          </tagNode>
+          <tagNode name="port-group">
+            <properties>
+              <help>Reset a firewall port group</help>
+            </properties>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+-->
+  <node name="show">
+    <children>
+      <node name="firewall">
+        <properties>
+          <help>Show firewall information</help>
+        </properties>
+        <children>
+          <tagNode name="group">
+            <properties>
+              <help>Show firewall group</help>
+              <completionHelp>
+                <path>firewall group address-group</path>
+                <path>firewall group network-group</path>
+                <path>firewall group port-group</path>
+                <path>firewall group ipv6-address-group</path>
+                <path>firewall group ipv6-network-group</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>
+          </tagNode>
+          <leafNode name="group">
+            <properties>
+              <help>Show firewall group</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group</command>
+          </leafNode>
+          <tagNode name="ipv6-name">
+            <properties>
+              <help>Show IPv6 firewall chains</help>
+              <completionHelp>
+                <path>firewall ipv6-name</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="rule">
+                <properties>
+                  <help>Show summary of IPv6 firewall rules</help>
+                  <completionHelp>
+                    <path>firewall ipv6-name ${COMP_WORDS[6]} rule</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --name $4 --rule $6 --ipv6</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --name $4 --ipv6</command>
+          </tagNode>
+          <tagNode name="name">
+            <properties>
+              <help>Show IPv4 firewall chains</help>
+              <completionHelp>
+                <path>firewall name</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="rule">
+                <properties>
+                  <help>Show summary of IPv4 firewall rules</help>
+                  <completionHelp>
+                    <path>firewall name ${COMP_WORDS[6]} rule</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --name $4 --rule $6</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --name $4</command>
+          </tagNode>
+          <leafNode name="statistics">
+            <properties>
+              <help>Show statistics of firewall application</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_statistics</command>
+          </leafNode>
+          <leafNode name="summary">
+            <properties>
+              <help>Show summary of firewall application</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_summary</command>
+          </leafNode>
+        </children>
+        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_all</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

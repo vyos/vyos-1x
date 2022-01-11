@@ -88,7 +88,7 @@ tcp_outgoing_address {{ outgoing_address }}
 
 {% if listen_address is defined and listen_address is not none %}
 {%   for address, config in listen_address.items() %}
-http_port {{ address }}:{{ config.port if config.port is defined else default_port }} {{ 'intercept' if config.disable_transparent is not defined }}
+http_port {{ address | bracketize_ipv6 }}:{{ config.port if config.port is defined else default_port }} {{ 'intercept' if config.disable_transparent is not defined }}
 {%   endfor %}
 {% endif %}
 http_port 127.0.0.1:{{ default_port }}
