@@ -51,7 +51,7 @@ def verify(policy):
     if not policy:
         return None
 
-    for route in ['route', 'ipv6_route']:
+    for route in ['route', 'route6']:
         if route in policy:
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
@@ -98,7 +98,7 @@ def generate(policy):
     return None
 
 def apply_table_marks(policy):
-    for route in ['route', 'ipv6_route']:
+    for route in ['route', 'route6']:
         if route in policy:
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:

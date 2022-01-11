@@ -9,7 +9,7 @@ table ip mangle {
         type filter hook postrouting priority -150; policy accept;
     }
 {% endif %}
-{% if route is defined -%}
+{% if route is defined and route is not none -%}
 {%   for route_text, conf in route.items() %}
     chain VYOS_PBR_{{ route_text }} {
 {%     if conf.rule is defined %}
@@ -36,8 +36,8 @@ table ip6 mangle {
         type filter hook postrouting priority -150; policy accept;
     }
 {% endif %}
-{% if ipv6_route is defined %}
-{%   for route_text, conf in ipv6_route.items() %}
+{% if route6 is defined and route6 is not none %}
+{%   for route_text, conf in route6.items() %}
     chain VYOS_PBR6_{{ route_text }} {
 {%     if conf.rule is defined %}
 {%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
