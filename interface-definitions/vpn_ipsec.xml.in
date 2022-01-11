@@ -286,7 +286,7 @@
               </node>
               <leafNode name="ikev2-reauth">
                 <properties>
-                  <help>ikev2-reauth_help</help>
+                  <help>Re-authentication of the remote peer during an IKE re-key. IKEv2 option only</help>
                   <completionHelp>
                     <list>yes no</list>
                   </completionHelp>
