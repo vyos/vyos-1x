@@ -298,7 +298,7 @@ def apply(container):
                                  f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
                                  f'--name {name} {port} {volume} {env_opt}'
             if 'allow_host_networks' in container_config:
-                _cmd(f'{container_base_cmd} --net host {image}')
+                run(f'{container_base_cmd} --net host {image}')
             else:
                 for network in container_config['network']:
                     ipparam = ''
@@ -306,18 +306,24 @@ def apply(container):
                         address = container_config['network'][network]['address']
                         ipparam = f'--ip {address}'
 
-                    counter = 0
-                    while True:
-                        if counter >= 10:
-                            break
-                        try:
-                            _cmd(f'{container_base_cmd} --net {network} {ipparam} {image}')
-                            break
-                        except:
-                            counter = counter +1
-                            sleep(0.5)
+                    run(f'{container_base_cmd} --net {network} {ipparam} {image}')
 
     return None
+
+def run(container_cmd):
+    counter = 0
+    while True:
+        if counter >= 10:
+            break
+        try:
+            _cmd(container_cmd)
+            break
+        except:
+            counter = counter +1
+            sleep(0.5)
+
+    return None
+
 
 if __name__ == '__main__':
     try:
