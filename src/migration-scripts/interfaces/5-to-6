@@ -107,10 +107,15 @@ if __name__ == '__main__':
         config_file = f.read()
 
     config = ConfigTree(config_file)
+    base = ['interfaces']
+
+    if not config.exists(base):
+        # Nothing to do
+        exit(0)
 
     # list all individual interface types like dummy, ethernet and so on
-    for if_type in config.list_nodes(['interfaces']):
-        base_if_type = ['interfaces', if_type]
+    for if_type in config.list_nodes(base):
+        base_if_type = base + [if_type]
 
         # for every individual interface we need to check if there is an
         # ipv6 ra configured ... and also for every VIF (VLAN) interface
