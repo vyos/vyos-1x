@@ -26,7 +26,7 @@ def get_policy_interfaces(conf, policy, name=None, ipv6=False):
     interfaces = conf.get_config_dict(['interfaces'], key_mangling=('-', '_'),
                                       get_first_key=True, no_tag_node_value_mangle=True)
 
-    routes = ['route', 'ipv6_route']
+    routes = ['route', 'route6']
 
     def parse_if(ifname, if_conf):
         if 'policy' in if_conf:
@@ -52,7 +52,7 @@ def get_policy_interfaces(conf, policy, name=None, ipv6=False):
 def get_config_policy(conf, name=None, ipv6=False, interfaces=True):
     config_path = ['policy']
     if name:
-        config_path += ['ipv6-route' if ipv6 else 'route', name]
+        config_path += ['route6' if ipv6 else 'route', name]
 
     policy = conf.get_config_dict(config_path, key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
@@ -64,7 +64,7 @@ def get_config_policy(conf, name=None, ipv6=False, interfaces=True):
                 for route_name, route_conf in policy['route'].items():
                     route_conf['interface'] = []
 
-            if 'ipv6_route' in policy:
+            if 'route6' in policy:
                 for route_name, route_conf in policy['ipv6_route'].items():
                     route_conf['interface'] = []
 
@@ -151,8 +151,8 @@ def show_policy(ipv6=False):
         for route, route_conf in policy['route'].items():
             output_policy_route(route, route_conf, ipv6=False)
 
-    if ipv6 and 'ipv6_route' in policy:
-        for route, route_conf in policy['ipv6_route'].items():
+    if ipv6 and 'route6' in policy:
+        for route, route_conf in policy['route6'].items():
             output_policy_route(route, route_conf, ipv6=True)
 
 def show_policy_name(name, ipv6=False):
