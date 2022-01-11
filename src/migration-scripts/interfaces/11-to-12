@@ -31,6 +31,8 @@ if __name__ == '__main__':
         config_file = f.read()
 
     config = ConfigTree(config_file)
+    if not config.exists(['interfaces']):
+        exit(0)
 
     for type in config.list_nodes(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
