@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.util import call
 from vyos.util import chown
@@ -42,6 +43,24 @@ systemd_telegraf_override_dir = '/etc/systemd/system/vyos-telegraf.service.d'
 systemd_override = f'{systemd_telegraf_override_dir}/10-override.conf'
 
 
+def get_interfaces(type='', vlan=True):
+    """
+    Get interfaces
+    get_interfaces()
+    ['dum0', 'eth0', 'eth1', 'eth1.5', 'lo', 'tun0']
+
+    get_interfaces("dummy")
+    ['dum0']
+    """
+    interfaces = []
+    ifaces = Section.interfaces(type)
+    for iface in ifaces:
+        if vlan == False and '.' in iface:
+            continue
+        interfaces.append(iface)
+
+    return interfaces
+
 def get_nft_filter_chains():
     """
     Get nft chains for table filter
@@ -56,6 +75,7 @@ def get_nft_filter_chains():
             chain_list.append(chain)
 
     return chain_list
+
 
 def get_config(config=None):
 
@@ -75,8 +95,9 @@ def get_config(config=None):
     default_values = defaults(base)
     monitoring = dict_merge(default_values, monitoring)
 
-    monitoring['nft_chains'] = get_nft_filter_chains()
     monitoring['custom_scripts_dir'] = custom_scripts_dir
+    monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
+    monitoring['nft_chains'] = get_nft_filter_chains()
 
     return monitoring
 
