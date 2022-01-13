@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -111,6 +111,10 @@ if __name__ == "__main__":
         (True, re.compile(r'public-keys \S+'), 'public-keys xxxx@xxx.xxx'),
         (True, re.compile(r'type \'ssh-(rsa|dss)\''), 'type ssh-xxx'),
         (True, re.compile(r' key \S+'), ' key xxxxxx'),
+        # Strip bucket
+        (True, re.compile(r' bucket \S+'), ' bucket xxxxxx'),
+        # Strip tokens
+        (True, re.compile(r' token \S+'), ' token xxxxxx'),
         # Strip OpenVPN secrets
         (True, re.compile(r'(shared-secret-key-file|ca-cert-file|cert-file|dh-file|key-file|client) (\S+)'), r'\1 xxxxxx'),
         # Strip IPSEC secrets
@@ -123,8 +127,8 @@ if __name__ == "__main__":
         # Strip MAC addresses
         (args.mac, re.compile(r'([0-9a-fA-F]{2}\:){5}([0-9a-fA-F]{2}((\:{0,1})){3})'), r'xx:xx:xx:xx:xx:\2'),
 
-        # Strip host-name, domain-name, and domain-search
-        (args.hostname, re.compile(r'(host-name|domain-name|domain-search) \S+'), r'\1 xxxxxx'),
+        # Strip host-name, domain-name, domain-search and url
+        (args.hostname, re.compile(r'(host-name|domain-name|domain-search|url) \S+'), r'\1 xxxxxx'),
 
         # Strip user-names
         (args.username, re.compile(r'(user|username|user-id) \S+'), r'\1 xxxxxx'),
