@@ -1,47 +1,88 @@
 #!/usr/bin/env python3
 
-import subprocess
+from vyos.ifconfig import Section
+from vyos.ifconfig import Interface
+
 import time
 
-def status_to_int(status):
-    switcher={
-        'u':'0',
-        'D':'1',
-        'A':'2'
-        }
-    return switcher.get(status,"")
+def get_interfaces(type='', vlan=True):
+    """
+    Get interfaces:
+    ['dum0', 'eth0', 'eth1', 'eth1.5', 'lo', 'tun0']
+    """
+    interfaces = []
+    ifaces = Section.interfaces(type)
+    for iface in ifaces:
+        if vlan == False and '.' in iface:
+            continue
+        interfaces.append(iface)
 
-def description_check(line):
-    desc=" ".join(line[3:])
-    if desc == "":
+    return interfaces
+
+def get_interface_addresses(iface, link_local_v6=False):
+    """
+    Get IP and IPv6 addresses from interface in one string
+    By default don't get IPv6 link-local addresses
+    If interface doesn't have address, return "-"
+    """
+    addresses = []
+    addrs = Interface(iface).get_addr()
+
+    for addr in addrs:
+        if link_local_v6 == False:
+            if addr.startswith('fe80::'):
+                continue
+        addresses.append(addr)
+
+    if not addresses:
+        return "-"
+
+    return (" ".join(addresses))
+
+def get_interface_description(iface):
+    """
+    Get interface description
+    If none return "empty"
+    """
+    description = Interface(iface).get_alias()
+
+    if not description:
         return "empty"
+
+    return description
+
+def get_interface_admin_state(iface):
+    """
+    Interface administrative state
+    up => 0, down => 2
+    """
+    state = Interface(iface).get_admin_state()
+    if state == 'up':
+        admin_state = 0
+    if state == 'down':
+        admin_state = 2
+
+    return admin_state
+
+def get_interface_oper_state(iface):
+    """
+    Interface operational state
+    up => 0, down => 1
+    """
+    state = Interface(iface).operational.get_state()
+    if state == 'down':
+        oper_state = 1
     else:
-        return desc
+        oper_state = 0
 
-def gen_ip_list(index,interfaces):
-    line=interfaces[index].split()
-    ip_list=line[1]
-    if index < len(interfaces):
-        index += 1
-        while len(interfaces[index].split())==1:
-            ip = interfaces[index].split()
-            ip_list = ip_list + " " + ip[0]
-            index += 1
-            if index == len(interfaces):
-                break
-    return ip_list
+    return oper_state
 
-interfaces = subprocess.check_output("/usr/libexec/vyos/op_mode/show_interfaces.py --action=show-brief", shell=True).decode('utf-8').splitlines()
-del interfaces[:3]
-lines_count=len(interfaces)
-index=0
-while index<lines_count:
-    line=interfaces[index].split()
-    if len(line)>1:
-        print(f'show_interfaces,interface={line[0]} '
-              f'ip_addresses="{gen_ip_list(index,interfaces)}",'
-              f'state={status_to_int(line[2][0])}i,'
-              f'link={status_to_int(line[2][2])}i,'
-              f'description="{description_check(line)}" '
-              f'{str(int(time.time()))}000000000')
-    index += 1
+interfaces = get_interfaces()
+
+for iface in interfaces:
+    print(f'show_interfaces,interface={iface} '
+          f'ip_addresses="{get_interface_addresses(iface)}",'
+          f'state={get_interface_admin_state(iface)}i,'
+          f'link={get_interface_oper_state(iface)}i,'
+          f'description="{get_interface_description(iface)}" '
+          f'{str(int(time.time()))}000000000')
