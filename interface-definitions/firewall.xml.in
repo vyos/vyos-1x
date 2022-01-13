@@ -125,7 +125,7 @@
           </tagNode>
           <tagNode name="ipv6-network-group">
             <properties>
-              <help>Network-group member</help>
+              <help>Firewall ipv6-network-group</help>
             </properties>
             <children>
               #include <include/generic-description.xml.i>
