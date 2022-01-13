@@ -171,7 +171,6 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if tcp_flags:
         output.append(parse_tcp_flags(tcp_flags))
 
-
     output.append('counter')
 
     if 'set' in rule_conf:
@@ -190,10 +189,10 @@ def parse_tcp_flags(flags):
     include = []
     for flag in flags.split(","):
         if flag[0] == '!':
-            flag = flag[1:]
+            flag = flag[1:].lower()
         else:
-            include.append(flag)
-        all_flags.append(flag)
+            include.append(flag.lower())
+        all_flags.append(flag.lower())
     return f'tcp flags & ({"|".join(all_flags)}) == {"|".join(include)}'
 
 def parse_time(time):

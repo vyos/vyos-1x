@@ -76,7 +76,7 @@ def get_config(config=None):
 
     return policy
 
-def verify_rule(policy, rule_conf, ipv6):
+def verify_rule(policy, name, rule_conf, ipv6):
     icmp = 'icmp' if not ipv6 else 'icmpv6'
     if icmp in rule_conf:
         icmp_defined = False
@@ -93,14 +93,14 @@ def verify_rule(policy, rule_conf, ipv6):
 
         if icmp_defined and 'protocol' not in rule_conf or rule_conf['protocol'] != icmp:
             raise ConfigError(f'{name} rule {rule_id}: ICMP type/code or type-name can only be defined if protocol is ICMP')
+
     if 'set' in rule_conf:
         if 'tcp_mss' in rule_conf['set']:
             tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
             if not tcp_flags or 'SYN' not in tcp_flags.split(","):
                 raise ConfigError(f'{name} rule {rule_id}: TCP SYN flag must be set to modify TCP-MSS')
-    if 'tcp' in rule_conf:
-        if 'flags' in rule_conf['tcp']:
-            if 'protocol' not in rule_conf or rule_conf['protocol'] != 'tcp':
+
+    if dict_search_args(rule_conf, 'tcp', 'flags') and dict_search_args(rule_conf, 'protocol') != 'tcp':
                 raise ConfigError(f'{name} rule {rule_id}: TCP flags can only be set if protocol is set to TCP')
 
     for side in ['destination', 'source']:
@@ -138,7 +138,7 @@ def verify(policy):
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
-                        verify_rule(policy, rule_conf, ipv6)
+                        verify_rule(policy, name, rule_conf, ipv6)
 
     for ifname, if_policy in policy['interfaces'].items():
         name = dict_search_args(if_policy, 'route')

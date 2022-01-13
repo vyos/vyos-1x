@@ -142,6 +142,9 @@ def verify_rule(firewall, rule_conf, ipv6):
         if not {'count', 'time'} <= set(rule_conf['recent']):
             raise ConfigError('Recent "count" and "time" values must be defined')
 
+    if dict_search_args(rule_conf, 'tcp', 'flags') and dict_search_args(rule_conf, 'protocol') != 'tcp':
+        raise ConfigError('Protocol must be tcp when specifying tcp flags')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
