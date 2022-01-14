@@ -330,12 +330,42 @@
         <help>TCP flags to match</help>
         <valueHelp>
           <format>txt</format>
-          <description>TCP flags to match</description>
+          <description>Multiple comma-separated flags</description>
+        </valueHelp>
+        <valueHelp>
+          <format>syn</format>
+          <description>Syncronise flag</description>
+        </valueHelp>
+        <valueHelp>
+          <format>ack</format>
+          <description>Acknowledge flag</description>
+        </valueHelp>
+        <valueHelp>
+          <format>fin</format>
+          <description>Finish flag</description>
+        </valueHelp>
+        <valueHelp>
+          <format>rst</format>
+          <description>Reset flag</description>
+        </valueHelp>
+        <valueHelp>
+          <format>urg</format>
+          <description>Urgent flag</description>
+        </valueHelp>
+        <valueHelp>
+          <format>psh</format>
+          <description>Push flag</description>
         </valueHelp>
         <valueHelp>
           <format> </format>
-          <description>\n\n  Allowed values for TCP flags : SYN ACK FIN RST URG PSH ALL\n  When specifying more than one flag, flags should be comma-separated.\n For example : value of 'SYN,!ACK,!FIN,!RST' will only match packets with\n  the SYN flag set, and the ACK, FIN and RST flags unset</description>
+          <description>\n When specifying more than one flag, flags should be comma-separated.\n For example: value of 'SYN,!ACK,!FIN,!RST' will only match packets with\n the SYN flag set, and the ACK, FIN and RST flags unset</description>
         </valueHelp>
+        <completionHelp>
+          <list>syn ack fin rst urg psh</list>
+        </completionHelp>
+        <constraint>
+          <validator name="tcp-flag"/>
+        </constraint>
       </properties>
     </leafNode>
   </children>
