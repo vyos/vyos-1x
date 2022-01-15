@@ -27,6 +27,7 @@ restrict -6 ::1
 
 {% if allow_clients is defined and allow_clients.address is defined %}
 # Allowed clients configuration
+restrict default ignore
 {%   for address in allow_clients.address %}
 restrict {{ address|address_from_cidr }} mask {{ address|netmask_from_cidr }} nomodify notrap nopeer
 {%   endfor %}
