@@ -96,6 +96,8 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         # Check generated client address configuration
         config = read_file(NTP_CONF)
+        self.assertIn('restrict default ignore', config)
+
         for network in networks:
             network_address = address_from_cidr(network)
             network_netmask = netmask_from_cidr(network)
