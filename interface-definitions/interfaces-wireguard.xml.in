@@ -101,6 +101,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ip-address"/>
+                    <validator name="ipv6-link-local"/>
                   </constraint>
                 </properties>
               </leafNode>
