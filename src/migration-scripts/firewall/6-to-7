@@ -17,6 +17,7 @@
 # T2199: Remove unavailable nodes due to XML/Python implementation using nftables
 #        monthdays: nftables does not have a monthdays equivalent
 #        utc: nftables userspace uses localtime and calculates the UTC offset automatically
+# T4178: Update tcp flags to use multi value node
 
 from sys import argv
 from sys import exit
@@ -45,24 +46,44 @@ if config.exists(base + ['name']):
         if config.exists(base + ['name', name, 'rule']):
             for rule in config.list_nodes(base + ['name', name, 'rule']):
                 rule_time = base + ['name', name, 'rule', rule, 'time']
+                rule_tcp_flags = base + ['name', name, 'rule', rule, 'tcp', 'flags']
 
                 if config.exists(rule_time + ['monthdays']):
                     config.delete(rule_time + ['monthdays'])
 
                 if config.exists(rule_time + ['utc']):
                     config.delete(rule_time + ['utc'])
+
+                if config.exists(rule_tcp_flags):
+                    tmp = config.return_value(rule_tcp_flags)
+                    config.delete(rule_tcp_flags)
+                    for flag in tmp.split(","):
+                        if flag[0] == '!':
+                            config.set(rule_tcp_flags + ['not', flag[1:].lower()])
+                        else:
+                            config.set(rule_tcp_flags + [flag.lower()])
 
 if config.exists(base + ['ipv6-name']):
     for name in config.list_nodes(base + ['ipv6-name']):
         if config.exists(base + ['ipv6-name', name, 'rule']):
             for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
                 rule_time = base + ['ipv6-name', name, 'rule', rule, 'time']
+                rule_tcp_flags = base + ['ipv6-name', name, 'rule', rule, 'tcp', 'flags']
 
                 if config.exists(rule_time + ['monthdays']):
                     config.delete(rule_time + ['monthdays'])
 
                 if config.exists(rule_time + ['utc']):
                     config.delete(rule_time + ['utc'])
+
+                if config.exists(rule_tcp_flags):
+                    tmp = config.return_value(rule_tcp_flags)
+                    config.delete(rule_tcp_flags)
+                    for flag in tmp.split(","):
+                        if flag[0] == '!':
+                            config.set(rule_tcp_flags + ['not', flag[1:].lower()])
+                        else:
+                            config.set(rule_tcp_flags + [flag.lower()])
 
 try:
     with open(file_name, 'w') as f:

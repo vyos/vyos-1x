@@ -97,11 +97,19 @@ def verify_rule(policy, name, rule_conf, ipv6):
     if 'set' in rule_conf:
         if 'tcp_mss' in rule_conf['set']:
             tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
-            if not tcp_flags or 'SYN' not in tcp_flags.split(","):
+            if not tcp_flags or 'syn' not in tcp_flags:
                 raise ConfigError(f'{name} rule {rule_id}: TCP SYN flag must be set to modify TCP-MSS')
 
-    if dict_search_args(rule_conf, 'tcp', 'flags') and dict_search_args(rule_conf, 'protocol') != 'tcp':
-                raise ConfigError(f'{name} rule {rule_id}: TCP flags can only be set if protocol is set to TCP')
+    tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
+    if tcp_flags:
+        if dict_search_args(rule_conf, 'protocol') != 'tcp':
+            raise ConfigError('Protocol must be tcp when specifying tcp flags')
+
+        not_flags = dict_search_args(rule_conf, 'tcp', 'flags', 'not')
+        if not_flags:
+            duplicates = [flag for flag in tcp_flags if flag in not_flags]
+            if duplicates:
+                raise ConfigError(f'Cannot match a tcp flag as set and not set')
 
     for side in ['destination', 'source']:
         if side in rule_conf:

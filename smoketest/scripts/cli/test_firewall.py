@@ -53,7 +53,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'group', 'network-group', 'smoketest_network'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'group', 'port-group', 'smoketest_port'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -61,7 +61,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump smoketest'],
-            ['ip saddr { 172.16.99.0/24 }', 'ip daddr 172.16.10.10', 'tcp dport { 53, 123 }', 'return'],
+            ['ip saddr { 172.16.99.0/24 }', 'ip daddr 172.16.10.10', 'th dport { 53, 123 }', 'return'],
         ]
 
         nftables_output = cmd('sudo nft list table ip filter')
@@ -72,7 +72,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 if all(item in line for item in search):
                     matched = True
                     break
-            self.assertTrue(matched)
+            self.assertTrue(matched, msg=search)
 
     def test_basic_rules(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
@@ -80,8 +80,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'address', '172.16.20.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'destination', 'port', '8888'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -90,7 +92,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['iifname "eth0"', 'jump smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'return'],
-            ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
+            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'reject'],
             ['smoketest default-action', 'drop']
         ]
 
@@ -102,7 +104,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 if all(item in line for item in search):
                     matched = True
                     break
-            self.assertTrue(matched)
+            self.assertTrue(matched, msg=search)
 
     def test_basic_rules_ipv6(self):
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'default-action', 'drop'])
@@ -132,7 +134,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 if all(item in line for item in search):
                     matched = True
                     break
-            self.assertTrue(matched)
+            self.assertTrue(matched, msg=search)
 
     def test_state_policy(self):
         self.cli_set(['firewall', 'state-policy', 'established', 'action', 'accept'])
