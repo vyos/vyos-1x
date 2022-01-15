@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -29,17 +28,14 @@ PROCESS_NAME = 'ntpd'
 NTP_CONF = '/run/ntpd/ntpd.conf'
 base_path = ['system', 'ntp']
 
-def get_config_value(key):
-    tmp = read_file(NTP_CONF)
-    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
-    # remove possible trailing whitespaces
-    return [item.strip() for item in tmp]
-
 class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.cli_delete(base_path)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         self.cli_delete(base_path)
@@ -47,35 +43,38 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.assertFalse(process_named_running(PROCESS_NAME))
 
-    def test_ntp_options(self):
+    def test_01_ntp_options(self):
         # Test basic NTP support with multiple servers and their options
         servers = ['192.0.2.1', '192.0.2.2']
         options = ['noselect', 'preempt', 'prefer']
-        ntp_pool = 'pool.vyos.io'
+        pools = ['pool.vyos.io']
 
         for server in servers:
             for option in options:
                 self.cli_set(base_path + ['server', server, option])
 
         # Test NTP pool
-        self.cli_set(base_path + ['server', ntp_pool, 'pool'])
+        for pool in pools:
+            self.cli_set(base_path + ['server', pool, 'pool'])
 
         # commit changes
         self.cli_commit()
 
         # Check generated configuration
-        tmp = get_config_value('server')
+        config = read_file(NTP_CONF)
+        self.assertIn('driftfile /var/lib/ntp/ntp.drift', config)
+        self.assertIn('restrict default noquery nopeer notrap nomodify', config)
+        self.assertIn('restrict source nomodify notrap noquery', config)
+        self.assertIn('restrict 127.0.0.1', config)
+        self.assertIn('restrict -6 ::1', config)
+
         for server in servers:
-            test = f'{server} iburst ' + ' '.join(options)
-            self.assertTrue(test in tmp)
+            self.assertIn(f'server {server} iburst ' + ' '.join(options), config)
 
-        tmp = get_config_value('pool')
-        self.assertTrue(f'{ntp_pool} iburst' in tmp)
+        for pool in pools:
+            self.assertIn(f'pool {pool} iburst', config)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
-    def test_ntp_clients(self):
+    def test_02_ntp_clients(self):
         # Test the allowed-networks statement
         listen_address = ['127.0.0.1', '::1']
         for listen in listen_address:
@@ -96,23 +95,16 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
+        config = read_file(NTP_CONF)
         for network in networks:
             network_address = address_from_cidr(network)
             network_netmask = netmask_from_cidr(network)
-
-            tmp = get_config_value(f'restrict {network_address}')[0]
-            test = f'mask {network_netmask} nomodify notrap nopeer'
-            self.assertTrue(tmp in test)
+            self.assertIn(f'restrict {network_address} mask {network_netmask} nomodify notrap nopeer', config)
 
         # Check listen address
-        tmp = get_config_value('interface')
-        test = ['ignore wildcard']
+        self.assertIn('interface ignore wildcard', config)
         for listen in listen_address:
-            test.append(f'listen {listen}')
-        self.assertEqual(tmp, test)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertIn(f'interface listen {listen}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
