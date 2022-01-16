@@ -84,8 +84,6 @@ if __name__ == '__main__':
         config_file = f.read()
 
     config = ConfigTree(config_file)
-    if not config.exists(['interfaces']):
-        exit(0)
 
     #
     # Migrate "interface ethernet eth0 ip ospf" to "protocols ospf interface eth0"
