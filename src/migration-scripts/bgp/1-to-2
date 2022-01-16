@@ -52,8 +52,6 @@ if config.exists(base + ['parameters', 'default', 'no-ipv4-unicast']):
     if len(config.list_nodes(base + ['parameters'])) == 0:
         config.delete(base + ['parameters'])
 
-    exit(0)
-
 # As we now install a new default option into BGP we need to migrate all
 # existing BGP neighbors and restore the old behavior
 if config.exists(base + ['neighbor']):
