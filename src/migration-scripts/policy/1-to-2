@@ -16,6 +16,7 @@
 
 # T4170: rename "policy ipv6-route" to "policy route6" to match common
 #        IPv4/IPv6 schema
+# T4178: Update tcp flags to use multi value node
 
 from sys import argv
 from sys import exit
@@ -40,6 +41,24 @@ if not config.exists(base):
 
 config.rename(base, 'route6')
 config.set_tag(['policy', 'route6'])
+
+for route in ['route', 'route6']:
+    route_path = ['policy', route]
+    if config.exists(route_path):
+        for name in config.list_nodes(route_path):
+            if config.exists(route_path + [name, 'rule']):
+                for rule in config.list_nodes(route_path + [name, 'rule']):
+                    rule_tcp_flags = route_path + [name, 'rule', rule, 'tcp', 'flags']
+
+                    if config.exists(rule_tcp_flags):
+                        tmp = config.return_value(rule_tcp_flags)
+                        config.delete(rule_tcp_flags)
+                        for flag in tmp.split(","):
+                            for flag in tmp.split(","):
+                                if flag[0] == '!':
+                                    config.set(rule_tcp_flags + ['not', flag[1:].lower()])
+                                else:
+                                    config.set(rule_tcp_flags + [flag.lower()])
 
 if config.exists(['interfaces']):
     def if_policy_rename(config, path):

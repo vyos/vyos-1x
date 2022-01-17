@@ -63,8 +63,10 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(matched)
 
     def test_pbr_table(self):
-        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'tcp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'port', '8888'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'tcp', 'flags', 'syn'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'tcp', 'flags', 'not', 'ack'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'table', table_id])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'tcp_udp'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'destination', 'port', '8888'])
@@ -81,7 +83,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump VYOS_PBR_smoketest'],
-            ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'meta mark set ' + mark_hex]
+            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'meta mark set ' + mark_hex]
         ]
 
         nftables_output = cmd('sudo nft list table ip mangle')

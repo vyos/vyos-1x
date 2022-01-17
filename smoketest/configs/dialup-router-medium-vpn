@@ -6,6 +6,15 @@ firewall {
     ipv6-src-route disable
     ip-src-route disable
     log-martians enable
+    name test_tcp_flags {
+        rule 1 {
+            action drop
+            protocol tcp
+            tcp {
+                flags SYN,ACK,!RST,!FIN
+            }
+        }
+    }
     options {
         interface vtun0 {
             adjust-mss 1380
