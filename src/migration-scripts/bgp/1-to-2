@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,7 +20,6 @@ from sys import argv
 from sys import exit
 
 from vyos.configtree import ConfigTree
-from vyos.template import is_ipv4
 
 if (len(argv) < 1):
     print("Must specify file name!")
@@ -51,21 +50,21 @@ if config.exists(base + ['parameters', 'default', 'no-ipv4-unicast']):
     # Check if the "default" node is now empty, if so - remove it
     if len(config.list_nodes(base + ['parameters'])) == 0:
         config.delete(base + ['parameters'])
+else:
+    # As we now install a new default option into BGP we need to migrate all
+    # existing BGP neighbors and restore the old behavior
+    if config.exists(base + ['neighbor']):
+        for neighbor in config.list_nodes(base + ['neighbor']):
+            peer_group = base + ['neighbor', neighbor, 'peer-group']
+            if config.exists(peer_group):
+                peer_group_name = config.return_value(peer_group)
+                # peer group enables old behavior for neighbor - bail out
+                if config.exists(base + ['peer-group', peer_group_name, 'address-family', 'ipv4-unicast']):
+                    continue
 
-# As we now install a new default option into BGP we need to migrate all
-# existing BGP neighbors and restore the old behavior
-if config.exists(base + ['neighbor']):
-    for neighbor in config.list_nodes(base + ['neighbor']):
-        peer_group = base + ['neighbor', neighbor, 'peer-group']
-        if config.exists(peer_group):
-            peer_group_name = config.return_value(peer_group)
-            # peer group enables old behavior for neighbor - bail out
-            if config.exists(base + ['peer-group', peer_group_name, 'address-family', 'ipv4-unicast']):
-                continue
-
-        afi_ipv4 = base + ['neighbor', neighbor, 'address-family', 'ipv4-unicast']
-        if not config.exists(afi_ipv4):
-            config.set(afi_ipv4)
+            afi_ipv4 = base + ['neighbor', neighbor, 'address-family', 'ipv4-unicast']
+            if not config.exists(afi_ipv4):
+                config.set(afi_ipv4)
 
 try:
     with open(file_name, 'w') as f:
