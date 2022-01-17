@@ -1,6 +1,6 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
 
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,32 @@ import os
 import sys
 import socket
 import ipaddress
+import json
+
+from vyos.util import cmd
+
+def get_vrf_by_service(service="sshd"):
+    """
+    Get VRF name by service name. For example "sshd"
+    Check all PIDs for VRFs and find "sshd" from them
+    If PID was not found in any VRF, return VRF "default"
+    Example:
+    >>> get_vrf_by_service()
+    'foo'
+    """
+    vrf_default = 'default'
+    data = cmd('sudo ip -j vrf show')
+    if 'name' in data:
+        data = json.loads(data)
+        for vrfs in data:
+            vrf = vrfs["name"]
+            # Get all PIDs on configured VRF
+            tmp = cmd(f'sudo ip vrf pids {vrf}')
+            if service in tmp:
+                return vrf
+    return vrf_default
+
+context_vrf = get_vrf_by_service()
 
 options = {
     'audible': {
@@ -128,7 +154,7 @@ options = {
         'ping': 'sudo ip vrf exec {value} {command}',
         'type': '<vrf>',
         'help': 'Use specified VRF table',
-        'dflt': 'default',
+        'dflt': context_vrf,
     },
     'verbose': {
         'ping': '{command} -v',
@@ -235,7 +261,6 @@ if __name__ == '__main__':
         sys.exit(f'ping: Unknown host: {host}')
 
     command = convert(ping[version],args)
-
     # print(f'{command} {host}')
     os.system(f'{command} {host}')
 
