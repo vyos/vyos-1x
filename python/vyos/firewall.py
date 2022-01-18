@@ -108,6 +108,9 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 elif 'network_group' in group:
                     group_name = group['network_group']
                     output.append(f'{ip_name} {prefix}addr $N{def_suffix}_{group_name}')
+                if 'mac_group' in group:
+                    group_name = group['mac_group']
+                    output.append(f'ether {prefix}addr $M_{group_name}')
                 if 'port_group' in group:
                     proto = rule_conf['protocol']
                     group_name = group['port_group']

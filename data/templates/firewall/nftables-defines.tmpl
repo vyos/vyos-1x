@@ -9,6 +9,11 @@ define A_{{ group_name }} = { {{ group_conf.address | join(",") }} }
 define A6_{{ group_name }} = { {{ group_conf.address | join(",") }} }
 {%     endfor %}
 {%   endif %}
+{%   if group.mac_group is defined %}
+{%     for group_name, group_conf in group.mac_group.items() %}
+define M_{{ group_name }} = { {{ group_conf.mac_address | join(",") }} }
+{%     endfor %}
+{%   endif %}
 {%   if group.network_group is defined %}
 {%     for group_name, group_conf in group.network_group.items() %}
 define N_{{ group_name }} = { {{ group_conf.network | join(",") }} }

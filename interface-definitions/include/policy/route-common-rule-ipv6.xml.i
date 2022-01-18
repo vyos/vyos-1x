@@ -232,6 +232,9 @@
           <format>!&lt;MAC address&gt;</format>
           <description>Match everything except the specified MAC address</description>
         </valueHelp>
+        <constraint>
+          <validator name="mac-address-firewall"/>
+        </constraint>
       </properties>
     </leafNode>
     #include <include/firewall/port.xml.i>

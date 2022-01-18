@@ -46,6 +46,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_groups(self):
+        self.cli_set(['firewall', 'group', 'mac-group', 'smoketest_mac', 'mac-address', '00:01:02:03:04:05'])
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '53'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '123'])
@@ -54,6 +55,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'group', 'port-group', 'smoketest_port'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'source', 'group', 'mac-group', 'smoketest_mac'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -62,6 +65,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['iifname "eth0"', 'jump smoketest'],
             ['ip saddr { 172.16.99.0/24 }', 'ip daddr 172.16.10.10', 'th dport { 53, 123 }', 'return'],
+            ['ether saddr { 00:01:02:03:04:05 }', 'return']
         ]
 
         nftables_output = cmd('sudo nft list table ip filter')
