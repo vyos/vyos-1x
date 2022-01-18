@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from glob import glob
 from json import loads
@@ -212,6 +213,16 @@ def verify(firewall):
 
     return None
 
+def cleanup_rule(table, jump_chain):
+    commands = []
+    results = cmd(f'nft -a list table {table}').split("\n")
+    for line in results:
+        if f'jump {jump_chain}' in line:
+            handle_search = re.search('handle (\d+)', line)
+            if handle_search:
+                commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    return commands
+
 def cleanup_commands(firewall):
     commands = []
     for table in ['ip filter', 'ip6 filter']:
@@ -234,6 +245,7 @@ def cleanup_commands(firewall):
                     elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
                         commands.append(f'flush chain {table} {chain}')
                     else:
+                        commands += cleanup_rule(table, chain)
                         commands.append(f'delete chain {table} {chain}')
             elif 'rule' in item:
                 rule = item['rule']
