@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from json import loads
 from sys import exit
@@ -160,6 +161,16 @@ def verify(policy):
 
     return None
 
+def cleanup_rule(table, jump_chain):
+    commands = []
+    results = cmd(f'nft -a list table {table}').split("\n")
+    for line in results:
+        if f'jump {jump_chain}' in line:
+            handle_search = re.search('handle (\d+)', line)
+            if handle_search:
+                commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    return commands
+
 def cleanup_commands(policy):
     commands = []
     for table in ['ip mangle', 'ip6 mangle']:
@@ -178,6 +189,7 @@ def cleanup_commands(policy):
                     elif table == 'ip6 mangle' and dict_search_args(policy, 'route6', chain.replace("VYOS_PBR6_", "", 1)):
                         commands.append(f'flush chain {table} {chain}')
                     else:
+                        commands += cleanup_rule(table, chain)
                         commands.append(f'delete chain {table} {chain}')
     return commands
 

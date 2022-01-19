@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from glob import glob
 from json import loads
@@ -101,6 +102,35 @@ def get_firewall_interfaces(conf):
         out.update(find_interfaces(iftype_conf))
     return out
 
+def get_firewall_zones(conf):
+    used_v4 = []
+    used_v6 = []
+    zone_policy = conf.get_config_dict(['zone-policy'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+
+    if 'zone' in zone_policy:
+        for zone, zone_conf in zone_policy['zone'].items():
+            if 'from' in zone_conf:
+                for from_zone, from_conf in zone_conf['from'].items():
+                    name = dict_search_args(from_conf, 'firewall', 'name')
+                    if name:
+                        used_v4.append(name)
+
+                    ipv6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
+                    if ipv6_name:
+                        used_v6.append(ipv6_name)
+
+            if 'intra_zone_filtering' in zone_conf:
+                name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'name')
+                if name:
+                    used_v4.append(name)
+
+                ipv6_name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'ipv6_name')
+                if ipv6_name:
+                    used_v6.append(ipv6_name)
+
+    return {'name': used_v4, 'ipv6_name': used_v6}
+
 def get_config(config=None):
     if config:
         conf = config
@@ -116,6 +146,7 @@ def get_config(config=None):
 
     firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     firewall['interfaces'] = get_firewall_interfaces(conf)
+    firewall['zone_policy'] = get_firewall_zones(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)
@@ -210,7 +241,22 @@ def verify(firewall):
             if ipv6_name and not dict_search_args(firewall, 'ipv6_name', ipv6_name):
                 raise ConfigError(f'Firewall ipv6-name "{ipv6_name}" is still referenced on interface {ifname}')
 
+    for fw_name, used_names in firewall['zone_policy'].items():
+        for name in used_names:
+            if not dict_search_args(firewall, fw_name, name):
+                raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
+
     return None
+
+def cleanup_rule(table, jump_chain):
+    commands = []
+    results = cmd(f'nft -a list table {table}').split("\n")
+    for line in results:
+        if f'jump {jump_chain}' in line:
+            handle_search = re.search('handle (\d+)', line)
+            if handle_search:
+                commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    return commands
 
 def cleanup_commands(firewall):
     commands = []
@@ -234,6 +280,7 @@ def cleanup_commands(firewall):
                     elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
                         commands.append(f'flush chain {table} {chain}')
                     else:
+                        commands += cleanup_rule(table, chain)
                         commands.append(f'delete chain {table} {chain}')
             elif 'rule' in item:
                 rule = item['rule']
