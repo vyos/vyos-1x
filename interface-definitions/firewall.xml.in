@@ -144,6 +144,27 @@
               </leafNode>
             </children>
           </tagNode>
+          <tagNode name="mac-group">
+            <properties>
+              <help>Firewall mac-group</help>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="mac-address">
+                <properties>
+                  <help>Mac-group member</help>
+                  <valueHelp>
+                    <format>&lt;MAC address&gt;</format>
+                    <description>MAC address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           <tagNode name="network-group">
             <properties>
               <help>Firewall network-group</help>

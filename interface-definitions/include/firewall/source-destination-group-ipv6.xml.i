@@ -12,6 +12,7 @@
         </completionHelp>
       </properties>
     </leafNode>
+    #include <include/firewall/mac-group.xml.i>
     <leafNode name="network-group">
       <properties>
         <help>Group of networks</help>

@@ -272,6 +272,8 @@ def show_firewall_group(name=None):
                 row.append("\n".join(sorted(group_conf['address'], key=ipaddress.ip_address)))
             elif 'network' in group_conf:
                 row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
+            elif 'mac_address' in group_conf:
+                row.append("\n".join(sorted(group_conf['mac_address'])))
             elif 'port' in group_conf:
                 row.append("\n".join(sorted(group_conf['port'])))
             else:
