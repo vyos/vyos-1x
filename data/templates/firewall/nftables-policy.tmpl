@@ -25,11 +25,7 @@ table ip mangle {
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
 {%       endfor %}
 {%     endif %}
-{%     if conf.default_action is defined %}
-        counter {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
-{%     else %}
-        counter return
-{%     endif %}
+        {{ conf | nft_default_rule(route_text) }}
     }
 {%   endfor %}
 {%- endif %}
@@ -52,9 +48,7 @@ table ip6 mangle {
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
 {%       endfor %}
 {%     endif %}
-{%     if conf.default_action is defined %}
-        counter {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
-{%     endif %}
+        {{ conf | nft_default_rule(route_text) }}
     }
 {%   endfor %}
 {% endif %}

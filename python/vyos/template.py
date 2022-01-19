@@ -516,6 +516,19 @@ def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
     from vyos.firewall import parse_rule
     return parse_rule(rule_conf, fw_name, rule_id, ip_name)
 
+@register_filter('nft_default_rule')
+def nft_default_rule(fw_conf, fw_name):
+    output = ['counter']
+    default_action = fw_conf.get('default_action', 'accept')
+
+    if 'enable_default_log' in fw_conf:
+        action_suffix = default_action[:1].upper()
+        output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}] "')
+
+    output.append(nft_action(default_action))
+    output.append(f'comment "{fw_name} default-action {default_action}"')
+    return " ".join(output)
+
 @register_filter('nft_state_policy')
 def nft_state_policy(conf, state, ipv6=False):
     out = [f'ct state {state}']
