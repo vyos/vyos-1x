@@ -126,6 +126,9 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {% if default_metric is defined and default_metric is not none %}
  default-metric {{ default_metric }}
 {% endif %}
+{% if maximum_paths is defined and maximum_paths is not none %}
+ maximum-paths {{ maximum_paths }}
+{% endif %}
 {% if distance is defined and distance is not none %}
 {%   if distance.global is defined and distance.global is not none %}
  distance {{ distance.global }}

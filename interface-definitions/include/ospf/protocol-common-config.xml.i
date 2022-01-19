@@ -289,6 +289,18 @@
     </constraint>
   </properties>
 </leafNode>
+<leafNode name="maximum-paths">
+  <properties>
+    <help>Maximum multiple paths (ECMP)</help>
+    <valueHelp>
+      <format>u32:1-64</format>
+      <description>Maximum multiple paths (ECMP)</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-64"/>
+    </constraint>
+  </properties>
+</leafNode>
 <node name="distance">
   <properties>
     <help>Administrative distance</help>
