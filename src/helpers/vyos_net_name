@@ -20,12 +20,14 @@ import os
 import re
 import time
 import logging
+import tempfile
 import threading
 from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
 from vyos.util import cmd, boot_configuration_complete
+from vyos.migrator import VirtualMigrator
 
 vyos_udev_dir = directories['vyos_udev_dir']
 vyos_log_dir = '/run/udev/log'
@@ -139,14 +141,20 @@ def get_configfile_interfaces() -> dict:
     try:
         config = ConfigTree(config_file)
     except Exception:
-        logging.debug(f"updating component version string syntax")
         try:
-            # this will update the component version string in place, for
-            # updates 1.2 --> 1.3/1.4
-            os.system(f'/usr/libexec/vyos/run-config-migration.py {config_path} --virtual --set-vintage=vyos')
-            with open(config_path) as f:
-                config_file = f.read()
+            logging.debug(f"updating component version string syntax")
+            # this will update the component version string syntax,
+            # required for updates 1.2 --> 1.3/1.4
+            with tempfile.NamedTemporaryFile() as fp:
+                with open(fp.name, 'w') as fd:
+                    fd.write(config_file)
+                virtual_migration = VirtualMigrator(fp.name)
+                virtual_migration.run()
+                with open(fp.name) as fd:
+                    config_file = fd.read()
+
             config = ConfigTree(config_file)
+
         except Exception as e:
             logging.critical(f"ConfigTree error: {e}")
 
@@ -246,4 +254,3 @@ if not boot_configuration_complete():
 else:
     logging.debug("boot configuration complete")
 lock.release()
-
