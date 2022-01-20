@@ -32,18 +32,13 @@ table ip filter {
 {% endif %}
 {% if name is defined %}
 {%   for name_text, conf in name.items() %}
-{%     set default_log = 'log' if 'enable_default_log' in conf else '' %}
     chain {{ name_text }} {
 {%     if conf.rule is defined %}
 {%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
         {{ rule_conf | nft_rule(name_text, rule_id) }}
 {%       endfor %}
 {%     endif %}
-{%     if conf.default_action is defined %}
-        counter {{ default_log }} {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
-{%     else %}
-        return
-{%     endif %}
+        {{ conf | nft_default_rule(name_text) }}
     }
 {%   endfor %}
 {% endif %}
@@ -87,18 +82,13 @@ table ip6 filter {
 {% endif %}
 {% if ipv6_name is defined %}
 {%   for name_text, conf in ipv6_name.items() %}
-{%     set default_log = 'log' if 'enable_default_log' in conf else '' %}
     chain {{ name_text }} {
 {%     if conf.rule is defined %}
 {%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
         {{ rule_conf | nft_rule(name_text, rule_id, 'ip6') }}
 {%       endfor %}
 {%     endif %}
-{%     if conf.default_action is defined %}
-        counter {{ default_log }} {{ conf.default_action | nft_action }} comment "{{ name_text }} default-action {{ conf.default_action }}"
-{%     else %}
-        return
-{%     endif %}
+        {{ conf | nft_default_rule(name_text) }}
     }
 {%   endfor %}
 {% endif %}

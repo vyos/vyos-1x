@@ -121,7 +121,8 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     output.append(f'{proto} {prefix}port $P_{group_name}')
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
-        output.append('log')
+        action = rule_conf['action'] if 'action' in rule_conf else 'accept'
+        output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}] "')
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
