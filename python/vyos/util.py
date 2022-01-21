@@ -694,6 +694,19 @@ def dict_search(path, dict_object):
         c = c.get(p, {})
     return c.get(parts[-1], None)
 
+def dict_search_args(dict_object, *path):
+    # Traverse dictionary using variable arguments
+    # Added due to above function not allowing for '.' in the key names
+    # Example: dict_search_args(some_dict, 'key', 'subkey', 'subsubkey', ...)
+    if not isinstance(dict_object, dict) or not path:
+        return None
+
+    for item in path:
+        if item not in dict_object:
+            return None
+        dict_object = dict_object[item]
+    return dict_object
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
