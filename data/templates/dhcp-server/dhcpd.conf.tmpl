@@ -165,7 +165,7 @@ shared-network {{ network | replace('_','-') }} {
         option wpad-url "{{ subnet_config.wpad_url }}";
 {%         endif %}
 {%         if subnet_config.client_prefix_length is defined and subnet_config.client_prefix_length is not none %}
-        option subnet-mask {{ subnet_config.client_prefix_length }};
+        option subnet-mask {{ ('0.0.0.0/' ~ subnet_config.client_prefix_length) | netmask_from_cidr }};
 {%         endif %}
 {%         if subnet_config.lease is defined and subnet_config.lease is not none %}
         default-lease-time {{ subnet_config.lease }};
