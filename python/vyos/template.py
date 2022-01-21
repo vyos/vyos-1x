@@ -352,3 +352,27 @@ def get_ipv4(interface):
     """ Get interface IPv4 addresses"""
     from vyos.ifconfig import Interface
     return Interface(interface).get_addr_v4()
+
+@register_filter('nft_action')
+def nft_action(vyos_action):
+    if vyos_action == 'accept':
+        return 'return'
+    return vyos_action
+
+@register_filter('nft_rule')
+def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
+    from vyos.firewall import parse_rule
+    return parse_rule(rule_conf, fw_name, rule_id, ip_name)
+
+@register_filter('nft_default_rule')
+def nft_default_rule(fw_conf, fw_name):
+    output = ['counter']
+    default_action = fw_conf.get('default_action', 'accept')
+
+    if 'enable_default_log' in fw_conf:
+        action_suffix = default_action[:1].upper()
+        output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}] "')
+
+    output.append(nft_action(default_action))
+    output.append(f'comment "{fw_name} default-action {default_action}"')
+    return " ".join(output)
