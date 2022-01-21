@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+
+<!-- Transparent firewall configuration -->
+
+<interfaceDefinition>
+  <node name="firewall">
+    <children>
+      <node name="policy">
+        <properties>
+          <help>Firewall policy</help>
+        </properties>
+        <children>
+          <node name="bridge">
+            <properties>
+              <help>Bridge firewall policy</help>
+            </properties>
+            <children>
+              <node name="forward">
+                <properties>
+                  <help>Bridge firewall policy for forwarded frames</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv4">
+                    <properties>
+                      <help>Bridge firewall policy for forwarded IPv4 traffic</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
+
