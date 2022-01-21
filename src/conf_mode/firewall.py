@@ -184,6 +184,12 @@ def verify_rule(firewall, rule_conf, ipv6):
             if duplicates:
                 raise ConfigError(f'Cannot match a tcp flag as set and not set')
 
+    if 'protocol' in rule_conf:
+        if rule_conf['protocol'] == 'icmp' and ipv6:
+            raise ConfigError(f'Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
+        if rule_conf['protocol'] == 'ipv6-icmp' and not ipv6:
+            raise ConfigError(f'Cannot match IPv6 ICMP protocol on IPv4, use icmp')
+
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
