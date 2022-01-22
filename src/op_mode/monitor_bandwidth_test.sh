@@ -24,6 +24,9 @@ elif [[ $(dig $1 AAAA +short | grep -v '\.$' | wc -l) -gt 0 ]]; then
 
     # Set address family to IPv6 when FQDN has at least one AAAA record
     OPT="-V"
+else
+    # It's not IPv6, no option needed
+    OPT=""
 fi
 
 /usr/bin/iperf $OPT -c $1 $2
