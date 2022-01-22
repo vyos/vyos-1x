@@ -150,7 +150,7 @@ def apply(if_firewall):
                 rule_action = 'insert'
                 rule_prefix = ''
 
-                handle = state_policy_handle('ip filter', chain)
+                handle = state_policy_handle('ip6 filter', ipv6_chain)
                 if handle:
                     rule_action = 'add'
                     rule_prefix = f'position {handle}'
