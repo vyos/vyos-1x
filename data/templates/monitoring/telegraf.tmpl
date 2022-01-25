@@ -42,11 +42,6 @@
   dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 [[inputs.ethtool]]
   interface_include = {{ interfaces_ethernet }}
-[[inputs.iptables]]
-  use_sudo = false
-  table = "filter"
-  chains = {{ nft_chains }}
-  use_lock = true
 [[inputs.ntpq]]
   dns_lookup = true
 [[inputs.internal]]
