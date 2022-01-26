@@ -10,6 +10,9 @@
       <format>range</format>
       <description>Numbered port range (e.g., 1001-1005)</description>
     </valueHelp>
+    <constraint>
+     <validator name="port-range"/>
+    </constraint>
   </properties>
 </leafNode>
 <!-- include end -->
