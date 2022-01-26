@@ -952,14 +952,23 @@ def install_into_config(conf, config_paths, override_prompt=True):
         return None
 
     count = 0
+    failed = []
 
     for path in config_paths:
         if override_prompt and conf.exists(path) and not conf.is_multi(path):
             if not ask_yes_no(f'Config node "{node}" already exists. Do you want to overwrite it?'):
                 continue
 
-        cmd(f'/opt/vyatta/sbin/my_set {path}')
-        count += 1
+        try:
+            cmd(f'/opt/vyatta/sbin/my_set {path}')
+            count += 1
+        except:
+            failed.append(path)
+
+    if failed:
+        print(f'Failed to install {len(failed)} value(s). Commands to manually install:')
+        for path in failed:
+            print(f'set {path}')
 
     if count > 0:
         print(f'{count} value(s) installed. Use "compare" to see the pending changes, and "commit" to apply.')
