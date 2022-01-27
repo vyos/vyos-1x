@@ -190,8 +190,8 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
 def parse_tcp_flags(flags):
     include = [flag for flag in flags if flag != 'not']
-    all_flags = include + [flag for flag in flags['not']] if 'not' in flags else []
-    return f'tcp flags & ({"|".join(all_flags)}) == {"|".join(include)}'
+    exclude = flags['not'].keys() if 'not' in flags else []
+    return f'tcp flags & ({"|".join(include + exclude)}) == {"|".join(include)}'
 
 def parse_time(time):
     out = []
