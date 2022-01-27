@@ -1,0 +1,83 @@
+#!/usr/sbin/nft -f
+
+flush ruleset bridge
+
+table bridge filter {
+
+{% if group is defined %}
+{%   if group.address_group is defined %}
+{%     for group_name, group_conf in group.address_group.items() %}
+  set A_{{ group_name }} {
+    type ipv4_addr
+    elements = { {{ group_conf.address | join(", ") }}  }
+  }
+{%     endfor %}
+{%   endif %}
+
+{%   if group.ipv6_address_group is defined %}
+{%     for group_name, group_conf in group.ipv6_address_group.items() %}
+  set A6_{{ group_name }}  {
+    type = ipv6_addr
+    elements = { {{ group_conf.address | join(", ") }} }
+  }
+{%     endfor %}
+{%   endif %}
+
+{%   if group.mac_group is defined %}
+{%     for group_name, group_conf in group.mac_group.items() %}
+  set M_{{ group_name }} {
+    type ether_addr
+    elements = { {{ group_conf.mac_address | join(", ") }} }
+  }
+{%     endfor %}
+{%   endif %}
+
+{%   if group.network_group is defined %}
+{%     for group_name, group_conf in group.network_group.items() %}
+  set N_{{ group_name }} {
+    type = ipv4_addr
+    elements = {{ group_conf.network | join(", ") }}
+  }
+{%     endfor %}
+{%   endif %}
+
+{%   if group.ipv6_network_group is defined %}
+{%     for group_name, group_conf in group.ipv6_network_group.items() %}
+  set N6_{{ group_name }} {
+    type = ipv6_addr
+    elements = { {{ group_conf.network | join(", ") }} }
+  }
+{%     endfor %}
+{%   endif %}
+
+{%   if group.port_group is defined %}
+{%     for group_name, group_conf in group.port_group.items() %}
+  set P_{{ group_name }} {
+    type inet_service
+    elements = { {{ group_conf.port | join(", ") }} }
+  }
+{%     endfor %}
+{%   endif %}
+{% endif %}
+
+    chain VYOS_FW_FORWARD {
+        type filter hook forward priority filter; policy accept;
+
+        ether type ip jump {{ policy.bridge.forward.ipv4 }}
+
+        jump VYOS_POST_FW
+    }
+    chain VYOS_POST_FW {
+        return
+    }
+
+  chain {{ policy.bridge.forward.ipv4 }} {
+{%     if ipv4_ruleset.rule is defined %}
+{%       for rule_id, rule_conf in ipv4_ruleset.rule.items() if rule_conf.disable is not defined %}
+        {{ rule_conf | nft_rule(policy.bridge.forward.ipv4, rule_id) }}
+{%       endfor %}
+{%     endif %}
+        {{ ipv4_ruleset | nft_default_rule(policy.bridge.forward.ipv4) }}
+    }
+}
+
