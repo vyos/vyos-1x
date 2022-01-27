@@ -10,7 +10,7 @@
           <help>Firewall policy</help>
         </properties>
         <children>
-          <node name="bridge">
+          <node name="bridge" owner="${vyos_conf_scripts_dir}/firewall-bridge.py">
             <properties>
               <help>Bridge firewall policy</help>
             </properties>
