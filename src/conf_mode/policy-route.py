@@ -205,6 +205,7 @@ def generate(policy):
 def apply_table_marks(policy):
     for route in ['route', 'route6']:
         if route in policy:
+            cmd_str = 'ip' if route == 'route' else 'ip -6'
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
@@ -213,20 +214,21 @@ def apply_table_marks(policy):
                             if set_table == 'main':
                                 set_table = '254'
                             table_mark = mark_offset - int(set_table)
-                            cmd(f'ip rule add fwmark {table_mark} table {set_table}')
+                            cmd(f'{cmd_str} rule add pref {set_table} fwmark {table_mark} table {set_table}')
 
 def cleanup_table_marks():
-    json_rules = cmd('ip -j -N rule list')
-    rules = loads(json_rules)
-    for rule in rules:
-        if 'fwmark' not in rule or 'table' not in rule:
-            continue
-        fwmark = rule['fwmark']
-        table = int(rule['table'])
-        if fwmark[:2] == '0x':
-            fwmark = int(fwmark, 16)
-        if (int(fwmark) == (mark_offset - table)):
-            cmd(f'ip rule del fwmark {fwmark} table {table}')
+    for cmd_str in ['ip', 'ip -6']:
+        json_rules = cmd(f'{cmd_str} -j -N rule list')
+        rules = loads(json_rules)
+        for rule in rules:
+            if 'fwmark' not in rule or 'table' not in rule:
+                continue
+            fwmark = rule['fwmark']
+            table = int(rule['table'])
+            if fwmark[:2] == '0x':
+                fwmark = int(fwmark, 16)
+            if (int(fwmark) == (mark_offset - table)):
+                cmd(f'{cmd_str} rule del fwmark {fwmark} table {table}')
 
 def apply(policy):
     install_result = run(f'nft -f {nftables_conf}')
