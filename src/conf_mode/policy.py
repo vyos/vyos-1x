@@ -87,6 +87,7 @@ def verify(policy):
 
             # human readable instance name (hypen instead of underscore)
             policy_hr = policy_type.replace('_', '-')
+            entries = []
             for rule, rule_config in instance_config['rule'].items():
                 mandatory_error = f'must be specified for "{policy_hr} {instance} rule {rule}"!'
                 if 'action' not in rule_config:
@@ -112,6 +113,11 @@ def verify(policy):
                 if policy_type in ['prefix_list', 'prefix_list6']:
                     if 'prefix' not in rule_config:
                         raise ConfigError(f'A prefix {mandatory_error}')
+
+                    # Check prefix duplicates
+                    if rule_config['prefix'] in entries and ('ge' not in rule_config and 'le' not in rule_config):
+                        raise ConfigError(f'Prefix {rule_config["prefix"]} is duplicated!')
+                    entries.append(rule_config['prefix'])
 
 
     # route-maps tend to be a bit more complex so they get their own verify() section
