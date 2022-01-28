@@ -100,87 +100,103 @@ icmpv6_translations = {
 
 if config.exists(base + ['name']):
     for name in config.list_nodes(base + ['name']):
-        if config.exists(base + ['name', name, 'rule']):
-            for rule in config.list_nodes(base + ['name', name, 'rule']):
-                rule_time = base + ['name', name, 'rule', rule, 'time']
-                rule_tcp_flags = base + ['name', name, 'rule', rule, 'tcp', 'flags']
-                rule_icmp = base + ['name', name, 'rule', rule, 'icmp']
+        if not config.exists(base + ['name', name, 'rule']):
+            continue
 
-                if config.exists(rule_time + ['monthdays']):
-                    config.delete(rule_time + ['monthdays'])
+        for rule in config.list_nodes(base + ['name', name, 'rule']):
+            rule_time = base + ['name', name, 'rule', rule, 'time']
+            rule_tcp_flags = base + ['name', name, 'rule', rule, 'tcp', 'flags']
+            rule_icmp = base + ['name', name, 'rule', rule, 'icmp']
 
-                if config.exists(rule_time + ['utc']):
-                    config.delete(rule_time + ['utc'])
+            if config.exists(rule_time + ['monthdays']):
+                config.delete(rule_time + ['monthdays'])
 
-                if config.exists(rule_tcp_flags):
-                    tmp = config.return_value(rule_tcp_flags)
-                    config.delete(rule_tcp_flags)
-                    for flag in tmp.split(","):
-                        if flag[0] == '!':
-                            config.set(rule_tcp_flags + ['not', flag[1:].lower()])
-                        else:
-                            config.set(rule_tcp_flags + [flag.lower()])
+            if config.exists(rule_time + ['utc']):
+                config.delete(rule_time + ['utc'])
 
-                if config.exists(rule_icmp + ['type-name']):
-                    tmp = config.return_value(rule_icmp + ['type-name'])
-                    if tmp in icmp_remove:
+            if config.exists(rule_tcp_flags):
+                tmp = config.return_value(rule_tcp_flags)
+                config.delete(rule_tcp_flags)
+                for flag in tmp.split(","):
+                    if flag[0] == '!':
+                        config.set(rule_tcp_flags + ['not', flag[1:].lower()])
+                    else:
+                        config.set(rule_tcp_flags + [flag.lower()])
+
+            if config.exists(rule_icmp + ['type-name']):
+                tmp = config.return_value(rule_icmp + ['type-name'])
+                if tmp in icmp_remove:
+                    config.delete(rule_icmp + ['type-name'])
+                elif tmp in icmp_translations:
+                    translate = icmp_translations[tmp]
+                    if isinstance(translate, str):
+                        config.set(rule_icmp + ['type-name'], value=translate)
+                    elif isinstance(translate, list):
                         config.delete(rule_icmp + ['type-name'])
-                    elif tmp in icmp_translations:
-                        translate = icmp_translations[tmp]
-                        if isinstance(translate, str):
-                            config.set(rule_icmp + ['type-name'], value=translate)
-                        elif isinstance(translate, list):
-                            config.delete(rule_icmp + ['type-name'])
-                            config.set(rule_icmp + ['type'], value=translate[0])
-                            config.set(rule_icmp + ['code'], value=translate[1])
+                        config.set(rule_icmp + ['type'], value=translate[0])
+                        config.set(rule_icmp + ['code'], value=translate[1])
+
+            for src_dst in ['destination', 'source']:
+                pg_base = base + ['name', name, 'rule', rule, src_dst, 'group', 'port-group']
+                proto_base = base + ['name', name, 'rule', rule, 'protocol']
+                if config.exists(pg_base) and not config.exists(proto_base):
+                    config.set(proto_base, value='tcp_udp')
 
 if config.exists(base + ['ipv6-name']):
     for name in config.list_nodes(base + ['ipv6-name']):
-        if config.exists(base + ['ipv6-name', name, 'rule']):
-            for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
-                rule_time = base + ['ipv6-name', name, 'rule', rule, 'time']
-                rule_tcp_flags = base + ['ipv6-name', name, 'rule', rule, 'tcp', 'flags']
-                rule_icmp = base + ['ipv6-name', name, 'rule', rule, 'icmpv6']
+        if not config.exists(base + ['ipv6-name', name, 'rule']):
+            continue
 
-                if config.exists(rule_time + ['monthdays']):
-                    config.delete(rule_time + ['monthdays'])
+        for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
+            rule_time = base + ['ipv6-name', name, 'rule', rule, 'time']
+            rule_tcp_flags = base + ['ipv6-name', name, 'rule', rule, 'tcp', 'flags']
+            rule_icmp = base + ['ipv6-name', name, 'rule', rule, 'icmpv6']
 
-                if config.exists(rule_time + ['utc']):
-                    config.delete(rule_time + ['utc'])
+            if config.exists(rule_time + ['monthdays']):
+                config.delete(rule_time + ['monthdays'])
 
-                if config.exists(rule_tcp_flags):
-                    tmp = config.return_value(rule_tcp_flags)
-                    config.delete(rule_tcp_flags)
-                    for flag in tmp.split(","):
-                        if flag[0] == '!':
-                            config.set(rule_tcp_flags + ['not', flag[1:].lower()])
-                        else:
-                            config.set(rule_tcp_flags + [flag.lower()])
+            if config.exists(rule_time + ['utc']):
+                config.delete(rule_time + ['utc'])
 
-                if config.exists(base + ['ipv6-name', name, 'rule', rule, 'protocol']):
-                    tmp = config.return_value(base + ['ipv6-name', name, 'rule', rule, 'protocol'])
-                    if tmp == 'icmpv6':
-                        config.set(base + ['ipv6-name', name, 'rule', rule, 'protocol'], value='ipv6-icmp')
-
-                if config.exists(rule_icmp + ['type']):
-                    tmp = config.return_value(rule_icmp + ['type'])
-                    type_code_match = re.match(r'^(\d+)/(\d+)$', tmp)
-
-                    if type_code_match:
-                        config.set(rule_icmp + ['type'], value=type_code_match[1])
-                        config.set(rule_icmp + ['code'], value=type_code_match[2])
-                    elif tmp in icmpv6_remove:
-                        config.delete(rule_icmp + ['type'])
-                    elif tmp in icmpv6_translations:
-                        translate = icmpv6_translations[tmp]
-                        if isinstance(translate, str):
-                            config.delete(rule_icmp + ['type'])
-                            config.set(rule_icmp + ['type-name'], value=translate)
-                        elif isinstance(translate, list):
-                            config.set(rule_icmp + ['type'], value=translate[0])
-                            config.set(rule_icmp + ['code'], value=translate[1])
+            if config.exists(rule_tcp_flags):
+                tmp = config.return_value(rule_tcp_flags)
+                config.delete(rule_tcp_flags)
+                for flag in tmp.split(","):
+                    if flag[0] == '!':
+                        config.set(rule_tcp_flags + ['not', flag[1:].lower()])
                     else:
-                        config.rename(rule_icmp + ['type'], 'type-name')
+                        config.set(rule_tcp_flags + [flag.lower()])
+
+            if config.exists(base + ['ipv6-name', name, 'rule', rule, 'protocol']):
+                tmp = config.return_value(base + ['ipv6-name', name, 'rule', rule, 'protocol'])
+                if tmp == 'icmpv6':
+                    config.set(base + ['ipv6-name', name, 'rule', rule, 'protocol'], value='ipv6-icmp')
+
+            if config.exists(rule_icmp + ['type']):
+                tmp = config.return_value(rule_icmp + ['type'])
+                type_code_match = re.match(r'^(\d+)/(\d+)$', tmp)
+
+                if type_code_match:
+                    config.set(rule_icmp + ['type'], value=type_code_match[1])
+                    config.set(rule_icmp + ['code'], value=type_code_match[2])
+                elif tmp in icmpv6_remove:
+                    config.delete(rule_icmp + ['type'])
+                elif tmp in icmpv6_translations:
+                    translate = icmpv6_translations[tmp]
+                    if isinstance(translate, str):
+                        config.delete(rule_icmp + ['type'])
+                        config.set(rule_icmp + ['type-name'], value=translate)
+                    elif isinstance(translate, list):
+                        config.set(rule_icmp + ['type'], value=translate[0])
+                        config.set(rule_icmp + ['code'], value=translate[1])
+                else:
+                    config.rename(rule_icmp + ['type'], 'type-name')
+
+            for src_dst in ['destination', 'source']:
+                pg_base = base + ['ipv6-name', name, 'rule', rule, src_dst, 'group', 'port-group']
+                proto_base = base + ['ipv6-name', name, 'rule', rule, 'protocol']
+                if config.exists(pg_base) and not config.exists(proto_base):
+                    config.set(proto_base, value='tcp_udp')
 
 try:
     with open(file_name, 'w') as f:
