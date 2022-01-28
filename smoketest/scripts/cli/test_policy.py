@@ -1206,6 +1206,32 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
+    # Test set table for sources with iif
+    def test_iif_sources_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.11', '203.0.113.12']
+        iif = 'lo'
+        rule = '100'
+        table = '150'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        # Check generated configuration
+        # Expected values
+        original = """
+        100:	from 203.0.113.11 iif lo lookup 150
+        100:	from 203.0.113.12 iif lo lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
     # Test set table for sources and destinations with fwmark
     def test_fwmark_sources_destination_table_id(self):
         path = base_path + ['local-route']
@@ -1318,6 +1344,31 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
+    # Test set table for sources with iif ipv6
+    def test_iif_sources_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        sources = ['2001:db8:1338::/126', '2001:db8:1339::/126']
+        iif = 'lo'
+        rule = '102'
+        table = '150'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
+
+        self.cli_commit()
+
+        # Check generated configuration
+        # Expected values
+        original = """
+        102:	from 2001:db8:1338::/126 iif lo lookup 150
+        102:	from 2001:db8:1339::/126 iif lo lookup 150
+        """
+        tmp = cmd('ip -6 rule show prio 102')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
     # Test set table for sources and destinations with fwmark ipv6
     def test_fwmark_sources_destination_ipv6_table_id(self):
         path = base_path + ['local-route6']
@@ -1384,7 +1435,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
-        103:    from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         """
         tmp = cmd('ip rule show prio 103')
         tmp_v6 = cmd('ip -6 rule show prio 103')
