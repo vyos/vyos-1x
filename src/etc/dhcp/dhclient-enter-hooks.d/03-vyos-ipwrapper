@@ -4,7 +4,7 @@
 IF_METRIC=${IF_METRIC:-210}
 
 # Check if interface is inside a VRF
-VRF_OPTION=$(/usr/sbin/ip -j -d link show ${interface} | awk '{if(match($0, /.*"master":"(\w+)".*"info_slave_kind":"vrf"/, IFACE_DETAILS)) printf("vrf %s", IFACE_DETAILS[1])}')
+VRF_OPTION=$(ip -j -d link show ${interface} | awk '{if(match($0, /.*"master":"(\w+)".*"info_slave_kind":"vrf"/, IFACE_DETAILS)) printf("vrf %s", IFACE_DETAILS[1])}')
 
 # get status of FRR
 function frr_alive () {
@@ -66,9 +66,9 @@ function iptovtysh () {
 # delete the same route from kernel before adding new one
 function delroute () {
     logmsg info "Checking if the route presented in kernel: $@ $VRF_OPTION"
-    if /usr/sbin/ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
-        logmsg info "Deleting IP route: \"/usr/sbin/ip route del $@ $VRF_OPTION\""
-        /usr/sbin/ip route del $@ $VRF_OPTION
+    if ip route show $@ $VRF_OPTION | grep -qx "$1 " ; then
+        logmsg info "Deleting IP route: \"ip route del $@ $VRF_OPTION\""
+        ip route del $@ $VRF_OPTION
     fi
 }
 
@@ -76,8 +76,8 @@ function delroute () {
 function ip () {
     # pass comand to system `ip` if this is not related to routes change
     if [ "$2" != "route" ] ; then
-        logmsg info "Passing command to /usr/sbin/ip: \"$@\""
-        /usr/sbin/ip $@
+        logmsg info "Passing command to iproute2: \"$@\""
+        ip $@
     else
         # if we want to work with routes, try to use FRR first
         if frr_alive ; then
@@ -87,8 +87,8 @@ function ip () {
             vtysh -c "conf t" -c "$VTYSH_CMD"
         else
             # add ip route to kernel
-            logmsg info "Modifying routes in kernel: \"/usr/sbin/ip $@\""
-            /usr/sbin/ip $@ $VRF_OPTION
+            logmsg info "Modifying routes in kernel: \"ip $@\""
+            ip $@ $VRF_OPTION
         fi
     fi
 }
