@@ -54,7 +54,8 @@ def get_config(config=None):
     pprint(firewall)
     config = {}
     config["policy"] = firewall["policy"]
-    config["group"] = firewall["group"]
+    if 'group' in firewall:
+        config["group"] = firewall["group"]
     config["ipv4_ruleset"] = firewall["name"][firewall["policy"]["bridge"]["forward"]["ipv4"]]
 
     return config
@@ -66,11 +67,17 @@ def verify(firewall):
         return None
 
 def generate(firewall):
+    if not firewall:
+        return None
+
     vyos.template.render(nftables_conf, 'firewall/nftables-bridge.tmpl', firewall)
     return None
 
 
 def apply(firewall):
+    if not firewall:
+        call('nft flush ruleset bridge')
+        return None
     install_result = vyos.util.run(f'nft -f {nftables_conf}')
     if install_result == 1:
         raise ConfigError('Failed to apply bridge firewall')
@@ -87,4 +94,3 @@ if __name__ == '__main__':
     except ConfigError as e:
         print(e)
         sys.exit(1)
-
