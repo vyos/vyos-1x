@@ -63,7 +63,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump smoketest'],
+            ['iifname "eth0"', 'jump NAME_smoketest'],
             ['ip saddr { 172.16.99.0/24 }', 'ip daddr 172.16.10.10', 'th dport { 53, 123 }', 'return'],
             ['ether saddr { 00:01:02:03:04:05 }', 'return']
         ]
@@ -94,7 +94,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump smoketest'],
+            ['iifname "eth0"', 'jump NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'return'],
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'reject'],
             ['smoketest default-action', 'drop']
@@ -124,7 +124,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump v6-smoketest'],
+            ['iifname "eth0"', 'jump NAME6_v6-smoketest'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
             ['smoketest default-action', 'drop']

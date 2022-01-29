@@ -44,8 +44,8 @@ class TestZonePolicy(VyOSUnitTestSHIM.TestCase):
             ['oifname { "eth0" }', 'jump VZONE_smoketest-eth0'],
             ['jump VZONE_smoketest-local_IN'],
             ['jump VZONE_smoketest-local_OUT'],
-            ['iifname { "eth0" }', 'jump smoketest'],
-            ['oifname { "eth0" }', 'jump smoketest']
+            ['iifname { "eth0" }', 'jump NAME_smoketest'],
+            ['oifname { "eth0" }', 'jump NAME_smoketest']
         ]
 
         nftables_output = cmd('sudo nft list table ip filter')

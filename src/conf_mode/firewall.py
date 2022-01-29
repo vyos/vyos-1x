@@ -54,6 +54,9 @@ sysfs_config = {
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
 }
 
+NAME_PREFIX = 'NAME_'
+NAME6_PREFIX = 'NAME6_'
+
 preserve_chains = [
     'INPUT',
     'FORWARD',
@@ -281,9 +284,9 @@ def cleanup_commands(firewall):
                     else:
                         commands.append(f'flush chain {table} {chain}')
                 elif chain not in preserve_chains and not chain.startswith("VZONE"):
-                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain):
+                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)):
                         commands.append(f'flush chain {table} {chain}')
-                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
+                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)):
                         commands.append(f'flush chain {table} {chain}')
                     else:
                         commands += cleanup_rule(table, chain)

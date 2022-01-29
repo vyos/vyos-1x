@@ -88,7 +88,8 @@ def get_config_firewall(conf, name=None, ipv6=False, interfaces=True):
 
 def get_nftables_details(name, ipv6=False):
     suffix = '6' if ipv6 else ''
-    command = f'sudo nft list chain ip{suffix} filter {name}'
+    name_prefix = 'NAME6_' if ipv6 else 'NAME_'
+    command = f'sudo nft list chain ip{suffix} filter {name_prefix}{name}'
     try:
         results = cmd(command)
     except:

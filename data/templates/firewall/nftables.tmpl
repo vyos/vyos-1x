@@ -32,7 +32,7 @@ table ip filter {
 {% endif %}
 {% if name is defined %}
 {%   for name_text, conf in name.items() %}
-    chain {{ name_text }} {
+    chain NAME_{{ name_text }} {
 {%     if conf.rule is defined %}
 {%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
         {{ rule_conf | nft_rule(name_text, rule_id) }}
@@ -82,7 +82,7 @@ table ip6 filter {
 {% endif %}
 {% if ipv6_name is defined %}
 {%   for name_text, conf in ipv6_name.items() %}
-    chain {{ name_text }} {
+    chain NAME6_{{ name_text }} {
 {%     if conf.rule is defined %}
 {%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
         {{ rule_conf | nft_rule(name_text, rule_id, 'ip6') }}
