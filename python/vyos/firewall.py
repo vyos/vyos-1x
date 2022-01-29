@@ -104,13 +104,25 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 group = side_conf['group']
                 if 'address_group' in group:
                     group_name = group['address_group']
-                    output.append(f'{ip_name} {prefix}addr $A{def_suffix}_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} $A{def_suffix}_{group_name}')
                 elif 'network_group' in group:
                     group_name = group['network_group']
-                    output.append(f'{ip_name} {prefix}addr $N{def_suffix}_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} $N{def_suffix}_{group_name}')
                 if 'mac_group' in group:
                     group_name = group['mac_group']
-                    output.append(f'ether {prefix}addr $M_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'ether {prefix}addr {operator} $M_{group_name}')
                 if 'port_group' in group:
                     proto = rule_conf['protocol']
                     group_name = group['port_group']
@@ -118,7 +130,12 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     if proto == 'tcp_udp':
                         proto = 'th'
 
-                    output.append(f'{proto} {prefix}port $P_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+
+                    output.append(f'{proto} {prefix}port {operator} $P_{group_name}')
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
