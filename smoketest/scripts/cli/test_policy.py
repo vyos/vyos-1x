@@ -678,9 +678,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         50:	from 203.0.113.1 lookup 23
         50:	from 203.0.113.2 lookup 23
@@ -702,9 +699,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         101:    from all fwmark 0x18 lookup 154
         """
@@ -725,9 +719,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         102:    from all to 203.0.113.1 lookup 154
         """
@@ -750,9 +741,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         100:	from 203.0.113.11 fwmark 0x17 lookup 150
         100:	from 203.0.113.12 fwmark 0x17 lookup 150
@@ -779,9 +767,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         103:	from 203.0.113.11 to 203.0.113.13 fwmark 0x17 lookup 150
         103:	from 203.0.113.11 to 203.0.113.15 fwmark 0x17 lookup 150
@@ -805,9 +790,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         50:	from 2001:db8:123::/48 lookup 23
         50:	from 2001:db8:126::/48 lookup 23
@@ -829,9 +811,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         100:    from all fwmark 0x18 lookup 154
         """
@@ -852,9 +831,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         101:    from all to 2001:db8:1337::/126 lookup 154
         """
@@ -877,9 +853,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         102:	from 2001:db8:1338::/126 fwmark 0x17 lookup 150
         102:	from 2001:db8:1339::/126 fwmark 0x17 lookup 150
@@ -906,9 +879,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
@@ -947,20 +917,17 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
-        103:	from 203.0.113.1/24 to 203.0.112.1/24 fwmark 0x17 lookup 150
-        103:	from 203.0.113.1/24 to 203.0.116.5 fwmark 0x17 lookup 150
-        103:	from 203.0.114.5 to 203.0.112.1/24 fwmark 0x17 lookup 150
+        103:	from 203.0.113.0/24 to 203.0.116.5 fwmark 0x17 lookup 150
+        103:	from 203.0.114.5 to 203.0.112.0/24 fwmark 0x17 lookup 150
         103:	from 203.0.114.5 to 203.0.116.5 fwmark 0x17 lookup 150
+        103:	from 203.0.113.0/24 to 203.0.112.0/24 fwmark 0x17 lookup 150
         """
         original_v6 = """
-        103:	from 20016 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        103:    from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         """
         tmp = cmd('ip rule show prio 103')
         tmp_v6 = cmd('ip -6 rule show prio 103')
@@ -975,11 +942,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         tmp = cmd('ip rule show prio 103')
         tmp_v6 = cmd('ip -6 rule show prio 103')
 
-        original = None
-        original_v6 = None
-
-        self.assertEqual(sort_ip(tmp), original)
-        self.assertEqual(sort_ip(tmp_v6), original_v6)
+        self.assertEqual(sort_ip(tmp), [])
+        self.assertEqual(sort_ip(tmp_v6), [])
 
     # Test multiple commits ipv4
     def test_multiple_commit_ipv4_table_id(self):
@@ -995,8 +959,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-        # Expected values
         original_first = """
         105:	from 192.0.2.1 lookup 151
         105:	from 192.0.2.2 lookup 151
@@ -1019,7 +981,10 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
 
 def sort_ip(output):
-    return output.splitlines().sort()
+    o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
+    o = o.splitlines()
+    o.sort()
+    return o
 
     # Test set table for fwmark
     def test_fwmark_table_id(self):
