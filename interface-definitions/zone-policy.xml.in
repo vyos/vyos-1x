@@ -13,6 +13,9 @@
             <format>txt</format>
             <description>Zone name</description>
           </valueHelp>
+          <constraint>
+            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+          </constraint>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
