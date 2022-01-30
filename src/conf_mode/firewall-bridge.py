@@ -49,12 +49,11 @@ def get_config(config=None):
     if not policy_dict:
         return None
 
-
-    pprint(firewall)
     config = {}
     config["policy"] = firewall["policy"]
     if 'group' in firewall:
         config["group"] = firewall["group"]
+
     config["ipv4_ruleset"] = firewall["name"][firewall["policy"]["bridge"]["forward"]["ipv4"]]
 
     return config
