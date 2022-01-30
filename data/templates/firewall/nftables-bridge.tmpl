@@ -9,7 +9,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.address_group.items() %}
   set A_{{ group_name }} {
     type ipv4_addr
-    elements = { {{ group_conf.address | join(", ") }}  }
+    elements = { {{ group_conf.address | force_to_list | join(", ") }}  }
   }
 {%     endfor %}
 {%   endif %}
@@ -18,7 +18,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.ipv6_address_group.items() %}
   set A6_{{ group_name }}  {
     type = ipv6_addr
-    elements = { {{ group_conf.address | join(", ") }} }
+    elements = { {{ group_conf.address | force_to_list | join(", ") }} }
   }
 {%     endfor %}
 {%   endif %}
@@ -27,7 +27,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.mac_group.items() %}
   set M_{{ group_name }} {
     type ether_addr
-    elements = { {{ group_conf.mac_address | join(", ") }} }
+    elements = { {{ group_conf.mac_address | force_to_list | join(", ") }} }
   }
 {%     endfor %}
 {%   endif %}
@@ -36,7 +36,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.network_group.items() %}
   set N_{{ group_name }} {
     type = ipv4_addr
-    elements = {{ group_conf.network | join(", ") }}
+    elements = {{ group_conf.network | force_to_list | join(", ") }}
   }
 {%     endfor %}
 {%   endif %}
@@ -45,7 +45,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.ipv6_network_group.items() %}
   set N6_{{ group_name }} {
     type = ipv6_addr
-    elements = { {{ group_conf.network | join(", ") }} }
+    elements = { {{ group_conf.network | force_to_list | join(", ") }} }
   }
 {%     endfor %}
 {%   endif %}
@@ -54,7 +54,7 @@ table bridge filter {
 {%     for group_name, group_conf in group.port_group.items() %}
   set P_{{ group_name }} {
     type inet_service
-    elements = { {{ group_conf.port | join(", ") }} }
+    elements = { {{ group_conf.port | force_to_list | join(", ") }} }
   }
 {%     endfor %}
 {%   endif %}

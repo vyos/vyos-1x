@@ -366,3 +366,10 @@ def nft_default_rule(fw_conf, fw_name):
     output.append(nft_action(default_action))
     output.append(f'comment "{fw_name} default-action {default_action}"')
     return " ".join(output)
+
+@register_filter('force_to_list')
+def force_to_list(value):
+    if isinstance(value, list):
+        return value
+    else:
+        return [value]
