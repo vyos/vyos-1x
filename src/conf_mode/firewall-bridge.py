@@ -16,9 +16,8 @@
 #
 
 import os
+import sys
 import copy
-from sys import argv
-from sys import exit
 
 import vyos.util
 
