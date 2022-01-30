@@ -54,7 +54,11 @@ def get_config(config=None):
     if 'group' in firewall:
         config["group"] = firewall["group"]
 
-    config["ipv4_ruleset"] = firewall["name"][firewall["policy"]["bridge"]["forward"]["ipv4"]]
+    try:
+        config["ipv4_ruleset"] = firewall["name"][firewall["policy"]["bridge"]["forward"]["ipv4"]]
+    except KeyError:
+        # Bridge firewall policy is not assigned, nothing to do
+        return None
 
     return config
 
