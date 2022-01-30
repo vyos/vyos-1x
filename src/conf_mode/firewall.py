@@ -73,6 +73,9 @@ preserve_chains = [
     'VYOS_FRAG6_MARK'
 ]
 
+nft_iface_chains = ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']
+nft6_iface_chains = ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
+
 valid_groups = [
     'address_group',
     'network_group',
@@ -248,27 +251,29 @@ def verify(firewall):
             name = dict_search_args(if_firewall, direction, 'name')
             ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
 
-            if name and not dict_search_args(firewall, 'name', name):
+            if name and dict_search_args(firewall, 'name', name) == None:
                 raise ConfigError(f'Firewall name "{name}" is still referenced on interface {ifname}')
 
-            if ipv6_name and not dict_search_args(firewall, 'ipv6_name', ipv6_name):
+            if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
                 raise ConfigError(f'Firewall ipv6-name "{ipv6_name}" is still referenced on interface {ifname}')
 
     for fw_name, used_names in firewall['zone_policy'].items():
         for name in used_names:
-            if not dict_search_args(firewall, fw_name, name):
+            if dict_search_args(firewall, fw_name, name) == None:
                 raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
 
     return None
 
 def cleanup_rule(table, jump_chain):
     commands = []
-    results = cmd(f'nft -a list table {table}').split("\n")
-    for line in results:
-        if f'jump {jump_chain}' in line:
-            handle_search = re.search('handle (\d+)', line)
-            if handle_search:
-                commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
+    for chain in chains:
+        results = cmd(f'nft -a list chain {table} {chain}').split("\n")
+        for line in results:
+            if f'jump {jump_chain}' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
     return commands
 
 def cleanup_commands(firewall):
@@ -288,9 +293,9 @@ def cleanup_commands(firewall):
                     else:
                         commands.append(f'flush chain {table} {chain}')
                 elif chain not in preserve_chains and not chain.startswith("VZONE"):
-                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)):
+                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
-                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)):
+                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
                     else:
                         commands += cleanup_rule(table, chain)
