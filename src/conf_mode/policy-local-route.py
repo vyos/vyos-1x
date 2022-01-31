@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
@@ -51,12 +52,15 @@ def get_config(config=None):
             for rule in (tmp or []):
                 src = leaf_node_changed(conf, base_rule + [rule, 'source'])
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
+                iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
                 rule_def = {}
                 if src:
                     rule_def = dict_merge({'source' : src}, rule_def)
                 if fwmk:
                     rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
+                if iif:
+                    rule_def = dict_merge({'inbound_interface' : iif}, rule_def)
                 if dst:
                     rule_def = dict_merge({'destination' : dst}, rule_def)
                 dict = dict_merge({dict_id : {rule : rule_def}}, dict)
@@ -72,6 +76,7 @@ def get_config(config=None):
             for rule, rule_config in pbr[route]['rule'].items():
                 src = leaf_node_changed(conf, base_rule + [rule, 'source'])
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
+                iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
                 # keep track of changes in configuration
                 # otherwise we might remove an existing node although nothing else has changed
@@ -100,6 +105,13 @@ def get_config(config=None):
                     changed = True
                     if len(fwmk) > 0:
                         rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
+                if iif is None:
+                    if 'inbound_interface' in rule_config:
+                        rule_def = dict_merge({'inbound_interface': rule_config['inbound_interface']}, rule_def)
+                else:
+                    changed = True
+                    if len(iif) > 0:
+                        rule_def = dict_merge({'inbound_interface' : iif}, rule_def)
                 if dst is None:
                     if 'destination' in rule_config:
                         rule_def = dict_merge({'destination': rule_config['destination']}, rule_def)
@@ -125,11 +137,18 @@ def verify(pbr):
         pbr_route = pbr[route]
         if 'rule' in pbr_route:
             for rule in pbr_route['rule']:
-                if 'source' not in pbr_route['rule'][rule] and 'destination' not in pbr_route['rule'][rule] and 'fwmark' not in pbr_route['rule'][rule]:
-                    raise ConfigError('Source or destination address or fwmark is required!')
+                if 'source' not in pbr_route['rule'][rule] \
+                        and 'destination' not in pbr_route['rule'][rule] \
+                        and 'fwmark' not in pbr_route['rule'][rule] \
+                        and 'inbound_interface' not in pbr_route['rule'][rule]:
+                    raise ConfigError('Source or destination address or fwmark or inbound-interface is required!')
                 else:
                     if 'set' not in pbr_route['rule'][rule] or 'table' not in pbr_route['rule'][rule]['set']:
                         raise ConfigError('Table set is required!')
+                    if 'inbound_interface' in pbr_route['rule'][rule]:
+                        interface = pbr_route['rule'][rule]['inbound_interface']
+                        if interface not in interfaces():
+                            raise ConfigError(f'Interface "{interface}" does not exist')
 
     return None
 
@@ -159,7 +178,10 @@ def apply(pbr):
                         rule_config['fwmark'] = rule_config['fwmark'] if 'fwmark' in rule_config else ['']
                         for fwmk in rule_config['fwmark']:
                             f_fwmk = '' if fwmk == '' else f' fwmark {fwmk} '
-                            call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_fwmk}')
+                            rule_config['inbound_interface'] = rule_config['inbound_interface'] if 'inbound_interface' in rule_config else ['']
+                            for iif in rule_config['inbound_interface']:
+                                f_iif = '' if iif == '' else f' iif {iif} '
+                                call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_fwmk}{f_iif}')
 
     # Generate new config
     for route in ['local_route', 'local_route6']:
@@ -183,7 +205,11 @@ def apply(pbr):
                         if 'fwmark' in rule_config:
                             fwmk = rule_config['fwmark']
                             f_fwmk = f' fwmark {fwmk} '
-                        call(f'ip{v6} rule add prio {rule} {f_src}{f_dst}{f_fwmk} lookup {table}')
+                        f_iif = ''
+                        if 'inbound_interface' in rule_config:
+                            iif = rule_config['inbound_interface']
+                            f_iif = f' iif {iif} '
+                        call(f'ip{v6} rule add prio {rule} {f_src}{f_dst}{f_fwmk}{f_iif} lookup {table}')
 
     return None
 
