@@ -19,7 +19,7 @@
           </leafNode>
           <leafNode name="wan-interface">
             <properties>
-              <help>WAN network interface (REQUIRE)</help>
+              <help>WAN network interface</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
@@ -139,49 +139,27 @@
                     <format>txt</format>
                     <description>The STUN server host address</description>
                   </valueHelp>
-                  <valueHelp>
-                    <format>stun.stunprotocol.org</format>
-                    <description>stunprotocol</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>stun.sipgate.net</format>
-                    <description>sipgate</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>stun.xten.com</format>
-                    <description>xten</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>txt</format>
-                    <description>other STUN Server</description>
-                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="port">
-                <properties>
-                  <help>The STUN server port</help>
-                  <valueHelp>
-                    <format>txt</format>
-                    <description>The STUN server port</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
+              #include <include/port-number.xml.i>
             </children>
           </node>
-          <tagNode name="rules">
+          <tagNode name="rule">
             <properties>
               <help>UPnP Rule</help>
+              <valueHelp>
+                <format>u32:0-65535</format>
+                <description>Rule number</description>
+              </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-65535"/>
               </constraint>
             </properties>
             <children>
-              <leafNode name="disable">
-                <properties>
-                  <help>Disable Rule</help>
-                  <valueless />
-                </properties>
-              </leafNode>
+              #include <include/generic-disable-node.xml.i>
               <leafNode name="external-port-range">
                 <properties>
                   <help>Port range (REQUIRE)</help>
