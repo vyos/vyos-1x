@@ -556,6 +556,7 @@ def nft_intra_zone_action(zone_conf, ipv6=False):
     if 'intra_zone_filtering' in zone_conf:
         intra_zone = zone_conf['intra_zone_filtering']
         fw_name = 'ipv6_name' if ipv6 else 'name'
+        name_prefix = 'NAME6_' if ipv6 else 'NAME_'
 
         if 'action' in intra_zone:
             if intra_zone['action'] == 'accept':
@@ -563,5 +564,5 @@ def nft_intra_zone_action(zone_conf, ipv6=False):
             return intra_zone['action']
         elif dict_search_args(intra_zone, 'firewall', fw_name):
             name = dict_search_args(intra_zone, 'firewall', fw_name)
-            return f'jump {name}'
+            return f'jump {name_prefix}{name}'
     return 'return'

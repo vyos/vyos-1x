@@ -206,6 +206,7 @@ def apply_table_marks(policy):
     for route in ['route', 'route6']:
         if route in policy:
             cmd_str = 'ip' if route == 'route' else 'ip -6'
+            tables = []
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
@@ -213,6 +214,9 @@ def apply_table_marks(policy):
                         if set_table:
                             if set_table == 'main':
                                 set_table = '254'
+                            if set_table in tables:
+                                continue
+                            tables.append(set_table)
                             table_mark = mark_offset - int(set_table)
                             cmd(f'{cmd_str} rule add pref {set_table} fwmark {table_mark} table {set_table}')
 
