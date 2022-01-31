@@ -127,6 +127,14 @@ def render(
 ##################################
 # Custom template filters follow #
 ##################################
+@register_filter('force_to_list')
+def force_to_list(value):
+    """ Convert scalars to single-item lists and leave lists untouched """
+    if isinstance(value, list):
+        return value
+    else:
+        return [value]
+
 @register_filter('ip_from_cidr')
 def ip_from_cidr(prefix):
     """ Take an IPv4/IPv6 CIDR host and strip cidr mask.
