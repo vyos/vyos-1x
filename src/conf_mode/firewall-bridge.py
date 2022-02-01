@@ -68,6 +68,10 @@ def verify(firewall):
     if not firewall:
         return None
 
+    for rule, rule_config in firewall['ipv4_ruleset']['rule'].items():
+        if 'reject' in rule_config['action']:
+            raise ConfigError(f"Action 'reject' can not be used for firewall policy bridge")
+
 def generate(firewall):
     if not firewall:
         return None

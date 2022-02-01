@@ -23,6 +23,9 @@
                   <leafNode name="ipv4">
                     <properties>
                       <help>Bridge firewall policy for forwarded IPv4 traffic</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
                     </properties>
                   </leafNode>
                 </children>
