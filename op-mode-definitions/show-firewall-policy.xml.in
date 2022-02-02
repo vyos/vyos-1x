@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="firewall">
+        <children>
+          <leafNode name="policy">
+            <properties>
+              <help>Show firewall policy</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/show_firewall_policy.py --summary</command>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
