@@ -59,7 +59,7 @@
           </leafNode>
           <leafNode name="hello-time">
             <properties>
-              <help>Hello packet advertisment interval</help>
+              <help>Hello packet advertisement interval</help>
               <valueHelp>
                 <format>u32:1-10</format>
                 <description>Spanning Tree Protocol hello advertisement interval in seconds (default 2)</description>
