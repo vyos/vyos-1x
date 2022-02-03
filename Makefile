@@ -88,6 +88,7 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/show/node.def
 	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/show/vpn/node.def
+	rm -f $(OP_TMPL_DIR)/show/firewall/node.def
 
 	# XXX: T3781: migrate back to old iptables NAT implementation as we can not use nft
 	# which requires Kernel 5.10 for proper prefix translation support. Kernel 5.10
