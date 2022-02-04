@@ -162,8 +162,6 @@ def apply(pbr):
     if not pbr:
         return None
 
-    print(pbr)
-
     # Delete old rule if needed
     for rule_rm in ['rule_remove', 'rule6_remove']:
         if rule_rm in pbr:
