@@ -278,6 +278,7 @@ def cleanup_rule(table, jump_chain):
 
 def cleanup_commands(firewall):
     commands = []
+    commands_end = []
     for table in ['ip filter', 'ip6 filter']:
         state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
         json_str = cmd(f'nft -j list table {table}')
@@ -308,7 +309,10 @@ def cleanup_commands(firewall):
                             chain = rule['chain']
                             handle = rule['handle']
                             commands.append(f'delete rule {table} {chain} handle {handle}')
-    return commands
+            elif 'set' in item:
+                set_name = item['set']['name']
+                commands_end.append(f'delete set {table} {set_name}')
+    return commands + commands_end
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):

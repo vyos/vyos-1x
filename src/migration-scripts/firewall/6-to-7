@@ -104,6 +104,7 @@ if config.exists(base + ['name']):
             continue
 
         for rule in config.list_nodes(base + ['name', name, 'rule']):
+            rule_recent = base + ['name', name, 'rule', rule, 'recent']
             rule_time = base + ['name', name, 'rule', rule, 'time']
             rule_tcp_flags = base + ['name', name, 'rule', rule, 'tcp', 'flags']
             rule_icmp = base + ['name', name, 'rule', rule, 'icmp']
@@ -113,6 +114,15 @@ if config.exists(base + ['name']):
 
             if config.exists(rule_time + ['utc']):
                 config.delete(rule_time + ['utc'])
+
+            if config.exists(rule_recent + ['time']):
+                tmp = int(config.return_value(rule_recent + ['time']))
+                unit = 'minute'
+                if tmp > 600:
+                    unit = 'hour'
+                elif tmp < 10:
+                    unit = 'second'
+                config.set(rule_recent + ['time'], value=unit)
 
             if config.exists(rule_tcp_flags):
                 tmp = config.return_value(rule_tcp_flags)
@@ -148,6 +158,7 @@ if config.exists(base + ['ipv6-name']):
             continue
 
         for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
+            rule_recent = base + ['ipv6-name', name, 'rule', rule, 'recent']
             rule_time = base + ['ipv6-name', name, 'rule', rule, 'time']
             rule_tcp_flags = base + ['ipv6-name', name, 'rule', rule, 'tcp', 'flags']
             rule_icmp = base + ['ipv6-name', name, 'rule', rule, 'icmpv6']
@@ -157,6 +168,15 @@ if config.exists(base + ['ipv6-name']):
 
             if config.exists(rule_time + ['utc']):
                 config.delete(rule_time + ['utc'])
+
+            if config.exists(rule_recent + ['time']):
+                tmp = int(config.return_value(rule_recent + ['time']))
+                unit = 'minute'
+                if tmp > 600:
+                    unit = 'hour'
+                elif tmp < 10:
+                    unit = 'second'
+                config.set(rule_recent + ['time'], value=unit)
 
             if config.exists(rule_tcp_flags):
                 tmp = config.return_value(rule_tcp_flags)

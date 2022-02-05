@@ -181,9 +181,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if 'recent' in rule_conf:
         count = rule_conf['recent']['count']
         time = rule_conf['recent']['time']
-        # output.append(f'meter {fw_name}_{rule_id} {{ ip saddr and 255.255.255.255 limit rate over {count}/{time} burst {count} packets }}')
-        # Waiting on input from nftables developers due to
-        # bug with above line and atomic chain flushing.
+        output.append(f'add @RECENT{def_suffix}_{fw_name}_{rule_id} {{ {ip_name} saddr limit rate over {count}/{time} burst {count} packets }}')
 
     if 'time' in rule_conf:
         output.append(parse_time(rule_conf['time']))
