@@ -53,7 +53,7 @@
 [[inputs.exec]]
   commands = [
     "{{ custom_scripts_dir }}/show_interfaces_input_filter.py",
-    "cat /tmp/vyos_services_input_filter"
+    "{{ custom_scripts_dir }}/vyos_services_input_filter.py"
   ]
   timeout = "10s"
   data_format = "influx"
