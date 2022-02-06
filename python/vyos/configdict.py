@@ -196,7 +196,7 @@ def is_member(conf, interface, intftype=None):
     interface name -> Interface is a member of this interface
     False -> interface type cannot have members
     """
-    ret_val = None
+    ret_val = {}
     intftypes = ['bonding', 'bridge']
 
     if intftype not in intftypes + [None]:
@@ -216,8 +216,8 @@ def is_member(conf, interface, intftype=None):
             member = base + [intf, 'member', 'interface', interface]
             if conf.exists(member):
                 tmp = conf.get_config_dict(member, key_mangling=('-', '_'),
-                                           get_first_key=True)
-                ret_val = {intf : tmp}
+                                           get_first_key=True, no_tag_node_value_mangle=True)
+                ret_val.update({intf : tmp})
 
     old_level = conf.set_level(old_level)
     return ret_val
