@@ -28,7 +28,6 @@ from vyos.util import cmd
 
 from vyos import ConfigError
 from vyos import airbag
-from pprint import pprint
 airbag.enable()
 
 nftables_conf = '/run/nftables.conf'
