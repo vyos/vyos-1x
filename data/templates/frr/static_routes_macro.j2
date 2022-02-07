@@ -5,7 +5,7 @@
 {%   if prefix_config.dhcp_interface is defined and prefix_config.dhcp_interface is not none %}
 {%     set next_hop = prefix_config.dhcp_interface | get_dhcp_router %}
 {%     if next_hop is defined and next_hop is not none %}
-{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ prefix_config.dhcp_interface }}
+{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ prefix_config.dhcp_interface }} {{ 'table ' + table if table is defined and table is not none }}
 {%     endif %}
 {%   endif %}
 {%   if prefix_config.interface is defined and prefix_config.interface is not none %}
