@@ -1,0 +1,8 @@
+#<token_type> <username> <pin> <secret_hex_key> <counter> <lastpass> <time>
+{% if username is defined %}
+{%   for user, user_config in username.itmes() %}
+{%     if user_config.disable is not defined and user_config.otp is defined and user_config.otp is not none %}
+{{ user_config.otp.token_tmpl }} {{ user }} {{ user_config.otp.pin | default("-", true) }} {{ user_config.otp.key }}
+{%     endif %}
+{%   endfor %}
+{% endif %}

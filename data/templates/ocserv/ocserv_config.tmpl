@@ -8,6 +8,14 @@ run-as-group = daemon
 
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf]"
+{% elif "local" in authentication.mode %}
+{%   if authentication.mode.local == "password-otp" %}
+auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
+{%   elif authentication.mode.local == "otp" %}
+auth = "plain[otp=/run/ocserv/users.oath]"
+{%   else %}
+auth = "plain[/run/ocserv/ocpasswd]"
+{%   endif %}
 {% else %}
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}
@@ -42,7 +50,8 @@ rekey-method = ssl
 try-mtu-discovery = true
 cisco-client-compat = true
 dtls-legacy = true
-
+max-ban-score = 80
+ban-reset-time = 300
 
 # The name to use for the tun device
 device = sslvpn
