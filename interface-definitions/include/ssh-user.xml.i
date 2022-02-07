@@ -3,9 +3,9 @@
   <properties>
     <help>Allow specific users to login</help>
     <constraint>
-      <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
+      <regex>^[-_a-zA-Z0-9.]{1,100}</regex>
     </constraint>
-    <constraintErrorMessage>illegal characters or more than 32 characters</constraintErrorMessage>
+    <constraintErrorMessage>Illegal characters or more than 100 characters</constraintErrorMessage>
     <multi/>
   </properties>
 </leafNode>
