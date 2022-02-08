@@ -130,6 +130,7 @@ Depends:
   ssl-cert,
   sudo,
   systemd,
+  telegraf (>= 1.20),
   tcpdump,
   tcptraceroute,
   telnet,
