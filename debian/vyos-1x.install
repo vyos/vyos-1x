@@ -5,6 +5,7 @@ etc/ppp
 etc/rsyslog.d
 etc/systemd
 etc/sysctl.d
+etc/telegraf
 etc/udev
 etc/update-motd.d
 etc/vyos
