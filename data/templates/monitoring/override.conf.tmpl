@@ -1,0 +1,7 @@
+[Unit]
+After=vyos-router.service
+ConditionPathExists=/run/telegraf/vyos-telegraf.conf
+[Service]
+Environment=INFLUX_TOKEN={{ authentication.token }}
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_SYS_ADMIN
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
