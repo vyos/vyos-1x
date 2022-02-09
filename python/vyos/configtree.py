@@ -15,8 +15,9 @@
 import re
 import json
 
-from ctypes import cdll, c_char_p, c_void_p, c_int
+from ctypes import cdll, c_char_p, c_void_p, c_int, POINTER
 
+LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
 def escape_backslash(string: str) -> str:
     """Escape single backslashes in string that are not in escape sequence"""
@@ -42,7 +43,9 @@ class ConfigTreeError(Exception):
 
 
 class ConfigTree(object):
-    def __init__(self, config_string, libpath='/usr/lib/libvyosconfig.so.0'):
+    def __init__(self, config_string=None, address=None, libpath=LIBPATH):
+        if config_string is None and address is None:
+            raise TypeError("ConfigTree() requires one of 'config_string' or 'address'")
         self.__config = None
         self.__lib = cdll.LoadLibrary(libpath)
 
@@ -60,7 +63,7 @@ class ConfigTree(object):
         self.__to_string.restype = c_char_p
 
         self.__to_commands = self.__lib.to_commands
-        self.__to_commands.argtypes = [c_void_p]
+        self.__to_commands.argtypes = [c_void_p, c_char_p]
         self.__to_commands.restype = c_char_p
 
         self.__to_json = self.__lib.to_json
@@ -126,15 +129,19 @@ class ConfigTree(object):
         self.__destroy = self.__lib.destroy
         self.__destroy.argtypes = [c_void_p]
 
-        config_section, version_section = extract_version(config_string)
-        config_section = escape_backslash(config_section)
-        config = self.__from_string(config_section.encode())
-        if config is None:
-            msg = self.__get_error().decode()
-            raise ValueError("Failed to parse config: {0}".format(msg))
+        if address is None:
+            config_section, version_section = extract_version(config_string)
+            config_section = escape_backslash(config_section)
+            config = self.__from_string(config_section.encode())
+            if config is None:
+                msg = self.__get_error().decode()
+                raise ValueError("Failed to parse config: {0}".format(msg))
+            else:
+                self.__config = config
+                self.__version = version_section
         else:
-            self.__config = config
-            self.__version = version_section
+            self.__config = address
+            self.__version = ''
 
     def __del__(self):
         if self.__config is not None:
@@ -143,13 +150,16 @@ class ConfigTree(object):
     def __str__(self):
         return self.to_string()
 
+    def _get_config(self):
+        return self.__config
+
     def to_string(self):
         config_string = self.__to_string(self.__config).decode()
         config_string = "{0}\n{1}".format(config_string, self.__version)
         return config_string
 
-    def to_commands(self):
-        return self.__to_commands(self.__config).decode()
+    def to_commands(self, op="set"):
+        return self.__to_commands(self.__config, op.encode()).decode()
 
     def to_json(self):
         return self.__to_json(self.__config).decode()
@@ -281,3 +291,32 @@ class ConfigTree(object):
         else:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
 
+class Diff:
+    def __init__(self, left, right, path=[], libpath=LIBPATH):
+        if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+            raise TypeError("Arguments must be instances of ConfigTree")
+        if path:
+            if not left.exists(path):
+                raise ConfigTreeError(f"Path {path} doesn't exist in lhs tree")
+            if not right.exists(path):
+                raise ConfigTreeError(f"Path {path} doesn't exist in rhs tree")
+        self.left = left
+        self.right = right
+
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+        df = cdll.LoadLibrary(libpath).diffs
+        df.restype = POINTER(c_void_p * 3)
+        res = list(df(path_str, left._get_config(), right._get_config()).contents)
+        self._diff = {'add': ConfigTree(address=res[0]),
+                      'del': ConfigTree(address=res[1]),
+                      'int': ConfigTree(address=res[2]) }
+
+        self.add = self._diff['add']
+        self.delete = self._diff['del']
+        self.inter = self._diff['int']
+
+    def to_commands(self):
+        add = self.add.to_commands()
+        delete = self.delete.to_commands(op="delete")
+        return delete + "\n" + add
