@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -117,11 +117,12 @@ def verify(openvpn):
         if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
-        if len([addr for addr in openvpn['local_address'] if is_ipv4(addr)]) > 1:
-            raise ConfigError('Only one IPv4 local-address can be specified')
+        if 'local_address' in openvpn:
+            if len([addr for addr in openvpn['local_address'] if is_ipv4(addr)]) > 1:
+                raise ConfigError('Only one IPv4 local-address can be specified')
 
-        if len([addr for addr in openvpn['local_address'] if is_ipv6(addr)]) > 1:
-            raise ConfigError('Only one IPv6 local-address can be specified')
+            if len([addr for addr in openvpn['local_address'] if is_ipv6(addr)]) > 1:
+                raise ConfigError('Only one IPv6 local-address can be specified')
 
         if openvpn['device_type'] == 'tun':
             if 'remote_address' not in openvpn:
@@ -160,7 +161,7 @@ def verify(openvpn):
             if dict_search('remote_host', openvpn) in dict_search('remote_address', openvpn):
                 raise ConfigError('"remote-address" and "remote-host" can not be the same')
 
-        if openvpn['device_type'] == 'tap':
+        if openvpn['device_type'] == 'tap' and 'local_address' in openvpn:
             # we can only have one local_address, this is ensured above
             v4addr = None
             for laddr in openvpn['local_address']:
