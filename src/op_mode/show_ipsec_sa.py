@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,119 +14,117 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import sys
+from re import split as re_split
+from sys import exit
 
-import vici
-import tabulate
-import hurry.filesize
+from hurry import filesize
+from tabulate import tabulate
+from vici import Session as vici_session
 
-import vyos.util
+from vyos.util import seconds_to_human
+
 
 def convert(text):
     return int(text) if text.isdigit() else text.lower()
 
-def alphanum_key(key):
-    return [convert(c) for c in re.split('([0-9]+)', str(key))]
 
-def format_output(conns, sas):
+def alphanum_key(key):
+    return [convert(c) for c in re_split('([0-9]+)', str(key))]
+
+
+def format_output(sas):
     sa_data = []
 
-    for peer, parent_conn in conns.items():
-        if peer not in sas:
-            continue
+    for sa in sas:
+        for parent_sa in sa.values():
+            # create an item for each child-sa
+            for child_sa in parent_sa.get('child-sas', {}).values():
+                # prepare a list for output data
+                sa_out_name = sa_out_state = sa_out_uptime = sa_out_bytes = sa_out_packets = sa_out_remote_addr = sa_out_remote_id = sa_out_proposal = 'N/A'
 
-        parent_sa = sas[peer]
-        child_sas = parent_sa['child-sas']
-        installed_sas = {v['name'].decode(): v for k, v in child_sas.items() if v["state"] == b"INSTALLED"}
+                # collect raw data
+                sa_name = child_sa.get('name')
+                sa_state = child_sa.get('state')
+                sa_uptime = child_sa.get('install-time')
+                sa_bytes_in = child_sa.get('bytes-in')
+                sa_bytes_out = child_sa.get('bytes-out')
+                sa_packets_in = child_sa.get('packets-in')
+                sa_packets_out = child_sa.get('packets-out')
+                sa_remote_addr = parent_sa.get('remote-host')
+                sa_remote_id = parent_sa.get('remote-id')
+                sa_proposal_encr_alg = child_sa.get('encr-alg')
+                sa_proposal_integ_alg = child_sa.get('integ-alg')
+                sa_proposal_encr_keysize = child_sa.get('encr-keysize')
+                sa_proposal_dh_group = child_sa.get('dh-group')
 
-        # parent_sa["state"] = IKE state, child_sas["state"] = ESP state
-        state = 'down'
-        uptime = 'N/A'
+                # format data to display
+                if sa_name:
+                    sa_out_name = sa_name.decode()
+                if sa_state:
+                    if sa_state == b'INSTALLED':
+                        sa_out_state = 'up'
+                    else:
+                        sa_out_state = 'down'
+                if sa_uptime:
+                    sa_out_uptime = seconds_to_human(sa_uptime.decode())
+                if sa_bytes_in and sa_bytes_out:
+                    bytes_in = filesize.size(int(sa_bytes_in.decode()))
+                    bytes_out = filesize.size(int(sa_bytes_out.decode()))
+                    sa_out_bytes = f'{bytes_in}/{bytes_out}'
+                if sa_packets_in and sa_packets_out:
+                    packets_in = filesize.size(int(sa_packets_in.decode()),
+                                               system=filesize.si)
+                    packets_out = filesize.size(int(sa_packets_out.decode()),
+                                                system=filesize.si)
+                    sa_out_packets = f'{packets_in}/{packets_out}'
+                if sa_remote_addr:
+                    sa_out_remote_addr = sa_remote_addr.decode()
+                if sa_remote_id:
+                    sa_out_remote_id = sa_remote_id.decode()
+                # format proposal
+                if sa_proposal_encr_alg:
+                    sa_out_proposal = sa_proposal_encr_alg.decode()
+                if sa_proposal_encr_keysize:
+                    sa_proposal_encr_keysize_str = sa_proposal_encr_keysize.decode()
+                    sa_out_proposal = f'{sa_out_proposal}_{sa_proposal_encr_keysize_str}'
+                if sa_proposal_integ_alg:
+                    sa_proposal_integ_alg_str = sa_proposal_integ_alg.decode()
+                    sa_out_proposal = f'{sa_out_proposal}/{sa_proposal_integ_alg_str}'
+                if sa_proposal_dh_group:
+                    sa_proposal_dh_group_str = sa_proposal_dh_group.decode()
+                    sa_out_proposal = f'{sa_out_proposal}/{sa_proposal_dh_group_str}'
 
-        if parent_sa["state"] == b"ESTABLISHED" and installed_sas:
-            state = "up"
+                # add a new item to output data
+                sa_data.append([
+                    sa_out_name, sa_out_state, sa_out_uptime, sa_out_bytes,
+                    sa_out_packets, sa_out_remote_addr, sa_out_remote_id,
+                    sa_out_proposal
+                ])
 
-        remote_host = parent_sa["remote-host"].decode()
-        remote_id = parent_sa["remote-id"].decode()
-
-        if remote_host == remote_id:
-            remote_id = "N/A"
-
-        # The counters can only be obtained from the child SAs
-        for child_conn in parent_conn['children']:
-            if child_conn not in installed_sas:
-                data = [child_conn, "down", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"]
-                sa_data.append(data)
-                continue
-
-            isa = installed_sas[child_conn]
-            csa_name = isa['name']
-            csa_name = csa_name.decode()
-
-            bytes_in = hurry.filesize.size(int(isa["bytes-in"].decode()))
-            bytes_out = hurry.filesize.size(int(isa["bytes-out"].decode()))
-            bytes_str = "{0}/{1}".format(bytes_in, bytes_out)
-
-            pkts_in = hurry.filesize.size(int(isa["packets-in"].decode()), system=hurry.filesize.si)
-            pkts_out = hurry.filesize.size(int(isa["packets-out"].decode()), system=hurry.filesize.si)
-            pkts_str = "{0}/{1}".format(pkts_in, pkts_out)
-            # Remove B from <1K values
-            pkts_str = re.sub(r'B', r'', pkts_str)
-
-            uptime = vyos.util.seconds_to_human(isa['install-time'].decode())
-
-            enc = isa["encr-alg"].decode()
-            if "encr-keysize" in isa:
-                key_size = isa["encr-keysize"].decode()
-            else:
-                key_size = ""
-            if "integ-alg" in isa:
-                hash = isa["integ-alg"].decode()
-            else:
-                hash = ""
-            if "dh-group" in isa:
-                dh_group = isa["dh-group"].decode()
-            else:
-                dh_group = ""
-
-            proposal = enc
-            if key_size:
-                proposal = "{0}_{1}".format(proposal, key_size)
-            if hash:
-                proposal = "{0}/{1}".format(proposal, hash)
-            if dh_group:
-                proposal = "{0}/{1}".format(proposal, dh_group)
-
-            data = [csa_name, state, uptime, bytes_str, pkts_str, remote_host, remote_id, proposal]
-            sa_data.append(data)
+    # return output data
     return sa_data
+
 
 if __name__ == '__main__':
     try:
-        session = vici.Session()
-        conns = {}
-        sas = {}
+        session = vici_session()
+        sas = list(session.list_sas())
 
-        for conn in session.list_conns():
-            for key in conn:
-                conns[key] = conn[key]
-
-        for sa in session.list_sas():
-            for key in sa:
-                sas[key] = sa[key]
-
-        headers = ["Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out", "Remote address", "Remote ID", "Proposal"]
-        sa_data = format_output(conns, sas)
+        sa_data = format_output(sas)
         sa_data = sorted(sa_data, key=alphanum_key)
-        output = tabulate.tabulate(sa_data, headers)
+
+        headers = [
+            "Connection", "State", "Uptime", "Bytes In/Out", "Packets In/Out",
+            "Remote address", "Remote ID", "Proposal"
+        ]
+        output = tabulate(sa_data, headers)
         print(output)
     except PermissionError:
         print("You do not have a permission to connect to the IPsec daemon")
-        sys.exit(1)
+        exit(1)
     except ConnectionRefusedError:
         print("IPsec is not runing")
-        sys.exit(1)
+        exit(1)
     except Exception as e:
         print("An error occured: {0}".format(e))
-        sys.exit(1)
+        exit(1)
