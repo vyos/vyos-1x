@@ -54,7 +54,7 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
 
         # Check telegraf config
         self.assertIn(f'organization = "{org}"', config)
-        self.assertIn(token, config)
+        self.assertIn(f'  token = "$INFLUX_TOKEN"', config)
         self.assertIn(f'urls = ["{url}:{port}"]', config)
         self.assertIn(f'bucket = "{bucket}"', config)
 
