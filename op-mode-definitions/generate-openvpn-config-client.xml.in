@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="openvpn">
+        <properties>
+          <help>Generate OpenVPN client configuration ovpn file</help>
+        </properties>
+        <children>
+          <node name="client-config">
+            <properties>
+              <help>Generate Client config</help>
+            </properties>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Local interface used for connection</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="ca">
+                    <properties>
+                      <help>CA certificate</help>
+                      <completionHelp>
+                        <path>pki ca</path>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="certificate">
+                        <properties>
+                          <help>Cerificate used by client</help>
+                          <completionHelp>
+                            <path>pki certificate</path>
+                          </completionHelp>
+                        </properties>
+                        <children>
+                          <tagNode name="key">
+                            <properties>
+                              <help>Certificate key used by client</help>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9" --key "${11}"</command>
+                          </tagNode>
+                        </children>
+                        <command>sudo ${vyos_op_scripts_dir}/generate_ovpn_client_file.py --interface "$5" --ca "$7" --cert "$9"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
