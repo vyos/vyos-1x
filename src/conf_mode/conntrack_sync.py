@@ -82,9 +82,9 @@ def verify(conntrack):
             raise ConfigError('Cannot configure all with other protocol')
 
     if 'listen_address' in conntrack:
-        address = conntrack['listen_address']
-        if not is_addr_assigned(address):
-            raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
+        for address in conntrack['listen_address']:
+            if not is_addr_assigned(address):
+                raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
 
     vrrp_group = dict_search('failover_mechanism.vrrp.sync_group', conntrack)
     if vrrp_group == None:
