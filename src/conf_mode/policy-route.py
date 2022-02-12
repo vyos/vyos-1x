@@ -123,6 +123,10 @@ def verify_rule(policy, name, rule_conf, ipv6):
                 for group in valid_groups:
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
+
+                        if group_name.startswith('!'):
+                            group_name = group_name[1:]
+
                         fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
                         error_group = fw_group.replace("_", "-")
                         group_obj = dict_search_args(policy['firewall_group'], fw_group, group_name)
