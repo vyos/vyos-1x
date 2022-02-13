@@ -41,7 +41,7 @@ class Ethtool:
     #   '100' : {'full': '', 'half': ''},
     #   '1000': {'full': ''}
     #  }
-    _speed_duplex = { }
+    _speed_duplex = {'auto': {'auto': ''}}
     _ring_buffers = { }
     _ring_buffers_max = { }
     _driver_name = None
