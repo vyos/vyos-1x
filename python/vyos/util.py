@@ -805,3 +805,12 @@ def boot_configuration_complete() -> bool:
     if os.path.isfile(config_status):
         return True
     return False
+
+def sysctl(name, value):
+    """ Change value via sysctl() - return True if changed, False otherwise """
+    tmp = cmd(f'sysctl {name}')
+    # last list index contains the actual value - only write if value differs
+    if tmp.split()[-1] != str(value):
+        call(f'sysctl -wq {name}={value}')
+        return True
+    return False
