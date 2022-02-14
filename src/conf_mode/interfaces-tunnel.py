@@ -83,19 +83,22 @@ def verify(tunnel):
         raise ConfigError('Tunnel parameters ip key must be set!')
 
     if tunnel['encapsulation'] in ['gre', 'gretap']:
-        if dict_search('parameters.ip.key', tunnel) != None:
-            # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
-            # Prevent the same key for 2 tunnels with same source-address/encap. T2920
-            for tunnel_if in Section.interfaces('tunnel'):
-                # It makes no sense to run the test for re-used GRE keys on our
-                # own interface we are currently working on
-                if tunnel['ifname'] == tunnel_if:
-                    continue
-                tunnel_cfg = get_interface_config(tunnel_if)
-                # no match on encapsulation - bail out
-                if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
-                    continue
-                new_source_address = dict_search('source_address', tunnel)
+        # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
+        # Prevent the same key for 2 tunnels with same source-address/encap. T2920
+        for tunnel_if in Section.interfaces('tunnel'):
+            # It makes no sense to run the test against our own interface we
+            # are currently configuring
+            if tunnel['ifname'] == tunnel_if:
+                continue
+
+            tunnel_cfg = get_interface_config(tunnel_if)
+            # no match on encapsulation - bail out
+            if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
+                continue
+
+            new_source_address = dict_search('source_address', tunnel)
+            new_source_interface = dict_search('source_interface', tunnel)
+            if dict_search('parameters.ip.key', tunnel) != None:
                 # Convert tunnel key to ip key, format "ip -j link show"
                 # 1 => 0.0.0.1, 999 => 0.0.3.231
                 orig_new_key = dict_search('parameters.ip.key', tunnel)
@@ -105,6 +108,16 @@ def verify(tunnel):
                    dict_search('linkinfo.info_data.ikey', tunnel_cfg) == new_key:
                     raise ConfigError(f'Key "{orig_new_key}" for source-address "{new_source_address}" ' \
                                       f'is already used for tunnel "{tunnel_if}"!')
+            else:
+                # If no IP GRE key is used we can not have more then one GRE tunnel
+                # bound to any one interface/IP address. This will result in a OS
+                # PermissionError: add tunnel "gre0" failed: File exists
+                if (dict_search('address', tunnel_cfg) == new_source_address or
+                   (dict_search('address', tunnel_cfg) == '0.0.0.0' and
+                    dict_search('link', tunnel_cfg) == new_source_interface)):
+                    raise ConfigError(f'Missing required "ip key" parameter when \
+                                      running more then one GRE based tunnel on the \
+                                      same source-interface/source-address')
 
     # Keys are not allowed with ipip and sit tunnels
     if tunnel['encapsulation'] in ['ipip', 'sit']:
