@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 yOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,9 +21,7 @@ from netifaces import interfaces
 from ipaddress import IPv4Address
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
-from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -34,8 +32,6 @@ from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.ifconfig import TunnelIf
-from vyos.template import is_ipv4
-from vyos.template import is_ipv6
 from vyos.util import get_interface_config
 from vyos.util import dict_search
 from vyos import ConfigError
