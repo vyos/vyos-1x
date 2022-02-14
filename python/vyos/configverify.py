@@ -173,7 +173,7 @@ def verify_eapol(config):
             if ca_cert_name not in config['pki']['ca']:
                 raise ConfigError('Invalid CA certificate specified for EAPoL')
 
-            ca_cert = config['pki']['ca'][cert_name]
+            ca_cert = config['pki']['ca'][ca_cert_name]
 
             if 'certificate' not in ca_cert:
                 raise ConfigError('Invalid CA certificate specified for EAPoL')
