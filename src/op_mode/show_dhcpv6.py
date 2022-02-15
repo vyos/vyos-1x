@@ -139,7 +139,7 @@ def get_leases(config, leases, state, pool=None, sort='ip'):
 
     # apply output/display sort
     if sort == 'ip':
-        leases = sorted(leases, key = lambda k: int(ip_address(k['ip'])))
+        leases = sorted(leases, key = lambda k: int(ip_address(k['ip'].split('/')[0])))
     else:
         leases = sorted(leases, key = lambda k: k[sort])
 
