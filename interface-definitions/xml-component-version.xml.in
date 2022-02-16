@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  #include <include/version/bgp-version.xml.i>
+  #include <include/version/broadcast-relay-version.xml.i>
+  #include <include/version/cluster-version.xml.i>
+  #include <include/version/config-management-version.xml.i>
+  #include <include/version/conntrack-sync-version.xml.i>
+  #include <include/version/conntrack-version.xml.i>
+  #include <include/version/dhcp-relay-version.xml.i>
+  #include <include/version/dhcp-server-version.xml.i>
+  #include <include/version/dhcpv6-server-version.xml.i>
+  #include <include/version/dns-forwarding-version.xml.i>
+  #include <include/version/firewall-version.xml.i>
+  #include <include/version/flow-accounting-version.xml.i>
+  #include <include/version/https-version.xml.i>
+  #include <include/version/interfaces-version.xml.i>
+  #include <include/version/ipoe-server-version.xml.i>
+  #include <include/version/ipsec-version.xml.i>
+  #include <include/version/isis-version.xml.i>
+  #include <include/version/l2tp-version.xml.i>
+  #include <include/version/lldp-version.xml.i>
+  #include <include/version/mdns-version.xml.i>
+  #include <include/version/nat66-version.xml.i>
+  #include <include/version/nat-version.xml.i>
+  #include <include/version/ntp-version.xml.i>
+  #include <include/version/openconnect-version.xml.i>
+  #include <include/version/ospf-version.xml.i>
+  #include <include/version/policy-version.xml.i>
+  #include <include/version/pppoe-server-version.xml.i>
+  #include <include/version/pptp-version.xml.i>
+  #include <include/version/qos-version.xml.i>
+  #include <include/version/quagga-version.xml.i>
+  #include <include/version/rpki-version.xml.i>
+  #include <include/version/salt-version.xml.i>
+  #include <include/version/snmp-version.xml.i>
+  #include <include/version/ssh-version.xml.i>
+  #include <include/version/sstp-version.xml.i>
+  #include <include/version/system-version.xml.i>
+  #include <include/version/vrf-version.xml.i>
+  #include <include/version/vrrp-version.xml.i>
+  #include <include/version/vyos-accel-ppp-version.xml.i>
+  #include <include/version/wanloadbalance-version.xml.i>
+  #include <include/version/webproxy-version.xml.i>
+</interfaceDefinition>
