@@ -188,6 +188,35 @@
                   <help>Use VRRP virtual MAC address as per RFC3768</help>
                 </properties>
               </leafNode>
+              <node name="track">
+                <properties>
+                  <help>Track settings</help>
+                </properties>
+                <children>
+                  <leafNode name="exclude-vrrp-interface">
+                    <properties>
+                      <valueless/>
+                      <help>Disable track state of main interface</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Interface name state check</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="interface-name"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="transition-script">
                 <properties>
                   <help>VRRP transition scripts</help>
@@ -233,7 +262,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="virtual-address">
+              <tagNode name="virtual-address">
                 <properties>
                   <help>Virtual address (IPv4 or IPv6, but they must not be mixed in one group)</help>
                   <valueHelp>
@@ -249,9 +278,11 @@
                     <validator name="ipv6-host"/>
                   </constraint>
                   <constraintErrorMessage>Virtual address must be a valid IPv4 or IPv6 address with prefix length (e.g. 192.0.2.3/24 or 2001:db8:ff::10/64)</constraintErrorMessage>
-                  <multi/>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/generic-interface-broadcast.xml.i>
+                </children>
+              </tagNode>
               <leafNode name="virtual-address-excluded">
                 <properties>
                   <help>Virtual address (If you need additional IPv4 and IPv6 in same group)</help>
