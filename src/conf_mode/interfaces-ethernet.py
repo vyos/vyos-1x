@@ -32,7 +32,9 @@ from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ethtool import Ethtool
 from vyos.ifconfig import EthernetIf
-from vyos.pki import wrap_certificate
+from vyos.pki import find_chain
+from vyos.pki import encode_certificate
+from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
@@ -159,7 +161,14 @@ def generate(ethernet):
         cert_name = ethernet['eapol']['certificate']
         pki_cert = ethernet['pki']['certificate'][cert_name]
 
-        write_file(cert_file_path, wrap_certificate(pki_cert['certificate']))
+        loaded_pki_cert = load_certificate(pki_cert['certificate'])
+        loaded_ca_certs = {load_certificate(c['certificate'])
+            for c in ethernet['pki']['ca'].values()}
+
+        cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
+
+        write_file(cert_file_path,
+                   '\n'.join(encode_certificate(c) for c in cert_full_chain))
         write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
 
         if 'ca_certificate' in ethernet['eapol']:
@@ -167,8 +176,11 @@ def generate(ethernet):
             ca_cert_name = ethernet['eapol']['ca_certificate']
             pki_ca_cert = ethernet['pki']['ca'][ca_cert_name]
 
+            loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+            ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+
             write_file(ca_cert_file_path,
-                       wrap_certificate(pki_ca_cert['certificate']))
+                       '\n'.join(encode_certificate(c) for c in ca_full_chain))
     else:
         # delete configuration on interface removal
         if os.path.isfile(wpa_suppl_conf.format(**ethernet)):
