@@ -1113,6 +1113,9 @@
                   <leafNode name="ip-next-hop">
                     <properties>
                       <help>Nexthop IP address</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
+                      </completionHelp>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>IP address</description>
@@ -1130,6 +1133,9 @@
                       <leafNode name="global">
                         <properties>
                           <help>Nexthop IPv6 global address</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_local_ips.sh --ipv6</script>
+                          </completionHelp>
                           <valueHelp>
                             <format>ipv6</format>
                             <description>IPv6 address and prefix length</description>
@@ -1142,6 +1148,9 @@
                       <leafNode name="local">
                         <properties>
                           <help>Nexthop IPv6 local address</help>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_local_ips.sh --ipv6</script>
+                          </completionHelp>
                           <valueHelp>
                             <format>ipv6</format>
                             <description>IPv6 address and prefix length</description>
@@ -1268,6 +1277,9 @@
                   <leafNode name="src">
                     <properties>
                       <help>Source address for route</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                      </completionHelp>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>IPv4 address</description>
