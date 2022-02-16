@@ -17,7 +17,10 @@ import os
 import re
 import sys
 import vyos.defaults
+from vyos.xml import component_version
 
+# legacy version, reading from the file names in
+# /opt/vyatta/etc/config-migrate/current
 def get_system_versions():
     """
     Get component versions from running system; critical failure if
@@ -37,3 +40,7 @@ def get_system_versions():
             system_versions[pair[0]] = int(pair[1])
 
     return system_versions
+
+# read from xml cache
+def get_system_component_version():
+    return component_version()
