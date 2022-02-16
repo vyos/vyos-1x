@@ -298,7 +298,6 @@ class BridgeIf(Interface):
 
         tmp = dict_search('member.interface', config)
         if tmp:
-
             for interface, interface_config in tmp.items():
                 # if interface does yet not exist bail out early and
                 # add it later
@@ -316,10 +315,13 @@ class BridgeIf(Interface):
                 # enslave interface port to bridge
                 self.add_port(interface)
 
-                # always set private-vlan/port isolation
-                tmp = dict_search('isolated', interface_config)
-                value = 'on' if (tmp != None) else 'off'
-                lower.set_port_isolation(value)
+                if not interface.startswith('wlan'):
+                    # always set private-vlan/port isolation - this can not be
+                    # done when lower link is a wifi link, as it will trigger:
+                    # RTNETLINK answers: Operation not supported
+                    tmp = dict_search('isolated', interface_config)
+                    value = 'on' if (tmp != None) else 'off'
+                    lower.set_port_isolation(value)
 
                 # set bridge port path cost
                 if 'cost' in interface_config:
