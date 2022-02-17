@@ -224,9 +224,10 @@ def verify_bridge_delete(config):
     when interface also is part of a bridge.
     """
     if 'is_bridge_member' in config:
-        raise ConfigError(
-            'Interface "{ifname}" cannot be deleted as it is a '
-            'member of bridge "{is_bridge_member}"!'.format(**config))
+        interface = config['ifname']
+        for bridge in config['is_bridge_member']:
+            raise ConfigError(f'Interface "{interface}" cannot be deleted as it '
+                              f'is a member of bridge "{bridge}"!')
 
 def verify_interface_exists(ifname):
     """
