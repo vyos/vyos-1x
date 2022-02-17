@@ -21,7 +21,7 @@ import vyos.systemversions as systemversions
 import vyos.defaults
 import vyos.version
 
-sys_versions = systemversions.get_system_versions()
+sys_versions = systemversions.get_system_component_version()
 
 component_string = formatversions.format_versions_string(sys_versions)
 
