@@ -20,6 +20,17 @@ charon {
     # Send Cisco Unity vendor ID payload (IKEv1 only).
     # cisco_unity = no
 
+    # Cisco FlexVPN
+{% if options is defined %}
+    cisco_flexvpn = {{ 'yes' if options.flexvpn is defined else 'no' }}
+{%   if options.virtual_ip is defined %}
+    install_virtual_ip = yes
+{%   endif %}
+{%   if options.interface is defined and options.interface is not none %}
+    install_virtual_ip_on = {{ options.interface }}
+{%   endif %}
+{%  endif %}
+
     # Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
     # close_ike_on_child_failure = no
 

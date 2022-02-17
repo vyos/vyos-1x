@@ -28,6 +28,7 @@ vti_path = ['interfaces', 'vti']
 nhrp_path = ['protocols', 'nhrp']
 base_path = ['vpn', 'ipsec']
 
+charon_file = '/etc/strongswan.d/charon.conf'
 dhcp_waiting_file = '/tmp/ipsec_dhcp_waiting'
 swanctl_file = '/etc/swanctl/swanctl.conf'
 
@@ -415,6 +416,76 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         # There is only one VTI test so no need to delete this globally in tearDown()
         self.cli_delete(vti_path)
+
+
+    def test_06_flex_vpn_vips(self):
+        local_address = '192.0.2.5'
+        local_id = 'vyos-r1'
+        remote_id = 'vyos-r2'
+        peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
+
+        self.cli_set(tunnel_path + ['tun1', 'encapsulation', 'gre'])
+        self.cli_set(tunnel_path + ['tun1', 'source-address', local_address])
+
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['options', 'flexvpn'])
+        self.cli_set(base_path + ['options', 'interface', 'tun1'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'ikev2-reauth', 'no'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
+
+        self.cli_set(peer_base_path + ['authentication', 'id', local_id])
+        self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
+        self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
+        self.cli_set(peer_base_path + ['authentication', 'remote-id', remote_id])
+        self.cli_set(peer_base_path + ['connection-type', 'initiate'])
+        self.cli_set(peer_base_path + ['ike-group', ike_group])
+        self.cli_set(peer_base_path + ['default-esp-group', esp_group])
+        self.cli_set(peer_base_path + ['local-address', local_address])
+        self.cli_set(peer_base_path + ['tunnel', '1', 'protocol', 'gre'])
+
+        self.cli_set(peer_base_path + ['virtual-address', '203.0.113.55'])
+        self.cli_set(peer_base_path + ['virtual-address', '203.0.113.56'])
+
+        self.cli_commit()
+
+        # Verify strongSwan configuration
+        swanctl_conf = read_file(swanctl_file)
+        swanctl_conf_lines = [
+            f'version = 2',
+            f'vips = 203.0.113.55, 203.0.113.56',
+            f'life_time = 3600s', # default value
+            f'local_addrs = {local_address} # dhcp:no',
+            f'remote_addrs = {peer_ip}',
+            f'peer_{peer_ip.replace(".","-")}_tunnel_1',
+            f'mode = tunnel',
+        ]
+
+        for line in swanctl_conf_lines:
+            self.assertIn(line, swanctl_conf)
+
+        swanctl_secrets_lines = [
+            f'id-local = {local_address} # dhcp:no',
+            f'id-remote = {peer_ip}',
+            f'id-localid = {local_id}',
+            f'id-remoteid = {remote_id}',
+            f'secret = "{secret}"',
+        ]
+
+        for line in swanctl_secrets_lines:
+            self.assertIn(line, swanctl_conf)
+
+        # Verify charon configuration
+        charon_conf = read_file(charon_file)
+        charon_conf_lines = [
+            f'# Cisco FlexVPN',
+            f'cisco_flexvpn = yes',
+            f'install_virtual_ip = yes',
+            f'install_virtual_ip_on = tun1',
+        ]
+
+        for line in charon_conf_lines:
+            self.assertIn(line, charon_conf)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

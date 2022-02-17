@@ -622,6 +622,19 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="flexvpn">
+                <properties>
+                  <help>Allow FlexVPN vendor ID payload (IKEv2 only)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/generic-interface.xml.i>
+              <leafNode name="virtual-ip">
+                <properties>
+                  <help>Allow install virtual-ip addresses</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           <tagNode name="profile">
@@ -1087,6 +1100,20 @@
                       </node>
                     </children>
                   </tagNode>
+                  <leafNode name="virtual-address">
+                    <properties>
+                      <help>Initiator request virtual-address from peer</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Request IPv4 address from peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Request IPv6 address from peer</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
                   <node name="vti">
                     <properties>
                       <help>Virtual tunnel interface [REQUIRED]</help>
