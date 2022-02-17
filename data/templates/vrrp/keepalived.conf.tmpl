@@ -28,6 +28,9 @@ vrrp_instance {{ name }} {
     virtual_router_id {{ group_config.vrid }}
     priority {{ group_config.priority }}
     advert_int {{ group_config.advertise_interval }}
+{%     if group_config.track is defined and group_config.track.exclude_vrrp_interface is defined %}
+    dont_track_primary
+{%     endif %}
 {%     if group_config.no_preempt is not defined and group_config.preempt_delay is defined and group_config.preempt_delay is not none %}
     preempt_delay {{ group_config.preempt_delay }}
 {%     elif group_config.no_preempt is defined %}
@@ -61,8 +64,8 @@ vrrp_instance {{ name }} {
 {%     endif %}
 {%     if group_config.virtual_address is defined and group_config.virtual_address is not none %}
     virtual_ipaddress {
-{%       for addr in group_config.virtual_address %}
-        {{ addr }}
+{%       for addr, addr_config in group_config.virtual_address.items() %}
+        {{ addr }}{{ ' dev ' + addr_config.interface if addr_config.interface is defined }}
 {%       endfor %}
     }
 {%     endif %}
@@ -70,6 +73,13 @@ vrrp_instance {{ name }} {
     virtual_ipaddress_excluded {
 {%       for addr in group_config.virtual_address_excluded %}
         {{ addr }}
+{%       endfor %}
+    }
+{%     endif %}
+{%     if group_config.track is defined and group_config.track.interface is defined and group_config.track.interface is not none %}
+    track_interface {
+{%       for interface in group_config.track.interface %}
+        {{ interface }}
 {%       endfor %}
     }
 {%     endif %}
