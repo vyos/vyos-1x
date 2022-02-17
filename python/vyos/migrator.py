@@ -195,7 +195,7 @@ class Migrator(object):
             # This will force calling all migration scripts:
             cfg_versions = {}
 
-        sys_versions = systemversions.get_system_versions()
+        sys_versions = systemversions.get_system_component_version()
 
         # save system component versions in json file for easy reference
         self.save_json_record(sys_versions)
