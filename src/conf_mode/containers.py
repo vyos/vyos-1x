@@ -122,6 +122,18 @@ def verify(container):
                         raise ConfigError(f'IP address "{address}" can not be used for a container, '\
                                           'reserved for the container engine!')
 
+            if 'device' in container_config:
+                for dev, dev_config in container_config['device'].items():
+                    if 'source' not in dev_config:
+                        raise ConfigError(f'Device "{dev}" has no source path configured!')
+
+                    if 'destination' not in dev_config:
+                        raise ConfigError(f'Device "{dev}" has no destination path configured!')
+
+                    source = dev_config['source']
+                    if not os.path.exists(source):
+                        raise ConfigError(f'Device "{dev}" source path "{source}" does not exist!')
+
             if 'environment' in container_config:
                 for var, cfg in container_config['environment'].items():
                     if 'value' not in cfg:
@@ -266,6 +278,14 @@ def apply(container):
                     c = c.replace('-', '_')
                     cap_add += f' --cap-add={c}'
 
+            # Add a host device to the container /dev/x:/dev/x
+            device = ''
+            if 'device' in container_config:
+                for dev, dev_config in container_config['device'].items():
+                    source_dev = dev_config['source']
+                    dest_dev = dev_config['destination']
+                    device += f' --device={source_dev}:{dest_dev}'
+
             # Check/set environment options "-e foo=bar"
             env_opt = ''
             if 'environment' in container_config:
@@ -296,7 +316,7 @@ def apply(container):
 
             container_base_cmd = f'podman run --detach --interactive --tty --replace {cap_add} ' \
                                  f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
-                                 f'--name {name} {port} {volume} {env_opt}'
+                                 f'--name {name} {device} {port} {volume} {env_opt}'
             if 'allow_host_networks' in container_config:
                 run(f'{container_base_cmd} --net host {image}')
             else:
