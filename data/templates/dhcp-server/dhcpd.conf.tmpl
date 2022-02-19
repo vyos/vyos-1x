@@ -42,9 +42,9 @@ failover peer "{{ failover.name }}" {
     secondary;
 {%   endif %}
     address {{ failover.source_address }};
-    port 520;
+    port 647;
     peer address {{ failover.remote }};
-    peer port 520;
+    peer port 647;
     max-response-delay 30;
     max-unacked-updates 10;
     load balance max seconds 3;
