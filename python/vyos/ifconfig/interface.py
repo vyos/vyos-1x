@@ -1228,12 +1228,11 @@ class Interface(Control):
         options_file = f'{config_base}_{ifname}.options'
         pid_file = f'{config_base}_{ifname}.pid'
         lease_file = f'{config_base}_{ifname}.leases'
-
-        # Stop client with old config files to get the right IF_METRIC.
         systemd_service = f'dhclient@{ifname}.service'
-        if is_systemd_service_active(systemd_service):
-            self._cmd(f'systemctl stop {systemd_service}')
 
+        # 'up' check is mandatory b/c even if the interface is A/D, as soon as
+        # the DHCP client is started the interface will be placed in u/u state.
+        # This is not what we intended to do when disabling an interface.
         if enable and 'disable' not in self._config:
             if dict_search('dhcp_options.host_name', self._config) == None:
                 # read configured system hostname.
@@ -1244,16 +1243,19 @@ class Interface(Control):
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
                     self._config = dict_merge(tmp, self._config)
 
-            render(options_file, 'dhcp-client/daemon-options.tmpl',
-                   self._config)
-            render(config_file, 'dhcp-client/ipv4.tmpl',
-                   self._config)
+            render(options_file, 'dhcp-client/daemon-options.tmpl', self._config)
+            render(config_file, 'dhcp-client/ipv4.tmpl', self._config)
 
-            # 'up' check is mandatory b/c even if the interface is A/D, as soon as
-            # the DHCP client is started the interface will be placed in u/u state.
-            # This is not what we intended to do when disabling an interface.
-            return self._cmd(f'systemctl restart {systemd_service}')
+            # When the DHCP client is restarted a brief outage will occur, as
+            # the old lease is released a new one is acquired (T4203). We will
+            # only restart DHCP client if it's option changed, or if it's not
+            # running, but it should be running (e.g. on system startup)
+            if 'dhcp_options_old' in self._config or not is_systemd_service_active(systemd_service):
+                return self._cmd(f'systemctl restart {systemd_service}')
+            return None
         else:
+            if is_systemd_service_active(systemd_service):
+                self._cmd(f'systemctl stop {systemd_service}')
             # cleanup old config files
             for file in [config_file, options_file, pid_file, lease_file]:
                 if os.path.isfile(file):

@@ -17,10 +17,10 @@ vrf {{ vrf }}
 {% endif %}
 {# IPv4 default routes from DHCP interfaces #}
 {% if dhcp is defined and dhcp is not none %}
-{%   for interface in dhcp %}
+{%   for interface, interface_config in dhcp.items() %}
 {%     set next_hop = interface | get_dhcp_router %}
 {%     if next_hop is defined and next_hop is not none %}
-{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 210
+{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ interface_config.distance }}
 {%     endif %}
 {%   endfor %}
 {% endif %}

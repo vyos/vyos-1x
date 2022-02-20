@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -102,6 +102,7 @@ def get_certificate_count(interface, cert_type):
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls._test_dhcp = True
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
@@ -145,24 +146,6 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_delete(['interfaces', section, span])
 
         self.cli_commit()
-
-    def test_dhcp_disable_interface(self):
-        # When interface is configured as admin down, it must be admin down
-        # even when dhcpc starts on the given interface
-        for interface in self._interfaces:
-            self.cli_set(self._base_path + [interface, 'disable'])
-
-            # Also enable DHCP (ISC DHCP always places interface in admin up
-            # state so we check that we do not start DHCP client.
-            # https://phabricator.vyos.net/T2767
-            self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
-
-        self.cli_commit()
-
-        # Validate interface state
-        for interface in self._interfaces:
-            flags = read_file(f'/sys/class/net/{interface}/flags')
-            self.assertEqual(int(flags, 16) & 1, 0)
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works woth a CPU bitmask,
