@@ -58,6 +58,31 @@
             </properties>
           </leafNode>
           #include <include/generic-description.xml.i>
+          <tagNode name="device">
+            <properties>
+              <help>Add a host device to the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source device (Example: "/dev/x")</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Source device</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container device (Example: "/dev/x")</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Destination container device</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           #include <include/generic-disable-node.xml.i>
           <tagNode name="environment">
             <properties>
