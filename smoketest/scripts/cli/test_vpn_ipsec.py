@@ -238,6 +238,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
         self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
+        self.cli_set(peer_base_path + ['connection-type', 'none'])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
         self.cli_set(peer_base_path + ['default-esp-group', esp_group])
         self.cli_set(peer_base_path + ['local-address', local_address])
@@ -266,6 +267,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             f'mode = tunnel',
             f'local_ts = 172.16.10.0/24,172.16.11.0/24',
             f'remote_ts = 172.17.10.0/24,172.17.11.0/24',
+            f'start_action = none',
             f'if_id_in = {if_id}', # will be 11 for vti10 - shifted by one
             f'if_id_out = {if_id}',
             f'updown = "/etc/ipsec.d/vti-up-down {vti}"'

@@ -77,6 +77,8 @@
                 start_action = start
 {%     elif peer_conf.connection_type == 'respond' %}
                 start_action = trap
+{%     elif peer_conf.connection_type == 'none' %}
+                start_action = none
 {%     endif %}
 {%     if ike.dead_peer_detection is defined %}
 {%       set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
@@ -119,6 +121,8 @@
                 start_action = start
 {%       elif peer_conf.connection_type == 'respond' %}
                 start_action = trap
+{%       elif peer_conf.connection_type == 'none' %}
+                start_action = none
 {%       endif %}
 {%       if ike.dead_peer_detection is defined %}
 {%         set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
