@@ -1,4 +1,4 @@
-<!-- include start from interface/tunnel-remotes.xml.i -->
+<!-- include start from interface/tunnel-remote-multi.xml.i -->
 <leafNode name="remote">
   <properties>
     <help>Tunnel remote address</help>
