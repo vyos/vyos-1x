@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -56,6 +56,7 @@ def is_mirrored_to(interface, mirror_if, qdisc):
 
 class BasicInterfaceTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
+        _test_dhcp = False
         _test_ip = False
         _test_mtu = False
         _test_vlan = False
@@ -95,6 +96,31 @@ class BasicInterfaceTest:
             # Verify that no previously interface remained on the system
             for intf in self._interfaces:
                 self.assertNotIn(intf, interfaces())
+
+            # No daemon that was started during a test should remain running
+            for daemon in ['dhcp6c', 'dhclient']:
+                self.assertFalse(process_named_running(daemon))
+
+        def test_dhcp_disable_interface(self):
+            if not self._test_dhcp:
+                self.skipTest('not supported')
+
+            # When interface is configured as admin down, it must be admin down
+            # even when dhcpc starts on the given interface
+            for interface in self._interfaces:
+                self.cli_set(self._base_path + [interface, 'disable'])
+
+                # Also enable DHCP (ISC DHCP always places interface in admin up
+                # state so we check that we do not start DHCP client.
+                # https://phabricator.vyos.net/T2767
+                self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                flags = read_file(f'/sys/class/net/{interface}/flags')
+                self.assertEqual(int(flags, 16) & 1, 0)
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:

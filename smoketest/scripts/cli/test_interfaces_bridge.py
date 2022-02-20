@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,6 +31,7 @@ from vyos.validate import is_intf_addr_assigned
 class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls._test_dhcp = True
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
