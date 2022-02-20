@@ -319,34 +319,42 @@ def is_source_interface(conf, interface, intftype=None):
 def get_dhcp_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
-    dhcp_interfaces = []
+    dhcp_interfaces = {}
     dict = conf.get_config_dict(['interfaces'], get_first_key=True)
     if not dict:
         return dhcp_interfaces
 
     def check_dhcp(config, ifname):
-        out = []
+        tmp = {}
         if 'address' in config and 'dhcp' in config['address']:
+            options = {}
+            if 'dhcp_options' in config and 'default_route_distance' in config['dhcp_options']:
+                options.update({'distance' : config['dhcp_options']['default_route_distance']})
             if 'vrf' in config:
-                if vrf is config['vrf']: out.append(ifname)
-            else: out.append(ifname)
-        return out
+                if vrf is config['vrf']: tmp.update({ifname : options})
+            else: tmp.update({ifname : options})
+        return tmp
 
     for section, interface in dict.items():
-        for ifname, ifconfig in interface.items():
+        for ifname in interface:
+            # we already have a dict representation of the config from get_config_dict(),
+            # but with the extended information from get_interface_dict() we also
+            # get the DHCP client default-route-distance default option if not specified.
+            ifconfig = get_interface_dict(conf, ['interfaces', section], ifname)
+
             tmp = check_dhcp(ifconfig, ifname)
-            dhcp_interfaces.extend(tmp)
+            dhcp_interfaces.update(tmp)
             # check per VLAN interfaces
             for vif, vif_config in ifconfig.get('vif', {}).items():
                 tmp = check_dhcp(vif_config, f'{ifname}.{vif}')
-                dhcp_interfaces.extend(tmp)
+                dhcp_interfaces.update(tmp)
             # check QinQ VLAN interfaces
             for vif_s, vif_s_config in ifconfig.get('vif-s', {}).items():
                 tmp = check_dhcp(vif_s_config, f'{ifname}.{vif_s}')
-                dhcp_interfaces.extend(tmp)
+                dhcp_interfaces.update(tmp)
                 for vif_c, vif_c_config in vif_s_config.get('vif-c', {}).items():
                     tmp = check_dhcp(vif_c_config, f'{ifname}.{vif_s}.{vif_c}')
-                    dhcp_interfaces.extend(tmp)
+                    dhcp_interfaces.update(tmp)
 
     return dhcp_interfaces
 
@@ -404,6 +412,12 @@ def get_interface_dict(config, base, ifname=''):
     # confuse parsers
     if 'deleted' not in dict:
         dict = dict_merge(default_values, dict)
+
+        # If interface does not request an IPv4 DHCP address there is no need
+        # to keep the dhcp-options key
+        if 'address' not in dict or 'dhcp' not in dict['address']:
+            if 'dhcp_options' in dict:
+                del dict['dhcp_options']
 
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
@@ -475,6 +489,12 @@ def get_interface_dict(config, base, ifname=''):
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
 
+            # If interface does not request an IPv4 DHCP address there is no need
+            # to keep the dhcp-options key
+            if 'address' not in dict['vif'][vif] or 'dhcp' not in dict['vif'][vif]['address']:
+                if 'dhcp_options' in dict['vif'][vif]:
+                    del dict['vif'][vif]['dhcp_options']
+
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
@@ -509,6 +529,13 @@ def get_interface_dict(config, base, ifname=''):
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(dict['vif_s'][vif_s])
 
+            # If interface does not request an IPv4 DHCP address there is no need
+            # to keep the dhcp-options key
+            if 'address' not in dict['vif_s'][vif_s] or 'dhcp' not in \
+                dict['vif_s'][vif_s]['address']:
+                if 'dhcp_options' in dict['vif_s'][vif_s]:
+                    del dict['vif_s'][vif_s]['dhcp_options']
+
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
@@ -542,6 +569,13 @@ def get_interface_dict(config, base, ifname=''):
                 # XXX: T2665: blend in proper DHCPv6-PD default values
                 dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
                     dict['vif_s'][vif_s]['vif_c'][vif_c])
+
+                # If interface does not request an IPv4 DHCP address there is no need
+                # to keep the dhcp-options key
+                if 'address' not in dict['vif_s'][vif_s]['vif_c'][vif_c] or 'dhcp' \
+                    not in dict['vif_s'][vif_s]['vif_c'][vif_c]['address']:
+                    if 'dhcp_options' in dict['vif_s'][vif_s]['vif_c'][vif_c]:
+                        del dict['vif_s'][vif_s]['vif_c'][vif_c]['dhcp_options']
 
             # Check if we are a member of a bridge device
             bridge = is_member(config, f'{ifname}.{vif_s}.{vif_c}', 'bridge')
