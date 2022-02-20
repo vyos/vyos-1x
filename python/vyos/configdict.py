@@ -423,6 +423,15 @@ def get_interface_dict(config, base, ifname=''):
     bond = is_member(config, ifname, 'bonding')
     if bond: dict.update({'is_bond_member' : bond})
 
+    # Check if any DHCP options changed which require a client restat
+    for leaf_node in ['client-id', 'default-route-distance', 'host-name',
+                 'no-default-route', 'vendor-class-id']:
+        dhcp = leaf_node_changed(config, ['dhcp-options', leaf_node])
+        if dhcp:
+            dict.update({'dhcp_options_old' : dhcp})
+            # one option is suffiecient to set 'dhcp_options_old' key
+            break
+
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
     # Kernels "lower" interface to this new "virtual/upper" interface.
@@ -470,6 +479,15 @@ def get_interface_dict(config, base, ifname=''):
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
 
+        # Check if any DHCP options changed which require a client restat
+        for leaf_node in ['client-id', 'default-route-distance', 'host-name',
+                     'no-default-route', 'vendor-class-id']:
+            dhcp = leaf_node_changed(config, ['vif', vif, 'dhcp-options', leaf_node])
+            if dhcp:
+                dict['vif'][vif].update({'dhcp_options_old' : dhcp})
+                # one option is suffiecient to set 'dhcp_options_old' key
+                break
+
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
         # XXX: T2665: we only wan't the vif-s defaults - do not care about vif-c
@@ -494,6 +512,15 @@ def get_interface_dict(config, base, ifname=''):
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
+
+        # Check if any DHCP options changed which require a client restat
+        for leaf_node in ['client-id', 'default-route-distance', 'host-name',
+                     'no-default-route', 'vendor-class-id']:
+            dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'dhcp-options', leaf_node])
+            if dhcp:
+                dict['vif_s'][vif_s].update({'dhcp_options_old' : dhcp})
+                # one option is suffiecient to set 'dhcp_options_old' key
+                break
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
@@ -521,6 +548,16 @@ def get_interface_dict(config, base, ifname=''):
             if bridge: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
                 {'is_bridge_member' : bridge})
 
+            # Check if any DHCP options changed which require a client restat
+            for leaf_node in ['client-id', 'default-route-distance', 'host-name',
+                         'no-default-route', 'vendor-class-id']:
+                dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c,
+                                                  'dhcp-options', leaf_node])
+                if dhcp:
+                    dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_old' : dhcp})
+                    # one option is suffiecient to set 'dhcp_options_old' key
+                    break
+
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
     return dict
@@ -544,7 +581,6 @@ def get_vlan_ids(interface):
                     vlan_ids.add(vlan_id)
 
     return vlan_ids
-
 
 def get_accel_dict(config, base, chap_secrets):
     """
