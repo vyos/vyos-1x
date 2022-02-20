@@ -5,6 +5,9 @@
     peer_{{ name }} {
         proposals = {{ ike | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike is defined and ike.key_exchange is defined else "0" }}
+{%   if peer_conf.virtual_address is defined and peer_conf.virtual_address is not none %}
+        vips = {{ peer_conf.virtual_address | join(', ') }}
+{%   endif %}
         local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '0.0.0.0/0' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
         remote_addrs = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '0.0.0.0/0' }}
 {%   if peer_conf.authentication is defined and peer_conf.authentication.mode is defined and peer_conf.authentication.mode == 'x509' %}
