@@ -311,7 +311,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>ikev1</format>
-                    <description>Use IKEv1 for key exchange [DEFAULT]</description>
+                    <description>Use IKEv1 for key exchange</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ikev2</format>
