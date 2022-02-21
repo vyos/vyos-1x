@@ -978,7 +978,7 @@
                     <properties>
                       <help>Connection type</help>
                       <completionHelp>
-                        <list>initiate respond</list>
+                        <list>initiate respond none</list>
                       </completionHelp>
                       <valueHelp>
                         <format>initiate</format>
@@ -988,8 +988,12 @@
                         <format>respond</format>
                         <description>Bring the connection up only if traffic is detected</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>none</format>
+                        <description>Load the connection only</description>
+                      </valueHelp>
                       <constraint>
-                        <regex>^(initiate|respond)$</regex>
+                        <regex>^(initiate|respond|none)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
