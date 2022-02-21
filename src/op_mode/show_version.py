@@ -26,10 +26,6 @@ from jinja2 import Template
 from sys import exit
 from vyos.util import call
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--funny", action="store_true", help="Add something funny to the output")
-parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
-
 version_output_tmpl = """
 Version:          VyOS {{version}}
 Release train:    {{release_train}}
@@ -51,7 +47,20 @@ Hardware UUID:    {{hardware_uuid}}
 Copyright:        VyOS maintainers and contributors
 """
 
+def get_raw_data():
+    version_data = vyos.version.get_full_version_data()
+    return version_data
+
+def get_formatted_output():
+    version_data = get_raw_data()
+    tmpl = Template(version_output_tmpl)
+    return tmpl.render(version_data)
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--funny", action="store_true", help="Add something funny to the output")
+    parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
+
     args = parser.parse_args()
 
     version_data = vyos.version.get_full_version_data()
@@ -60,9 +69,8 @@ if __name__ == '__main__':
         import json
         print(json.dumps(version_data))
         exit(0)
-
-    tmpl = Template(version_output_tmpl)
-    print(tmpl.render(version_data))
+    else:
+        print(get_formatted_output())
 
     if args.funny:
         print(vyos.limericks.get_random())
