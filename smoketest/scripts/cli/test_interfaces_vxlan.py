@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,8 +18,9 @@ import unittest
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
+from vyos.util import get_bridge_fdb
 from vyos.util import get_interface_config
-
+from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 
 class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
@@ -57,21 +58,34 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         ttl = 20
         for interface in self._interfaces:
             options = get_interface_config(interface)
+            bridge = get_bridge_fdb(interface)
 
             vni = options['linkinfo']['info_data']['id']
             self.assertIn(f'vni {vni}', self._options[interface])
 
-            if any('link' in s for s in self._options[interface]):
+            if any('source-interface' in s for s in self._options[interface]):
                 link = options['linkinfo']['info_data']['link']
                 self.assertIn(f'source-interface {link}', self._options[interface])
 
-            if any('local6' in s for s in self._options[interface]):
-                remote = options['linkinfo']['info_data']['local6']
-                self.assertIn(f'source-address {local6}', self._options[interface])
+            # Verify source-address setting was properly configured on the Kernel
+            if any('source-address' in s for s in self._options[interface]):
+                for s in self._options[interface]:
+                    if 'source-address' in s:
+                        address = s.split()[-1]
+                        if is_ipv6(address):
+                            tmp = options['linkinfo']['info_data']['local6']
+                        else:
+                            tmp = options['linkinfo']['info_data']['local']
+                        self.assertIn(f'source-address {tmp}', self._options[interface])
 
-            if any('remote6' in s for s in self._options[interface]):
-                remote = options['linkinfo']['info_data']['remote6']
-                self.assertIn(f'remote {remote}', self._options[interface])
+            # Verify remote setting was properly configured on the Kernel
+            if any('remote' in s for s in self._options[interface]):
+                for s in self._options[interface]:
+                    if 'remote' in s:
+                        for fdb in bridge:
+                            if 'mac' in fdb and fdb['mac'] == '00:00:00:00:00:00':
+                                remote = fdb['dst']
+                                self.assertIn(f'remote {remote}', self._options[interface])
 
             if any('group' in s for s in self._options[interface]):
                 group = options['linkinfo']['info_data']['group']

@@ -774,6 +774,14 @@ def dict_search_recursive(dict_object, key):
             for x in dict_search_recursive(j, key):
                 yield x
 
+def get_bridge_fdb(interface):
+    """ Returns the forwarding database entries for a given interface """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
+    return tmp
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
