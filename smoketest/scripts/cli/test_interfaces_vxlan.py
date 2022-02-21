@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,8 +17,9 @@
 import unittest
 
 from vyos.ifconfig import Interface
+from vyos.util import get_bridge_fdb
 from vyos.util import get_interface_config
-
+from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 
 class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
@@ -33,11 +34,59 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
             'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1'],
             'vxlan40': ['vni 40', 'remote 127.0.0.2', 'remote 127.0.0.3'],
-            'vxlan50': ['vni 50', 'remote 2001:db8:2000::1', 'remote 2001:db8:2000::2', 'parameters ipv6 flowlabel 0x1000'],
+            'vxlan50': ['vni 50', 'remote 2001:db8:2000::1', 'remote 2001:db8:2000::2'],
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
         super(cls, cls).setUpClass()
+
+    def test_01vxlan_parameters(self):
+        for intf in self._interfaces:
+            for option in self._options.get(intf, []):
+                self.cli_set(self._base_path + [intf] + option.split())
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            options = get_interface_config(interface)
+            bridge = get_bridge_fdb(interface)
+
+            vni = options['linkinfo']['info_data']['id']
+            self.assertIn(f'vni {vni}', self._options[interface])
+
+            if any('source-interface' in s for s in self._options[interface]):
+                link = options['linkinfo']['info_data']['link']
+                self.assertIn(f'source-interface {link}', self._options[interface])
+
+            # Verify source-address setting was properly configured on the Kernel
+            if any('source-address' in s for s in self._options[interface]):
+                for s in self._options[interface]:
+                    if 'source-address' in s:
+                        address = s.split()[-1]
+                        if is_ipv6(address):
+                            tmp = options['linkinfo']['info_data']['local6']
+                        else:
+                            tmp = options['linkinfo']['info_data']['local']
+                        self.assertIn(f'source-address {tmp}', self._options[interface])
+
+            # Verify remote setting was properly configured on the Kernel
+            if any('remote' in s for s in self._options[interface]):
+                for s in self._options[interface]:
+                    if 'remote' in s:
+                        for fdb in bridge:
+                            if 'mac' in fdb and fdb['mac'] == '00:00:00:00:00:00':
+                                remote = fdb['dst']
+                                self.assertIn(f'remote {remote}', self._options[interface])
+
+            if any('group' in s for s in self._options[interface]):
+                group = options['linkinfo']['info_data']['group']
+                self.assertIn(f'group {group}', self._options[interface])
+
+            if any('external' in s for s in self._options[interface]):
+                self.assertTrue(options['linkinfo']['info_data']['external'])
+
+            self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
+            self.assertEqual(Interface(interface).get_admin_state(), 'up')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
