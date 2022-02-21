@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,8 +34,8 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
-    interface name will be added or a deleted flag
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least
+    the interface name will be added or a deleted flag
     """
     if config:
         conf = config
@@ -44,13 +44,6 @@ def get_config(config=None):
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
 
-    # leave first remote in dict and put the other ones (if they exists) to "other_remotes"
-    remotes = vxlan.get('remote')
-    if remotes:
-        vxlan['remote'] = remotes[0]
-        if len(remotes) > 1:
-            del remotes[0]
-            vxlan['other_remotes'] = remotes
     return vxlan
 
 def verify(vxlan):
@@ -63,8 +56,7 @@ def verify(vxlan):
 
     if 'group' in vxlan:
         if 'source_interface' not in vxlan:
-            raise ConfigError('Multicast VXLAN requires an underlaying interface ')
-
+            raise ConfigError('Multicast VXLAN requires an underlaying interface')
         verify_source_interface(vxlan)
 
     if not any(tmp in ['group', 'remote', 'source_address'] for tmp in vxlan):
@@ -95,34 +87,25 @@ def verify(vxlan):
             protocol = 'ipv6'
         else:
             protocol = 'ipv4'
+
     if 'remote' in vxlan:
-        if is_ipv6(vxlan['remote']):
-            if protocol == 'ipv4':
-                raise ConfigError('IPv4 and IPV6 cannot be mixed')
-            protocol = 'ipv6'
-        else:
-            if protocol == 'ipv6':
-                raise ConfigError('IPv4 and IPV6 cannot be mixed')
-            protocol = 'ipv4'
-    if 'other_remotes' in vxlan:
-        for rem in vxlan['other_remotes']:
-            if is_ipv6(rem):
+        error_msg = 'Can not mix both IPv4 and IPv6 for VXLAN underlay'
+        for remote in vxlan['remote']:
+            if is_ipv6(remote):
                 if protocol == 'ipv4':
-                    raise ConfigError('IPv4 and IPV6 cannot be mixed')
+                    raise ConfigError(error_msg)
                 protocol = 'ipv6'
             else:
                 if protocol == 'ipv6':
-                    raise ConfigError('IPv4 and IPV6 cannot be mixed')
+                    raise ConfigError(error_msg)
                 protocol = 'ipv4'
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
     return None
 
-
 def generate(vxlan):
     return None
-
 
 def apply(vxlan):
     # Check if the VXLAN interface already exists
@@ -149,7 +132,6 @@ def apply(vxlan):
         v.update(vxlan)
 
     return None
-
 
 if __name__ == '__main__':
     try:
