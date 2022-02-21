@@ -33,10 +33,12 @@ def utc2local(datetime):
 
 def parse_time(s):
     try:
-        if re.match(r'^\d{1,2}$', s):
-            if (int(s) > 59):
+        if re.match(r'^\d{1,9999}$', s):
+            if (int(s) > 59) and (int(s) < 1440):
                 s = str(int(s)//60) + ":" + str(int(s)%60)
                 return datetime.strptime(s, "%H:%M").time()
+            if (int(s) >= 1440):
+                return s.split()
             else:
                 return datetime.strptime(s, "%M").time()
         else:
@@ -141,7 +143,7 @@ def execute_shutdown(time, reboot=True, ask=True):
             cmd(f'/usr/bin/wall "{wall_msg}"')
         else:
             if not ts:
-                exit(f'Invalid time "{time[0]}". The valid format is HH:MM')
+                exit(f'Invalid time "{time[0]}". Uses 24 Hour Clock format')
             else:
                 exit(f'Invalid date "{time[1]}". A valid format is YYYY-MM-DD [HH:MM]')
     else:
@@ -172,7 +174,12 @@ def main():
     action.add_argument("--reboot", "-r",
                         help="Reboot the system",
                         nargs="*",
-                        metavar="Minutes|HH:MM")
+                        metavar="HH:MM")
+
+    action.add_argument("--reboot_in", "-i",
+                        help="Reboot the system",
+                        nargs="*",
+                        metavar="Minutes")
 
     action.add_argument("--poweroff", "-p",
                         help="Poweroff the system",
@@ -190,7 +197,17 @@ def main():
 
     try:
         if args.reboot is not None:
+            for r in args.reboot:
+                if ':' not in r and '/' not in r and '.' not in r:
+                    print("Incorrect  format! Use HH:MM")
+                    exit(1)
             execute_shutdown(args.reboot, reboot=True, ask=args.yes)
+        if args.reboot_in is not None:
+            for i in args.reboot_in:
+                if ':' in i:
+                    print("Incorrect format! Use Minutes")
+                    exit(1)
+            execute_shutdown(args.reboot_in, reboot=True, ask=args.yes)
         if args.poweroff is not None:
             execute_shutdown(args.poweroff, reboot=False, ask=args.yes)
         if args.cancel:
