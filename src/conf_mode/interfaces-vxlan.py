@@ -21,6 +21,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
@@ -43,6 +44,16 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
+
+    # VXLAN interfaces are picky and require recreation if certain parameters
+    # change. But a VXLAN interface should - of course - not be re-created if
+    # it's description or IP address is adjusted. Feels somehow logic doesn't it?
+    for cli_option in ['external', 'gpe', 'group', 'port', 'remote',
+                       'source-address', 'source-interface', 'vni',
+                       'parameters ip dont-fragment', 'parameters ip tos',
+                       'parameters ip ttl']:
+        if leaf_node_changed(conf, cli_option.split()):
+            vxlan.update({'rebuild_required': {}})
 
     return vxlan
 
@@ -109,11 +120,12 @@ def generate(vxlan):
 
 def apply(vxlan):
     # Check if the VXLAN interface already exists
-    if vxlan['ifname'] in interfaces():
-        v = VXLANIf(vxlan['ifname'])
-        # VXLAN is super picky and the tunnel always needs to be recreated,
-        # thus we can simply always delete it first.
-        v.remove()
+    if 'rebuild_required' in vxlan or 'delete' in vxlan:
+        if vxlan['ifname'] in interfaces():
+            v = VXLANIf(vxlan['ifname'])
+            # VXLAN is super picky and the tunnel always needs to be recreated,
+            # thus we can simply always delete it first.
+            v.remove()
 
     if 'deleted' not in vxlan:
         # This is a special type of interface which needs additional parameters
