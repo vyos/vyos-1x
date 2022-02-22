@@ -121,14 +121,11 @@ def apply(pbr):
         if rule_rm in pbr:
             v6 = " -6" if rule_rm == 'rule6_remove' else ""
             for rule, rule_config in pbr[rule_rm].items():
-                rule_config['source'] = rule_config['source'] if 'source' in rule_config else ['']
-                for src in rule_config['source']:
+                for src in (rule_config['source'] or ['']):
                     f_src = '' if src == '' else f' from {src} '
-                    rule_config['destination'] = rule_config['destination'] if 'destination' in rule_config else ['']
-                    for dst in rule_config['destination']:
+                    for dst in (rule_config['destination'] or ['']):
                         f_dst = '' if dst == '' else f' to {dst} '
-                        rule_config['fwmark'] = rule_config['fwmark'] if 'fwmark' in rule_config else ['']
-                        for fwmk in rule_config['fwmark']:
+                        for fwmk in (rule_config['fwmark'] or ['']):
                             f_fwmk = '' if fwmk == '' else f' fwmark {fwmk} '
                             call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_fwmk}')
 
@@ -144,11 +141,9 @@ def apply(pbr):
             for rule, rule_config in pbr_route['rule'].items():
                 table = rule_config['set']['table']
 
-                rule_config['source'] = rule_config['source'] if 'source' in rule_config else ['all']
-                for src in rule_config['source'] or ['all']:
+                for src in (rule_config['source'] or ['all']):
                     f_src = '' if src == '' else f' from {src} '
-                    rule_config['destination'] = rule_config['destination'] if 'destination' in rule_config else ['all']
-                    for dst in rule_config['destination']:
+                    for dst in (rule_config['destination'] or ['all']):
                         f_dst = '' if dst == '' else f' to {dst} '
                         f_fwmk = ''
                         if 'fwmark' in rule_config:

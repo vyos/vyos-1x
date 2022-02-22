@@ -924,8 +924,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         path = base_path + ['local-route']
         path_v6 = base_path + ['local-route6']
 
-        sources = ['203.0.113.0/24', '203.0.114.5']
-        destinations = ['203.0.112.0/24', '203.0.116.5']
+        sources = ['203.0.113.1/24', '203.0.114.5']
+        destinations = ['203.0.112.1/24', '203.0.116.5']
         sources_v6 = ['2001:db8:1338::/126', '2001:db8:1339::/56']
         destinations_v6 = ['2001:db8:13::/48', '2001:db8:16::/48']
         fwmk = '23'
@@ -975,8 +975,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         tmp = cmd('ip rule show prio 103')
         tmp_v6 = cmd('ip -6 rule show prio 103')
 
-        original = None
-        original_v6 = None
+        original = ['']
+        original_v6 = ['']
 
         self.assertEqual(sort_ip(tmp), original)
         self.assertEqual(sort_ip(tmp_v6), original_v6)
