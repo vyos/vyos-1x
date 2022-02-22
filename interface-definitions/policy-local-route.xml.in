@@ -76,7 +76,6 @@
                   <multi/>
                 </properties>
               </leafNode>
-              #include <include/interface/inbound-interface.xml.i>
             </children>
           </tagNode>
         </children>
@@ -166,7 +165,6 @@
                   <multi/>
                 </properties>
               </leafNode>
-              #include <include/interface/inbound-interface.xml.i>
             </children>
           </tagNode>
         </children>
