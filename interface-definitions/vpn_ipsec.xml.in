@@ -55,6 +55,30 @@
                 </properties>
                 <defaultValue>3600</defaultValue>
               </leafNode>
+              <leafNode name="life-bytes">
+                <properties>
+                  <help>ESP life in bytes</help>
+                  <valueHelp>
+                    <format>u32:1024-26843545600000</format>
+                    <description>ESP life in bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1024-26843545600000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="life-packets">
+                <properties>
+                  <help>ESP life in packets</help>
+                  <valueHelp>
+                    <format>u32:1000-26843545600000</format>
+                    <description>ESP life in packets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1000-26843545600000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="mode">
                 <properties>
                   <help>ESP mode</help>

@@ -60,6 +60,12 @@
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is defined else esp_group[ peer_conf.default_esp_group ] %}
             peer_{{ name }}_vti {
                 esp_proposals = {{ vti_esp | get_esp_ike_cipher(ike) | join(',') }}
+{%   if vti_esp.life_bytes is defined and vti_esp.life_bytes is not none %}
+                life_bytes = {{ vti_esp.life_bytes }}
+{%   endif %}
+{%   if vti_esp.life_packets is defined and vti_esp.life_packets is not none %}
+                life_packets = {{ vti_esp.life_packets }}
+{%   endif %}
                 life_time = {{ vti_esp.lifetime }}s
                 local_ts = 0.0.0.0/0,::/0
                 remote_ts = 0.0.0.0/0,::/0
@@ -96,6 +102,12 @@
 {%       set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
             peer_{{ name }}_tunnel_{{ tunnel_id }} {
                 esp_proposals = {{ tunnel_esp | get_esp_ike_cipher(ike) | join(',') }}
+{%       if tunnel_esp.life_bytes is defined and tunnel_esp.life_bytes is not none %}
+                life_bytes = {{ tunnel_esp.life_bytes }}
+{%       endif %}
+{%       if tunnel_esp.life_packets is defined and tunnel_esp.life_packets is not none %}
+                life_packets = {{ tunnel_esp.life_packets }}
+{%       endif %}
                 life_time = {{ tunnel_esp.lifetime }}s
 {%       if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
 {%         if tunnel_conf.local is defined and tunnel_conf.local.prefix is defined %}

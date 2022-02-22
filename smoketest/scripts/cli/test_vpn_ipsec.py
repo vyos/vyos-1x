@@ -172,7 +172,12 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Site to site
         local_address = '192.0.2.10'
         priority = '20'
+        life_bytes = '100000'
+        life_packets = '2000000'
         peer_base_path = base_path + ['site-to-site', 'peer', peer_ip]
+
+        self.cli_set(base_path + ['esp-group', esp_group, 'life-bytes', life_bytes])
+        self.cli_set(base_path + ['esp-group', esp_group, 'life-packets', life_packets])
 
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
         self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
@@ -198,6 +203,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
+            f'life_bytes = {life_bytes}',
+            f'life_packets = {life_packets}',
             f'rekey_time = 28800s', # default value
             f'proposals = aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024',
