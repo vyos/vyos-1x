@@ -69,47 +69,20 @@ def get_config(config=None):
         # delete policy local-route rule x fwmark x
         # delete policy local-route rule x destination x.x.x.x
         if 'rule' in pbr[route]:
-            for rule, rule_config in pbr[route]['rule'].items():
+            for rule in pbr[route]['rule']:
                 src = leaf_node_changed(conf, base_rule + [rule, 'source'])
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
-                # keep track of changes in configuration
-                # otherwise we might remove an existing node although nothing else has changed
-                changed = False
 
                 rule_def = {}
-                # src is None if there are no changes to src
-                if src is None:
-                    # if src hasn't changed, include it in the removal selector
-                    # if a new selector is added, we have to remove all previous rules without this selector
-                    # to make sure we remove all previous rules with this source(s), it will be included
-                    if 'source' in rule_config:
-                        rule_def = dict_merge({'source': rule_config['source']}, rule_def)
-                else:
-                    # if src is not None, it's previous content will be returned
-                    # this can be an empty array if it's just being set, or the previous value
-                    # either way, something has to be changed and we only want to remove previous values
-                    changed = True
-                    # set the old value for removal if it's not empty
-                    if len(src) > 0:
-                        rule_def = dict_merge({'source' : src}, rule_def)
-                if fwmk is None:
-                    if 'fwmark' in rule_config:
-                        rule_def = dict_merge({'fwmark': rule_config['fwmark']}, rule_def)
-                else:
-                    changed = True
-                    if len(fwmk) > 0:
-                        rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
-                if dst is None:
-                    if 'destination' in rule_config:
-                        rule_def = dict_merge({'destination': rule_config['destination']}, rule_def)
-                else:
-                    changed = True
-                    if len(dst) > 0:
-                        rule_def = dict_merge({'destination' : dst}, rule_def)
-                if changed:
-                    dict = dict_merge({dict_id : {rule : rule_def}}, dict)
-                    pbr.update(dict)
+                if src:
+                    rule_def = dict_merge({'source' : src}, rule_def)
+                if fwmk:
+                    rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
+                if dst:
+                    rule_def = dict_merge({'destination' : dst}, rule_def)
+                dict = dict_merge({dict_id : {rule : rule_def}}, dict)
+                pbr.update(dict)
 
     return pbr
 
@@ -142,8 +115,6 @@ def generate(pbr):
 def apply(pbr):
     if not pbr:
         return None
-
-    print(pbr)
 
     # Delete old rule if needed
     for rule_rm in ['rule_remove', 'rule6_remove']:
