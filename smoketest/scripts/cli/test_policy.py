@@ -981,6 +981,43 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sort_ip(tmp), original)
         self.assertEqual(sort_ip(tmp_v6), original_v6)
 
+    # Test multiple commits ipv4
+    def test_multiple_commit_ipv4_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['192.0.2.1', '192.0.2.2']
+        destination = '203.0.113.25'
+        rule = '105'
+        table = '151'
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        # Check generated configuration
+        # Expected values
+        original_first = """
+        105:	from 192.0.2.1 lookup 151
+        105:	from 192.0.2.2 lookup 151
+        """
+        tmp = cmd('ip rule show prio 105')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original_first))
+
+        # Create second commit with added destination
+        self.cli_set(path + ['rule', rule, 'destination', destination])
+        self.cli_commit()
+
+        original_second = """
+        105:	from 192.0.2.1 to 203.0.113.25 lookup 151
+        105:	from 192.0.2.2 to 203.0.113.25 lookup 151
+        """
+        tmp = cmd('ip rule show prio 105')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original_second))
+
+
 def sort_ip(output):
     return output.splitlines().sort()
 
