@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -202,7 +202,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(encapsulation, conf['linkinfo']['info_kind'])
         self.assertEqual(self.local_v4, conf['linkinfo']['info_data']['local'])
         self.assertEqual(remote_ip4,    conf['linkinfo']['info_data']['remote'])
-        self.assertEqual(64,           conf['linkinfo']['info_data']['ttl'])
+        self.assertEqual(64,            conf['linkinfo']['info_data']['ttl'])
 
         # Change remote ip address (inc host by 2
         new_remote = inc_ip(remote_ip4, 2)
