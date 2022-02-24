@@ -1191,7 +1191,7 @@
             <help>Set period to rescan BGP table to check if condition is met</help>
             <valueHelp>
               <format>u32:5-240</format>
-              <description>Period to rerun the conditional advertisement scanner process (default: 60)</description>
+              <description>Period to rerun the conditional advertisement scanner process</description>
             </valueHelp>
             <constraint>
               <validator name="numeric" argument="--range 5-240"/>

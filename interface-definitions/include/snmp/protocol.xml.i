@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>udp</format>
-      <description>Listen protocol UDP (default)</description>
+      <description>Listen protocol UDP</description>
     </valueHelp>
     <valueHelp>
       <format>tcp</format>

@@ -15,7 +15,7 @@
     </valueHelp>
     <valueHelp>
       <format>sha1</format>
-      <description>SHA1 HMAC (default)</description>
+      <description>SHA1 HMAC</description>
     </valueHelp>
     <valueHelp>
       <format>sha1_160</format>

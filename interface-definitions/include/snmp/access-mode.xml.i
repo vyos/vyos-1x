@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>ro</format>
-      <description>Read-Only (default)</description>
+      <description>Read-Only</description>
     </valueHelp>
     <valueHelp>
       <format>rw</format>

@@ -11,7 +11,7 @@
     </valueHelp>
     <valueHelp>
       <format>aes128</format>
-      <description>128 bit AES-CBC (default)</description>
+      <description>128 bit AES-CBC</description>
     </valueHelp>
     <valueHelp>
       <format>aes192</format>

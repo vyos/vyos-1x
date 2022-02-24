@@ -41,7 +41,7 @@
                       <help>Session timeout</help>
                       <valueHelp>
                         <format>u32:1-30</format>
-                        <description>Session timeout in seconds (default: 2)</description>
+                        <description>Session timeout in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-30"/>
@@ -61,10 +61,10 @@
             <children>
               <leafNode name="tcp">
                 <properties>
-                  <help>tcp port number to accept connections (default: 443)</help>
+                  <help>tcp port number to accept connections</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
-                    <description>Numeric IP port (default: 443)</description>
+                    <description>Numeric IP port</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-65535"/>
@@ -74,10 +74,10 @@
               </leafNode>
               <leafNode name="udp">
                 <properties>
-                  <help>udp port number to accept connections (default: 443)</help>
+                  <help>udp port number to accept connections</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
-                    <description>Numeric IP port (default: 443)</description>
+                    <description>Numeric IP port</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-65535"/>
@@ -160,7 +160,7 @@
                       <help>Prefix length used for individual client</help>
                       <valueHelp>
                         <format>u32:48-128</format>
-                        <description>Client prefix length (default: 64)</description>
+                        <description>Client prefix length</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 48-128"/>

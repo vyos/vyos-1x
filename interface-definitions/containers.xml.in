@@ -111,7 +111,7 @@
           </leafNode>
           <leafNode name="memory">
             <properties>
-              <help>Constrain the memory available to a container (default: 512MB)</help>
+              <help>Constrain the memory available to a container</help>
               <valueHelp>
                 <format>u32:0</format>
                 <description>Unlimited</description>
@@ -212,7 +212,7 @@
               </valueHelp>
               <valueHelp>
                 <format>on-failure</format>
-                <description>Restart containers when they exit with a non-zero exit code, retrying indefinitely (default)</description>
+                <description>Restart containers when they exit with a non-zero exit code, retrying indefinitely</description>
               </valueHelp>
               <valueHelp>
                 <format>always</format>
@@ -283,7 +283,7 @@
       </tagNode>
       <leafNode name="registry">
         <properties>
-          <help>Add registry (default docker.io)</help>
+          <help>Add registry</help>
           <multi/>
         </properties>
         <defaultValue>docker.io</defaultValue>

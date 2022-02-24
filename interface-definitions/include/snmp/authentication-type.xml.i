@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>md5</format>
-      <description>Message Digest 5 (default)</description>
+      <description>Message Digest 5</description>
     </valueHelp>
     <valueHelp>
       <format>sha</format>

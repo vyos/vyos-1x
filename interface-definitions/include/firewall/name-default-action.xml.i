@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>drop</format>
-      <description>Drop if no prior rules are hit (default)</description>
+      <description>Drop if no prior rules are hit</description>
     </valueHelp>
     <valueHelp>
       <format>reject</format>

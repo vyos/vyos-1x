@@ -4,7 +4,7 @@
     <help>BGP keepalive interval for this neighbor</help>
     <valueHelp>
       <format>u32:1-65535</format>
-      <description>Keepalive interval in seconds (default 60)</description>
+      <description>Keepalive interval in seconds</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-65535"/>

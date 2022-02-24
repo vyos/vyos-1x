@@ -44,19 +44,19 @@
               </node>
               <leafNode name="bucket">
                 <properties>
-                  <help>Remote bucket, by default (main)</help>
+                  <help>Remote bucket</help>
                 </properties>
                 <defaultValue>main</defaultValue>
               </leafNode>
               <leafNode name="source">
                 <properties>
-                  <help>Source parameters for monitoring (default: all)</help>
+                  <help>Source parameters for monitoring</help>
                   <completionHelp>
                     <list>all hardware-utilization logs network system telegraf</list>
                   </completionHelp>
                   <valueHelp>
                     <format>all</format>
-                    <description>All parameters (default)</description>
+                    <description>All parameters</description>
                   </valueHelp>
                   <valueHelp>
                     <format>hardware-utilization</format>

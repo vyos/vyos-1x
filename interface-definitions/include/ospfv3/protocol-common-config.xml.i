@@ -158,7 +158,7 @@
     </leafNode>
     <leafNode name="instance-id">
       <properties>
-        <help>Instance Id (default: 0)</help>
+        <help>Instance ID</help>
         <valueHelp>
           <format>u32:0-255</format>
           <description>Instance Id</description>

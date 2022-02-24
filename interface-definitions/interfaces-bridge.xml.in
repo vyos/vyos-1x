@@ -26,7 +26,7 @@
               </valueHelp>
               <valueHelp>
                 <format>u32:10-1000000</format>
-                <description>MAC address aging time in seconds (default: 300)</description>
+                <description>MAC address aging time in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-0 --range 10-1000000"/>
@@ -48,7 +48,7 @@
               <help>Forwarding delay</help>
               <valueHelp>
                 <format>u32:0-200</format>
-                <description>Spanning Tree Protocol forwarding delay in seconds (default 15)</description>
+                <description>Spanning Tree Protocol forwarding delay in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-200"/>
@@ -62,7 +62,7 @@
               <help>Hello packet advertisement interval</help>
               <valueHelp>
                 <format>u32:1-10</format>
-                <description>Spanning Tree Protocol hello advertisement interval in seconds (default 2)</description>
+                <description>Spanning Tree Protocol hello advertisement interval in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-10"/>
@@ -99,7 +99,7 @@
               <help>Interval at which neighbor bridges are removed</help>
               <valueHelp>
                 <format>u32:1-40</format>
-                <description>Bridge maximum aging time in seconds (default 20)</description>
+                <description>Bridge maximum aging time in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-40"/>
@@ -195,7 +195,7 @@
               <help>Priority for this bridge</help>
               <valueHelp>
                 <format>u32:0-65535</format>
-                <description>Bridge priority (default 32768)</description>
+                <description>Bridge priority</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 0-65535"/>

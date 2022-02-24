@@ -105,7 +105,7 @@
                 <regex>^(quiet|fatal|error|info|verbose)$</regex>
               </constraint>
             </properties>
-            <defaultValue>INFO</defaultValue>
+            <defaultValue>info</defaultValue>
           </leafNode>
           <leafNode name="mac">
             <properties>
