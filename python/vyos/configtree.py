@@ -305,6 +305,10 @@ class ConfigTree(object):
 
 class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
+        if left is None:
+            left = ConfigTree(config_string='\n')
+        if right is None:
+            right = ConfigTree(config_string='\n')
         if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
             raise TypeError("Arguments must be instances of ConfigTree")
         if path:
