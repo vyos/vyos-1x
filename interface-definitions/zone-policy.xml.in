@@ -37,6 +37,7 @@
                 <regex>^(drop|reject)$</regex>
               </constraint>
             </properties>
+            <defaultValue>drop</defaultValue>
           </leafNode>
           <tagNode name="from">
             <properties>
