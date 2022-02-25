@@ -49,6 +49,7 @@
                   </constraint>
                   <constraintErrorMessage>max-size must be a value between 64 and 1400</constraintErrorMessage>
                 </properties>
+                <defaultValue>576</defaultValue>
               </leafNode>
               <leafNode name="relay-agents-packets">
                 <properties>
