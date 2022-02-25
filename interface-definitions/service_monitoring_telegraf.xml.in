@@ -98,10 +98,8 @@
                   <constraintErrorMessage>Incorrect URL format.</constraintErrorMessage>
                 </properties>
               </leafNode>
+              #include <include/port-number.xml.i>
               <leafNode name="port">
-                <properties>
-                  <help>Remote port (default: 8086)</help>
-                </properties>
                 <defaultValue>8086</defaultValue>
               </leafNode>
             </children>
