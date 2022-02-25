@@ -15,7 +15,7 @@
 import re
 import json
 
-from ctypes import cdll, c_char_p, c_void_p, c_int, POINTER
+from ctypes import cdll, c_char_p, c_void_p, c_int
 
 LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
@@ -303,7 +303,7 @@ class ConfigTree(object):
         subt = ConfigTree(address=res)
         return subt
 
-class Diff:
+class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
         if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
             raise TypeError("Arguments must be instances of ConfigTree")
@@ -312,21 +312,28 @@ class Diff:
                 raise ConfigTreeError(f"Path {path} doesn't exist in lhs tree")
             if not right.exists(path):
                 raise ConfigTreeError(f"Path {path} doesn't exist in rhs tree")
+
         self.left = left
         self.right = right
 
+        self.__lib = cdll.LoadLibrary(libpath)
+
+        self.__diff_tree = self.__lib.diff_tree
+        self.__diff_tree.argtypes = [c_char_p, c_void_p, c_void_p]
+        self.__diff_tree.restype = c_void_p
+
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
-        df = cdll.LoadLibrary(libpath).diffs
-        df.restype = POINTER(c_void_p * 3)
-        res = list(df(path_str, left._get_config(), right._get_config()).contents)
-        self._diff = {'add': ConfigTree(address=res[0]),
-                      'del': ConfigTree(address=res[1]),
-                      'int': ConfigTree(address=res[2]) }
+        res = self.__diff_tree(path_str, left._get_config(), right._get_config())
 
-        self.add = self._diff['add']
-        self.delete = self._diff['del']
-        self.inter = self._diff['int']
+        # full diff config_tree and python dict representation
+        self.full = ConfigTree(address=res)
+        self.dict = json.loads(self.full.to_json())
+
+        # config_tree sub-trees
+        self.add = self.full.get_subtree(['add'])
+        self.delete = self.full.get_subtree(['delete'])
+        self.inter = self.full.get_subtree(['inter'])
 
     def to_commands(self):
         add = self.add.to_commands()
