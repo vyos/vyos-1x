@@ -529,6 +529,7 @@
                 <regex>^(disabled|optional|required)$</regex>
               </constraint>
             </properties>
+            <defaultValue>disabled</defaultValue>
           </leafNode>
           <leafNode name="mode">
             <properties>
