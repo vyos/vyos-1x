@@ -309,6 +309,7 @@
                     <validator name="numeric" argument="--range 1025-65535"/>
                   </constraint>
                 </properties>
+                <!-- no defaultValue specified as there is default-port -->
               </leafNode>
               <leafNode name="disable-transparent">
                 <properties>
