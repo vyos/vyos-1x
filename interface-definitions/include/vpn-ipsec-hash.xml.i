@@ -61,5 +61,6 @@
       <regex>^(md5|md5_128|sha1|sha1_160|sha256|sha256_96|sha384|sha512|aesxcbc|aescmac|aes128gmac|aes192gmac|aes256gmac)$</regex>
     </constraint>
   </properties>
+  <defaultValue>sha1</defaultValue>
 </leafNode>
 <!-- include end -->

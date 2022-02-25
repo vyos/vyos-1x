@@ -293,6 +293,7 @@
                         <validator name="numeric" argument="--range 2-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>30</defaultValue>
                   </leafNode>
                   <leafNode name="timeout">
                     <properties>
@@ -305,6 +306,7 @@
                         <validator name="numeric" argument="--range 2-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>120</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -377,6 +379,7 @@
                     <regex>^(enable|disable)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>enable</defaultValue>
               </leafNode>
               <leafNode name="mode">
                 <properties>
@@ -396,6 +399,7 @@
                     <regex>^(main|aggressive)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>main</defaultValue>
               </leafNode>
               <tagNode name="proposal">
                 <properties>

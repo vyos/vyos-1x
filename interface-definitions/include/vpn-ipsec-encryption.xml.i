@@ -229,5 +229,6 @@
       <regex>^(null|aes128|aes192|aes256|aes128ctr|aes192ctr|aes256ctr|aes128ccm64|aes192ccm64|aes256ccm64|aes128ccm96|aes192ccm96|aes256ccm96|aes128ccm128|aes192ccm128|aes256ccm128|aes128gcm64|aes192gcm64|aes256gcm64|aes128gcm96|aes192gcm96|aes256gcm96|aes128gcm128|aes192gcm128|aes256gcm128|aes128gmac|aes192gmac|aes256gmac|3des|blowfish128|blowfish192|blowfish256|camellia128|camellia192|camellia256|camellia128ctr|camellia192ctr|camellia256ctr|camellia128ccm64|camellia192ccm64|camellia256ccm64|camellia128ccm96|camellia192ccm96|camellia256ccm96|camellia128ccm128|camellia192ccm128|camellia256ccm128|serpent128|serpent192|serpent256|twofish128|twofish192|twofish256|cast128|chacha20poly1305)$</regex>
     </constraint>
   </properties>
+  <defaultValue>aes128</defaultValue>
 </leafNode>
 <!-- include end -->
