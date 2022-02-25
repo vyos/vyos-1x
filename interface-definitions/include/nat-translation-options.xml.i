@@ -22,7 +22,8 @@
           <regex>^(persistent|random)$</regex>
         </constraint>
       </properties>
-    </leafNode> 
+      <defaultValue>random</defaultValue>
+    </leafNode>
     <leafNode name="port-mapping">
       <properties>
         <help>Port mapping options</help>
@@ -45,7 +46,8 @@
           <regex>^(random|fully-random|none)$</regex>
         </constraint>
       </properties>
-    </leafNode> 
+      <defaultValue>none</defaultValue>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
