@@ -126,6 +126,10 @@ class ConfigTree(object):
         self.__set_tag.argtypes = [c_void_p, c_char_p]
         self.__set_tag.restype = c_int
 
+        self.__get_subtree = self.__lib.get_subtree
+        self.__get_subtree.argtypes = [c_void_p, c_char_p]
+        self.__get_subtree.restype = c_void_p
+
         self.__destroy = self.__lib.destroy
         self.__destroy.argtypes = [c_void_p]
 
@@ -290,6 +294,14 @@ class ConfigTree(object):
             return True
         else:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
+
+    def get_subtree(self, path, with_node=False):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+
+        res = self.__get_subtree(self.__config, path_str, with_node)
+        subt = ConfigTree(address=res)
+        return subt
 
 class Diff:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
