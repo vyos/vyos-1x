@@ -41,7 +41,7 @@
               </completionHelp>
               <valueHelp>
                 <format>auto</format>
-                <description>Auto negotiation (default)</description>
+                <description>Auto negotiation</description>
               </valueHelp>
               <valueHelp>
                 <format>half</format>
@@ -110,7 +110,7 @@
           </node>
           <leafNode name="speed">
             <properties>
-              <help>Link speed (default: auto)</help>
+              <help>Link speed</help>
               <completionHelp>
                 <list>auto 10 100 1000 2500 5000 10000 25000 40000 50000 100000</list>
               </completionHelp>

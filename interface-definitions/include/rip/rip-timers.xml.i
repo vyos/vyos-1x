@@ -9,7 +9,7 @@
         <help>Garbage collection timer</help>
         <valueHelp>
           <format>u32:5-2147483647</format>
-          <description>Garbage colletion time (default 120)</description>
+          <description>Garbage colletion time</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 5-2147483647"/>
@@ -22,7 +22,7 @@
         <help>Routing information timeout timer</help>
         <valueHelp>
           <format>u32:5-2147483647</format>
-          <description>Routing information timeout timer (default 180)</description>
+          <description>Routing information timeout timer</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 5-2147483647"/>
@@ -35,7 +35,7 @@
         <help>Routing table update timer</help>
         <valueHelp>
           <format>u32:5-2147483647</format>
-          <description>Routing table update timer in seconds (default 30)</description>
+          <description>Routing table update timer in seconds</description>
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 5-2147483647"/>

@@ -82,7 +82,7 @@
           </tagNode>
           <leafNode name="polling-period">
             <properties>
-              <help>RPKI cache polling period (default: 300)</help>
+              <help>RPKI cache polling period</help>
               <valueHelp>
                 <format>u32:1-86400</format>
                 <description>Polling period in seconds</description>

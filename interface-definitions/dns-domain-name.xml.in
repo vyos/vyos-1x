@@ -29,6 +29,7 @@
           </constraint>
         </properties>
       </leafNode>
+      <!-- script does not use XML defaults so far -->
       <leafNode name="host-name" owner="${vyos_conf_scripts_dir}/host_name.py">
         <properties>
           <help>System host name (default: vyos)</help>

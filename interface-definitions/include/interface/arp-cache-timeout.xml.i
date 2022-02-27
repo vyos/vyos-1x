@@ -4,7 +4,7 @@
     <help>ARP cache entry timeout in seconds</help>
     <valueHelp>
       <format>u32:1-86400</format>
-      <description>ARP cache entry timout in seconds (default 30)</description>
+      <description>ARP cache entry timout in seconds</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-86400"/>

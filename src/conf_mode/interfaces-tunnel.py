@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from netifaces import interfaces
-from ipaddress import IPv4Address
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -50,8 +49,24 @@ def get_config(config=None):
     base = ['interfaces', 'tunnel']
     tunnel = get_interface_dict(conf, base)
 
-    tmp = leaf_node_changed(conf, ['encapsulation'])
-    if tmp: tunnel.update({'encapsulation_changed': {}})
+    if 'deleted' not in tunnel:
+        tmp = leaf_node_changed(conf, ['encapsulation'])
+        if tmp: tunnel.update({'encapsulation_changed': {}})
+
+        # We also need to inspect other configured tunnels as there are Kernel
+        # restrictions where we need to comply. E.g. GRE tunnel key can't be used
+        # twice, or with multiple GRE tunnels to the same location we must specify
+        # a GRE key
+        conf.set_level(base)
+        tunnel['other_tunnels'] = conf.get_config_dict([], key_mangling=('-', '_'),
+                                                      get_first_key=True,
+                                                      no_tag_node_value_mangle=True)
+        # delete our own instance from this dict
+        ifname = tunnel['ifname']
+        del tunnel['other_tunnels'][ifname]
+        # if only one tunnel is present on the system, no need to keep this key
+        if len(tunnel['other_tunnels']) == 0:
+            del tunnel['other_tunnels']
 
     # We must check if our interface is configured to be a DMVPN member
     nhrp_base = ['protocols', 'nhrp', 'tunnel']
@@ -92,48 +107,47 @@ def verify(tunnel):
             if 'direction' not in tunnel['parameters']['erspan']:
                 raise ConfigError('ERSPAN version 2 requires direction to be set!')
 
-    # If tunnel source address any and key not set
+    # If tunnel source is any and gre key is not set
+    interface = tunnel['ifname']
     if tunnel['encapsulation'] in ['gre'] and \
        dict_search('source_address', tunnel) == '0.0.0.0' and \
        dict_search('parameters.ip.key', tunnel) == None:
-        raise ConfigError('Tunnel parameters ip key must be set!')
+        raise ConfigError(f'"parameters ip key" must be set for {interface} when '\
+                           'encapsulation is GRE!')
 
-    if tunnel['encapsulation'] in ['gre', 'gretap']:
+    gre_encapsulations = ['gre', 'gretap']
+    if tunnel['encapsulation'] in gre_encapsulations and 'other_tunnels' in tunnel:
         # Check pairs tunnel source-address/encapsulation/key with exists tunnels.
         # Prevent the same key for 2 tunnels with same source-address/encap. T2920
-        for tunnel_if in Section.interfaces('tunnel'):
-            # It makes no sense to run the test against our own interface we
-            # are currently configuring
-            if tunnel['ifname'] == tunnel_if:
-                continue
-
-            tunnel_cfg = get_interface_config(tunnel_if)
+        for o_tunnel, o_tunnel_conf in tunnel['other_tunnels'].items():
             # no match on encapsulation - bail out
-            if dict_search('linkinfo.info_kind', tunnel_cfg) != tunnel['encapsulation']:
+            our_encapsulation = tunnel['encapsulation']
+            their_encapsulation = o_tunnel_conf['encapsulation']
+            if our_encapsulation in gre_encapsulations and their_encapsulation \
+                not in gre_encapsulations:
                 continue
 
-            new_source_address = dict_search('source_address', tunnel)
-            new_source_interface = dict_search('source_interface', tunnel)
-            if dict_search('parameters.ip.key', tunnel) != None:
-                # Convert tunnel key to ip key, format "ip -j link show"
-                # 1 => 0.0.0.1, 999 => 0.0.3.231
-                orig_new_key = dict_search('parameters.ip.key', tunnel)
-                new_key = IPv4Address(int(orig_new_key))
-                new_key = str(new_key)
-                if dict_search('address', tunnel_cfg) == new_source_address and \
-                   dict_search('linkinfo.info_data.ikey', tunnel_cfg) == new_key:
-                    raise ConfigError(f'Key "{orig_new_key}" for source-address "{new_source_address}" ' \
+            our_address = dict_search('source_address', tunnel)
+            our_key = dict_search('parameters.ip.key', tunnel)
+            their_address = dict_search('source_address', o_tunnel_conf)
+            their_key = dict_search('parameters.ip.key', o_tunnel_conf)
+            if our_key != None:
+                if their_address == our_address and their_key == our_key:
+                    raise ConfigError(f'Key "{our_key}" for source-address "{our_address}" ' \
                                       f'is already used for tunnel "{tunnel_if}"!')
             else:
-                # If no IP GRE key is used we can not have more then one GRE tunnel
-                # bound to any one interface/IP address. This will result in a OS
-                # PermissionError: add tunnel "gre0" failed: File exists
-                if (dict_search('address', tunnel_cfg) == new_source_address or
-                   (dict_search('address', tunnel_cfg) == '0.0.0.0' and
-                    dict_search('link', tunnel_cfg) == new_source_interface)):
-                    raise ConfigError(f'Missing required "ip key" parameter when \
-                                      running more then one GRE based tunnel on the \
-                                      same source-interface/source-address')
+                our_source_if = dict_search('source_interface', tunnel)
+                their_source_if = dict_search('source_interface', o_tunnel_conf)
+                our_remote = dict_search('remote', tunnel)
+                their_remote = dict_search('remote', o_tunnel_conf)
+                # If no IP GRE key is defined we can not have more then one GRE tunnel
+                # bound to any one interface/IP address and the same remote. This will
+                # result in a OS  PermissionError: add tunnel "gre0" failed: File exists
+                if (their_address == our_address or our_source_if == their_source_if) and \
+                    our_remote == their_remote:
+                    raise ConfigError(f'Missing required "ip key" parameter when '\
+                                       'running more then one GRE based tunnel on the '\
+                                       'same source-interface/source-address')
 
     # Keys are not allowed with ipip and sit tunnels
     if tunnel['encapsulation'] in ['ipip', 'sit']:

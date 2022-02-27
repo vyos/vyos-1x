@@ -66,7 +66,7 @@
               </completionHelp>
               <valueHelp>
                 <format>layer2</format>
-                <description>use MAC addresses to generate the hash (802.3ad, default)</description>
+                <description>use MAC addresses to generate the hash</description>
               </valueHelp>
               <valueHelp>
                 <format>layer2+3</format>
@@ -115,7 +115,7 @@
               </completionHelp>
               <valueHelp>
                 <format>slow</format>
-                <description>Request partner to transmit LACPDUs every 30 seconds (default)</description>
+                <description>Request partner to transmit LACPDUs every 30 seconds</description>
               </valueHelp>
               <valueHelp>
                 <format>fast</format>
@@ -135,7 +135,7 @@
               </completionHelp>
               <valueHelp>
                 <format>802.3ad</format>
-                <description>IEEE 802.3ad Dynamic link aggregation (Default)</description>
+                <description>IEEE 802.3ad Dynamic link aggregation</description>
               </valueHelp>
               <valueHelp>
                 <format>active-backup</format>

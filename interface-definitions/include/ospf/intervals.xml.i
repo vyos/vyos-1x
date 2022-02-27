@@ -1,7 +1,7 @@
 <!-- include start from ospf/intervals.xml.i -->
 <leafNode name="dead-interval">
   <properties>
-    <help>Interval after which a neighbor is declared dead (default: 40)</help>
+    <help>Interval after which a neighbor is declared dead</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Neighbor dead interval (seconds)</description>
@@ -14,7 +14,7 @@
 </leafNode>
 <leafNode name="hello-interval">
   <properties>
-    <help>Interval between hello packets (default: 10)</help>
+    <help>Interval between hello packets</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Hello interval (seconds)</description>
@@ -27,7 +27,7 @@
 </leafNode>
 <leafNode name="retransmit-interval">
   <properties>
-    <help>Interval between retransmitting lost link state advertisements (default: 5)</help>
+    <help>Interval between retransmitting lost link state advertisements</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Retransmit interval (seconds)</description>
@@ -40,7 +40,7 @@
 </leafNode>
 <leafNode name="transmit-delay">
   <properties>
-    <help>Link state transmit delay (default: 1)</help>
+    <help>Link state transmit delay</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Link state transmit delay (seconds)</description>

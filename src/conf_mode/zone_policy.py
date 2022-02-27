@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,10 +20,12 @@ from json import loads
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import cmd
 from vyos.util import dict_search_args
 from vyos.util import run
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -36,12 +38,22 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['zone-policy']
-    zone_policy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
+    zone_policy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                       get_first_key=True,
+                                       no_tag_node_value_mangle=True)
 
-    if zone_policy:
-        zone_policy['firewall'] = conf.get_config_dict(['firewall'], key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
+    zone_policy['firewall'] = conf.get_config_dict(['firewall'],
+                                                   key_mangling=('-', '_'),
+                                                   get_first_key=True,
+                                                   no_tag_node_value_mangle=True)
+
+    if 'zone' in zone_policy:
+        # We have gathered the dict representation of the CLI, but there are default
+        # options which we need to update into the dictionary retrived.
+        default_values = defaults(base + ['zone'])
+        for zone in zone_policy['zone']:
+            zone_policy['zone'][zone] = dict_merge(default_values,
+                                                   zone_policy['zone'][zone])
 
     return zone_policy
 

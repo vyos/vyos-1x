@@ -16,7 +16,9 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/interface/address-ipv4-ipv6.xml.i>
+          #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface/dhcp-options.xml.i>
+          #include <include/interface/dhcpv6-options.xml.i>
           #include <include/interface/ipv4-options.xml.i>
           #include <include/interface/ipv6-options.xml.i>
           #include <include/interface/interface-firewall.xml.i>
@@ -34,7 +36,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>gcm-aes-128</format>
-                    <description>Galois/Counter Mode of AES cipher with 128-bit key (default)</description>
+                    <description>Galois/Counter Mode of AES cipher with 128-bit key</description>
                   </valueHelp>
                   <valueHelp>
                     <format>gcm-aes-256</format>
@@ -82,7 +84,7 @@
                   </leafNode>
                   <leafNode name="priority">
                     <properties>
-                      <help>Priority of MACsec Key Agreement protocol (MKA) actor (default: 255)</help>
+                      <help>Priority of MACsec Key Agreement protocol (MKA) actor</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>MACsec Key Agreement protocol (MKA) priority</description>

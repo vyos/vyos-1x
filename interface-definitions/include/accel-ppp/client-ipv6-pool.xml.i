@@ -21,7 +21,7 @@
               <help>Prefix length used for individual client</help>
               <valueHelp>
                 <format>u32:48-128</format>
-                <description>Client prefix length (default: 64)</description>
+                <description>Client prefix length</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 48-128"/>
