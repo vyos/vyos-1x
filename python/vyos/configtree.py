@@ -326,8 +326,13 @@ class DiffTree:
         self.__diff_tree.argtypes = [c_char_p, c_void_p, c_void_p]
         self.__diff_tree.restype = c_void_p
 
+        self.__trim_tree = self.__lib.trim_tree
+        self.__trim_tree.argtypes = [c_void_p, c_void_p]
+        self.__trim_tree.restype = c_void_p
+
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
+
         res = self.__diff_tree(path_str, left._get_config(), right._get_config())
 
         # full diff config_tree and python dict representation
@@ -336,8 +341,13 @@ class DiffTree:
 
         # config_tree sub-trees
         self.add = self.full.get_subtree(['add'])
-        self.delete = self.full.get_subtree(['delete'])
+        self.sub = self.full.get_subtree(['sub'])
         self.inter = self.full.get_subtree(['inter'])
+
+        # trim sub(-tract) tree to get delete tree for commands
+        ref = self.right.get_subtree(path, with_node=True) if path else self.right
+        res = self.__trim_tree(self.sub._get_config(), ref._get_config())
+        self.delete = ConfigTree(address=res)
 
     def to_commands(self):
         add = self.add.to_commands()
