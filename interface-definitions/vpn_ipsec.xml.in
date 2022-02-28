@@ -879,11 +879,11 @@
                     <properties>
                       <help>Local IPv4 or IPv6 pool prefix exclusions</help>
                       <valueHelp>
-                        <format>ipv4</format>
+                        <format>ipv4net</format>
                         <description>Local IPv4 pool prefix exclusion</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>ipv6</format>
+                        <format>ipv6net</format>
                         <description>Local IPv6 pool prefix exclusion</description>
                       </valueHelp>
                       <constraint>
