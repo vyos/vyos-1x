@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,6 +27,7 @@ from vyos.configdict import dict_merge
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.template import render
+from vyos.util import call
 from vyos.util import cmd
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
@@ -35,6 +36,8 @@ from vyos import airbag
 airbag.enable()
 
 uacctd_conf_path = '/run/pmacct/uacctd.conf'
+systemd_service = 'uacctd.service'
+systemd_override = f'/etc/systemd/system/{systemd_service}.d/override.conf'
 nftables_nflog_table = 'raw'
 nftables_nflog_chain = 'VYOS_CT_PREROUTING_HOOK'
 egress_nftables_nflog_table = 'inet mangle'
@@ -236,7 +239,10 @@ def generate(flow_config):
     if not flow_config:
         return None
 
-    render(uacctd_conf_path, 'netflow/uacctd.conf.tmpl', flow_config)
+    render(uacctd_conf_path, 'pmacct/uacctd.conf.tmpl', flow_config)
+    render(systemd_override, 'pmacct/override.conf.tmpl', flow_config)
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
 
 def apply(flow_config):
     action = 'restart'
@@ -246,13 +252,13 @@ def apply(flow_config):
         _nftables_config([], 'egress')
 
         # Stop flow-accounting daemon and remove configuration file
-        cmd('systemctl stop uacctd.service')
+        call(f'systemctl stop {systemd_service}')
         if os.path.exists(uacctd_conf_path):
             os.unlink(uacctd_conf_path)
         return
 
     # Start/reload flow-accounting daemon
-    cmd(f'systemctl restart uacctd.service')
+    call(f'systemctl restart {systemd_service}')
 
     # configure nftables rules for defined interfaces
     if 'interface' in flow_config:

@@ -431,6 +431,7 @@
               #include <include/source-address-ipv4-ipv6.xml.i>
             </children>
           </node>
+          #include <include/interface/vrf.xml.i>
         </children>
       </node>
     </children>
