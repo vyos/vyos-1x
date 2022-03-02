@@ -15,7 +15,7 @@
 import re
 import json
 
-from ctypes import cdll, c_char_p, c_void_p, c_int, POINTER
+from ctypes import cdll, c_char_p, c_void_p, c_int
 
 LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
@@ -125,6 +125,10 @@ class ConfigTree(object):
         self.__set_tag = self.__lib.set_tag
         self.__set_tag.argtypes = [c_void_p, c_char_p]
         self.__set_tag.restype = c_int
+
+        self.__get_subtree = self.__lib.get_subtree
+        self.__get_subtree.argtypes = [c_void_p, c_char_p]
+        self.__get_subtree.restype = c_void_p
 
         self.__destroy = self.__lib.destroy
         self.__destroy.argtypes = [c_void_p]
@@ -291,8 +295,20 @@ class ConfigTree(object):
         else:
             raise ConfigTreeError("Path [{}] doesn't exist".format(path_str))
 
-class Diff:
+    def get_subtree(self, path, with_node=False):
+        check_path(path)
+        path_str = " ".join(map(str, path)).encode()
+
+        res = self.__get_subtree(self.__config, path_str, with_node)
+        subt = ConfigTree(address=res)
+        return subt
+
+class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
+        if left is None:
+            left = ConfigTree(config_string='\n')
+        if right is None:
+            right = ConfigTree(config_string='\n')
         if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
             raise TypeError("Arguments must be instances of ConfigTree")
         if path:
@@ -300,21 +316,38 @@ class Diff:
                 raise ConfigTreeError(f"Path {path} doesn't exist in lhs tree")
             if not right.exists(path):
                 raise ConfigTreeError(f"Path {path} doesn't exist in rhs tree")
+
         self.left = left
         self.right = right
 
+        self.__lib = cdll.LoadLibrary(libpath)
+
+        self.__diff_tree = self.__lib.diff_tree
+        self.__diff_tree.argtypes = [c_char_p, c_void_p, c_void_p]
+        self.__diff_tree.restype = c_void_p
+
+        self.__trim_tree = self.__lib.trim_tree
+        self.__trim_tree.argtypes = [c_void_p, c_void_p]
+        self.__trim_tree.restype = c_void_p
+
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
-        df = cdll.LoadLibrary(libpath).diffs
-        df.restype = POINTER(c_void_p * 3)
-        res = list(df(path_str, left._get_config(), right._get_config()).contents)
-        self._diff = {'add': ConfigTree(address=res[0]),
-                      'del': ConfigTree(address=res[1]),
-                      'int': ConfigTree(address=res[2]) }
 
-        self.add = self._diff['add']
-        self.delete = self._diff['del']
-        self.inter = self._diff['int']
+        res = self.__diff_tree(path_str, left._get_config(), right._get_config())
+
+        # full diff config_tree and python dict representation
+        self.full = ConfigTree(address=res)
+        self.dict = json.loads(self.full.to_json())
+
+        # config_tree sub-trees
+        self.add = self.full.get_subtree(['add'])
+        self.sub = self.full.get_subtree(['sub'])
+        self.inter = self.full.get_subtree(['inter'])
+
+        # trim sub(-tract) tree to get delete tree for commands
+        ref = self.right.get_subtree(path, with_node=True) if path else self.right
+        res = self.__trim_tree(self.sub._get_config(), ref._get_config())
+        self.delete = ConfigTree(address=res)
 
     def to_commands(self):
         add = self.add.to_commands()
