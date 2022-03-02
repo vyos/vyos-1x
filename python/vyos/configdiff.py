@@ -16,6 +16,7 @@
 from enum import IntFlag, auto
 
 from vyos.config import Config
+from vyos.configtree import DiffTree
 from vyos.configdict import dict_merge
 from vyos.util import get_sub_dict, mangle_dict_keys
 from vyos.xml import defaults
@@ -35,6 +36,8 @@ class Diff(IntFlag):
     DELETE = auto()
     ADD = auto()
     STABLE = auto()
+
+ALL = Diff.MERGE | Diff.DELETE | Diff.ADD | Diff.STABLE
 
 requires_effective = [enum_to_key(Diff.DELETE)]
 target_defaults = [enum_to_key(Diff.MERGE)]
@@ -73,18 +76,23 @@ def get_config_diff(config, key_mangling=None):
             isinstance(key_mangling[1], str)):
         raise ValueError("key_mangling must be a tuple of two strings")
 
-    return ConfigDiff(config, key_mangling)
+    diff_t = DiffTree(config._running_config, config._session_config)
+
+    return ConfigDiff(config, key_mangling, diff_tree=diff_t)
 
 class ConfigDiff(object):
     """
     The class of config changes as represented by comparison between the
     session config dict and the effective config dict.
     """
-    def __init__(self, config, key_mangling=None):
+    def __init__(self, config, key_mangling=None, diff_tree=None):
         self._level = config.get_level()
         self._session_config_dict = config.get_cached_root_dict(effective=False)
         self._effective_config_dict = config.get_cached_root_dict(effective=True)
         self._key_mangling = key_mangling
+
+        self._diff_tree = diff_tree
+        self._diff_dict = diff_tree.dict if diff_tree else {}
 
     # mirrored from Config; allow path arguments relative to level
     def _make_path(self, path):
@@ -134,7 +142,17 @@ class ConfigDiff(object):
                                                     self._key_mangling[1])
         return config_dict
 
-    def get_child_nodes_diff(self, path=[], expand_nodes=Diff(0), no_defaults=False):
+    def is_node_changed(self, path=[]):
+        if self._diff_tree is None:
+            raise NotImplementedError("diff_tree class not available")
+
+        if (self._diff_tree.add.exists(self._make_path(path)) or
+            self._diff_tree.sub.exists(self._make_path(path))):
+            return True
+        return False
+
+    def get_child_nodes_diff(self, path=[], expand_nodes=Diff(0), no_defaults=False,
+                             recursive=False):
         """
         Args:
             path (str|list): config path
@@ -144,6 +162,8 @@ class ConfigDiff(object):
                                   value
             no_detaults=False: if expand_nodes & Diff.MERGE, do not merge default
                                values to ret['merge']
+            recursive: if true, use config_tree diff algorithm provided by
+                       diff_tree class
 
         Returns: dict of lists, representing differences between session
                                 and effective config, under path
@@ -154,6 +174,34 @@ class ConfigDiff(object):
         """
         session_dict = get_sub_dict(self._session_config_dict,
                                     self._make_path(path), get_first_key=True)
+
+        if recursive:
+            if self._diff_tree is None:
+                raise NotImplementedError("diff_tree class not available")
+            else:
+                add = get_sub_dict(self._diff_tree.dict, ['add'], get_first_key=True)
+                sub = get_sub_dict(self._diff_tree.dict, ['sub'], get_first_key=True)
+                inter = get_sub_dict(self._diff_tree.dict, ['inter'], get_first_key=True)
+                ret = {}
+                ret[enum_to_key(Diff.MERGE)] = session_dict
+                ret[enum_to_key(Diff.DELETE)] = get_sub_dict(sub, self._make_path(path),
+                                                             get_first_key=True)
+                ret[enum_to_key(Diff.ADD)] = get_sub_dict(add, self._make_path(path),
+                                                          get_first_key=True)
+                ret[enum_to_key(Diff.STABLE)] = get_sub_dict(inter, self._make_path(path),
+                                                             get_first_key=True)
+                for e in Diff:
+                    k = enum_to_key(e)
+                    if not (e & expand_nodes):
+                        ret[k] = list(ret[k])
+                    else:
+                        if self._key_mangling:
+                            ret[k] = self._mangle_dict_keys(ret[k])
+                        if k in target_defaults and not no_defaults:
+                            default_values = defaults(self._make_path(path))
+                            ret[k] = dict_merge(default_values, ret[k])
+                return ret
+
         effective_dict = get_sub_dict(self._effective_config_dict,
                                       self._make_path(path), get_first_key=True)
 
@@ -179,7 +227,8 @@ class ConfigDiff(object):
 
         return ret
 
-    def get_node_diff(self, path=[], expand_nodes=Diff(0), no_defaults=False):
+    def get_node_diff(self, path=[], expand_nodes=Diff(0), no_defaults=False,
+                      recursive=False):
         """
         Args:
             path (str|list): config path
@@ -189,6 +238,8 @@ class ConfigDiff(object):
                                   value
             no_detaults=False: if expand_nodes & Diff.MERGE, do not merge default
                                values to ret['merge']
+            recursive: if true, use config_tree diff algorithm provided by
+                       diff_tree class
 
         Returns: dict of lists, representing differences between session
                                 and effective config, at path
@@ -198,6 +249,31 @@ class ConfigDiff(object):
                  dict['stable'] = config values in both session and effective
         """
         session_dict = get_sub_dict(self._session_config_dict, self._make_path(path))
+
+        if recursive:
+            if self._diff_tree is None:
+                raise NotImplementedError("diff_tree class not available")
+            else:
+                add = get_sub_dict(self._diff_tree.dict, ['add'], get_first_key=True)
+                sub = get_sub_dict(self._diff_tree.dict, ['sub'], get_first_key=True)
+                inter = get_sub_dict(self._diff_tree.dict, ['inter'], get_first_key=True)
+                ret = {}
+                ret[enum_to_key(Diff.MERGE)] = session_dict
+                ret[enum_to_key(Diff.DELETE)] = get_sub_dict(sub, self._make_path(path))
+                ret[enum_to_key(Diff.ADD)] = get_sub_dict(add, self._make_path(path))
+                ret[enum_to_key(Diff.STABLE)] = get_sub_dict(inter, self._make_path(path))
+                for e in Diff:
+                    k = enum_to_key(e)
+                    if not (e & expand_nodes):
+                        ret[k] = list(ret[k])
+                    else:
+                        if self._key_mangling:
+                            ret[k] = self._mangle_dict_keys(ret[k])
+                        if k in target_defaults and not no_defaults:
+                            default_values = defaults(self._make_path(path))
+                            ret[k] = dict_merge(default_values, ret[k])
+                return ret
+
         effective_dict = get_sub_dict(self._effective_config_dict, self._make_path(path))
 
         ret = _key_sets_from_dicts(session_dict, effective_dict)
