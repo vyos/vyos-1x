@@ -2,6 +2,9 @@
 {%   if prefix_config.blackhole is defined %}
 {{ ip_ipv6 }} route {{ prefix }} blackhole {{ prefix_config.blackhole.distance if prefix_config.blackhole.distance is defined }} {{ 'tag ' + prefix_config.blackhole.tag if prefix_config.blackhole.tag is defined }} {{ 'table ' + table if table is defined and table is not none }}
 {%   endif %}
+{%   if prefix_config.reject is defined %}
+{{ ip_ipv6 }} route {{ prefix }} reject {{ prefix_config.reject.distance if prefix_config.reject.distance is defined }} {{ 'tag ' + prefix_config.reject.tag if prefix_config.reject.tag is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{%   endif %}
 {%   if prefix_config.dhcp_interface is defined and prefix_config.dhcp_interface is not none %}
 {%     set next_hop = prefix_config.dhcp_interface | get_dhcp_router %}
 {%     if next_hop is defined and next_hop is not none %}

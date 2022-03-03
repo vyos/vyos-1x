@@ -12,6 +12,7 @@
   </properties>
   <children>
     #include <include/static/static-route-blackhole.xml.i>
+    #include <include/static/static-route-reject.xml.i>
     <tagNode name="interface">
       <properties>
         <help>IPv6 gateway interface name</help>

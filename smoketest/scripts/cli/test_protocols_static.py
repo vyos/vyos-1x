@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -52,8 +52,15 @@ routes = {
         },
         'blackhole' : { 'distance' : '90' },
     },
-    '100.64.0.0/10' : {
+    '100.64.0.0/16' : {
         'blackhole' : { },
+    },
+    '100.65.0.0/16' : {
+        'reject'    : { 'distance' : '10', 'tag' : '200' },
+    },
+    '100.66.0.0/16' : {
+        'blackhole' : { },
+        'reject'    : { 'distance' : '10', 'tag' : '200' },
     },
     '2001:db8:100::/40' : {
         'next_hop' : {
@@ -74,6 +81,9 @@ routes = {
         },
         'blackhole' : { 'distance' : '250', 'tag' : '500' },
     },
+    '2001:db8:300::/40' : {
+        'reject'    : { 'distance' : '250', 'tag' : '500' },
+    },
     '2001:db8::/32' : {
         'blackhole' : { 'distance' : '200', 'tag' : '600' },
     },
@@ -82,9 +92,15 @@ routes = {
 tables = ['80', '81', '82']
 
 class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        # This is our "target" VRF when leaking routes:
-        self.cli_set(['vrf', 'name', 'black', 'table', '43210'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+        cls.cli_set(cls, ['vrf', 'name', 'black', 'table', '43210'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['vrf'])
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
         for route, route_config in routes.items():
@@ -135,6 +151,20 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                 if 'tag' in route_config['blackhole']:
                     self.cli_set(base + ['blackhole', 'tag', route_config['blackhole']['tag']])
 
+            if 'reject' in route_config:
+                self.cli_set(base + ['reject'])
+                if 'distance' in route_config['reject']:
+                    self.cli_set(base + ['reject', 'distance', route_config['reject']['distance']])
+                if 'tag' in route_config['reject']:
+                    self.cli_set(base + ['reject', 'tag', route_config['reject']['tag']])
+
+            if {'blackhole', 'reject'} <= set(route_config):
+                # Can not use blackhole and reject at the same time
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+                self.cli_delete(base + ['blackhole'])
+                self.cli_delete(base + ['reject'])
+
         # commit changes
         self.cli_commit()
 
@@ -177,12 +207,26 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     else:
                         self.assertIn(tmp, frrconfig)
 
+            if {'blackhole', 'reject'} <= set(route_config):
+                # Can not use blackhole and reject at the same time
+                # Config error validated above - skip this route
+                continue
+
             if 'blackhole' in route_config:
                 tmp = f'{ip_ipv6} route {route} blackhole'
                 if 'tag' in route_config['blackhole']:
                     tmp += ' tag ' + route_config['blackhole']['tag']
                 if 'distance' in route_config['blackhole']:
                     tmp += ' ' + route_config['blackhole']['distance']
+
+                self.assertIn(tmp, frrconfig)
+
+            if 'reject' in route_config:
+                tmp = f'{ip_ipv6} route {route} reject'
+                if 'tag' in route_config['reject']:
+                    tmp += ' tag ' + route_config['reject']['tag']
+                if 'distance' in route_config['reject']:
+                    tmp += ' ' + route_config['reject']['distance']
 
                 self.assertIn(tmp, frrconfig)
 
@@ -389,11 +433,8 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
-        self.cli_delete(['vrf'])
-
     def test_04_static_zebra_route_map(self):
         # Implemented because of T3328
-        self.debug = True
         route_map = 'foo-static-in'
         self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
 
