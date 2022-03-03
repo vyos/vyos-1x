@@ -1,7 +1,7 @@
 <!-- include start from static/static-route6.xml.i -->
 <tagNode name="route6">
   <properties>
-    <help>VRF static IPv6 route</help>
+    <help>Static IPv6 route</help>
     <valueHelp>
       <format>ipv6net</format>
       <description>IPv6 static route</description>

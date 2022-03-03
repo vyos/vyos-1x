@@ -1,7 +1,7 @@
 <!-- include start from static/static-route.xml.i -->
 <tagNode name="route">
   <properties>
-    <help>VRF static IPv4 route</help>
+    <help>Static IPv4 route</help>
     <valueHelp>
       <format>ipv4net</format>
       <description>IPv4 static route</description>
