@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -1250,7 +1250,7 @@ class Interface(Control):
             # the old lease is released a new one is acquired (T4203). We will
             # only restart DHCP client if it's option changed, or if it's not
             # running, but it should be running (e.g. on system startup)
-            if 'dhcp_options_old' in self._config or not is_systemd_service_active(systemd_service):
+            if 'dhcp_options_changed' in self._config or not is_systemd_service_active(systemd_service):
                 return self._cmd(f'systemctl restart {systemd_service}')
             return None
         else:

@@ -136,7 +136,7 @@ def leaf_node_changed(conf, path):
 
     return None
 
-def node_changed(conf, path, key_mangling=None):
+def node_changed(conf, path, key_mangling=None, recursive=False):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return the old value. If nothing
@@ -146,7 +146,7 @@ def node_changed(conf, path, key_mangling=None):
     D = get_config_diff(conf, key_mangling)
     D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE)['delete'].keys()
+    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE, recursive=recursive)['delete'].keys()
     return list(keys)
 
 def get_removed_vlans(conf, dict):
@@ -444,13 +444,8 @@ def get_interface_dict(config, base, ifname=''):
     if bond: dict.update({'is_bond_member' : bond})
 
     # Check if any DHCP options changed which require a client restat
-    for leaf_node in ['client-id', 'default-route-distance', 'host-name',
-                 'no-default-route', 'vendor-class-id']:
-        dhcp = leaf_node_changed(config, ['dhcp-options', leaf_node])
-        if dhcp:
-            dict.update({'dhcp_options_old' : dhcp})
-            # one option is suffiecient to set 'dhcp_options_old' key
-            break
+    dhcp = node_changed(config, ['dhcp-options'], recursive=True)
+    if dhcp: dict.update({'dhcp_options_changed' : ''})
 
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
@@ -506,13 +501,8 @@ def get_interface_dict(config, base, ifname=''):
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
 
         # Check if any DHCP options changed which require a client restat
-        for leaf_node in ['client-id', 'default-route-distance', 'host-name',
-                     'no-default-route', 'vendor-class-id']:
-            dhcp = leaf_node_changed(config, ['vif', vif, 'dhcp-options', leaf_node])
-            if dhcp:
-                dict['vif'][vif].update({'dhcp_options_old' : dhcp})
-                # one option is suffiecient to set 'dhcp_options_old' key
-                break
+        dhcp = node_changed(config, ['vif', vif, 'dhcp-options'], recursive=True)
+        if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : ''})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
@@ -547,13 +537,8 @@ def get_interface_dict(config, base, ifname=''):
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
 
         # Check if any DHCP options changed which require a client restat
-        for leaf_node in ['client-id', 'default-route-distance', 'host-name',
-                     'no-default-route', 'vendor-class-id']:
-            dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'dhcp-options', leaf_node])
-            if dhcp:
-                dict['vif_s'][vif_s].update({'dhcp_options_old' : dhcp})
-                # one option is suffiecient to set 'dhcp_options_old' key
-                break
+        dhcp = node_changed(config, ['vif-s', vif_s, 'dhcp-options'], recursive=True)
+        if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : ''})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
@@ -589,14 +574,9 @@ def get_interface_dict(config, base, ifname=''):
                 {'is_bridge_member' : bridge})
 
             # Check if any DHCP options changed which require a client restat
-            for leaf_node in ['client-id', 'default-route-distance', 'host-name',
-                         'no-default-route', 'vendor-class-id']:
-                dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c,
-                                                  'dhcp-options', leaf_node])
-                if dhcp:
-                    dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_old' : dhcp})
-                    # one option is suffiecient to set 'dhcp_options_old' key
-                    break
+            dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c,
+                                              'dhcp-options'], recursive=True)
+            if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : ''})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
