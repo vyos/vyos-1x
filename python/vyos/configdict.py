@@ -574,8 +574,7 @@ def get_interface_dict(config, base, ifname=''):
                 {'is_bridge_member' : bridge})
 
             # Check if any DHCP options changed which require a client restat
-            dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c,
-                                              'dhcp-options'], recursive=True)
+            dhcp = node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'], recursive=True)
             if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : ''})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
