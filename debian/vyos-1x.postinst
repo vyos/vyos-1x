@@ -83,3 +83,12 @@ fi
 if [ -L /etc/init.d/README ]; then
     rm -f /etc/init.d/README
 fi
+
+# Remove unwanted daemon files from /etc
+# conntackd
+DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd"
+for file in $DELETE; do
+    if [ -f ${file} ]; then
+        rm -f ${file}
+    fi
+done

@@ -14,12 +14,10 @@
 # Modified by : Mohit Mehta <mohit@vyatta.com>
 # Slight modifications were made to this script for running with Vyatta
 # The original script came from 0.9.14 debian conntrack-tools package
-#
-#
 
 CONNTRACKD_BIN=/usr/sbin/conntrackd
 CONNTRACKD_LOCK=/var/lock/conntrack.lock
-CONNTRACKD_CONFIG=/etc/conntrackd/conntrackd.conf
+CONNTRACKD_CONFIG=/run/conntrackd/conntrackd.conf
 FACILITY=daemon
 LEVEL=notice
 TAG=conntrack-tools
@@ -29,6 +27,10 @@ FAILOVER_STATE="/var/run/vyatta-conntrackd-failover-state"
 
 $LOGCMD "vyatta-vrrp-conntracksync invoked at `date`"
 
+if ! systemctl is-active --quiet conntrackd.service; then
+    echo "conntrackd service not running"
+    exit 1
+fi
 
 if [ ! -e $FAILOVER_STATE ]; then
 	mkdir -p /var/run
