@@ -33,3 +33,12 @@ fi
 
 # ensure hte proxy user has a proper shell
 chsh -s /bin/sh proxy
+
+# Remove unwanted daemon files from /etc
+# conntackd
+DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd"
+for file in $DELETE; do
+    if [ -f ${file} ]; then
+        rm -f ${file}
+    fi
+done
