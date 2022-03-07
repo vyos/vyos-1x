@@ -93,3 +93,7 @@ for file in $DELETE; do
         rm -f ${file}
     fi
 done
+
+# Remove logrotate items controlled via CLI and VyOS defaults
+sed -i '/^\/var\/log\/messages$/d' /etc/logrotate.d/rsyslog
+sed -i '/^\/var\/log\/auth.log$/d' /etc/logrotate.d/rsyslog
