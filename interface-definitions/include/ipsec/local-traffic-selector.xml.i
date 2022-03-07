@@ -9,11 +9,11 @@
       <properties>
         <help>Local IPv4 or IPv6 prefix</help>
         <valueHelp>
-          <format>ipv4</format>
+          <format>ipv4net</format>
           <description>Local IPv4 prefix</description>
         </valueHelp>
         <valueHelp>
-          <format>ipv6</format>
+          <format>ipv6net</format>
           <description>Local IPv6 prefix</description>
         </valueHelp>
         <constraint>
