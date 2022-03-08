@@ -93,6 +93,11 @@ class Config(object):
         (self._running_config,
          self._session_config) = self._config_source.get_configtree_tuple()
 
+    def get_config_tree(self, effective=False):
+        if effective:
+            return self._running_config
+        return self._session_config
+
     def _make_path(self, path):
         # Backwards-compatibility stuff: original implementation used string paths
         # libvyosconfig paths are lists, but since node names cannot contain whitespace,
