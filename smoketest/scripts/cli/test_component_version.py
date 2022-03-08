@@ -16,7 +16,7 @@
 
 import unittest
 
-from vyos.systemversions import get_system_versions, get_system_component_version
+from vyos.component_version import legacy_from_system, from_system
 
 # After T3474, component versions should be updated in the files in
 # vyos-1x/interface-definitions/include/version/
@@ -24,8 +24,8 @@ from vyos.systemversions import get_system_versions, get_system_component_versio
 # that in the xml cache.
 class TestComponentVersion(unittest.TestCase):
     def setUp(self):
-        self.legacy_d = get_system_versions()
-        self.xml_d = get_system_component_version()
+        self.legacy_d = legacy_from_system()
+        self.xml_d = from_system()
 
     def test_component_version(self):
         self.assertTrue(set(self.legacy_d).issubset(set(self.xml_d)))
