@@ -29,15 +29,40 @@ import gzip
 import tempfile
 import vyos.defaults
 import vyos.remote
-from vyos.configsource import ConfigSourceSession, VyOSError
+from vyos.configsource import ConfigSourceSession
+from vyos.configtree import ConfigTree, DiffTree
 from vyos.migrator import Migrator, VirtualMigrator, MigratorError
+from vyos.util import cmd, DEVNULL
 
 class LoadConfig(ConfigSourceSession):
-    """A subclass for calling 'loadFile'.
+    """A subclass for loading a config file.
     This does not belong in configsource.py, and only has a single caller.
     """
-    def load_config(self, path):
-        return self._run(['/bin/cli-shell-api','loadFile',path])
+    def load_config(self, file_path):
+        try:
+            with open(file_path) as f:
+                config_file = f.read()
+            load_ct = ConfigTree(config_file)
+        except (OSError, ValueError) as e:
+            print(e)
+            return
+
+        eff_ct, _ = self.get_configtree_tuple()
+        diff = DiffTree(eff_ct, load_ct)
+        commands = diff.to_commands()
+        # on an empty set of 'add' or 'delete' commands, to_commands
+        # returns '\n'; prune below
+        command_list = commands.splitlines()
+        command_list = [c for c in command_list if c]
+
+        if not command_list:
+            return
+        for op in command_list:
+            try:
+                cmd(f'/opt/vyatta/sbin/my_{op}', shell=True, stderr=DEVNULL)
+            except OSError as e:
+                print(e)
+                return
 
 file_name = sys.argv[1] if len(sys.argv) > 1 else 'config.boot'
 configdir = vyos.defaults.directories['config']
@@ -93,10 +118,7 @@ with tempfile.NamedTemporaryFile() as fp:
     except MigratorError as err:
         sys.exit('{}'.format(err))
 
-    try:
-        config.load_config(fp.name)
-    except VyOSError as err:
-        sys.exit('{}'.format(err))
+    config.load_config(fp.name)
 
 if config.session_changed():
     print("Load complete. Use 'commit' to make changes effective.")
