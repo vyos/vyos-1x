@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="public-key-command">
+        <properties>
+          <help>Generate configuration mode command to add OpenSSH public key from file</help>
+        </properties>
+        <children>
+          <tagNode name="user">
+            <properties>
+              <help>Username of public key owner</help>
+              <completionHelp>
+                <list>&lt;username&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="path">
+                <properties>
+                  <help>Local path or remote URL of OpenSSH public key</help>
+                  <completionHelp>
+                    <list><![CDATA[<http[s]://[<username>:<password>@]<hostname>/<path-to-file>> <ftp://[<username>[:<password>]@]<hostname>/<path-to-file>> <tftp://<hostname>/<path-to-file>> <sftp://[<username>[:<password>]@]<hostname>/<path-to-file>> <scp://[<username>[:<password>]@]<hostname>/<path-to-file>> <[file://]/<path-to-file>>]]></list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/generate_public_key_command.py "$4" "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
