@@ -16,13 +16,24 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import vyos.formatversions as formatversions
+import vyos.systemversions as systemversions
 import vyos.defaults
-from vyos.component_version import write_footer
+import vyos.version
+
+sys_versions = systemversions.get_system_component_version()
+
+component_string = formatversions.format_versions_string(sys_versions)
+
+os_version_string = vyos.version.get_version()
 
 sys.stdout.write("\n\n")
 if vyos.defaults.cfg_vintage == 'vyos':
-    write_footer(None, vintage='vyos')
+    formatversions.write_vyos_versions_foot(None, component_string,
+                                            os_version_string)
 elif vyos.defaults.cfg_vintage == 'vyatta':
-    write_footer(None, vintage='vyatta')
+    formatversions.write_vyatta_versions_foot(None, component_string,
+                                              os_version_string)
 else:
-    write_footer(None, vintage='vyatta')
+    formatversions.write_vyatta_versions_foot(None, component_string,
+                                              os_version_string)
