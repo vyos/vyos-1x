@@ -18,6 +18,9 @@ import re
 
 from vyos.util import popen
 
+# These drivers do not support using ethtool to change the speed, duplex, or flow control settings
+_drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront', 'iavf', 'ice', 'i40e']
+
 class Ethtool:
     """
     Class is used to retrive and cache information about an ethernet adapter
@@ -188,7 +191,7 @@ class Ethtool:
         if duplex not in ['auto', 'full', 'half']:
             raise ValueError(f'Value "{duplex}" for duplex is invalid!')
 
-        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
             return False
 
         if speed in self._speed_duplex:
@@ -198,7 +201,7 @@ class Ethtool:
 
     def check_flow_control(self):
         """ Check if the NIC supports flow-control """
-        if self.get_driver_name() in ['vmxnet3', 'virtio_net', 'xen_netfront']:
+        if self.get_driver_name() in _drivers_without_speed_duplex_flow:
             return False
         return self._flow_control
 
