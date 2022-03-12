@@ -17,6 +17,7 @@
 import os
 import re
 
+from pathlib import Path
 from sys import exit
 
 from vyos.config import Config
@@ -89,7 +90,7 @@ def get_config(config=None):
                     filename: {
                         'log-file': '/var/log/user/' + filename,
                         'max-files': '5',
-                        'action-on-max-size': '/usr/sbin/logrotate /etc/logrotate.d/' + filename,
+                        'action-on-max-size': '/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog-generated-' + filename,
                         'selectors': '*.err',
                         'max-size': 262144
                     }
@@ -205,10 +206,17 @@ def generate(c):
     conf = '/etc/rsyslog.d/vyos-rsyslog.conf'
     render(conf, 'syslog/rsyslog.conf.tmpl', c)
 
+    # cleanup current logrotate config files
+    logrotate_files = Path('/etc/logrotate.d/').glob('vyos-rsyslog-generated-*')
+    for file in logrotate_files:
+        file.unlink()
+
     # eventually write for each file its own logrotate file, since size is
     # defined it shouldn't matter
-    conf = '/etc/logrotate.d/vyos-rsyslog'
-    render(conf, 'syslog/logrotate.tmpl', c)
+    for filename, fileconfig in c.get('files', {}).items():
+        if fileconfig['log-file'].startswith('/var/log/user/'):
+            conf = '/etc/logrotate.d/vyos-rsyslog-generated-' + filename
+            render(conf, 'syslog/logrotate.tmpl', { 'config_render': fileconfig })
 
 
 def verify(c):

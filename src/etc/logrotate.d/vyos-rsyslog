@@ -1,0 +1,12 @@
+/var/log/messages {
+    create
+    missingok
+    nomail
+    notifempty
+    rotate 10
+    size 1M
+    postrotate
+        # inform rsyslog service about rotation
+        /usr/lib/rsyslog/rsyslog-rotate
+    endscript
+}
