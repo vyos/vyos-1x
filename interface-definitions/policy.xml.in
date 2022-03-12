@@ -1115,13 +1115,23 @@
                       <help>Nexthop IP address</help>
                       <completionHelp>
                         <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
+                        <list>unchanged peer-address</list>
                       </completionHelp>
                       <valueHelp>
                         <format>ipv4</format>
                         <description>IP address</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>unchanged</format>
+                        <description>Set the BGP nexthop address as unchanged</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>peer-address</format>
+                        <description>Set the BGP nexthop address to the address of the peer</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv4-address"/>
+                        <regex>^(unchanged|peer-address)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1158,6 +1168,12 @@
                           <constraint>
                             <validator name="ipv6-address"/>
                           </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="peer-address">
+                        <properties>
+                          <help>Use peer address (for BGP only)</help>
+                          <valueless/>
                         </properties>
                       </leafNode>
                       <leafNode name="prefer-global">
