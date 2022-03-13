@@ -166,6 +166,8 @@ def verify(bgp):
                         raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
                     if 'remote_as' in peer_config:
                         raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
+                    if 'source_interface' in peer_config['interface']:
+                        raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
 
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
