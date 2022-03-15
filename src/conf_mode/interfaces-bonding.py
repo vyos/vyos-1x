@@ -132,10 +132,10 @@ def verify(bond):
         return None
 
     if 'arp_monitor' in bond:
-        if 'target' in bond['arp_monitor'] and len(int(bond['arp_monitor']['target'])) > 16:
+        if 'target' in bond['arp_monitor'] and len(bond['arp_monitor']['target']) > 16:
             raise ConfigError('The maximum number of arp-monitor targets is 16')
 
-        if 'interval' in bond['arp_monitor'] and len(int(bond['arp_monitor']['interval'])) > 0:
+        if 'interval' in bond['arp_monitor'] and int(bond['arp_monitor']['interval']) > 0:
             if bond['mode'] in ['802.3ad', 'balance-tlb', 'balance-alb']:
                 raise ConfigError('ARP link monitoring does not work for mode 802.3ad, ' \
                                   'transmit-load-balance or adaptive-load-balance')
