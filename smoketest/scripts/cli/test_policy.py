@@ -1030,7 +1030,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp = f'match ipv6 address prefix-list {rule_config["match"]["ipv6-address-pfx"]}'
                         self.assertIn(tmp, config)
                     if 'ipv6-nexthop' in rule_config['match']:
-                        tmp = f'match ipv6 next-hop {rule_config["match"]["ipv6-nexthop"]}'
+                        tmp = f'match ipv6 next-hop address {rule_config["match"]["ipv6-nexthop"]}'
                         self.assertIn(tmp, config)
                     if 'large-community' in rule_config['match']:
                         tmp = f'match large-community {rule_config["match"]["large-community"]}'
