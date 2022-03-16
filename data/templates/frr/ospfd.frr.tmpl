@@ -1,7 +1,7 @@
 !
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
-interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
+interface {{ iface }}
 {%     if iface_config.authentication is defined and iface_config.authentication is not none %}
 {%       if iface_config.authentication.plaintext_password is defined and iface_config.authentication.plaintext_password is not none %}
  ip ospf authentication-key {{ iface_config.authentication.plaintext_password }}

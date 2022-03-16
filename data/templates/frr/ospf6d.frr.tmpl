@@ -1,7 +1,7 @@
 !
 {% if interface is defined and interface is not none %}
 {%   for iface, iface_config in interface.items() %}
-interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
+interface {{ iface }}
 {%     if iface_config.area is defined and iface_config.area is not none %}
  ipv6 ospf6 area {{ iface_config.area }}
 {%     endif %}
