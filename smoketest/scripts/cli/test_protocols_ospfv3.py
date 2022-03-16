@@ -278,4 +278,4 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

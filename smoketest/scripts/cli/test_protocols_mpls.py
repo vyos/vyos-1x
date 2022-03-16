@@ -114,4 +114,4 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'  interface {interface}', afiv4_config)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
