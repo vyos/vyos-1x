@@ -97,6 +97,12 @@ router ospf {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
+{%     if area_config.export_list is defined and area_config.export_list is not none %}
+ area {{ area_id }} export-list {{ area_config.export_list }}
+{%     endif %}
+{%     if area_config.import_list is defined and area_config.import_list is not none %}
+ area {{ area_id }} import-list {{ area_config.import_list }}
+{%     endif %}
 {%     if area_config.shortcut is defined and area_config.shortcut is not none %}
  area {{ area_id }} shortcut {{ area_config.shortcut }}
 {%     endif %}

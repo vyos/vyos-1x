@@ -256,6 +256,36 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="export-list">
+      <properties>
+        <help>Set the filter for networks announced to other areas</help>
+        <completionHelp>
+          <path>policy access-list</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32</format>
+          <description>Access-list number</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="import-list">
+      <properties>
+        <help>Set the filter for networks from other areas announced</help>
+        <completionHelp>
+          <path>policy access-list</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32</format>
+          <description>Access-list number</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <tagNode name="virtual-link">
       <properties>
         <help>Virtual link</help>
