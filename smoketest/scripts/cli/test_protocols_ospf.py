@@ -368,6 +368,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
+    def test_ospf_13_export_list(self):
+        # Verify explort-list works on ospf-area
+        acl = '100'
+        seq = '10'
+        area = '0.0.0.10'
+        network = '10.0.0.0/8'
+
+
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
+        self.cli_set(base_path + ['area', area, 'network', network])
+        self.cli_set(base_path + ['area', area, 'export-list', acl])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # default
+        self.assertIn(f' network {network} area {area}', frrconfig)
+        self.assertIn(f' area {area} export-list {acl}', frrconfig)
+
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     unittest.main(verbosity=2)
