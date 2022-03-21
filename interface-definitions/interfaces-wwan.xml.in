@@ -30,7 +30,6 @@
           #include <include/interface/authentication.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
-          #include <include/interface/vrf.xml.i>
           #include <include/interface/disable-link-detect.xml.i>
           #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
@@ -41,6 +40,9 @@
           #include <include/interface/dial-on-demand.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/traffic-policy.xml.i>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

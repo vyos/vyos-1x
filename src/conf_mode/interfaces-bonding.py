@@ -27,9 +27,10 @@ from vyos.configdict import is_source_interface
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
-from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_mirror
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_redirect
+from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
@@ -151,6 +152,7 @@ def verify(bond):
     verify_dhcpv6(bond)
     verify_vrf(bond)
     verify_mirror(bond)
+    verify_redirect(bond)
 
     # use common function to verify VLAN configuration
     verify_vlan_config(bond)

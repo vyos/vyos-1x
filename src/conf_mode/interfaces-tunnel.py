@@ -26,6 +26,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_redirect
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_tunnel
 from vyos.ifconfig import Interface
@@ -157,6 +158,7 @@ def verify(tunnel):
     verify_mtu_ipv6(tunnel)
     verify_address(tunnel)
     verify_vrf(tunnel)
+    verify_redirect(tunnel)
 
     if 'source_interface' in tunnel:
         verify_interface_exists(tunnel['source_interface'])

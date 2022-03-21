@@ -29,6 +29,12 @@ interface_definitions: $(config_xml_obj)
 	# XXX: delete top level node.def's that now live in other packages
 	# IPSec VPN EAP-RADIUS does not support source-address
 	rm -rf $(TMPL_DIR)/vpn/ipsec/remote-access/radius/source-address
+
+	# T4284 neq QoS implementation is not yet live
+	find $(TMPL_DIR)/interfaces -name traffic-policy -type d -exec rm -rf {} \;
+	find $(TMPL_DIR)/interfaces -name redirect -type d -exec rm -rf {} \;
+	rm -rf $(TMPL_DIR)/interfaces/input
+
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'

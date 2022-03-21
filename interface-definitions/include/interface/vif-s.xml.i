@@ -64,11 +64,15 @@
         #include <include/interface/ipv6-options.xml.i>
         #include <include/interface/mac.xml.i>
         #include <include/interface/mtu-68-16000.xml.i>
+        #include <include/interface/redirect.xml.i>
+        #include <include/interface/traffic-policy.xml.i>
         #include <include/interface/vrf.xml.i>
         #include <include/interface/interface-firewall-vif-c.xml.i>
         #include <include/interface/interface-policy-vif-c.xml.i>
       </children>
     </tagNode>
+    #include <include/interface/redirect.xml.i>
+    #include <include/interface/traffic-policy.xml.i>
     #include <include/interface/vrf.xml.i>
   </children>
 </tagNode>

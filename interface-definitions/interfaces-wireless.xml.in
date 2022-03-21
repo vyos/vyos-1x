@@ -778,6 +778,8 @@
             </properties>
             <defaultValue>monitor</defaultValue>
           </leafNode>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/vif.xml.i>
           #include <include/interface/vif-s.xml.i>
         </children>

@@ -20,7 +20,6 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/disable-link-detect.xml.i>
-          #include <include/interface/vrf.xml.i>
           #include <include/interface/mtu-64-8024.xml.i>
           <leafNode name="mtu">
             <defaultValue>1476</defaultValue>
@@ -288,6 +287,9 @@
               </node>
             </children>
           </node>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/traffic-policy.xml.i>
         </children>
       </tagNode>
     </children>

@@ -19,6 +19,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configverify import verify_redirect
 from vyos.ifconfig import VTIIf
 from vyos.util import dict_search
 from vyos import ConfigError
@@ -39,6 +40,7 @@ def get_config(config=None):
     return vti
 
 def verify(vti):
+    verify_redirect(vti)
     return None
 
 def generate(vti):

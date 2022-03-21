@@ -125,6 +125,7 @@
               </constraint>
             </properties>
           </leafNode>
+          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

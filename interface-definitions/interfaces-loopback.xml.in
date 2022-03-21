@@ -26,6 +26,8 @@
               #include <include/interface/source-validation.xml.i>
             </children>
           </node>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/traffic-policy.xml.i>
         </children>
       </tagNode>
     </children>
