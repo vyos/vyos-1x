@@ -33,6 +33,7 @@ interface_definitions: $(config_xml_obj)
 	# T4284 neq QoS implementation is not yet live
 	find $(TMPL_DIR)/interfaces -name traffic-policy -type d -exec rm -rf {} \;
 	find $(TMPL_DIR)/interfaces -name redirect -type d -exec rm -rf {} \;
+	rm -rf $(TMPL_DIR)/traffic-policy
 	rm -rf $(TMPL_DIR)/interfaces/input
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
