@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,8 +29,12 @@ def get_key(path):
         key_string = vyos.remote.get_remote_config(path)
     return key_string.split()
 
-username = sys.argv[1]
-algorithm, key, identifier = get_key(sys.argv[2])
+try:
+    username = sys.argv[1]
+    algorithm, key, identifier = get_key(sys.argv[2])
+except Exception as e:
+    print("Failed to retrieve the public key: {}".format(e))
+    sys.exit(1)
 
 print('# To add this key as an embedded key, run the following commands:')
 print('configure')
@@ -39,3 +43,4 @@ print(f'set system login user {username} authentication public-keys {identifier}
 print('commit')
 print('save')
 print('exit')
+
