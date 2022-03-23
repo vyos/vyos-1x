@@ -25,10 +25,9 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_eapol
 from vyos.configverify import verify_interface_exists
-from vyos.configverify import verify_mirror
+from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu
 from vyos.configverify import verify_mtu_ipv6
-from vyos.configverify import verify_redirect
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ethtool import Ethtool
@@ -84,8 +83,7 @@ def verify(ethernet):
     verify_address(ethernet)
     verify_vrf(ethernet)
     verify_eapol(ethernet)
-    verify_mirror(ethernet)
-    verify_redirect(ethernet)
+    verify_mirror_redirect(ethernet)
 
     ethtool = Ethtool(ifname)
     # No need to check speed and duplex keys as both have default values.

@@ -107,6 +107,7 @@
               <constraintErrorMessage>Invalid encapsulation, must be one of: erspan, gre, gretap, ip6erspan, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
             </properties>
           </leafNode>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="multicast">
             <properties>
               <help>Multicast operation over tunnel</help>

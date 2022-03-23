@@ -21,7 +21,7 @@ from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
-from vyos.configverify import verify_redirect
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import DummyIf
 from vyos import ConfigError
 from vyos import airbag
@@ -47,7 +47,7 @@ def verify(dummy):
 
     verify_vrf(dummy)
     verify_address(dummy)
-    verify_redirect(dummy)
+    verify_mirror_redirect(dummy)
 
     return None
 

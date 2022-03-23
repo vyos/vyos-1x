@@ -566,6 +566,7 @@
             </properties>
             <defaultValue>g</defaultValue>
           </leafNode>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="physical-device">
             <properties>
               <help>Wireless physical device</help>

@@ -1294,48 +1294,60 @@ class Interface(Control):
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
-    def set_mirror(self):
+    def set_mirror_redirect(self):
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
         source_if = self._config['ifname']
-        config = self._config.get('mirror', None)
 
+        mirror_config = None
+        if 'mirror' in self._config:
+            mirror_config = self._config['mirror']
         if 'is_mirror_intf' in self._config:
             source_if = next(iter(self._config['is_mirror_intf']))
-            config = self._config['is_mirror_intf'][source_if].get('mirror', None)
+            mirror_config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
-        # Check configuration stored by old perl code before delete T3782/T4056
-        if not 'redirect' in self._config and not 'traffic_policy' in self._config:
-            # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
-            # Remove existing mirroring rules
-            delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
-            delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
-            delete_tc_cmd += 'set $?=0'
-            self._popen(delete_tc_cmd)
+        redirect_config = None
 
-        # Bail out early if nothing needs to be configured
-        if not config:
-            return
+        # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
+        # qdisc on specified device") - we simply cleanup all stuff here
+        self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
+        self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
 
-        for direction, mirror_if in config.items():
-            if mirror_if not in interfaces():
-                continue
+        # Apply interface mirror policy
+        if mirror_config:
+            for direction, target_if in mirror_config.items():
+                if target_if not in interfaces():
+                    continue
 
-            if direction == 'ingress':
-                handle = 'ffff: ingress'
-                parent = 'ffff:'
-            elif direction == 'egress':
-                handle = '1: root prio'
-                parent = '1:'
+                if direction == 'ingress':
+                    handle = 'ffff: ingress'
+                    parent = 'ffff:'
+                elif direction == 'egress':
+                    handle = '1: root prio'
+                    parent = '1:'
 
-            # Mirror egress traffic
-            mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
-            # Export the mirrored traffic to the interface
-            mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {mirror_if}'
-            self._popen(mirror_cmd)
+                # Mirror egress traffic
+                mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
+                # Export the mirrored traffic to the interface
+                mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol '\
+                              f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
+                              f'egress mirror dev {target_if}'
+                _, err = self._popen(mirror_cmd)
+                if err: print('tc qdisc(filter for mirror port failed')
+
+        # Apply interface traffic redirection policy
+        elif 'redirect' in self._config:
+            _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
+            if err: print(f'tc qdisc add for redirect failed!')
+
+            target_if = self._config['redirect']
+            _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
+                                 f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
+                                 f'egress redirect dev {target_if}')
+            if err: print('tc filter add for redirect failed')
 
     def set_xdp(self, state):
         """
@@ -1562,8 +1574,8 @@ class Interface(Control):
         # eXpress Data Path - highly experimental
         self.set_xdp('xdp' in config)
 
-        # configure port mirror
-        self.set_mirror()
+        # configure interface mirror or redirection target
+        self.set_mirror_redirect()
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
@@ -1723,5 +1735,5 @@ class VLANIf(Interface):
 
         return super().set_admin_state(state)
 
-    def set_mirror(self):
+    def set_mirror_redirect(self):
         return

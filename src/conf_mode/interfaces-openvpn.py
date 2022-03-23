@@ -35,6 +35,7 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import VTunIf
 from vyos.pki import load_dh_parameters
 from vyos.pki import load_private_key
@@ -495,6 +496,7 @@ def verify(openvpn):
             raise ConfigError('Username for authentication is missing')
 
     verify_vrf(openvpn)
+    verify_mirror_redirect(openvpn)
 
     return None
 

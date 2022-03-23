@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configverify import verify_redirect
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import LoopbackIf
 from vyos import ConfigError
 from vyos import airbag
@@ -40,7 +40,7 @@ def get_config(config=None):
     return loopback
 
 def verify(loopback):
-    verify_redirect(loopback)
+    verify_mirror_redirect(loopback)
     return None
 
 def generate(loopback):

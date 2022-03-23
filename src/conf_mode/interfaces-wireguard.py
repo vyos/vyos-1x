@@ -28,7 +28,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
-from vyos.configverify import verify_redirect
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import WireGuardIf
 from vyos.util import check_kmod
 from vyos.util import check_port_availability
@@ -71,7 +71,7 @@ def verify(wireguard):
     verify_mtu_ipv6(wireguard)
     verify_address(wireguard)
     verify_vrf(wireguard)
-    verify_redirect(wireguard)
+    verify_mirror_redirect(wireguard)
 
     if 'private_key' not in wireguard:
         raise ConfigError('Wireguard private-key not defined')

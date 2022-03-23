@@ -27,6 +27,7 @@
           #include <include/interface/ipv6-options.xml.i>
           #include <include/source-interface-ethernet.xml.i>
           #include <include/interface/mac.xml.i>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
           <leafNode name="mode">

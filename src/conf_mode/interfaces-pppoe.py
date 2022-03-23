@@ -28,7 +28,7 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_mtu_ipv6
-from vyos.configverify import verify_redirect
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import PPPoEIf
 from vyos.template import render
 from vyos.util import call
@@ -86,7 +86,7 @@ def verify(pppoe):
     verify_authentication(pppoe)
     verify_vrf(pppoe)
     verify_mtu_ipv6(pppoe)
-    verify_redirect(pppoe)
+    verify_mirror_redirect(pppoe)
 
     if {'connect_on_demand', 'vrf'} <= set(pppoe):
         raise ConfigError('On-demand dialing and VRF can not be used at the same time')

@@ -29,7 +29,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
-from vyos.configverify import verify_redirect
+from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_source_interface
 from vyos import ConfigError
 from vyos import airbag
@@ -67,7 +67,7 @@ def verify(macsec):
     verify_vrf(macsec)
     verify_mtu_ipv6(macsec)
     verify_address(macsec)
-    verify_redirect(macsec)
+    verify_mirror_redirect(macsec)
 
     if not (('security' in macsec) and
             ('cipher' in macsec['security'])):

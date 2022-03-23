@@ -102,6 +102,7 @@
               </constraint>
             </properties>
           </leafNode>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
             <defaultValue>1492</defaultValue>

@@ -178,31 +178,26 @@ def verify_eapol(config):
             if 'certificate' not in ca_cert:
                 raise ConfigError('Invalid CA certificate specified for EAPoL')
 
-def verify_mirror(config):
+def verify_mirror_redirect(config):
     """
     Common helper function used by interface implementations to perform
-    recurring validation of mirror interface configuration.
+    recurring validation of mirror and redirect interface configuration via tc(8)
 
     It makes no sense to mirror traffic back at yourself!
     """
+    if {'mirror', 'redirect'} <= set(config):
+        raise ConfigError('Mirror and redirect can not be enabled at the same time!')
+
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
             if mirror_interface == config['ifname']:
                 raise ConfigError(f'Can not mirror "{direction}" traffic back ' \
                                    'the originating interface!')
 
-def verify_redirect(config):
-    """
-    Common helper function used by interface implementations to perform
-    recurring validation of the redirect interface configuration.
-
-    It makes no sense to mirror and redirect traffic at the same time!
-    """
-    if {'mirror', 'redirect'} <= set(config):
-        raise ConfigError('Can not do both redirect and mirror')
-
     if dict_search('traffic_policy.in', config) != None:
-        raise ConfigError('Can not use ingress policy and redirect')
+        # XXX: support combination of limiting and redirect/mirror - this is an
+        # artificial limitation
+        raise ConfigError('Can not use ingress policy tigether with mirror or redirect!')
 
 def verify_authentication(config):
     """
@@ -328,7 +323,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
-        verify_redirect(vlan)
+        verify_mirror_redirect(vlan)
         verify_mtu_parent(vlan, config)
 
     # 802.1ad (Q-in-Q) VLANs
@@ -337,7 +332,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
-        verify_redirect(s_vlan)
+        verify_mirror_redirect(s_vlan)
         verify_mtu_parent(s_vlan, config)
 
         for c_vlan in s_vlan.get('vif_c', {}):
@@ -345,7 +340,7 @@ def verify_vlan_config(config):
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)
-            verify_redirect(c_vlan)
+            verify_mirror_redirect(c_vlan)
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
 

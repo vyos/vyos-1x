@@ -31,6 +31,7 @@
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
             <defaultValue>1430</defaultValue>

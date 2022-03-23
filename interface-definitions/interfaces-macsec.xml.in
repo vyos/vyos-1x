@@ -23,6 +23,7 @@
           #include <include/interface/ipv6-options.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
+          #include <include/interface/mirror.xml.i>
           <node name="security">
             <properties>
               <help>Security/Encryption Settings</help>
