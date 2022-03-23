@@ -1734,6 +1734,3 @@ class VLANIf(Interface):
             return None
 
         return super().set_admin_state(state)
-
-    def set_mirror_redirect(self):
-        return

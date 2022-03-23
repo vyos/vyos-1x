@@ -317,9 +317,12 @@ def verify_vlan_config(config):
         if duplicate:
             raise ConfigError(f'Duplicate VLAN id "{duplicate[0]}" used for vif and vif-s interfaces!')
 
+    parent_ifname = config['ifname']
     # 802.1q VLANs
-    for vlan in config.get('vif', {}):
-        vlan = config['vif'][vlan]
+    for vlan_id in config.get('vif', {}):
+        vlan = config['vif'][vlan_id]
+        vlan['ifname'] = f'{parent_ifname}.{vlan_id}'
+
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
@@ -327,16 +330,20 @@ def verify_vlan_config(config):
         verify_mtu_parent(vlan, config)
 
     # 802.1ad (Q-in-Q) VLANs
-    for s_vlan in config.get('vif_s', {}):
-        s_vlan = config['vif_s'][s_vlan]
+    for s_vlan_id in config.get('vif_s', {}):
+        s_vlan = config['vif_s'][s_vlan_id]
+        s_vlan['ifname'] = f'{parent_ifname}.{s_vlan_id}'
+
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
         verify_mirror_redirect(s_vlan)
         verify_mtu_parent(s_vlan, config)
 
-        for c_vlan in s_vlan.get('vif_c', {}):
-            c_vlan = s_vlan['vif_c'][c_vlan]
+        for c_vlan_id in s_vlan.get('vif_c', {}):
+            c_vlan = s_vlan['vif_c'][c_vlan_id]
+            c_vlan['ifname'] = f'{parent_ifname}.{s_vlan_id}.{c_vlan_id}'
+
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)

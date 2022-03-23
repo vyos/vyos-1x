@@ -44,6 +44,7 @@
     #include <include/interface/ipv4-options.xml.i>
     #include <include/interface/ipv6-options.xml.i>
     #include <include/interface/mac.xml.i>
+    #include <include/interface/mirror.xml.i>
     #include <include/interface/mtu-68-16000.xml.i>
     <tagNode name="vif-c">
       <properties>
@@ -63,6 +64,7 @@
         #include <include/interface/ipv4-options.xml.i>
         #include <include/interface/ipv6-options.xml.i>
         #include <include/interface/mac.xml.i>
+        #include <include/interface/mirror.xml.i>
         #include <include/interface/mtu-68-16000.xml.i>
         #include <include/interface/redirect.xml.i>
         #include <include/interface/traffic-policy.xml.i>
