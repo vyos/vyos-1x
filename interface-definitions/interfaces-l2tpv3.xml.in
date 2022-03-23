@@ -86,7 +86,6 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface/mtu-68-16000.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
           <leafNode name="session-id">
             <properties>
