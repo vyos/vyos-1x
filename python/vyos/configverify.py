@@ -185,14 +185,25 @@ def verify_mirror_redirect(config):
 
     It makes no sense to mirror traffic back at yourself!
     """
+    import os
     if {'mirror', 'redirect'} <= set(config):
         raise ConfigError('Mirror and redirect can not be enabled at the same time!')
 
     if 'mirror' in config:
         for direction, mirror_interface in config['mirror'].items():
+            if not os.path.exists(f'/sys/class/net/{mirror_interface}'):
+                raise ConfigError(f'Requested mirror interface "{mirror_interface}" '\
+                                   'does not exist!')
+
             if mirror_interface == config['ifname']:
-                raise ConfigError(f'Can not mirror "{direction}" traffic back ' \
+                raise ConfigError(f'Can not mirror "{direction}" traffic back '\
                                    'the originating interface!')
+
+    if 'redirect' in config:
+        redirect_ifname = config['redirect']
+        if not os.path.exists(f'/sys/class/net/{redirect_ifname}'):
+            raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
+                               'does not exist!')
 
     if dict_search('traffic_policy.in', config) != None:
         # XXX: support combination of limiting and redirect/mirror - this is an

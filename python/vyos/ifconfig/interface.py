@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from netifaces import interfaces
 import os
 import re
 import json
@@ -1319,9 +1318,6 @@ class Interface(Control):
         # Apply interface mirror policy
         if mirror_config:
             for direction, target_if in mirror_config.items():
-                if target_if not in interfaces():
-                    continue
-
                 if direction == 'ingress':
                     handle = 'ffff: ingress'
                     parent = 'ffff:'
