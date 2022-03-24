@@ -32,6 +32,7 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.ifconfig import VTunIf
@@ -87,6 +88,9 @@ def get_config(config=None):
 
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
+
+        tmp = leaf_node_changed(conf, ['openvpn-option'])
+        if tmp: openvpn['restart_required'] = ''
 
         # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
         # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
@@ -651,7 +655,10 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    call(f'systemctl reload-or-restart openvpn@{interface}.service')
+    action = 'reload-or-restart'
+    if 'restart_required' in openvpn:
+        action = 'restart'
+    call(f'systemctl {action} openvpn@{interface}.service')
 
     o = VTunIf(**openvpn)
     o.update(openvpn)
