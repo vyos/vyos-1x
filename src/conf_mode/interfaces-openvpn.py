@@ -29,6 +29,7 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_diffie_hellman_length
@@ -79,6 +80,10 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'openvpn']
     openvpn = get_interface_dict(conf, base)
+
+    if 'deleted' not in openvpn:
+        tmp = leaf_node_changed(conf, ['openvpn-option'])
+        if tmp: openvpn['restart_required'] = ''
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
     return openvpn
@@ -509,7 +514,10 @@ def apply(openvpn):
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    call(f'systemctl reload-or-restart openvpn@{interface}.service')
+    action = 'reload-or-restart'
+    if 'restart_required' in openvpn:
+        action = 'restart'
+    call(f'systemctl {action} openvpn@{interface}.service')
 
     conf = VTunIf.get_config()
     conf['device_type'] = openvpn['device_type']
