@@ -231,7 +231,7 @@
                 <properties>
                   <help>Action to take if a child SA is unexpectedly closed</help>
                   <completionHelp>
-                    <list>none hold clear restart</list>
+                    <list>none hold restart</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
@@ -242,15 +242,11 @@
                     <description>Attempt to re-negotiate when matching traffic is seen</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>clear</format>
-                    <description>Remove the connection immediately</description>
-                  </valueHelp>
-                  <valueHelp>
                     <format>restart</format>
                     <description>Attempt to re-negotiate the connection immediately</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(none|hold|clear|restart)$</regex>
+                    <regex>^(none|hold|restart)$</regex>
                   </constraint>
                 </properties>
               </leafNode>

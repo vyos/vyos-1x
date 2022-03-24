@@ -87,9 +87,10 @@
                 start_action = none
 {%     endif %}
 {%     if ike.dead_peer_detection is defined %}
-{%       set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+{%       set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'restart'} %}
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
 {%     endif %}
+                close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
             }
 {%   elif peer_conf.tunnel is defined %}
 {%     for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
@@ -137,9 +138,10 @@
                 start_action = none
 {%       endif %}
 {%       if ike.dead_peer_detection is defined %}
-{%         set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'start'} %}
+{%         set dpd_translate = {'clear': 'clear', 'hold': 'trap', 'restart': 'restart'} %}
                 dpd_action = {{ dpd_translate[ike.dead_peer_detection.action] }}
 {%       endif %}
+                close_action = {{ {'none': 'none', 'hold': 'trap', 'restart': 'start'}[ike.close_action] }}
 {%       if peer_conf.vti is defined and peer_conf.vti.bind is defined %}
                 updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
                 {# The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
