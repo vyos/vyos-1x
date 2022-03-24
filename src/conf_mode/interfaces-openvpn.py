@@ -40,6 +40,7 @@ from vyos.template import is_ipv6
 from vyos.util import call
 from vyos.util import chown
 from vyos.util import chmod_600
+from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import makedir
 from vyos.validate import is_addr_assigned
@@ -303,8 +304,8 @@ def verify(openvpn):
     # verify specified IP address is present on any interface on this system
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
-            raise ConfigError('local-host IP address "{local_host}" not assigned' \
-                              ' to any interface'.format(**openvpn))
+            print('local-host IP address "{local_host}" not assigned' \
+                  ' to any interface'.format(**openvpn))
 
     # TCP active
     if openvpn['protocol'] == 'tcp-active':
@@ -511,6 +512,13 @@ def apply(openvpn):
             VTunIf(interface).remove()
 
         return None
+
+    # verify specified IP address is present on any interface on this system
+    # Allow to bind service to nonlocal address, if it virtaual-vrrp address
+    # or if address will be assign later
+    if 'local_host' in openvpn:
+        if not is_addr_assigned(openvpn['local_host']):
+            cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
