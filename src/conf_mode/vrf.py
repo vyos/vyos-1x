@@ -26,7 +26,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
-from vyos.util import sysctl
+from vyos.util import sysctl_write
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -144,8 +144,8 @@ def apply(vrf):
     bind_all = '0'
     if 'bind-to-all' in vrf:
         bind_all = '1'
-    sysctl('net.ipv4.tcp_l3mdev_accept', bind_all)
-    sysctl('net.ipv4.udp_l3mdev_accept', bind_all)
+    sysctl_write('net.ipv4.tcp_l3mdev_accept', bind_all)
+    sysctl_write('net.ipv4.udp_l3mdev_accept', bind_all)
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if os.path.isdir(f'/sys/class/net/{tmp}'):
