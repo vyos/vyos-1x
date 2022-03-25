@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,11 +20,10 @@ from sys import exit
 
 from glob import glob
 from vyos.config import Config
-from vyos.configdict import node_changed
 from vyos.template import render_to_string
-from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import read_file
+from vyos.util import sysctl_write
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -88,21 +87,21 @@ def apply(mpls):
     labels = '0'
     if 'interface' in mpls:
         labels = '1048575'
-    call(f'sysctl -wq net.mpls.platform_labels={labels}')
+    sysctl_write('net.mpls.platform_labels', labels)
 
     # Check for changes in global MPLS options
     if 'parameters' in mpls:
             # Choose whether to copy IP TTL to MPLS header TTL
         if 'no_propagate_ttl' in mpls['parameters']:
-            call('sysctl -wq net.mpls.ip_ttl_propagate=0')
+            sysctl_write('net.mpls.ip_ttl_propagate', 0)
             # Choose whether to limit maximum MPLS header TTL
         if 'maximum_ttl' in mpls['parameters']:
             ttl = mpls['parameters']['maximum_ttl']
-            call(f'sysctl -wq net.mpls.default_ttl={ttl}')
+            sysctl_write('net.mpls.default_ttl', ttl)
     else:
         # Set default global MPLS options if not defined.
-        call('sysctl -wq net.mpls.ip_ttl_propagate=1')
-        call('sysctl -wq net.mpls.default_ttl=255')
+        sysctl_write('net.mpls.ip_ttl_propagate', 1)
+        sysctl_write('net.mpls.default_ttl', 255)
 
     # Enable and disable MPLS processing on interfaces per configuration
     if 'interface' in mpls:
@@ -116,11 +115,11 @@ def apply(mpls):
             if '1' in interface_state:
                 if system_interface not in mpls['interface']:
                     system_interface = system_interface.replace('.', '/')
-                    call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
+                    sysctl_write(f'net.mpls.conf.{system_interface}.input', 0)
             elif '0' in interface_state:
                 if system_interface in mpls['interface']:
                     system_interface = system_interface.replace('.', '/')
-                    call(f'sysctl -wq net.mpls.conf.{system_interface}.input=1')
+                    sysctl_write(f'net.mpls.conf.{system_interface}.input', 1)
     else:
         system_interfaces = []
         # If MPLS interfaces are not configured, set MPLS processing disabled
@@ -128,7 +127,7 @@ def apply(mpls):
             system_interfaces.append(os.path.basename(interface)) 
         for system_interface in system_interfaces:
             system_interface = system_interface.replace('.', '/')
-            call(f'sysctl -wq net.mpls.conf.{system_interface}.input=0')
+            sysctl_write(f'net.mpls.conf.{system_interface}.input', 0)
 
     return None
 
