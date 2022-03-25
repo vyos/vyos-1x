@@ -814,11 +814,16 @@ def boot_configuration_complete() -> bool:
         return True
     return False
 
+def sysctl_read(name):
+    """ Read and return current value of sysctl() option """
+    tmp = cmd(f'sysctl {name}')
+    return tmp.split()[-1]
+
 def sysctl(name, value):
     """ Change value via sysctl() - return True if changed, False otherwise """
     tmp = cmd(f'sysctl {name}')
     # last list index contains the actual value - only write if value differs
-    if tmp.split()[-1] != str(value):
+    if sysctl_read(name) != str(value):
         call(f'sysctl -wq {name}={value}')
         return True
     return False
