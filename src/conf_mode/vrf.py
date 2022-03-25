@@ -29,7 +29,7 @@ from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos.util import popen
 from vyos.util import run
-from vyos.util import sysctl
+from vyos.util import sysctl_write
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -154,8 +154,8 @@ def apply(vrf):
     bind_all = '0'
     if 'bind-to-all' in vrf:
         bind_all = '1'
-    sysctl('net.ipv4.tcp_l3mdev_accept', bind_all)
-    sysctl('net.ipv4.udp_l3mdev_accept', bind_all)
+    sysctl_write('net.ipv4.tcp_l3mdev_accept', bind_all)
+    sysctl_write('net.ipv4.udp_l3mdev_accept', bind_all)
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
         if os.path.isdir(f'/sys/class/net/{tmp}'):

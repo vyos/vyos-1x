@@ -1011,7 +1011,7 @@ def sysctl_read(name):
     tmp = cmd(f'sysctl {name}')
     return tmp.split()[-1]
 
-def sysctl(name, value):
+def sysctl_write(name, value):
     """ Change value via sysctl() - return True if changed, False otherwise """
     tmp = cmd(f'sysctl {name}')
     # last list index contains the actual value - only write if value differs

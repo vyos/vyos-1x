@@ -22,7 +22,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import leaf_node_changed
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import sysctl
+from vyos.util import sysctl_write
 from vyos.util import write_file
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -58,7 +58,7 @@ def apply(opt):
     # disable IPv6 globally
     tmp = dict_search('disable', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl('net.ipv6.conf.all.disable_ipv6', value)
+    sysctl_write('net.ipv6.conf.all.disable_ipv6', value)
 
     if 'reboot_required' in opt:
         print('Changing IPv6 disable parameter will only take affect\n' \
@@ -67,17 +67,17 @@ def apply(opt):
     # configure multipath
     tmp = dict_search('multipath.layer4_hashing', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl('net.ipv6.fib_multipath_hash_policy', value)
+    sysctl_write('net.ipv6.fib_multipath_hash_policy', value)
 
     # Apply ND threshold values
     # table_size has a default value - thus the key always exists
     size = int(dict_search('neighbor.table_size', opt))
     # Amount upon reaching which the records begin to be cleared immediately
-    sysctl('net.ipv6.neigh.default.gc_thresh3', size)
+    sysctl_write('net.ipv6.neigh.default.gc_thresh3', size)
     # Amount after which the records begin to be cleaned after 5 seconds
-    sysctl('net.ipv6.neigh.default.gc_thresh2', size // 2)
+    sysctl_write('net.ipv6.neigh.default.gc_thresh2', size // 2)
     # Minimum number of stored records is indicated which is not cleared
-    sysctl('net.ipv6.neigh.default.gc_thresh1', size // 8)
+    sysctl_write('net.ipv6.neigh.default.gc_thresh1', size // 8)
 
     # enable/disable IPv6 forwarding
     tmp = dict_search('disable_forwarding', opt)

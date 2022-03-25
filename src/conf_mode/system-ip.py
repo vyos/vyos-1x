@@ -20,7 +20,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import sysctl
+from vyos.util import sysctl_write
 from vyos.util import write_file
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -53,11 +53,11 @@ def apply(opt):
     # table_size has a default value - thus the key always exists
     size = int(dict_search('arp.table_size', opt))
     # Amount upon reaching which the records begin to be cleared immediately
-    sysctl('net.ipv4.neigh.default.gc_thresh3', size)
+    sysctl_write('net.ipv4.neigh.default.gc_thresh3', size)
     # Amount after which the records begin to be cleaned after 5 seconds
-    sysctl('net.ipv4.neigh.default.gc_thresh2', size // 2)
+    sysctl_write('net.ipv4.neigh.default.gc_thresh2', size // 2)
     # Minimum number of stored records is indicated which is not cleared
-    sysctl('net.ipv4.neigh.default.gc_thresh1', size // 8)
+    sysctl_write('net.ipv4.neigh.default.gc_thresh1', size // 8)
 
     # enable/disable IPv4 forwarding
     tmp = dict_search('disable_forwarding', opt)
@@ -67,11 +67,11 @@ def apply(opt):
     # configure multipath
     tmp = dict_search('multipath.ignore_unreachable_nexthops', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl('net.ipv4.fib_multipath_use_neigh', value)
+    sysctl_write('net.ipv4.fib_multipath_use_neigh', value)
 
     tmp = dict_search('multipath.layer4_hashing', opt)
     value = '1' if (tmp != None) else '0'
-    sysctl('net.ipv4.fib_multipath_hash_policy', value)
+    sysctl_write('net.ipv4.fib_multipath_hash_policy', value)
 
 if __name__ == '__main__':
     try:
