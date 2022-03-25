@@ -5,6 +5,7 @@
       <node name="ipv6" owner="${vyos_conf_scripts_dir}/system-ipv6.py">
         <properties>
           <help>IPv6 Settings</help>
+          <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
           <priority>290</priority>
         </properties>
         <children>

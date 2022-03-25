@@ -5,7 +5,8 @@
       <node name="ip" owner="${vyos_conf_scripts_dir}/system-ip.py">
         <properties>
           <help>IPv4 Settings</help>
-          <priority>400</priority>
+          <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
+          <priority>290</priority>
         </properties>
         <children>
           <node name="arp">
