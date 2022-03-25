@@ -81,7 +81,6 @@ class TestProtocolsMPLS(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_mpls_basic(self):
-        self.debug = True
         router_id = '1.2.3.4'
         transport_ipv4_addr = '5.6.7.8'
         interfaces = Section.interfaces('ethernet')
