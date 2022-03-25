@@ -38,6 +38,7 @@ from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.util import is_systemd_service_active
+from vyos.util import sysctl_read
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -1357,47 +1358,49 @@ class Interface(Control):
         value = tmp if (tmp != None) else '0'
         self.set_ipv4_source_validation(value)
 
-        # IPv6 forwarding
-        tmp = dict_search('ipv6.disable_forwarding', config)
-        value = '0' if (tmp != None) else '1'
-        self.set_ipv6_forwarding(value)
+        # Only change IPv6 parameters if IPv6 was not explicitly disabled
+        if sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0':
+            # IPv6 forwarding
+            tmp = dict_search('ipv6.disable_forwarding', config)
+            value = '0' if (tmp != None) else '1'
+            self.set_ipv6_forwarding(value)
 
-        # IPv6 router advertisements
-        tmp = dict_search('ipv6.address.autoconf', config)
-        value = '2' if (tmp != None) else '1'
-        if 'dhcpv6' in new_addr:
-            value = '2'
-        self.set_ipv6_accept_ra(value)
+            # IPv6 router advertisements
+            tmp = dict_search('ipv6.address.autoconf', config)
+            value = '2' if (tmp != None) else '1'
+            if 'dhcpv6' in new_addr:
+                value = '2'
+            self.set_ipv6_accept_ra(value)
 
-        # IPv6 address autoconfiguration
-        tmp = dict_search('ipv6.address.autoconf', config)
-        value = '1' if (tmp != None) else '0'
-        self.set_ipv6_autoconf(value)
+            # IPv6 address autoconfiguration
+            tmp = dict_search('ipv6.address.autoconf', config)
+            value = '1' if (tmp != None) else '0'
+            self.set_ipv6_autoconf(value)
 
-        # IPv6 Duplicate Address Detection (DAD) tries
-        tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
-        value = tmp if (tmp != None) else '1'
-        self.set_ipv6_dad_messages(value)
+            # IPv6 Duplicate Address Detection (DAD) tries
+            tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
+            value = tmp if (tmp != None) else '1'
+            self.set_ipv6_dad_messages(value)
 
-        # MTU - Maximum Transfer Unit
-        if 'mtu' in config:
-            self.set_mtu(config.get('mtu'))
+            # MTU - Maximum Transfer Unit
+            if 'mtu' in config:
+                self.set_mtu(config.get('mtu'))
 
-        # Delete old IPv6 EUI64 addresses before changing MAC
-        for addr in (dict_search('ipv6.address.eui64_old', config) or []):
-            self.del_ipv6_eui64_address(addr)
+            # Delete old IPv6 EUI64 addresses before changing MAC
+            for addr in (dict_search('ipv6.address.eui64_old', config) or []):
+                self.del_ipv6_eui64_address(addr)
 
-        # Manage IPv6 link-local addresses
-        if dict_search('ipv6.address.no_default_link_local', config) != None:
-            self.del_ipv6_eui64_address('fe80::/64')
-        else:
-            self.add_ipv6_eui64_address('fe80::/64')
+            # Manage IPv6 link-local addresses
+            if dict_search('ipv6.address.no_default_link_local', config) != None:
+                self.del_ipv6_eui64_address('fe80::/64')
+            else:
+                self.add_ipv6_eui64_address('fe80::/64')
 
-        # Add IPv6 EUI-based addresses
-        tmp = dict_search('ipv6.address.eui64', config)
-        if tmp:
-            for addr in tmp:
-                self.add_ipv6_eui64_address(addr)
+            # Add IPv6 EUI-based addresses
+            tmp = dict_search('ipv6.address.eui64', config)
+            if tmp:
+                for addr in tmp:
+                    self.add_ipv6_eui64_address(addr)
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
