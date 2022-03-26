@@ -159,8 +159,14 @@ def verify(bgp):
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
-                if is_ip(peer) and is_addr_assigned(peer):
-                    raise ConfigError(f'Can not configure a local address as neighbor "{peer}"')
+                vrf = None
+                vrf_error_msg = f' in default VRF!'
+                if 'vrf' in bgp:
+                    vrf = bgp['vrf']
+                    vrf_error_msg = f' in VRF "{vrf}"!'
+
+                if is_ip(peer) and is_addr_assigned(peer, vrf):
+                    raise ConfigError(f'Can not configure local address as neighbor "{peer}"{vrf_error_msg}')
                 elif is_interface(peer):
                     if 'peer_group' in peer_config:
                         raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
