@@ -43,14 +43,13 @@ def _are_same_ip(one, two):
     s_two = AF_INET if is_ipv4(two) else AF_INET6
     return inet_pton(f_one, one) == inet_pton(f_one, two)
 
-def is_intf_addr_assigned(intf, address, vrf=None) -> bool:
+def is_intf_addr_assigned(intf, address) -> bool:
     """
     Verify if the given IPv4/IPv6 address is assigned to specific interface.
     It can check both a single IP address (e.g. 192.0.2.1 or a assigned CIDR
     address 192.0.2.1/24.
     """
     from vyos.template import is_ipv4
-    from vyos.util import get_interface_config
 
     from netifaces import ifaddresses
     from netifaces import AF_INET
@@ -66,12 +65,6 @@ def is_intf_addr_assigned(intf, address, vrf=None) -> bool:
         ifaces = ifaddresses(intf)
     except ValueError as e:
         print(e)
-        return False
-
-    # Check if interface belongs to requested VRF. If interfaces does not
-    # belong to requested VRF - bail out early
-    tmp = get_interface_config(intf)
-    if 'master' in tmp and tmp['master'] != vrf:
         return False
 
     # determine IP version (AF_INET or AF_INET6) depending on passed address
@@ -104,14 +97,20 @@ def is_intf_addr_assigned(intf, address, vrf=None) -> bool:
 
     return False
 
-def is_addr_assigned(addr, vrf=None) -> bool:
-    """
-    Verify if the given IPv4/IPv6 address is assigned to any interface
-    """
+def is_addr_assigned(ip_address, vrf=None) -> bool:
+    """ Verify if the given IPv4/IPv6 address is assigned to any interfac """
     from netifaces import interfaces
-    for intf in interfaces():
-        tmp = is_intf_addr_assigned(intf, addr, vrf)
-        if tmp == True:
+    from vyos.util import get_interface_config
+    from vyos.util import dict_search
+    for interface in interfaces():
+        # Check if interface belongs to the requested VRF, if this is not the
+        # case there is no need to proceed with this data set - continue loop
+        # with next element
+        tmp = get_interface_config(interface)
+        if dict_search('master', tmp) != vrf:
+            continue
+
+        if is_intf_addr_assigned(interface, ip_address):
             return True
 
     return False
