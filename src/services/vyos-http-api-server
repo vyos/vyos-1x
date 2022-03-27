@@ -648,10 +648,12 @@ if __name__ == '__main__':
     app.state.vyos_keys = server_config['api_keys']
 
     app.state.vyos_debug = server_config['debug']
+    app.state.vyos_gql = server_config['gql']
     app.state.vyos_strict = server_config['strict']
     app.state.vyos_origins = server_config.get('cors', {}).get('origins', [])
 
-    graphql_init(app)
+    if app.state.vyos_gql:
+        graphql_init(app)
 
     try:
         if not server_config['socket']:
