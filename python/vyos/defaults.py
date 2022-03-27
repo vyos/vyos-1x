@@ -48,6 +48,7 @@ api_data = {
     'port' : '8080',
     'socket' : False,
     'strict' : False,
+    'gql' : False,
     'debug' : False,
     'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
 }
