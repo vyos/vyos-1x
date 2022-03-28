@@ -653,6 +653,13 @@ def apply(openvpn):
 
         return None
 
+    # verify specified IP address is present on any interface on this system
+    # Allow to bind service to nonlocal address, if it virtaual-vrrp address
+    # or if address will be assign later
+    if 'local_host' in openvpn:
+        if not is_addr_assigned(openvpn['local_host']):
+            cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
+
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
     action = 'reload-or-restart'
