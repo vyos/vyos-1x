@@ -27,6 +27,7 @@ from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import sysctl_write
+from vyos.util import is_ipv6_enabled
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -194,10 +195,11 @@ def apply(vrf):
 
             # set VRF description for e.g. SNMP monitoring
             vrf_if = Interface(name)
-            # We also should add proper loopback IP addresses to the newly
-            # created VRFs for services bound to the loopback address (SNMP, NTP)
+            # We also should add proper loopback IP addresses to the newly added
+            # VRF for services bound to the loopback address (SNMP, NTP)
             vrf_if.add_addr('127.0.0.1/8')
-            vrf_if.add_addr('::1/128')
+            if is_ipv6_enabled():
+                vrf_if.add_addr('::1/128')
             # add VRF description if available
             vrf_if.set_alias(config.get('description', ''))
 
