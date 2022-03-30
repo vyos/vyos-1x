@@ -1083,6 +1083,10 @@ class Interface(Control):
 
         addr_is_v4 = is_ipv4(addr)
 
+        # Failsave - do not add IPv6 address if IPv6 is disabled
+        if is_ipv6(addr) and not is_ipv6_enabled():
+            return False
+
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
