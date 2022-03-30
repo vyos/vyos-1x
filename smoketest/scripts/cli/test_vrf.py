@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,9 +26,10 @@ from netifaces import interfaces
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
-from vyos.template import is_ipv6
+from vyos.template import is_ipv4
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 base_path = ['vrf']
@@ -108,9 +109,14 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             #  ...
             regex = f'{table}\s+{vrf}\s+#\s+{description}'
             self.assertTrue(re.findall(regex, iproute2_config))
+
+            tmp = get_interface_config(vrf)
+            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
+            # Increment table ID for the next run
             table = str(int(table) + 1)
 
-    def test_vrf_loopback_ips(self):
+    def test_vrf_loopbacks_ips(self):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
@@ -121,10 +127,48 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
+        loopbacks = ['127.0.0.1', '::1']
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
-            self.assertTrue(is_intf_addr_assigned(vrf, '127.0.0.1'))
-            self.assertTrue(is_intf_addr_assigned(vrf, '::1'))
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+            # Test for proper loopback IP assignment
+            for addr in loopbacks:
+                self.assertTrue(is_intf_addr_assigned(vrf, addr))
+
+    def test_vrf_loopbacks_no_ipv6(self):
+        table = '2002'
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', str(table)])
+            table = str(int(table) + 1)
+
+        # Globally disable IPv6 - this will remove all IPv6 interface addresses
+        self.cli_set(['system', 'ipv6', 'disable'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = '2002'
+        loopbacks = ['127.0.0.1', '::1']
+        for vrf in vrfs:
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+
+            # Verify VRF table ID
+            tmp = get_interface_config(vrf)
+            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
+            # Test for proper loopback IP assignment
+            for addr in loopbacks:
+                if is_ipv4(addr):
+                    self.assertTrue(is_intf_addr_assigned(vrf, addr))
+                else:
+                    self.assertFalse(is_intf_addr_assigned(vrf, addr))
+
+            table = str(int(table) + 1)
+
+        self.cli_delete(['system', 'ipv6'])
 
     def test_vrf_bind_all(self):
         table = '2000'
