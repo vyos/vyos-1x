@@ -990,6 +990,10 @@ class Interface(Control):
                     "Can't configure both static IPv4 and DHCP address "
                     "on the same interface"))
 
+        # Failsave - do not add IPv6 address if IPv6 is disabled
+        if is_ipv6(addr) and not is_ipv6_enabled():
+            return False
+
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
