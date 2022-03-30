@@ -13,9 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import vyos.util
-
 from vyos.ifconfig.interface import Interface
+from vyos.util import is_ipv6_enabled
 
 @Interface.register
 class LoopbackIf(Interface):
@@ -33,8 +32,6 @@ class LoopbackIf(Interface):
             'bridgeable': True,
         }
     }
-
-    name = 'loopback'
 
     def remove(self):
         """
@@ -62,11 +59,11 @@ class LoopbackIf(Interface):
         on any interface. """
 
         addr = config.get('address', [])
-        # We must ensure that the loopback addresses are never deleted from the system
-        addr += ['127.0.0.1/8']
 
-        if (vyos.util.sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0'):
-            addr += ['::1/128']
+        # We must ensure that the loopback addresses are never deleted from the system
+        addr.append('127.0.0.1/8')
+        if is_ipv6_enabled():
+            addr.append('::1/128')
 
         # Update IP address entry in our dictionary
         config.update({'address' : addr})
