@@ -38,7 +38,7 @@ from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.util import is_systemd_service_active
-from vyos.util import sysctl_read
+from vyos.util import is_ipv6_enabled
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -1359,7 +1359,7 @@ class Interface(Control):
         self.set_ipv4_source_validation(value)
 
         # Only change IPv6 parameters if IPv6 was not explicitly disabled
-        if sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0':
+        if is_ipv6_enabled():
             # IPv6 forwarding
             tmp = dict_search('ipv6.disable_forwarding', config)
             value = '0' if (tmp != None) else '1'

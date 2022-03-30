@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,3 +24,15 @@ class TestVyOSUtil(TestCase):
         new_data = mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
 
+    def test_sysctl_read(self):
+        self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
+
+    def test_ipv6_enabled(self):
+        tmp = sysctl_read('net.ipv6.conf.all.disable_ipv6')
+        # We need to test for both variants as this depends on how the
+        # Docker container is started (with or without IPv6 support) - so we
+        # will simply check both cases to not make the users life miserable.
+        if tmp == '0':
+            self.assertTrue(is_ipv6_enabled())
+        else:
+            self.assertFalse(is_ipv6_enabled())
