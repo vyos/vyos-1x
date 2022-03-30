@@ -1089,8 +1089,11 @@ class Interface(Control):
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True)
         elif not is_intf_addr_assigned(self.ifname, addr):
-            self._cmd(f'ip addr add "{addr}" '
-                    f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
+            tmp = f'ip addr add {addr} dev {self.ifname}'
+            # Add broadcast address for IPv4
+            if is_ipv4(addr): tmp += ' brd +'
+
+            self._cmd(tmp)
         else:
             return False
 
