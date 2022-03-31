@@ -21,6 +21,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.template import is_ipv4
 from vyos.util import read_file
 from vyos.util import is_ipv6_enabled
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 base_path = ['system', 'ipv6']
@@ -68,6 +69,17 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
                 self.assertTrue(is_intf_addr_assigned('lo', addr))
             else:
                 self.assertFalse(is_intf_addr_assigned('lo', addr))
+
+        # T4330: Verify MTU can be changed with IPv6 disabled
+        mtu = '1600'
+        eth_if = 'eth0'
+        self.cli_set(['interfaces', 'ethernet', eth_if, 'mtu', mtu])
+        self.cli_commit()
+
+        tmp = get_interface_config(eth_if)
+        self.assertEqual(tmp['mtu'], int(mtu))
+
+        self.cli_delete(['interfaces', 'ethernet', eth_if, 'mtu'])
 
     def test_system_ipv6_strict_dad(self):
         # This defaults to 1
