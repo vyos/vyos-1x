@@ -1530,10 +1530,6 @@ class Interface(Control):
             value = tmp if (tmp != None) else '1'
             self.set_ipv6_dad_messages(value)
 
-            # MTU - Maximum Transfer Unit
-            if 'mtu' in config:
-                self.set_mtu(config.get('mtu'))
-
             # Delete old IPv6 EUI64 addresses before changing MAC
             for addr in (dict_search('ipv6.address.eui64_old', config) or []):
                 self.del_ipv6_eui64_address(addr)
@@ -1549,6 +1545,10 @@ class Interface(Control):
             if tmp:
                 for addr in tmp:
                     self.add_ipv6_eui64_address(addr)
+
+        # MTU - Maximum Transfer Unit
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
