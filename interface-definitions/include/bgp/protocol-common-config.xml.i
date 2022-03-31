@@ -1430,6 +1430,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="no-suppress-duplicates">
+      <properties>
+        <help>Disable suppress duplicate updates if the route actually not changed</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="reject-as-sets">
       <properties>
         <help>Reject routes with AS_SET or AS_CONFED_SET flag</help>

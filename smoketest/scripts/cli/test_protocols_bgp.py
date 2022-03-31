@@ -274,6 +274,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
         self.cli_set(base_path + ['parameters', 'fast-convergence'])
         self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
+        self.cli_set(base_path + ['parameters', 'no-suppress-duplicates'])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
@@ -305,6 +306,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
+        self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
         self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
