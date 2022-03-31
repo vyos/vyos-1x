@@ -185,4 +185,4 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

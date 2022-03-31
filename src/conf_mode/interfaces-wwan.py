@@ -23,6 +23,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
 from vyos.util import cmd
@@ -77,6 +78,7 @@ def verify(wwan):
     verify_interface_exists(ifname)
     verify_authentication(wwan)
     verify_vrf(wwan)
+    verify_redirect(wwan)
 
     return None
 

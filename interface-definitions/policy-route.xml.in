@@ -5,6 +5,9 @@
       <tagNode name="route6" owner="${vyos_conf_scripts_dir}/policy-route.py">
         <properties>
           <help>Policy route rule set name for IPv6</help>
+          <constraint>
+            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+          </constraint>
           <priority>201</priority>
         </properties>
         <children>
@@ -51,6 +54,9 @@
       <tagNode name="route" owner="${vyos_conf_scripts_dir}/policy-route.py">
         <properties>
           <help>Policy route rule set name for IPv4</help>
+          <constraint>
+            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+          </constraint>
           <priority>201</priority>
         </properties>
         <children>

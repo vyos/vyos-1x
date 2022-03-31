@@ -48,6 +48,7 @@
 "protocols_ripng.py",
 "protocols_static.py",
 "protocols_static_multicast.py",
+"qos.py",
 "salt-minion.py",
 "service_console-server.py",
 "service_ids_fastnetmon.py",

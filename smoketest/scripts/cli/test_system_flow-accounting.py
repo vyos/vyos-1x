@@ -39,6 +39,9 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
     def tearDown(self):
+        # after service removal process must no longer run
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -213,9 +216,9 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         uacctd = read_file(uacctd_conf)
 
         tmp = []
-        tmp.append('memory')
         for server, server_config in netflow_server.items():
             tmp.append(f'nfprobe[nf_{server}]')
+        tmp.append('memory')
         self.assertIn('plugins: ' + ','.join(tmp), uacctd)
 
         for server, server_config in netflow_server.items():

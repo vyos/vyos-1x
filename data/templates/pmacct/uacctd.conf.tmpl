@@ -19,18 +19,18 @@ imt_mem_pools_number: 169
 {% endif %}
 
 {% set plugin = [] %}
-{% if disable_imt is not defined %}
-{%   set plugin = ['memory'] %}
-{% endif %}
 {% if netflow is defined and netflow.server is defined and netflow.server is not none %}
 {%   for server in netflow.server %}
-{%     set plugin = plugin.append('nfprobe[nf_' ~ server ~ ']') %}
+{%     set _ = plugin.append('nfprobe[nf_' ~ server ~ ']') %}
 {%   endfor %}
 {% endif %}
 {% if sflow is defined and sflow.server is defined and sflow.server is not none %}
 {%   for server in sflow.server %}
-{%     set plugin = plugin.append('sfprobe[sf_' ~ server ~ ']') %}
+{%     set _ = plugin.append('sfprobe[sf_' ~ server ~ ']') %}
 {%   endfor %}
+{% endif %}
+{% if disable_imt is not defined %}
+{%     set _ = plugin.append('memory') %}
 {% endif %}
 plugins: {{ plugin | join(',') }}
 

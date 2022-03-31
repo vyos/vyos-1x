@@ -1,7 +1,7 @@
 <!-- include start from static/static-route6.xml.i -->
 <tagNode name="route6">
   <properties>
-    <help>VRF static IPv6 route</help>
+    <help>Static IPv6 route</help>
     <valueHelp>
       <format>ipv6net</format>
       <description>IPv6 static route</description>
@@ -11,26 +11,8 @@
     </constraint>
   </properties>
   <children>
-    <node name="blackhole">
-      <properties>
-        <help>Silently discard pkts when matched</help>
-      </properties>
-      <children>
-        #include <include/static/static-route-distance.xml.i>
-        <leafNode name="tag">
-          <properties>
-            <help>Tag value for this route</help>
-            <valueHelp>
-              <format>u32:1-4294967295</format>
-              <description>Tag value for this route</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 1-4294967295"/>
-            </constraint>
-          </properties>
-        </leafNode>
-      </children>
-    </node>
+    #include <include/static/static-route-blackhole.xml.i>
+    #include <include/static/static-route-reject.xml.i>
     <tagNode name="interface">
       <properties>
         <help>IPv6 gateway interface name</help>

@@ -22,7 +22,7 @@
                   <help>Advertise interval</help>
                   <valueHelp>
                     <format>u32:1-255</format>
-                    <description>Advertise interval in seconds (default: 1)</description>
+                    <description>Advertise interval in seconds</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 1-255"/>
@@ -79,7 +79,7 @@
                 <children>
                   <leafNode name="failure-count">
                     <properties>
-                      <help>Health check failure count required for transition to fault (default: 3)</help>
+                      <help>Health check failure count required for transition to fault</help>
                       <constraint>
                         <validator name="numeric" argument="--positive" />
                       </constraint>
@@ -88,7 +88,7 @@
                   </leafNode>
                   <leafNode name="interval">
                     <properties>
-                      <help>Health check execution interval in seconds (default: 60)</help>
+                      <help>Health check execution interval in seconds</help>
                       <constraint>
                         <validator name="numeric" argument="--positive"/>
                       </constraint>
@@ -160,7 +160,7 @@
               </leafNode>
               <leafNode name="priority">
                 <properties>
-                  <help>Router priority (default: 100)</help>
+                  <help>Router priority</help>
                   <valueHelp>
                     <format>u32:1-255</format>
                     <description>Router priority</description>
@@ -333,7 +333,7 @@
               <help>Interval between health-checks (in seconds)</help>
               <valueHelp>
                 <format>u32:1-600</format>
-                <description>Interval in seconds (default: 10)</description>
+                <description>Interval in seconds</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-3600"/>
@@ -343,7 +343,7 @@
           </leafNode>
           <leafNode name="forward-method">
             <properties>
-              <help>Forwarding method (default: NAT)</help>
+              <help>Forwarding method</help>
               <completionHelp>
                 <list>direct nat tunnel</list>
               </completionHelp>
@@ -371,7 +371,7 @@
               <help>Timeout for persistent connections</help>
               <valueHelp>
                 <format>u32:1-86400</format>
-                <description>Timeout for persistent connections (default: 300)</description>
+                <description>Timeout for persistent connections</description>
               </valueHelp>
               <constraint>
                 <validator name="numeric" argument="--range 1-86400"/>
@@ -381,7 +381,7 @@
           </leafNode>
           <leafNode name="protocol">
             <properties>
-              <help>Protocol for port checks (default: TCP)</help>
+              <help>Protocol for port checks</help>
               <completionHelp>
                 <list>tcp udp</list>
               </completionHelp>

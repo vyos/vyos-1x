@@ -173,7 +173,7 @@ def verify_eapol(config):
             if ca_cert_name not in config['pki']['ca']:
                 raise ConfigError('Invalid CA certificate specified for EAPoL')
 
-            ca_cert = config['pki']['ca'][cert_name]
+            ca_cert = config['pki']['ca'][ca_cert_name]
 
             if 'certificate' not in ca_cert:
                 raise ConfigError('Invalid CA certificate specified for EAPoL')
@@ -190,6 +190,19 @@ def verify_mirror(config):
             if mirror_interface == config['ifname']:
                 raise ConfigError(f'Can not mirror "{direction}" traffic back ' \
                                    'the originating interface!')
+
+def verify_redirect(config):
+    """
+    Common helper function used by interface implementations to perform
+    recurring validation of the redirect interface configuration.
+
+    It makes no sense to mirror and redirect traffic at the same time!
+    """
+    if {'mirror', 'redirect'} <= set(config):
+        raise ConfigError('Can not do both redirect and mirror')
+
+    if dict_search('traffic_policy.in', config) != None:
+        raise ConfigError('Can not use ingress policy and redirect')
 
 def verify_authentication(config):
     """
@@ -224,9 +237,10 @@ def verify_bridge_delete(config):
     when interface also is part of a bridge.
     """
     if 'is_bridge_member' in config:
-        raise ConfigError(
-            'Interface "{ifname}" cannot be deleted as it is a '
-            'member of bridge "{is_bridge_member}"!'.format(**config))
+        interface = config['ifname']
+        for bridge in config['is_bridge_member']:
+            raise ConfigError(f'Interface "{interface}" cannot be deleted as it '
+                              f'is a member of bridge "{bridge}"!')
 
 def verify_interface_exists(ifname):
     """
@@ -314,6 +328,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(vlan)
         verify_address(vlan)
         verify_vrf(vlan)
+        verify_redirect(vlan)
         verify_mtu_parent(vlan, config)
 
     # 802.1ad (Q-in-Q) VLANs
@@ -322,6 +337,7 @@ def verify_vlan_config(config):
         verify_dhcpv6(s_vlan)
         verify_address(s_vlan)
         verify_vrf(s_vlan)
+        verify_redirect(s_vlan)
         verify_mtu_parent(s_vlan, config)
 
         for c_vlan in s_vlan.get('vif_c', {}):
@@ -329,6 +345,7 @@ def verify_vlan_config(config):
             verify_dhcpv6(c_vlan)
             verify_address(c_vlan)
             verify_vrf(c_vlan)
+            verify_redirect(c_vlan)
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
 

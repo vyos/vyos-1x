@@ -93,9 +93,9 @@ def verify(conntrack):
             raise ConfigError('Can not configure expect-sync "all" with other protocols!')
 
     if 'listen_address' in conntrack:
-        address = conntrack['listen_address']
-        if not is_addr_assigned(address):
-            raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
+        for address in conntrack['listen_address']:
+            if not is_addr_assigned(address):
+                raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
 
     vrrp_group = dict_search('failover_mechanism.vrrp.sync_group', conntrack)
     if vrrp_group == None:

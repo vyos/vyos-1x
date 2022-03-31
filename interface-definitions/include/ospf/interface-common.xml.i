@@ -20,7 +20,7 @@
 </leafNode>
 <leafNode name="priority">
   <properties>
-    <help>Router priority (default: 1)</help>
+    <help>Router priority</help>
     <valueHelp>
       <format>u32:0-255</format>
       <description>OSPF router priority cost</description>

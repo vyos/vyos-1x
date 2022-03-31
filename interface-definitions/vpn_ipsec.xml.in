@@ -30,7 +30,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>disable</format>
-                    <description>Disable ESP compression (default)</description>
+                    <description>Disable ESP compression</description>
                   </valueHelp>
                   <valueHelp>
                     <format>enable</format>
@@ -47,13 +47,37 @@
                   <help>ESP lifetime</help>
                   <valueHelp>
                     <format>u32:30-86400</format>
-                    <description>ESP lifetime in seconds (default: 3600)</description>
+                    <description>ESP lifetime in seconds</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 30-86400"/>
                   </constraint>
                 </properties>
                 <defaultValue>3600</defaultValue>
+              </leafNode>
+              <leafNode name="life-bytes">
+                <properties>
+                  <help>ESP life in bytes</help>
+                  <valueHelp>
+                    <format>u32:1024-26843545600000</format>
+                    <description>ESP life in bytes</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1024-26843545600000"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="life-packets">
+                <properties>
+                  <help>ESP life in packets</help>
+                  <valueHelp>
+                    <format>u32:1000-26843545600000</format>
+                    <description>ESP life in packets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1000-26843545600000"/>
+                  </constraint>
+                </properties>
               </leafNode>
               <leafNode name="mode">
                 <properties>
@@ -63,7 +87,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>tunnel</format>
-                    <description>Tunnel mode (default)</description>
+                    <description>Tunnel mode</description>
                   </valueHelp>
                   <valueHelp>
                     <format>transport</format>
@@ -83,7 +107,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Inherit Diffie-Hellman group from the IKE group (default)</description>
+                    <description>Inherit Diffie-Hellman group from the IKE group</description>
                   </valueHelp>
                   <valueHelp>
                     <format>dh-group1</format>
@@ -207,26 +231,22 @@
                 <properties>
                   <help>Action to take if a child SA is unexpectedly closed</help>
                   <completionHelp>
-                    <list>none hold clear restart</list>
+                    <list>none hold restart</list>
                   </completionHelp>
                   <valueHelp>
                     <format>none</format>
-                    <description>Do nothing (default)</description>
+                    <description>Do nothing</description>
                   </valueHelp>
                   <valueHelp>
                     <format>hold</format>
                     <description>Attempt to re-negotiate when matching traffic is seen</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>clear</format>
-                    <description>Remove the connection immediately</description>
-                  </valueHelp>
-                  <valueHelp>
                     <format>restart</format>
                     <description>Attempt to re-negotiate the connection immediately</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(none|hold|clear|restart)$</regex>
+                    <regex>^(none|hold|restart)$</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -243,7 +263,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>hold</format>
-                        <description>Attempt to re-negotiate the connection when matching traffic is seen (default)</description>
+                        <description>Attempt to re-negotiate the connection when matching traffic is seen</description>
                       </valueHelp>
                       <valueHelp>
                         <format>clear</format>
@@ -263,30 +283,32 @@
                       <help>Keep-alive interval</help>
                       <valueHelp>
                         <format>u32:2-86400</format>
-                        <description>Keep-alive interval in seconds (default: 30)</description>
+                        <description>Keep-alive interval in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 2-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>30</defaultValue>
                   </leafNode>
                   <leafNode name="timeout">
                     <properties>
                       <help>Dead Peer Detection keep-alive timeout (IKEv1 only)</help>
                       <valueHelp>
                         <format>u32:2-86400</format>
-                        <description>Keep-alive timeout in seconds (default 120)</description>
+                        <description>Keep-alive timeout in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 2-86400"/>
                       </constraint>
                     </properties>
+                    <defaultValue>120</defaultValue>
                   </leafNode>
                 </children>
               </node>
               <leafNode name="ikev2-reauth">
                 <properties>
-                  <help>Re-authentication of the remote peer during an IKE re-key. IKEv2 option only</help>
+                  <help>Re-authentication of the remote peer during an IKE re-key - IKEv2 only</help>
                   <completionHelp>
                     <list>yes no</list>
                   </completionHelp>
@@ -296,7 +318,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>no</format>
-                    <description>Disable remote host re-authenticaton during an IKE rekey. (default)</description>
+                    <description>Disable remote host re-authenticaton during an IKE rekey</description>
                   </valueHelp>
                   <constraint>
                     <regex>^(yes|no)$</regex>
@@ -311,7 +333,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>ikev1</format>
-                    <description>Use IKEv1 for key exchange [DEFAULT]</description>
+                    <description>Use IKEv1 for key exchange</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ikev2</format>
@@ -327,7 +349,7 @@
                   <help>IKE lifetime</help>
                   <valueHelp>
                     <format>u32:30-86400</format>
-                    <description>IKE lifetime in seconds (default: 28800)</description>
+                    <description>IKE lifetime in seconds</description>
                   </valueHelp>
                   <constraint>
                     <validator name="numeric" argument="--range 30-86400"/>
@@ -343,7 +365,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>enable</format>
-                    <description>Enable MOBIKE (default for IKEv2)</description>
+                    <description>Enable MOBIKE</description>
                   </valueHelp>
                   <valueHelp>
                     <format>disable</format>
@@ -353,6 +375,7 @@
                     <regex>^(enable|disable)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>enable</defaultValue>
               </leafNode>
               <leafNode name="mode">
                 <properties>
@@ -362,7 +385,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>main</format>
-                    <description>Use the main mode (recommended, default)</description>
+                    <description>Use the main mode (recommended)</description>
                   </valueHelp>
                   <valueHelp>
                     <format>aggressive</format>
@@ -372,6 +395,7 @@
                     <regex>^(main|aggressive)$</regex>
                   </constraint>
                 </properties>
+                <defaultValue>main</defaultValue>
               </leafNode>
               <tagNode name="proposal">
                 <properties>
@@ -509,7 +533,7 @@
                   <help>strongSwan logging Level</help>
                   <valueHelp>
                     <format>0</format>
-                    <description>Very basic auditing logs e.g. SA up/SA down (default)</description>
+                    <description>Very basic auditing logs e.g. SA up/SA down</description>
                   </valueHelp>
                   <valueHelp>
                     <format>1</format>
@@ -619,6 +643,19 @@
               <leafNode name="disable-route-autoinstall">
                 <properties>
                   <help>Do not automatically install routes to remote networks</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="flexvpn">
+                <properties>
+                  <help>Allow FlexVPN vendor ID payload (IKEv2 only)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              #include <include/generic-interface.xml.i>
+              <leafNode name="virtual-ip">
+                <properties>
+                  <help>Allow install virtual-ip addresses</help>
                   <valueless/>
                 </properties>
               </leafNode>
@@ -754,7 +791,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>u32:1-86400</format>
-                        <description>Timeout in seconds (default: 28800)</description>
+                        <description>Timeout in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-86400"/>
@@ -838,11 +875,11 @@
                     <properties>
                       <help>Local IPv4 or IPv6 pool prefix exclusions</help>
                       <valueHelp>
-                        <format>ipv4</format>
+                        <format>ipv4net</format>
                         <description>Local IPv4 pool prefix exclusion</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>ipv6</format>
+                        <format>ipv6net</format>
                         <description>Local IPv6 pool prefix exclusion</description>
                       </valueHelp>
                       <constraint>
@@ -856,11 +893,11 @@
                     <properties>
                       <help>Local IPv4 or IPv6 pool prefix</help>
                       <valueHelp>
-                        <format>ipv4</format>
+                        <format>ipv4net</format>
                         <description>Local IPv4 pool prefix</description>
                       </valueHelp>
                       <valueHelp>
-                        <format>ipv6</format>
+                        <format>ipv6net</format>
                         <description>Local IPv6 pool prefix</description>
                       </valueHelp>
                       <constraint>
@@ -965,7 +1002,7 @@
                     <properties>
                       <help>Connection type</help>
                       <completionHelp>
-                        <list>initiate respond</list>
+                        <list>initiate respond none</list>
                       </completionHelp>
                       <valueHelp>
                         <format>initiate</format>
@@ -975,8 +1012,12 @@
                         <format>respond</format>
                         <description>Bring the connection up only if traffic is detected</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>none</format>
+                        <description>Load the connection only</description>
+                      </valueHelp>
                       <constraint>
-                        <regex>^(initiate|respond)$</regex>
+                        <regex>^(initiate|respond|none)$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1026,7 +1067,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>inherit</format>
-                        <description>Inherit the reauth configuration form your IKE-group (default)</description>
+                        <description>Inherit the reauth configuration form your IKE-group</description>
                       </valueHelp>
                       <constraint>
                         <regex>^(yes|no|inherit)$</regex>
@@ -1069,11 +1110,11 @@
                             <properties>
                               <help>Remote IPv4 or IPv6 prefix</help>
                               <valueHelp>
-                                <format>ipv4</format>
+                                <format>ipv4net</format>
                                 <description>Remote IPv4 prefix</description>
                               </valueHelp>
                               <valueHelp>
-                                <format>ipv6</format>
+                                <format>ipv6net</format>
                                 <description>Remote IPv6 prefix</description>
                               </valueHelp>
                               <constraint>
@@ -1087,6 +1128,20 @@
                       </node>
                     </children>
                   </tagNode>
+                  <leafNode name="virtual-address">
+                    <properties>
+                      <help>Initiator request virtual-address from peer</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Request IPv4 address from peer</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Request IPv6 address from peer</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
                   <node name="vti">
                     <properties>
                       <help>Virtual tunnel interface [REQUIRED]</help>

@@ -82,6 +82,10 @@ def verify(static):
                     for interface, interface_config in prefix_options[type].items():
                         verify_vrf(interface_config)
 
+            if {'blackhole', 'reject'} <= set(prefix_options):
+                raise ConfigError(f'Can not use both blackhole and reject for '\
+                                  'prefix "{prefix}"!')
+
     return None
 
 def generate(static):

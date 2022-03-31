@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,9 +21,11 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_redirect
 from vyos.configverify import verify_source_interface
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
@@ -34,8 +36,8 @@ airbag.enable()
 
 def get_config(config=None):
     """
-    Retrive CLI config as dictionary. Dictionary can never be empty, as at least the
-    interface name will be added or a deleted flag
+    Retrive CLI config as dictionary. Dictionary can never be empty, as at least
+    the interface name will be added or a deleted flag
     """
     if config:
         conf = config
@@ -43,6 +45,16 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'vxlan']
     vxlan = get_interface_dict(conf, base)
+
+    # VXLAN interfaces are picky and require recreation if certain parameters
+    # change. But a VXLAN interface should - of course - not be re-created if
+    # it's description or IP address is adjusted. Feels somehow logic doesn't it?
+    for cli_option in ['external', 'gpe', 'group', 'port', 'remote',
+                       'source-address', 'source-interface', 'vni',
+                       'parameters ip dont-fragment', 'parameters ip tos',
+                       'parameters ip ttl']:
+        if leaf_node_changed(conf, cli_option.split()):
+            vxlan.update({'rebuild_required': {}})
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation
@@ -70,8 +82,7 @@ def verify(vxlan):
 
     if 'group' in vxlan:
         if 'source_interface' not in vxlan:
-            raise ConfigError('Multicast VXLAN requires an underlaying interface ')
-
+            raise ConfigError('Multicast VXLAN requires an underlaying interface')
         verify_source_interface(vxlan)
 
     if not any(tmp in ['group', 'remote', 'source_address'] for tmp in vxlan):
@@ -108,22 +119,42 @@ def verify(vxlan):
             raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
                               f'bytes) for VXLAN overhead ({vxlan_overhead} bytes!)')
 
+    # Check for mixed IPv4 and IPv6 addresses
+    protocol = None
+    if 'source_address' in vxlan:
+        if is_ipv6(vxlan['source_address']):
+            protocol = 'ipv6'
+        else:
+            protocol = 'ipv4'
+
+    if 'remote' in vxlan:
+        error_msg = 'Can not mix both IPv4 and IPv6 for VXLAN underlay'
+        for remote in vxlan['remote']:
+            if is_ipv6(remote):
+                if protocol == 'ipv4':
+                    raise ConfigError(error_msg)
+                protocol = 'ipv6'
+            else:
+                if protocol == 'ipv6':
+                    raise ConfigError(error_msg)
+                protocol = 'ipv4'
+
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
+    verify_redirect(vxlan)
     return None
-
 
 def generate(vxlan):
     return None
 
-
 def apply(vxlan):
     # Check if the VXLAN interface already exists
-    if vxlan['ifname'] in interfaces():
-        v = VXLANIf(vxlan['ifname'])
-        # VXLAN is super picky and the tunnel always needs to be recreated,
-        # thus we can simply always delete it first.
-        v.remove()
+    if 'rebuild_required' in vxlan or 'delete' in vxlan:
+        if vxlan['ifname'] in interfaces():
+            v = VXLANIf(vxlan['ifname'])
+            # VXLAN is super picky and the tunnel always needs to be recreated,
+            # thus we can simply always delete it first.
+            v.remove()
 
     if 'deleted' not in vxlan:
         # Finally create the new interface
@@ -131,7 +162,6 @@ def apply(vxlan):
         v.update(vxlan)
 
     return None
-
 
 if __name__ == '__main__':
     try:

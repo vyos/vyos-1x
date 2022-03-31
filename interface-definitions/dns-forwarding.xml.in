@@ -16,7 +16,7 @@
             <children>
               <leafNode name="cache-size">
                 <properties>
-                  <help>DNS forwarding cache size (default: 10000)</help>
+                  <help>DNS forwarding cache size</help>
                   <valueHelp>
                     <format>u32:0-2147483647</format>
                     <description>DNS forwarding cache size</description>
@@ -38,7 +38,7 @@
               </leafNode>
               <leafNode name="dnssec">
                 <properties>
-                  <help>DNSSEC mode (default: process-no-validate)</help>
+                  <help>DNSSEC mode</help>
                   <completionHelp>
                     <list>off process-no-validate process log-fail validate</list>
                   </completionHelp>
@@ -587,7 +587,7 @@
               #include <include/listen-address.xml.i>
               <leafNode name="negative-ttl">
                 <properties>
-                  <help>Maximum amount of time negative entries are cached (default: 3600)</help>
+                  <help>Maximum amount of time negative entries are cached</help>
                   <valueHelp>
                     <format>u32:0-7200</format>
                     <description>Seconds to cache NXDOMAIN entries</description>

@@ -1,7 +1,7 @@
 ##
 ## VyOS cleanup
 ##
-# NOTE: here we use 'ip' wrapper, therefore a route will be actually deleted via ip or vtysh, according to the system state
+# NOTE: here we use 'ip' wrapper, therefore a route will be actually deleted via /usr/sbin/ip or vtysh, according to the system state
 hostsd_client="/usr/bin/vyos-hostsd-client"
 hostsd_changes=
 # check vyos-hostsd status

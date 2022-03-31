@@ -54,6 +54,9 @@ sysfs_config = {
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
 }
 
+NAME_PREFIX = 'NAME_'
+NAME6_PREFIX = 'NAME6_'
+
 preserve_chains = [
     'INPUT',
     'FORWARD',
@@ -69,6 +72,9 @@ preserve_chains = [
     'VYOS_POST_FW6',
     'VYOS_FRAG6_MARK'
 ]
+
+nft_iface_chains = ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']
+nft6_iface_chains = ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
 
 valid_groups = [
     'address_group',
@@ -201,6 +207,10 @@ def verify_rule(firewall, rule_conf, ipv6):
                 for group in valid_groups:
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
+
+                        if group_name and group_name[0] == '!':
+                            group_name = group_name[1:]
+
                         fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
                         error_group = fw_group.replace("_", "-")
                         group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
@@ -241,31 +251,34 @@ def verify(firewall):
             name = dict_search_args(if_firewall, direction, 'name')
             ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
 
-            if name and not dict_search_args(firewall, 'name', name):
+            if name and dict_search_args(firewall, 'name', name) == None:
                 raise ConfigError(f'Firewall name "{name}" is still referenced on interface {ifname}')
 
-            if ipv6_name and not dict_search_args(firewall, 'ipv6_name', ipv6_name):
+            if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
                 raise ConfigError(f'Firewall ipv6-name "{ipv6_name}" is still referenced on interface {ifname}')
 
     for fw_name, used_names in firewall['zone_policy'].items():
         for name in used_names:
-            if not dict_search_args(firewall, fw_name, name):
+            if dict_search_args(firewall, fw_name, name) == None:
                 raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
 
     return None
 
 def cleanup_rule(table, jump_chain):
     commands = []
-    results = cmd(f'nft -a list table {table}').split("\n")
-    for line in results:
-        if f'jump {jump_chain}' in line:
-            handle_search = re.search('handle (\d+)', line)
-            if handle_search:
-                commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
+    for chain in chains:
+        results = cmd(f'nft -a list chain {table} {chain}').split("\n")
+        for line in results:
+            if f'jump {jump_chain}' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
     return commands
 
 def cleanup_commands(firewall):
     commands = []
+    commands_end = []
     for table in ['ip filter', 'ip6 filter']:
         state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
         json_str = cmd(f'nft -j list table {table}')
@@ -281,9 +294,9 @@ def cleanup_commands(firewall):
                     else:
                         commands.append(f'flush chain {table} {chain}')
                 elif chain not in preserve_chains and not chain.startswith("VZONE"):
-                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain):
+                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
-                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
+                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
                     else:
                         commands += cleanup_rule(table, chain)
@@ -296,7 +309,10 @@ def cleanup_commands(firewall):
                             chain = rule['chain']
                             handle = rule['handle']
                             commands.append(f'delete rule {table} {chain} handle {handle}')
-    return commands
+            elif 'set' in item:
+                set_name = item['set']['name']
+                commands_end.append(f'delete set {table} {set_name}')
+    return commands + commands_end
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):

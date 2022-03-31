@@ -18,7 +18,7 @@
             <children>
               <leafNode name="hop-limit">
                 <properties>
-                  <help>Set Hop Count field of the IP header for outgoing packets (default: 64)</help>
+                  <help>Set Hop Count field of the IP header for outgoing packets</help>
                   <valueHelp>
                     <format>u32:0</format>
                     <description>Unspecified (by this router)</description>
@@ -63,7 +63,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>medium</format>
-                    <description>Default router has medium preference (default)</description>
+                    <description>Default router has medium preference</description>
                   </valueHelp>
                   <valueHelp>
                     <format>high</format>
@@ -108,7 +108,7 @@
                 <children>
                   <leafNode name="max">
                     <properties>
-                      <help>Maximum interval between unsolicited multicast RAs (default: 600)</help>
+                      <help>Maximum interval between unsolicited multicast RAs</help>
                       <valueHelp>
                         <format>u32:4-1800</format>
                         <description>Maximum interval in seconds</description>
@@ -156,7 +156,7 @@
                 <children>
                   <leafNode name="valid-lifetime">
                     <properties>
-                      <help>Time in seconds that the route will remain valid (default: 1800 seconds)</help>
+                      <help>Time in seconds that the route will remain valid</help>
                       <completionHelp>
                         <list>infinity</list>
                       </completionHelp>
@@ -187,7 +187,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>medium</format>
-                        <description>Route has medium preference (default)</description>
+                        <description>Route has medium preference</description>
                       </valueHelp>
                       <valueHelp>
                         <format>high</format>
@@ -234,7 +234,7 @@
                   </leafNode>
                   <leafNode name="preferred-lifetime">
                     <properties>
-                      <help>Time in seconds that the prefix will remain preferred (default 4 hours)</help>
+                      <help>Time in seconds that the prefix will remain preferred</help>
                       <completionHelp>
                         <list>infinity</list>
                       </completionHelp>
@@ -255,7 +255,7 @@
                   </leafNode>
                   <leafNode name="valid-lifetime">
                     <properties>
-                      <help>Time in seconds that the prefix will remain valid (default: 30 days)</help>
+                      <help>Time in seconds that the prefix will remain valid</help>
                       <completionHelp>
                         <list>infinity</list>
                       </completionHelp>

@@ -204,7 +204,7 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
  match ipv6 address prefix-list {{ rule_config.match.ipv6.address.prefix_list }}
 {%           endif %}
 {%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.nexthop is defined and rule_config.match.ipv6.nexthop is not none %}
- match ipv6 next-hop {{ rule_config.match.ipv6.nexthop }}
+ match ipv6 next-hop address {{ rule_config.match.ipv6.nexthop }}
 {%           endif %}
 {%           if rule_config.match.large_community is defined and rule_config.match.large_community.large_community_list is defined and rule_config.match.large_community.large_community_list is not none %}
  match large-community {{ rule_config.match.large_community.large_community_list }}
@@ -275,6 +275,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%           endif %}
 {%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.local is defined and rule_config.set.ipv6_next_hop.local is not none %}
  set ipv6 next-hop local {{ rule_config.set.ipv6_next_hop.local }}
+{%           endif %}
+{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.peer_address is defined %}
+ set ipv6 next-hop peer-address
 {%           endif %}
 {%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.prefer_global is defined %}
  set ipv6 next-hop prefer-global

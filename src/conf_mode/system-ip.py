@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,13 +20,12 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.util import call
 from vyos.util import dict_search
+from vyos.util import sysctl_write
+from vyos.util import write_file
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
-
-def sysctl(name, value):
-    call(f'sysctl -wq {name}={value}')
 
 def get_config(config=None):
     if config:
@@ -50,29 +49,29 @@ def generate(opt):
     pass
 
 def apply(opt):
+    # Apply ARP threshold values
+    # table_size has a default value - thus the key always exists
     size = int(dict_search('arp.table_size', opt))
-    if size:
-        # apply ARP threshold values
-        sysctl('net.ipv4.neigh.default.gc_thresh3', str(size))
-        sysctl('net.ipv4.neigh.default.gc_thresh2', str(size // 2))
-        sysctl('net.ipv4.neigh.default.gc_thresh1', str(size // 8))
+    # Amount upon reaching which the records begin to be cleared immediately
+    sysctl_write('net.ipv4.neigh.default.gc_thresh3', size)
+    # Amount after which the records begin to be cleaned after 5 seconds
+    sysctl_write('net.ipv4.neigh.default.gc_thresh2', size // 2)
+    # Minimum number of stored records is indicated which is not cleared
+    sysctl_write('net.ipv4.neigh.default.gc_thresh1', size // 8)
 
     # enable/disable IPv4 forwarding
-    tmp = '1'
-    if 'disable_forwarding' in opt:
-        tmp = '0'
-    sysctl('net.ipv4.conf.all.forwarding', tmp)
+    tmp = dict_search('disable_forwarding', opt)
+    value = '0' if (tmp != None) else '1'
+    write_file('/proc/sys/net/ipv4/conf/all/forwarding', value)
 
-    tmp = '0'
-    # configure multipath - dict_search() returns an empty dict if key was found
-    if isinstance(dict_search('multipath.ignore_unreachable_nexthops', opt), dict):
-        tmp = '1'
-    sysctl('net.ipv4.fib_multipath_use_neigh', tmp)
+    # configure multipath
+    tmp = dict_search('multipath.ignore_unreachable_nexthops', opt)
+    value = '1' if (tmp != None) else '0'
+    sysctl_write('net.ipv4.fib_multipath_use_neigh', value)
 
-    tmp = '0'
-    if isinstance(dict_search('multipath.layer4_hashing', opt), dict):
-        tmp = '1'
-    sysctl('net.ipv4.fib_multipath_hash_policy', tmp)
+    tmp = dict_search('multipath.layer4_hashing', opt)
+    value = '1' if (tmp != None) else '0'
+    sysctl_write('net.ipv4.fib_multipath_hash_policy', value)
 
 if __name__ == '__main__':
     try:

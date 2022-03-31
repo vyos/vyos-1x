@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,11 +30,19 @@ listen_if = 'dum3632'
 listen_ip = '192.0.2.1'
 
 class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'dummy', listen_if, 'address', listen_ip + '/32'])
+    @classmethod
+    def setUpClass(cls):
+        # call base-classes classmethod
+        super(cls, cls).setUpClass()
+        # create a test interfaces
+        cls.cli_set(cls, ['interfaces', 'dummy', listen_if, 'address', listen_ip + '/32'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'dummy', listen_if])
+        super().tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'dummy', listen_if])
         self.cli_delete(base_path)
         self.cli_commit()
 

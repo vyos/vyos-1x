@@ -6,7 +6,7 @@
   <children>
     <leafNode name="reference-bandwidth">
       <properties>
-        <help>Reference bandwidth method to assign cost (default: 100)</help>
+        <help>Reference bandwidth method to assign cost</help>
         <valueHelp>
           <format>u32:1-4294967</format>
           <description>Reference bandwidth cost in Mbits/sec</description>

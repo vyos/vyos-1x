@@ -23,7 +23,7 @@
                       <help>Size of a single log file that triggers rotation</help>
                       <valueHelp>
                         <format>u32:1-1024</format>
-                        <description>Size in MB (default: 10)</description>
+                        <description>Size in MB</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-1024" />
@@ -37,7 +37,7 @@
                       <help>Count of rotations before old logs will be deleted</help>
                       <valueHelp>
                         <format>u32:1-100</format>
-                        <description>Rotations (default: 10)</description>
+                        <description>Rotations</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-100" />
@@ -58,7 +58,7 @@
                       <help>Size of a single log file that triggers rotation</help>
                       <valueHelp>
                         <format>u32:1-1024</format>
-                        <description>Size in MB (default: 1)</description>
+                        <description>Size in MB</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-1024" />
@@ -72,7 +72,7 @@
                       <help>Count of rotations before old logs will be deleted</help>
                       <valueHelp>
                         <format>u32:1-100</format>
-                        <description>Rotations (default: 10)</description>
+                        <description>Rotations</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-100" />

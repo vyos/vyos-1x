@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import vyos.util
+
 from vyos.ifconfig.interface import Interface
 
 @Interface.register
@@ -23,7 +25,6 @@ class LoopbackIf(Interface):
     """
     _persistent_addresses = ['127.0.0.1/8', '::1/128']
     iftype = 'loopback'
-
     definition = {
         **Interface.definition,
         **{
@@ -32,6 +33,9 @@ class LoopbackIf(Interface):
             'bridgeable': True,
         }
     }
+
+    name = 'loopback'
+
     def remove(self):
         """
         Loopback interface can not be deleted from operating system. We can
@@ -59,7 +63,10 @@ class LoopbackIf(Interface):
 
         addr = config.get('address', [])
         # We must ensure that the loopback addresses are never deleted from the system
-        addr += self._persistent_addresses
+        addr += ['127.0.0.1/8']
+
+        if (vyos.util.sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0'):
+            addr += ['::1/128']
 
         # Update IP address entry in our dictionary
         config.update({'address' : addr})

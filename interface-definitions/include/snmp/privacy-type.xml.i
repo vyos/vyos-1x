@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>des</format>
-      <description>Data Encryption Standard (default)</description>
+      <description>Data Encryption Standard</description>
     </valueHelp>
     <valueHelp>
       <format>aes</format>

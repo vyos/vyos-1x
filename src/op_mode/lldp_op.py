@@ -54,6 +54,7 @@ def parse_data(data, interface):
         for local_if, values in neighbor.items():
             if interface is not None and local_if != interface:
                 continue
+            cap = ''
             for chassis, c_value in values.get('chassis', {}).items():
                 # bail out early if no capabilities found
                 if 'capability' not in c_value:
@@ -62,7 +63,6 @@ def parse_data(data, interface):
                 if isinstance(capabilities, dict):
                     capabilities = [capabilities]
 
-                cap = ''
                 for capability in capabilities:
                     if capability['enabled']:
                         if capability['type'] == 'Router':

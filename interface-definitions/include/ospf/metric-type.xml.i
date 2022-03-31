@@ -1,7 +1,7 @@
 <!-- include start from ospf/metric-type.xml.i -->
 <leafNode name="metric-type">
   <properties>
-    <help>OSPF metric type for default routes (default: 2)</help>
+    <help>OSPF metric type for default routes</help>
     <valueHelp>
       <format>u32:1-2</format>
       <description>Set OSPF External Type 1/2 metrics</description>

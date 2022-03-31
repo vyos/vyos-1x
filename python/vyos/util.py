@@ -774,6 +774,14 @@ def dict_search_recursive(dict_object, key):
             for x in dict_search_recursive(j, key):
                 yield x
 
+def get_bridge_fdb(interface):
+    """ Returns the forwarding database entries for a given interface """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
+    return tmp
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
@@ -995,5 +1003,19 @@ def boot_configuration_complete() -> bool:
     from vyos.defaults import config_status
 
     if os.path.isfile(config_status):
+        return True
+    return False
+
+def sysctl_read(name):
+    """ Read and return current value of sysctl() option """
+    tmp = cmd(f'sysctl {name}')
+    return tmp.split()[-1]
+
+def sysctl_write(name, value):
+    """ Change value via sysctl() - return True if changed, False otherwise """
+    tmp = cmd(f'sysctl {name}')
+    # last list index contains the actual value - only write if value differs
+    if sysctl_read(name) != str(value):
+        call(f'sysctl -wq {name}={value}')
         return True
     return False

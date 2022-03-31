@@ -146,13 +146,24 @@
     </leafNode>
     <leafNode name="time">
       <properties>
-        <help>Source addresses seen in the last N seconds</help>
+        <help>Source addresses seen in the last second/minute/hour</help>
+        <completionHelp>
+          <list>second minute hour</list>
+        </completionHelp>
         <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Source addresses seen in the last N seconds</description>
+          <format>second</format>
+          <description>Source addresses seen COUNT times in the last second</description>
+        </valueHelp>
+        <valueHelp>
+          <format>minute</format>
+          <description>Source addresses seen COUNT times in the last minute</description>
+        </valueHelp>
+        <valueHelp>
+          <format>hour</format>
+          <description>Source addresses seen COUNT times in the last hour</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
+          <regex>^(second|minute|hour)$</regex>
         </constraint>
       </properties>
     </leafNode>

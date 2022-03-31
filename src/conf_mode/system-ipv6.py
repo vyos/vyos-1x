@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,95 +15,82 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 
 from sys import exit
-from copy import deepcopy
 from vyos.config import Config
-from vyos import ConfigError
+from vyos.configdict import dict_merge
+from vyos.configdict import leaf_node_changed
 from vyos.util import call
-
+from vyos.util import dict_search
+from vyos.util import sysctl_write
+from vyos.util import write_file
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-ipv6_disable_file = '/etc/modprobe.d/vyos_disable_ipv6.conf'
-
-default_config_data = {
-    'reboot_message': False,
-    'ipv6_forward': '1',
-    'disable_addr_assignment': False,
-    'mp_layer4_hashing': '0',
-    'neighbor_cache': 8192,
-    'strict_dad': '1'
-
-}
-
-def sysctl(name, value):
-    call('sysctl -wq {}={}'.format(name, value))
-
 def get_config(config=None):
-    ip_opt = deepcopy(default_config_data)
     if config:
         conf = config
     else:
         conf = Config()
-    conf.set_level('system ipv6')
-    if conf.exists(''):
-        ip_opt['disable_addr_assignment'] = conf.exists('disable')
-        if conf.exists_effective('disable') != conf.exists('disable'):
-            ip_opt['reboot_message'] = True
+    base = ['system', 'ipv6']
 
-        if conf.exists('disable-forwarding'):
-            ip_opt['ipv6_forward'] = '0'
+    opt = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-        if conf.exists('multipath layer4-hashing'):
-            ip_opt['mp_layer4_hashing'] = '1'
+    tmp = leaf_node_changed(conf, base + ['disable'])
+    if tmp: opt['reboot_required'] = {}
 
-        if conf.exists('neighbor table-size'):
-            ip_opt['neighbor_cache'] = int(conf.return_value('neighbor table-size'))
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    opt = dict_merge(default_values, opt)
 
-        if conf.exists('strict-dad'):
-            ip_opt['strict_dad'] = 2
+    return opt
 
-    return ip_opt
-
-def verify(ip_opt):
+def verify(opt):
     pass
 
-def generate(ip_opt):
+def generate(opt):
     pass
 
-def apply(ip_opt):
-    # disable IPv6 address assignment
-    if ip_opt['disable_addr_assignment']:
-        with open(ipv6_disable_file, 'w') as f:
-            f.write('options ipv6 disable_ipv6=1')
-    else:
-        if os.path.exists(ipv6_disable_file):
-            os.unlink(ipv6_disable_file)
+def apply(opt):
+    # disable IPv6 globally
+    tmp = dict_search('disable', opt)
+    value = '1' if (tmp != None) else '0'
+    sysctl_write('net.ipv6.conf.all.disable_ipv6', value)
 
-    if ip_opt['reboot_message']:
+    if 'reboot_required' in opt:
         print('Changing IPv6 disable parameter will only take affect\n' \
               'when the system is rebooted.')
 
     # configure multipath
-    sysctl('net.ipv6.fib_multipath_hash_policy', ip_opt['mp_layer4_hashing'])
+    tmp = dict_search('multipath.layer4_hashing', opt)
+    value = '1' if (tmp != None) else '0'
+    sysctl_write('net.ipv6.fib_multipath_hash_policy', value)
 
-    # apply neighbor table threshold values
-    sysctl('net.ipv6.neigh.default.gc_thresh3', ip_opt['neighbor_cache'])
-    sysctl('net.ipv6.neigh.default.gc_thresh2', ip_opt['neighbor_cache'] // 2)
-    sysctl('net.ipv6.neigh.default.gc_thresh1', ip_opt['neighbor_cache'] // 8)
+    # Apply ND threshold values
+    # table_size has a default value - thus the key always exists
+    size = int(dict_search('neighbor.table_size', opt))
+    # Amount upon reaching which the records begin to be cleared immediately
+    sysctl_write('net.ipv6.neigh.default.gc_thresh3', size)
+    # Amount after which the records begin to be cleaned after 5 seconds
+    sysctl_write('net.ipv6.neigh.default.gc_thresh2', size // 2)
+    # Minimum number of stored records is indicated which is not cleared
+    sysctl_write('net.ipv6.neigh.default.gc_thresh1', size // 8)
 
     # enable/disable IPv6 forwarding
-    with open('/proc/sys/net/ipv6/conf/all/forwarding', 'w') as f:
-        f.write(ip_opt['ipv6_forward'])
+    tmp = dict_search('disable_forwarding', opt)
+    value = '0' if (tmp != None) else '1'
+    write_file('/proc/sys/net/ipv6/conf/all/forwarding', value)
 
     # configure IPv6 strict-dad
+    tmp = dict_search('strict_dad', opt)
+    value = '2' if (tmp != None) else '1'
     for root, dirs, files in os.walk('/proc/sys/net/ipv6/conf'):
         for name in files:
-            if name == "accept_dad":
-                with open(os.path.join(root, name), 'w') as f:
-                    f.write(str(ip_opt['strict_dad']))
+            if name == 'accept_dad':
+                write_file(os.path.join(root, name), value)
 
 if __name__ == '__main__':
     try:

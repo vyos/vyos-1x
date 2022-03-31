@@ -13,6 +13,9 @@
             <format>txt</format>
             <description>Zone name</description>
           </valueHelp>
+          <constraint>
+            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+          </constraint>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
@@ -24,7 +27,7 @@
               </completionHelp>
               <valueHelp>
                 <format>drop</format>
-                <description>Drop silently (default)</description>
+                <description>Drop silently</description>
               </valueHelp>
               <valueHelp>
                 <format>reject</format>
@@ -34,6 +37,7 @@
                 <regex>^(drop|reject)$</regex>
               </constraint>
             </properties>
+            <defaultValue>drop</defaultValue>
           </leafNode>
           <tagNode name="from">
             <properties>
@@ -94,7 +98,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>accept</format>
-                    <description>Accept traffic (default)</description>
+                    <description>Accept traffic</description>
                   </valueHelp>
                   <valueHelp>
                     <format>drop</format>
@@ -135,7 +139,7 @@
               <help>Zone to be local-zone</help>
               <valueless/>
             </properties>
-          </leafNode> 
+          </leafNode>
         </children>
       </tagNode>
     </children>

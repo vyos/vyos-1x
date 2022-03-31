@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -39,6 +39,7 @@ from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.util import get_interface_namespace
 from vyos.util import is_systemd_service_active
+from vyos.util import sysctl_read
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -1088,8 +1089,11 @@ class Interface(Control):
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True)
         elif not is_intf_addr_assigned(self.ifname, addr):
-            self._cmd(f'ip addr add "{addr}" '
-                    f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
+            tmp = f'ip addr add {addr} dev {self.ifname}'
+            # Add broadcast address for IPv4
+            if is_ipv4(addr): tmp += ' brd +'
+
+            self._cmd(tmp)
         else:
             return False
 
@@ -1228,12 +1232,11 @@ class Interface(Control):
         options_file = f'{config_base}_{ifname}.options'
         pid_file = f'{config_base}_{ifname}.pid'
         lease_file = f'{config_base}_{ifname}.leases'
-
-        # Stop client with old config files to get the right IF_METRIC.
         systemd_service = f'dhclient@{ifname}.service'
-        if is_systemd_service_active(systemd_service):
-            self._cmd(f'systemctl stop {systemd_service}')
 
+        # 'up' check is mandatory b/c even if the interface is A/D, as soon as
+        # the DHCP client is started the interface will be placed in u/u state.
+        # This is not what we intended to do when disabling an interface.
         if enable and 'disable' not in self._config:
             if dict_search('dhcp_options.host_name', self._config) == None:
                 # read configured system hostname.
@@ -1244,16 +1247,19 @@ class Interface(Control):
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
                     self._config = dict_merge(tmp, self._config)
 
-            render(options_file, 'dhcp-client/daemon-options.tmpl',
-                   self._config)
-            render(config_file, 'dhcp-client/ipv4.tmpl',
-                   self._config)
+            render(options_file, 'dhcp-client/daemon-options.tmpl', self._config)
+            render(config_file, 'dhcp-client/ipv4.tmpl', self._config)
 
-            # 'up' check is mandatory b/c even if the interface is A/D, as soon as
-            # the DHCP client is started the interface will be placed in u/u state.
-            # This is not what we intended to do when disabling an interface.
-            return self._cmd(f'systemctl restart {systemd_service}')
+            # When the DHCP client is restarted a brief outage will occur, as
+            # the old lease is released a new one is acquired (T4203). We will
+            # only restart DHCP client if it's option changed, or if it's not
+            # running, but it should be running (e.g. on system startup)
+            if 'dhcp_options_changed' in self._config or not is_systemd_service_active(systemd_service):
+                return self._cmd(f'systemctl restart {systemd_service}')
+            return None
         else:
+            if is_systemd_service_active(systemd_service):
+                self._cmd(f'systemctl stop {systemd_service}')
             # cleanup old config files
             for file in [config_file, options_file, pid_file, lease_file]:
                 if os.path.isfile(file):
@@ -1446,11 +1452,6 @@ class Interface(Control):
         value = tmp if (tmp != None) else '0'
         self.set_tcp_ipv4_mss(value)
 
-        # Configure MSS value for IPv6 TCP connections
-        tmp = dict_search('ipv6.adjust_mss', config)
-        value = tmp if (tmp != None) else '0'
-        self.set_tcp_ipv6_mss(value)
-
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
         value = tmp if (tmp != None) else '30'
@@ -1496,47 +1497,54 @@ class Interface(Control):
         value = tmp if (tmp != None) else '0'
         self.set_ipv4_source_validation(value)
 
-        # IPv6 forwarding
-        tmp = dict_search('ipv6.disable_forwarding', config)
-        value = '0' if (tmp != None) else '1'
-        self.set_ipv6_forwarding(value)
+        # Only change IPv6 parameters if IPv6 was not explicitly disabled
+        if sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0':
+            # Configure MSS value for IPv6 TCP connections
+            tmp = dict_search('ipv6.adjust_mss', config)
+            value = tmp if (tmp != None) else '0'
+            self.set_tcp_ipv6_mss(value)
 
-        # IPv6 router advertisements
-        tmp = dict_search('ipv6.address.autoconf', config)
-        value = '2' if (tmp != None) else '1'
-        if 'dhcpv6' in new_addr:
-            value = '2'
-        self.set_ipv6_accept_ra(value)
+            # IPv6 forwarding
+            tmp = dict_search('ipv6.disable_forwarding', config)
+            value = '0' if (tmp != None) else '1'
+            self.set_ipv6_forwarding(value)
 
-        # IPv6 address autoconfiguration
-        tmp = dict_search('ipv6.address.autoconf', config)
-        value = '1' if (tmp != None) else '0'
-        self.set_ipv6_autoconf(value)
+            # IPv6 router advertisements
+            tmp = dict_search('ipv6.address.autoconf', config)
+            value = '2' if (tmp != None) else '1'
+            if 'dhcpv6' in new_addr:
+                value = '2'
+            self.set_ipv6_accept_ra(value)
 
-        # IPv6 Duplicate Address Detection (DAD) tries
-        tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
-        value = tmp if (tmp != None) else '1'
-        self.set_ipv6_dad_messages(value)
+            # IPv6 address autoconfiguration
+            tmp = dict_search('ipv6.address.autoconf', config)
+            value = '1' if (tmp != None) else '0'
+            self.set_ipv6_autoconf(value)
 
-        # MTU - Maximum Transfer Unit
-        if 'mtu' in config:
-            self.set_mtu(config.get('mtu'))
+            # IPv6 Duplicate Address Detection (DAD) tries
+            tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
+            value = tmp if (tmp != None) else '1'
+            self.set_ipv6_dad_messages(value)
 
-        # Delete old IPv6 EUI64 addresses before changing MAC
-        for addr in (dict_search('ipv6.address.eui64_old', config) or []):
-            self.del_ipv6_eui64_address(addr)
+            # MTU - Maximum Transfer Unit
+            if 'mtu' in config:
+                self.set_mtu(config.get('mtu'))
 
-        # Manage IPv6 link-local addresses
-        if dict_search('ipv6.address.no_default_link_local', config) != None:
-            self.del_ipv6_eui64_address('fe80::/64')
-        else:
-            self.add_ipv6_eui64_address('fe80::/64')
+            # Delete old IPv6 EUI64 addresses before changing MAC
+            for addr in (dict_search('ipv6.address.eui64_old', config) or []):
+                self.del_ipv6_eui64_address(addr)
 
-        # Add IPv6 EUI-based addresses
-        tmp = dict_search('ipv6.address.eui64', config)
-        if tmp:
-            for addr in tmp:
-                self.add_ipv6_eui64_address(addr)
+            # Manage IPv6 link-local addresses
+            if dict_search('ipv6.address.no_default_link_local', config) != None:
+                self.del_ipv6_eui64_address('fe80::/64')
+            else:
+                self.add_ipv6_eui64_address('fe80::/64')
+
+            # Add IPv6 EUI-based addresses
+            tmp = dict_search('ipv6.address.eui64', config)
+            if tmp:
+                for addr in tmp:
+                    self.add_ipv6_eui64_address(addr)
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:

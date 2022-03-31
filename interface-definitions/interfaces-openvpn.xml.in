@@ -38,7 +38,7 @@
           #include <include/interface/interface-policy.xml.i>
           <leafNode name="device-type">
             <properties>
-              <help>OpenVPN interface device-type (default: tun)</help>
+              <help>OpenVPN interface device-type</help>
               <completionHelp>
                 <list>tun tap</list>
               </completionHelp>
@@ -206,7 +206,7 @@
             <children>
               <leafNode name="failure-count">
                 <properties>
-                  <help>Maximum number of keepalive packet failures (default: 60)</help>
+                  <help>Maximum number of keepalive packet failures</help>
                   <valueHelp>
                     <format>u32:0-1000</format>
                     <description>Maximum number of keepalive packet failures</description>
@@ -219,7 +219,7 @@
               </leafNode>
               <leafNode name="interval">
                 <properties>
-                  <help>Keepalive packet interval in seconds (default: 10)</help>
+                  <help>Keepalive packet interval in seconds</help>
                   <valueHelp>
                     <format>u32:0-600</format>
                     <description>Keepalive packet interval (seconds)</description>
@@ -613,13 +613,13 @@
               </leafNode>
               <leafNode name="topology">
                 <properties>
-                  <help>Topology for clients (default: net30)</help>
+                  <help>Topology for clients</help>
                   <completionHelp>
                     <list>net30 point-to-point subnet</list>
                   </completionHelp>
                   <valueHelp>
                     <format>net30</format>
-                    <description>net30 topology (default)</description>
+                    <description>net30 topology</description>
                   </valueHelp>
                   <valueHelp>
                     <format>point-to-point</format>
@@ -647,7 +647,7 @@
                     <children>
                       <leafNode name="slop">
                         <properties>
-                          <help>Maximum allowed clock slop in seconds (default: 180)</help>
+                          <help>Maximum allowed clock slop in seconds</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Seconds</description>
@@ -660,7 +660,7 @@
                       </leafNode>
                       <leafNode name="drift">
                         <properties>
-                          <help>Time drift in seconds (default: 0)</help>
+                          <help>Time drift in seconds</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Seconds</description>
@@ -673,7 +673,7 @@
                       </leafNode>
                       <leafNode name="step">
                         <properties>
-                          <help>Step value for totp in seconds (default: 30)</help>
+                          <help>Step value for totp in seconds</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Seconds</description>
@@ -686,7 +686,7 @@
                       </leafNode>
                       <leafNode name="digits">
                         <properties>
-                          <help>Number of digits to use for totp hash (default: 6)</help>
+                          <help>Number of digits to use for totp hash</help>
                           <valueHelp>
                             <format>1-65535</format>
                             <description>Seconds</description>
@@ -699,7 +699,7 @@
                       </leafNode>
                       <leafNode name="challenge">
                         <properties>
-                          <help>Expect password as result of a challenge response protocol (default: enabled)</help>
+                          <help>Expect password as result of a challenge response protocol</help>
                           <completionHelp>
                             <list>disable enable</list>
                           </completionHelp>
@@ -709,7 +709,7 @@
                           </valueHelp>
                           <valueHelp>
                             <format>enable</format>
-                            <description>Enable chalenge-response (default)</description>
+                            <description>Enable chalenge-response</description>
                           </valueHelp>
                           <constraint>
                             <regex>^(disable|enable)$</regex>
@@ -816,6 +816,8 @@
               <valueless/>
             </properties>
           </leafNode>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

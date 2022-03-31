@@ -265,8 +265,8 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
 
-        frrconfig = self.getFRRconfig(f'interface {vrf_iface} vrf {vrf}')
-        self.assertIn(f'interface {vrf_iface} vrf {vrf}', frrconfig)
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}')
+        self.assertIn(f'interface {vrf_iface}', frrconfig)
         self.assertIn(f' ipv6 ospf6 bfd', frrconfig)
 
         frrconfig = self.getFRRconfig(f'router ospf6 vrf {vrf}')
@@ -278,4 +278,4 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

@@ -20,7 +20,7 @@
           #include <include/interface/description.xml.i>
           <leafNode name="destination-port">
             <properties>
-              <help>UDP destination port for L2TPv3 tunnel (default: 5000)</help>
+              <help>UDP destination port for L2TPv3 tunnel</help>
               <valueHelp>
                 <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
@@ -36,7 +36,7 @@
           #include <include/interface/interface-policy.xml.i>
           <leafNode name="encapsulation">
             <properties>
-              <help>Encapsulation type (default: UDP)</help>
+              <help>Encapsulation type</help>
               <completionHelp>
                 <list>udp ip</list>
               </completionHelp>
@@ -86,7 +86,6 @@
               </constraint>
             </properties>
           </leafNode>
-          #include <include/interface/mtu-68-16000.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
           <leafNode name="session-id">
             <properties>
@@ -102,7 +101,7 @@
           </leafNode>
           <leafNode name="source-port">
             <properties>
-              <help>UDP source port for L2TPv3 tunnel (default: 5000)</help>
+              <help>UDP source port for L2TPv3 tunnel</help>
               <valueHelp>
                 <format>u32:1-65535</format>
                 <description>Numeric IP port</description>
@@ -125,6 +124,7 @@
               </constraint>
             </properties>
           </leafNode>
+          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

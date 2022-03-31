@@ -17,7 +17,7 @@
 [[outputs.influxdb_v2]]
   urls = ["{{ url }}:{{ port }}"]
   insecure_skip_verify = true
-  token = "{{ authentication.token }}"
+  token = "$INFLUX_TOKEN"
   organization = "{{ authentication.organization }}"
   bucket = "{{ bucket }}"
 [[inputs.cpu]]
@@ -52,8 +52,9 @@
   syslog_standard = "RFC3164"
 [[inputs.exec]]
   commands = [
+    "{{ custom_scripts_dir }}/show_firewall_input_filter.py",
     "{{ custom_scripts_dir }}/show_interfaces_input_filter.py",
-    "cat /tmp/vyos_services_input_filter"
+    "{{ custom_scripts_dir }}/vyos_services_input_filter.py"
   ]
   timeout = "10s"
   data_format = "influx"

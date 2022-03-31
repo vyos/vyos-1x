@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,12 +21,18 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.util import cmd
 
 class TestZonePolicy(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+        cls.cli_set(cls, ['firewall', 'name', 'smoketest', 'default-action', 'drop'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['firewall'])
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(['zone-policy'])
-        self.cli_delete(['firewall'])
         self.cli_commit()
 
     def test_basic_zone(self):
@@ -44,8 +50,8 @@ class TestZonePolicy(VyOSUnitTestSHIM.TestCase):
             ['oifname { "eth0" }', 'jump VZONE_smoketest-eth0'],
             ['jump VZONE_smoketest-local_IN'],
             ['jump VZONE_smoketest-local_OUT'],
-            ['iifname { "eth0" }', 'jump smoketest'],
-            ['oifname { "eth0" }', 'jump smoketest']
+            ['iifname { "eth0" }', 'jump NAME_smoketest'],
+            ['oifname { "eth0" }', 'jump NAME_smoketest']
         ]
 
         nftables_output = cmd('sudo nft list table ip filter')

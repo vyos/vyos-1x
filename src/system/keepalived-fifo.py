@@ -71,7 +71,8 @@ class KeepalivedFifo:
 
             # Read VRRP configuration directly from CLI
             self.vrrp_config_dict = conf.get_config_dict(base,
-                                     key_mangling=('-', '_'), get_first_key=True)
+                                     key_mangling=('-', '_'), get_first_key=True,
+                                     no_tag_node_value_mangle=True)
 
             logger.debug(f'Loaded configuration: {self.vrrp_config_dict}')
         except Exception as err:

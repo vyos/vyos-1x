@@ -57,10 +57,10 @@
           <children>
             <leafNode name="address">
               <properties>
-                <help>Local interface address assigned to interface</help>
+                <help>Local interface address assigned to interface (default: EUI-64)</help>
                 <valueHelp>
                   <format>&gt;0</format>
-                  <description>Used to form IPv6 interface address (default: EUI-64)</description>
+                  <description>Used to form IPv6 interface address</description>
                 </valueHelp>
                 <constraint>
                   <validator name="numeric" argument="--non-negative"/>

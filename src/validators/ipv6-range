@@ -1,17 +1,20 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import sys
-import re
-from vyos.template import is_ipv6
+from ipaddress import IPv6Address
+from sys import argv, exit
 
 if __name__ == '__main__':
-    if len(sys.argv)>1:
-        ipv6_range = sys.argv[1]
-        # Regex for ipv6-ipv6 https://regexr.com/
-        if re.search('([a-f0-9:]+:+)+[a-f0-9]+-([a-f0-9:]+:+)+[a-f0-9]+', ipv6_range):
-            for tmp in ipv6_range.split('-'):
-                if not is_ipv6(tmp):
-                    print(f'Error: {ipv6_range} is not a valid IPv6 range')
-                    sys.exit(1)
-
-    sys.exit(0)
+    if len(argv) > 1:
+        # try to pass validation and raise an error if failed
+        try:
+            ipv6_range = argv[1]
+            range_left = ipv6_range.split('-')[0]
+            range_right = ipv6_range.split('-')[1]
+            if not IPv6Address(range_left) < IPv6Address(range_right):
+                raise ValueError(f'left element {range_left} must be less than right element {range_right}')
+        except Exception as err:
+            print(f'Error: {ipv6_range} is not a valid IPv6 range: {err}')
+            exit(1)
+    else:
+        print('Error: an IPv6 range argument must be provided')
+        exit(1)

@@ -5,6 +5,7 @@
       <node name="ipv6" owner="${vyos_conf_scripts_dir}/system-ipv6.py">
         <properties>
           <help>IPv6 Settings</help>
+          <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
           <priority>290</priority>
         </properties>
         <children>
@@ -35,20 +36,10 @@
           </node>
           <node name="neighbor">
             <properties>
-              <help>Parameters for Neighbor cache</help>
+              <help>Parameters for neighbor discovery cache</help>
             </properties>
             <children>
-              <leafNode name="table-size">
-                <properties>
-                  <help>Maximum number of entries to keep in the Neighbor cache</help>
-                  <completionHelp>
-                    <list>1024 2048 4096 8192 16384 32768</list>
-                  </completionHelp>
-                  <constraint>
-                    <regex>^(1024|2048|4096|8192|16384|32768)$</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/arp-ndp-table-size.xml.i>
             </children>
           </node>
           <leafNode name="strict-dad">

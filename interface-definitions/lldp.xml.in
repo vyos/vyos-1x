@@ -28,7 +28,7 @@
               #include <include/generic-disable-node.xml.i>
               <node name="location">
                 <properties>
-                  <help>LLDP-MED location data [REQUIRED]</help>
+                  <help>LLDP-MED location data</help>
                 </properties>
                 <children>
                   <node name="coordinate-based">
@@ -40,6 +40,10 @@
                         <properties>
                           <help>Altitude in meters</help>
                           <valueHelp>
+                            <format>0</format>
+                            <description>No altitude</description>
+                          </valueHelp>
+                          <valueHelp>
                             <format>[+-]&lt;meters&gt;</format>
                             <description>Altitude in meters</description>
                           </valueHelp>
@@ -48,13 +52,14 @@
                             <validator name="numeric"/>
                           </constraint>
                         </properties>
+                        <defaultValue>0</defaultValue>
                       </leafNode>
                       <leafNode name="datum">
                         <properties>
                           <help>Coordinate datum type</help>
                           <valueHelp>
                             <format>WGS84</format>
-                            <description>WGS84 (default)</description>
+                            <description>WGS84</description>
                           </valueHelp>
                           <valueHelp>
                             <format>NAD83</format>
@@ -69,33 +74,34 @@
                           </completionHelp>
                           <constraintErrorMessage>Datum should be WGS84, NAD83, or MLLW</constraintErrorMessage>
                           <constraint>
-                            <regex>^(WGS84|NAD83|MLLW)$</regex>
+                            <regex>(WGS84|NAD83|MLLW)</regex>
                           </constraint>
                         </properties>
+                        <defaultValue>WGS84</defaultValue>
                       </leafNode>
                       <leafNode name="latitude">
                         <properties>
-                          <help>Latitude [REQUIRED]</help>
+                          <help>Latitude</help>
                           <valueHelp>
                             <format>&lt;latitude&gt;</format>
                             <description>Latitude (example "37.524449N")</description>
                           </valueHelp>
                           <constraintErrorMessage>Latitude should be a number followed by S or N</constraintErrorMessage>
                           <constraint>
-                            <regex>(\d+)(\.\d+)?[nNsS]$</regex>
+                            <regex>(\d+)(\.\d+)?[nNsS]</regex>
                           </constraint>
                         </properties>
                       </leafNode>
                       <leafNode name="longitude">
                         <properties>
-                          <help>Longitude [REQUIRED]</help>
+                          <help>Longitude</help>
                           <valueHelp>
                             <format>&lt;longitude&gt;</format>
                             <description>Longitude (example "122.267255W")</description>
                           </valueHelp>
                           <constraintErrorMessage>Longiture should be a number followed by E or W</constraintErrorMessage>
                           <constraint>
-                            <regex>(\d+)(\.\d+)?[eEwW]$</regex>
+                            <regex>(\d+)(\.\d+)?[eEwW]</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -109,7 +115,7 @@
                         <description>Emergency Call Service ELIN number (between 10-25 numbers)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>[0-9]{10,25}$</regex>
+                        <regex>[0-9]{10,25}</regex>
                       </constraint>
                       <constraintErrorMessage>ELIN number must be between 10-25 numbers</constraintErrorMessage>
                     </properties>
