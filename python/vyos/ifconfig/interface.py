@@ -1501,6 +1501,13 @@ class Interface(Control):
         value = tmp if (tmp != None) else '0'
         self.set_ipv4_source_validation(value)
 
+        # MTU - Maximum Transfer Unit has a default value. It must ALWAYS be set
+        # before mangling any IPv6 option. If MTU is less then 1280 IPv6 will be
+        # automatically disabled by the kernel. Also MTU must be increased before
+        # configuring any IPv6 address on the interface.
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
+
         # Only change IPv6 parameters if IPv6 was not explicitly disabled
         if is_ipv6_enabled():
             # Configure MSS value for IPv6 TCP connections
@@ -1545,10 +1552,6 @@ class Interface(Control):
             if tmp:
                 for addr in tmp:
                     self.add_ipv6_eui64_address(addr)
-
-        # MTU - Maximum Transfer Unit
-        if 'mtu' in config:
-            self.set_mtu(config.get('mtu'))
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
