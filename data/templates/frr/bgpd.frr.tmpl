@@ -545,6 +545,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is defined and vrf is not none 
 {%   if parameters.no_fast_external_failover is defined %}
  no bgp fast-external-failover
 {%   endif %}
+{%   if parameters.no_suppress_duplicates is defined %}
+ no bgp suppress-duplicates
+{%   endif %}
 {%   if parameters.reject_as_sets is defined %}
  bgp reject-as-sets
 {%   endif %}
