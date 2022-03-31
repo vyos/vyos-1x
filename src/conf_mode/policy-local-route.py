@@ -65,9 +65,6 @@ def get_config(config=None):
                     rule_def = dict_merge({'destination' : dst}, rule_def)
                 dict = dict_merge({dict_id : {rule : rule_def}}, dict)
                 pbr.update(dict)
-            if fwmk:
-                dict = dict_merge({'rule_remove' : {rule : {'fwmark' : fwmk}}}, dict)
-                pbr.update(dict)
 
         if not route in pbr:
             continue
