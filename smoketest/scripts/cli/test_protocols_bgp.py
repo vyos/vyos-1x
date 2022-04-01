@@ -239,6 +239,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'non_exist_map' in peer_config:
                 base = f'{base} non-exist-map {peer_config["non_exist_map"]}'
             self.assertIn(base, frrconfig)
+        if 'graceful_rst' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart', frrconfig)
+        if 'graceful_rst_no' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart-disable', frrconfig)
+        if 'graceful_rst_hlp' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart-helper', frrconfig)
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -380,6 +386,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-all'])
             if 'addpath_per_as' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-per-as'])
+            if 'graceful_rst' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'enable'])
+            if 'graceful_rst_no' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'disable'])
+            if 'graceful_rst_hlp' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'restart-helper'])
 
             # Conditional advertisement
             if 'advertise_map' in peer_config:
@@ -462,6 +474,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-all'])
             if 'addpath_per_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
+            if 'graceful_rst' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'enable'])
+            if 'graceful_rst_no' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'disable'])
+            if 'graceful_rst_hlp' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'restart-helper'])
 
             # Conditional advertisement
             if 'advertise_map' in config:
