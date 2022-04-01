@@ -797,6 +797,11 @@ def is_wwan_connected(interface):
     if not interface.startswith('wwan'):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
 
+    # ModemManager is required for connection(s) - if service is not running,
+    # there won't be any connection at all!
+    if not is_systemd_service_active('ModemManager.service'):
+        return False
+
     modem = interface.lstrip('wwan')
 
     tmp = cmd(f'mmcli --modem {modem} --output-json')
