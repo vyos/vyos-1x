@@ -326,6 +326,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_02_neighbors(self):
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
+        self.cli_set(base_path + ['parameters', 'deterministic-med'])
+
         for peer, peer_config in neighbor_config.items():
             afi = 'ipv4-unicast'
             if is_ipv6(peer):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -212,6 +212,11 @@ def verify(bgp):
 
                     if 'non_exist_map' in afi_config['conditionally_advertise']:
                         verify_route_map(afi_config['conditionally_advertise']['non_exist_map'], bgp)
+
+                # T4332: bgp deterministic-med cannot be disabled while addpath-tx-bestpath-per-AS is in use
+                if 'addpath_tx_per_as' in afi_config:
+                    if dict_search('parameters.deterministic_med', bgp) == None:
+                        raise ConfigError('addpath-tx-per-as requires BGP deterministic-med paramtere to be set!')
 
                 # Validate if configured Prefix list exists
                 if 'prefix_list' in afi_config:
