@@ -23,7 +23,7 @@
                       <help>Use local username/password configuration (OTP supported)</help>
                       <valueHelp>
                         <format>password</format>
-                        <description>Password-only local authentication (default)</description>
+                        <description>Password-only local authentication</description>
                       </valueHelp>
                       <valueHelp>
                         <format>otp</format>
@@ -36,7 +36,7 @@
                       <constraint>
                         <regex>^(password|otp|password-otp)$</regex>
                       </constraint>
-                      <constraintErrorMessage>Invalid authentication mode</constraintErrorMessage>
+                      <constraintErrorMessage>Invalid authentication mode. Must be one of: password, otp or password-otp </constraintErrorMessage>
                       <completionHelp>
                         <list>otp password password-otp</list>
                       </completionHelp>

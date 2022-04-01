@@ -37,6 +37,8 @@ class TestVpnOpenconnect(VyOSUnitTestSHIM.TestCase):
     def test_vpn(self):
         user = 'vyos_user'
         password = 'vyos_pass'
+        otp = '37500000026900000000200000000000'
+
         self.cli_delete(pki_path)
         self.cli_delete(base_path)
 
@@ -45,7 +47,8 @@ class TestVpnOpenconnect(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pki_path + ['certificate', 'openconnect', 'private', 'key', key_data])
 
         self.cli_set(base_path + ["authentication", "local-users", "username", user, "password", password])
-        self.cli_set(base_path + ["authentication", "mode", "local"])
+        self.cli_set(base_path + ["authentication", "local-users", "username", user, "otp", "key", otp])
+        self.cli_set(base_path + ["authentication", "mode", "local", "password-otp"])
         self.cli_set(base_path + ["network-settings", "client-ip-settings", "subnet", "192.0.2.0/24"])
         self.cli_set(base_path + ["ssl", "ca-certificate", 'openconnect'])
         self.cli_set(base_path + ["ssl", "certificate", 'openconnect'])

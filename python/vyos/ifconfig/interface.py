@@ -39,7 +39,7 @@ from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.util import get_interface_namespace
 from vyos.util import is_systemd_service_active
-from vyos.util import sysctl_read
+from vyos.util import is_ipv6_enabled
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned
@@ -1083,6 +1083,10 @@ class Interface(Control):
 
         addr_is_v4 = is_ipv4(addr)
 
+        # Failsave - do not add IPv6 address if IPv6 is disabled
+        if is_ipv6(addr) and not is_ipv6_enabled():
+            return False
+
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
@@ -1498,7 +1502,7 @@ class Interface(Control):
         self.set_ipv4_source_validation(value)
 
         # Only change IPv6 parameters if IPv6 was not explicitly disabled
-        if sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0':
+        if is_ipv6_enabled():
             # Configure MSS value for IPv6 TCP connections
             tmp = dict_search('ipv6.adjust_mss', config)
             value = tmp if (tmp != None) else '0'
@@ -1526,10 +1530,6 @@ class Interface(Control):
             value = tmp if (tmp != None) else '1'
             self.set_ipv6_dad_messages(value)
 
-            # MTU - Maximum Transfer Unit
-            if 'mtu' in config:
-                self.set_mtu(config.get('mtu'))
-
             # Delete old IPv6 EUI64 addresses before changing MAC
             for addr in (dict_search('ipv6.address.eui64_old', config) or []):
                 self.del_ipv6_eui64_address(addr)
@@ -1545,6 +1545,10 @@ class Interface(Control):
             if tmp:
                 for addr in tmp:
                     self.add_ipv6_eui64_address(addr)
+
+        # MTU - Maximum Transfer Unit
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:

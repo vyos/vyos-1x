@@ -212,6 +212,79 @@
               </tagNode>
             </children>
           </node>
+          <node name="protocol">
+            <properties>
+              <help>Show log for Routing Protocols</help>
+            </properties>
+            <children>
+              <leafNode name="ospf">
+                <properties>
+                  <help>Show log for OSPF</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/ospfd</command>
+              </leafNode>
+              <leafNode name="ospfv3">
+                <properties>
+                  <help>Show log for OSPF for IPv6</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/ospf6d</command>
+              </leafNode>
+              <leafNode name="bgp">
+                <properties>
+                  <help>Show log for BGP</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/bgpd</command>
+              </leafNode>
+              <leafNode name="rip">
+                <properties>
+                  <help>Show log for RIP</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/ripd</command>
+              </leafNode>
+              <leafNode name="ripng">
+                <properties>
+                  <help>Show log for RIPng</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/ripngd</command>
+              </leafNode>
+              <leafNode name="static">
+                <properties>
+                  <help>Show log for static route</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/staticd</command>
+              </leafNode>
+              <leafNode name="multicast">
+                <properties>
+                  <help>Show log for Multicast protocol</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/pimd</command>
+              </leafNode>
+              <leafNode name="isis">
+                <properties>
+                  <help>Show log for ISIS</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/isisd</command>
+              </leafNode>
+              <leafNode name="nhrp">
+                <properties>
+                  <help>Show log for NHRP</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/nhrpd</command>
+              </leafNode>
+              <leafNode name="bfd">
+                <properties>
+                  <help>Show log for BFD</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/bfdd</command>
+              </leafNode>
+              <leafNode name="mpls">
+                <properties>
+                  <help>Show log for MPLS</help>
+                </properties>
+                <command>journalctl -b /usr/lib/frr/ldpd</command>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="snmp">
             <properties>
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>

@@ -34,45 +34,47 @@
                 <constraint>
                   <regex>[a-fA-F0-9]{20,10000}</regex>
                 </constraint>
-                <constraintErrorMessage>Key name must in hex be alphanumerical only (min. 20 hex characters)</constraintErrorMessage>
+                <constraintErrorMessage>Key name must only include hex characters and be at least 20 characters long</constraintErrorMessage>
               </properties>
             </leafNode>
             <leafNode name="otp-length">
               <properties>
-                <help>Optional. Number of digits in OTP code (default: 6)</help>
+                <help>Number of digits in OTP code</help>
                 <valueHelp>
                   <format>u32:6-8</format>
-                  <description>Number of digits in OTP code (default: 6)</description>
+                  <description>Number of digits in OTP code</description>
                 </valueHelp>
                 <constraint>
                   <validator name="numeric" argument="--range 6-8"/>
                 </constraint>
                 <constraintErrorMessage>Number of digits in OTP code must be between 6 and 8</constraintErrorMessage>
               </properties>
+              <defaultValue>6</defaultValue>
             </leafNode>
             <leafNode name="interval">
               <properties>
-                <help>Optional. Time tokens interval in seconds (for time tokens) (default: 30)</help>
+                <help>Time tokens interval in seconds</help>
                 <valueHelp>
                   <format>u32:5-86400</format>
-                  <description>Time tokens interval in seconds (for time tokens). (default: 30)</description>
+                  <description>Time tokens interval in seconds.</description>
                 </valueHelp>
                 <constraint>
                   <validator name="numeric" argument="--range 5-86400"/>
                 </constraint>
                 <constraintErrorMessage>Time token interval must be between 5 and 86400 seconds</constraintErrorMessage>
               </properties>
+              <defaultValue>30</defaultValue>
             </leafNode>
             <leafNode name="token-type">
               <properties>
-                <help>Optional. Token type (default: hotp-time)</help>
+                <help>Token type</help>
                 <valueHelp>
                   <format>hotp-time</format>
-                  <description>time-based OTP algorithm</description>
+                  <description>Time-based OTP algorithm</description>
                 </valueHelp>
                 <valueHelp>
                   <format>hotp-event</format>
-                  <description>event-based OTP algorithm</description>
+                  <description>Event-based OTP algorithm</description>
                 </valueHelp>
                 <constraint>
                   <regex>(hotp-time|hotp-event)</regex>
@@ -81,6 +83,7 @@
                   <list>hotp-time hotp-event</list>
                 </completionHelp>
               </properties>
+              <defaultValue>hotp-time</defaultValue>
             </leafNode>
           </children>
         </node>
