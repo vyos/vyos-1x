@@ -37,7 +37,7 @@ from vyos import airbag
 airbag.enable()
 
 service_name = 'ModemManager.service'
-cron_script = '/etc/cron.d/wwan'
+cron_script = '/etc/cron.d/vyos-wwan'
 
 def get_config(config=None):
     """
@@ -58,8 +58,8 @@ def get_config(config=None):
                                                     get_first_key=True,
                                                     no_tag_node_value_mangle=True)
 
-    # This if-clause is just to be sure - it will always evaluate to true
     ifname = wwan['ifname']
+    # This if-clause is just to be sure - it will always evaluate to true
     if ifname in wwan['other_interfaces']:
         del wwan['other_interfaces'][ifname]
     if len(wwan['other_interfaces']) == 0:
@@ -84,13 +84,25 @@ def verify(wwan):
 
 def generate(wwan):
     if 'deleted' in wwan:
+        # We are the last WWAN interface - there are no other ones remaining
+        # thus the cronjob needs to go away, too
+        if 'other_interfaces' not in wwan:
+            if os.path.exists(cron_script):
+                os.unlink(cron_script)
         return None
 
+    # Install cron triggered helper script to re-dial WWAN interfaces on
+    # disconnect - e.g. happens during RF signal loss. The script watches every
+    # WWAN interface - so there is only one instance.
     if not os.path.exists(cron_script):
         write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py')
+
     return None
 
 def apply(wwan):
+    # ModemManager is required to dial WWAN connections - one instance is
+    # required to serve all modems. Activate ModemManager on first invocation
+    # of any WWAN interface.
     if not is_systemd_service_active(service_name):
         cmd(f'systemctl start {service_name}')
 
@@ -113,7 +125,8 @@ def apply(wwan):
     if 'deleted' in wwan or 'disable' in wwan:
         w.remove()
 
-        # There are no other WWAN interfaces - stop the daemon
+        # We are the last WWAN interface - there are no other WWAN interfaces
+        # remaining, thus we can stop ModemManager and free resources.
         if 'other_interfaces' not in wwan:
             cmd(f'systemctl stop {service_name}')
             # Clean CRON helper script which is used for to re-connect when
@@ -140,9 +153,6 @@ def apply(wwan):
     command = f'{base_cmd} --simple-connect="{options}"'
     call(command, stdout=DEVNULL)
     w.update(wwan)
-
-    if 'other_interfaces' not in wwan and 'deleted' in wwan:
-        cmd(f'systemctl start {service_name}')
 
     return None
 
