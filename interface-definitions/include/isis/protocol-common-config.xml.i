@@ -4,24 +4,7 @@
     <help>Configure the authentication password for an area</help>
   </properties>
   <children>
-    <leafNode name="plaintext-password">
-      <properties>
-        <help>Plain-text authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="md5">
-      <properties>
-        <help>MD5 authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
+    #include <include/isis/password.xml.i>
   </children>
 </node>
 <node name="default-information">
@@ -59,24 +42,7 @@
     <help>Set the authentication password for a routing domain</help>
   </properties>
   <children>
-    <leafNode name="plaintext-password">
-      <properties>
-        <help>Plain-text authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="md5">
-      <properties>
-        <help>MD5 authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
+    #include <include/isis/password.xml.i>
   </children>
 </node>
 <leafNode name="dynamic-hostname">
@@ -104,7 +70,7 @@
       <description>Act as an area router</description>
     </valueHelp>
     <constraint>
-      <regex>^(level-1|level-1-2|level-2)$</regex>
+      <regex>(level-1|level-1-2|level-2)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -182,7 +148,7 @@
       <description>Use new style of TLVs to carry wider metric</description>
     </valueHelp>
     <constraint>
-      <regex>^(narrow|transition|wide)$</regex>
+      <regex>(narrow|transition|wide)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -668,7 +634,7 @@
           <description>Level-2 only adjacencies are formed</description>
         </valueHelp>
         <constraint>
-          <regex>^(level-1|level-1-2|level-2-only)$</regex>
+          <regex>(level-1|level-1-2|level-2-only)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -722,15 +688,7 @@
         <help>Configure the authentication password for a circuit</help>
       </properties>
       <children>
-        <leafNode name="plaintext-password">
-          <properties>
-            <help>Plain-text authentication type</help>
-            <valueHelp>
-              <format>txt</format>
-              <description>Circuit password</description>
-            </valueHelp>
-          </properties>
-        </leafNode>
+        #include <include/isis/password.xml.i>
       </children>
     </node>
     <leafNode name="priority">
