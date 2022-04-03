@@ -114,10 +114,11 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  segment-routing node-msd {{ segment_routing.maximum_label_depth }}
 {%   endif %}
 {%   if segment_routing.global_block is vyos_defined %}
+{%     if segment_routing.local_block is vyos_defined %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }} local-block {{ segment_routing.local_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
+{%     else %}
  segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }}
-{%   endif %}
-{%   if segment_routing.local_block is vyos_defined %}
- segment-routing local-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
+{%     endif %}
 {%   endif %}
 {%   if segment_routing.prefix is vyos_defined %}
 {%     for prefixes in segment_routing.prefix %}

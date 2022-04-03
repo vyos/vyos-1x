@@ -241,22 +241,20 @@
     </leafNode>
     <node name="global-block">
       <properties>
-        <help>Global block label range</help>
+        <help>Segment Routing Global Block label range</help>
       </properties>
       <children>
         #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
-<!--
     <node name="local-block">
       <properties>
-        <help>Local Block label range</help>
+        <help>Segment Routing Local Block label range</help>
       </properties>
       <children>
         #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
--->
     <leafNode name="maximum-label-depth">
       <properties>
         <help>Maximum MPLS labels allowed for this router</help>
