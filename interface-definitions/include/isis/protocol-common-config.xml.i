@@ -244,30 +244,7 @@
         <help>Global block label range</help>
       </properties>
       <children>
-        <leafNode name="low-label-value">
-          <properties>
-            <help>The lower bound of the global block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="high-label-value">
-          <properties>
-            <help>The upper bound of the global block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
 <!--
@@ -276,30 +253,7 @@
         <help>Local Block label range</help>
       </properties>
       <children>
-        <leafNode name="low-label-value">
-          <properties>
-            <help>The lower bound of the local block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="  range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="high-label-value">
-          <properties>
-            <help>The upper bound of the local block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="  range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
 -->
