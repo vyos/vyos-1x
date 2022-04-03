@@ -165,5 +165,52 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' domain-password clear {password}', tmp)
         self.assertIn(f' area-password clear {password}', tmp)
 
+    def test_isis_06_spf_delay(self):
+        network = 'point-to-point'
+        holddown = '10'
+        init_delay = '50'
+        long_delay = '200'
+        short_delay = '100'
+        time_to_learn = '75'
+
+        self.cli_set(base_path + ['net', net])
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface, 'network', network])
+
+        self.cli_set(base_path + ['spf-delay-ietf', 'holddown', holddown])
+        # verify() - All types of spf-delay must be configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['spf-delay-ietf', 'init-delay', init_delay])
+        # verify() - All types of spf-delay must be configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['spf-delay-ietf', 'long-delay', long_delay])
+        # verify() - All types of spf-delay must be configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['spf-delay-ietf', 'short-delay', short_delay])
+        # verify() - All types of spf-delay must be configured
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['spf-delay-ietf', 'time-to-learn', time_to_learn])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' spf-delay-ietf init-delay {init_delay} short-delay {short_delay} long-delay {long_delay} holddown {holddown} time-to-learn {time_to_learn}', tmp)
+
+        for interface in self._interfaces:
+            tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
+            self.assertIn(f' ip router isis {domain}', tmp)
+            self.assertIn(f' ipv6 router isis {domain}', tmp)
+            self.assertIn(f' isis network {network}', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
