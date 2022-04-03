@@ -269,7 +269,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router ospf6', frrconfig)
         self.assertIn(f' ospf6 router-id {router_id}', frrconfig)
 
-        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', end='', daemon='ospf6d')
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', daemon='ospf6d')
         self.assertIn(f'interface {vrf_iface}', frrconfig)
         self.assertIn(f' ipv6 ospf6 bfd', frrconfig)
 
