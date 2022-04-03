@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,6 +39,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     @classmethod
     def tearDownClass(cls):
