@@ -31,7 +31,9 @@ interface {{ iface }}
 {%     if iface_config.passive is vyos_defined %}
  isis passive
 {%     endif %}
-{%     if iface_config.password.plaintext_password is vyos_defined %}
+{%     if iface_config.password.md5 is vyos_defined %}
+ isis password md5 {{ iface_config.password.md5 }}
+{%     elif iface_config.password.plaintext_password is vyos_defined %}
  isis password clear {{ iface_config.password.plaintext_password }}
 {%     endif %}
 {%     if iface_config.priority is vyos_defined %}
