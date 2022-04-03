@@ -1,10 +1,10 @@
 !
-{% if vrf is defined and vrf is not none and route_map is defined and route_map is not none %}
+{% if vrf is vyos_defined and route_map is vyos_defined %}
 vrf {{ vrf }}
  ip protocol {{ protocol }} route-map {{ route_map }}
  exit-vrf
 !
-{% elif route_map is defined and route_map is not none %}
+{% elif route_map is vyos_defined %}
 ip protocol {{ protocol }} route-map {{ route_map }}
 {% endif %}
 !
