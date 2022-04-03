@@ -1,18 +1,18 @@
-{% if access_list is defined and access_list is not none %}
+{% if access_list is vyos_defined %}
 {%   for acl, acl_config in access_list.items() | natural_sort %}
-{%     if acl_config.description is defined and acl_config.description is not none %}
+{%     if acl_config.description is vyos_defined %}
 access-list {{ acl }} remark {{ acl_config.description }}
 {%     endif %}
-{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%     if acl_config.rule is vyos_defined %}
 {%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
 {%         set ip = '' %}
 {%         set src = '' %}
 {%         set src_mask = '' %}
-{%         if rule_config.source is defined and rule_config.source.any is defined %}
+{%         if rule_config.source.any is vyos_defined %}
 {%           set src = 'any' %}
-{%         elif rule_config.source is defined and rule_config.source.host is defined and rule_config.source.host is not none %}
-{%           set src = 'host ' + rule_config.source.host %}
-{%         elif rule_config.source is defined and rule_config.source.network is defined and rule_config.source.network is not none %}
+{%         elif rule_config.source.host is vyos_defined %}
+{%           set src = 'host ' ~ rule_config.source.host %}
+{%         elif rule_config.source.network is vyos_defined %}
 {%           set src = rule_config.source.network %}
 {%           set src_mask = rule_config.source.inverse_mask %}
 {%         endif %}
@@ -21,11 +21,11 @@ access-list {{ acl }} remark {{ acl_config.description }}
 {%         if (acl|int >= 100 and acl|int <= 199) or (acl|int >= 2000 and acl|int <= 2699) %}
 {%           set ip = 'ip' %}
 {%           set dst = 'any' %}
-{%           if rule_config.destination is defined and rule_config.destination.any is defined %}
+{%           if rule_config.destination.any is vyos_defined %}
 {%             set dst = 'any' %}
-{%           elif rule_config.destination is defined and rule_config.destination.host is defined and rule_config.destination.host is not none %}
-{%             set dst = 'host ' + rule_config.destination.host %}
-{%           elif rule_config.destination is defined and rule_config.destination.network is defined and rule_config.destination.network is not none %}
+{%           elif rule_config.destination.host is vyos_defined %}
+{%             set dst = 'host ' ~ rule_config.destination.host %}
+{%           elif rule_config.destination.network is vyos_defined %}
 {%             set dst = rule_config.destination.network %}
 {%             set dst_mask = rule_config.destination.inverse_mask %}
 {%           endif %}
@@ -36,28 +36,28 @@ access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ ip }} {{ src }}
 {%   endfor %}
 {% endif %}
 !
-{% if access_list6 is defined and access_list6 is not none %}
+{% if access_list6 is vyos_defined %}
 {%   for acl, acl_config in access_list6.items() | natural_sort %}
-{%     if acl_config.description is defined and acl_config.description is not none %}
+{%     if acl_config.description is vyos_defined %}
 ipv6 access-list {{ acl }} remark {{ acl_config.description }}
 {%     endif %}
-{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%     if acl_config.rule is vyos_defined %}
 {%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
 {%         set src = '' %}
-{%         if rule_config.source is defined and rule_config.source.any is defined %}
+{%         if rule_config.source.any is vyos_defined %}
 {%           set src = 'any' %}
-{%         elif rule_config.source is defined and rule_config.source.network is defined and rule_config.source.network is not none %}
+{%         elif rule_config.source.network is vyos_defined %}
 {%           set src = rule_config.source.network %}
 {%         endif %}
-ipv6 access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ src }} {{ 'exact-match' if rule_config.source.exact_match is defined }}
+ipv6 access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ src }} {{ 'exact-match' if rule_config.source.exact_match is vyos_defined }}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
 !
-{% if as_path_list is defined and as_path_list is not none %}
+{% if as_path_list is vyos_defined %}
 {%   for acl, acl_config in as_path_list.items() | natural_sort %}
-{%     if acl_config.rule is defined and acl_config.rule is not none %}
+{%     if acl_config.rule is vyos_defined %}
 {%       for rule, rule_config in acl_config.rule.items() | natural_sort %}
 bgp as-path access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.regex }}
 {%       endfor %}
@@ -65,9 +65,9 @@ bgp as-path access-list {{ acl }} seq {{ rule }} {{ rule_config.action }} {{ rul
 {%   endfor %}
 {% endif %}
 !
-{% if community_list is defined and community_list is not none %}
+{% if community_list is vyos_defined %}
 {%   for list, list_config in community_list.items() | natural_sort %}
-{%     if list_config.rule is defined and list_config.rule is not none %}
+{%     if list_config.rule is vyos_defined %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
 {%         if list|int != 0 %}
@@ -80,9 +80,9 @@ bgp community-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }} {
 {%   endfor %}
 {% endif %}
 !
-{% if extcommunity_list is defined and extcommunity_list is not none %}
+{% if extcommunity_list is vyos_defined %}
 {%   for list, list_config in extcommunity_list.items() | natural_sort %}
-{%     if list_config.rule is defined and list_config.rule is not none %}
+{%     if list_config.rule is vyos_defined %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
 {%         if list|int != 0 %}
@@ -95,9 +95,9 @@ bgp extcommunity-list expanded {{ list }} seq {{ rule }} {{ rule_config.action }
 {%   endfor %}
 {% endif %}
 !
-{% if large_community_list is defined and large_community_list is not none %}
+{% if large_community_list is vyos_defined %}
 {%   for list, list_config in large_community_list.items() | natural_sort %}
-{%     if list_config.rule is defined and list_config.rule is not none %}
+{%     if list_config.rule is vyos_defined %}
 {%       for rule, rule_config in list_config.rule.items() | natural_sort %}
 {#         by default, if casting to int fails it returns 0 #}
 {%         if list|int != 0 %}
@@ -110,209 +110,207 @@ bgp large-community-list expanded {{ list }} seq {{ rule }} {{ rule_config.actio
 {%   endfor %}
 {% endif %}
 !
-{% if prefix_list is defined and prefix_list is not none %}
+{% if prefix_list is vyos_defined %}
 {%   for prefix_list, prefix_list_config in prefix_list.items() | natural_sort %}
-{%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
+{%     if prefix_list_config.description is vyos_defined %}
 ip prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
 {%     endif %}
-{%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
+{%     if prefix_list_config.rule is vyos_defined %}
 {%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
-{%         if rule_config.prefix is defined and rule_config.prefix is not none %}
-ip prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%         if rule_config.prefix is vyos_defined %}
+ip prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' ~ rule_config.ge if rule_config.ge is vyos_defined }} {{ 'le ' ~ rule_config.le if rule_config.le is vyos_defined }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
 !
-{% if prefix_list6 is defined and prefix_list6 is not none %}
+{% if prefix_list6 is vyos_defined %}
 {%   for prefix_list, prefix_list_config in prefix_list6.items() | natural_sort %}
-{%     if prefix_list_config.description is defined and prefix_list_config.description is not none %}
+{%     if prefix_list_config.description is vyos_defined %}
 ipv6 prefix-list {{ prefix_list }} description {{ prefix_list_config.description }}
 {%     endif %}
-{%     if prefix_list_config.rule is defined and prefix_list_config.rule is not none %}
+{%     if prefix_list_config.rule is vyos_defined %}
 {%       for rule, rule_config in prefix_list_config.rule.items() | natural_sort %}
-{%         if rule_config.prefix is defined and rule_config.prefix is not none %}
-ipv6 prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' + rule_config.ge if rule_config.ge is defined }} {{ 'le ' + rule_config.le if rule_config.le is defined }}
+{%         if rule_config.prefix is vyos_defined %}
+ipv6 prefix-list {{ prefix_list }} seq {{ rule }} {{ rule_config.action }} {{ rule_config.prefix }} {{ 'ge ' ~ rule_config.ge if rule_config.ge is vyos_defined }} {{ 'le ' ~ rule_config.le if rule_config.le is vyos_defined }}
 {%         endif %}
 {%       endfor %}
 {%     endif %}
 {%   endfor %}
 {% endif %}
 !
-{% if route_map is defined and route_map is not none %}
+{% if route_map is vyos_defined %}
 {%   for route_map, route_map_config in route_map.items() | natural_sort %}
-{%     if route_map_config.rule is defined and route_map_config.rule is not none %}
+{%     if route_map_config.rule is vyos_defined %}
 {%       for rule, rule_config in route_map_config.rule.items() | natural_sort %}
 route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
-{%         if rule_config.call is defined and rule_config.call is not none %}
+{%         if rule_config.call is vyos_defined %}
  call {{ rule_config.call }}
 {%         endif %}
-{%         if rule_config.continue is defined and rule_config.continue is not none %}
+{%         if rule_config.continue is vyos_defined %}
  on-match goto {{ rule_config.continue }}
 {%         endif %}
-{%         if rule_config.description is defined and rule_config.description is not none %}
+{%         if rule_config.description is vyos_defined %}
  description {{ rule_config.description }}
 {%         endif %}
-{%         if rule_config.match is defined and rule_config.match is not none %}
-{%           if rule_config.match.as_path is defined and rule_config.match.as_path is not none %}
+{%         if rule_config.match is vyos_defined %}
+{%           if rule_config.match.as_path is vyos_defined %}
  match as-path {{ rule_config.match.as_path }}
 {%           endif %}
-{%           if rule_config.match.community is defined and rule_config.match.community.community_list is defined and rule_config.match.community.community_list is not none %}
- match community {{ rule_config.match.community.community_list }} {{ 'exact-match' if rule_config.match.community.exact_match is defined }}
+{%           if rule_config.match.community.community_list is vyos_defined %}
+ match community {{ rule_config.match.community.community_list }} {{ 'exact-match' if rule_config.match.community.exact_match is vyos_defined }}
 {%           endif %}
-{%           if rule_config.match.extcommunity is defined and rule_config.match.extcommunity is not none %}
+{%           if rule_config.match.extcommunity is vyos_defined %}
  match extcommunity {{ rule_config.match.extcommunity }}
 {%           endif %}
-{%           if rule_config.match.evpn is defined and rule_config.match.evpn.default_route is defined %}
+{%           if rule_config.match.evpn.default_route is vyos_defined %}
  match evpn default-route
 {%           endif %}
-{%           if rule_config.match.evpn is defined and rule_config.match.evpn.rd is defined and rule_config.match.evpn.rd is not none %}
+{%           if rule_config.match.evpn.rd is vyos_defined %}
  match evpn rd {{ rule_config.match.evpn.rd }}
 {%           endif %}
-{%           if rule_config.match.evpn is defined and rule_config.match.evpn.route_type is defined and rule_config.match.evpn.route_type is not none %}
+{%           if rule_config.match.evpn.route_type is vyos_defined %}
  match evpn route-type {{ rule_config.match.evpn.route_type }}
 {%           endif %}
-{%           if rule_config.match.evpn is defined and rule_config.match.evpn.vni is defined and rule_config.match.evpn.vni is not none %}
+{%           if rule_config.match.evpn.vni is vyos_defined %}
  match evpn vni {{ rule_config.match.evpn.vni }}
 {%           endif %}
-{%           if rule_config.match.interface is defined and rule_config.match.interface is not none %}
+{%           if rule_config.match.interface is vyos_defined %}
  match interface {{ rule_config.match.interface }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.address is defined and rule_config.match.ip.address.access_list is defined and rule_config.match.ip.address.access_list is not none %}
+{%           if rule_config.match.ip.address.access_list is vyos_defined %}
  match ip address {{ rule_config.match.ip.address.access_list }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.address is defined and rule_config.match.ip.address.prefix_list is defined and rule_config.match.ip.address.prefix_list is not none %}
+{%           if rule_config.match.ip.address.prefix_list is vyos_defined %}
  match ip address prefix-list {{ rule_config.match.ip.address.prefix_list }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.nexthop is defined and rule_config.match.ip.nexthop.access_list is defined and rule_config.match.ip.nexthop.access_list is not none %}
+{%           if rule_config.match.ip.nexthop.access_list is vyos_defined %}
  match ip next-hop {{ rule_config.match.ip.nexthop.access_list }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.nexthop is defined and rule_config.match.ip.nexthop.prefix_list is defined and rule_config.match.ip.nexthop.prefix_list is not none %}
+{%           if rule_config.match.ip.nexthop.prefix_list is vyos_defined %}
  match ip next-hop prefix-list {{ rule_config.match.ip.nexthop.prefix_list }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.route_source is defined and rule_config.match.ip.route_source.access_list is defined and rule_config.match.ip.route_source.access_list is not none %}
+{%           if rule_config.match.ip.route_source.access_list is vyos_defined %}
  match ip route-source {{ rule_config.match.ip.route_source.access_list }}
 {%           endif %}
-{%           if rule_config.match.ip is defined and rule_config.match.ip.route_source is defined and rule_config.match.ip.route_source.prefix_list is defined and rule_config.match.ip.route_source.prefix_list is not none %}
+{%           if rule_config.match.ip.route_source.prefix_list is vyos_defined %}
  match ip route-source prefix-list {{ rule_config.match.ip.route_source.prefix_list }}
 {%           endif %}
-{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.address is defined and rule_config.match.ipv6.address.access_list is defined and rule_config.match.ipv6.address.access_list is not none %}
+{%           if rule_config.match.ipv6.address.access_list is vyos_defined %}
  match ipv6 address {{ rule_config.match.ipv6.address.access_list }}
 {%           endif %}
-{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.address is defined and rule_config.match.ipv6.address.prefix_list is defined and rule_config.match.ipv6.address.prefix_list is not none %}
+{%           if rule_config.match.ipv6.address.prefix_list is vyos_defined %}
  match ipv6 address prefix-list {{ rule_config.match.ipv6.address.prefix_list }}
 {%           endif %}
-{%           if rule_config.match.ipv6 is defined and rule_config.match.ipv6.nexthop is defined and rule_config.match.ipv6.nexthop is not none %}
+{%           if rule_config.match.ipv6.nexthop is vyos_defined %}
  match ipv6 next-hop address {{ rule_config.match.ipv6.nexthop }}
 {%           endif %}
-{%           if rule_config.match.large_community is defined and rule_config.match.large_community.large_community_list is defined and rule_config.match.large_community.large_community_list is not none %}
+{%           if rule_config.match.large_community.large_community_list is vyos_defined %}
  match large-community {{ rule_config.match.large_community.large_community_list }}
 {%           endif %}
-{%           if rule_config.match.local_preference is defined and rule_config.match.local_preference is not none %}
+{%           if rule_config.match.local_preference is vyos_defined %}
  match local-preference {{ rule_config.match.local_preference }}
 {%           endif %}
-{%           if rule_config.match.metric is defined and rule_config.match.metric is not none %}
+{%           if rule_config.match.metric is vyos_defined %}
  match metric {{ rule_config.match.metric }}
 {%           endif %}
-{%           if rule_config.match.origin is defined and rule_config.match.origin is not none %}
+{%           if rule_config.match.origin is vyos_defined %}
  match origin {{ rule_config.match.origin }}
 {%           endif %}
-{%           if rule_config.match.peer is defined and rule_config.match.peer is not none %}
+{%           if rule_config.match.peer is vyos_defined %}
  match peer {{ rule_config.match.peer }}
 {%           endif %}
-{%           if rule_config.match.rpki is defined and rule_config.match.rpki is not none %}
+{%           if rule_config.match.rpki is vyos_defined %}
  match rpki {{ rule_config.match.rpki }}
 {%           endif %}
-{%           if rule_config.match.tag is defined and rule_config.match.tag is not none %}
+{%           if rule_config.match.tag is vyos_defined %}
  match tag {{ rule_config.match.tag }}
 {%           endif %}
 {%         endif %}
-{%         if rule_config.on_match is defined and rule_config.on_match is not none %}
-{%           if rule_config.on_match.next is defined %}
+{%         if rule_config.on_match.next is vyos_defined %}
  on-match next
-{%           endif %}
-{%           if rule_config.on_match.goto is defined and rule_config.on_match.goto is not none %}
- on-match goto {{ rule_config.on_match.goto }}
-{%           endif %}
 {%         endif %}
-{%         if rule_config.set is defined and rule_config.set is not none %}
-{%           if rule_config.set.aggregator is defined and rule_config.set.aggregator.as is defined and rule_config.set.aggregator.ip is defined %}
+{%         if rule_config.on_match.goto is vyos_defined %}
+ on-match goto {{ rule_config.on_match.goto }}
+{%         endif %}
+{%         if rule_config.set is vyos_defined %}
+{%           if rule_config.set.aggregator.as is vyos_defined and rule_config.set.aggregator.ip is vyos_defined %}
  set aggregator as {{ rule_config.set.aggregator.as }} {{ rule_config.set.aggregator.ip }}
 {%           endif %}
-{%           if rule_config.set.as_path_exclude is defined and rule_config.set.as_path_exclude is not none %}
+{%           if rule_config.set.as_path_exclude is vyos_defined %}
  set as-path exclude {{ rule_config.set.as_path_exclude }}
 {%           endif %}
-{%           if rule_config.set.as_path_prepend is defined and rule_config.set.as_path_prepend is not none %}
+{%           if rule_config.set.as_path_prepend is vyos_defined %}
  set as-path prepend {{ rule_config.set.as_path_prepend }}
 {%           endif %}
-{%           if rule_config.set.atomic_aggregate is defined %}
+{%           if rule_config.set.atomic_aggregate is vyos_defined %}
  set atomic-aggregate
 {%           endif %}
-{%           if rule_config.set.comm_list is defined and rule_config.set.comm_list.comm_list is defined and rule_config.set.comm_list.comm_list is not none %}
- set comm-list {{ rule_config.set.comm_list.comm_list }} {{ 'delete' if rule_config.set.comm_list.delete is defined }}
+{%           if rule_config.set.comm_list.comm_list is vyos_defined %}
+ set comm-list {{ rule_config.set.comm_list.comm_list }} {{ 'delete' if rule_config.set.comm_list.delete is vyos_defined }}
 {%           endif %}
-{%           if rule_config.set.community is defined and rule_config.set.community is not none %}
+{%           if rule_config.set.community is vyos_defined %}
  set community {{ rule_config.set.community }}
 {%           endif %}
-{%           if rule_config.set.distance is defined and rule_config.set.distance is not none %}
+{%           if rule_config.set.distance is vyos_defined %}
  set distance {{ rule_config.set.distance }}
 {%           endif %}
-{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.bandwidth is defined and rule_config.set.extcommunity.bandwidth is not none %}
+{%           if rule_config.set.extcommunity.bandwidth is vyos_defined %}
  set extcommunity bandwidth {{ rule_config.set.extcommunity.bandwidth }}
 {%           endif %}
-{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.rt is defined and rule_config.set.extcommunity.rt is not none %}
+{%           if rule_config.set.extcommunity.rt is vyos_defined %}
  set extcommunity rt {{ rule_config.set.extcommunity.rt }}
 {%           endif %}
-{%           if rule_config.set.extcommunity is defined and rule_config.set.extcommunity.soo is defined and rule_config.set.extcommunity.soo is not none %}
+{%           if rule_config.set.extcommunity.soo is vyos_defined %}
  set extcommunity soo {{ rule_config.set.extcommunity.soo }}
 {%           endif %}
-{%           if rule_config.set.ip_next_hop is defined and rule_config.set.ip_next_hop is not none %}
+{%           if rule_config.set.ip_next_hop is vyos_defined %}
  set ip next-hop {{ rule_config.set.ip_next_hop }}
 {%           endif %}
-{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.global is defined and rule_config.set.ipv6_next_hop.global is not none %}
+{%           if rule_config.set.ipv6_next_hop.global is vyos_defined %}
  set ipv6 next-hop global {{ rule_config.set.ipv6_next_hop.global }}
 {%           endif %}
-{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.local is defined and rule_config.set.ipv6_next_hop.local is not none %}
+{%           if rule_config.set.ipv6_next_hop.local is vyos_defined %}
  set ipv6 next-hop local {{ rule_config.set.ipv6_next_hop.local }}
 {%           endif %}
-{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.peer_address is defined %}
+{%           if rule_config.set.ipv6_next_hop.peer_address is vyos_defined %}
  set ipv6 next-hop peer-address
 {%           endif %}
-{%           if rule_config.set.ipv6_next_hop is defined and rule_config.set.ipv6_next_hop.prefer_global is defined %}
+{%           if rule_config.set.ipv6_next_hop.prefer_global is vyos_defined %}
  set ipv6 next-hop prefer-global
 {%           endif %}
-{%           if rule_config.set.large_community is defined and rule_config.set.large_community is not none %}
+{%           if rule_config.set.large_community is vyos_defined %}
  set large-community {{ rule_config.set.large_community }}
 {%           endif %}
-{%           if rule_config.set.large_comm_list_delete is defined and rule_config.set.large_comm_list_delete is not none %}
+{%           if rule_config.set.large_comm_list_delete is vyos_defined %}
  set large-comm-list {{ rule_config.set.large_comm_list_delete }} delete
 {%           endif %}
-{%           if rule_config.set.local_preference is defined and rule_config.set.local_preference is not none %}
+{%           if rule_config.set.local_preference is vyos_defined %}
  set local-preference {{ rule_config.set.local_preference }}
 {%           endif %}
-{%           if rule_config.set.metric is defined and rule_config.set.metric is not none %}
+{%           if rule_config.set.metric is vyos_defined %}
  set metric {{ rule_config.set.metric }}
 {%           endif %}
-{%           if rule_config.set.metric_type is defined and rule_config.set.metric_type is not none %}
+{%           if rule_config.set.metric_type is vyos_defined %}
  set metric-type {{ rule_config.set.metric_type }}
 {%           endif %}
-{%           if rule_config.set.origin is defined and rule_config.set.origin is not none %}
+{%           if rule_config.set.origin is vyos_defined %}
  set origin {{ rule_config.set.origin }}
 {%           endif %}
-{%           if rule_config.set.originator_id is defined and rule_config.set.originator_id is not none %}
+{%           if rule_config.set.originator_id is vyos_defined %}
  set originator-id {{ rule_config.set.originator_id }}
 {%           endif %}
-{%           if rule_config.set.src is defined and rule_config.set.src is not none %}
+{%           if rule_config.set.src is vyos_defined %}
  set src {{ rule_config.set.src }}
 {%           endif %}
-{%           if rule_config.set.table is defined and rule_config.set.table is not none %}
+{%           if rule_config.set.table is vyos_defined %}
  set table {{ rule_config.set.table }}
 {%           endif %}
-{%           if rule_config.set.tag is defined and rule_config.set.tag is not none %}
+{%           if rule_config.set.tag is vyos_defined %}
  set tag {{ rule_config.set.tag }}
 {%           endif %}
-{%           if rule_config.set.weight is defined and rule_config.set.weight is not none %}
+{%           if rule_config.set.weight is vyos_defined %}
  set weight {{ rule_config.set.weight }}
 {%           endif %}
 {%         endif %}
