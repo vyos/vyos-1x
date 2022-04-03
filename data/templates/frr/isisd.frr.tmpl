@@ -157,7 +157,7 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
 {% if default_information.originate is vyos_defined %}
 {%   for afi, afi_config in default_information.originate.items() %}
 {%     for level, level_config in afi_config.items() %}
- default-information originate {{ afi }} {{ level | replace('_', '-') }} {{ 'always' if level_config.always is defined }} {{ 'route-map ' ~ level_config.route_map if level_config.route_map is defined }} {{ 'metric ' ~ level_config.metric if level_config.metric is defined }}
+ default-information originate {{ afi }} {{ level | replace('_', '-') }} {{ 'always' if level_config.always is vyos_defined }} {{ 'route-map ' ~ level_config.route_map if level_config.route_map is vyos_defined }} {{ 'metric ' ~ level_config.metric if level_config.metric is vyos_defined }}
 {%     endfor %}
 {%   endfor %}
 {% endif %}
@@ -177,9 +177,9 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
 {% if redistribute.ipv6 is vyos_defined %}
 {%   for protocol, protocol_options in redistribute.ipv6.items() %}
 {%     for level, level_config in protocol_options.items() %}
-{%       if level_config.metric is defined and level_config.metric is not none %}
+{%       if level_config.metric is vyos_defined %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
-{%       elif level_config.route_map is defined and level_config.route_map is not none %}
+{%       elif level_config.route_map is vyos_defined %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
 {%       else %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }}
