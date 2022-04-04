@@ -250,6 +250,9 @@ def apply(login):
     if 'rm_users' in login:
         for user in login['rm_users']:
             try:
+                # Disable user to prevent re-login
+                call(f'usermod -s /sbin/nologin {user}')
+
                 # Logout user if he is still logged in
                 if user in list(set([tmp[0] for tmp in users()])):
                     print(f'{user} is logged in, forcing logout!')
