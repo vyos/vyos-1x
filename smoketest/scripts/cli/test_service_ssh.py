@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,6 +25,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
+from vyos.util import is_systemd_service_running
 from vyos.util import process_named_running
 from vyos.util import read_file
 
@@ -52,6 +53,9 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         # delete testing SSH config
         self.cli_delete(base_path)
         self.cli_commit()
@@ -59,6 +63,11 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.isfile(key_rsa))
         self.assertTrue(os.path.isfile(key_dsa))
         self.assertTrue(os.path.isfile(key_ed25519))
+
+        # Established SSH connections remains running after service is stopped.
+        # We can not use process_named_running here - we rather need to check
+        # that the systemd service is no longer running
+        self.assertFalse(is_systemd_service_running(PROCESS_NAME))
 
     def test_ssh_default(self):
         # Check if SSH service runs with default settings - used for checking
@@ -71,9 +80,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # Check configured port
         port = get_config_value('Port')[0]
         self.assertEqual('22', port)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ssh_single_listen_address(self):
         # Check if SSH service can be configured and runs
@@ -111,9 +117,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         keepalive = get_config_value('ClientAliveInterval')[0]
         self.assertTrue("100" in keepalive)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_ssh_multiple_listen_addresses(self):
         # Check if SSH service can be configured and runs with multiple
         # listen ports and listen-addresses
@@ -138,9 +141,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         for address in addresses:
             self.assertIn(address, tmp)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_ssh_vrf(self):
         # Check if SSH service can be bound to given VRF
         port = '22'
@@ -159,9 +159,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # Check configured port
         tmp = get_config_value('Port')
         self.assertIn(port, tmp)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
         # Check for process in VRF
         tmp = cmd(f'ip vrf pids {vrf}')
