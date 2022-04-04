@@ -112,6 +112,22 @@
             </children>
           </tagNode>
           #include <include/name-server-ipv4-ipv6.xml.i>
+          <node name="client-ip-pool">
+            <properties>
+              <help>Client IP pools and gateway setting</help>
+            </properties>
+            <children>
+              <tagNode name="name">
+                <properties>
+                  <help>Pool name</help>
+                </properties>
+                <children>
+                  #include <include/accel-ppp/gateway-address.xml.i>
+                  #include <include/accel-ppp/client-ip-pool-subnet-single.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           <node name="authentication">
             <properties>

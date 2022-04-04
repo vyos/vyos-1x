@@ -25,11 +25,21 @@ level=5
 verbose=1
 {% for interface in interfaces %}
 {% if interface.vlan_mon %}
-interface=re:{{ interface.name }}\.\d+,{% else %}interface={{ interface.name }},{% endif %}shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }},range={{ interface.range }},start={{ interface.sess_start }},ipv6=1
+interface=re:{{ interface.name }}\.\d+,{% else %}interface={{ interface.name }},{% endif %}shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }}{{ ',range=' + interface.range if interface.range is defined and interface.range is not none }},start={{ interface.sess_start }},ipv6=1
 {% endfor %}
-{% if auth_mode == 'noauth' %}
+{%   if auth_mode == 'noauth' %}
 noauth=1
-{% elif auth_mode == 'local' %}
+{%     if client_named_ip_pool %}
+{%       for pool in client_named_ip_pool %}
+{%         if pool.subnet is defined  %}
+ip-pool={{ pool.name }}
+{%         endif %}
+{%         if pool.gateway_address is defined %}
+gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
+{%         endif %}
+{%       endfor%}
+{%     endif %}
+{%   elif auth_mode == 'local' %}
 username=ifname
 password=csid
 {% endif %}
@@ -60,6 +70,18 @@ verbose=1
 
 [ipv6-dhcp]
 verbose=1
+
+{% if client_named_ip_pool %}
+[ip-pool]
+{%   for pool in client_named_ip_pool %}
+{%     if pool.subnet is defined  %}
+{{ pool.subnet }},name={{ pool.name }}
+{%     endif %}
+{%     if pool.gateway_address is defined %}
+gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
+{%     endif %}
+{%   endfor%}
+{% endif %}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
