@@ -7,7 +7,7 @@
           <help>Wireless Modem (WWAN) Interface</help>
           <priority>350</priority>
           <completionHelp>
-            <script>cd /sys/class/net; ls -d wwan*</script>
+            <script>cd /sys/class/net; if compgen -G "wwan*" > /dev/null; then ls -d wwan*; fi</script>
           </completionHelp>
           <constraint>
             <regex>^wwan[0-9]+$</regex>
