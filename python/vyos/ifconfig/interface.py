@@ -1296,9 +1296,6 @@ class Interface(Control):
                 else:
                     self.del_addr(addr)
 
-        for addr in new_addr:
-            self.add_addr(addr)
-
         # start DHCPv6 client when only PD was configured
         if dhcpv6pd:
             self.set_dhcpv6(True)
@@ -1312,6 +1309,10 @@ class Interface(Control):
             # also drop the interface out of a bridge or bond - thus this is
             # checked before
             self.set_vrf(config.get('vrf', ''))
+
+        # Add this section after vrf T4331
+        for addr in new_addr:
+            self.add_addr(addr)
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
