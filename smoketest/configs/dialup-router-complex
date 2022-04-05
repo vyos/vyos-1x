@@ -498,6 +498,9 @@ firewall {
             destination {
                 port 110,995
             }
+            limit {
+                rate "10/minute"
+            }
             protocol tcp
         }
         rule 123 {

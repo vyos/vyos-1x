@@ -171,6 +171,12 @@ def verify_rule(firewall, rule_conf, ipv6):
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError('Cannot specify both "match-frag" and "match-non-frag"')
 
+    if 'limit' in rule_conf:
+        if 'rate' in rule_conf['limit']:
+            rate_int = re.sub(r'\D', '', rule_conf['limit']['rate'])
+            if int(rate_int) < 1:
+                raise ConfigError('Limit rate integer cannot be less than 1')
+
     if 'ipsec' in rule_conf:
         if {'match_ipsec', 'match_non_ipsec'} <= set(rule_conf['ipsec']):
             raise ConfigError('Cannot specify both "match-ipsec" and "match-non-ipsec"')
