@@ -1361,6 +1361,7 @@ service {
             listen-address 172.16.254.30
             listen-address 172.31.0.254
             negative-ttl 60
+            network-timeout 5000
         }
     }
     lldp {
