@@ -523,15 +523,6 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <tagNode name="address">
-      <properties>
-        <help>Show IPv4 OSPF neighbor information for specified IP address</help>
-        <completionHelp>
-          <list>&lt;x.x.x.x&gt;</list>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
     <node name="detail">
       <properties>
         <help>Show detailed IPv4 OSPF neighbor information</help>
