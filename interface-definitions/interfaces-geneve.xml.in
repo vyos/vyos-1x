@@ -52,7 +52,6 @@
           </node>
           #include <include/interface/mirror.xml.i>
           #include <include/interface/redirect.xml.i>
-          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/tunnel-remote.xml.i>
           #include <include/vni.xml.i>
         </children>

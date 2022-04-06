@@ -28,36 +28,33 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
-    base = ['traffic-policy']
+    base = ['qos']
     if not conf.exists(base):
         return None
 
     qos = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    for traffic_policy in ['drop-tail', 'fair-queue', 'fq-codel', 'limiter',
-                           'network-emulator', 'priority-queue', 'random-detect',
-                           'rate-control', 'round-robin', 'shaper', 'shaper-hfsc']:
-        traffic_policy_us = traffic_policy.replace('-','_')
-        # Individual policy type not present on CLI - no need to blend in
-        # any default values
-        if traffic_policy_us not in qos:
-            continue
+    if 'policy' in qos:
+        for policy in qos['policy']:
+            # CLI mangles - to _ for better Jinja2 compatibility - do we need
+            # Jinja2 here?
+            policy = policy.replace('-','_')
 
-        default_values = defaults(base + [traffic_policy_us])
+            default_values = defaults(base + ['policy', policy])
 
-        # class is another tag node which requires individual handling
-        class_default_values = defaults(base + [traffic_policy_us, 'class'])
-        if 'class' in default_values:
-            del default_values['class']
+            # class is another tag node which requires individual handling
+            class_default_values = defaults(base + ['policy', policy, 'class'])
+            if 'class' in default_values:
+                del default_values['class']
 
-        for policy, policy_config in qos[traffic_policy_us].items():
-            qos[traffic_policy_us][policy] = dict_merge(
-                default_values, qos[traffic_policy_us][policy])
+            for p_name, p_config in qos['policy'][policy].items():
+                qos['policy'][policy][p_name] = dict_merge(
+                    default_values, qos['policy'][policy][p_name])
 
-            if 'class' in policy_config:
-                for policy_class in policy_config['class']:
-                    qos[traffic_policy_us][policy]['class'][policy_class] = dict_merge(
-                        class_default_values, qos[traffic_policy_us][policy]['class'][policy_class])
+                if 'class' in p_config:
+                    for p_class in p_config['class']:
+                        qos['policy'][policy][p_name]['class'][p_class] = dict_merge(
+                            class_default_values, qos['policy'][policy][p_name]['class'][p_class])
 
     import pprint
     pprint.pprint(qos)

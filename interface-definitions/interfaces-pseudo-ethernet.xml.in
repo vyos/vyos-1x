@@ -61,7 +61,6 @@
           </leafNode>
           #include <include/interface/mtu-68-16000.xml.i>
           #include <include/interface/redirect.xml.i>
-          #include <include/interface/traffic-policy.xml.i>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>
         </children>
