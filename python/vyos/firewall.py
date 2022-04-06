@@ -174,7 +174,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:
-            output.append(f'limit rate {rule_conf["limit"]["rate"]}/second')
+            output.append(f'limit rate {rule_conf["limit"]["rate"]}')
             if 'burst' in rule_conf['limit']:
                 output.append(f'burst {rule_conf["limit"]["burst"]} packets')
 

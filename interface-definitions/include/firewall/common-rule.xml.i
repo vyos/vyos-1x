@@ -66,11 +66,11 @@
       <properties>
         <help>Maximum average matching rate</help>
         <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Maximum average matching rate</description>
+          <format>txt</format>
+          <description>integer/unit (Example: 5/minute)</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
+          <regex>^\d+/(second|minute|hour|day)$</regex>
         </constraint>
       </properties>
     </leafNode>

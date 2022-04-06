@@ -88,6 +88,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'destination', 'port', '8888'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'limit', 'rate', '5/minute'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -97,6 +101,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['iifname "eth0"', 'jump NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'return'],
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'reject'],
+            ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
             ['smoketest default-action', 'drop']
         ]
 
