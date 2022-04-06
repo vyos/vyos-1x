@@ -269,9 +269,8 @@ def verify(dns):
         raise ConfigError('Invalid authoritative records have been defined')
 
     if 'system' in dns:
-        if not ('system_name_server' in dns or 'system_name_server_dhcp' in dns):
-            print("Warning: No 'system name-server' or 'system " \
-                  "name-servers-dhcp' configured")
+        if not 'system_name_server' in dns:
+            print('Warning: No "system name-server" configured')
 
     return None
 
