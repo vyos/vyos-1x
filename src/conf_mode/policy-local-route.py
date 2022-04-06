@@ -100,14 +100,14 @@ def get_config(config=None):
                         rule_def = dict_merge({'source' : src}, rule_def)
                 if fwmk is None:
                     if 'fwmark' in rule_config:
-                        rule_def = dict_merge({'fwmark': rule_config['fwmark']}, rule_def)
+                        rule_def = dict_merge({'fwmark': [rule_config['fwmark']]}, rule_def)
                 else:
                     changed = True
                     if len(fwmk) > 0:
                         rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
                 if iif is None:
                     if 'inbound_interface' in rule_config:
-                        rule_def = dict_merge({'inbound_interface': rule_config['inbound_interface']}, rule_def)
+                        rule_def = dict_merge({'inbound_interface': [rule_config['inbound_interface']]}, rule_def)
                 else:
                     changed = True
                     if len(iif) > 0:

@@ -1030,13 +1030,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original_second))
 
-
-def sort_ip(output):
-    o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
-    o = o.splitlines()
-    o.sort()
-    return o
-
     # Test set table for fwmark
     def test_fwmark_table_id(self):
         path = base_path + ['local-route']
@@ -1050,9 +1043,6 @@ def sort_ip(output):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         101:    from all fwmark 0x18 lookup 154
         """
@@ -1077,9 +1067,6 @@ def sort_ip(output):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         100:	from 203.0.113.11 fwmark 0x17 lookup 150
         100:	from 203.0.113.12 fwmark 0x17 lookup 150
@@ -1089,6 +1076,48 @@ def sort_ip(output):
         tmp = tmp.split()
 
         self.assertEqual(tmp, original)
+
+    # Test remove fwmark for sources with fwmark
+    def test_source_fwmk_remove(self):
+        path = base_path + ['local-route']
+
+        src = '203.0.113.11'
+        dst = '203.0.113.0/24'
+        fwmk = '23'
+        rule = '100'
+        table = '150'
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'source', src])
+        self.cli_set(path + ['rule', rule, 'destination', dst])
+        self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        100:	from 203.0.113.11 to 203.0.113.0/24 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
+        original = original.split()
+        tmp = tmp.split()
+
+        self.assertEqual(tmp, original)
+
+        self.cli_delete(path + ['rule', rule, 'source', src])
+        self.cli_commit()
+
+        original = """
+        100:	from all to 203.0.113.0/24 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
+        original = original.split()
+        tmp = tmp.split()
+        self.assertEqual(tmp, original)
+
+def sort_ip(output):
+    o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
+    o = o.splitlines()
+    o.sort()
+    return o
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
