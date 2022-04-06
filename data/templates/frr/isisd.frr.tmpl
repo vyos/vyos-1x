@@ -99,8 +99,8 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     endfor %}
 {%   endif %}
 {% endif %}
-{% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.init_delay is not none %}
- spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }}
+{% if spf_delay_ietf is defined and spf_delay_ietf.init_delay is defined and spf_delay_ietf.short_delay is defined and spf_delay_ietf.long_delay is defined and spf_delay_ietf.holddown is defined and spf_delay_ietf.time_to_learn is defined %}
+ spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }} short-delay {{ spf_delay_ietf.short_delay }} long-delay {{ spf_delay_ietf.long_delay }} holddown {{ spf_delay_ietf.holddown }} time-to-learn {{ spf_delay_ietf.time_to_learn }}
 {% endif %}
 {% if area_password is defined and area_password is not none %}
 {%   if area_password.md5 is defined and area_password.md5 is not none %}
