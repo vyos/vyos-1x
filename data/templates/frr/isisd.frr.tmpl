@@ -181,7 +181,9 @@ interface {{ iface }} {{ 'vrf ' + vrf if vrf is defined and vrf is not none }}
 {%     if iface_config.passive is defined %}
  isis passive
 {%     endif %}
-{%     if iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
+{%     if iface_config.password is defined and iface_config.password.md5 is defined and iface_config.password.md5 is not none %}
+ isis password md5 {{ iface_config.password.md5 }}
+{%     elif iface_config.password is defined and iface_config.password.plaintext_password is defined and iface_config.password.plaintext_password is not none %}
  isis password clear {{ iface_config.password.plaintext_password }}
 {%     endif %}
 {%     if iface_config.priority is defined and iface_config.priority is not none %}
