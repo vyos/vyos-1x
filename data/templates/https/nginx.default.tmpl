@@ -53,19 +53,6 @@ server {
         }
 
         error_page 497 =301 https://$host:{{ server.port }}$request_uri;
-        error_page 501 502 503 =200 @50*_json;
-
-{% if api_set %}
-        location @50*_json {
-                default_type application/json;
-                return 200 '{"error": "service https api unavailable at this proxy address: set service https api-restrict virtual-host"}';
-        }
-{% else %}
-        location @50*_json {
-                default_type application/json;
-                return 200 '{"error": "Start service in configuration mode: set service https api"}';
-        }
-{% endif %}
 
 }
 

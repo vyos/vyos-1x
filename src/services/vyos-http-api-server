@@ -352,7 +352,7 @@ class MultipartRoute(APIRoute):
                 return error(e.status_code, e.detail)
             except Exception as e:
                 if request.ERR_MISSING_KEY:
-                    return error(422, "Valid API key is required")
+                    return error(401, "Valid API key is required")
                 if request.ERR_MISSING_DATA:
                     return error(422, "Non-empty data field is required")
                 if request.ERR_NOT_JSON:
