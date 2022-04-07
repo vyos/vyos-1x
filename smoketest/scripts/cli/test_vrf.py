@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,8 +27,10 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.template import is_ipv6
+from vyos.template import is_ipv4
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 base_path = ['vrf']
@@ -61,6 +63,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # delete all VRFs
         self.cli_delete(base_path)
+        self.cli_delete(['interfaces', 'dummy'])
+        self.cli_delete(['protocols', 'vrf'])
         self.cli_commit()
         for vrf in vrfs:
             self.assertNotIn(vrf, interfaces())
@@ -108,9 +112,14 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             #  ...
             regex = f'{table}\s+{vrf}\s+#\s+{description}'
             self.assertTrue(re.findall(regex, iproute2_config))
+
+            tmp = get_interface_config(vrf)
+            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
+            # Increment table ID for the next run
             table = str(int(table) + 1)
 
-    def test_vrf_loopback_ips(self):
+    def test_vrf_loopbacks_ips(self):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
@@ -121,10 +130,48 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
+        loopbacks = ['127.0.0.1', '::1']
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
-            self.assertTrue(is_intf_addr_assigned(vrf, '127.0.0.1'))
-            self.assertTrue(is_intf_addr_assigned(vrf, '::1'))
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+            # Test for proper loopback IP assignment
+            for addr in loopbacks:
+                self.assertTrue(is_intf_addr_assigned(vrf, addr))
+
+    def test_vrf_loopbacks_no_ipv6(self):
+        table = '2002'
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', str(table)])
+            table = str(int(table) + 1)
+
+        # Globally disable IPv6 - this will remove all IPv6 interface addresses
+        self.cli_set(['system', 'ipv6', 'disable'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = '2002'
+        loopbacks = ['127.0.0.1', '::1']
+        for vrf in vrfs:
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+
+            # Verify VRF table ID
+            tmp = get_interface_config(vrf)
+            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
+            # Test for proper loopback IP assignment
+            for addr in loopbacks:
+                if is_ipv4(addr):
+                    self.assertTrue(is_intf_addr_assigned(vrf, addr))
+                else:
+                    self.assertFalse(is_intf_addr_assigned(vrf, addr))
+
+            table = str(int(table) + 1)
+
+        self.cli_delete(['system', 'ipv6'])
 
     def test_vrf_bind_all(self):
         table = '2000'
@@ -204,13 +251,13 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
                 },
         }
 
+        # required interface for leaking to default table
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
+
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
             self.cli_set(base + ['table', str(table)])
-
-            # required interface for leaking to default table
-            self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
 
             # we also need an interface in "UP" state to install routes
             self.cli_set(['interfaces', 'dummy', f'dum{table}', 'vrf', vrf])
@@ -233,28 +280,24 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify routes
-        table = '2000'
         for vrf in vrfs:
-            for route, route_config in routes.items():
-                if is_ipv6(route):
-                    tmp = get_vrf_ipv6_routes(vrf)
-                else:
-                    tmp = get_vrf_ipv4_routes(vrf)
+            self.assertIn(vrf, interfaces())
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            for prefix, prefix_config in routes.items():
+                tmp = 'ip'
+                if is_ipv6(prefix):
+                    tmp += 'v6'
 
-                found = False
-                for result in tmp:
-                    if 'dst' in result and result['dst'] == route:
-                        if 'gateway' in result and result['gateway'] == route_config['next_hop']:
-                            found = True
+                tmp += f' route {prefix} {prefix_config["next_hop"]}'
+                if 'distance' in prefix_config:
+                    tmp += ' ' + prefix_config['distance']
+                if 'next_hop_vrf' in prefix_config:
+                    tmp += ' nexthop-vrf ' + prefix_config['next_hop_vrf']
 
-                self.assertTrue(found)
+                    self.assertIn(tmp, frrconfig)
 
-            # Cleanup
-            self.cli_delete(['protocols', 'vrf', vrf])
-            self.cli_delete(['interfaces', 'dummy', f'dum{table}'])
-            self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address', '192.0.2.1/24'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address'])
 
-            table = str(int(table) + 1)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
