@@ -106,6 +106,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         port = '443'
         name = 'localhost'
 
+        self.cli_set(base_path + ['api', 'socket'])
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
 
