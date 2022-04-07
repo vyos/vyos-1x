@@ -30,7 +30,6 @@ from vyos.util import get_interface_config
 from vyos.util import popen
 from vyos.util import run
 from vyos.util import sysctl_write
-from vyos.util import is_ipv6_enabled
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -219,8 +218,7 @@ def apply(vrf):
             # We also should add proper loopback IP addresses to the newly added
             # VRF for services bound to the loopback address (SNMP, NTP)
             vrf_if.add_addr('127.0.0.1/8')
-            if is_ipv6_enabled():
-                vrf_if.add_addr('::1/128')
+            vrf_if.add_addr('::1/128')
             # add VRF description if available
             vrf_if.set_alias(config.get('description', ''))
 

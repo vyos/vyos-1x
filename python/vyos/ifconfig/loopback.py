@@ -14,7 +14,6 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
-from vyos.util import is_ipv6_enabled
 
 @Interface.register
 class LoopbackIf(Interface):
@@ -58,15 +57,14 @@ class LoopbackIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        addr = config.get('address', [])
-
+        address = config.get('address', [])
         # We must ensure that the loopback addresses are never deleted from the system
-        addr.append('127.0.0.1/8')
-        if is_ipv6_enabled():
-            addr.append('::1/128')
+        for tmp in self._persistent_addresses:
+            if tmp not in address:
+                address.append(tmp)
 
         # Update IP address entry in our dictionary
-        config.update({'address' : addr})
+        config.update({'address' : address})
 
         # call base class
         super().update(config)

@@ -15,12 +15,6 @@
               <valueless/>
             </properties>
           </leafNode>
-          <leafNode name="disable">
-            <properties>
-              <help>Disable assignment of IPv6 addresses on all interfaces</help>
-              <valueless/>
-            </properties>
-          </leafNode>
           <node name="multipath">
             <properties>
               <help>IPv6 multipath settings</help>

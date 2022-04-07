@@ -26,13 +26,3 @@ class TestVyOSUtil(TestCase):
 
     def test_sysctl_read(self):
         self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
-
-    def test_ipv6_enabled(self):
-        tmp = sysctl_read('net.ipv6.conf.all.disable_ipv6')
-        # We need to test for both variants as this depends on how the
-        # Docker container is started (with or without IPv6 support) - so we
-        # will simply check both cases to not make the users life miserable.
-        if tmp == '0':
-            self.assertTrue(is_ipv6_enabled())
-        else:
-            self.assertFalse(is_ipv6_enabled())

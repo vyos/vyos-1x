@@ -1024,7 +1024,3 @@ def sysctl_write(name, value):
         call(f'sysctl -wq {name}={value}')
         return True
     return False
-
-def is_ipv6_enabled() -> bool:
-    """ Check if IPv6 support on the system is enabled or not """
-    return (sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0')

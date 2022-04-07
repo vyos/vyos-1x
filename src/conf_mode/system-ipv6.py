@@ -17,11 +17,8 @@
 import os
 
 from sys import exit
-from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configdict import leaf_node_changed
-from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import sysctl_write
 from vyos.util import write_file
@@ -39,9 +36,6 @@ def get_config(config=None):
 
     opt = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    tmp = leaf_node_changed(conf, base + ['disable'])
-    if tmp: opt['reboot_required'] = {}
-
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
@@ -50,24 +44,12 @@ def get_config(config=None):
     return opt
 
 def verify(opt):
-    if 'disable' in opt:
-        DeprecationWarning('VyOS 1.4 (sagitta) will remove the CLI command to '\
-                           'disable IPv6 address family in the Linux Kernel!')
     pass
 
 def generate(opt):
     pass
 
 def apply(opt):
-    # disable IPv6 globally
-    tmp = dict_search('disable', opt)
-    value = '1' if (tmp != None) else '0'
-    sysctl_write('net.ipv6.conf.all.disable_ipv6', value)
-
-    if 'reboot_required' in opt:
-        print('Changing IPv6 disable parameter will only take affect\n' \
-              'when the system is rebooted.')
-
     # configure multipath
     tmp = dict_search('multipath.layer4_hashing', opt)
     value = '1' if (tmp != None) else '0'
