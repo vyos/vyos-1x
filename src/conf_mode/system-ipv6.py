@@ -17,6 +17,7 @@
 import os
 
 from sys import exit
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import leaf_node_changed
@@ -49,6 +50,9 @@ def get_config(config=None):
     return opt
 
 def verify(opt):
+    if 'disable' in opt:
+        DeprecationWarning('VyOS 1.4 (sagitta) will remove the CLI command to '\
+                           'disable IPv6 address family in the Linux Kernel!')
     pass
 
 def generate(opt):
