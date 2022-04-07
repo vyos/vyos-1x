@@ -15,6 +15,12 @@
 
 from textwrap import fill
 
+class DeprecationWarning():
+    def __init__(self, message):
+        # Reformat the message and trim it to 72 characters in length
+        message = fill(message, width=72)
+        print(f'\nDEPRECATION WARNING: {message}\n')
+
 class ConfigError(Exception):
     def __init__(self, message):
         # Reformat the message and trim it to 72 characters in length
