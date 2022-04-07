@@ -665,6 +665,40 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
                 self.assertIn(tmp, config)
 
+    def test_prefix_list_duplicates(self):
+        # FRR does not allow to specify the same profix list rule multiple times
+        #
+        # vyos(config)# ip prefix-list foo seq 10 permit 192.0.2.0/24
+        # vyos(config)# ip prefix-list foo seq 20 permit 192.0.2.0/24
+        # % Configuration failed.
+        # Error type: validation
+        # Error description: duplicated prefix list value: 192.0.2.0/24
+
+        # There is also a VyOS verify() function to test this
+
+        prefix = '100.64.0.0/10'
+        prefix_list = 'duplicates'
+        test_range = range(20, 25)
+        path = base_path + ['prefix-list', prefix_list]
+
+        for rule in test_range:
+            self.cli_set(path + ['rule', str(rule), 'action', 'permit'])
+            self.cli_set(path + ['rule', str(rule), 'prefix', prefix])
+
+        # Duplicate prefixes
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        for rule in test_range:
+            self.cli_set(path + ['rule', str(rule), 'le', str(rule)])
+
+        self.cli_commit()
+
+        config = self.getFRRconfig('ip prefix-list', end='')
+        for rule in test_range:
+            tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
+            self.assertIn(tmp, config)
+
     def test_route_map(self):
         access_list = '50'
         as_path_list = '100'

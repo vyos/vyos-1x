@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -114,10 +114,9 @@ def verify(policy):
                     if 'prefix' not in rule_config:
                         raise ConfigError(f'A prefix {mandatory_error}')
 
-                    # Check prefix duplicates
-                    if rule_config['prefix'] in entries and ('ge' not in rule_config and 'le' not in rule_config):
-                        raise ConfigError(f'Prefix {rule_config["prefix"]} is duplicated!')
-                    entries.append(rule_config['prefix'])
+                    if rule_config in entries:
+                        raise ConfigError(f'Rule "{rule}" contains a duplicate prefix definition!')
+                    entries.append(rule_config)
 
 
     # route-maps tend to be a bit more complex so they get their own verify() section
