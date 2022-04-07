@@ -133,5 +133,10 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # Must get HTTP code 401 on invalid key (Unauthorized)
         self.assertEqual(r.status_code, 401)
 
+        payload_no_key = {'data': '{"op": "showConfig", "path": []}'}
+        r = request('POST', url, verify=False, headers=headers, data=payload_no_key)
+        # Must get HTTP code 401 on missing key (Unauthorized)
+        self.assertEqual(r.status_code, 401)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
