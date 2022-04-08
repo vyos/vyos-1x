@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -109,7 +109,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dhcp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    dhcp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
     # T2665: defaults include lease time per TAG node which need to be added to
     # individual subnet definitions
     default_values = defaults(base + ['shared-network-name', 'subnet'])

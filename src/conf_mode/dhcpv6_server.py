@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -41,7 +41,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
     return dhcpv6
 
 def verify(dhcpv6):
