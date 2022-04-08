@@ -95,6 +95,51 @@
     </constraint>
   </properties>
 </leafNode>
+<node name="ct-status">
+  <properties>
+    <help>Connection status in conntrack</help>
+  </properties>
+  <children>
+    <leafNode name="dnat">
+      <properties>
+        <help>Set when connection needs DNAT in original direction</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>^(enable|disable)$</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="snat">
+      <properties>
+        <help>Set when connection needs SNAT in original direction</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>^(enable|disable)$</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 <leafNode name="protocol">
   <properties>
     <help>Protocol to match (protocol name, number, or "all")</help>
