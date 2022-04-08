@@ -6,6 +6,9 @@
         <properties>
           <help>Wireless (WiFi/WLAN) Network Interface</help>
           <priority>318</priority>
+          <completionHelp>
+            <script>cd /sys/class/net; if compgen -G "wlan*" > /dev/null; then ls -d wlan*; fi</script>
+          </completionHelp>
           <constraint>
             <regex>^wlan[0-9]+$</regex>
           </constraint>
