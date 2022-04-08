@@ -131,41 +131,6 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             for addr in loopbacks:
                 self.assertTrue(is_intf_addr_assigned(vrf, addr))
 
-    def test_vrf_loopbacks_no_ipv6(self):
-        table = '2002'
-        for vrf in vrfs:
-            base = base_path + ['name', vrf]
-            self.cli_set(base + ['table', str(table)])
-            table = str(int(table) + 1)
-
-        # Globally disable IPv6 - this will remove all IPv6 interface addresses
-        self.cli_set(['system', 'ipv6', 'disable'])
-
-        # commit changes
-        self.cli_commit()
-
-        # Verify VRF configuration
-        table = '2002'
-        loopbacks = ['127.0.0.1', '::1']
-        for vrf in vrfs:
-            # Ensure VRF was created
-            self.assertIn(vrf, interfaces())
-
-            # Verify VRF table ID
-            tmp = get_interface_config(vrf)
-            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
-
-            # Test for proper loopback IP assignment
-            for addr in loopbacks:
-                if is_ipv4(addr):
-                    self.assertTrue(is_intf_addr_assigned(vrf, addr))
-                else:
-                    self.assertFalse(is_intf_addr_assigned(vrf, addr))
-
-            table = str(int(table) + 1)
-
-        self.cli_delete(['system', 'ipv6'])
-
     def test_vrf_bind_all(self):
         table = '2000'
         for vrf in vrfs:
