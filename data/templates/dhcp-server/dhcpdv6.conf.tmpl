@@ -15,7 +15,7 @@ option dhcp6.name-servers {{ global_parameters.name_server | join(', ') }};
 # Shared network configration(s)
 {% if shared_network_name is vyos_defined %}
 {%   for network, network_config in shared_network_name.items() if network_config.disable is not vyos_defined %}
-shared-network {{ network | replace('_','-') }} {
+shared-network {{ network }} {
 {%     if network_config.common_options is vyos_defined %}
 {%       if network_config.common_options.info_refresh_time is vyos_defined %}
     option dhcp6.info-refresh-time {{ network_config.common_options.info_refresh_time }};
@@ -117,7 +117,7 @@ shared-network {{ network | replace('_','-') }} {
 {%       endfor %}
 {%     endif %}
     on commit {
-        set shared-networkname = "{{ network | replace('_','-') }}";
+        set shared-networkname = "{{ network }}";
     }
 }
 {%   endfor %}

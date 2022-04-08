@@ -62,7 +62,7 @@ subnet {{ address | network_from_ipv4 }} netmask {{ address | netmask_from_ipv4 
 # Shared network configration(s)
 {% if shared_network_name is vyos_defined %}
 {%   for network, network_config in shared_network_name.items() if network_config.disable is not vyos_defined %}
-shared-network {{ network | replace('_','-') }} {
+shared-network {{ network }} {
 {%     if network_config.authoritative is vyos_defined %}
     authoritative;
 {%     endif %}
@@ -215,7 +215,7 @@ shared-network {{ network | replace('_','-') }} {
 {%       endfor %}
 {%     endif %}
     on commit {
-        set shared-networkname = "{{ network | replace('_','-') }}";
+        set shared-networkname = "{{ network }}";
 {%     if hostfile_update is vyos_defined %}
         set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
         set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
