@@ -6,6 +6,15 @@ firewall {
     ipv6-src-route disable
     ip-src-route disable
     log-martians enable
+    name test_tcp_flags {
+        rule 1 {
+            action drop
+            protocol tcp
+            tcp {
+                flags SYN,ACK,!RST,!FIN
+            }
+        }
+    }
     options {
         interface vtun0 {
             adjust-mss 1380
@@ -83,6 +92,7 @@ interfaces {
         }
         policy {
             route LAN-POLICY-BASED-ROUTING
+            ipv6-route LAN6-POLICY-BASED-ROUTING
         }
         smp-affinity auto
         speed auto
@@ -383,6 +393,29 @@ nat {
     }
 }
 policy {
+    ipv6-route LAN6-POLICY-BASED-ROUTING {
+        rule 10 {
+            destination {
+            }
+            disable
+            set {
+                table 10
+            }
+            source {
+                address 2002::1
+            }
+        }
+        rule 20 {
+            destination {
+            }
+            set {
+                table 100
+            }
+            source {
+                address 2008::f
+            }
+        }
+    }
     prefix-list user2-routes {
         rule 1 {
             action permit

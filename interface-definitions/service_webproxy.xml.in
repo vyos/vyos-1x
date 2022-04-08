@@ -28,7 +28,7 @@
             <children>
               <leafNode name="children">
                 <properties>
-                  <help>Number of authentication helper processes (default: 5)</help>
+                  <help>Number of authentication helper processes</help>
                   <valueHelp>
                     <format>n</format>
                     <description>Number of authentication helper processes</description>
@@ -41,7 +41,7 @@
               </leafNode>
               <leafNode name="credentials-ttl">
                 <properties>
-                  <help>Authenticated session time to live in minutes (default: 60)</help>
+                  <help>Authenticated session time to live in minutes</help>
                   <valueHelp>
                     <format>n</format>
                     <description>Authenticated session timeout</description>
@@ -105,7 +105,7 @@
                   </leafNode>
                   <leafNode name="version">
                     <properties>
-                      <help>LDAP protocol version (default: 3)</help>
+                      <help>LDAP protocol version</help>
                       <completionHelp>
                           <list>2 3</list>
                       </completionHelp>
@@ -177,7 +177,7 @@
               </leafNode>
               <leafNode name="http-port">
                 <properties>
-                  <help>Default Proxy Port (default: 3128)</help>
+                  <help>Default Proxy Port</help>
                   <valueHelp>
                     <format>u32:1025-65535</format>
                     <description>Default port number</description>
@@ -190,7 +190,11 @@
               </leafNode>
                <leafNode name="icp-port">
                 <properties>
-                  <help>Cache peer ICP port (default: disabled)</help>
+                  <help>Cache peer ICP port</help>
+                  <valueHelp>
+                    <format>u32:0</format>
+                    <description>Cache peer disabled</description>
+                  </valueHelp>
                   <valueHelp>
                     <format>u32:1-65535</format>
                     <description>Cache peer ICP port</description>
@@ -203,7 +207,7 @@
               </leafNode>
               <leafNode name="options">
                 <properties>
-                  <help>Cache peer options (default: "no-query default")</help>
+                  <help>Cache peer options</help>
                   <valueHelp>
                     <format>txt</format>
                     <description>Cache peer options</description>
@@ -239,7 +243,7 @@
           </tagNode>
           <leafNode name="cache-size">
             <properties>
-              <help>Disk cache size in MB (default: 100)</help>
+              <help>Disk cache size in MB</help>
                <valueHelp>
                 <format>u32</format>
                 <description>Disk cache size in MB</description>
@@ -253,7 +257,7 @@
           </leafNode>
           <leafNode name="default-port">
             <properties>
-              <help>Default Proxy Port (default: 3128)</help>
+              <help>Default Proxy Port</help>
               <valueHelp>
                 <format>u32:1025-65535</format>
                 <description>Default port number</description>
@@ -296,7 +300,7 @@
             <children>
               <leafNode name="port">
                 <properties>
-                  <help>Default Proxy Port (default: 3128)</help>
+                  <help>Default Proxy Port</help>
                   <valueHelp>
                     <format>u32:1025-65535</format>
                     <description>Default port number</description>
@@ -305,6 +309,7 @@
                     <validator name="numeric" argument="--range 1025-65535"/>
                   </constraint>
                 </properties>
+                <!-- no defaultValue specified as there is default-port -->
               </leafNode>
               <leafNode name="disable-transparent">
                 <properties>
@@ -399,7 +404,7 @@
                     <children>
                       <leafNode name="update-hour">
                         <properties>
-                          <help>Hour of day for database update [REQUIRED]</help>
+                          <help>Hour of day for database update</help>
                           <valueHelp>
                             <format>u32:0-23</format>
                             <description>Hour for database update</description>
@@ -414,7 +419,7 @@
                   </node>
                   <leafNode name="redirect-url">
                     <properties>
-                      <help>Redirect URL for filtered websites (default: block.vyos.net)</help>
+                      <help>Redirect URL for filtered websites</help>
                       <valueHelp>
                         <format>url</format>
                         <description>URL for redirect</description>

@@ -26,7 +26,7 @@
                   </completionHelp>
                   <valueHelp>
                     <format>ro</format>
-                    <description>Read-Only (default)</description>
+                    <description>Read-Only</description>
                   </valueHelp>
                   <valueHelp>
                     <format>rw</format>
@@ -226,7 +226,7 @@
                       </valueHelp>
                       <valueHelp>
                         <format>auth</format>
-                        <description>Messages are authenticated but not encrypted (authNoPriv, default)</description>
+                        <description>Messages are authenticated but not encrypted (authNoPriv)</description>
                       </valueHelp>
                       <valueHelp>
                         <format>priv</format>
@@ -329,7 +329,7 @@
                         <list>inform trap</list>
                       </completionHelp>
                       <valueHelp>
-                        <format>inform (default)</format>
+                        <format>inform</format>
                         <description>Use INFORM</description>
                       </valueHelp>
                       <valueHelp>

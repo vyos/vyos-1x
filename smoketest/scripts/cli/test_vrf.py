@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,9 +25,10 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
-from vyos.template import is_ipv6
+from vyos.template import is_ipv4
 from vyos.util import cmd
 from vyos.util import read_file
+from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 base_path = ['vrf']
@@ -105,10 +106,13 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
 
+            tmp = get_interface_config(vrf)
+            self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
             # Increment table ID for the next run
             table = str(int(table) + 1)
 
-    def test_vrf_loopback_ips(self):
+    def test_vrf_loopbacks_ips(self):
         table = '2000'
         for vrf in vrfs:
             base = base_path + ['name', vrf]
@@ -119,10 +123,13 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
+        loopbacks = ['127.0.0.1', '::1']
         for vrf in vrfs:
-            self.assertTrue(vrf in interfaces())
-            self.assertTrue(is_intf_addr_assigned(vrf, '127.0.0.1'))
-            self.assertTrue(is_intf_addr_assigned(vrf, '::1'))
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+            # Test for proper loopback IP assignment
+            for addr in loopbacks:
+                self.assertTrue(is_intf_addr_assigned(vrf, addr))
 
     def test_vrf_bind_all(self):
         table = '2000'
@@ -174,11 +181,11 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        # Verify & cleanup
+        # Verify VRF assignmant
         for interface in self._interfaces:
-            # os.readlink resolves to: '../../../../../virtual/net/foovrf'
-            tmp = os.readlink(f'/sys/class/net/{interface}/master').split('/')[-1]
-            self.assertEqual(tmp, vrf)
+            tmp = get_interface_config(interface)
+            self.assertEqual(vrf, tmp['master'])
+
             # cleanup
             section = Section.section(interface)
             self.cli_delete(['interfaces', section, interface, 'vrf'])
@@ -219,6 +226,46 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
             # Increment table ID for the next run
             table = str(int(table) + 1)
+
+    def test_vrf_link_local_ip_addresses(self):
+        # Testcase for issue T4331
+        table = '100'
+        vrf = 'orange'
+        interface = 'dum9998'
+        addresses = ['192.0.2.1/26', '2001:db8:9998::1/64', 'fe80::1/64']
+
+        for address in addresses:
+            self.cli_set(['interfaces', 'dummy', interface, 'address', address])
+
+        # Create dummy interfaces
+        self.cli_commit()
+
+        # ... and verify IP addresses got assigned
+        for address in addresses:
+            self.assertTrue(is_intf_addr_assigned(interface, address))
+
+        # Move interface to VRF
+        self.cli_set(base_path + ['name', vrf, 'table', table])
+        self.cli_set(['interfaces', 'dummy', interface, 'vrf', vrf])
+
+        # Apply VRF config
+        self.cli_commit()
+        # Ensure VRF got created
+        self.assertIn(vrf, interfaces())
+        # ... and IP addresses are still assigned
+        for address in addresses:
+            self.assertTrue(is_intf_addr_assigned(interface, address))
+        # Verify VRF table ID
+        tmp = get_interface_config(vrf)
+        self.assertEqual(int(table), tmp['linkinfo']['info_data']['table'])
+
+        # Verify interface is assigned to VRF
+        tmp = get_interface_config(interface)
+        self.assertEqual(vrf, tmp['master'])
+
+        # Delete Interface
+        self.cli_delete(['interfaces', 'dummy', interface])
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -169,28 +169,40 @@ def verify(isis):
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', isis):
-        high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
-        low_label_value = dict_search('segment_routing.global_block.low_label_value', isis)
+        g_high_label_value = dict_search('segment_routing.global_block.high_label_value', isis)
+        g_low_label_value = dict_search('segment_routing.global_block.low_label_value', isis)
 
-        # If segment routing global block high value is blank, throw error
-        if (low_label_value and not high_label_value) or (high_label_value and not low_label_value):
-            raise ConfigError('Segment routing global block requires both low and high value!')
+        # If segment routing global block high or low value is blank, throw error
+        if not (g_low_label_value or g_high_label_value):
+            raise ConfigError('Segment routing global-block requires both low and high value!')
 
         # If segment routing global block low value is higher than the high value, throw error
-        if int(low_label_value) > int(high_label_value):
-            raise ConfigError('Segment routing global block low value must be lower than high value')
+        if int(g_low_label_value) > int(g_high_label_value):
+            raise ConfigError('Segment routing global-block low value must be lower than high value')
 
     if dict_search('segment_routing.local_block', isis):
-        high_label_value = dict_search('segment_routing.local_block.high_label_value', isis)
-        low_label_value = dict_search('segment_routing.local_block.low_label_value', isis)
+        if dict_search('segment_routing.global_block', isis) == None:
+            raise ConfigError('Segment routing local-block requires global-block to be configured!')
 
-        # If segment routing local block high value is blank, throw error
-        if (low_label_value and not high_label_value) or (high_label_value and not low_label_value):
-            raise ConfigError('Segment routing local block requires both high and low value!')
+        l_high_label_value = dict_search('segment_routing.local_block.high_label_value', isis)
+        l_low_label_value = dict_search('segment_routing.local_block.low_label_value', isis)
 
-        # If segment routing local block low value is higher than the high value, throw error
-        if int(low_label_value) > int(high_label_value):
-            raise ConfigError('Segment routing local block low value must be lower than high value')
+        # If segment routing local-block high or low value is blank, throw error
+        if not (l_low_label_value or l_high_label_value):
+            raise ConfigError('Segment routing local-block requires both high and low value!')
+
+        # If segment routing local-block low value is higher than the high value, throw error
+        if int(l_low_label_value) > int(l_high_label_value):
+            raise ConfigError('Segment routing local-block low value must be lower than high value')
+
+        # local-block most live outside global block
+        global_range = range(int(g_low_label_value), int(g_high_label_value) +1)
+        local_range  = range(int(l_low_label_value), int(l_high_label_value) +1)
+
+        # Check for overlapping ranges
+        if list(set(global_range) & set(local_range)):
+            raise ConfigError(f'Segment-Routing Global Block ({g_low_label_value}/{g_high_label_value}) '\
+                              f'conflicts with Local Block ({l_low_label_value}/{l_high_label_value})!')
 
     return None
 

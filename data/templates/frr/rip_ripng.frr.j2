@@ -1,36 +1,36 @@
-{% if default_information is defined and default_information.originate is defined %}
+{% if default_information is vyos_defined %}
  default-information originate
 {% endif %}
-{% if default_metric is defined and default_metric is not none %}
+{% if default_metric is vyos_defined %}
  default-metric {{ default_metric }}
 {% endif %}
-{% if passive_interface is defined and passive_interface is not none %}
+{% if passive_interface is vyos_defined %}
 {%   for interface in passive_interface %}
  passive-interface {{ interface }}
 {%   endfor %}
 {% endif %}
-{% if network is defined and network is not none %}
+{% if network is vyos_defined %}
 {%   for prefix in network %}
  network {{ prefix }}
 {%   endfor %}
 {% endif %}
-{% if interface is defined and interface is not none %}
+{% if interface is vyos_defined %}
 {%   for ifname in interface %}
  network {{ ifname }}
 {%   endfor %}
 {% endif %}
-{% if route is defined and route is not none %}
+{% if route is vyos_defined %}
 {%   for prefix in route %}
  route {{ prefix }}
 {%   endfor %}
 {% endif %}
 {# timers have default values #}
  timers basic {{ timers['update'] }} {{ timers.timeout }} {{ timers.garbage_collection }}
-{% if redistribute is defined and redistribute is not none %}
+{% if redistribute is vyos_defined %}
 {%   for protocol, protocol_config in redistribute.items() %}
-{%     if protocol == 'ospfv3' %}
+{%     if protocol is vyos_defined('ospfv3') %}
 {%       set protocol = 'ospf6' %}
 {%     endif %}
- redistribute {{ protocol }} {{ 'metric ' + protocol_config.metric if protocol_config.metric is defined }} {{ 'route-map ' + protocol_config.route_map if protocol_config.route_map is defined }}
+ redistribute {{ protocol }} {{ 'metric ' ~ protocol_config.metric if protocol_config.metric is vyos_defined }} {{ 'route-map ' ~ protocol_config.route_map if protocol_config.route_map is vyos_defined }}
 {%   endfor %}
 {% endif %}

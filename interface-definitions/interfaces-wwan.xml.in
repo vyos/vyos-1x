@@ -7,7 +7,7 @@
           <help>Wireless Modem (WWAN) Interface</help>
           <priority>350</priority>
           <completionHelp>
-            <script>cd /sys/class/net; ls -d wwan*</script>
+            <script>cd /sys/class/net; if compgen -G "wwan*" > /dev/null; then ls -d wwan*; fi</script>
           </completionHelp>
           <constraint>
             <regex>^wwan[0-9]+$</regex>
@@ -30,8 +30,8 @@
           #include <include/interface/authentication.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
-          #include <include/interface/vrf.xml.i>
           #include <include/interface/disable-link-detect.xml.i>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/mtu-68-1500.xml.i>
           <leafNode name="mtu">
             <defaultValue>1430</defaultValue>
@@ -41,6 +41,8 @@
           #include <include/interface/dial-on-demand.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

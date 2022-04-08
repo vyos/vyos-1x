@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,112 +36,118 @@ bfd_profile = 'foo-bar-baz'
 
 neighbor_config = {
     '192.0.2.1' : {
-        'bfd'          : '',
-        'cap_dynamic'  : '',
-        'cap_ext_next' : '',
-        'remote_as'    : '100',
-        'adv_interv'   : '400',
-        'passive'      : '',
-        'password'     : 'VyOS-Secure123',
-        'shutdown'     : '',
-        'cap_over'     : '',
-        'ttl_security' : '5',
-        'local_as'     : '300',
-        'route_map_in' : route_map_in,
-        'route_map_out': route_map_out,
+        'bfd'              : '',
+        'cap_dynamic'      : '',
+        'cap_ext_next'     : '',
+        'remote_as'        : '100',
+        'adv_interv'       : '400',
+        'passive'          : '',
+        'password'         : 'VyOS-Secure123',
+        'shutdown'         : '',
+        'cap_over'         : '',
+        'ttl_security'     : '5',
+        'local_as'         : '300',
+        'route_map_in'     : route_map_in,
+        'route_map_out'    : route_map_out,
         'no_send_comm_ext' : '',
-        'addpath_all' : '',
+        'addpath_all'      : '',
         },
     '192.0.2.2' : {
-        'bfd_profile'  : bfd_profile,
-        'remote_as'    : '200',
-        'shutdown'     : '',
-        'no_cap_nego'  : '',
-        'port'         : '667',
-        'cap_strict'   : '',
-        'advertise_map': route_map_in,
-        'non_exist_map': route_map_out,
-        'pfx_list_in'  : prefix_list_in,
-        'pfx_list_out' : prefix_list_out,
+        'bfd_profile'      : bfd_profile,
+        'remote_as'        : '200',
+        'shutdown'         : '',
+        'no_cap_nego'      : '',
+        'port'             : '667',
+        'cap_strict'       : '',
+        'advertise_map'    : route_map_in,
+        'non_exist_map'    : route_map_out,
+        'pfx_list_in'      : prefix_list_in,
+        'pfx_list_out'     : prefix_list_out,
         'no_send_comm_std' : '',
         },
     '192.0.2.3' : {
-        'advertise_map': route_map_in,
-        'description'  : 'foo bar baz',
-        'remote_as'    : '200',
-        'passive'      : '',
-        'multi_hop'    : '5',
-        'update_src'   : 'lo',
-        'peer_group'   : 'foo',
+        'advertise_map'    : route_map_in,
+        'description'      : 'foo bar baz',
+        'remote_as'        : '200',
+        'passive'          : '',
+        'multi_hop'        : '5',
+        'update_src'       : 'lo',
+        'peer_group'       : 'foo',
+        'graceful_rst'     : '',
         },
     '2001:db8::1' : {
-        'advertise_map': route_map_in,
-        'exist_map'    : route_map_out,
-        'cap_dynamic'  : '',
-        'cap_ext_next' : '',
-        'remote_as'    : '123',
-        'adv_interv'   : '400',
-        'passive'      : '',
-        'password'     : 'VyOS-Secure123',
-        'shutdown'     : '',
-        'cap_over'     : '',
-        'ttl_security' : '5',
-        'local_as'     : '300',
-        'solo'         : '',
-        'route_map_in' : route_map_in,
-        'route_map_out': route_map_out,
+        'advertise_map'    : route_map_in,
+        'exist_map'        : route_map_out,
+        'cap_dynamic'      : '',
+        'cap_ext_next'     : '',
+        'remote_as'        : '123',
+        'adv_interv'       : '400',
+        'passive'          : '',
+        'password'         : 'VyOS-Secure123',
+        'shutdown'         : '',
+        'cap_over'         : '',
+        'ttl_security'     : '5',
+        'local_as'         : '300',
+        'solo'             : '',
+        'route_map_in'     : route_map_in,
+        'route_map_out'    : route_map_out,
         'no_send_comm_std' : '',
         'addpath_per_as'   : '',
-        'peer_group'   : 'foo-bar',
+        'peer_group'       : 'foo-bar',
         },
     '2001:db8::2' : {
-        'remote_as'    : '456',
-        'shutdown'     : '',
-        'no_cap_nego'  : '',
-        'port'         : '667',
-        'cap_strict'   : '',
-        'pfx_list_in'  : prefix_list_in6,
-        'pfx_list_out' : prefix_list_out6,
+        'remote_as'        : '456',
+        'shutdown'         : '',
+        'no_cap_nego'      : '',
+        'port'             : '667',
+        'cap_strict'       : '',
+        'pfx_list_in'      : prefix_list_in6,
+        'pfx_list_out'     : prefix_list_out6,
         'no_send_comm_ext' : '',
-        'peer_group'   : 'foo-bar_baz',
+        'peer_group'       : 'foo-bar_baz',
+        'graceful_rst_hlp' : ''
         },
 }
 
 peer_group_config = {
     'foo' : {
-        'advertise_map': route_map_in,
-        'exist_map'    : route_map_out,
-        'bfd'          : '',
-        'remote_as'    : '100',
-        'passive'      : '',
-        'password'     : 'VyOS-Secure123',
-        'shutdown'     : '',
-        'cap_over'     : '',
-        'ttl_security': '5',
+        'advertise_map'    : route_map_in,
+        'exist_map'        : route_map_out,
+        'bfd'              : '',
+        'remote_as'        : '100',
+        'passive'          : '',
+        'password'         : 'VyOS-Secure123',
+        'shutdown'         : '',
+        'cap_over'         : '',
+        'ttl_security'     : '5',
+        },
+    'bar' : {
+        'remote_as'        : '111',
+        'graceful_rst_no'  : ''
         },
     'foo-bar' : {
-        'advertise_map': route_map_in,
-        'description'  : 'foo peer bar group',
-        'remote_as'    : '200',
-        'shutdown'     : '',
-        'no_cap_nego'  : '',
-        'local_as'     : '300',
-        'pfx_list_in'  : prefix_list_in,
-        'pfx_list_out' : prefix_list_out,
+        'advertise_map'    : route_map_in,
+        'description'      : 'foo peer bar group',
+        'remote_as'        : '200',
+        'shutdown'         : '',
+        'no_cap_nego'      : '',
+        'local_as'         : '300',
+        'pfx_list_in'      : prefix_list_in,
+        'pfx_list_out'     : prefix_list_out,
         'no_send_comm_ext' : '',
         },
     'foo-bar_baz' : {
-        'advertise_map': route_map_in,
-        'non_exist_map': route_map_out,
-        'bfd_profile'  : bfd_profile,
-        'cap_dynamic'  : '',
-        'cap_ext_next' : '',
-        'remote_as'    : '200',
-        'passive'      : '',
-        'multi_hop'    : '5',
-        'update_src'   : 'lo',
-        'route_map_in' : route_map_in,
-        'route_map_out': route_map_out,
+        'advertise_map'    : route_map_in,
+        'non_exist_map'    : route_map_out,
+        'bfd_profile'      : bfd_profile,
+        'cap_dynamic'      : '',
+        'cap_ext_next'     : '',
+        'remote_as'        : '200',
+        'passive'          : '',
+        'multi_hop'        : '5',
+        'update_src'       : 'lo',
+        'route_map_in'     : route_map_in,
+        'route_map_out'    : route_map_out,
         },
 }
 
@@ -239,6 +245,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             if 'non_exist_map' in peer_config:
                 base = f'{base} non-exist-map {peer_config["non_exist_map"]}'
             self.assertIn(base, frrconfig)
+        if 'graceful_rst' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart', frrconfig)
+        if 'graceful_rst_no' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart-disable', frrconfig)
+        if 'graceful_rst_hlp' in peer_config:
+            self.assertIn(f' neighbor {peer} graceful-restart-helper', frrconfig)
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -274,6 +286,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
         self.cli_set(base_path + ['parameters', 'fast-convergence'])
         self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
+        self.cli_set(base_path + ['parameters', 'no-suppress-duplicates'])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
@@ -305,6 +318,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
+        self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
         self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
@@ -318,6 +332,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_02_neighbors(self):
         # Test out individual neighbor configuration items, not all of them are
         # also available to a peer-group!
+        self.cli_set(base_path + ['parameters', 'deterministic-med'])
+
         for peer, peer_config in neighbor_config.items():
             afi = 'ipv4-unicast'
             if is_ipv6(peer):
@@ -378,6 +394,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-all'])
             if 'addpath_per_as' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'addpath-tx-per-as'])
+            if 'graceful_rst' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'enable'])
+            if 'graceful_rst_no' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'disable'])
+            if 'graceful_rst_hlp' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'restart-helper'])
 
             # Conditional advertisement
             if 'advertise_map' in peer_config:
@@ -460,6 +482,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-all'])
             if 'addpath_per_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'addpath-tx-per-as'])
+            if 'graceful_rst' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'enable'])
+            if 'graceful_rst_no' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'disable'])
+            if 'graceful_rst_hlp' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'restart-helper'])
 
             # Conditional advertisement
             if 'advertise_map' in config:
@@ -478,6 +506,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in neighbor_config.items():
             if 'peer_group' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'peer-group', peer_config['peer_group']])
+
 
         # commit changes
         self.cli_commit()
@@ -854,4 +883,4 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' exit-address-family', afi_config)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

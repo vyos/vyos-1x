@@ -33,7 +33,7 @@ with open(file_name, 'r') as f:
 base = ['protocols', 'bgp']
 config = ConfigTree(config_file)
 
-if not config.exists(base):
+if not config.exists(base) or not config.is_tag(base):
     # Nothing to do
     exit(0)
 

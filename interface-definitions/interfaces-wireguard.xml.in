@@ -19,11 +19,11 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
-          #include <include/interface/vrf.xml.i>
           #include <include/port-number.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="mtu">
             <defaultValue>1420</defaultValue>
           </leafNode>
@@ -101,6 +101,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="ip-address"/>
+                    <validator name="ipv6-link-local"/>
                   </constraint>
                 </properties>
               </leafNode>
@@ -119,6 +120,8 @@
               </leafNode>
             </children>
           </tagNode>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

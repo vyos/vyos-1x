@@ -37,14 +37,27 @@ def get_load_averages():
 
     return res
 
-if __name__ == '__main__':
+def get_raw_data():
     from vyos.util import seconds_to_human
 
-    print("Uptime: {}\n".format(seconds_to_human(get_uptime_seconds())))
+    res = {}
+    res["uptime_seconds"] = get_uptime_seconds()
+    res["uptime"] = seconds_to_human(get_uptime_seconds())
+    res["load_average"] = get_load_averages()
 
-    avgs = get_load_averages()
+    return res
 
-    print("Load averages:")
-    print("1  minute:   {:.02f}%".format(avgs[1]*100))
-    print("5  minutes:  {:.02f}%".format(avgs[5]*100))
-    print("15 minutes:  {:.02f}%".format(avgs[15]*100))
+def get_formatted_output():
+    data = get_raw_data()
+
+    out = "Uptime: {}\n\n".format(data["uptime"])
+    avgs = data["load_average"]
+    out += "Load averages:\n"
+    out += "1  minute:   {:.02f}%\n".format(avgs[1]*100)
+    out += "5  minutes:  {:.02f}%\n".format(avgs[5]*100)
+    out += "15 minutes:  {:.02f}%\n".format(avgs[15]*100)
+
+    return out
+
+if __name__ == '__main__':
+    print(get_formatted_output())

@@ -31,6 +31,9 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+NAME_PREFIX = 'NAME_'
+NAME6_PREFIX = 'NAME6_'
+
 NFT_CHAINS = {
     'in': 'VYOS_FW_FORWARD',
     'out': 'VYOS_FW_FORWARD',
@@ -127,7 +130,7 @@ def apply(if_firewall):
 
         name = dict_search_args(if_firewall, direction, 'name')
         if name:
-            rule_exists = cleanup_rule('ip filter', chain, if_prefix, ifname, name)
+            rule_exists = cleanup_rule('ip filter', chain, if_prefix, ifname, f'{NAME_PREFIX}{name}')
 
             if not rule_exists:
                 rule_action = 'insert'
@@ -138,24 +141,24 @@ def apply(if_firewall):
                     rule_action = 'add'
                     rule_prefix = f'position {handle}'
 
-                run(f'nft {rule_action} rule ip filter {chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {name}')
+                run(f'nft {rule_action} rule ip filter {chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {NAME_PREFIX}{name}')
         else:
             cleanup_rule('ip filter', chain, if_prefix, ifname)
 
         ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
         if ipv6_name:
-            rule_exists = cleanup_rule('ip6 filter', ipv6_chain, if_prefix, ifname, ipv6_name)
+            rule_exists = cleanup_rule('ip6 filter', ipv6_chain, if_prefix, ifname, f'{NAME6_PREFIX}{ipv6_name}')
 
             if not rule_exists:
                 rule_action = 'insert'
                 rule_prefix = ''
 
-                handle = state_policy_handle('ip filter', chain)
+                handle = state_policy_handle('ip6 filter', ipv6_chain)
                 if handle:
                     rule_action = 'add'
                     rule_prefix = f'position {handle}'
 
-                run(f'nft {rule_action} rule ip6 filter {ipv6_chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {ipv6_name}')
+                run(f'nft {rule_action} rule ip6 filter {ipv6_chain} {rule_prefix} {if_prefix}ifname {ifname} counter jump {NAME6_PREFIX}{ipv6_name}')
         else:
             cleanup_rule('ip6 filter', ipv6_chain, if_prefix, ifname)
 

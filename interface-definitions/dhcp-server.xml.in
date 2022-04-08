@@ -203,7 +203,7 @@
                   </leafNode>
                   <leafNode name="lease">
                     <properties>
-                      <help>Lease timeout in seconds (default: 86400)</help>
+                      <help>Lease timeout in seconds</help>
                       <valueHelp>
                         <format>u32</format>
                         <description>DHCP lease time in seconds</description>

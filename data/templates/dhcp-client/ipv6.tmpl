@@ -2,54 +2,54 @@
 
 # man https://www.unix.com/man-page/debian/5/dhcp6c.conf/
 interface {{ ifname }} {
-{% if dhcpv6_options is defined and dhcpv6_options.duid is defined and dhcpv6_options.duid is not none %}
+{% if dhcpv6_options.duid is vyos_defined %}
     send client-id {{ dhcpv6_options.duid }};
 {% endif %}
-{% if address is defined and 'dhcpv6' in address %}
+{% if address is vyos_defined and 'dhcpv6' in address %}
     request domain-name-servers;
     request domain-name;
-{%   if dhcpv6_options is defined and dhcpv6_options.parameters_only is defined %}
+{%   if dhcpv6_options.parameters_only is vyos_defined %}
     information-only;
 {%   endif %}
-{%   if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
+{%   if dhcpv6_options.temporary is not vyos_defined %}
     send ia-na 0; # non-temporary address
 {%   endif %}
-{%   if dhcpv6_options is defined and dhcpv6_options.rapid_commit is defined %}
+{%   if dhcpv6_options.rapid_commit is vyos_defined %}
     send rapid-commit; # wait for immediate reply instead of advertisements
 {%   endif %}
 {% endif %}
-{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
+{% if dhcpv6_options.pd is vyos_defined %}
 {%   for pd in dhcpv6_options.pd %}
     send ia-pd {{ pd }}; # prefix delegation #{{ pd }}
 {%   endfor %}
 {% endif %}
 };
 
-{% if address is defined and 'dhcpv6' in address %}
-{%   if dhcpv6_options is not defined or dhcpv6_options.temporary is not defined %}
+{% if address is vyos_defined and 'dhcpv6' in address %}
+{%   if dhcpv6_options.temporary is not vyos_defined %}
 id-assoc na 0 {
     # Identity association for non temporary address
 };
 {%   endif %}
 {% endif %}
 
-{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
-{%   for pd in dhcpv6_options.pd %}
+{% if dhcpv6_options.pd is vyos_defined %}
+{%   for pd, pd_config in dhcpv6_options.pd.items() %}
 id-assoc pd {{ pd }} {
 {#   length got a default value #}
-    prefix ::/{{ dhcpv6_options.pd[pd].length }} infinity;
-{%     set sla_len = 64 - dhcpv6_options.pd[pd].length|int %}
+    prefix ::/{{ pd_config.length }} infinity;
+{%     set sla_len = 64 - pd_config.length|int %}
 {%     set count = namespace(value=0) %}
-{%     for interface in dhcpv6_options.pd[pd].interface if dhcpv6_options.pd[pd].interface is defined %}
+{%     for interface, interface_config in pd_config.interface.items() if pd_config.interface is vyos_defined %}
     prefix-interface {{ interface }} {
         sla-len {{ sla_len }};
-{%       if dhcpv6_options.pd[pd].interface[interface].sla_id is defined and dhcpv6_options.pd[pd].interface[interface].sla_id is not none %}
-        sla-id {{ dhcpv6_options.pd[pd].interface[interface].sla_id }};
+{%       if interface_config.sla_id is vyos_defined %}
+        sla-id {{ interface_config.sla_id }};
 {%       else %}
         sla-id {{ count.value }};
 {%       endif %}
-{%       if dhcpv6_options.pd[pd].interface[interface].address is defined and dhcpv6_options.pd[pd].interface[interface].address is not none %}
-        ifid {{ dhcpv6_options.pd[pd].interface[interface].address }};
+{%       if interface_config.address is vyos_defined %}
+        ifid {{ interface_config.address }};
 {%       endif %}
     };
 {%      set count.value = count.value + 1 %}

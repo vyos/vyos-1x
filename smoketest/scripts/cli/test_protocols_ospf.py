@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,6 +39,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
     @classmethod
     def tearDownClass(cls):
@@ -367,6 +371,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # cleanup
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
+
+    def test_ospf_13_export_list(self):
+        # Verify explort-list works on ospf-area
+        acl = '100'
+        seq = '10'
+        area = '0.0.0.10'
+        network = '10.0.0.0/8'
+
+
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
+        self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
+        self.cli_set(base_path + ['area', area, 'network', network])
+        self.cli_set(base_path + ['area', area, 'export-list', acl])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # default
+        self.assertIn(f' network {network} area {area}', frrconfig)
+        self.assertIn(f' area {area} export-list {acl}', frrconfig)
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)

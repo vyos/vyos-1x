@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,13 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import paramiko
 import re
 import unittest
+
+from pwd import getpwall
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
+from vyos.util import is_systemd_service_running
 from vyos.util import process_named_running
 from vyos.util import read_file
 
@@ -49,6 +53,9 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         # delete testing SSH config
         self.cli_delete(base_path)
         self.cli_commit()
@@ -56,6 +63,11 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(os.path.isfile(key_rsa))
         self.assertTrue(os.path.isfile(key_dsa))
         self.assertTrue(os.path.isfile(key_ed25519))
+
+        # Established SSH connections remains running after service is stopped.
+        # We can not use process_named_running here - we rather need to check
+        # that the systemd service is no longer running
+        self.assertFalse(is_systemd_service_running(PROCESS_NAME))
 
     def test_ssh_default(self):
         # Check if SSH service runs with default settings - used for checking
@@ -68,9 +80,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # Check configured port
         port = get_config_value('Port')[0]
         self.assertEqual('22', port)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_ssh_single_listen_address(self):
         # Check if SSH service can be configured and runs
@@ -108,9 +117,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         keepalive = get_config_value('ClientAliveInterval')[0]
         self.assertTrue("100" in keepalive)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_ssh_multiple_listen_addresses(self):
         # Check if SSH service can be configured and runs with multiple
         # listen ports and listen-addresses
@@ -135,9 +141,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         for address in addresses:
             self.assertIn(address, tmp)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_ssh_vrf(self):
         # Check if SSH service can be bound to given VRF
         port = '22'
@@ -157,15 +160,58 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('Port')
         self.assertIn(port, tmp)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
         # Check for process in VRF
         tmp = cmd(f'ip vrf pids {vrf}')
         self.assertIn(PROCESS_NAME, tmp)
 
         # delete VRF
         self.cli_delete(['vrf', 'name', vrf])
+
+    def test_ssh_login(self):
+        # Perform SSH login and command execution with a predefined user. The
+        # result (output of uname -a) must match the output if the command is
+        # run natively.
+        #
+        # We also try to login as an invalid user - this is not allowed to work.
+
+        def ssh_send_cmd(command, username, password, host='localhost'):
+            """ SSH command execution helper """
+            # Try to login via SSH
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(hostname='localhost', username=username, password=password)
+            _, stdout, stderr = ssh_client.exec_command(command)
+            output = stdout.read().decode().strip()
+            error = stderr.read().decode().strip()
+            ssh_client.close()
+            return output, error
+
+        test_user = 'ssh_test'
+        test_pass = 'v2i57DZs8idUwMN3VC92'
+        test_command = 'uname -a'
+
+        self.cli_set(base_path)
+        self.cli_set(['system', 'login', 'user', test_user, 'authentication', 'plaintext-password', test_pass])
+
+        # commit changes
+        self.cli_commit()
+
+        # Login with proper credentials
+        output, error = ssh_send_cmd(test_command, test_user, test_pass)
+        # verify login
+        self.assertFalse(error)
+        self.assertEqual(output, cmd(test_command))
+
+        # Login with invalid credentials
+        with self.assertRaises(paramiko.ssh_exception.AuthenticationException):
+            output, error = ssh_send_cmd(test_command, 'invalid_user', 'invalid_password')
+
+        self.cli_delete(['system', 'login', 'user', test_user])
+        self.cli_commit()
+
+        # After deletion the test user is not allowed to remain in /etc/passwd
+        usernames = [x[0] for x in getpwall()]
+        self.assertNotIn(test_user, usernames)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

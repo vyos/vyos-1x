@@ -267,6 +267,22 @@ firewall {
             }
             protocol udp
         }
+        rule 800 {
+            action drop
+            description "SSH anti brute force"
+            destination {
+                port ssh
+            }
+            log enable
+            protocol tcp
+            recent {
+                count 4
+                time 60
+            }
+            state {
+                new enable
+            }
+        }
     }
     name DMZ-WAN {
         default-action accept
@@ -481,6 +497,9 @@ firewall {
             description POP3
             destination {
                 port 110,995
+            }
+            limit {
+                rate "10/minute"
             }
             protocol tcp
         }

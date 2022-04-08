@@ -88,7 +88,7 @@
                       <help>IKE lifetime</help>
                       <valueHelp>
                         <format>u32:30-86400</format>
-                        <description>IKE lifetime in seconds (default 3600)</description>
+                        <description>IKE lifetime in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 30-86400"/>
@@ -101,7 +101,7 @@
                       <help>ESP lifetime</help>
                       <valueHelp>
                         <format>u32:30-86400</format>
-                        <description>IKE lifetime in seconds (default 3600)</description>
+                        <description>IKE lifetime in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 30-86400"/>
@@ -135,7 +135,7 @@
                   <help>PPP idle timeout</help>
                   <valueHelp>
                     <format>u32:30-86400</format>
-                    <description>PPP idle timeout in seconds (default 1800)</description>
+                    <description>PPP idle timeout in seconds</description>
                   </valueHelp>
                     <constraint>
                       <validator name="numeric" argument="--range 30-86400"/>
@@ -206,7 +206,7 @@
                       </leafNode>
                       <leafNode name="acct-timeout">
                         <properties>
-                          <help>Timeout to wait reply for Interim-Update packets. (default 3 seconds)</help>
+                          <help>Timeout to wait reply for Interim-Update packets</help>
                         </properties>
                       </leafNode>
                       <leafNode name="max-try">
@@ -244,7 +244,7 @@
                         <children>
                           <leafNode name="attribute">
                             <properties>
-                              <help>Specifies which radius attribute contains rate information. (default is Filter-Id)</help>
+                              <help>Specifies which radius attribute contains rate information</help>
                             </properties>
                           </leafNode>
                           <leafNode name="vendor">

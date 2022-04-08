@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -159,13 +159,21 @@ def verify(bgp):
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
-                if is_ip(peer) and is_addr_assigned(peer):
-                    raise ConfigError(f'Can not configure a local address as neighbor "{peer}"')
+                vrf = None
+                vrf_error_msg = f' in default VRF!'
+                if 'vrf' in bgp:
+                    vrf = bgp['vrf']
+                    vrf_error_msg = f' in VRF "{vrf}"!'
+
+                if is_ip(peer) and is_addr_assigned(peer, vrf):
+                    raise ConfigError(f'Can not configure local address as neighbor "{peer}"{vrf_error_msg}')
                 elif is_interface(peer):
                     if 'peer_group' in peer_config:
                         raise ConfigError(f'peer-group must be set under the interface node of "{peer}"')
                     if 'remote_as' in peer_config:
                         raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
+                    if 'source_interface' in peer_config['interface']:
+                        raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
 
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
@@ -204,6 +212,11 @@ def verify(bgp):
 
                     if 'non_exist_map' in afi_config['conditionally_advertise']:
                         verify_route_map(afi_config['conditionally_advertise']['non_exist_map'], bgp)
+
+                # T4332: bgp deterministic-med cannot be disabled while addpath-tx-bestpath-per-AS is in use
+                if 'addpath_tx_per_as' in afi_config:
+                    if dict_search('parameters.deterministic_med', bgp) == None:
+                        raise ConfigError('addpath-tx-per-as requires BGP deterministic-med paramtere to be set!')
 
                 # Validate if configured Prefix list exists
                 if 'prefix_list' in afi_config:

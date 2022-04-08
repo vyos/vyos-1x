@@ -117,7 +117,7 @@ def collect_validators(ve):
 
     return regex_args + " " + validator_args
 
-def get_properties(p):
+def get_properties(p, default=None):
     props = {}
 
     if p is None:
@@ -125,7 +125,12 @@ def get_properties(p):
 
     # Get the help string
     try:
-        props["help"] = p.find("help").text
+        help = p.find("help").text
+        if default != None:
+            # DNS forwarding for instance has multiple defaults - specified as whitespace separated list
+            tmp = ', '.join(default.text.split())
+            help += f' (default: {tmp})'
+        props["help"] = help
     except:
         pass
 
@@ -134,7 +139,11 @@ def get_properties(p):
         vhe = p.findall("valueHelp")
         vh = []
         for v in vhe:
-            vh.append( (v.find("format").text, v.find("description").text) )
+            format = v.find("format").text
+            description = v.find("description").text
+            if default != None and default.text == format:
+                description += f' (default)'
+            vh.append( (format, description) )
         props["val_help"] = vh
     except:
         props["val_help"] = []
@@ -271,7 +280,7 @@ def process_node(n, tmpl_dir):
         print("Name of the node: {0}. Created directory: {1}\n".format(name, "/".join(my_tmpl_dir)), end="")
     os.makedirs(make_path(my_tmpl_dir), exist_ok=True)
 
-    props = get_properties(props_elem)
+    props = get_properties(props_elem, n.find("defaultValue"))
     if owner:
         props["owner"] = owner
     # Type should not be set for non-tag, non-leaf nodes

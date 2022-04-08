@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -87,6 +87,7 @@ def verify(policy):
 
             # human readable instance name (hypen instead of underscore)
             policy_hr = policy_type.replace('_', '-')
+            entries = []
             for rule, rule_config in instance_config['rule'].items():
                 mandatory_error = f'must be specified for "{policy_hr} {instance} rule {rule}"!'
                 if 'action' not in rule_config:
@@ -112,6 +113,10 @@ def verify(policy):
                 if policy_type in ['prefix_list', 'prefix_list6']:
                     if 'prefix' not in rule_config:
                         raise ConfigError(f'A prefix {mandatory_error}')
+
+                    if rule_config in entries:
+                        raise ConfigError(f'Rule "{rule}" contains a duplicate prefix definition!')
+                    entries.append(rule_config)
 
 
     # route-maps tend to be a bit more complex so they get their own verify() section

@@ -45,13 +45,19 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'state' in rule_conf and rule_conf['state']:
         states = ",".join([s for s, v in rule_conf['state'].items() if v == 'enable'])
-        output.append(f'ct state {{{states}}}')
+
+        if states:
+            output.append(f'ct state {{{states}}}')
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
         proto = rule_conf['protocol']
+        operator = ''
+        if proto[0] == '!':
+            operator = '!='
+            proto = proto[1:]
         if proto == 'tcp_udp':
             proto = '{tcp, udp}'
-        output.append('meta l4proto ' + proto)
+        output.append(f'meta l4proto {operator} {proto}')
 
     for side in ['destination', 'source']:
         if side in rule_conf:
@@ -59,7 +65,10 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
             side_conf = rule_conf[side]
 
             if 'address' in side_conf:
-                output.append(f'{ip_name} {prefix}addr {side_conf["address"]}')
+                suffix = side_conf['address']
+                if suffix[0] == '!':
+                    suffix = f'!= {suffix[1:]}'
+                output.append(f'{ip_name} {prefix}addr {suffix}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf["mac_address"]
@@ -69,24 +78,51 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
             if 'port' in side_conf:
                 proto = rule_conf['protocol']
-                port = side_conf["port"]
+                port = side_conf['port'].split(',')
 
-                if isinstance(port, list):
-                    port = ",".join(port)
+                ports = []
+                negated_ports = []
+
+                for p in port:
+                    if p[0] == '!':
+                        negated_ports.append(p[1:])
+                    else:
+                        ports.append(p)
 
                 if proto == 'tcp_udp':
                     proto = 'th'
 
-                output.append(f'{proto} {prefix}port {{{port}}}')
+                if ports:
+                    ports_str = ','.join(ports)
+                    output.append(f'{proto} {prefix}port {{{ports_str}}}')
+
+                if negated_ports:
+                    negated_ports_str = ','.join(negated_ports)
+                    output.append(f'{proto} {prefix}port != {{{negated_ports_str}}}')
 
             if 'group' in side_conf:
                 group = side_conf['group']
                 if 'address_group' in group:
                     group_name = group['address_group']
-                    output.append(f'{ip_name} {prefix}addr $A{def_suffix}_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} $A{def_suffix}_{group_name}')
                 elif 'network_group' in group:
                     group_name = group['network_group']
-                    output.append(f'{ip_name} {prefix}addr $N{def_suffix}_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} $N{def_suffix}_{group_name}')
+                if 'mac_group' in group:
+                    group_name = group['mac_group']
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'ether {prefix}addr {operator} $M_{group_name}')
                 if 'port_group' in group:
                     proto = rule_conf['protocol']
                     group_name = group['port_group']
@@ -94,10 +130,16 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     if proto == 'tcp_udp':
                         proto = 'th'
 
-                    output.append(f'{proto} {prefix}port $P_{group_name}')
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+
+                    output.append(f'{proto} {prefix}port {operator} $P_{group_name}')
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
-        output.append('log')
+        action = rule_conf['action'] if 'action' in rule_conf else 'accept'
+        output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}] "')
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
@@ -132,16 +174,14 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:
-            output.append(f'limit rate {rule_conf["limit"]["rate"]}/second')
+            output.append(f'limit rate {rule_conf["limit"]["rate"]}')
             if 'burst' in rule_conf['limit']:
                 output.append(f'burst {rule_conf["limit"]["burst"]} packets')
 
     if 'recent' in rule_conf:
         count = rule_conf['recent']['count']
         time = rule_conf['recent']['time']
-        # output.append(f'meter {fw_name}_{rule_id} {{ ip saddr and 255.255.255.255 limit rate over {count}/{time} burst {count} packets }}')
-        # Waiting on input from nftables developers due to
-        # bug with above line and atomic chain flushing.
+        output.append(f'add @RECENT{def_suffix}_{fw_name}_{rule_id} {{ {ip_name} saddr limit rate over {count}/{time} burst {count} packets }}')
 
     if 'time' in rule_conf:
         output.append(parse_time(rule_conf['time']))
@@ -149,7 +189,6 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
     if tcp_flags:
         output.append(parse_tcp_flags(tcp_flags))
-
 
     output.append('counter')
 
@@ -165,15 +204,9 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     return " ".join(output)
 
 def parse_tcp_flags(flags):
-    all_flags = []
-    include = []
-    for flag in flags.split(","):
-        if flag[0] == '!':
-            flag = flag[1:]
-        else:
-            include.append(flag)
-        all_flags.append(flag)
-    return f'tcp flags & ({"|".join(all_flags)}) == {"|".join(include)}'
+    include = [flag for flag in flags if flag != 'not']
+    exclude = list(flags['not']) if 'not' in flags else []
+    return f'tcp flags & ({"|".join(include + exclude)}) == {"|".join(include) if include else "0x0"}'
 
 def parse_time(time):
     out = []
@@ -209,7 +242,7 @@ def parse_policy_set(set_conf, def_suffix):
         table = set_conf['table']
         if table == 'main':
             table = '254'
-        mark = 0x7FFFFFFF - int(set_conf['table'])
+        mark = 0x7FFFFFFF - int(table)
         out.append(f'meta mark set {mark}')
     if 'tcp_mss' in set_conf:
         mss = set_conf['tcp_mss']

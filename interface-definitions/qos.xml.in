@@ -1,0 +1,789 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="qos" owner="${vyos_conf_scripts_dir}/qos.py">
+    <properties>
+      <help>Quality of Service (QoS)</help>
+    </properties>
+    <children>
+      <tagNode name="interface">
+        <properties>
+          <help>Interface to apply QoS policy</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          </completionHelp>
+          <valueHelp>
+            <format>txt</format>
+            <description>Interface name</description>
+          </valueHelp>
+          <constraint>
+            <validator name="interface-name"/>
+          </constraint>
+        </properties>
+        <children>
+          <leafNode name="ingress">
+            <properties>
+              <help>Interface ingress traffic policy</help>
+              <completionHelp>
+                <path>traffic-policy drop-tail</path>
+                <path>traffic-policy fair-queue</path>
+                <path>traffic-policy fq-codel</path>
+                <path>traffic-policy limiter</path>
+                <path>traffic-policy network-emulator</path>
+                <path>traffic-policy priority-queue</path>
+                <path>traffic-policy random-detect</path>
+                <path>traffic-policy rate-control</path>
+                <path>traffic-policy round-robin</path>
+                <path>traffic-policy shaper</path>
+                <path>traffic-policy shaper-hfsc</path>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>QoS Policy name</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+          <leafNode name="egress">
+            <properties>
+              <help>Interface egress traffic policy</help>
+              <completionHelp>
+                <path>traffic-policy drop-tail</path>
+                <path>traffic-policy fair-queue</path>
+                <path>traffic-policy fq-codel</path>
+                <path>traffic-policy limiter</path>
+                <path>traffic-policy network-emulator</path>
+                <path>traffic-policy priority-queue</path>
+                <path>traffic-policy random-detect</path>
+                <path>traffic-policy rate-control</path>
+                <path>traffic-policy round-robin</path>
+                <path>traffic-policy shaper</path>
+                <path>traffic-policy shaper-hfsc</path>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>QoS Policy name</description>
+              </valueHelp>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <node name="policy" owner="${vyos_conf_scripts_dir}/qos.py">
+        <properties>
+          <help>Service Policy definitions</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          <tagNode name="drop-tail">
+            <properties>
+              <help>Packet limited First In, First Out queue</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/qos/queue-limit-1-4294967295.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="fair-queue">
+            <properties>
+              <help>Stochastic Fairness Queueing</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <leafNode name="hash-interval">
+                <properties>
+                  <help>Interval in seconds for queue algorithm perturbation</help>
+                  <valueHelp>
+                    <format>u32:0</format>
+                    <description>No perturbation</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-127</format>
+                    <description>Interval in seconds for queue algorithm perturbation (advised: 10)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-127"/>
+                  </constraint>
+                  <constraintErrorMessage>Interval must be in range 0 to 127</constraintErrorMessage>
+                </properties>
+                <defaultValue>0</defaultValue>
+              </leafNode>
+              <leafNode name="queue-limit">
+                <properties>
+                  <help>Upper limit of the SFQ</help>
+                  <valueHelp>
+                    <format>u32:2-127</format>
+                    <description>Queue size in packets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 2-127"/>
+                  </constraint>
+                  <constraintErrorMessage>Queue limit must greater than 1 and less than 128</constraintErrorMessage>
+                </properties>
+                <defaultValue>127</defaultValue>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="fq-codel">
+            <properties>
+              <help>Fair Queuing Controlled Delay</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/qos/codel-quantum.xml.i>
+              #include <include/qos/flows.xml.i>
+              #include <include/qos/interval.xml.i>
+              #include <include/qos/queue-limit-2-10999.xml.i>
+              #include <include/qos/target.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="limiter">
+            <properties>
+              <help>Traffic input limiting policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              <tagNode name="class">
+                <properties>
+                  <help>Class ID</help>
+                  <valueHelp>
+                    <format>u32:1-4090</format>
+                    <description>Class Identifier</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4090"/>
+                  </constraint>
+                  <constraintErrorMessage>Class identifier must be between 1 and 4090</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/qos/bandwidth.xml.i>
+                  #include <include/qos/burst.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/match.xml.i>
+                  <leafNode name="priority">
+                    <properties>
+                      <help>Priority for rule evaluation</help>
+                      <valueHelp>
+                        <format>u32:0-20</format>
+                        <description>Priority for match rule evaluation</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-20"/>
+                      </constraint>
+                      <constraintErrorMessage>Priority must be between 0 and 20</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>20</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="default">
+                <properties>
+                  <help>Default policy</help>
+                </properties>
+                <children>
+                  #include <include/qos/bandwidth.xml.i>
+                  #include <include/qos/burst.xml.i>
+                </children>
+              </node>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="network-emulator">
+            <properties>
+              <help>Network emulator policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/qos/bandwidth.xml.i>
+              #include <include/qos/burst.xml.i>
+              #include <include/generic-description.xml.i>
+              <leafNode name="network-delay">
+                <properties>
+                  <help>Adds delay to packets outgoing to chosen network interface</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Time in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65535"/>
+                  </constraint>
+                  <constraintErrorMessage>Priority must be between 0 and 65535</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="packet-corruption">
+                <properties>
+                  <help>Introducing error in a random position for chosen percent of packets</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Percentage of packets affected</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-100"/>
+                  </constraint>
+                  <constraintErrorMessage>Priority must be between 0 and 100</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="packet-loss">
+                <properties>
+                  <help>Add independent loss probability to the packets outgoing to chosen network interface</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Percentage of packets affected</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-100"/>
+                  </constraint>
+                  <constraintErrorMessage>Must be between 0 and 100</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="packet-loss">
+                <properties>
+                  <help>Add independent loss probability to the packets outgoing to chosen network interface</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Percentage of packets affected</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-100"/>
+                  </constraint>
+                  <constraintErrorMessage>Must be between 0 and 100</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              <leafNode name="packet-loss">
+                <properties>
+                  <help>Packet reordering percentage</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Percentage of packets affected</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-100"/>
+                  </constraint>
+                  <constraintErrorMessage>Must be between 0 and 100</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              #include <include/qos/queue-limit-1-4294967295.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="priority-queue">
+            <properties>
+              <help>Priority queuing based policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              <tagNode name="class">
+                <properties>
+                  <help>Class Handle</help>
+                  <valueHelp>
+                    <format>u32:1-7</format>
+                    <description>Priority</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-7"/>
+                  </constraint>
+                  <constraintErrorMessage>Class handle must be between 1 and 7</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/codel-quantum.xml.i>
+                  #include <include/qos/flows.xml.i>
+                  #include <include/qos/interval.xml.i>
+                  #include <include/qos/match.xml.i>
+                  #include <include/qos/queue-limit-2-10999.xml.i>
+                  #include <include/qos/target.xml.i>
+                  #include <include/qos/queue-type.xml.i>
+                </children>
+              </tagNode>
+              <node name="default">
+                <properties>
+                  <help>Default policy</help>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/codel-quantum.xml.i>
+                  #include <include/qos/flows.xml.i>
+                  #include <include/qos/interval.xml.i>
+                  #include <include/qos/queue-limit-2-10999.xml.i>
+                  #include <include/qos/target.xml.i>
+                  #include <include/qos/queue-type.xml.i>
+                </children>
+              </node>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="random-detect">
+            <properties>
+              <help>Priority queuing based policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/qos/bandwidth.xml.i>
+              <leafNode name="bandwidth">
+                <defaultValue>auto</defaultValue>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+              <tagNode name="precedence">
+                <properties>
+                  <help>IP precedence</help>
+                  <valueHelp>
+                    <format>u32:0-7</format>
+                    <description>IP precedence value</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-7"/>
+                  </constraint>
+                  <constraintErrorMessage>IP precedence value must be between 0 and 7</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/qos/queue-limit-1-4294967295.xml.i>
+                  <leafNode name="average-packet">
+                    <properties>
+                      <help>Average packet size (bytes)</help>
+                      <valueHelp>
+                        <format>u32:16-10240</format>
+                        <description>Average packet size in bytes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-100"/>
+                      </constraint>
+                      <constraintErrorMessage>Average packet size must be between 16 and 10240</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>1024</defaultValue>
+                  </leafNode>
+                  <leafNode name="mark-probability">
+                    <properties>
+                      <help>Mark probability for this precedence</help>
+                      <valueHelp>
+                        <format>&lt;number&gt;</format>
+                        <description>Numeric value (1/N)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--positive"/>
+                      </constraint>
+                      <constraintErrorMessage>Mark probability must be greater than 0</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="maximum-threshold">
+                    <properties>
+                      <help>Maximum threshold for random detection</help>
+                      <valueHelp>
+                        <format>u32:0-4096</format>
+                        <description>Maximum Threshold in packets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4096"/>
+                      </constraint>
+                      <constraintErrorMessage>Threshold must be between 0 and 4096</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="minimum-threshold">
+                    <properties>
+                      <help>Minimum  threshold for random detection</help>
+                      <valueHelp>
+                        <format>u32:0-4096</format>
+                        <description>Maximum Threshold in packets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4096"/>
+                      </constraint>
+                      <constraintErrorMessage>Threshold must be between 0 and 4096</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="rate-control">
+            <properties>
+              <help>Rate limiting policy (Token Bucket Filter)</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/qos/bandwidth.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/qos/burst.xml.i>
+              <leafNode name="latency">
+                <properties>
+                  <help>Maximum latency</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;</format>
+                    <description>Time in milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4096"/>
+                  </constraint>
+                  <constraintErrorMessage>Threshold must be between 0 and 4096</constraintErrorMessage>
+                </properties>
+                <defaultValue>50</defaultValue>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="round-robin">
+            <properties>
+              <help>Round-Robin based policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              <tagNode name="class">
+                <properties>
+                  <help>Class ID</help>
+                  <valueHelp>
+                    <format>u32:1-4095</format>
+                    <description>Class Identifier</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4095"/>
+                  </constraint>
+                  <constraintErrorMessage>Class identifier must be between 1 and 4095</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/qos/codel-quantum.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/flows.xml.i>
+                  #include <include/qos/interval.xml.i>
+                  #include <include/qos/match.xml.i>
+                  <leafNode name="quantum">
+                    <properties>
+                      <help>Packet scheduling quantum</help>
+                      <valueHelp>
+                        <format>u32:1-4294967295</format>
+                        <description>Packet scheduling quantum (bytes)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-4294967295"/>
+                      </constraint>
+                      <constraintErrorMessage>Quantum must be in range 1 to 4294967295</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  #include <include/qos/queue-limit-1-4294967295.xml.i>
+                  #include <include/qos/queue-type.xml.i>
+                  #include <include/qos/target.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="shaper-hfsc">
+            <properties>
+              <help>Hierarchical Fair Service Curve's policy</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/qos/bandwidth.xml.i>
+              <leafNode name="bandwidth">
+                <defaultValue>auto</defaultValue>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+              <tagNode name="class">
+                <properties>
+                  <help>Class ID</help>
+                  <valueHelp>
+                    <format>u32:1-4095</format>
+                    <description>Class Identifier</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4095"/>
+                  </constraint>
+                  <constraintErrorMessage>Class identifier must be between 1 and 4095</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/generic-description.xml.i>
+                  <node name="linkshare">
+                    <properties>
+                      <help>Linkshare class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                  #include <include/qos/match.xml.i>
+                  <node name="realtime">
+                    <properties>
+                      <help>Realtime class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                  <node name="upperlimit">
+                    <properties>
+                      <help>Upperlimit class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </tagNode>
+              <node name="default">
+                <properties>
+                  <help>Default policy</help>
+                </properties>
+                <children>
+                  <node name="linkshare">
+                    <properties>
+                      <help>Linkshare class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                  <node name="realtime">
+                    <properties>
+                      <help>Realtime class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                  <node name="upperlimit">
+                    <properties>
+                      <help>Upperlimit class settings</help>
+                    </properties>
+                    <children>
+                      #include <include/qos/hfsc-d.xml.i>
+                      #include <include/qos/hfsc-m1.xml.i>
+                      #include <include/qos/hfsc-m2.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <tagNode name="shaper">
+            <properties>
+              <help>Traffic shaping based policy (Hierarchy Token Bucket)</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Policy name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/qos/bandwidth.xml.i>
+              <leafNode name="bandwidth">
+                <defaultValue>auto</defaultValue>
+              </leafNode>
+              <tagNode name="class">
+                <properties>
+                  <help>Class ID</help>
+                  <valueHelp>
+                    <format>u32:2-4095</format>
+                    <description>Class Identifier</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 2-4095"/>
+                  </constraint>
+                  <constraintErrorMessage>Class identifier must be between 2 and 4095</constraintErrorMessage>
+                </properties>
+                <children>
+                  #include <include/qos/bandwidth.xml.i>
+                  <leafNode name="bandwidth">
+                    <defaultValue>100%</defaultValue>
+                  </leafNode>
+                  #include <include/qos/burst.xml.i>
+                  <leafNode name="ceiling">
+                    <properties>
+                      <help>Bandwidth limit for this class</help>
+                      <valueHelp>
+                        <format>&lt;number&gt;</format>
+                        <description>Rate in kbit (kilobit per second)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;%%</format>
+                        <description>Percentage of overall rate</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;bit</format>
+                        <description>bit(1), kbit(10^3), mbit(10^6), gbit, tbit</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;ibit</format>
+                        <description>kibit(1024), mibit(1024^2), gibit(1024^3), tbit(1024^4)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;ibps</format>
+                        <description>kibps(1024*8), mibps(1024^2*8), gibps, tibps - Byte/sec</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;bps</format>
+                        <description>bps(8),kbps(8*10^3),mbps(8*10^6), gbps, tbps - Byte/sec</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  #include <include/qos/codel-quantum.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/flows.xml.i>
+                  #include <include/qos/interval.xml.i>
+                  #include <include/qos/match.xml.i>
+                  <leafNode name="priority">
+                    <properties>
+                      <help>Priority for usage of excess bandwidth</help>
+                      <valueHelp>
+                        <format>u32:0-7</format>
+                        <description>Priority order for bandwidth pool</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-7"/>
+                      </constraint>
+                      <constraintErrorMessage>Priority must be between 0 and 7</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>20</defaultValue>
+                  </leafNode>
+                  #include <include/qos/queue-limit-1-4294967295.xml.i>
+                  #include <include/qos/queue-type.xml.i>
+                  #include <include/qos/set-dscp.xml.i>
+                  #include <include/qos/target.xml.i>
+                </children>
+              </tagNode>
+              #include <include/generic-description.xml.i>
+              <node name="default">
+                <properties>
+                  <help>Default policy</help>
+                </properties>
+                <children>
+                  #include <include/qos/bandwidth.xml.i>
+                  #include <include/qos/burst.xml.i>
+                  <leafNode name="ceiling">
+                    <properties>
+                      <help>Bandwidth limit for this class</help>
+                      <valueHelp>
+                        <format>&lt;number&gt;</format>
+                        <description>Rate in kbit (kilobit per second)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;%%</format>
+                        <description>Percentage of overall rate</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;bit</format>
+                        <description>bit(1), kbit(10^3), mbit(10^6), gbit, tbit</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;ibit</format>
+                        <description>kibit(1024), mibit(1024^2), gibit(1024^3), tbit(1024^4)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;ibps</format>
+                        <description>kibps(1024*8), mibps(1024^2*8), gibps, tibps - Byte/sec</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;number&gt;bps</format>
+                        <description>bps(8),kbps(8*10^3),mbps(8*10^6), gbps, tbps - Byte/sec</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                  #include <include/qos/codel-quantum.xml.i>
+                  #include <include/generic-description.xml.i>
+                  #include <include/qos/flows.xml.i>
+                  #include <include/qos/interval.xml.i>
+                  <leafNode name="priority">
+                    <properties>
+                      <help>Priority for usage of excess bandwidth</help>
+                      <valueHelp>
+                        <format>u32:0-7</format>
+                        <description>Priority order for bandwidth pool</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-7"/>
+                      </constraint>
+                      <constraintErrorMessage>Priority must be between 0 and 7</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>20</defaultValue>
+                  </leafNode>
+                  #include <include/qos/queue-limit-1-4294967295.xml.i>
+                  #include <include/qos/queue-type.xml.i>
+                  #include <include/qos/set-dscp.xml.i>
+                  #include <include/qos/target.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

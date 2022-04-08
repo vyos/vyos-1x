@@ -18,7 +18,6 @@
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
     #include <include/interface/disable.xml.i>
-    #include <include/interface/vrf.xml.i>
     #include <include/interface/interface-firewall-vif.xml.i>
     #include <include/interface/interface-policy-vif.xml.i>
     <leafNode name="egress-qos">
@@ -50,7 +49,10 @@
     #include <include/interface/ipv4-options.xml.i>
     #include <include/interface/ipv6-options.xml.i>
     #include <include/interface/mac.xml.i>
+    #include <include/interface/mirror.xml.i>
     #include <include/interface/mtu-68-16000.xml.i>
+    #include <include/interface/redirect.xml.i>
+    #include <include/interface/vrf.xml.i>
   </children>
 </tagNode>
 <!-- include end -->

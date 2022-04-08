@@ -16,7 +16,7 @@
 #
 
 # This migration script will remove the deprecated 'listen-on' statement
-# from the dns forwarding service and will add the corresponding 
+# from the dns forwarding service and will add the corresponding
 # listen-address nodes instead. This is required as PowerDNS can only listen
 # on interface addresses and not on interface names.
 
@@ -37,53 +37,50 @@ with open(file_name, 'r') as f:
 config = ConfigTree(config_file)
 
 base = ['service', 'dns', 'forwarding']
-if not config.exists(base):
+if not config.exists(base + ['listen-on']):
     # Nothing to do
     exit(0)
 
-if config.exists(base + ['listen-on']):
-    listen_intf = config.return_values(base + ['listen-on'])
-    # Delete node with abandoned command
-    config.delete(base + ['listen-on'])
+listen_intf = config.return_values(base + ['listen-on'])
+# Delete node with abandoned command
+config.delete(base + ['listen-on'])
 
-    # retrieve interface addresses for every configured listen-on interface
-    listen_addr = []
-    for intf in listen_intf:
-        # we need to evaluate the interface section before manipulating the 'intf' variable
-        section = Interface.section(intf)
-        if not section:
-            raise ValueError(f'Invalid interface name {intf}')
+# retrieve interface addresses for every configured listen-on interface
+listen_addr = []
+for intf in listen_intf:
+    # we need to evaluate the interface section before manipulating the 'intf' variable
+    section = Interface.section(intf)
+    if not section:
+        raise ValueError(f'Invalid interface name {intf}')
 
-        # we need to treat vif and vif-s interfaces differently,
-        # both "real interfaces" use dots for vlan identifiers - those
-        # need to be exchanged with vif and vif-s identifiers
-        if intf.count('.') == 1:
-            # this is a regular VLAN interface
-            intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
-        elif intf.count('.') == 2:
-            # this is a QinQ VLAN interface
-            intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
+    # we need to treat vif and vif-s interfaces differently,
+    # both "real interfaces" use dots for vlan identifiers - those
+    # need to be exchanged with vif and vif-s identifiers
+    if intf.count('.') == 1:
+        # this is a regular VLAN interface
+        intf = intf.split('.')[0] + ' vif ' + intf.split('.')[1]
+    elif intf.count('.') == 2:
+        # this is a QinQ VLAN interface
+        intf = intf.split('.')[0] + ' vif-s ' + intf.split('.')[1] + ' vif-c ' +  intf.split('.')[2]
 
-        # retrieve corresponding interface addresses in CIDR format
-        # those need to be converted in pure IP addresses without network information
-        path = ['interfaces', section, intf, 'address']
-        try:
-            for addr in config.return_values(path):
-                listen_addr.append( ip_interface(addr).ip )
-        except:
-            # Some interface types do not use "address" option (e.g. OpenVPN)
-            # and may not even have a fixed address
-            print("Could not retrieve the address of the interface {} from the config".format(intf))
-            print("You will need to update your DNS forwarding configuration manually")
-
-    for addr in listen_addr:
-        config.set(base + ['listen-address'], value=addr, replace=False)
-
+    # retrieve corresponding interface addresses in CIDR format
+    # those need to be converted in pure IP addresses without network information
+    path = ['interfaces', section, intf, 'address']
     try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)
+        for addr in config.return_values(path):
+            listen_addr.append( ip_interface(addr).ip )
+    except:
+        # Some interface types do not use "address" option (e.g. OpenVPN)
+        # and may not even have a fixed address
+        print("Could not retrieve the address of the interface {} from the config".format(intf))
+        print("You will need to update your DNS forwarding configuration manually")
 
-exit(0)
+for addr in listen_addr:
+    config.set(base + ['listen-address'], value=addr, replace=False)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)

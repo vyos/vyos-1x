@@ -1,0 +1,17 @@
+#!/usr/bin/python3
+
+import sys
+import re
+
+if __name__ == '__main__':
+    if len(sys.argv)>1:
+        flag = sys.argv[1]
+        if flag and flag[0] == '!':
+            flag = flag[1:]
+        if flag not in ['syn', 'ack', 'rst', 'fin', 'urg', 'psh', 'ecn', 'cwr']:
+            print(f'Error: {flag} is not a valid TCP flag')
+            sys.exit(1)
+    else:
+        sys.exit(2)
+
+    sys.exit(0)

@@ -1,0 +1,32 @@
+{% if group is defined %}
+{%   if group.address_group is defined %}
+{%     for group_name, group_conf in group.address_group.items() %}
+define A_{{ group_name }} = { {{ group_conf.address | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{%   if group.ipv6_address_group is defined %}
+{%     for group_name, group_conf in group.ipv6_address_group.items() %}
+define A6_{{ group_name }} = { {{ group_conf.address | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{%   if group.mac_group is defined %}
+{%     for group_name, group_conf in group.mac_group.items() %}
+define M_{{ group_name }} = { {{ group_conf.mac_address | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{%   if group.network_group is defined %}
+{%     for group_name, group_conf in group.network_group.items() %}
+define N_{{ group_name }} = { {{ group_conf.network | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{%   if group.ipv6_network_group is defined %}
+{%     for group_name, group_conf in group.ipv6_network_group.items() %}
+define N6_{{ group_name }} = { {{ group_conf.network | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{%   if group.port_group is defined %}
+{%     for group_name, group_conf in group.port_group.items() %}
+define P_{{ group_name }} = { {{ group_conf.port | join(",") }} }
+{%     endfor %}
+{%   endif %}
+{% endif %}

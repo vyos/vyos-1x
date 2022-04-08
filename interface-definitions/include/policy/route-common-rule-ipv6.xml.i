@@ -232,6 +232,9 @@
           <format>!&lt;MAC address&gt;</format>
           <description>Match everything except the specified MAC address</description>
         </valueHelp>
+        <constraint>
+          <validator name="mac-address-firewall"/>
+        </constraint>
       </properties>
     </leafNode>
     #include <include/firewall/port.xml.i>
@@ -320,26 +323,7 @@
     </leafNode>
   </children>
 </node>
-<node name="tcp">
-  <properties>
-    <help>TCP flags to match</help>
-  </properties>
-  <children>
-    <leafNode name="flags">
-      <properties>
-        <help>TCP flags to match</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>TCP flags to match</description>
-        </valueHelp>
-        <valueHelp>
-          <format> </format>
-          <description>\n\n  Allowed values for TCP flags : SYN ACK FIN RST URG PSH ALL\n  When specifying more than one flag, flags should be comma-separated.\n For example : value of 'SYN,!ACK,!FIN,!RST' will only match packets with\n  the SYN flag set, and the ACK, FIN and RST flags unset</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/firewall/tcp-flags.xml.i>
 <node name="time">
   <properties>
     <help>Time to match rule</help>

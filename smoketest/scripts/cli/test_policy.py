@@ -665,6 +665,40 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
                 self.assertIn(tmp, config)
 
+    def test_prefix_list_duplicates(self):
+        # FRR does not allow to specify the same profix list rule multiple times
+        #
+        # vyos(config)# ip prefix-list foo seq 10 permit 192.0.2.0/24
+        # vyos(config)# ip prefix-list foo seq 20 permit 192.0.2.0/24
+        # % Configuration failed.
+        # Error type: validation
+        # Error description: duplicated prefix list value: 192.0.2.0/24
+
+        # There is also a VyOS verify() function to test this
+
+        prefix = '100.64.0.0/10'
+        prefix_list = 'duplicates'
+        test_range = range(20, 25)
+        path = base_path + ['prefix-list', prefix_list]
+
+        for rule in test_range:
+            self.cli_set(path + ['rule', str(rule), 'action', 'permit'])
+            self.cli_set(path + ['rule', str(rule), 'prefix', prefix])
+
+        # Duplicate prefixes
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        for rule in test_range:
+            self.cli_set(path + ['rule', str(rule), 'le', str(rule)])
+
+        self.cli_commit()
+
+        config = self.getFRRconfig('ip prefix-list', end='')
+        for rule in test_range:
+            tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
+            self.assertIn(tmp, config)
+
     def test_route_map(self):
         access_list = '50'
         as_path_list = '100'
@@ -1030,7 +1064,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp = f'match ipv6 address prefix-list {rule_config["match"]["ipv6-address-pfx"]}'
                         self.assertIn(tmp, config)
                     if 'ipv6-nexthop' in rule_config['match']:
-                        tmp = f'match ipv6 next-hop {rule_config["match"]["ipv6-nexthop"]}'
+                        tmp = f'match ipv6 next-hop address {rule_config["match"]["ipv6-nexthop"]}'
                         self.assertIn(tmp, config)
                     if 'large-community' in rule_config['match']:
                         tmp = f'match large-community {rule_config["match"]["large-community"]}'
@@ -1135,18 +1169,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         50:	from 203.0.113.1 lookup 23
         50:	from 203.0.113.2 lookup 23
         """
         tmp = cmd('ip rule show prio 50')
-        original = original.split()
-        tmp = tmp.split()
 
-        self.assertEqual(tmp, original)
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
 
     # Test set table for fwmark
     def test_fwmark_table_id(self):
@@ -1161,17 +1190,32 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         101:    from all fwmark 0x18 lookup 154
         """
         tmp = cmd('ip rule show prio 101')
-        original = original.split()
-        tmp = tmp.split()
 
-        self.assertEqual(tmp, original)
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for destination
+    def test_destination_table_id(self):
+        path = base_path + ['local-route']
+
+        dst = '203.0.113.1'
+        rule = '102'
+        table = '154'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'destination', dst])
+
+        self.cli_commit()
+
+        original = """
+        102:    from all to 203.0.113.1 lookup 154
+        """
+        tmp = cmd('ip rule show prio 102')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
 
     # Test set table for sources with fwmark
     def test_fwmark_sources_table_id(self):
@@ -1188,18 +1232,301 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        # Check generated configuration
-
-        # Expected values
         original = """
         100:	from 203.0.113.11 fwmark 0x17 lookup 150
         100:	from 203.0.113.12 fwmark 0x17 lookup 150
         """
         tmp = cmd('ip rule show prio 100')
-        original = original.split()
-        tmp = tmp.split()
 
-        self.assertEqual(tmp, original)
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for sources with iif
+    def test_iif_sources_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.11', '203.0.113.12']
+        iif = 'lo'
+        rule = '100'
+        table = '150'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        # Check generated configuration
+        # Expected values
+        original = """
+        100:	from 203.0.113.11 iif lo lookup 150
+        100:	from 203.0.113.12 iif lo lookup 150
+        """
+        tmp = cmd('ip rule show prio 100')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for sources and destinations with fwmark
+    def test_fwmark_sources_destination_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['203.0.113.11', '203.0.113.12']
+        destinations = ['203.0.113.13', '203.0.113.15']
+        fwmk = '23'
+        rule = '103'
+        table = '150'
+        for src in sources:
+            for dst in destinations:
+                self.cli_set(path + ['rule', rule, 'set', 'table', table])
+                self.cli_set(path + ['rule', rule, 'source', src])
+                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        103:	from 203.0.113.11 to 203.0.113.13 fwmark 0x17 lookup 150
+        103:	from 203.0.113.11 to 203.0.113.15 fwmark 0x17 lookup 150
+        103:	from 203.0.113.12 to 203.0.113.13 fwmark 0x17 lookup 150
+        103:	from 203.0.113.12 to 203.0.113.15 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 103')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table ipv6 for some sources ipv6
+    def test_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        sources = ['2001:db8:123::/48', '2001:db8:126::/48']
+        rule = '50'
+        table = '23'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        original = """
+        50:	from 2001:db8:123::/48 lookup 23
+        50:	from 2001:db8:126::/48 lookup 23
+        """
+        tmp = cmd('ip -6 rule show prio 50')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for fwmark ipv6
+    def test_fwmark_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        fwmk = '24'
+        rule = '100'
+        table = '154'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        100:    from all fwmark 0x18 lookup 154
+        """
+        tmp = cmd('ip -6 rule show prio 100')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for destination ipv6
+    def test_destination_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        dst = '2001:db8:1337::/126'
+        rule = '101'
+        table = '154'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'destination', dst])
+
+        self.cli_commit()
+
+        original = """
+        101:    from all to 2001:db8:1337::/126 lookup 154
+        """
+        tmp = cmd('ip -6 rule show prio 101')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for sources with fwmark ipv6
+    def test_fwmark_sources_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        sources = ['2001:db8:1338::/126', '2001:db8:1339::/126']
+        fwmk = '23'
+        rule = '102'
+        table = '150'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        102:	from 2001:db8:1338::/126 fwmark 0x17 lookup 150
+        102:	from 2001:db8:1339::/126 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip -6 rule show prio 102')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for sources with iif ipv6
+    def test_iif_sources_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        sources = ['2001:db8:1338::/126', '2001:db8:1339::/126']
+        iif = 'lo'
+        rule = '102'
+        table = '150'
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'set', 'table', table])
+            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
+
+        self.cli_commit()
+
+        # Check generated configuration
+        # Expected values
+        original = """
+        102:	from 2001:db8:1338::/126 iif lo lookup 150
+        102:	from 2001:db8:1339::/126 iif lo lookup 150
+        """
+        tmp = cmd('ip -6 rule show prio 102')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test set table for sources and destinations with fwmark ipv6
+    def test_fwmark_sources_destination_ipv6_table_id(self):
+        path = base_path + ['local-route6']
+
+        sources = ['2001:db8:1338::/126', '2001:db8:1339::/56']
+        destinations = ['2001:db8:13::/48', '2001:db8:16::/48']
+        fwmk = '23'
+        rule = '103'
+        table = '150'
+        for src in sources:
+            for dst in destinations:
+                self.cli_set(path + ['rule', rule, 'set', 'table', table])
+                self.cli_set(path + ['rule', rule, 'source', src])
+                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip -6 rule show prio 103')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+    # Test delete table for sources and destination with fwmark ipv4/ipv6
+    def test_delete_ipv4_ipv6_table_id(self):
+        path = base_path + ['local-route']
+        path_v6 = base_path + ['local-route6']
+
+        sources = ['203.0.113.0/24', '203.0.114.5']
+        destinations = ['203.0.112.0/24', '203.0.116.5']
+        sources_v6 = ['2001:db8:1338::/126', '2001:db8:1339::/56']
+        destinations_v6 = ['2001:db8:13::/48', '2001:db8:16::/48']
+        fwmk = '23'
+        rule = '103'
+        table = '150'
+        for src in sources:
+            for dst in destinations:
+                self.cli_set(path + ['rule', rule, 'set', 'table', table])
+                self.cli_set(path + ['rule', rule, 'source', src])
+                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
+
+        for src in sources_v6:
+            for dst in destinations_v6:
+                self.cli_set(path_v6 + ['rule', rule, 'set', 'table', table])
+                self.cli_set(path_v6 + ['rule', rule, 'source', src])
+                self.cli_set(path_v6 + ['rule', rule, 'destination', dst])
+                self.cli_set(path_v6 + ['rule', rule, 'fwmark', fwmk])
+
+        self.cli_commit()
+
+        original = """
+        103:	from 203.0.113.0/24 to 203.0.116.5 fwmark 0x17 lookup 150
+        103:	from 203.0.114.5 to 203.0.112.0/24 fwmark 0x17 lookup 150
+        103:	from 203.0.114.5 to 203.0.116.5 fwmark 0x17 lookup 150
+        103:	from 203.0.113.0/24 to 203.0.112.0/24 fwmark 0x17 lookup 150
+        """
+        original_v6 = """
+        103:	from 2001:db8:1338::/126 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
+        103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
+        """
+        tmp = cmd('ip rule show prio 103')
+        tmp_v6 = cmd('ip -6 rule show prio 103')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+        self.assertEqual(sort_ip(tmp_v6), sort_ip(original_v6))
+
+        self.cli_delete(path)
+        self.cli_delete(path_v6)
+        self.cli_commit()
+
+        tmp = cmd('ip rule show prio 103')
+        tmp_v6 = cmd('ip -6 rule show prio 103')
+
+        self.assertEqual(sort_ip(tmp), [])
+        self.assertEqual(sort_ip(tmp_v6), [])
+
+    # Test multiple commits ipv4
+    def test_multiple_commit_ipv4_table_id(self):
+        path = base_path + ['local-route']
+
+        sources = ['192.0.2.1', '192.0.2.2']
+        destination = '203.0.113.25'
+        rule = '105'
+        table = '151'
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        for src in sources:
+            self.cli_set(path + ['rule', rule, 'source', src])
+
+        self.cli_commit()
+
+        original_first = """
+        105:	from 192.0.2.1 lookup 151
+        105:	from 192.0.2.2 lookup 151
+        """
+        tmp = cmd('ip rule show prio 105')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original_first))
+
+        # Create second commit with added destination
+        self.cli_set(path + ['rule', rule, 'destination', destination])
+        self.cli_commit()
+
+        original_second = """
+        105:	from 192.0.2.1 to 203.0.113.25 lookup 151
+        105:	from 192.0.2.2 to 203.0.113.25 lookup 151
+        """
+        tmp = cmd('ip rule show prio 105')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original_second))
+
+
+def sort_ip(output):
+    o = '\n'.join([' '.join(line.strip().split()) for line in output.strip().splitlines()])
+    o = o.splitlines()
+    o.sort()
+    return o
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

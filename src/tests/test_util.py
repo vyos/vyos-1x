@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,3 +23,6 @@ class TestVyOSUtil(TestCase):
         expected_data = {"foo_bar": {"baz_quux": None}}
         new_data = mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
+
+    def test_sysctl_read(self):
+        self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')

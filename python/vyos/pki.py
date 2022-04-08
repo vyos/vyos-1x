@@ -331,3 +331,29 @@ def verify_certificate(cert, ca_cert):
         return True
     except InvalidSignature:
         return False
+
+# Certificate chain
+
+def find_parent(cert, ca_certs):
+    for ca_cert in ca_certs:
+        if verify_certificate(cert, ca_cert):
+            return ca_cert
+    return None
+
+def find_chain(cert, ca_certs):
+    remaining = ca_certs.copy()
+    chain = [cert]
+
+    while remaining:
+        parent = find_parent(chain[-1], remaining)
+        if parent is None:
+            # No parent in the list of remaining certificates or there's a circular dependency
+            break
+        elif parent == chain[-1]:
+            # Self-signed: must be root CA (end of chain)
+            break
+        else:
+            remaining.remove(parent)
+            chain.append(parent)
+
+    return chain

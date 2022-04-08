@@ -1,4 +1,4 @@
-<!-- include start from rip/tunnel-remote.xml.i -->
+<!-- include start from interface/tunnel-remote.xml.i -->
 <leafNode name="remote">
   <properties>
     <help>Tunnel remote address</help>

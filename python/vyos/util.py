@@ -774,6 +774,14 @@ def dict_search_recursive(dict_object, key):
             for x in dict_search_recursive(j, key):
                 yield x
 
+def get_bridge_fdb(interface):
+    """ Returns the forwarding database entries for a given interface """
+    if not os.path.exists(f'/sys/class/net/{interface}'):
+        return None
+    from json import loads
+    tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
+    return tmp
+
 def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
@@ -952,14 +960,23 @@ def install_into_config(conf, config_paths, override_prompt=True):
         return None
 
     count = 0
+    failed = []
 
     for path in config_paths:
         if override_prompt and conf.exists(path) and not conf.is_multi(path):
             if not ask_yes_no(f'Config node "{node}" already exists. Do you want to overwrite it?'):
                 continue
 
-        cmd(f'/opt/vyatta/sbin/my_set {path}')
-        count += 1
+        try:
+            cmd(f'/opt/vyatta/sbin/my_set {path}')
+            count += 1
+        except:
+            failed.append(path)
+
+    if failed:
+        print(f'Failed to install {len(failed)} value(s). Commands to manually install:')
+        for path in failed:
+            print(f'set {path}')
 
     if count > 0:
         print(f'{count} value(s) installed. Use "compare" to see the pending changes, and "commit" to apply.')
@@ -971,6 +988,11 @@ def is_wwan_connected(interface):
 
     if not interface.startswith('wwan'):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')
+
+    # ModemManager is required for connection(s) - if service is not running,
+    # there won't be any connection at all!
+    if not is_systemd_service_active('ModemManager.service'):
+        return False
 
     modem = interface.lstrip('wwan')
 
@@ -986,5 +1008,19 @@ def boot_configuration_complete() -> bool:
     from vyos.defaults import config_status
 
     if os.path.isfile(config_status):
+        return True
+    return False
+
+def sysctl_read(name):
+    """ Read and return current value of sysctl() option """
+    tmp = cmd(f'sysctl {name}')
+    return tmp.split()[-1]
+
+def sysctl_write(name, value):
+    """ Change value via sysctl() - return True if changed, False otherwise """
+    tmp = cmd(f'sysctl {name}')
+    # last list index contains the actual value - only write if value differs
+    if sysctl_read(name) != str(value):
+        call(f'sysctl -wq {name}={value}')
         return True
     return False

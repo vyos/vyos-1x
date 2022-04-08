@@ -49,10 +49,10 @@ class WiFiIf(Interface):
         on any interface. """
 
         # We can not call add_to_bridge() until wpa_supplicant is running, thus
-        # we will remove the key from the config dict and react to this specal
-        # case in thie derived class.
+        # we will remove the key from the config dict and react to this special
+        # case in this derived class.
         # re-add ourselves to any bridge we might have fallen out of
-        bridge_member = ''
+        bridge_member = None
         if 'is_bridge_member' in config:
             bridge_member = config['is_bridge_member']
             del config['is_bridge_member']

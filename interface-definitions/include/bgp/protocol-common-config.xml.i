@@ -1191,7 +1191,7 @@
             <help>Set period to rescan BGP table to check if condition is met</help>
             <valueHelp>
               <format>u32:5-240</format>
-              <description>Period to rerun the conditional advertisement scanner process (default: 60)</description>
+              <description>Period to rerun the conditional advertisement scanner process</description>
             </valueHelp>
             <constraint>
               <validator name="numeric" argument="--range 5-240"/>
@@ -1427,6 +1427,12 @@
     <leafNode name="no-fast-external-failover">
       <properties>
         <help>Disable immediate session reset on peer link down event</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="no-suppress-duplicates">
+      <properties>
+        <help>Disable suppress duplicate updates if the route actually not changed</help>
         <valueless/>
       </properties>
     </leafNode>

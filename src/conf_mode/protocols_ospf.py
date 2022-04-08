@@ -25,6 +25,7 @@ from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_access_list
 from vyos.template import render_to_string
 from vyos.util import dict_search
 from vyos.util import get_interface_config
@@ -158,6 +159,16 @@ def verify(ospf):
     # As we can have a default-information route-map, we need to validate it!
     route_map_name = dict_search('default_information.originate.route_map', ospf)
     if route_map_name: verify_route_map(route_map_name, ospf)
+
+    # Validate if configured Access-list exists 
+    if 'area' in ospf:
+          for area, area_config in ospf['area'].items():
+              if 'import_list' in area_config:
+                  acl_import = area_config['import_list']
+                  if acl_import: verify_access_list(acl_import, ospf)
+              if 'export_list' in area_config:
+                  acl_export = area_config['export_list']
+                  if acl_export: verify_access_list(acl_export, ospf)
 
     if 'interface' in ospf:
         for interface, interface_config in ospf['interface'].items():

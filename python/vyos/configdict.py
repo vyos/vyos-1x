@@ -117,6 +117,12 @@ def leaf_node_changed(conf, path):
     D.set_level(conf.get_level())
     (new, old) = D.get_value_diff(path)
     if new != old:
+        if isinstance(old, dict):
+            # valueLess nodes return {} if node is deleted
+            return True
+        if old is None and isinstance(new, dict):
+            # valueLess nodes return {} if node was added
+            return True
         if old is None:
             return []
         if isinstance(old, str):
@@ -130,7 +136,7 @@ def leaf_node_changed(conf, path):
 
     return None
 
-def node_changed(conf, path, key_mangling=None):
+def node_changed(conf, path, key_mangling=None, recursive=False):
     """
     Check if a leaf node was altered. If it has been altered - values has been
     changed, or it was added/removed, we will return the old value. If nothing
@@ -140,7 +146,7 @@ def node_changed(conf, path, key_mangling=None):
     D = get_config_diff(conf, key_mangling)
     D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE)['delete'].keys()
+    keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE, recursive=recursive)['delete'].keys()
     return list(keys)
 
 def get_removed_vlans(conf, dict):
@@ -196,7 +202,7 @@ def is_member(conf, interface, intftype=None):
     interface name -> Interface is a member of this interface
     False -> interface type cannot have members
     """
-    ret_val = None
+    ret_val = {}
     intftypes = ['bonding', 'bridge']
 
     if intftype not in intftypes + [None]:
@@ -216,8 +222,8 @@ def is_member(conf, interface, intftype=None):
             member = base + [intf, 'member', 'interface', interface]
             if conf.exists(member):
                 tmp = conf.get_config_dict(member, key_mangling=('-', '_'),
-                                           get_first_key=True)
-                ret_val = {intf : tmp}
+                                           get_first_key=True, no_tag_node_value_mangle=True)
+                ret_val.update({intf : tmp})
 
     old_level = conf.set_level(old_level)
     return ret_val
@@ -319,34 +325,42 @@ def is_source_interface(conf, interface, intftype=None):
 def get_dhcp_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
-    dhcp_interfaces = []
+    dhcp_interfaces = {}
     dict = conf.get_config_dict(['interfaces'], get_first_key=True)
     if not dict:
         return dhcp_interfaces
 
     def check_dhcp(config, ifname):
-        out = []
+        tmp = {}
         if 'address' in config and 'dhcp' in config['address']:
+            options = {}
+            if 'dhcp_options' in config and 'default_route_distance' in config['dhcp_options']:
+                options.update({'distance' : config['dhcp_options']['default_route_distance']})
             if 'vrf' in config:
-                if vrf is config['vrf']: out.append(ifname)
-            else: out.append(ifname)
-        return out
+                if vrf is config['vrf']: tmp.update({ifname : options})
+            else: tmp.update({ifname : options})
+        return tmp
 
     for section, interface in dict.items():
-        for ifname, ifconfig in interface.items():
+        for ifname in interface:
+            # we already have a dict representation of the config from get_config_dict(),
+            # but with the extended information from get_interface_dict() we also
+            # get the DHCP client default-route-distance default option if not specified.
+            ifconfig = get_interface_dict(conf, ['interfaces', section], ifname)
+
             tmp = check_dhcp(ifconfig, ifname)
-            dhcp_interfaces.extend(tmp)
+            dhcp_interfaces.update(tmp)
             # check per VLAN interfaces
             for vif, vif_config in ifconfig.get('vif', {}).items():
                 tmp = check_dhcp(vif_config, f'{ifname}.{vif}')
-                dhcp_interfaces.extend(tmp)
+                dhcp_interfaces.update(tmp)
             # check QinQ VLAN interfaces
             for vif_s, vif_s_config in ifconfig.get('vif-s', {}).items():
                 tmp = check_dhcp(vif_s_config, f'{ifname}.{vif_s}')
-                dhcp_interfaces.extend(tmp)
+                dhcp_interfaces.update(tmp)
                 for vif_c, vif_c_config in vif_s_config.get('vif-c', {}).items():
                     tmp = check_dhcp(vif_c_config, f'{ifname}.{vif_s}.{vif_c}')
-                    dhcp_interfaces.extend(tmp)
+                    dhcp_interfaces.update(tmp)
 
     return dhcp_interfaces
 
@@ -405,6 +419,12 @@ def get_interface_dict(config, base, ifname=''):
     if 'deleted' not in dict:
         dict = dict_merge(default_values, dict)
 
+        # If interface does not request an IPv4 DHCP address there is no need
+        # to keep the dhcp-options key
+        if 'address' not in dict or 'dhcp' not in dict['address']:
+            if 'dhcp_options' in dict:
+                del dict['dhcp_options']
+
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
 
@@ -422,6 +442,10 @@ def get_interface_dict(config, base, ifname=''):
     # Check if we are a member of a bond device
     bond = is_member(config, ifname, 'bonding')
     if bond: dict.update({'is_bond_member' : bond})
+
+    # Check if any DHCP options changed which require a client restat
+    dhcp = node_changed(config, ['dhcp-options'], recursive=True)
+    if dhcp: dict.update({'dhcp_options_changed' : ''})
 
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
@@ -466,9 +490,19 @@ def get_interface_dict(config, base, ifname=''):
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif'][vif] = T2665_set_dhcpv6pd_defaults(dict['vif'][vif])
 
+            # If interface does not request an IPv4 DHCP address there is no need
+            # to keep the dhcp-options key
+            if 'address' not in dict['vif'][vif] or 'dhcp' not in dict['vif'][vif]['address']:
+                if 'dhcp_options' in dict['vif'][vif]:
+                    del dict['vif'][vif]['dhcp_options']
+
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif}', 'bridge')
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
+
+        # Check if any DHCP options changed which require a client restat
+        dhcp = node_changed(config, ['vif', vif, 'dhcp-options'], recursive=True)
+        if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : ''})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
@@ -491,9 +525,20 @@ def get_interface_dict(config, base, ifname=''):
             # XXX: T2665: blend in proper DHCPv6-PD default values
             dict['vif_s'][vif_s] = T2665_set_dhcpv6pd_defaults(dict['vif_s'][vif_s])
 
+            # If interface does not request an IPv4 DHCP address there is no need
+            # to keep the dhcp-options key
+            if 'address' not in dict['vif_s'][vif_s] or 'dhcp' not in \
+                dict['vif_s'][vif_s]['address']:
+                if 'dhcp_options' in dict['vif_s'][vif_s]:
+                    del dict['vif_s'][vif_s]['dhcp_options']
+
         # Check if we are a member of a bridge device
         bridge = is_member(config, f'{ifname}.{vif_s}', 'bridge')
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
+
+        # Check if any DHCP options changed which require a client restat
+        dhcp = node_changed(config, ['vif-s', vif_s, 'dhcp-options'], recursive=True)
+        if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : ''})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
@@ -516,10 +561,21 @@ def get_interface_dict(config, base, ifname=''):
                 dict['vif_s'][vif_s]['vif_c'][vif_c] = T2665_set_dhcpv6pd_defaults(
                     dict['vif_s'][vif_s]['vif_c'][vif_c])
 
+                # If interface does not request an IPv4 DHCP address there is no need
+                # to keep the dhcp-options key
+                if 'address' not in dict['vif_s'][vif_s]['vif_c'][vif_c] or 'dhcp' \
+                    not in dict['vif_s'][vif_s]['vif_c'][vif_c]['address']:
+                    if 'dhcp_options' in dict['vif_s'][vif_s]['vif_c'][vif_c]:
+                        del dict['vif_s'][vif_s]['vif_c'][vif_c]['dhcp_options']
+
             # Check if we are a member of a bridge device
             bridge = is_member(config, f'{ifname}.{vif_s}.{vif_c}', 'bridge')
             if bridge: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
                 {'is_bridge_member' : bridge})
+
+            # Check if any DHCP options changed which require a client restat
+            dhcp = node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'], recursive=True)
+            if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : ''})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)
@@ -544,7 +600,6 @@ def get_vlan_ids(interface):
                     vlan_ids.add(vlan_id)
 
     return vlan_ids
-
 
 def get_accel_dict(config, base, chap_secrets):
     """

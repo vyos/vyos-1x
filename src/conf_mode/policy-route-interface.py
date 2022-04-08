@@ -52,7 +52,7 @@ def verify(if_policy):
     if not if_policy:
         return None
 
-    for route in ['route', 'ipv6_route']:
+    for route in ['route', 'route6']:
         if route in if_policy:
             if route not in if_policy['policy']:
                 raise ConfigError('Policy route not configured')
@@ -71,7 +71,7 @@ def cleanup_rule(table, chain, ifname, new_name=None):
     results = cmd(f'nft -a list chain {table} {chain}').split("\n")
     retval = None
     for line in results:
-        if f'oifname "{ifname}"' in line:
+        if f'ifname "{ifname}"' in line:
             if new_name and f'jump {new_name}' in line:
                 # new_name is used to clear rules for any previously referenced chains
                 # returns true when rule exists and doesn't need to be created
@@ -98,8 +98,8 @@ def apply(if_policy):
     else:
         cleanup_rule('ip mangle', route_chain, ifname)
 
-    if 'ipv6_route' in if_policy:
-        name = 'VYOS_PBR6_' + if_policy['ipv6_route']
+    if 'route6' in if_policy:
+        name = 'VYOS_PBR6_' + if_policy['route6']
         rule_exists = cleanup_rule('ip6 mangle', ipv6_route_chain, ifname, name)
 
         if not rule_exists:

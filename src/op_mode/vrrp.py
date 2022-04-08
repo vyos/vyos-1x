@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,6 +23,7 @@ import tabulate
 
 import vyos.util
 
+from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig.vrrp import VRRP
 from vyos.ifconfig.vrrp import VRRPError, VRRPNoData
 
@@ -35,7 +36,17 @@ group.add_argument("-d", "--data", action="store_true", help="Print detailed VRR
 
 args = parser.parse_args()
 
+def is_configured():
+    """ Check if VRRP is configured """
+    config = ConfigTreeQuery()
+    if not config.exists(['high-availability', 'vrrp', 'group']):
+        return False
+    return True
+
 # Exit early if VRRP is dead or not configured
+if  is_configured() == False:
+    print('VRRP not configured!')
+    exit(0)
 if not VRRP.is_running():
     print('VRRP is not running')
     sys.exit(0)

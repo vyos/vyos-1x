@@ -84,17 +84,17 @@
           <help>Show policy information</help>
         </properties>
         <children>
-          <node name="ipv6-route">
+          <node name="route6">
             <properties>
               <help>Show IPv6 policy chain</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show_all --ipv6</command>
           </node>
-          <tagNode name="ipv6-route">
+          <tagNode name="route6">
             <properties>
               <help>Show IPv6 policy chains</help>
               <completionHelp>
-                <path>policy ipv6-route</path>
+                <path>policy route6</path>
               </completionHelp>
             </properties>
             <children>
@@ -102,7 +102,7 @@
                 <properties>
                   <help>Show summary of IPv6 policy rules</help>
                   <completionHelp>
-                    <path>policy ipv6-route ${COMP_WORDS[4]} rule</path>
+                    <path>policy route6 ${COMP_WORDS[4]} rule</path>
                   </completionHelp>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/policy_route.py --action show --name $4 --rule $6 --ipv6</command>

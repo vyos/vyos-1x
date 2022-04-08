@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ from vyos.util import read_file
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls._test_dhcp = True
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True
@@ -36,7 +37,6 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         cls._test_vlan = True
         cls._test_qinq = True
         cls._base_path = ['interfaces', 'bonding']
-        cls._interfaces = ['bond0']
         cls._mirror_interfaces = ['dum21354']
         cls._members = []
 
@@ -52,6 +52,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         cls._options['bond0'] = []
         for member in cls._members:
             cls._options['bond0'].append(f'member interface {member}')
+        cls._interfaces = list(cls._options)
 
         # call base-classes classmethod
         super(cls, cls).setUpClass()
@@ -149,6 +150,20 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             for interface in self._interfaces:
                 defined_policy = read_file(f'/sys/class/net/{interface}/bonding/xmit_hash_policy').split()
                 self.assertEqual(defined_policy[0], hash_policy)
+
+    def test_bonding_multi_use_member(self):
+        # Define available bonding hash policies
+        for interface in ['bond10', 'bond20']:
+            for member in self._members:
+                self.cli_set(self._base_path + [interface, 'member', 'interface', member])
+
+        # check validate() - can not use the same member interfaces multiple times
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(self._base_path + ['bond20'])
+
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

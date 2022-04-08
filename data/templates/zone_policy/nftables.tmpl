@@ -13,29 +13,32 @@ table ip filter {
     chain VZONE_{{ zone_name }}_IN {
         iifname lo counter return
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.name is defined %}
-        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME_{{ from_conf.firewall.name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%       endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
 {%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall.name is defined %}
-        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME_{{ from_conf.firewall.name }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%         endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
 {%     else %}
     chain VZONE_{{ zone_name }} {
         iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=False) }}
+{%       if zone_conf.intra_zone_filtering is defined %}
+        iifname { {{ zone_conf.interface | join(",") }} } counter return
+{%       endif %}
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.name is defined %}
 {%         if zone[from_zone].local_zone is not defined %}
-        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME_{{ from_conf.firewall.name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%         endif %}
 {%       endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
 {%     endif %}
 {%   endfor %}
@@ -47,29 +50,32 @@ table ip6 filter {
     chain VZONE6_{{ zone_name }}_IN {
         iifname lo counter return
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.ipv6_name is defined %}
-        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME6_{{ from_conf.firewall.ipv6_name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%       endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
     chain VZONE6_{{ zone_name }}_OUT {
         oifname lo counter return
 {%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall.ipv6_name is defined %}
-        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME6_{{ from_conf.firewall.ipv6_name }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%         endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
 {%     else %}
     chain VZONE6_{{ zone_name }} {
         iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6=True) }}
+{%       if zone_conf.intra_zone_filtering is defined %}
+        iifname { {{ zone_conf.interface | join(",") }} } counter return
+{%       endif %}
 {%       for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall.ipv6_name is defined %}
 {%         if zone[from_zone].local_zone is not defined %}
-        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump {{ from_conf.firewall.ipv6_name }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME6_{{ from_conf.firewall.ipv6_name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%         endif %}
 {%       endfor %}
-        counter {{ zone_conf.default_action if zone_conf.default_action is defined else 'drop' }}
+        counter {{ zone_conf.default_action }}
     }
 {%     endif %}
 {%   endfor %}

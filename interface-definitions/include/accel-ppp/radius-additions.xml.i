@@ -21,7 +21,7 @@
             <help>Accounting port</help>
             <valueHelp>
               <format>u32:1-65535</format>
-              <description>Numeric IP port (default: 1813)</description>
+              <description>Numeric IP port</description>
             </valueHelp>
             <constraint>
               <validator name="numeric" argument="--range 1-65535"/>
@@ -62,7 +62,7 @@
     </leafNode>
     <leafNode name="acct-timeout">
       <properties>
-        <help>Timeout for Interim-Update packets, terminate session afterwards (default 3 seconds)</help>
+        <help>Timeout for Interim-Update packets, terminate session afterwards</help>
         <valueHelp>
           <format>u32:0-60</format>
           <description>Timeout in seconds, 0 to keep active</description>
@@ -126,7 +126,7 @@
         </leafNode>
         <leafNode name="port">
           <properties>
-            <help>Port for Dynamic Authorization Extension server (DM/CoA) (default: 1700)</help>
+            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
             <valueHelp>
               <format>u32:1-65535</format>
               <description>TCP port</description>

@@ -6,7 +6,7 @@ net.netfilter.nf_conntrack_max = {{ table_size }}
 
 net.ipv4.tcp_max_syn_backlog = {{ tcp.half_open_connections }}
 
-net.netfilter.nf_conntrack_tcp_loose = {{ '1' if tcp.loose == 'enable' else '0' }}
+net.netfilter.nf_conntrack_tcp_loose = {{ '1' if tcp.loose is vyos_defined('enable') else '0' }}
 net.netfilter.nf_conntrack_tcp_max_retrans = {{ tcp.max_retrans }}
 
 net.netfilter.nf_conntrack_icmp_timeout = {{ timeout.icmp }}

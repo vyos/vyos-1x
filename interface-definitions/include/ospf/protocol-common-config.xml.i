@@ -106,7 +106,7 @@
             </leafNode>
             <leafNode name="translate">
               <properties>
-                <help>Configure NSSA-ABR (default: candidate)</help>
+                <help>Configure NSSA-ABR</help>
                 <completionHelp>
                   <list>always candidate never</list>
                 </completionHelp>
@@ -116,7 +116,7 @@
                 </valueHelp>
                 <valueHelp>
                   <format>candidate</format>
-                  <description>Translate for election (default)</description>
+                  <description>Translate for election</description>
                 </valueHelp>
                 <valueHelp>
                   <format>never</format>
@@ -256,6 +256,36 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="export-list">
+      <properties>
+        <help>Set the filter for networks announced to other areas</help>
+        <completionHelp>
+          <path>policy access-list</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32</format>
+          <description>Access-list number</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="import-list">
+      <properties>
+        <help>Set the filter for networks from other areas announced</help>
+        <completionHelp>
+          <path>policy access-list</path>
+        </completionHelp>
+        <valueHelp>
+          <format>u32</format>
+          <description>Access-list number</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
     <tagNode name="virtual-link">
       <properties>
         <help>Virtual link</help>
@@ -286,6 +316,18 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-16777214"/>
+    </constraint>
+  </properties>
+</leafNode>
+<leafNode name="maximum-paths">
+  <properties>
+    <help>Maximum multiple paths (ECMP)</help>
+    <valueHelp>
+      <format>u32:1-64</format>
+      <description>Maximum multiple paths (ECMP)</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-64"/>
     </constraint>
   </properties>
 </leafNode>
@@ -490,7 +532,7 @@
   <children>
     <leafNode name="poll-interval">
       <properties>
-        <help>Dead neighbor polling interval (default: 60)</help>
+        <help>Dead neighbor polling interval</help>
         <valueHelp>
           <format>u32:1-65535</format>
           <description>Seconds between dead neighbor polling interval</description>
@@ -503,7 +545,7 @@
     </leafNode>
     <leafNode name="priority">
       <properties>
-        <help>Neighbor priority in seconds (default: 0)</help>
+        <help>Neighbor priority in seconds</help>
         <valueHelp>
           <format>u32:0-255</format>
           <description>Neighbor priority</description>
@@ -523,13 +565,13 @@
   <children>
     <leafNode name="abr-type">
       <properties>
-        <help>OSPF ABR type (default: cisco)</help>
+        <help>OSPF ABR type</help>
         <completionHelp>
           <list>cisco ibm shortcut standard</list>
         </completionHelp>
         <valueHelp>
           <format>cisco</format>
-          <description>Cisco ABR type (default)</description>
+          <description>Cisco ABR type</description>
         </valueHelp>
         <valueHelp>
           <format>ibm</format>
@@ -700,7 +742,7 @@
           <children>
             <leafNode name="delay">
               <properties>
-                <help>Delay from the first change received to SPF calculation (default: 200)</help>
+                <help>Delay from the first change received to SPF calculation</help>
                 <valueHelp>
                   <format>u32:0-600000</format>
                   <description>Delay in milliseconds</description>
@@ -713,7 +755,7 @@
             </leafNode>
             <leafNode name="initial-holdtime">
               <properties>
-                <help>Initial hold time between consecutive SPF calculations (default: 1000)</help>
+                <help>Initial hold time between consecutive SPF calculations</help>
                 <valueHelp>
                   <format>u32:0-600000</format>
                   <description>Initial hold time in milliseconds</description>
@@ -726,7 +768,7 @@
             </leafNode>
             <leafNode name="max-holdtime">
               <properties>
-                <help>Maximum hold time (default: 10000)</help>
+                <help>Maximum hold time</help>
                 <valueHelp>
                   <format>u32:0-600000</format>
                   <description>Max hold time in milliseconds</description>

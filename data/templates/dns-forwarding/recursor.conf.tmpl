@@ -19,6 +19,9 @@ max-cache-entries={{ cache_size }}
 # negative TTL for NXDOMAIN
 max-negative-ttl={{ negative_ttl }}
 
+# timeout
+network-timeout={{ timeout }}
+
 # ignore-hosts-file
 export-etc-hosts={{ 'no' if ignore_hosts_file is defined else 'yes' }}
 

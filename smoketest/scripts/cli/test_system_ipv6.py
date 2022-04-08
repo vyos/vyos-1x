@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,12 +17,16 @@
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+
+from vyos.template import is_ipv4
 from vyos.util import read_file
+from vyos.util import get_interface_config
+from vyos.validate import is_intf_addr_assigned
 
 base_path = ['system', 'ipv6']
 
 file_forwarding = '/proc/sys/net/ipv6/conf/all/forwarding'
-file_disable = '/etc/modprobe.d/vyos_disable_ipv6.conf'
+file_disable = '/proc/sys/net/ipv6/conf/all/disable_ipv6'
 file_dad = '/proc/sys/net/ipv6/conf/all/accept_dad'
 file_multipath = '/proc/sys/net/ipv6/fib_multipath_hash_policy'
 
@@ -40,15 +44,6 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertEqual(read_file(file_forwarding), '0')
-
-    def test_system_ipv6_disable(self):
-        # Do not assign any IPv6 address on interfaces, this requires a reboot
-        # which can not be tested, but we can read the config file :)
-        self.cli_set(base_path + ['disable'])
-        self.cli_commit()
-
-        # Verify configuration file
-        self.assertEqual(read_file(file_disable), 'options ipv6 disable_ipv6=1')
 
     def test_system_ipv6_strict_dad(self):
         # This defaults to 1

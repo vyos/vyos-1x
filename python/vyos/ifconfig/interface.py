@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from netifaces import interfaces
 import os
 import re
 import json
@@ -1080,16 +1079,17 @@ class Interface(Control):
         if addr in self._addr:
             return False
 
-        addr_is_v4 = is_ipv4(addr)
-
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True)
         elif not is_intf_addr_assigned(self.ifname, addr):
-            self._cmd(f'ip addr add "{addr}" '
-                    f'{"brd + " if addr_is_v4 else ""}dev "{self.ifname}"')
+            tmp = f'ip addr add {addr} dev {self.ifname}'
+            # Add broadcast address for IPv4
+            if is_ipv4(addr): tmp += ' brd +'
+
+            self._cmd(tmp)
         else:
             return False
 
@@ -1228,12 +1228,11 @@ class Interface(Control):
         options_file = f'{config_base}_{ifname}.options'
         pid_file = f'{config_base}_{ifname}.pid'
         lease_file = f'{config_base}_{ifname}.leases'
-
-        # Stop client with old config files to get the right IF_METRIC.
         systemd_service = f'dhclient@{ifname}.service'
-        if is_systemd_service_active(systemd_service):
-            self._cmd(f'systemctl stop {systemd_service}')
 
+        # 'up' check is mandatory b/c even if the interface is A/D, as soon as
+        # the DHCP client is started the interface will be placed in u/u state.
+        # This is not what we intended to do when disabling an interface.
         if enable and 'disable' not in self._config:
             if dict_search('dhcp_options.host_name', self._config) == None:
                 # read configured system hostname.
@@ -1244,16 +1243,19 @@ class Interface(Control):
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
                     self._config = dict_merge(tmp, self._config)
 
-            render(options_file, 'dhcp-client/daemon-options.tmpl',
-                   self._config)
-            render(config_file, 'dhcp-client/ipv4.tmpl',
-                   self._config)
+            render(options_file, 'dhcp-client/daemon-options.tmpl', self._config)
+            render(config_file, 'dhcp-client/ipv4.tmpl', self._config)
 
-            # 'up' check is mandatory b/c even if the interface is A/D, as soon as
-            # the DHCP client is started the interface will be placed in u/u state.
-            # This is not what we intended to do when disabling an interface.
-            return self._cmd(f'systemctl restart {systemd_service}')
+            # When the DHCP client is restarted a brief outage will occur, as
+            # the old lease is released a new one is acquired (T4203). We will
+            # only restart DHCP client if it's option changed, or if it's not
+            # running, but it should be running (e.g. on system startup)
+            if 'dhcp_options_changed' in self._config or not is_systemd_service_active(systemd_service):
+                return self._cmd(f'systemctl restart {systemd_service}')
+            return None
         else:
+            if is_systemd_service_active(systemd_service):
+                self._cmd(f'systemctl stop {systemd_service}')
             # cleanup old config files
             for file in [config_file, options_file, pid_file, lease_file]:
                 if os.path.isfile(file):
@@ -1284,48 +1286,57 @@ class Interface(Control):
             if os.path.isfile(config_file):
                 os.remove(config_file)
 
-    def set_mirror(self):
+    def set_mirror_redirect(self):
         # Please refer to the document for details
         #   - https://man7.org/linux/man-pages/man8/tc.8.html
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
         source_if = self._config['ifname']
-        config = self._config.get('mirror', None)
 
+        mirror_config = None
+        if 'mirror' in self._config:
+            mirror_config = self._config['mirror']
         if 'is_mirror_intf' in self._config:
             source_if = next(iter(self._config['is_mirror_intf']))
-            config = self._config['is_mirror_intf'][source_if].get('mirror', None)
+            mirror_config = self._config['is_mirror_intf'][source_if].get('mirror', None)
 
-        # Check configuration stored by old perl code before delete T3782/T4056
-        if not 'redirect' in self._config and not 'traffic_policy' in self._config:
-            # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
-            # Remove existing mirroring rules
-            delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
-            delete_tc_cmd += f'tc qdisc del dev {source_if} handle 1: root prio 2> /dev/null;'
-            delete_tc_cmd += 'set $?=0'
-            self._popen(delete_tc_cmd)
+        redirect_config = None
 
-        # Bail out early if nothing needs to be configured
-        if not config:
-            return
+        # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
+        # qdisc on specified device") - we simply cleanup all stuff here
+        self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
+        self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
 
-        for direction, mirror_if in config.items():
-            if mirror_if not in interfaces():
-                continue
+        # Apply interface mirror policy
+        if mirror_config:
+            for direction, target_if in mirror_config.items():
+                if direction == 'ingress':
+                    handle = 'ffff: ingress'
+                    parent = 'ffff:'
+                elif direction == 'egress':
+                    handle = '1: root prio'
+                    parent = '1:'
 
-            if direction == 'ingress':
-                handle = 'ffff: ingress'
-                parent = 'ffff:'
-            elif direction == 'egress':
-                handle = '1: root prio'
-                parent = '1:'
+                # Mirror egress traffic
+                mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
+                # Export the mirrored traffic to the interface
+                mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol '\
+                              f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
+                              f'egress mirror dev {target_if}'
+                _, err = self._popen(mirror_cmd)
+                if err: print('tc qdisc(filter for mirror port failed')
 
-            # Mirror egress traffic
-            mirror_cmd  = f'tc qdisc add dev {source_if} handle {handle}; '
-            # Export the mirrored traffic to the interface
-            mirror_cmd += f'tc filter add dev {source_if} parent {parent} protocol all prio 10 u32 match u32 0 0 flowid 1:1 action mirred egress mirror dev {mirror_if}'
-            self._popen(mirror_cmd)
+        # Apply interface traffic redirection policy
+        elif 'redirect' in self._config:
+            _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
+            if err: print(f'tc qdisc add for redirect failed!')
+
+            target_if = self._config['redirect']
+            _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
+                                 f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
+                                 f'egress redirect dev {target_if}')
+            if err: print('tc filter add for redirect failed')
 
     def set_xdp(self, state):
         """
@@ -1424,9 +1435,6 @@ class Interface(Control):
                 else:
                     self.del_addr(addr)
 
-        for addr in new_addr:
-            self.add_addr(addr)
-
         # start DHCPv6 client when only PD was configured
         if dhcpv6pd:
             self.set_dhcpv6(True)
@@ -1441,15 +1449,14 @@ class Interface(Control):
             # checked before
             self.set_vrf(config.get('vrf', ''))
 
+        # Add this section after vrf T4331
+        for addr in new_addr:
+            self.add_addr(addr)
+
         # Configure MSS value for IPv4 TCP connections
         tmp = dict_search('ip.adjust_mss', config)
         value = tmp if (tmp != None) else '0'
         self.set_tcp_ipv4_mss(value)
-
-        # Configure MSS value for IPv6 TCP connections
-        tmp = dict_search('ipv6.adjust_mss', config)
-        value = tmp if (tmp != None) else '0'
-        self.set_tcp_ipv6_mss(value)
 
         # Configure ARP cache timeout in milliseconds - has default value
         tmp = dict_search('ip.arp_cache_timeout', config)
@@ -1496,6 +1503,18 @@ class Interface(Control):
         value = tmp if (tmp != None) else '0'
         self.set_ipv4_source_validation(value)
 
+        # MTU - Maximum Transfer Unit has a default value. It must ALWAYS be set
+        # before mangling any IPv6 option. If MTU is less then 1280 IPv6 will be
+        # automatically disabled by the kernel. Also MTU must be increased before
+        # configuring any IPv6 address on the interface.
+        if 'mtu' in config:
+            self.set_mtu(config.get('mtu'))
+
+        # Configure MSS value for IPv6 TCP connections
+        tmp = dict_search('ipv6.adjust_mss', config)
+        value = tmp if (tmp != None) else '0'
+        self.set_tcp_ipv6_mss(value)
+
         # IPv6 forwarding
         tmp = dict_search('ipv6.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
@@ -1517,10 +1536,6 @@ class Interface(Control):
         tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
         value = tmp if (tmp != None) else '1'
         self.set_ipv6_dad_messages(value)
-
-        # MTU - Maximum Transfer Unit
-        if 'mtu' in config:
-            self.set_mtu(config.get('mtu'))
 
         # Delete old IPv6 EUI64 addresses before changing MAC
         for addr in (dict_search('ipv6.address.eui64_old', config) or []):
@@ -1546,8 +1561,8 @@ class Interface(Control):
         # eXpress Data Path - highly experimental
         self.set_xdp('xdp' in config)
 
-        # configure port mirror
-        self.set_mirror()
+        # configure interface mirror or redirection target
+        self.set_mirror_redirect()
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
@@ -1706,6 +1721,3 @@ class VLANIf(Interface):
             return None
 
         return super().set_admin_state(state)
-
-    def set_mirror(self):
-        return

@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -68,6 +68,16 @@ class VXLANIf(Interface):
             'vni'                        : 'id',
         }
 
+        # IPv6 flowlabels can only be used on IPv6 tunnels, thus we need to
+        # ensure that at least the first remote IP address is passed to the
+        # tunnel creation command. Subsequent tunnel remote addresses can later
+        # be added to the FDB
+        remote_list = None
+        if 'remote' in self.config:
+            # skip first element as this is already configured as remote
+            remote_list = self.config['remote'][1:]
+            self.config['remote'] = self.config['remote'][0]
+
         cmd = 'ip link add {ifname} type {type} dstport {port}'
         for vyos_key, iproute2_key in mapping.items():
             # dict_search will return an empty dict "{}" for valueless nodes like
@@ -82,3 +92,10 @@ class VXLANIf(Interface):
         self._cmd(cmd.format(**self.config))
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')
+
+        # VXLAN tunnel is always recreated on any change - see interfaces-vxlan.py
+        if remote_list:
+            for remote in remote_list:
+                cmd = f'bridge fdb append to 00:00:00:00:00:00 dst {remote} ' \
+                       'port {port} dev {ifname}'
+                self._cmd(cmd.format(**self.config))

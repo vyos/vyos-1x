@@ -20,7 +20,6 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/disable-link-detect.xml.i>
-          #include <include/interface/vrf.xml.i>
           #include <include/interface/mtu-64-8024.xml.i>
           <leafNode name="mtu">
             <defaultValue>1476</defaultValue>
@@ -108,6 +107,7 @@
               <constraintErrorMessage>Invalid encapsulation, must be one of: erspan, gre, gretap, ip6erspan, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
             </properties>
           </leafNode>
+          #include <include/interface/mirror.xml.i>
           <leafNode name="multicast">
             <properties>
               <help>Multicast operation over tunnel</help>
@@ -241,7 +241,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>u32:0-255</format>
-                        <description>Encapsulation limit (default: 4)</description>
+                        <description>Encapsulation limit</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
@@ -261,7 +261,7 @@
                       <help>Hoplimit</help>
                       <valueHelp>
                         <format>u32:0-255</format>
-                        <description>Hop limit (default: 64)</description>
+                        <description>Hop limit</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-255"/>
@@ -288,6 +288,8 @@
               </node>
             </children>
           </node>
+          #include <include/interface/vrf.xml.i>
+          #include <include/interface/redirect.xml.i>
         </children>
       </tagNode>
     </children>

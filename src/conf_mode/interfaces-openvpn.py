@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,8 +32,10 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
+from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import VTunIf
 from vyos.pki import load_dh_parameters
 from vyos.pki import load_private_key
@@ -47,6 +49,7 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import call
 from vyos.util import chown
+from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import makedir
@@ -86,6 +89,9 @@ def get_config(config=None):
 
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
+
+        tmp = leaf_node_changed(conf, ['openvpn-option'])
+        if tmp: openvpn['restart_required'] = ''
 
         # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
         # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
@@ -225,11 +231,12 @@ def verify(openvpn):
         if 'local_address' not in openvpn and 'is_bridge_member' not in openvpn:
             raise ConfigError('Must specify "local-address" or add interface to bridge')
 
-        if len([addr for addr in openvpn['local_address'] if is_ipv4(addr)]) > 1:
-            raise ConfigError('Only one IPv4 local-address can be specified')
+        if 'local_address' in openvpn:
+            if len([addr for addr in openvpn['local_address'] if is_ipv4(addr)]) > 1:
+                raise ConfigError('Only one IPv4 local-address can be specified')
 
-        if len([addr for addr in openvpn['local_address'] if is_ipv6(addr)]) > 1:
-            raise ConfigError('Only one IPv6 local-address can be specified')
+            if len([addr for addr in openvpn['local_address'] if is_ipv6(addr)]) > 1:
+                raise ConfigError('Only one IPv6 local-address can be specified')
 
         if openvpn['device_type'] == 'tun':
             if 'remote_address' not in openvpn:
@@ -268,7 +275,7 @@ def verify(openvpn):
             if dict_search('remote_host', openvpn) in dict_search('remote_address', openvpn):
                 raise ConfigError('"remote-address" and "remote-host" can not be the same')
 
-        if openvpn['device_type'] == 'tap':
+        if openvpn['device_type'] == 'tap' and 'local_address' in openvpn:
             # we can only have one local_address, this is ensured above
             v4addr = None
             for laddr in openvpn['local_address']:
@@ -423,8 +430,8 @@ def verify(openvpn):
     # verify specified IP address is present on any interface on this system
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
-            raise ConfigError('local-host IP address "{local_host}" not assigned' \
-                              ' to any interface'.format(**openvpn))
+            print('local-host IP address "{local_host}" not assigned' \
+                  ' to any interface'.format(**openvpn))
 
     # TCP active
     if openvpn['protocol'] == 'tcp-active':
@@ -489,6 +496,7 @@ def verify(openvpn):
             raise ConfigError('Username for authentication is missing')
 
     verify_vrf(openvpn)
+    verify_mirror_redirect(openvpn)
 
     return None
 
@@ -647,9 +655,19 @@ def apply(openvpn):
 
         return None
 
+    # verify specified IP address is present on any interface on this system
+    # Allow to bind service to nonlocal address, if it virtaual-vrrp address
+    # or if address will be assign later
+    if 'local_host' in openvpn:
+        if not is_addr_assigned(openvpn['local_host']):
+            cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
+
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
-    call(f'systemctl reload-or-restart openvpn@{interface}.service')
+    action = 'reload-or-restart'
+    if 'restart_required' in openvpn:
+        action = 'restart'
+    call(f'systemctl {action} openvpn@{interface}.service')
 
     o = VTunIf(**openvpn)
     o.update(openvpn)

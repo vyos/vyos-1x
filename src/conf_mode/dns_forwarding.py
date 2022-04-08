@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,6 +16,7 @@
 
 import os
 
+from netifaces import interfaces
 from sys import exit
 from glob import glob
 
@@ -64,10 +65,6 @@ def get_config(config=None):
         base_nameservers = ['system', 'name-server']
         if conf.exists(base_nameservers):
             dns.update({'system_name_server': conf.return_values(base_nameservers)})
-
-        base_nameservers_dhcp = ['system', 'name-servers-dhcp']
-        if conf.exists(base_nameservers_dhcp):
-            dns.update({'system_name_server_dhcp': conf.return_values(base_nameservers_dhcp)})
 
     if 'authoritative_domain' in dns:
         dns['authoritative_zones'] = []
@@ -272,9 +269,8 @@ def verify(dns):
         raise ConfigError('Invalid authoritative records have been defined')
 
     if 'system' in dns:
-        if not ('system_name_server' in dns or 'system_name_server_dhcp' in dns):
-            print("Warning: No 'system name-server' or 'system " \
-                  "name-servers-dhcp' configured")
+        if not 'system_name_server' in dns:
+            print('Warning: No "system name-server" configured')
 
     return None
 
@@ -339,10 +335,15 @@ def apply(dns):
             hc.delete_name_server_tags_recursor(['system'])
 
         # add dhcp nameserver tags for configured interfaces
-        if 'system_name_server_dhcp' in dns:
-            for interface in dns['system_name_server_dhcp']:
-                hc.add_name_server_tags_recursor(['dhcp-' + interface,
-                                                  'dhcpv6-' + interface ])
+        if 'system_name_server' in dns:
+            for interface in dns['system_name_server']:
+                # system_name_server key contains both IP addresses and interface
+                # names (DHCP) to use DNS servers. We need to check if the
+                # value is an interface name - only if this is the case, add the
+                # interface based DNS forwarder.
+                if interface in interfaces():
+                    hc.add_name_server_tags_recursor(['dhcp-' + interface,
+                                                      'dhcpv6-' + interface ])
 
         # hostsd will generate the forward-zones file
         # the list and keys() are required as get returns a dict, not list

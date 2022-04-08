@@ -1,21 +1,24 @@
 {% macro static_routes(ip_ipv6, prefix, prefix_config, table=None) %}
-{%   if prefix_config.blackhole is defined %}
-{{ ip_ipv6 }} route {{ prefix }} blackhole {{ prefix_config.blackhole.distance if prefix_config.blackhole.distance is defined }} {{ 'tag ' + prefix_config.blackhole.tag if prefix_config.blackhole.tag is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{%   if prefix_config.blackhole is vyos_defined %}
+{{ ip_ipv6 }} route {{ prefix }} blackhole {{ prefix_config.blackhole.distance if prefix_config.blackhole.distance is vyos_defined }} {{ 'tag ' ~ prefix_config.blackhole.tag if prefix_config.blackhole.tag is vyos_defined }} {{ 'table ' ~ table if table is vyos_defined and table is not none }}
 {%   endif %}
-{%   if prefix_config.dhcp_interface is defined and prefix_config.dhcp_interface is not none %}
+{%   if prefix_config.reject is vyos_defined %}
+{{ ip_ipv6 }} route {{ prefix }} reject {{ prefix_config.reject.distance if prefix_config.reject.distance is vyos_defined }} {{ 'tag ' ~ prefix_config.reject.tag if prefix_config.reject.tag is vyos_defined }} {{ 'table ' ~ table if table is vyos_defined }}
+{%   endif %}
+{%   if prefix_config.dhcp_interface is vyos_defined %}
 {%     set next_hop = prefix_config.dhcp_interface | get_dhcp_router %}
-{%     if next_hop is defined and next_hop is not none %}
-{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ prefix_config.dhcp_interface }}
+{%     if next_hop is vyos_defined %}
+{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ prefix_config.dhcp_interface }} {{ 'table ' ~ table if table is vyos_defined }}
 {%     endif %}
 {%   endif %}
-{%   if prefix_config.interface is defined and prefix_config.interface is not none %}
+{%   if prefix_config.interface is vyos_defined %}
 {%     for interface, interface_config in prefix_config.interface.items() if interface_config.disable is not defined %}
-{{ ip_ipv6 }} route {{ prefix }} {{ interface }} {{ interface_config.distance if interface_config.distance is defined }} {{ 'nexthop-vrf ' + interface_config.vrf if interface_config.vrf is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{{ ip_ipv6 }} route {{ prefix }} {{ interface }} {{ interface_config.distance if interface_config.distance is vyos_defined }} {{ 'nexthop-vrf ' ~ interface_config.vrf if interface_config.vrf is vyos_defined }} {{ 'table ' ~ table if table is vyos_defined }}
 {%     endfor %}
 {%   endif %}
-{%   if prefix_config.next_hop is defined and prefix_config.next_hop is not none %}
+{%   if prefix_config.next_hop is vyos_defined and prefix_config.next_hop is not none %}
 {%     for next_hop, next_hop_config in prefix_config.next_hop.items() if next_hop_config.disable is not defined %}
-{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ next_hop_config.interface if next_hop_config.interface is defined }} {{ next_hop_config.distance if next_hop_config.distance is defined }} {{ 'nexthop-vrf ' + next_hop_config.vrf if next_hop_config.vrf is defined }} {{ 'table ' + table if table is defined and table is not none }}
+{{ ip_ipv6 }} route {{ prefix }} {{ next_hop }} {{ next_hop_config.interface if next_hop_config.interface is vyos_defined }} {{ next_hop_config.distance if next_hop_config.distance is vyos_defined }} {{ 'nexthop-vrf ' ~ next_hop_config.vrf if next_hop_config.vrf is vyos_defined }} {{ 'table ' ~ table if table is vyos_defined}}
 {%     endfor %}
 {%   endif %}
 {% endmacro %}

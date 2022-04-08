@@ -249,10 +249,11 @@ class XML(dict):
     # @lru_cache(maxsize=100)
     # XXX: need to use cachetool instead - for later
 
-    def component_versions(self) -> dict:
-        sort_component = sorted(self[kw.component_version].items(),
-                                key = lambda kv: kv[0])
-        return dict(sort_component)
+    def component_version(self) -> dict:
+        d = {}
+        for k in sorted(self[kw.component_version]):
+            d[k] = int(self[kw.component_version][k])
+        return d
 
     def defaults(self, lpath, flat):
         d = self[kw.default]

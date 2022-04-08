@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -55,10 +55,17 @@ def get_system_memory_human():
 
     return mem
 
+def get_raw_data():
+    return get_system_memory_human()
+
+def get_formatted_output():
+    mem = get_raw_data()
+
+    out = "Total: {}\n".format(mem["total"])
+    out += "Free:  {}\n".format(mem["free"])
+    out += "Used:  {}".format(mem["used"])
+
+    return out
+
 if __name__ == '__main__':
-    mem = get_system_memory_human()
-
-    print("Total: {}".format(mem["total"]))
-    print("Free:  {}".format(mem["free"]))
-    print("Used:  {}".format(mem["used"]))
-
+    print(get_formatted_output())

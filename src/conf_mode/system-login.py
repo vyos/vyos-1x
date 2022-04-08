@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,6 +23,7 @@ from pwd import getpwall
 from pwd import getpwnam
 from spwd import getspnam
 from sys import exit
+from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -31,6 +32,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.util import cmd
 from vyos.util import call
+from vyos.util import run
 from vyos.util import DEVNULL
 from vyos.util import dict_search
 from vyos.xml import defaults
@@ -250,13 +252,22 @@ def apply(login):
     if 'rm_users' in login:
         for user in login['rm_users']:
             try:
+                # Disable user to prevent re-login
+                call(f'usermod -s /sbin/nologin {user}')
+
                 # Logout user if he is still logged in
                 if user in list(set([tmp[0] for tmp in users()])):
                     print(f'{user} is logged in, forcing logout!')
-                    call(f'pkill -HUP -u {user}')
+                    # re-run command until user is logged out
+                    while run(f'pkill -HUP -u {user}'):
+                        sleep(0.250)
 
-                # Remove user account but leave home directory to be safe
-                call(f'userdel --remove {user}', stderr=DEVNULL)
+                # Remove user account but leave home directory in place. Re-run
+                # command until user is removed - userdel might return 8 as
+                # SSH sessions are not all yet properly cleaned away, thus we
+                # simply re-run the command until the account wen't away
+                while run(f'userdel --remove {user}', stderr=DEVNULL):
+                    sleep(0.250)
 
             except Exception as e:
                 raise ConfigError(f'Deleting user "{user}" raised exception: {e}')

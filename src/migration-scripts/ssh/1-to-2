@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,26 +30,52 @@ file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
 
-base = ['service', 'ssh', 'loglevel']
+base = ['service', 'ssh']
 config = ConfigTree(config_file)
 
 if not config.exists(base):
     # Nothing to do
     exit(0)
-else:
-    # red in configured loglevel and convert it to lower case
-    tmp = config.return_value(base).lower()
 
+path_loglevel = base + ['loglevel']
+if config.exists(path_loglevel):
+    # red in configured loglevel and convert it to lower case
+    tmp = config.return_value(path_loglevel).lower()
     # VyOS 1.2 had no proper value validation on the CLI thus the
     # user could use any arbitrary values - sanitize them
     if tmp not in ['quiet', 'fatal', 'error', 'info', 'verbose']:
         tmp = 'info'
+    config.set(path_loglevel, value=tmp)
 
-    config.set(base, value=tmp)
+# T4273: migrate ssh cipher list to multi node
+path_ciphers = base + ['ciphers']
+if config.exists(path_ciphers):
+    tmp = []
+    # get curtrent cipher list - comma delimited
+    for cipher in config.return_values(path_ciphers):
+        tmp.extend(cipher.split(','))
+    # delete old cipher suite representation
+    config.delete(path_ciphers)
 
-    try:
-        with open(file_name, 'w') as f:
-            f.write(config.to_string())
-    except OSError as e:
-        print("Failed to save the modified config: {}".format(e))
-        exit(1)
+    for cipher in tmp:
+        config.set(path_ciphers, value=cipher, replace=False)
+
+# T4273: migrate ssh key-exchange list to multi node
+path_kex = base + ['key-exchange']
+if config.exists(path_kex):
+    tmp = []
+    # get curtrent cipher list - comma delimited
+    for kex in config.return_values(path_kex):
+        tmp.extend(kex.split(','))
+    # delete old cipher suite representation
+    config.delete(path_kex)
+
+    for kex in tmp:
+        config.set(path_kex, value=kex, replace=False)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

@@ -83,8 +83,7 @@ def check_storage(path, size):
     directory = path if os.path.isdir(path) else (os.path.dirname(os.path.expanduser(path)) or os.getcwd())
     # `size` can be None or 0 to indicate unknown size.
     if not size:
-        print_error('Warning: Cannot determine size of remote file.')
-        print_error('Bravely continuing regardless.')
+        print_error('Warning: Cannot determine size of remote file. Bravely continuing regardless.')
         return
 
     if size < 1024 * 1024:
@@ -227,7 +226,7 @@ class HttpC:
                 r.raise_for_status()
                 # If the request got redirected, keep the last URL we ended up with.
                 final_urlstring = r.url
-                if r.history:
+                if r.history and self.progressbar:
                     print_error('Redirecting to ' + final_urlstring)
                 # Check for the prospective file size.
                 try:
@@ -317,11 +316,12 @@ def friendly_download(local_path, urlstring, source_host='', source_port=0):
         sys.exit(1)
     except:
         import traceback
+        print_error(f'Failed to download {urlstring}.')
         # There are a myriad different reasons a download could fail.
         # SSH errors, FTP errors, I/O errors, HTTP errors (403, 404...)
         # We omit the scary stack trace but print the error nevertheless.
-        print_error(f'Failed to download {urlstring}.')
-        traceback.print_exception(*sys.exc_info()[:2], None)
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, None, 0, None, False)
         sys.exit(1)
     else:
         print_error('Download complete.')

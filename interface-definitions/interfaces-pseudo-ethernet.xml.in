@@ -27,6 +27,7 @@
           #include <include/interface/ipv6-options.xml.i>
           #include <include/source-interface-ethernet.xml.i>
           #include <include/interface/mac.xml.i>
+          #include <include/interface/mirror.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
           <leafNode name="mode">
@@ -59,6 +60,7 @@
             <defaultValue>private</defaultValue>
           </leafNode>
           #include <include/interface/mtu-68-16000.xml.i>
+          #include <include/interface/redirect.xml.i>
           #include <include/interface/vif-s.xml.i>
           #include <include/interface/vif.xml.i>
         </children>

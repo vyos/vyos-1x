@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,6 +23,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from distutils.version import LooseVersion
 from platform import release as kernel_version
 from subprocess import Popen, PIPE
+from pwd import getpwall
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -51,6 +52,11 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(base_path + ['user', user])
 
         self.cli_commit()
+
+        # After deletion, a user is not allowed to remain in /etc/passwd
+        usernames = [x[0] for x in getpwall()]
+        for user in users:
+            self.assertNotIn(user, usernames)
 
     def test_add_linux_system_user(self):
         # We are not allowed to re-use a username already taken by the Linux
@@ -235,4 +241,4 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(tmp)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

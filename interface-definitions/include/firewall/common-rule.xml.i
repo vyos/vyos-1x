@@ -66,11 +66,11 @@
       <properties>
         <help>Maximum average matching rate</help>
         <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Maximum average matching rate</description>
+          <format>txt</format>
+          <description>integer/unit (Example: 5/minute)</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
+          <regex>^\d+/(second|minute|hour|day)$</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -146,13 +146,24 @@
     </leafNode>
     <leafNode name="time">
       <properties>
-        <help>Source addresses seen in the last N seconds</help>
+        <help>Source addresses seen in the last second/minute/hour</help>
+        <completionHelp>
+          <list>second minute hour</list>
+        </completionHelp>
         <valueHelp>
-          <format>u32:0-4294967295</format>
-          <description>Source addresses seen in the last N seconds</description>
+          <format>second</format>
+          <description>Source addresses seen COUNT times in the last second</description>
+        </valueHelp>
+        <valueHelp>
+          <format>minute</format>
+          <description>Source addresses seen COUNT times in the last minute</description>
+        </valueHelp>
+        <valueHelp>
+          <format>hour</format>
+          <description>Source addresses seen COUNT times in the last hour</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0-4294967295"/>
+          <regex>^(second|minute|hour)$</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -176,6 +187,9 @@
           <format>!&lt;MAC address&gt;</format>
           <description>Match everything except the specified MAC address</description>
         </valueHelp>
+        <constraint>
+          <validator name="mac-address-firewall"/>
+        </constraint>
       </properties>
     </leafNode>
     #include <include/firewall/port.xml.i>
@@ -264,26 +278,7 @@
     </leafNode>
   </children>
 </node>
-<node name="tcp">
-  <properties>
-    <help>TCP flags to match</help>
-  </properties>
-  <children>
-    <leafNode name="flags">
-      <properties>
-        <help>TCP flags to match</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>TCP flags to match</description>
-        </valueHelp>
-        <valueHelp>
-          <format> </format>
-          <description>\n\n  Allowed values for TCP flags : SYN ACK FIN RST URG PSH ALL\n  When specifying more than one flag, flags should be comma-separated.\n For example : value of 'SYN,!ACK,!FIN,!RST' will only match packets with\n  the SYN flag set, and the ACK, FIN and RST flags unset</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/firewall/tcp-flags.xml.i>
 <node name="time">
   <properties>
     <help>Time to match rule</help>

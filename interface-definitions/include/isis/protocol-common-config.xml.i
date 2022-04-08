@@ -4,24 +4,7 @@
     <help>Configure the authentication password for an area</help>
   </properties>
   <children>
-    <leafNode name="plaintext-password">
-      <properties>
-        <help>Plain-text authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="md5">
-      <properties>
-        <help>MD5 authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
+    #include <include/isis/password.xml.i>
   </children>
 </node>
 <node name="default-information">
@@ -59,24 +42,7 @@
     <help>Set the authentication password for a routing domain</help>
   </properties>
   <children>
-    <leafNode name="plaintext-password">
-      <properties>
-        <help>Plain-text authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
-    <leafNode name="md5">
-      <properties>
-        <help>MD5 authentication type</help>
-        <valueHelp>
-          <format>txt</format>
-          <description>Level-wide password</description>
-        </valueHelp>
-      </properties>
-    </leafNode>
+    #include <include/isis/password.xml.i>
   </children>
 </node>
 <leafNode name="dynamic-hostname">
@@ -104,7 +70,7 @@
       <description>Act as an area router</description>
     </valueHelp>
     <constraint>
-      <regex>^(level-1|level-1-2|level-2)$</regex>
+      <regex>(level-1|level-1-2|level-2)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -182,7 +148,7 @@
       <description>Use new style of TLVs to carry wider metric</description>
     </valueHelp>
     <constraint>
-      <regex>^(narrow|transition|wide)$</regex>
+      <regex>(narrow|transition|wide)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -275,68 +241,20 @@
     </leafNode>
     <node name="global-block">
       <properties>
-        <help>Global block label range</help>
+        <help>Segment Routing Global Block label range</help>
       </properties>
       <children>
-        <leafNode name="low-label-value">
-          <properties>
-            <help>The lower bound of the global block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="high-label-value">
-          <properties>
-            <help>The upper bound of the global block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="--range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
-<!--
     <node name="local-block">
       <properties>
-        <help>Local Block label range</help>
+        <help>Segment Routing Local Block label range</help>
       </properties>
       <children>
-        <leafNode name="low-label-value">
-          <properties>
-            <help>The lower bound of the local block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="  range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
-        <leafNode name="high-label-value">
-          <properties>
-            <help>The upper bound of the local block</help>
-            <valueHelp>
-              <format>u32:16-1048575</format>
-              <description>MPLS label value</description>
-            </valueHelp>
-            <constraint>
-              <validator name="numeric" argument="  range 16-1048575"/>
-            </constraint>
-          </properties>
-        </leafNode>
+        #include <include/isis/high-low-label-value.xml.i>
       </children>
     </node>
--->
     <leafNode name="maximum-label-depth">
       <properties>
         <help>Maximum MPLS labels allowed for this router</help>
@@ -668,7 +586,7 @@
           <description>Level-2 only adjacencies are formed</description>
         </valueHelp>
         <constraint>
-          <regex>^(level-1|level-1-2|level-2-only)$</regex>
+          <regex>(level-1|level-1-2|level-2-only)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -722,15 +640,7 @@
         <help>Configure the authentication password for a circuit</help>
       </properties>
       <children>
-        <leafNode name="plaintext-password">
-          <properties>
-            <help>Plain-text authentication type</help>
-            <valueHelp>
-              <format>txt</format>
-              <description>Circuit password</description>
-            </valueHelp>
-          </properties>
-        </leafNode>
+        #include <include/isis/password.xml.i>
       </children>
     </node>
     <leafNode name="priority">

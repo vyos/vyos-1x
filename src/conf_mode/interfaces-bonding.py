@@ -27,8 +27,9 @@ from vyos.configdict import is_source_interface
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_dhcpv6
-from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
@@ -132,10 +133,10 @@ def verify(bond):
         return None
 
     if 'arp_monitor' in bond:
-        if 'target' in bond['arp_monitor'] and len(int(bond['arp_monitor']['target'])) > 16:
+        if 'target' in bond['arp_monitor'] and len(bond['arp_monitor']['target']) > 16:
             raise ConfigError('The maximum number of arp-monitor targets is 16')
 
-        if 'interval' in bond['arp_monitor'] and len(int(bond['arp_monitor']['interval'])) > 0:
+        if 'interval' in bond['arp_monitor'] and int(bond['arp_monitor']['interval']) > 0:
             if bond['mode'] in ['802.3ad', 'balance-tlb', 'balance-alb']:
                 raise ConfigError('ARP link monitoring does not work for mode 802.3ad, ' \
                                   'transmit-load-balance or adaptive-load-balance')
@@ -149,6 +150,7 @@ def verify(bond):
     verify_address(bond)
     verify_dhcpv6(bond)
     verify_vrf(bond)
+    verify_mirror_redirect(bond)
 
     # use common function to verify VLAN configuration
     verify_vlan_config(bond)

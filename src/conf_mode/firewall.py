@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 
 from glob import glob
 from json import loads
@@ -22,6 +23,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.template import render
 from vyos.util import cmd
@@ -33,7 +35,10 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
+
 nftables_conf = '/run/nftables.conf'
+nftables_defines_conf = '/run/nftables_defines.conf'
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
@@ -48,6 +53,9 @@ sysfs_config = {
     'syn_cookies': {'sysfs': '/proc/sys/net/ipv4/tcp_syncookies'},
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
 }
+
+NAME_PREFIX = 'NAME_'
+NAME6_PREFIX = 'NAME6_'
 
 preserve_chains = [
     'INPUT',
@@ -64,6 +72,9 @@ preserve_chains = [
     'VYOS_POST_FW6',
     'VYOS_FRAG6_MARK'
 ]
+
+nft_iface_chains = ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']
+nft6_iface_chains = ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
 
 valid_groups = [
     'address_group',
@@ -97,6 +108,35 @@ def get_firewall_interfaces(conf):
         out.update(find_interfaces(iftype_conf))
     return out
 
+def get_firewall_zones(conf):
+    used_v4 = []
+    used_v6 = []
+    zone_policy = conf.get_config_dict(['zone-policy'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+
+    if 'zone' in zone_policy:
+        for zone, zone_conf in zone_policy['zone'].items():
+            if 'from' in zone_conf:
+                for from_zone, from_conf in zone_conf['from'].items():
+                    name = dict_search_args(from_conf, 'firewall', 'name')
+                    if name:
+                        used_v4.append(name)
+
+                    ipv6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
+                    if ipv6_name:
+                        used_v6.append(ipv6_name)
+
+            if 'intra_zone_filtering' in zone_conf:
+                name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'name')
+                if name:
+                    used_v4.append(name)
+
+                ipv6_name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'ipv6_name')
+                if ipv6_name:
+                    used_v6.append(ipv6_name)
+
+    return {'name': used_v4, 'ipv6_name': used_v6}
+
 def get_config(config=None):
     if config:
         conf = config
@@ -104,16 +144,15 @@ def get_config(config=None):
         conf = Config()
     base = ['firewall']
 
-    if not conf.exists(base):
-        return {}
-
     firewall = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
     default_values = defaults(base)
     firewall = dict_merge(default_values, firewall)
 
+    firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     firewall['interfaces'] = get_firewall_interfaces(conf)
+    firewall['zone_policy'] = get_firewall_zones(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)
@@ -121,6 +160,7 @@ def get_config(config=None):
         firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
                                         key_mangling=('-', '_'), get_first_key=True,
                                         no_tag_node_value_mangle=True)
+
     return firewall
 
 def verify_rule(firewall, rule_conf, ipv6):
@@ -131,6 +171,12 @@ def verify_rule(firewall, rule_conf, ipv6):
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError('Cannot specify both "match-frag" and "match-non-frag"')
 
+    if 'limit' in rule_conf:
+        if 'rate' in rule_conf['limit']:
+            rate_int = re.sub(r'\D', '', rule_conf['limit']['rate'])
+            if int(rate_int) < 1:
+                raise ConfigError('Limit rate integer cannot be less than 1')
+
     if 'ipsec' in rule_conf:
         if {'match_ipsec', 'match_non_ipsec'} <= set(rule_conf['ipsec']):
             raise ConfigError('Cannot specify both "match-ipsec" and "match-non-ipsec"')
@@ -138,6 +184,23 @@ def verify_rule(firewall, rule_conf, ipv6):
     if 'recent' in rule_conf:
         if not {'count', 'time'} <= set(rule_conf['recent']):
             raise ConfigError('Recent "count" and "time" values must be defined')
+
+    tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
+    if tcp_flags:
+        if dict_search_args(rule_conf, 'protocol') != 'tcp':
+            raise ConfigError('Protocol must be tcp when specifying tcp flags')
+
+        not_flags = dict_search_args(rule_conf, 'tcp', 'flags', 'not')
+        if not_flags:
+            duplicates = [flag for flag in tcp_flags if flag in not_flags]
+            if duplicates:
+                raise ConfigError(f'Cannot match a tcp flag as set and not set')
+
+    if 'protocol' in rule_conf:
+        if rule_conf['protocol'] == 'icmp' and ipv6:
+            raise ConfigError(f'Cannot match IPv4 ICMP protocol on IPv6, use ipv6-icmp')
+        if rule_conf['protocol'] == 'ipv6-icmp' and not ipv6:
+            raise ConfigError(f'Cannot match IPv6 ICMP protocol on IPv4, use icmp')
 
     for side in ['destination', 'source']:
         if side in rule_conf:
@@ -151,15 +214,18 @@ def verify_rule(firewall, rule_conf, ipv6):
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
 
+                        if group_name and group_name[0] == '!':
+                            group_name = group_name[1:]
+
                         fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
+                        error_group = fw_group.replace("_", "-")
+                        group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
 
-                        if not dict_search_args(firewall, 'group', fw_group):
-                            error_group = fw_group.replace("_", "-")
-                            raise ConfigError(f'Group defined in rule but {error_group} is not configured')
-
-                        if group_name not in firewall['group'][fw_group]:
-                            error_group = group.replace("_", "-")
+                        if group_obj is None:
                             raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+
+                        if not group_obj:
+                            print(f'WARNING: {error_group} "{group_name}" has no members')
 
             if 'port' in side_conf or dict_search_args(side_conf, 'group', 'port_group'):
                 if 'protocol' not in rule_conf:
@@ -169,10 +235,6 @@ def verify_rule(firewall, rule_conf, ipv6):
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
 def verify(firewall):
-    # bail out early - looks like removal from running config
-    if not firewall:
-        return None
-
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         if not firewall['trap_targets']:
             raise ConfigError(f'Firewall config-trap enabled but "service snmp trap-target" is not defined')
@@ -195,16 +257,34 @@ def verify(firewall):
             name = dict_search_args(if_firewall, direction, 'name')
             ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
 
-            if name and not dict_search_args(firewall, 'name', name):
+            if name and dict_search_args(firewall, 'name', name) == None:
                 raise ConfigError(f'Firewall name "{name}" is still referenced on interface {ifname}')
 
-            if ipv6_name and not dict_search_args(firewall, 'ipv6_name', ipv6_name):
+            if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
                 raise ConfigError(f'Firewall ipv6-name "{ipv6_name}" is still referenced on interface {ifname}')
+
+    for fw_name, used_names in firewall['zone_policy'].items():
+        for name in used_names:
+            if dict_search_args(firewall, fw_name, name) == None:
+                raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
 
     return None
 
+def cleanup_rule(table, jump_chain):
+    commands = []
+    chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
+    for chain in chains:
+        results = cmd(f'nft -a list chain {table} {chain}').split("\n")
+        for line in results:
+            if f'jump {jump_chain}' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
+    return commands
+
 def cleanup_commands(firewall):
     commands = []
+    commands_end = []
     for table in ['ip filter', 'ip6 filter']:
         state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
         json_str = cmd(f'nft -j list table {table}')
@@ -220,11 +300,12 @@ def cleanup_commands(firewall):
                     else:
                         commands.append(f'flush chain {table} {chain}')
                 elif chain not in preserve_chains and not chain.startswith("VZONE"):
-                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain):
+                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
-                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain):
+                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)) != None:
                         commands.append(f'flush chain {table} {chain}')
                     else:
+                        commands += cleanup_rule(table, chain)
                         commands.append(f'delete chain {table} {chain}')
             elif 'rule' in item:
                 rule = item['rule']
@@ -234,7 +315,10 @@ def cleanup_commands(firewall):
                             chain = rule['chain']
                             handle = rule['handle']
                             commands.append(f'delete rule {table} {chain} handle {handle}')
-    return commands
+            elif 'set' in item:
+                set_name = item['set']['name']
+                commands_end.append(f'delete set {table} {set_name}')
+    return commands + commands_end
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):
@@ -243,6 +327,7 @@ def generate(firewall):
         firewall['cleanup_commands'] = cleanup_commands(firewall)
 
     render(nftables_conf, 'firewall/nftables.tmpl', firewall)
+    render(nftables_defines_conf, 'firewall/nftables-defines.tmpl', firewall)
     return None
 
 def apply_sysfs(firewall):
@@ -306,6 +391,12 @@ def state_policy_rule_exists():
     search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
     return 'VYOS_STATE_POLICY' in search_str
 
+def resync_policy_route():
+    # Update policy route as firewall groups were updated
+    tmp = run(policy_route_conf_script)
+    if tmp > 0:
+        print('Warning: Failed to re-apply policy route configuration')
+
 def apply(firewall):
     if 'first_install' in firewall:
         run('nfct helper add rpc inet tcp')
@@ -324,6 +415,9 @@ def apply(firewall):
             cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)
+
+    if firewall['policy_resync']:
+        resync_policy_route()
 
     post_apply_trap(firewall)
 
