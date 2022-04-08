@@ -106,6 +106,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         port = '443'
         name = 'localhost'
 
+        self.cli_set(base_path + ['api', 'socket'])
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
 
@@ -130,6 +131,11 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         payload_invalid = {'data': '{"op": "showConfig", "path": []}', 'key': 'invalid'}
         r = request('POST', url, verify=False, headers=headers, data=payload_invalid)
         # Must get HTTP code 401 on invalid key (Unauthorized)
+        self.assertEqual(r.status_code, 401)
+
+        payload_no_key = {'data': '{"op": "showConfig", "path": []}'}
+        r = request('POST', url, verify=False, headers=headers, data=payload_no_key)
+        # Must get HTTP code 401 on missing key (Unauthorized)
         self.assertEqual(r.status_code, 401)
 
 if __name__ == '__main__':
