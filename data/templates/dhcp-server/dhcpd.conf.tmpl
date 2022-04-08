@@ -4,7 +4,7 @@
 # https://www.isc.org/wp-content/uploads/2017/08/dhcp43options.html
 #
 # log-facility local7;
-{% if hostfile_update is defined %}
+{% if hostfile_update is vyos_defined %}
 on release {
     set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name);
     set ClientIp = binary-to-ascii(10, 8, ".",leased-address);
@@ -17,13 +17,13 @@ on expiry {
 }
 {% endif %}
 
-{{ 'use-host-decl-names on;' if host_decl_name is defined }}
-ddns-update-style {{ 'interim' if dynamic_dns_update is defined else 'none' }};
+{{ 'use-host-decl-names on;' if host_decl_name is vyos_defined }}
+ddns-update-style {{ 'interim' if dynamic_dns_update is vyos_defined else 'none' }};
 option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 option wpad-url code 252 = text;
 
-{% if global_parameters is defined and global_parameters is not none %}
+{% if global_parameters is vyos_defined %}
 # The following {{ global_parameters | length }} line(s) have been added as
 # global-parameters in the CLI and have not been validated !!!
 {%   for parameter in global_parameters %}
@@ -31,7 +31,7 @@ option wpad-url code 252 = text;
 {%   endfor %}
 
 {% endif %}
-{% if failover is defined and failover is not none %}
+{% if failover is vyos_defined %}
 # DHCP failover configuration
 failover peer "{{ failover.name }}" {
 {%   if failover.status == 'primary' %}
@@ -50,7 +50,7 @@ failover peer "{{ failover.name }}" {
     load balance max seconds 3;
 }
 {% endif %}
-{% if listen_address is defined and listen_address is not none %}
+{% if listen_address is vyos_defined %}
 
 # DHCP server serving relay subnet, we need a connector to the real world
 {%   for address in listen_address %}
@@ -60,70 +60,70 @@ subnet {{ address | network_from_ipv4 }} netmask {{ address | netmask_from_ipv4 
 {% endif %}
 
 # Shared network configration(s)
-{% if shared_network_name is defined and shared_network_name is not none %}
-{%   for network, network_config in shared_network_name.items() if network_config.disable is not defined %}
+{% if shared_network_name is vyos_defined %}
+{%   for network, network_config in shared_network_name.items() if network_config.disable is not vyos_defined %}
 shared-network {{ network | replace('_','-') }} {
-{%     if network_config.authoritative is defined %}
+{%     if network_config.authoritative is vyos_defined %}
     authoritative;
 {%     endif %}
-{%     if network_config.name_server is defined and network_config.name_server is not none %}
+{%     if network_config.name_server is vyos_defined %}
     option domain-name-servers {{ network_config.name_server | join(', ') }};
 {%     endif %}
-{%     if network_config.domain_name is defined and network_config.domain_name is not none %}
+{%     if network_config.domain_name is vyos_defined %}
     option domain-name "{{ network_config.domain_name }}";
 {%     endif %}
-{%     if network_config.domain_search is defined and network_config.domain_search is not none %}
+{%     if network_config.domain_search is vyos_defined %}
     option domain-search "{{ network_config.domain_search | join('", "') }}";
 {%     endif %}
-{%     if network_config.ntp_server is defined and network_config.ntp_server is not none %}
+{%     if network_config.ntp_server is vyos_defined %}
     option ntp-servers {{ network_config.ntp_server | join(', ') }};
 {%     endif %}
-{%     if network_config.ping_check is defined %}
+{%     if network_config.ping_check is vyos_defined %}
     ping-check true;
 {%     endif %}
-{%     if network_config.shared_network_parameters is defined and network_config.shared_network_parameters is not none %}
+{%     if network_config.shared_network_parameters is vyos_defined %}
     # The following {{ network_config.shared_network_parameters | length }} line(s)
     # were added as shared-network-parameters in the CLI and have not been validated
 {%       for parameter in network_config.shared_network_parameters %}
     {{ parameter }}
 {%       endfor %}
 {%     endif %}
-{%     if network_config.subnet is defined and network_config.subnet is not none %}
+{%     if network_config.subnet is vyos_defined %}
 {%       for subnet, subnet_config in network_config.subnet.items() %}
-{%         if subnet_config.description is defined and subnet_config.description is not none %}
+{%         if subnet_config.description is vyos_defined %}
     # {{ subnet_config.description }}
 {%         endif %}
     subnet {{ subnet | address_from_cidr }} netmask {{ subnet | netmask_from_cidr }} {
-{%         if subnet_config.name_server is defined and subnet_config.name_server is not none %}
+{%         if subnet_config.name_server is vyos_defined %}
         option domain-name-servers {{ subnet_config.name_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.domain_name is defined and subnet_config.domain_name is not none %}
+{%         if subnet_config.domain_name is vyos_defined %}
         option domain-name "{{ subnet_config.domain_name }}";
 {%         endif %}
-{%         if subnet_config.domain_search is defined and subnet_config.domain_search is not none %}
+{%         if subnet_config.domain_search is vyos_defined %}
         option domain-search "{{ subnet_config.domain_search | join('", "') }}";
 {%         endif %}
-{%         if subnet_config.ntp_server is defined and subnet_config.ntp_server is not none %}
+{%         if subnet_config.ntp_server is vyos_defined %}
         option ntp-servers {{ subnet_config.ntp_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.pop_server is defined and subnet_config.pop_server is not none %}
+{%         if subnet_config.pop_server is vyos_defined %}
         option pop-server {{ subnet_config.pop_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.smtp_server is defined and subnet_config.smtp_server is not none %}
+{%         if subnet_config.smtp_server is vyos_defined %}
         option smtp-server {{ subnet_config.smtp_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.time_server is defined and subnet_config.time_server is not none %}
+{%         if subnet_config.time_server is vyos_defined %}
         option time-servers {{ subnet_config.time_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.wins_server is defined and subnet_config.wins_server is not none %}
+{%         if subnet_config.wins_server is vyos_defined %}
         option netbios-name-servers {{ subnet_config.wins_server | join(', ') }};
 {%         endif %}
-{%         if subnet_config.static_route is defined and subnet_config.static_route is not none %}
+{%         if subnet_config.static_route is vyos_defined %}
 {%           set static_default_route = '' %}
-{%           if subnet_config.default_router and subnet_config.default_router is not none %}
-{%             set static_default_route = ', ' + '0.0.0.0/0' | isc_static_route(subnet_config.default_router) %}
+{%           if subnet_config.default_router is vyos_defined %}
+{%             set static_default_route = ', ' ~ '0.0.0.0/0' | isc_static_route(subnet_config.default_router) %}
 {%           endif %}
-{%           if subnet_config.static_route is defined and subnet_config.static_route is not none %}
+{%           if subnet_config.static_route is vyos_defined %}
 {%           set rfc3442_routes = [] %}
 {%           for route, route_options in subnet_config.static_route.items() %}
 {%             set rfc3442_routes = rfc3442_routes.append(route | isc_static_route(route_options.next_hop)) %}
@@ -132,56 +132,56 @@ shared-network {{ network | replace('_','-') }} {
         option windows-static-route {{ rfc3442_routes | join(', ') }};
 {%           endif %}
 {%         endif %}
-{%         if subnet_config.ip_forwarding is defined %}
+{%         if subnet_config.ip_forwarding is vyos_defined %}
         option ip-forwarding true;
 {%         endif %}
-{%         if subnet_config.default_router and subnet_config.default_router is not none %}
+{%         if subnet_config.default_router is vyos_defined %}
         option routers {{ subnet_config.default_router }};
 {%         endif %}
-{%         if subnet_config.server_identifier is defined and subnet_config.server_identifier is not none %}
+{%         if subnet_config.server_identifier is vyos_defined %}
         option dhcp-server-identifier {{ subnet_config.server_identifier }};
 {%         endif %}
-{%         if subnet_config.subnet_parameters is defined and subnet_config.subnet_parameters is not none %}
+{%         if subnet_config.subnet_parameters is vyos_defined %}
         # The following {{ subnet_config.subnet_parameters | length }} line(s) were added as
         # subnet-parameters in the CLI and have not been validated!!!
 {%           for parameter in subnet_config.subnet_parameters %}
         {{ parameter }}
 {%           endfor %}
 {%         endif %}
-{%         if subnet_config.tftp_server_name is defined and subnet_config.tftp_server_name is not none %}
+{%         if subnet_config.tftp_server_name is vyos_defined %}
         option tftp-server-name "{{ subnet_config.tftp_server_name }}";
 {%         endif %}
-{%         if subnet_config.bootfile_name is defined and subnet_config.bootfile_name is not none %}
+{%         if subnet_config.bootfile_name is vyos_defined %}
         option bootfile-name "{{ subnet_config.bootfile_name }}";
         filename "{{ subnet_config.bootfile_name }}";
 {%         endif %}
-{%         if subnet_config.bootfile_server is defined and subnet_config.bootfile_server is not none %}
+{%         if subnet_config.bootfile_server is vyos_defined %}
         next-server {{ subnet_config.bootfile_server }};
 {%         endif %}
-{%         if subnet_config.time_offset is defined and subnet_config.time_offset is not none %}
+{%         if subnet_config.time_offset is vyos_defined %}
         option time-offset {{ subnet_config.time_offset }};
 {%         endif %}
-{%         if subnet_config.wpad_url is defined and subnet_config.wpad_url is not none %}
+{%         if subnet_config.wpad_url is vyos_defined %}
         option wpad-url "{{ subnet_config.wpad_url }}";
 {%         endif %}
-{%         if subnet_config.client_prefix_length is defined and subnet_config.client_prefix_length is not none %}
+{%         if subnet_config.client_prefix_length is vyos_defined %}
         option subnet-mask {{ ('0.0.0.0/' ~ subnet_config.client_prefix_length) | netmask_from_cidr }};
 {%         endif %}
-{%         if subnet_config.lease is defined and subnet_config.lease is not none %}
+{%         if subnet_config.lease is vyos_defined %}
         default-lease-time {{ subnet_config.lease }};
         max-lease-time {{ subnet_config.lease }};
 {%         endif %}
-{%         if network_config.ping_check is not defined and subnet_config.ping_check is defined %}
+{%         if network_config.ping_check is not vyos_defined and subnet_config.ping_check is vyos_defined %}
         ping-check true;
 {%         endif %}
-{%         if subnet_config.static_mapping is defined and subnet_config.static_mapping is not none %}
-{%           for host, host_config in subnet_config.static_mapping.items() if host_config.disable is not defined %}
-        host {{ host | replace('_','-') if host_decl_name is defined else network | replace('_','-') + '_' + host | replace('_','-') }} {
-{%             if host_config.ip_address is defined and host_config.ip_address is not none %}
+{%         if subnet_config.static_mapping is vyos_defined %}
+{%           for host, host_config in subnet_config.static_mapping.items() if host_config.disable is not vyos_defined %}
+        host {{ host | replace('_','-') if host_decl_name is vyos_defined else network | replace('_','-') ~ '_' ~ host | replace('_','-') }} {
+{%             if host_config.ip_address is vyos_defined %}
             fixed-address {{ host_config.ip_address }};
 {%             endif %}
             hardware ethernet {{ host_config.mac_address }};
-{%             if host_config.static_mapping_parameters is defined and host_config.static_mapping_parameters is not none %}
+{%             if host_config.static_mapping_parameters is vyos_defined %}
             # The following {{ host_config.static_mapping_parameters | length }} line(s) were added
             # as static-mapping-parameters in the CLI and have not been validated
 {%               for parameter in host_config.static_mapping_parameters %}
@@ -191,20 +191,20 @@ shared-network {{ network | replace('_','-') }} {
         }
 {%           endfor %}
 {%         endif %}
-{%         if subnet_config.range is defined and subnet_config.range is not none %}
+{%         if subnet_config.range is vyos_defined %}
 {#           pool configuration can only be used if there follows a range option #}
         pool {
 {%         endif %}
-{%         if subnet_config.enable_failover is defined %}
+{%         if subnet_config.enable_failover is vyos_defined %}
             failover peer "{{ failover.name }}";
             deny dynamic bootp clients;
 {%         endif %}
-{%           if subnet_config.range is defined and subnet_config.range is not none %}
+{%           if subnet_config.range is vyos_defined %}
 {%             for range, range_options in subnet_config.range.items() %}
             range {{ range_options.start }} {{ range_options.stop }};
 {%             endfor %}
 {%           endif %}
-{%         if subnet_config.range is defined and subnet_config.range is not none %}
+{%         if subnet_config.range is vyos_defined %}
 {#           pool configuration can only be used if there follows a range option #}
         }
 {%         endif %}
@@ -213,7 +213,7 @@ shared-network {{ network | replace('_','-') }} {
 {%     endif %}
     on commit {
         set shared-networkname = "{{ network | replace('_','-') }}";
-{%     if hostfile_update is defined %}
+{%     if hostfile_update is vyos_defined %}
         set ClientIp = binary-to-ascii(10, 8, ".", leased-address);
         set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
         set ClientName = pick-first-value(host-decl-name, option fqdn.hostname, option host-name, "empty_hostname");
