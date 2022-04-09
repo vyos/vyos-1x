@@ -54,6 +54,7 @@ def get_config(config=None):
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
                 iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
+                table = leaf_node_changed(conf, base_rule + [rule, 'set', 'table'])
                 rule_def = {}
                 if src:
                     rule_def = dict_merge({'source' : src}, rule_def)
@@ -63,6 +64,8 @@ def get_config(config=None):
                     rule_def = dict_merge({'inbound_interface' : iif}, rule_def)
                 if dst:
                     rule_def = dict_merge({'destination' : dst}, rule_def)
+                if table:
+                    rule_def = dict_merge({'table' : table}, rule_def)
                 dict = dict_merge({dict_id : {rule : rule_def}}, dict)
                 pbr.update(dict)
 
@@ -78,6 +81,7 @@ def get_config(config=None):
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
                 iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
                 dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
+                table = leaf_node_changed(conf, base_rule + [rule, 'set', 'table'])
                 # keep track of changes in configuration
                 # otherwise we might remove an existing node although nothing else has changed
                 changed = False
@@ -119,6 +123,13 @@ def get_config(config=None):
                     changed = True
                     if len(dst) > 0:
                         rule_def = dict_merge({'destination' : dst}, rule_def)
+                if table is None:
+                    if 'set' in rule_config and 'table' in rule_config['set']:
+                        rule_def = dict_merge({'table': [rule_config['set']['table']]}, rule_def)
+                else:
+                    changed = True
+                    if len(table) > 0:
+                        rule_def = dict_merge({'table' : table}, rule_def)
                 if changed:
                     dict = dict_merge({dict_id : {rule : rule_def}}, dict)
                     pbr.update(dict)
@@ -179,7 +190,10 @@ def apply(pbr):
                             rule_config['inbound_interface'] = rule_config['inbound_interface'] if 'inbound_interface' in rule_config else ['']
                             for iif in rule_config['inbound_interface']:
                                 f_iif = '' if iif == '' else f' iif {iif} '
-                                call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_fwmk}{f_iif}')
+                                rule_config['table'] = rule_config['table'] if 'table' in rule_config else ['']
+                                for table in rule_config['table']:
+                                    f_table = '' if table == '' else f' lookup {table} '
+                                call(f'ip{v6} rule del prio {rule} {f_src}{f_dst}{f_fwmk}{f_iif}{f_table}')
 
     # Generate new config
     for route in ['local_route', 'local_route6']:
