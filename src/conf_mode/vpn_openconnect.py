@@ -24,6 +24,7 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
 from vyos.util import is_systemd_service_running
+from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from crypt import crypt, mksalt, METHOD_SHA512
@@ -35,6 +36,7 @@ airbag.enable()
 cfg_dir        = '/run/ocserv'
 ocserv_conf    = cfg_dir + '/ocserv.conf'
 ocserv_passwd  = cfg_dir + '/ocpasswd'
+ocserv_otp_usr = cfg_dir + '/users.oath'
 radius_cfg     = cfg_dir + '/radiusclient.conf'
 radius_servers = cfg_dir + '/radius_servers'
 
@@ -54,6 +56,16 @@ def get_config():
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
 
+    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+    del ocserv['authentication']['local_users']['username']['otp']
+    if not ocserv["authentication"]["local_users"]["username"]:
+        raise ConfigError('openconnect mode local required at least one user')
+    default_ocserv_usr_values = default_values['authentication']['local_users']['username']['otp']
+    for user, params in ocserv['authentication']['local_users']['username'].items():
+        # Not every configuration requires OTP settings
+        if ocserv['authentication']['local_users']['username'][user].get('otp'):
+            ocserv['authentication']['local_users']['username'][user]['otp'] = dict_merge(default_ocserv_usr_values, ocserv['authentication']['local_users']['username'][user]['otp'])
+
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
@@ -63,17 +75,34 @@ def get_config():
 def verify(ocserv):
     if ocserv is None:
         return None
-
     # Check authentication
     if "authentication" in ocserv:
         if "mode" in ocserv["authentication"]:
             if "local" in ocserv["authentication"]["mode"]:
-                if not ocserv["authentication"]["local_users"] or not ocserv["authentication"]["local_users"]["username"]:
-                    raise ConfigError('openconnect mode local required at leat one user')
+                if "radius" in ocserv["authentication"]["mode"]:
+                    raise ConfigError('OpenConnect authentication modes are mutually-exclusive, remove either local or radius from your configuration')
+                if not ocserv["authentication"]["local_users"]:
+                    raise ConfigError('openconnect mode local required at least one user')
+                if not ocserv["authentication"]["local_users"]["username"]:
+                    raise ConfigError('openconnect mode local required at least one user')
                 else:
-                    for user in ocserv["authentication"]["local_users"]["username"]:
-                        if not "password" in ocserv["authentication"]["local_users"]["username"][user]:
-                            raise ConfigError(f'password required for user {user}')
+                    # For OTP mode: verify that each local user has an OTP key
+                    if "otp" in ocserv["authentication"]["mode"]["local"]:
+                        users_wo_key = []
+                        for user, user_config in ocserv["authentication"]["local_users"]["username"].items():
+                            # User has no OTP key defined
+                            if dict_search('otp.key', user_config) == None:
+                                users_wo_key.append(user)
+                        if users_wo_key:
+                            raise ConfigError(f'OTP enabled, but no OTP key is configured for these users:\n{users_wo_key}')
+                    # For password (and default) mode: verify that each local user has password
+                    if "password" in ocserv["authentication"]["mode"]["local"] or "otp" not in ocserv["authentication"]["mode"]["local"]:
+                        users_wo_pswd = []
+                        for user in ocserv["authentication"]["local_users"]["username"]:
+                            if not "password" in ocserv["authentication"]["local_users"]["username"][user]:
+                                users_wo_pswd.append(user)
+                        if users_wo_pswd:
+                            raise ConfigError(f'password required for users:\n{users_wo_pswd}')
         else:
             raise ConfigError('openconnect authentication mode required')
     else:
@@ -122,7 +151,6 @@ def verify(ocserv):
     else:
         raise ConfigError('openconnect network settings required')
 
-
 def generate(ocserv):
     if not ocserv:
         return None
@@ -132,6 +160,42 @@ def generate(ocserv):
         render(radius_cfg, 'ocserv/radius_conf.tmpl', ocserv["authentication"]["radius"])
         # Render radius servers
         render(radius_servers, 'ocserv/radius_servers.tmpl', ocserv["authentication"]["radius"])
+    elif "local" in ocserv["authentication"]["mode"]:
+        # if mode "OTP", generate OTP users file parameters
+        if "otp" in ocserv["authentication"]["mode"]["local"]:
+            if "local_users" in ocserv["authentication"]:
+                for user in ocserv["authentication"]["local_users"]["username"]:
+                    # OTP token type from CLI parameters:
+                    otp_interval = str(ocserv["authentication"]["local_users"]["username"][user]["otp"].get("interval"))
+                    token_type = ocserv["authentication"]["local_users"]["username"][user]["otp"].get("token_type")
+                    otp_length = str(ocserv["authentication"]["local_users"]["username"][user]["otp"].get("otp_length"))
+                    if token_type == "hotp-time":
+                        otp_type = "HOTP/T" + otp_interval
+                    elif token_type == "hotp-event":
+                        otp_type = "HOTP/E"
+                    else:
+                        otp_type = "HOTP/T" + otp_interval
+                    ocserv["authentication"]["local_users"]["username"][user]["otp"]["token_tmpl"] = otp_type + "/" + otp_length
+        # if there is a password, generate hash
+        if "password" in ocserv["authentication"]["mode"]["local"] or not "otp" in ocserv["authentication"]["mode"]["local"]:
+            if "local_users" in ocserv["authentication"]:
+                for user in ocserv["authentication"]["local_users"]["username"]:
+                    ocserv["authentication"]["local_users"]["username"][user]["hash"] = get_hash(ocserv["authentication"]["local_users"]["username"][user]["password"])
+
+        if "password-otp" in ocserv["authentication"]["mode"]["local"]:
+            # Render local users ocpasswd
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+            # Render local users OTP keys
+            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.tmpl', ocserv["authentication"]["local_users"])
+        elif "password" in ocserv["authentication"]["mode"]["local"]:
+            # Render local users ocpasswd
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+        elif "otp" in ocserv["authentication"]["mode"]["local"]:
+            # Render local users OTP keys
+            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.tmpl', ocserv["authentication"]["local_users"])
+        else:
+            # Render local users ocpasswd
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
     else:
         if "local_users" in ocserv["authentication"]:
             for user in ocserv["authentication"]["local_users"]["username"]:
@@ -169,7 +233,7 @@ def generate(ocserv):
 def apply(ocserv):
     if not ocserv:
         call('systemctl stop ocserv.service')
-        for file in [ocserv_conf, ocserv_passwd]:
+        for file in [ocserv_conf, ocserv_passwd, ocserv_otp_usr]:
             if os.path.exists(file):
                 os.unlink(file)
     else:

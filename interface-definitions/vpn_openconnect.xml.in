@@ -13,25 +13,43 @@
               <help>Authentication for remote access SSL VPN Server</help>
             </properties>
             <children>
-              <leafNode name="mode">
+              <node name="mode">
                 <properties>
                   <help>Authentication mode used by this server</help>
-                  <valueHelp>
-                    <format>local</format>
-                    <description>Use local username/password configuration</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>radius</format>
-                    <description>Use RADIUS server for user autentication</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>^(local|radius)$</regex>
-                  </constraint>
-                  <completionHelp>
-                    <list>local radius</list>
-                  </completionHelp>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="local">
+                    <properties>
+                      <help>Use local username/password configuration (OTP supported)</help>
+                      <valueHelp>
+                        <format>password</format>
+                        <description>Password-only local authentication</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>otp</format>
+                        <description>OTP-only local authentication</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>password-otp</format>
+                        <description>Password (first) + OTP local authentication</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(password|otp|password-otp)$</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid authentication mode. Must be one of: password, otp or password-otp </constraintErrorMessage>
+                      <completionHelp>
+                        <list>otp password password-otp</list>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="radius">
+                    <properties>
+                      <help>Use RADIUS server for user autentication</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               #include <include/auth-local-users.xml.i>
               #include <include/radius-server-ipv4.xml.i>
               <node name="radius">
