@@ -1,10 +1,10 @@
 {% if authentication.mode is vyos_defined('radius') %}
-{%   if authentication.radius.rate_limit.enable is vyos_defined %}
+{%     if authentication.radius.rate_limit.enable is vyos_defined %}
 [shaper]
 verbose=1
 attr={{ authentication.radius.rate_limit.attribute }}
-{%     if authentication.radius.rate_limit.vendor is vyos_defined %}
+{%         if authentication.radius.rate_limit.vendor is vyos_defined %}
 vendor={{ authentication.radius.rate_limit.vendor }}
+{%         endif %}
 {%     endif %}
-{%   endif %}
 {% endif %}

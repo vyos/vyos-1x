@@ -2,14 +2,14 @@
 {# as FRR does not support deleting the entire rpki section we leave it in place even when it's empty #}
 rpki
 {% if cache is vyos_defined %}
-{%   for peer, peer_config in cache.items() %}
-{#     port is mandatory and preference uses a default value #}
-{%     if peer_config.ssh.username is vyos_defined %}
+{%     for peer, peer_config in cache.items() %}
+{#         port is mandatory and preference uses a default value #}
+{%         if peer_config.ssh.username is vyos_defined %}
  rpki cache {{ peer | replace('_', '-') }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }} {{ peer_config.ssh.known_hosts_file }} preference {{ peer_config.preference }}
-{%     else %}
+{%         else %}
  rpki cache {{ peer | replace('_', '-') }} {{ peer_config.port }} preference {{ peer_config.preference }}
-{%     endif %}
-{%   endfor %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 {% if polling_period is vyos_defined %}
  rpki polling_period {{ polling_period }}

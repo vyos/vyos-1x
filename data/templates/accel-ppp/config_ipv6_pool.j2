@@ -2,19 +2,19 @@
 [ipv6-nd]
 AdvAutonomousFlag=1
 
-{%   if client_ipv6_pool.prefix is vyos_defined %}
+{%     if client_ipv6_pool.prefix is vyos_defined %}
 [ipv6-pool]
-{%     for prefix, options in client_ipv6_pool.prefix.items() %}
+{%         for prefix, options in client_ipv6_pool.prefix.items() %}
 {{ prefix }},{{ options.mask }}
-{%     endfor %}
-{%     if client_ipv6_pool.delegate is vyos_defined %}
-{%       for prefix, options in client_ipv6_pool.delegate.items() %}
+{%         endfor %}
+{%         if client_ipv6_pool.delegate is vyos_defined %}
+{%             for prefix, options in client_ipv6_pool.delegate.items() %}
 delegate={{ prefix }},{{ options.delegation_prefix }}
-{%       endfor %}
+{%             endfor %}
+{%         endif %}
 {%     endif %}
-{%   endif %}
-{%   if client_ipv6_pool.delegate is vyos_defined %}
+{%     if client_ipv6_pool.delegate is vyos_defined %}
 [ipv6-dhcp]
 verbose=1
-{%   endif %}
+{%     endif %}
 {% endif %}

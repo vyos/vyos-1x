@@ -5,32 +5,32 @@
  default-metric {{ default_metric }}
 {% endif %}
 {% if passive_interface is vyos_defined %}
-{%   for interface in passive_interface %}
+{%     for interface in passive_interface %}
  passive-interface {{ interface }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if network is vyos_defined %}
-{%   for prefix in network %}
+{%     for prefix in network %}
  network {{ prefix }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if interface is vyos_defined %}
-{%   for ifname in interface %}
+{%     for ifname in interface %}
  network {{ ifname }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if route is vyos_defined %}
-{%   for prefix in route %}
+{%     for prefix in route %}
  route {{ prefix }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {# timers have default values #}
  timers basic {{ timers['update'] }} {{ timers.timeout }} {{ timers.garbage_collection }}
 {% if redistribute is vyos_defined %}
-{%   for protocol, protocol_config in redistribute.items() %}
-{%     if protocol is vyos_defined('ospfv3') %}
-{%       set protocol = 'ospf6' %}
-{%     endif %}
+{%     for protocol, protocol_config in redistribute.items() %}
+{%         if protocol is vyos_defined('ospfv3') %}
+{%             set protocol = 'ospf6' %}
+{%         endif %}
  redistribute {{ protocol }} {{ 'metric ' ~ protocol_config.metric if protocol_config.metric is vyos_defined }} {{ 'route-map ' ~ protocol_config.route_map if protocol_config.route_map is vyos_defined }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}

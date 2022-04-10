@@ -7,6 +7,8 @@ XDP_DIR := src/xdp
 LIBS := -lzmq
 CFLAGS :=
 
+J2LINT := $(shell command -v j2lint 2> /dev/null)
+
 config_xml_src = $(wildcard interface-definitions/*.xml.in)
 config_xml_obj = $(config_xml_src:.xml.in=.xml)
 op_xml_src = $(wildcard op-mode-definitions/*.xml.in)
@@ -75,7 +77,7 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions vyshim
+all: clean interface_definitions op_mode_definitions test j2lint vyshim
 
 .PHONY: clean
 clean:
@@ -89,6 +91,13 @@ clean:
 test:
 	set -e; python3 -m compileall -q -x '/vmware-tools/scripts/, /ppp/' .
 	PYTHONPATH=python/ python3 -m "nose" --with-xunit src --with-coverage --cover-erase --cover-xml --cover-package src/conf_mode,src/op_mode,src/completion,src/helpers,src/validators,src/tests --verbose
+
+.PHONY: j2lint
+j2lint:
+ifndef J2LINT
+	$(error "j2lint binary not found, consider installing: pip install git+https://github.com/aristanetworks/j2lint.git@341b5d5db86")
+endif
+	$(J2LINT) data/
 
 .PHONY: sonar
 sonar:
