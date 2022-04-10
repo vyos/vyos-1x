@@ -1,1 +1,1 @@
-{{ 'options cfg80211 ieee80211_regdom=' + regdom if regdom is defined }}
+{{ 'options cfg80211 ieee80211_regdom=' ~ regdom if regdom is vyos_defined }}

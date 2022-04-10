@@ -18,7 +18,7 @@ network={
     #       this will add latency to scanning, so enable this only when needed)
     scan_ssid=1
 
-{% if security is defined and security.wpa is defined and security.wpa.passphrase is defined %}
+{% if security.wpa.passphrase is vyos_defined %}
     # ieee80211w: whether management frame protection is enabled
     # 0 = disabled (default unless changed with the global pmf parameter)
     # 1 = optional
@@ -59,7 +59,7 @@ network={
     # OWE = Opportunistic Wireless Encryption (a.k.a. Enhanced Open)
     # DPP = Device Provisioning Protocol
     # If not set, this defaults to: WPA-PSK WPA-EAP
-{%   if security.wpa.mode is defined and security.wpa.mode == 'wpa3' %}
+{%   if security.wpa.mode is vyos_defined('wpa3') %}
     key_mgmt=SAE
 {%   else %}
     key_mgmt=WPA-PSK WPA-PSK-SHA256
