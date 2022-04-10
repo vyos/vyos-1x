@@ -1,6 +1,6 @@
 #!/usr/sbin/nft -f
 
-{% if cleanup_commands is defined %}
+{% if cleanup_commands is vyos_defined %}
 {%   for command in cleanup_commands %}
 {{ command }}
 {%   endfor %}
@@ -9,7 +9,7 @@
 include "/run/nftables_defines.conf"
 
 table ip mangle {
-{% if first_install is defined %}
+{% if first_install is vyos_defined %}
     chain VYOS_PBR_PREROUTING {
         type filter hook prerouting priority -150; policy accept;
     }
@@ -17,11 +17,11 @@ table ip mangle {
         type filter hook postrouting priority -150; policy accept;
     }
 {% endif %}
-{% if route is defined and route is not none -%}
+{% if route is vyos_defined %}
 {%   for route_text, conf in route.items() %}
     chain VYOS_PBR_{{ route_text }} {
-{%     if conf.rule is defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+{%     if conf.rule is vyos_defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
 {%       endfor %}
 {%     endif %}
@@ -32,7 +32,7 @@ table ip mangle {
 }
 
 table ip6 mangle {
-{% if first_install is defined %}
+{% if first_install is vyos_defined %}
     chain VYOS_PBR6_PREROUTING {
         type filter hook prerouting priority -150; policy accept;
     }
@@ -40,11 +40,11 @@ table ip6 mangle {
         type filter hook postrouting priority -150; policy accept;
     }
 {% endif %}
-{% if route6 is defined and route6 is not none %}
+{% if route6 is vyos_defined %}
 {%   for route_text, conf in route6.items() %}
     chain VYOS_PBR6_{{ route_text }} {
-{%     if conf.rule is defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+{%     if conf.rule is vyos_defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
 {%       endfor %}
 {%     endif %}
