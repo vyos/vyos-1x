@@ -185,8 +185,8 @@ def generate(nat):
     # dry-run newly generated configuration
     tmp = run(f'nft -c -f {nftables_nat_config}')
     if tmp > 0:
-        if os.path.exists(nftables_ct_file):
-            os.unlink(nftables_ct_file)
+        if os.path.exists(nftables_nat_config):
+            os.unlink(nftables_nat_config)
         raise ConfigError('Configuration file errors encountered!')
 
     return None
