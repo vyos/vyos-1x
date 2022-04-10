@@ -14,24 +14,24 @@
 #
 ########################################################
 
-{% if disable_quickleave is not defined %}
+{% if disable_quickleave is not vyos_defined %}
 quickleave
 {% endif %}
-{% if interface is defined and interface is not none %}
+{% if interface is vyos_defined %}
 {%   for iface, config in interface.items() %}
 
 # Configuration for {{ iface }} ({{ config.role }} interface)
-{%     if config.role == 'disabled' %}
+{%     if config.role is vyos_defined('disabled') %}
 phyint {{ iface }} disabled
 {%     else %}
 phyint {{ iface }} {{ config.role }} ratelimit 0 threshold {{ config.threshold }}
 {%     endif %}
-{%     if config.alt_subnet is defined and config.alt_subnet is not none %}
+{%     if config.alt_subnet is vyos_defined %}
 {%       for subnet in config.alt_subnet %}
         altnet {{ subnet }}
 {%       endfor %}
 {%     endif %}
-{%     if config.whitelist is defined and config.whitelist is not none %}
+{%     if config.whitelist is vyos_defined %}
 {%       for subnet in config.whitelist %}
         whitelist {{ subnet }}
 {%       endfor %}
