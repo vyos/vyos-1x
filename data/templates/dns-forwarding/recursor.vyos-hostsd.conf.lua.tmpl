@@ -13,16 +13,16 @@ addNTA("{{ a }}.", "{{ tag }} alias")
 {%   endfor %}
 {% endif %}
 
-{% if forward_zones is defined %}
+{% if forward_zones is vyos_defined %}
 -- from 'service dns forwarding domain'
 {%   for zone, zonedata in forward_zones.items() %}
-{%     if zonedata['addnta'] is defined %}
+{%     if zonedata.addnta is vyos_defined %}
 addNTA("{{ zone }}", "static")
 {%     endif %}
 {%   endfor %}
 {% endif %}
 
-{% if authoritative_zones is defined %}
+{% if authoritative_zones is vyos_defined %}
 -- from 'service dns forwarding authoritative-domain'
 {%   for zone in authoritative_zones %}
 addNTA("{{ zone }}", "static")
