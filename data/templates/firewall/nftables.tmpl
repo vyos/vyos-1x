@@ -1,6 +1,6 @@
 #!/usr/sbin/nft -f
 
-{% if cleanup_commands is defined %}
+{% if cleanup_commands is vyos_defined %}
 {%   for command in cleanup_commands %}
 {{ command }}
 {%   endfor %}
@@ -9,7 +9,7 @@
 include "/run/nftables_defines.conf"
 
 table ip filter {
-{% if first_install is defined %}
+{% if first_install is vyos_defined %}
     chain VYOS_FW_FORWARD {
         type filter hook forward priority 0; policy accept;
         jump VYOS_POST_FW
@@ -30,14 +30,14 @@ table ip filter {
         ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
     }
 {% endif %}
-{% if name is defined %}
+{% if name is vyos_defined %}
 {%   set ns = namespace(sets=[]) %}
 {%   for name_text, conf in name.items() %}
     chain NAME_{{ name_text }} {
-{%     if conf.rule is defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+{%     if conf.rule is vyos_defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(name_text, rule_id) }}
-{%         if rule_conf.recent is defined %}
+{%         if rule_conf.recent is vyos_defined %}
 {%           set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
 {%         endif %}
 {%       endfor %}
@@ -53,15 +53,15 @@ table ip filter {
     }
 {%   endfor %}
 {% endif %}
-{% if state_policy is defined %}
+{% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
-{%   if state_policy.established is defined %}
+{%   if state_policy.established is vyos_defined %}
         {{ state_policy.established | nft_state_policy('established') }}
 {%   endif %}
-{%   if state_policy.invalid is defined %}
+{%   if state_policy.invalid is vyos_defined %}
         {{ state_policy.invalid | nft_state_policy('invalid') }}
 {%   endif %}
-{%   if state_policy.related is defined %}
+{%   if state_policy.related is vyos_defined %}
         {{ state_policy.related | nft_state_policy('related') }}
 {%   endif %}
         return
@@ -70,7 +70,7 @@ table ip filter {
 }
 
 table ip6 filter {
-{% if first_install is defined %}
+{% if first_install is vyos_defined %}
     chain VYOS_FW6_FORWARD {
         type filter hook forward priority 0; policy accept;
         jump VYOS_POST_FW6
@@ -91,14 +91,14 @@ table ip6 filter {
         exthdr frag exists meta mark set 0xffff1 return
     }
 {% endif %}
-{% if ipv6_name is defined %}
+{% if ipv6_name is vyos_defined %}
 {%   set ns = namespace(sets=[]) %}
 {%   for name_text, conf in ipv6_name.items() %}
     chain NAME6_{{ name_text }} {
-{%     if conf.rule is defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not defined %}
+{%     if conf.rule is vyos_defined %}
+{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(name_text, rule_id, 'ip6') }}
-{%         if rule_conf.recent is defined %}
+{%         if rule_conf.recent is vyos_defined %}
 {%           set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
 {%         endif %}
 {%       endfor %}
@@ -114,15 +114,15 @@ table ip6 filter {
     }
 {%   endfor %}
 {% endif %}
-{% if state_policy is defined %}
+{% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
-{%   if state_policy.established is defined %}
+{%   if state_policy.established is vyos_defined %}
         {{ state_policy.established | nft_state_policy('established', ipv6=True) }}
 {%   endif %}
-{%   if state_policy.invalid is defined %}
+{%   if state_policy.invalid is vyos_defined %}
         {{ state_policy.invalid | nft_state_policy('invalid', ipv6=True) }}
 {%   endif %}
-{%   if state_policy.related is defined %}
+{%   if state_policy.related is vyos_defined %}
         {{ state_policy.related | nft_state_policy('related', ipv6=True) }}
 {%   endif %}
         return
@@ -130,7 +130,7 @@ table ip6 filter {
 {% endif %}
 }
 
-{% if first_install is defined %}
+{% if first_install is vyos_defined %}
 table ip nat {
     chain PREROUTING {
         type nat hook prerouting priority -100; policy accept;
