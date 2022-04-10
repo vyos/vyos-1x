@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import jmespath
 import json
 import unittest
@@ -29,10 +28,13 @@ src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 
 class TestNAT(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.cli_delete(base_path)
+        cls.cli_delete(cls, base_path)
 
     def tearDown(self):
         self.cli_delete(base_path)
