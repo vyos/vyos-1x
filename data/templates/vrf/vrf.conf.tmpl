@@ -2,8 +2,8 @@
 #
 # Routing table ID to name mapping reference
 # id       vrf name         comment
-{% if name is defined and name is not none %}
+{% if name is vyos_defined %}
 {%   for vrf, vrf_config in name.items() %}
-{{ "%-10s" | format(vrf_config.table) }} {{ "%-16s" | format(vrf) }} {{ '# ' + vrf_config.description if vrf_config.description is defined and vrf_config.description is not none }}
+{{ "%-10s" | format(vrf_config.table) }} {{ "%-16s" | format(vrf) }} {{ '# ' ~ vrf_config.description if vrf_config.description is vyos_defined }}
 {%   endfor %}
 {% endif %}
