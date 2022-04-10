@@ -9,9 +9,9 @@ global_defs {
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
 
-{% if vrrp is defined and vrrp.group is defined and vrrp.group is not none %}
-{%   for name, group_config in vrrp.group.items() if group_config.disable is not defined %}
-{%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none %}
+{% if vrrp.group is vyos_defined %}
+{%   for name, group_config in vrrp.group.items() if group_config.disable is not vyos_defined %}
+{%     if group_config.health_check.script is vyos_defined %}
 vrrp_script healthcheck_{{ name }} {
     script "{{ group_config.health_check.script }}"
     interval {{ group_config.health_check.interval }}
@@ -20,7 +20,7 @@ vrrp_script healthcheck_{{ name }} {
 }
 {%     endif %}
 vrrp_instance {{ name }} {
-{%     if group_config.description is defined and group_config.description is not none %}
+{%     if group_config.description is vyos_defined %}
     # {{ group_config.description }}
 {%     endif %}
     state BACKUP
@@ -28,62 +28,62 @@ vrrp_instance {{ name }} {
     virtual_router_id {{ group_config.vrid }}
     priority {{ group_config.priority }}
     advert_int {{ group_config.advertise_interval }}
-{%     if group_config.track is defined and group_config.track.exclude_vrrp_interface is defined %}
+{%     if group_config.track.exclude_vrrp_interface is vyos_defined %}
     dont_track_primary
 {%     endif %}
-{%     if group_config.no_preempt is not defined and group_config.preempt_delay is defined and group_config.preempt_delay is not none %}
+{%     if group_config.no_preempt is not vyos_defined and group_config.preempt_delay is vyos_defined %}
     preempt_delay {{ group_config.preempt_delay }}
-{%     elif group_config.no_preempt is defined %}
+{%     elif group_config.no_preempt is vyos_defined %}
     nopreempt
 {%     endif %}
-{%     if group_config.peer_address is defined and group_config.peer_address is not none %}
+{%     if group_config.peer_address is vyos_defined %}
     unicast_peer { {{ group_config.peer_address }} }
 {%     endif %}
-{%     if group_config.hello_source_address is defined and group_config.hello_source_address is not none %}
-{%       if group_config.peer_address is defined and group_config.peer_address is not none %}
+{%     if group_config.hello_source_address is vyos_defined %}
+{%       if group_config.peer_address is vyos_defined %}
     unicast_src_ip {{ group_config.hello_source_address }}
 {%       else %}
     mcast_src_ip {{ group_config.hello_source_address }}
 {%       endif %}
 {%     endif %}
-{%     if group_config.rfc3768_compatibility is defined and group_config.peer_address is defined %}
+{%     if group_config.rfc3768_compatibility is vyos_defined and group_config.peer_address is vyos_defined %}
     use_vmac {{ group_config.interface }}v{{ group_config.vrid }}
     vmac_xmit_base
-{%     elif group_config.rfc3768_compatibility is defined %}
+{%     elif group_config.rfc3768_compatibility is vyos_defined %}
     use_vmac {{ group_config.interface }}v{{ group_config.vrid }}
 {%     endif %}
-{%     if group_config.authentication is defined and group_config.authentication is not none %}
+{%     if group_config.authentication is vyos_defined %}
     authentication {
         auth_pass "{{ group_config.authentication.password }}"
-{%       if group_config.authentication.type == 'plaintext-password' %}
+{%       if group_config.authentication.type is vyos_defined('plaintext-password') %}
         auth_type PASS
 {%       else %}
         auth_type {{ group_config.authentication.type | upper }}
 {%       endif %}
     }
 {%     endif %}
-{%     if group_config.address is defined and group_config.address is not none %}
+{%     if group_config.address is vyos_defined %}
     virtual_ipaddress {
 {%       for addr, addr_config in group_config.address.items() %}
-        {{ addr }}{{ ' dev ' + addr_config.interface if addr_config.interface is defined }}
+        {{ addr }}{{ ' dev ' + addr_config.interface if addr_config.interface is vyos_defined }}
 {%       endfor %}
     }
 {%     endif %}
-{%     if group_config.excluded_address is defined and group_config.excluded_address is not none %}
+{%     if group_config.excluded_address is vyos_defined %}
     virtual_ipaddress_excluded {
 {%       for addr in group_config.excluded_address %}
         {{ addr }}
 {%       endfor %}
     }
 {%     endif %}
-{%     if group_config.track is defined and group_config.track.interface is defined and group_config.track.interface is not none %}
+{%     if group_config.track.interface is vyos_defined %}
     track_interface {
 {%       for interface in group_config.track.interface %}
         {{ interface }}
 {%       endfor %}
     }
 {%     endif %}
-{%     if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none %}
+{%     if group_config.health_check.script is vyos_defined %}
     track_script {
         healthcheck_{{ name }}
     }
@@ -92,11 +92,11 @@ vrrp_instance {{ name }} {
 {%   endfor %}
 {% endif %}
 
-{% if vrrp is defined and vrrp.sync_group is defined and vrrp.sync_group is not none %}
-{%   for name, sync_group_config in vrrp.sync_group.items() if sync_group_config.disable is not defined %}
+{% if vrrp.sync_group is vyos_defined %}
+{%   for name, sync_group_config in vrrp.sync_group.items() if sync_group_config.disable is not vyos_defined %}
 vrrp_sync_group {{ name }} {
     group {
-{%     if sync_group_config.member is defined and sync_group_config.member is not none %}
+{%     if sync_group_config.member is vyos_defined %}
 {%       for member in sync_group_config.member %}
         {{ member }}
 {%       endfor %}
@@ -104,16 +104,16 @@ vrrp_sync_group {{ name }} {
     }
 
 {# Health-check scripts should be in section sync-group if member is part of the sync-group T4081 #}
-{%     if vrrp is defined and vrrp.group is defined and vrrp.group is not none %}
-{%       for name, group_config in vrrp.group.items() if group_config.disable is not defined %}
-{%         if group_config.health_check is defined and group_config.health_check.script is defined and group_config.health_check.script is not none and name in sync_group_config.member %}
+{%     if vrrp.group is vyos_defined %}
+{%       for name, group_config in vrrp.group.items() if group_config.disable is not vyos_defined %}
+{%         if group_config.health_check.script is vyos_defined and name in sync_group_config.member %}
     track_script {
         healthcheck_{{ name }}
     }
 {%         endif %}
 {%       endfor %}
 {%     endif %}
-{%     if conntrack_sync_group is defined and conntrack_sync_group == name %}
+{%     if conntrack_sync_group is vyos_defined(name) %}
 {%     set vyos_helper = "/usr/libexec/vyos/vyos-vrrp-conntracksync.sh" %}
     notify_master "{{ vyos_helper }} master {{ name }}"
     notify_backup "{{ vyos_helper }} backup {{ name }}"
@@ -123,41 +123,41 @@ vrrp_sync_group {{ name }} {
 {%   endfor %}
 {% endif %}
 
-{% if virtual_server is defined and virtual_server is not none %}
+{% if virtual_server is vyos_defined %}
 # Virtual-server configuration
 {%   for vserver, vserver_config in virtual_server.items() %}
 virtual_server {{ vserver }} {{ vserver_config.port }} {
     delay_loop {{ vserver_config.delay_loop }}
-{%     if vserver_config.algorithm == 'round-robin' %}
+{%     if vserver_config.algorithm is vyos_defined('round-robin') %}
     lb_algo rr
-{%     elif vserver_config.algorithm == 'weighted-round-robin' %}
+{%     elif vserver_config.algorithm is vyos_defined('weighted-round-robin') %}
     lb_algo wrr
-{%     elif vserver_config.algorithm == 'least-connection' %}
+{%     elif vserver_config.algorithm is vyos_defined('least-connection') %}
     lb_algo lc
-{%     elif vserver_config.algorithm == 'weighted-least-connection' %}
+{%     elif vserver_config.algorithm is vyos_defined('weighted-least-connection') %}
     lb_algo wlc
-{%     elif vserver_config.algorithm == 'source-hashing' %}
+{%     elif vserver_config.algorithm is vyos_defined('source-hashing') %}
     lb_algo sh
-{%     elif vserver_config.algorithm == 'destination-hashing' %}
+{%     elif vserver_config.algorithm is vyos_defined('destination-hashing') %}
     lb_algo dh
-{%     elif vserver_config.algorithm == 'locality-based-least-connection' %}
+{%     elif vserver_config.algorithm is vyos_defined('locality-based-least-connection') %}
     lb_algo lblc
 {%     endif %}
-{%     if vserver_config.forward_method == "nat" %}
+{%     if vserver_config.forward_method is vyos_defined('nat') %}
     lb_kind NAT
-{%     elif vserver_config.forward_method == "direct" %}
+{%     elif vserver_config.forward_method is vyos_defined('direct') %}
     lb_kind DR
-{%     elif vserver_config.forward_method == "tunnel" %}
+{%     elif vserver_config.forward_method is vyos_defined('tunnel') %}
     lb_kind TUN
 {%     endif %}
     persistence_timeout {{ vserver_config.persistence_timeout }}
     protocol {{ vserver_config.protocol | upper }}
-{%     if vserver_config.real_server is defined and vserver_config.real_server is not none %}
+{%     if vserver_config.real_server is vyos_defined %}
 {%       for rserver, rserver_config in vserver_config.real_server.items() %}
     real_server {{ rserver }} {{ rserver_config.port }} {
         weight 1
         {{ vserver_config.protocol | upper }}_CHECK {
-{%         if rserver_config.connection_timeout is defined and rserver_config.connection_timeout is not none %}
+{%         if rserver_config.connection_timeout is vyos_defined %}
             connect_timeout {{ rserver_config.connection_timeout }}
 {%         endif %}
         }
