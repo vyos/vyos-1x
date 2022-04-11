@@ -170,11 +170,18 @@ class EthernetIf(Interface):
                 return
 
         cmd = f'ethtool --change {ifname}'
-        if speed == 'auto' or duplex == 'auto':
-            cmd += ' autoneg on'
-        else:
-            cmd += f' speed {speed} duplex {duplex} autoneg off'
-        return self._cmd(cmd)
+        try:
+            if speed == 'auto' or duplex == 'auto':
+                cmd += ' autoneg on'
+            else:
+                cmd += f' speed {speed} duplex {duplex} autoneg off'
+            return self._cmd(cmd)
+        except PermissionError:
+            # Some NICs do not tell that they don't suppport settings speed/duplex,
+            # but they do not actually support it either.
+            # In that case it's probably better to ignore the error
+            # than end up with a broken config.
+            print('Warning: could not set speed/duplex settings: operation not permitted!')
 
     def set_gro(self, state):
         """
