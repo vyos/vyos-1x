@@ -57,9 +57,6 @@ def get_config(config=None):
     if conf.exists(['service', 'lldp', 'snmp', 'enable']):
         snmp.update({'lldp_snmp' : ''})
 
-    if conf.exists(['system', 'ipv6', 'disable']):
-        snmp.update({'ipv6_disabled' : ''})
-
     if 'deleted' in snmp:
         return snmp
 
@@ -100,9 +97,8 @@ def get_config(config=None):
             snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])
 
         if '::1' not in snmp['listen_address']:
-            if 'ipv6_disabled' not in snmp:
-                tmp = {'::1': {'port': '161'}}
-                snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])
+            tmp = {'::1': {'port': '161'}}
+            snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])
 
     if 'community' in snmp:
         default_values = defaults(base + ['community'])
