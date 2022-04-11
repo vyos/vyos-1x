@@ -1,8 +1,6 @@
-{% if http_client is defined %}
-{%   if http_client.source_interface is defined %}
+{% if http_client.source_interface is vyos_defined %}
 --interface "{{ http_client.source_interface }}"
-{%   endif %}
-{%   if http_client.source_address is defined %}
+{% endif %}
+{% if http_client.source_address is vyos_defined %}
 --interface "{{ http_client.source_address }}"
-{%   endif %}
 {% endif %}
