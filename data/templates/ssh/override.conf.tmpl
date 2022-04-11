@@ -1,12 +1,12 @@
-{% set vrf_command = 'ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
 [Unit]
 StartLimitIntervalSec=0
 After=vyos-router.service
-ConditionPathExists={{config_file}}
+ConditionPathExists={{ config_file }}
 
 [Service]
 ExecStart=
-ExecStart={{vrf_command}}/usr/sbin/sshd -f {{config_file}} -D $SSHD_OPTS
+ExecStart={{ vrf_command }}/usr/sbin/sshd -f {{ config_file }} -D $SSHD_OPTS
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10
