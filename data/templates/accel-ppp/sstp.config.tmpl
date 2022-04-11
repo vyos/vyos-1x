@@ -50,7 +50,7 @@ verbose=1
 check-ip=1
 {# MTU #}
 mtu={{ mtu }}
-ipv6={{ 'allow' if ppp_options.ipv6 == "deny" and client_ipv6_pool is defined else ppp_options.ipv6 }}
+ipv6={{ 'allow' if ppp_options.ipv6 is vyos_defined("deny") and client_ipv6_pool is vyos_defined else ppp_options.ipv6 }}
 ipv4={{ ppp_options.ipv4 }}
 
 mppe={{ ppp_options.mppe }}

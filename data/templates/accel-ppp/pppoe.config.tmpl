@@ -11,13 +11,13 @@ ippool
 {# Common authentication protocols (pap, chap ...) #}
 {% include 'accel-ppp/config_modules_auth_protocols.j2' %}
 
-{% if snmp is defined %}
+{% if snmp is vyos_defined %}
 net-snmp
 {% endif %}
-{% if limits is defined %}
+{% if limits is vyos_defined %}
 connlimit
 {% endif %}
-{% if extended_scripts is defined %}
+{% if extended_scripts is vyos_defined %}
 sigchld
 pppd_compat
 {% endif %}
@@ -30,7 +30,7 @@ syslog=accel-pppoe,daemon
 copy=1
 level=5
 
-{% if snmp is defined and snmp.master_agent is defined %}
+{% if snmp.master_agent is vyos_defined %}
 [snmp]
 master=1
 {% endif %}
@@ -47,7 +47,7 @@ disable
 {# Common DNS name-server definition #}
 {% include 'accel-ppp/config_name_server.j2' %}
 
-{% if wins_server is defined and wins_server is not none %}
+{% if wins_server is vyos_defined %}
 [wins]
 {%   for server in wins_server %}
 wins{{ loop.index }}={{ server }}
@@ -57,7 +57,7 @@ wins{{ loop.index }}={{ server }}
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
-{% if session_control is defined and session_control != 'disable' %}
+{% if session_control is vyos_defined and session_control is not vyos_defined('disable') %}
 [common]
 single-session={{ session_control }}
 {% endif %}
@@ -65,37 +65,37 @@ single-session={{ session_control }}
 [ppp]
 verbose=1
 check-ip=1
-ccp={{ "1" if ppp_options.ccp is defined else "0" }}
-unit-preallocate={{ "1" if authentication.radius.preallocate_vif is defined else "0" }}
-{% if ppp_options.min_mtu is defined and ppp_options.min_mtu is not none %}
+ccp={{ "1" if ppp_options.ccp is vyos_defined else "0" }}
+unit-preallocate={{ "1" if authentication.radius.preallocate_vif is vyos_defined else "0" }}
+{% if ppp_options.min_mtu is vyos_defined %}
 min-mtu={{ ppp_options.min_mtu }}
 {% else %}
 min-mtu={{ mtu }}
 {% endif %}
-{% if ppp_options.mru is defined and ppp_options.mru is not none %}
+{% if ppp_options.mru is vyos_defined %}
 mru={{ ppp_options.mru }}
 {% endif %}
 mppe={{ ppp_options.mppe }}
 lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
 lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}
 lcp-echo-failure={{ ppp_options.lcp_echo_failure }}
-{% if ppp_options.ipv4 is defined and ppp_options.ipv4 is not none %}
+{% if ppp_options.ipv4 is vyos_defined %}
 ipv4={{ ppp_options.ipv4 }}
 {% endif %}
 {# IPv6 #}
-{% if ppp_options.ipv6 is defined and ppp_options.ipv6 is not none %}
+{% if ppp_options.ipv6 is vyos_defined %}
 ipv6={{ ppp_options.ipv6 }}
-{%   if ppp_options.ipv6_intf_id is defined and ppp_options.ipv6_intf_id is not none %}
+{%   if ppp_options.ipv6_intf_id is vyos_defined %}
 ipv6-intf-id={{ ppp_options.ipv6_intf_id }}
 {%   endif %}
-{%   if ppp_options.ipv6_peer_intf_id is defined and ppp_options.ipv6_peer_intf_id is not none %}
+{%   if ppp_options.ipv6_peer_intf_id is vyos_defined %}
 ipv6-peer-intf-id={{ ppp_options.ipv6_peer_intf_id }}
 {%   endif %}
-ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is defined else "0" }}
+ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is vyos_defined else "0" }}
 {% endif %}
 {# MTU #}
 mtu={{ mtu }}
-{% if ppp_options.interface_cache is defined and ppp_options.interface_cache is not none %}
+{% if ppp_options.interface_cache is vyos_defined %}
 unit-cache={{ ppp_options.interface_cache }}
 {% endif %}
 
@@ -103,18 +103,18 @@ unit-cache={{ ppp_options.interface_cache }}
 verbose=1
 ac-name={{ access_concentrator }}
 
-{% if interface is defined and interface is not none %}
+{% if interface is vyos_defined %}
 {%   for iface, iface_config in interface.items() %}
-{%     if iface_config.vlan_id is not defined and iface_config.vlan_range is not defined %}
+{%     if iface_config.vlan_id is not vyos_defined and iface_config.vlan_range is not vyos_defined %}
 interface={{ iface }}
 {%     endif %}
-{%     if iface_config.vlan_range is defined %}
+{%     if iface_config.vlan_range is vyos_defined %}
 {%       for regex in iface_config.regex %}
 interface=re:^{{ iface | replace('.', '\\.') }}\.({{ regex }})$
 {%       endfor %}
 vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
 {%     endif %}
-{%     if iface_config.vlan_id is defined %}
+{%     if iface_config.vlan_id is vyos_defined %}
 {%       for vlan in iface_config.vlan_id %}
 vlan-mon={{ iface }},{{ vlan }}
 interface=re:^{{ iface | replace('.', '\\.') }}\.{{ vlan }}$
@@ -138,19 +138,19 @@ service-name={{ service_name | join(',') }}
 {%   endfor %}
 pado-delay={{ pado_delay_param.value }}
 {% endif %}
-{% if authentication.radius.called_sid_format is defined and authentication.radius.called_sid_format is not none %}
+{% if authentication.radius.called_sid_format is vyos_defined %}
 called-sid={{ authentication.radius.called_sid_format }}
 {% endif %}
 
-{% if limits is defined %}
+{% if limits is vyos_defined %}
 [connlimit]
-{%   if limits.connection_limit is defined and limits.connection_limit is not none %}
+{%   if limits.connection_limit is vyos_defined %}
 limit={{ limits.connection_limit }}
 {%   endif %}
-{%   if limits.burst is defined and limits.burst %}
+{%   if limits.burst is vyos_defined %}
 burst={{ limits.burst }}
 {%   endif %}
-{%   if limits.timeout is defined and limits.timeout is not none %}
+{%   if limits.timeout is vyos_defined %}
 timeout={{ limits.timeout }}
 {%   endif %}
 {% endif %}
@@ -158,7 +158,7 @@ timeout={{ limits.timeout }}
 {# Common RADIUS shaper configuration #}
 {% include 'accel-ppp/config_shaper_radius.j2' %}
 
-{% if extended_scripts is defined %}
+{% if extended_scripts is vyos_defined %}
 [pppd-compat]
 verbose=1
 radattr-prefix=/run/accel-pppd/radattr

@@ -1,5 +1,5 @@
-{% if authentication is defined and authentication.mode is defined and authentication.mode == 'local' %}
+{% if authentication.mode is vyos_defined('local') %}
 chap-secrets
-{% elif authentication is defined and authentication.mode is defined and authentication.mode == 'radius' %}
+{% elif authentication.mode is vyos_defined('radius') %}
 radius
 {% endif %}

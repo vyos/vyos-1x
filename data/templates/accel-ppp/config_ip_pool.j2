@@ -1,12 +1,12 @@
-{% if client_ip_pool is defined and client_ip_pool is not none %}
+{% if client_ip_pool is vyos_defined %}
 [ip-pool]
-{%   if gateway_address is defined and gateway_address is not none %}
+{%   if gateway_address is vyos_defined %}
 gw-ip-address={{ gateway_address }}
 {%   endif %}
-{%   if client_ip_pool.start is defined and client_ip_pool.stop is defined and client_ip_pool.start is not none and client_ip_pool.stop is not none %}
+{%   if client_ip_pool.start is vyos_defined and client_ip_pool.stop is vyos_defined %}
 {{ client_ip_pool.start }}-{{ client_ip_pool.stop.split('.')[3] }}
 {%   endif %}
-{%   if client_ip_pool.subnet is defined and client_ip_pool.subnet is not none %}
+{%   if client_ip_pool.subnet is vyos_defined %}
 {%     for subnet in client_ip_pool.subnet %}
 {{ subnet }}
 {%     endfor %}
