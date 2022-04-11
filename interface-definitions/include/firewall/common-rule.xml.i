@@ -95,51 +95,25 @@
     </constraint>
   </properties>
 </leafNode>
-<node name="ct-status">
+<leafNode name="connection-status">
   <properties>
-    <help>Connection status in conntrack</help>
+    <help>Connection status</help>
+    <completionHelp>
+      <list>dnat snat</list>
+    </completionHelp>
+    <valueHelp>
+      <format>dnat</format>
+      <description>Match connections that are subject to destination NAT</description>
+    </valueHelp>
+    <valueHelp>
+      <format>snat</format>
+      <description>Match connections that are subject to source NAT</description>
+    </valueHelp>
+    <constraint>
+      <regex>^(dnat|snat)$</regex>
+    </constraint>
   </properties>
-  <children>
-    <leafNode name="dnat">
-      <properties>
-        <help>Set when connection needs DNAT in original direction</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>^(enable|disable)$</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="snat">
-      <properties>
-        <help>Set when connection needs SNAT in original direction</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>^(enable|disable)$</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+</leafNode>
 <leafNode name="protocol">
   <properties>
     <help>Protocol to match (protocol name, number, or "all")</help>

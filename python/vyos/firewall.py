@@ -49,11 +49,9 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         if states:
             output.append(f'ct state {{{states}}}')
 
-    if 'ct_status' in rule_conf and rule_conf['ct_status']:
-        status = ",".join([s for s, v in rule_conf['ct_status'].items() if v == 'enable'])
-
-        if status:
-            output.append(f'ct status {{{status}}}')
+    if 'connection_status' in rule_conf and rule_conf['connection_status']:
+        status = rule_conf['connection_status']
+        output.append(f'ct status {{{status}}}')
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
         proto = rule_conf['protocol']
