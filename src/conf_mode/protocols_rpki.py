@@ -81,7 +81,7 @@ def verify(rpki):
 def generate(rpki):
     if not rpki:
         return
-    rpki['new_frr_config'] = render_to_string('frr/rpki.frr.tmpl', rpki)
+    rpki['new_frr_config'] = render_to_string('frr/rpki.frr.j2', rpki)
     return None
 
 def apply(rpki):
