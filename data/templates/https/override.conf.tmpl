@@ -1,15 +1,15 @@
-{% set vrf_command = 'ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
 [Unit]
 StartLimitIntervalSec=0
 After=vyos-router.service
 
 [Service]
 ExecStartPre=
-ExecStartPre={{vrf_command}}/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'
+ExecStartPre={{ vrf_command }}/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'
 ExecStart=
-ExecStart={{vrf_command}}/usr/sbin/nginx -g 'daemon on; master_process on;'
+ExecStart={{ vrf_command }}/usr/sbin/nginx -g 'daemon on; master_process on;'
 ExecReload=
-ExecReload={{vrf_command}}/usr/sbin/nginx -g 'daemon on; master_process on;' -s reload
+ExecReload={{ vrf_command }}/usr/sbin/nginx -g 'daemon on; master_process on;' -s reload
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10

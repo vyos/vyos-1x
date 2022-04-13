@@ -1,11 +1,11 @@
-{% set vrf_command = 'ip vrf exec ' + vrf + ' ' if vrf is defined else '' %}
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
 [Unit]
 Description=VyOS HTTP API service
 After=vyos-router.service
 Requires=vyos-router.service
 
 [Service]
-ExecStart={{vrf_command}}/usr/libexec/vyos/services/vyos-http-api-server
+ExecStart={{ vrf_command }}/usr/libexec/vyos/services/vyos-http-api-server
 Type=idle
 
 SyslogIdentifier=vyos-http-api
