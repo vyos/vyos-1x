@@ -1,5 +1,5 @@
 Source                                           Destination                                      Protocol
-{% for parsed in data if parsed.flow is defined and parsed.flow.meta is defined %}
+{% for parsed in data if parsed.flow.meta is vyos_defined %}
 {%   for key in parsed.flow.meta %}
 {%     if key['@direction'] == 'original' %}
 {%       set saddr    = key.layer3.src | bracketize_ipv6 %}

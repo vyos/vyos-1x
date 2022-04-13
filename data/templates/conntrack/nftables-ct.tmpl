@@ -12,7 +12,7 @@ table raw {
     chain {{ nft_ct_ignore_name }} {
 {% if ignore.rule is vyos_defined %}
 {%   for rule, rule_config in ignore.rule.items() %}
-        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is defined and rule_config.description is not none }}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
 {%     set nft_command = '' %}
 {%     if rule_config.inbound_interface is vyos_defined %}
 {%       set nft_command = nft_command ~ ' iifname ' ~ rule_config.inbound_interface %}
@@ -40,7 +40,7 @@ table raw {
     chain {{ nft_ct_timeout_name }} {
 {% if timeout.custom.rule is vyos_defined %}
 {%   for rule, rule_config in timeout.custom.rule.items() %}
-        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is defined and rule_config.description is not none }}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
 {%   endfor %}
 {% endif %}
         return

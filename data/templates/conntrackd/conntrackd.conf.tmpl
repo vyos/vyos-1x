@@ -3,16 +3,16 @@
 # Synchronizer settings
 Sync {
     Mode FTFW {
-        DisableExternalCache {{ 'on' if disable_external_cache is defined else 'off' }}
+        DisableExternalCache {{ 'on' if disable_external_cache is vyos_defined else 'off' }}
     }
 {% for iface, iface_config in interface.items() %}
-{%   if iface_config.peer is defined and iface_config.peer is not none %}
+{%   if iface_config.peer is vyos_defined %}
     UDP {
-{%     if listen_address is defined and listen_address is not none %}
+{%     if listen_address is vyos_defined %}
         IPv4_address {{ listen_address }}
 {%     endif %}
         IPv4_Destination_Address {{ iface_config.peer }}
-        Port {{ iface_config.port if iface_config.port is defined else '3780' }}
+        Port {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
         Interface {{ iface }}
         SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
         RcvSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
@@ -22,7 +22,7 @@ Sync {
     Multicast {
 {%     set ip_address = iface | get_ipv4 %}
         IPv4_address {{ mcast_group }}
-        Group {{ iface_config.port if iface_config.port is defined else '3780' }}
+        Group {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
         IPv4_interface {{ ip_address[0] | ip_from_cidr }}
         Interface {{ iface }}
         SndSocketBuffer {{ sync_queue_size | int *1024 *1024 }}
@@ -31,7 +31,7 @@ Sync {
     }
 {%   endif %}
 {% endfor %}
-{% if expect_sync is defined and expect_sync is not none %}
+{% if expect_sync is vyos_defined %}
     Options {
 {%   if 'all' in expect_sync %}
         ExpectationSync on
@@ -83,9 +83,9 @@ General {
     NetlinkBufferSizeMaxGrowth {{ event_listen_queue_size | int *1024 *1024 }}
     NetlinkOverrunResync off
     NetlinkEventsReliable on
-{% if ignore_address is defined or accept_protocol is defined %}
+{% if ignore_address is vyos_defined or accept_protocol is vyos_defined %}
     Filter From Userspace {
-{%   if ignore_address is defined and ignore_address is not none %}
+{%   if ignore_address is vyos_defined %}
         Address Ignore {
 {%     for address in ignore_address if address | is_ipv4 %}
             IPv4_address {{ address }}
@@ -95,7 +95,7 @@ General {
 {%     endfor %}
         }
 {%   endif %}
-{%   if accept_protocol is defined and accept_protocol is not none %}
+{%   if accept_protocol is vyos_defined %}
         Protocol Accept {
 {%     for protocol in accept_protocol %}
 {%       if protocol == 'icmp6' %}
