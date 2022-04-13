@@ -5,12 +5,12 @@ pidfile: /run/pmacct/uacctd.pid
 uacctd_group: 2
 uacctd_nl_size: 2097152
 snaplen: {{ packet_length }}
-aggregate: in_iface{{ ',out_iface' if enable_egress is defined }},src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
+aggregate: in_iface{{ ',out_iface' if enable_egress is vyos_defined }},src_mac,dst_mac,vlan,src_host,dst_host,src_port,dst_port,proto,tos,flows
 {% set pipe_size = buffer_size | int *1024 *1024 %}
 plugin_pipe_size: {{ pipe_size }}
 {# We need an integer division (//) without any remainder or fraction #}
 plugin_buffer_size: {{ pipe_size // 1000 }}
-{% if syslog_facility is defined and syslog_facility is not none %}
+{% if syslog_facility is vyos_defined %}
 syslog: {{ syslog_facility }}
 {% endif %}
 {% if disable_imt is not defined %}
@@ -19,12 +19,12 @@ imt_mem_pools_number: 169
 {% endif %}
 
 {% set plugin = [] %}
-{% if netflow is defined and netflow.server is defined and netflow.server is not none %}
+{% if netflow.server is vyos_defined %}
 {%   for server in netflow.server %}
 {%     set _ = plugin.append('nfprobe[nf_' ~ server ~ ']') %}
 {%   endfor %}
 {% endif %}
-{% if sflow is defined and sflow.server is defined and sflow.server is not none %}
+{% if sflow.server is vyos_defined %}
 {%   for server in sflow.server %}
 {%     set _ = plugin.append('sfprobe[sf_' ~ server ~ ']') %}
 {%   endfor %}
@@ -34,39 +34,39 @@ imt_mem_pools_number: 169
 {% endif %}
 plugins: {{ plugin | join(',') }}
 
-{% if netflow is defined and netflow.server is defined and netflow.server is not none %}
+{% if netflow.server is vyos_defined %}
 # NetFlow servers
 {%   for server, server_config in netflow.server.items() %}
 nfprobe_receiver[nf_{{ server }}]: {{ server }}:{{ server_config.port }}
 nfprobe_version[nf_{{ server }}]: {{ netflow.version }}
-{%     if netflow.engine_id is defined and netflow.engine_id is not none %}
+{%     if netflow.engine_id is vyos_defined %}
 nfprobe_engine[nf_{{ server }}]: {{ netflow.engine_id }}
 {%     endif %}
-{%     if netflow.max_flows is defined and netflow.max_flows is not none %}
+{%     if netflow.max_flows is vyos_defined %}
 nfprobe_maxflows[nf_{{ server }}]: {{ netflow.max_flows }}
 {%     endif %}
-{%     if netflow.sampling_rate is defined and netflow.sampling_rate is not none %}
+{%     if netflow.sampling_rate is vyos_defined %}
 sampling_rate[nf_{{ server }}]: {{ netflow.sampling_rate }}
 {%     endif %}
-{%     if netflow.source_address is defined and netflow.source_address is not none %}
+{%     if netflow.source_address is vyos_defined %}
 nfprobe_source_ip[nf_{{ server }}]: {{ netflow.source_address }}
 {%     endif %}
-{%     if netflow.timeout is defined and netflow.timeout is not none %}
+{%     if netflow.timeout is vyos_defined %}
 nfprobe_timeouts[nf_{{ server }}]: expint={{ netflow.timeout.expiry_interval }}:general={{ netflow.timeout.flow_generic }}:icmp={{ netflow.timeout.icmp }}:maxlife={{ netflow.timeout.max_active_life }}:tcp.fin={{ netflow.timeout.tcp_fin }}:tcp={{ netflow.timeout.tcp_generic }}:tcp.rst={{ netflow.timeout.tcp_rst }}:udp={{ netflow.timeout.udp }}
 {%     endif %}
 
 {%   endfor %}
 {% endif %}
 
-{% if sflow is defined and sflow.server is defined and sflow.server is not none %}
+{% if sflow.server is vyos_defined %}
 # sFlow servers
 {%   for server, server_config in sflow.server.items() %}
 sfprobe_receiver[sf_{{ server }}]: {{ server }}:{{ server_config.port }}
 sfprobe_agentip[sf_{{ server }}]: {{ sflow.agent_address }}
-{%     if sflow.sampling_rate is defined and sflow.sampling_rate is not none %}
+{%     if sflow.sampling_rate is vyos_defined %}
 sampling_rate[sf_{{ server }}]: {{ sflow.sampling_rate }}
 {%     endif %}
-{%     if sflow.source_address is defined and sflow.source_address is not none %}
+{%     if sflow.source_address is vyos_defined %}
 sfprobe_source_ip[sf_{{ server }}]: {{ sflow.source_address }}
 {%     endif %}
 
