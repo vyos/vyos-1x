@@ -3,12 +3,12 @@
 {% if ip %}
 ifconfig-push {{ ip[0] }} {{ server_subnet[0] | netmask_from_cidr }}
 {% endif %}
-{% if push_route is defined and push_route is not none %}
+{% if push_route is vyos_defined %}
 {%   for route in push_route %}
 push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }}"
 {%   endfor %}
 {% endif %}
-{% if subnet is defined and subnet is not none %}
+{% if subnet is vyos_defined %}
 {%   for network in subnet %}
 iroute {{ network | address_from_cidr }} {{ network | netmask_from_cidr }}
 {%   endfor %}
@@ -26,6 +26,6 @@ push "route-ipv6 {{ route6 }}"
 iroute-ipv6 {{ net6 }}
 {%   endfor %}
 {% endif %}
-{% if disable is defined %}
+{% if disable is vyos_defined %}
 disable
 {% endif %}

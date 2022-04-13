@@ -1,7 +1,7 @@
 [Service]
 ExecStart=
 ExecStart=/usr/sbin/openvpn --daemon openvpn-%i --config %i.conf --status %i.status 30 --writepid %i.pid
-{%- if openvpn_option is defined and openvpn_option is not none %}
+{%- if openvpn_option is vyos_defined %}
 {%   for option in openvpn_option %}
 {#     Remove the '--' prefix from variable if it is presented #}
 {%     if option.startswith('--') %}
