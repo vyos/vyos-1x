@@ -1,12 +1,10 @@
 dhcp {
     load = yes
-{% if remote_access is defined and remote_access.dhcp is defined %}
-{%   if remote_access.dhcp.interface is defined %}
+{% if remote_access.dhcp.interface is vyos_defined %}
     interface = {{ remote_access.dhcp.interface }}
-{%   endif %}
-{%   if remote_access.dhcp.server is defined %}
+{% endif %}
+{% if remote_access.dhcp.server is vyos_defined %}
     server = {{ remote_access.dhcp.server }}
-{%   endif %}
 {% endif %}
 
     # Always use the configured server address.

@@ -41,7 +41,7 @@ eap-radius {
     load = yes
 
     # NAS-Identifier to include in RADIUS messages.
-    nas_identifier = {{ remote_access.radius.nas_identifier if remote_access is defined and remote_access.radius is defined and remote_access.radius.nas_identifier is defined else 'strongSwan' }}
+    nas_identifier = {{ remote_access.radius.nas_identifier if remote_access.radius.nas_identifier is vyos_defined else 'strongSwan' }}
 
     # Port of RADIUS server (authentication).
     # port = 1812
@@ -94,13 +94,13 @@ eap-radius {
 
     # Section to specify multiple RADIUS servers.
     servers {
-{%  if remote_access is defined and remote_access.radius is defined and remote_access.radius.server is defined %}
-{%    for server, server_options in remote_access.radius.server.items() if server_options.disable is not defined %}
+{%  if remote_access.radius.server is vyos_defined %}
+{%    for server, server_options in remote_access.radius.server.items() if server_options.disable is not vyos_defined %}
         {{ server | replace('.', '-') }} {
             address = {{ server }}
             secret = {{ server_options.key }}
             auth_port = {{ server_options.port }}
-{%      if server_options.disable_accounting is not defined %}
+{%      if server_options.disable_accounting is not vyos_defined %}
             acct_port = {{ server_options.port | int +1 }}
 {%  endif %}
             sockets = 20

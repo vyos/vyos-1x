@@ -2,7 +2,7 @@
 
 config setup
 {% set charondebug = '' %}
-{% if log is defined and log.subsystem is defined and log.subsystem is not none %}
+{% if log.subsystem is vyos_defined %}
 {%   set subsystem = log.subsystem %}
 {%   if 'any' in log.subsystem %}
 {%     set subsystem = ['dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl', 'net', 'asn',
@@ -11,8 +11,8 @@ config setup
 {%   set charondebug = subsystem | join (' ' ~ log.level ~ ', ') ~ ' ' ~ log.level %}
 {% endif %}
     charondebug = "{{ charondebug }}"
-    uniqueids = {{ "no" if disable_uniqreqids is defined else "yes" }}
+    uniqueids = {{ "no" if disable_uniqreqids is vyos_defined else "yes" }}
 
-{%  if include_ipsec_conf is defined %}
+{%  if include_ipsec_conf is vyos_defined %}
 include {{ include_ipsec_conf }}
 {%  endif %}

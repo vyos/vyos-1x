@@ -21,12 +21,12 @@ charon {
     # cisco_unity = no
 
     # Cisco FlexVPN
-{% if options is defined %}
-    cisco_flexvpn = {{ 'yes' if options.flexvpn is defined else 'no' }}
-{%   if options.virtual_ip is defined %}
+{% if options is vyos_defined %}
+    cisco_flexvpn = {{ 'yes' if options.flexvpn is vyos_defined else 'no' }}
+{%   if options.virtual_ip is vyos_defined %}
     install_virtual_ip = yes
 {%   endif %}
-{%   if options.interface is defined and options.interface is not none %}
+{%   if options.interface is vyos_defined %}
     install_virtual_ip_on = {{ options.interface }}
 {%   endif %}
 {%  endif %}
