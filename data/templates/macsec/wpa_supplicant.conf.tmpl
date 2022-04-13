@@ -45,10 +45,9 @@ network={
     #  - the key server has decided to enable MACsec
     # 0: Encrypt traffic (default)
     # 1: Integrity only
-    macsec_integ_only={{ '0' if security is defined and security.encrypt is defined else '1' }}
+    macsec_integ_only={{ '0' if security.encrypt is vyos_defined else '1' }}
 
-{% if security is defined %}
-{%   if security.encrypt is defined %}
+{% if security.encrypt is vyos_defined %}
     # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
     # This allows to configure MACsec with a pre-shared key using a (CAK,CKN) pair.
     # In this mode, instances of wpa_supplicant can act as MACsec peers. The peer
@@ -63,9 +62,9 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security.mka.priority }}
-{%   endif %}
+{% endif %}
 
-{%   if security.replay_window is defined %}
+{% if security.replay_window is vyos_defined %}
     # macsec_replay_protect: IEEE 802.1X/MACsec replay protection
     # This setting applies only when MACsec is in use, i.e.,
     #  - macsec_policy is enabled
@@ -83,7 +82,6 @@ network={
     # 0: No replay window, strict check (default)
     # 1..2^32-1: number of packets that could be misordered
     macsec_replay_window={{ security.replay_window }}
-{%   endif %}
 {% endif %}
 }
 
