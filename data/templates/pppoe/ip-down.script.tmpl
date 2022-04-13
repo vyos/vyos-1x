@@ -26,13 +26,13 @@ fi
 {%   if default_route != 'none' %}
 # Always delete default route when interface goes down if we installed it
 vtysh -c "conf t" ${VRF_NAME} -c "no ip route 0.0.0.0/0 {{ ifname }} ${VRF_NAME}"
-{%      if ipv6 is defined and ipv6.address is defined and ipv6.address.autoconf is defined %}
+{%      if ipv6.address.autoconf is vyos_defined %}
 vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
 {%      endif %}
 {%   endif %}
 {% endif %}
 
-{% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
+{% if dhcpv6_options.pd is vyos_defined %}
 # Stop wide dhcpv6 client
 systemctl stop dhcp6c@{{ ifname }}.service
 {% endif %}
