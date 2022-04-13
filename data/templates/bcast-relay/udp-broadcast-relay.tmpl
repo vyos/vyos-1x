@@ -2,4 +2,4 @@
 
 # UDP broadcast relay configuration for instance {{ id }}
 {{ '# ' ~ description if description is vyos_defined }}
-DAEMON_ARGS="{{ '-s ' ~ address if address is defined }} {{ instance }} {{ port }} {{ interface | join(' ') }}"
+DAEMON_ARGS="{{ '-s ' ~ address if address is vyos_defined }} {{ instance }} {{ port }} {{ interface | join(' ') }}"
