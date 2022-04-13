@@ -15,17 +15,17 @@ restrict -6 ::1
 #
 # Configurable section
 #
-{% if server is defined and server is not none %}
+{% if server is vyos_defined %}
 {%   for server, config in server.items() %}
 {%     set association = 'server' %}
-{%     if config.pool is defined %}
+{%     if config.pool is vyos_defined %}
 {%       set association = 'pool' %}
 {%     endif %}
-{{ association }} {{ server | replace('_', '-') }} iburst {{ 'noselect' if config.noselect is defined }} {{ 'preempt' if config.preempt is defined }} {{ 'prefer' if config.prefer is defined }}
+{{ association }} {{ server | replace('_', '-') }} iburst {{ 'noselect' if config.noselect is vyos_defined }} {{ 'preempt' if config.preempt is vyos_defined }} {{ 'prefer' if config.prefer is vyos_defined }}
 {%   endfor %}
 {% endif %}
 
-{% if allow_clients is defined and allow_clients.address is defined %}
+{% if allow_clients.address is vyos_defined %}
 # Allowed clients configuration
 restrict default ignore
 {%   for address in allow_clients.address %}
