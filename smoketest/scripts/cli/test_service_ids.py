@@ -87,7 +87,8 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'ban_for_pps = on', config)
         self.assertIn(f'threshold_pps = {pps}', config)
 
-        self.assertIn(f'interfaces = {interfaces.join(",")}', config)
+        tmp = ','.join(interfaces)
+        self.assertIn(f'interfaces = {tmp}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
