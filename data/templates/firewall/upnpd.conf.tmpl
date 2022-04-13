@@ -2,7 +2,7 @@
 
 # WAN network interface
 ext_ifname={{ wan_interface }}
-{% if wan_ip is defined %}
+{% if wan_ip is vyos_defined %}
 # If the WAN interface has several IP addresses, you
 # can specify the one to use below
 {%   for addr in wan_ip %}
@@ -11,7 +11,7 @@ ext_ip={{ addr }}
 {% endif %}
 
 # LAN network interfaces IPs / networks
-{% if listen is defined %}
+{% if listen is vyos_defined %}
 # There can be multiple listening IPs for SSDP traffic, in that case
 # use multiple 'listening_ip=...' lines, one for each network interface.
 # It can be IP address or network interface name (ie. "eth0")
@@ -45,7 +45,7 @@ listening_ip={{ addr }}
 # default is /var/run/minissdpd.sock
 #minissdpdsocket=/var/run/minissdpd.sock
 
-{% if nat_pmp is defined %}
+{% if nat_pmp is vyos_defined %}
 # Enable NAT-PMP support (default is no)
 enable_natpmp=yes
 {% endif %}
@@ -53,14 +53,14 @@ enable_natpmp=yes
 # Enable UPNP support (default is yes)
 enable_upnp=yes
 
-{% if pcp_lifetime is defined %}
+{% if pcp_lifetime is vyos_defined %}
 # PCP
 # Configure the minimum and maximum lifetime of a port mapping in seconds
 # 120s and 86400s (24h) are suggested values from PCP-base
-{% if pcp_lifetime.max is defined %}
+{% if pcp_lifetime.max is vyos_defined %}
 max_lifetime={{ pcp_lifetime.max }}
 {% endif %}
-{% if pcp_lifetime.min is defined %}
+{% if pcp_lifetime.min is vyos_defined %}
 min_lifetime={{ pcp_lifetime.min }}
 {% endif %}
 {% endif %}
@@ -69,7 +69,7 @@ min_lifetime={{ pcp_lifetime.min }}
 # To enable the next few runtime options, see compile time
 # ENABLE_MANUFACTURER_INFO_CONFIGURATION (config.h)
 
-{% if friendly_name is defined %}
+{% if friendly_name is vyos_defined %}
 # Name of this service, default is "`uname -s` router"
 friendly_name= {{ friendly_name }}
 {% endif  %}
@@ -89,7 +89,7 @@ model_description=Vyos open source enterprise router/firewall operating system
 # Model URL, default is URL of OS vendor
 model_url=https://vyos.io/
 
-{% if secure_mode is defined %}
+{% if secure_mode is vyos_defined %}
 # Secure Mode, UPnP clients can only add mappings to their own IP
 secure_mode=yes
 {% else %}
@@ -97,7 +97,7 @@ secure_mode=yes
 secure_mode=no
 {% endif %}
 
-{% if presentation_url is defined %}
+{% if presentation_url is vyos_defined %}
 # Default presentation URL is HTTP address on port 80
 # If set to an empty string, no presentationURL element will appear
 # in the XML description of the device, which prevents MS Windows
@@ -129,7 +129,7 @@ lease_file=/config/upnp.leases
 #serial=12345678
 #model_number=1
 
-{% if rules is defined %}
+{% if rules is vyos_defined %}
 # UPnP permission rules
 # (allow|deny) (external port range) IP/mask (internal port range)
 # A port range is <min port>-<max port> or <port> if there is only
@@ -143,13 +143,13 @@ lease_file=/config/upnp.leases
 # also consider implementing network-specific restrictions
 # CAUTION: failure to enforce any rules may permit insecure requests to be made!
 {% for rule, config in rules.items() %}
-{%  if config.disable is defined %}
+{%  if config.disable is vyos_defined %}
 {{ config.action}} {{ config.external_port_range }} {{ config.ip }} {{ config.internal_port_range }}
 {%  endif %}
 {% endfor %}
 {% endif %}
 
-{% if stun is defined %}
+{% if stun is vyos_defined %}
 # WAN interface must have public IP address. Otherwise it is behind NAT
 # and port forwarding is impossible. In some cases WAN interface can be
 # behind unrestricted NAT 1:1 when all incoming traffic is NAT-ed and
