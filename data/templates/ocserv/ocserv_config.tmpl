@@ -20,15 +20,15 @@ auth = "plain[/run/ocserv/ocpasswd]"
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}
 
-{% if ssl.certificate is defined %}
+{% if ssl.certificate is vyos_defined %}
 server-cert = /run/ocserv/cert.pem
 server-key = /run/ocserv/cert.key
-{% if ssl.passphrase is defined %}
+{% if ssl.passphrase is vyos_defined %}
 key-pin = {{ ssl.passphrase }}
 {% endif %}
 {% endif %}
 
-{% if ssl.ca_certificate is defined %}
+{% if ssl.ca_certificate is vyos_defined %}
 ca-cert = /run/ocserv/ca.pem
 {% endif %}
 

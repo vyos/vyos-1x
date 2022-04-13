@@ -1,7 +1,7 @@
 #<token_type> <username> <pin> <secret_hex_key> <counter> <lastpass> <time>
-{% if username is defined %}
+{% if username is vyos_defined %}
 {%   for user, user_config in username.items() %}
-{%     if user_config.disable is not defined and user_config.otp is defined and user_config.otp is not none %}
+{%     if user_config.disable is not vyos_defined and user_config.otp is vyos_defined %}
 {{ user_config.otp.token_tmpl }} {{ user }} {{ user_config.otp.pin | default("-", true) }} {{ user_config.otp.key }}
 {%     endif %}
 {%   endfor %}
