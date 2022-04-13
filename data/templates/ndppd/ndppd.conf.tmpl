@@ -15,13 +15,13 @@
 ########################################################
 
 {% set global = namespace(ndppd_interfaces = [],ndppd_prefixs = []) %}
-{% if source is defined and source.rule is defined and source.rule is not none %}
+{% if source.rule is vyos_defined %}
 {%   for rule, config in source.rule.items() if config.disable is not defined %}
-{%     if config.outbound_interface is defined %}
+{%     if config.outbound_interface is vyos_defined %}
 {%         if config.outbound_interface not in global.ndppd_interfaces %}
 {%             set global.ndppd_interfaces = global.ndppd_interfaces + [config.outbound_interface] %}
 {%         endif   %}
-{%         if config.translation is defined and config.translation.address is defined and config.translation.address | is_ip_network %}
+{%         if config.translation.address is vyos_defined and config.translation.address | is_ip_network %}
 {%             set global.ndppd_prefixs = global.ndppd_prefixs + [{'interface':config.outbound_interface,'rule':config.translation.address}] %}
 {%         endif    %}
 {%     endif    %}
