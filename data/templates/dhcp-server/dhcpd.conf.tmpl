@@ -158,7 +158,7 @@ shared-network {{ network }} {
 {%         if subnet_config.bootfile_server is vyos_defined %}
         next-server {{ subnet_config.bootfile_server }};
 {%         endif %}
-{%         if subnet_config.bootfile_size is defined and subnet_config.bootfile_size is not none %}
+{%         if subnet_config.bootfile_size is vyos_defined %}
         option boot-size {{ subnet_config.bootfile_size }};
 {%         endif %}
 {%         if subnet_config.time_offset is vyos_defined %}
