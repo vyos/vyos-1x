@@ -12,13 +12,13 @@ ff00::0         ip6-mcastprefix
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 
-{% if hosts is defined and hosts is not none %}
+{% if hosts is vyos_defined %}
 # From 'system static-host-mapping' and DHCP server
 {%   for tag, taghosts in hosts.items() %}
 # {{ tag }}
-{%     for host, hostprops in taghosts.items() if hostprops.address is defined %}
+{%     for host, hostprops in taghosts.items() if hostprops.address is vyos_defined %}
 {%       for addr in hostprops.address %}
-{{ "%-15s" | format(addr) }} {{ host }} {{ hostprops.aliases|join(' ') if hostprops.aliases is defined }}
+{{ "%-15s" | format(addr) }} {{ host }} {{ hostprops.aliases|join(' ') if hostprops.aliases is vyos_defined }}
 {%       endfor %}
 {%     endfor %}
 {%   endfor %}
