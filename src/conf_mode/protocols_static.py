@@ -91,7 +91,7 @@ def verify(static):
 def generate(static):
     if not static:
         return None
-    static['new_frr_config'] = render_to_string('frr/staticd.frr.tmpl', static)
+    static['new_frr_config'] = render_to_string('frr/staticd.frr.j2', static)
     return None
 
 def apply(static):

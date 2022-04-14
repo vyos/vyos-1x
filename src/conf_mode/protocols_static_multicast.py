@@ -96,7 +96,7 @@ def generate(mroute):
     if mroute is None:
         return None
 
-    render(config_file, 'frr/static_mcast.frr.tmpl', mroute)
+    render(config_file, 'frr/static_mcast.frr.j2', mroute)
     return None
 
 def apply(mroute):

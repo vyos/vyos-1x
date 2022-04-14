@@ -177,7 +177,7 @@ def verify(policy):
 def generate(policy):
     if not policy:
         return None
-    policy['new_frr_config'] = render_to_string('frr/policy.frr.tmpl', policy)
+    policy['new_frr_config'] = render_to_string('frr/policy.frr.j2', policy)
     return None
 
 def apply(policy):

@@ -160,7 +160,7 @@ def verify(ospf):
     route_map_name = dict_search('default_information.originate.route_map', ospf)
     if route_map_name: verify_route_map(route_map_name, ospf)
 
-    # Validate if configured Access-list exists 
+    # Validate if configured Access-list exists
     if 'area' in ospf:
           for area, area_config in ospf['area'].items():
               if 'import_list' in area_config:
@@ -204,9 +204,9 @@ def generate(ospf):
     if not ospf or 'deleted' in ospf:
         return None
 
-    ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.tmpl
-    ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', ospf)
-    ospf['frr_ospfd_config'] = render_to_string('frr/ospfd.frr.tmpl', ospf)
+    ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.j2
+    ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', ospf)
+    ospf['frr_ospfd_config'] = render_to_string('frr/ospfd.frr.j2', ospf)
     return None
 
 def apply(ospf):

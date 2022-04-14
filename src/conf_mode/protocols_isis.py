@@ -210,9 +210,9 @@ def generate(isis):
     if not isis or 'deleted' in isis:
         return None
 
-    isis['protocol'] = 'isis' # required for frr/vrf.route-map.frr.tmpl
-    isis['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', isis)
-    isis['frr_isisd_config'] = render_to_string('frr/isisd.frr.tmpl', isis)
+    isis['protocol'] = 'isis' # required for frr/vrf.route-map.frr.j2
+    isis['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', isis)
+    isis['frr_isisd_config'] = render_to_string('frr/isisd.frr.j2', isis)
     return None
 
 def apply(isis):

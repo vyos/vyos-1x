@@ -1,53 +1,53 @@
 !
 {% if interface is vyos_defined %}
-{%   for iface, iface_config in interface.items() %}
+{%     for iface, iface_config in interface.items() %}
 interface {{ iface }}
  ip router isis VyOS
  ipv6 router isis VyOS
-{%     if iface_config.bfd is vyos_defined %}
+{%         if iface_config.bfd is vyos_defined %}
  isis bfd
-{%       if iface_config.bfd.profile is vyos_defined %}
+{%             if iface_config.bfd.profile is vyos_defined %}
  isis bfd profile {{ iface_config.bfd.profile }}
-{%       endif %}
-{%     endif %}
-{%     if iface_config.network.point_to_point is vyos_defined %}
+{%             endif %}
+{%         endif %}
+{%         if iface_config.network.point_to_point is vyos_defined %}
  isis network point-to-point
-{%     endif %}
-{%     if iface_config.circuit_type is vyos_defined %}
+{%         endif %}
+{%         if iface_config.circuit_type is vyos_defined %}
  isis circuit-type {{ iface_config.circuit_type }}
-{%     endif %}
-{%     if iface_config.hello_interval is vyos_defined %}
+{%         endif %}
+{%         if iface_config.hello_interval is vyos_defined %}
  isis hello-interval {{ iface_config.hello_interval }}
-{%     endif %}
-{%     if iface_config.hello_multiplier is vyos_defined %}
+{%         endif %}
+{%         if iface_config.hello_multiplier is vyos_defined %}
  isis hello-multiplier {{ iface_config.hello_multiplier }}
-{%     endif %}
-{%     if iface_config.hello_padding is vyos_defined %}
+{%         endif %}
+{%         if iface_config.hello_padding is vyos_defined %}
  isis hello padding
-{%     endif %}
-{%     if iface_config.metric is vyos_defined %}
+{%         endif %}
+{%         if iface_config.metric is vyos_defined %}
  isis metric {{ iface_config.metric }}
-{%     endif %}
-{%     if iface_config.passive is vyos_defined %}
+{%         endif %}
+{%         if iface_config.passive is vyos_defined %}
  isis passive
-{%     endif %}
-{%     if iface_config.password.md5 is vyos_defined %}
+{%         endif %}
+{%         if iface_config.password.md5 is vyos_defined %}
  isis password md5 {{ iface_config.password.md5 }}
-{%     elif iface_config.password.plaintext_password is vyos_defined %}
+{%         elif iface_config.password.plaintext_password is vyos_defined %}
  isis password clear {{ iface_config.password.plaintext_password }}
-{%     endif %}
-{%     if iface_config.priority is vyos_defined %}
+{%         endif %}
+{%         if iface_config.priority is vyos_defined %}
  isis priority {{ iface_config.priority }}
-{%     endif %}
-{%     if iface_config.psnp_interval is vyos_defined %}
+{%         endif %}
+{%         if iface_config.psnp_interval is vyos_defined %}
  isis psnp-interval {{ iface_config.psnp_interval }}
-{%     endif %}
-{%     if iface_config.no_three_way_handshake is vyos_defined %}
+{%         endif %}
+{%         if iface_config.no_three_way_handshake is vyos_defined %}
  no isis three-way-handshake
-{%     endif %}
+{%         endif %}
 exit
 !
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 !
 router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
@@ -94,58 +94,58 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  mpls-te router-address {{ traffic_engineering.address }}
 {% endif %}
 {% if traffic_engineering.inter_as is vyos_defined %}
-{%   set level = '' %}
-{%   if traffic_engineering.inter_as.level_1 is vyos_defined %}
-{%     set level = ' level-1' %}
-{%   endif %}
-{%   if traffic_engineering.inter_as.level_1_2 is vyos_defined %}
-{%     set level = ' level-1-2' %}
-{%   endif %}
-{%   if traffic_engineering.inter_as.level_2 is vyos_defined %}
-{%     set level = ' level-2-only' %}
-{%   endif %}
+{%     set level = '' %}
+{%     if traffic_engineering.inter_as.level_1 is vyos_defined %}
+{%         set level = ' level-1' %}
+{%     endif %}
+{%     if traffic_engineering.inter_as.level_1_2 is vyos_defined %}
+{%         set level = ' level-1-2' %}
+{%     endif %}
+{%     if traffic_engineering.inter_as.level_2 is vyos_defined %}
+{%         set level = ' level-2-only' %}
+{%     endif %}
  mpls-te inter-as{{ level }}
 {% endif %}
 {% if segment_routing is vyos_defined %}
-{%   if segment_routing.enable is vyos_defined %}
+{%     if segment_routing.enable is vyos_defined %}
  segment-routing on
-{%   endif %}
-{%   if segment_routing.maximum_label_depth is vyos_defined %}
- segment-routing node-msd {{ segment_routing.maximum_label_depth }}
-{%   endif %}
-{%   if segment_routing.global_block is vyos_defined %}
-{%     if segment_routing.local_block is vyos_defined %}
- segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }} local-block {{ segment_routing.local_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
-{%     else %}
- segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }}
 {%     endif %}
-{%   endif %}
-{%   if segment_routing.prefix is vyos_defined %}
-{%     for prefixes in segment_routing.prefix %}
-{%       if segment_routing.prefix[prefixes].absolute is vyos_defined %}
-{%         if segment_routing.prefix[prefixes].absolute.value is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }}
-{%           if segment_routing.prefix[prefixes].absolute.explicit_null is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }} explicit-null
-{%           endif %}
-{%           if segment_routing.prefix[prefixes].absolute.no_php_flag is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ segment_routing.prefix[prefixes].absolute.value }} no-php-flag
-{%           endif %}
+{%     if segment_routing.maximum_label_depth is vyos_defined %}
+ segment-routing node-msd {{ segment_routing.maximum_label_depth }}
+{%     endif %}
+{%     if segment_routing.global_block is vyos_defined %}
+{%         if segment_routing.local_block is vyos_defined %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }} local-block {{ segment_routing.local_block.low_label_value }} {{ segment_routing.local_block.high_label_value }}
+{%         else %}
+ segment-routing global-block {{ segment_routing.global_block.low_label_value }} {{ segment_routing.global_block.high_label_value }}
 {%         endif %}
-{%         if segment_routing.prefix[prefixes].index is vyos_defined %}
-{%           if segment_routing.prefix[prefixes].index.value is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }}
-{%             if segment_routing.prefix[prefixes].index.explicit_null is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }} explicit-null
+{%     endif %}
+{%     if segment_routing.prefix is vyos_defined %}
+{%         for prefix, prefix_config in segment_routing.prefix.items() %}
+{%             if prefix_config.absolute is vyos_defined %}
+{%                 if prefix_config.absolute.value is vyos_defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }}
+{%                     if prefix_config.absolute.explicit_null is vyos_defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }} explicit-null
+{%                     endif %}
+{%                     if prefix_config.absolute.no_php_flag is vyos_defined %}
+ segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }} no-php-flag
+{%                     endif %}
+{%                 endif %}
+{%                 if prefix_config.index is vyos_defined %}
+{%                     if prefix_config.index.value is vyos_defined %}
+ segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }}
+{%                         if prefix_config.index.explicit_null is vyos_defined %}
+ segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }} explicit-null
+{%                         endif %}
+{%                         if prefix_config.index.no_php_flag is vyos_defined %}
+ segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }} no-php-flag
+{%                         endif %}
+{%                     endif %}
+{%                 endif %}
 {%             endif %}
-{%             if segment_routing.prefix[prefixes].index.no_php_flag is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ segment_routing.prefix[prefixes].index.value }} no-php-flag
-{%             endif %}
-{%           endif %}
-{%         endif %}
-{%       endif %}
-{%     endfor %}
-{%   endif %}
+{%         endfor %}
+{%     endif %}
 {% endif %}
 {% if spf_delay_ietf.init_delay is vyos_defined %}
  spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }} short-delay {{ spf_delay_ietf.short_delay }} long-delay {{ spf_delay_ietf.long_delay }} holddown {{ spf_delay_ietf.holddown }} time-to-learn {{ spf_delay_ietf.time_to_learn }}
@@ -156,37 +156,37 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  area-password clear {{ area_password.plaintext_password }}
 {% endif %}
 {% if default_information.originate is vyos_defined %}
-{%   for afi, afi_config in default_information.originate.items() %}
-{%     for level, level_config in afi_config.items() %}
+{%     for afi, afi_config in default_information.originate.items() %}
+{%         for level, level_config in afi_config.items() %}
  default-information originate {{ afi }} {{ level | replace('_', '-') }} {{ 'always' if level_config.always is vyos_defined }} {{ 'route-map ' ~ level_config.route_map if level_config.route_map is vyos_defined }} {{ 'metric ' ~ level_config.metric if level_config.metric is vyos_defined }}
+{%         endfor %}
 {%     endfor %}
-{%   endfor %}
 {% endif %}
 {% if redistribute.ipv4 is vyos_defined %}
-{%   for protocol, protocol_options in redistribute.ipv4.items() %}
-{%     for level, level_config in protocol_options.items() %}
-{%       if level_config.metric is vyos_defined %}
+{%     for protocol, protocol_options in redistribute.ipv4.items() %}
+{%         for level, level_config in protocol_options.items() %}
+{%             if level_config.metric is vyos_defined %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
-{%       elif level_config.route_map is vyos_defined %}
+{%             elif level_config.route_map is vyos_defined %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
-{%       else %}
+{%             else %}
  redistribute ipv4 {{ protocol }} {{ level | replace('_', '-') }}
-{%       endif %}
+{%             endif %}
+{%         endfor %}
 {%     endfor %}
-{%   endfor %}
 {% endif %}
 {% if redistribute.ipv6 is vyos_defined %}
-{%   for protocol, protocol_options in redistribute.ipv6.items() %}
-{%     for level, level_config in protocol_options.items() %}
-{%       if level_config.metric is vyos_defined %}
+{%     for protocol, protocol_options in redistribute.ipv6.items() %}
+{%         for level, level_config in protocol_options.items() %}
+{%             if level_config.metric is vyos_defined %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} metric {{ level_config.metric }}
-{%       elif level_config.route_map is vyos_defined %}
+{%             elif level_config.route_map is vyos_defined %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }} route-map {{ level_config.route_map }}
-{%       else %}
+{%             else %}
  redistribute ipv6 {{ protocol }} {{ level | replace('_', '-') }}
-{%       endif %}
+{%             endif %}
+{%         endfor %}
 {%     endfor %}
-{%   endfor %}
 {% endif %}
 {% if level is vyos_defined('level-2') %}
  is-type level-2-only

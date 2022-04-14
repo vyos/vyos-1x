@@ -98,7 +98,7 @@ def verify(bfd):
 def generate(bfd):
     if not bfd:
         return None
-    bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.tmpl', bfd)
+    bfd['new_frr_config'] = render_to_string('frr/bfdd.frr.j2', bfd)
 
 def apply(bfd):
     bfd_daemon = 'bfdd'

@@ -1,0 +1,9 @@
+{% if name is vyos_defined %}
+{%     for vrf, vrf_config in name.items() %}
+vrf {{ vrf }}
+{%         if vrf_config.vni is vyos_defined %}
+ vni {{ vrf_config.vni }}
+{%         endif %}
+ exit-vrf
+{%     endfor %}
+{% endif %}

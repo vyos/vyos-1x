@@ -68,7 +68,7 @@ def generate(mpls):
     if not mpls or 'deleted' in mpls:
         return None
 
-    mpls['frr_ldpd_config'] = render_to_string('frr/ldpd.frr.tmpl', mpls)
+    mpls['frr_ldpd_config'] = render_to_string('frr/ldpd.frr.j2', mpls)
     return None
 
 def apply(mpls):

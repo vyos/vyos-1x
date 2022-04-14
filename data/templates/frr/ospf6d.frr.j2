@@ -1,0 +1,95 @@
+!
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.area is vyos_defined %}
+ ipv6 ospf6 area {{ iface_config.area }}
+{%         endif %}
+{%         if iface_config.cost is vyos_defined %}
+ ipv6 ospf6 cost {{ iface_config.cost }}
+{%         endif %}
+{%         if iface_config.priority is vyos_defined %}
+ ipv6 ospf6 priority {{ iface_config.priority }}
+{%         endif %}
+{%         if iface_config.hello_interval is vyos_defined %}
+ ipv6 ospf6 hello-interval {{ iface_config.hello_interval }}
+{%         endif %}
+{%         if iface_config.retransmit_interval is vyos_defined %}
+ ipv6 ospf6 retransmit-interval {{ iface_config.retransmit_interval }}
+{%         endif %}
+{%         if iface_config.transmit_delay is vyos_defined %}
+ ipv6 ospf6 transmit-delay {{ iface_config.transmit_delay }}
+{%         endif %}
+{%         if iface_config.dead_interval is vyos_defined %}
+ ipv6 ospf6 dead-interval {{ iface_config.dead_interval }}
+{%         endif %}
+{%         if iface_config.bfd is vyos_defined %}
+ ipv6 ospf6 bfd
+{%         endif %}
+{%         if iface_config.bfd.profile is vyos_defined %}
+ ipv6 ospf6 bfd profile {{ iface_config.bfd.profile }}
+{%         endif %}
+{%         if iface_config.mtu_ignore is vyos_defined %}
+ ipv6 ospf6 mtu-ignore
+{%         endif %}
+{%         if iface_config.ifmtu is vyos_defined %}
+ ipv6 ospf6 ifmtu {{ iface_config.ifmtu }}
+{%         endif %}
+{%         if iface_config.network is vyos_defined %}
+ ipv6 ospf6 network {{ iface_config.network }}
+{%         endif %}
+{%         if iface_config.instance_id is vyos_defined %}
+ ipv6 ospf6 instance-id {{ iface_config.instance_id }}
+{%         endif %}
+{%         if iface_config.passive is vyos_defined %}
+ ipv6 ospf6 passive
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}
+!
+router ospf6 {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
+{% if area is vyos_defined %}
+{%     for area_id, area_config in area.items() %}
+{%         if area_config.area_type is vyos_defined %}
+{%             for type, type_config in area_config.area_type.items() %}
+ area {{ area_id }} {{ type }} {{ 'default-information-originate' if type_config.default_information_originate is vyos_defined }} {{ 'no-summary' if type_config.no_summary is vyos_defined }}
+{%             endfor %}
+{%         endif %}
+{%         if area_config.range is vyos_defined %}
+{%             for prefix, prefix_config in area_config.range.items() %}
+ area {{ area_id }} range {{ prefix }} {{ 'advertise' if prefix_config.advertise is vyos_defined }} {{ 'not-advertise' if prefix_config.not_advertise is vyos_defined }}
+{%             endfor %}
+{%         endif %}
+{%         if area_config.export_list is vyos_defined %}
+ area {{ area_id }} export-list {{ area_config.export_list }}
+{%         endif %}
+{%         if area_config.import_list is vyos_defined %}
+ area {{ area_id }} import-list {{ area_config.import_list }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+ auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
+{% if default_information.originate is vyos_defined %}
+ default-information originate {{ 'always' if default_information.originate.always is vyos_defined }} {{ 'metric ' ~ default_information.originate.metric if default_information.originate.metric is vyos_defined }} {{ 'metric-type ' ~ default_information.originate.metric_type if default_information.originate.metric_type is vyos_defined }} {{ 'route-map ' ~ default_information.originate.route_map if default_information.originate.route_map is vyos_defined }}
+{% endif %}
+{% if distance.global is vyos_defined %}
+ distance {{ distance.global }}
+{% endif %}
+{% if distance.ospfv3 is vyos_defined %}
+ distance ospf6 {{ 'intra-area ' ~ distance.ospfv3.intra_area if distance.ospfv3.intra_area is vyos_defined }} {{ 'inter-area ' ~ distance.ospfv3.inter_area if distance.ospfv3.inter_area is vyos_defined }} {{ 'external ' ~ distance.ospfv3.external if distance.ospfv3.external is vyos_defined }}
+{% endif %}
+{% if log_adjacency_changes is vyos_defined %}
+ log-adjacency-changes {{ "detail" if log_adjacency_changes.detail is vyos_defined }}
+{% endif %}
+{% if parameters.router_id is vyos_defined %}
+ ospf6 router-id {{ parameters.router_id }}
+{% endif %}
+{% if redistribute is vyos_defined %}
+{%     for protocol, options in redistribute.items() %}
+ redistribute {{ protocol }} {{ 'route-map ' ~ options.route_map if options.route_map is vyos_defined }}
+{%     endfor %}
+{% endif %}
+exit
+!

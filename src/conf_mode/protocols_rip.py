@@ -102,7 +102,7 @@ def generate(rip):
     if not rip or 'deleted' in rip:
         return None
 
-    rip['new_frr_config'] = render_to_string('frr/ripd.frr.tmpl', rip)
+    rip['new_frr_config'] = render_to_string('frr/ripd.frr.j2', rip)
     return None
 
 def apply(rip):

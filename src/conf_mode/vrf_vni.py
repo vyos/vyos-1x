@@ -40,7 +40,7 @@ def verify(vrf):
     return None
 
 def generate(vrf):
-    vrf['new_frr_config'] = render_to_string('frr/vrf-vni.frr.tmpl', vrf)
+    vrf['new_frr_config'] = render_to_string('frr/vrf-vni.frr.j2', vrf)
     return None
 
 def apply(vrf):

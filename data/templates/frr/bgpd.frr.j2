@@ -1,21 +1,21 @@
 {### MACRO definition for recurring peer patter, this can be either fed by a ###}
 {### peer-group or an individual BGP neighbor ###}
 {% macro bgp_neighbor(neighbor, config, peer_group=false) %}
-{%   if peer_group == true %}
+{% if peer_group == true %}
  neighbor {{ neighbor }} peer-group
-{%   elif config.peer_group is vyos_defined %}
+{% elif config.peer_group is vyos_defined %}
  neighbor {{ neighbor }} peer-group {{ config.peer_group }}
-{%   endif %}
-{%   if config.remote_as is vyos_defined %}
+{% endif %}
+{% if config.remote_as is vyos_defined %}
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
-{%   endif %}
-{%   if config.interface.remote_as is vyos_defined %}
+{% endif %}
+{% if config.interface.remote_as is vyos_defined %}
  neighbor {{ neighbor }} interface remote-as {{ config.interface.remote_as }}
-{%   endif %}
-{%   if config.advertisement_interval is vyos_defined %}
+{% endif %}
+{% if config.advertisement_interval is vyos_defined %}
  neighbor {{ neighbor }} advertisement-interval {{ config.advertisement_interval }}
-{%   endif %}
-{%   if config.bfd is vyos_defined %}
+{% endif %}
+{% if config.bfd is vyos_defined %}
  neighbor {{ neighbor }} bfd
 {%     if config.bfd.check_control_plane_failure is vyos_defined %}
  neighbor {{ neighbor }} bfd check-control-plane-failure
@@ -23,76 +23,74 @@
 {%     if config.bfd.profile is vyos_defined %}
  neighbor {{ neighbor }} bfd profile {{ config.bfd.profile }}
 {%     endif %}
-{%   endif %}
-{%   if config.capability is vyos_defined %}
+{% endif %}
+{% if config.capability is vyos_defined %}
 {%     if config.capability.dynamic is vyos_defined %}
  neighbor {{ neighbor }} capability dynamic
 {%     endif %}
 {%     if config.capability.extended_nexthop is vyos_defined %}
  neighbor {{ neighbor }} capability extended-nexthop
 {%     endif %}
-{%   endif %}
-{%   if config.description is vyos_defined %}
+{% endif %}
+{% if config.description is vyos_defined %}
  neighbor {{ neighbor }} description {{ config.description }}
-{%   endif %}
-{%   if config.disable_capability_negotiation is vyos_defined %}
+{% endif %}
+{% if config.disable_capability_negotiation is vyos_defined %}
  neighbor {{ neighbor }} dont-capability-negotiate
-{%   endif %}
-{%   if config.ebgp_multihop is vyos_defined %}
+{% endif %}
+{% if config.ebgp_multihop is vyos_defined %}
  neighbor {{ neighbor }} ebgp-multihop {{ config.ebgp_multihop }}
-{%   endif %}
-{%   if config.graceful_restart is vyos_defined %}
+{% endif %}
+{% if config.graceful_restart is vyos_defined %}
 {%     if config.graceful_restart is vyos_defined('enable') %}
-{%       set graceful_restart = 'graceful-restart' %}
+{%         set graceful_restart = 'graceful-restart' %}
 {%     elif config.graceful_restart is vyos_defined('disable') %}
-{%       set graceful_restart = 'graceful-restart-disable' %}
+{%         set graceful_restart = 'graceful-restart-disable' %}
 {%     elif config.graceful_restart is vyos_defined('restart-helper') %}
-{%       set graceful_restart = 'graceful-restart-helper' %}
+{%         set graceful_restart = 'graceful-restart-helper' %}
 {%     endif %}
  neighbor {{ neighbor }} {{ graceful_restart }}
-{%   endif %}
-{%   if config.local_as is vyos_defined %}
+{% endif %}
+{% if config.local_as is vyos_defined %}
 {%     for local_as, local_as_config in config.local_as.items() %}
 {#       There can be only one local-as value, this is checked in the Python code #}
  neighbor {{ neighbor }} local-as {{ local_as }} {{ 'no-prepend' if local_as_config.no_prepend is vyos_defined }} {{ 'replace-as' if local_as_config.no_prepend is vyos_defined and local_as_config.no_prepend.replace_as is vyos_defined }}
 {%     endfor %}
-{%   endif %}
-{%   if config.override_capability is vyos_defined %}
+{% endif %}
+{% if config.override_capability is vyos_defined %}
  neighbor {{ neighbor }} override-capability
-{%   endif %}
-{%   if config.passive is vyos_defined %}
+{% endif %}
+{% if config.passive is vyos_defined %}
  neighbor {{ neighbor }} passive
-{%   endif %}
-{%   if config.password is vyos_defined %}
+{% endif %}
+{% if config.password is vyos_defined %}
  neighbor {{ neighbor }} password {{ config.password }}
-{%   endif %}
-{%   if config.port is vyos_defined %}
+{% endif %}
+{% if config.port is vyos_defined %}
  neighbor {{ neighbor }} port {{ config.port }}
-{%   endif %}
-{%   if config.shutdown is vyos_defined %}
+{% endif %}
+{% if config.shutdown is vyos_defined %}
  neighbor {{ neighbor }} shutdown
-{%   endif %}
-{%   if config.solo is vyos_defined %}
+{% endif %}
+{% if config.solo is vyos_defined %}
  neighbor {{ neighbor }} solo
-{%   endif %}
-{%   if config.strict_capability_match is vyos_defined %}
+{% endif %}
+{% if config.strict_capability_match is vyos_defined %}
  neighbor {{ neighbor }} strict-capability-match
-{%   endif %}
-{%   if config.ttl_security.hops is vyos_defined %}
+{% endif %}
+{% if config.ttl_security.hops is vyos_defined %}
  neighbor {{ neighbor }} ttl-security hops {{ config.ttl_security.hops }}
-{%   endif %}
-{%   if config.timers is vyos_defined %}
-{%     if config.timers.connect is vyos_defined %}
+{% endif %}
+{% if config.timers.connect is vyos_defined %}
  neighbor {{ neighbor }} timers connect {{ config.timers.connect }}
-{%     endif %}
-{%     if config.timers.keepalive is vyos_defined and config.timers.holdtime is vyos_defined %}
+{% endif %}
+{% if config.timers.keepalive is vyos_defined and config.timers.holdtime is vyos_defined %}
  neighbor {{ neighbor }} timers {{ config.timers.keepalive }} {{ config.timers.holdtime }}
-{%     endif %}
-{%   endif %}
-{%   if config.update_source is vyos_defined %}
+{% endif %}
+{% if config.update_source is vyos_defined %}
  neighbor {{ neighbor }} update-source {{ config.update_source }}
-{%   endif %}
-{%   if config.interface is vyos_defined %}
+{% endif %}
+{% if config.interface is vyos_defined %}
 {%     if config.interface.peer_group is vyos_defined %}
  neighbor {{ neighbor }} interface peer-group {{ config.interface.peer_group }}
 {%     endif %}
@@ -100,137 +98,137 @@
  neighbor {{ neighbor }} interface {{ config.interface.source_interface }}
 {%     endif %}
 {%     if config.interface.v6only is vyos_defined %}
-{%       if config.interface.v6only.peer_group is vyos_defined %}
+{%         if config.interface.v6only.peer_group is vyos_defined %}
  neighbor {{ neighbor }} interface v6only peer-group {{ config.interface.v6only.peer_group }}
-{%       endif %}
-{%       if config.interface.v6only.remote_as is vyos_defined %}
- neighbor {{ neighbor }} interface v6only remote-as {{ config.interface.v6only.remote_as }}
-{%       endif %}
-{%     endif %}
-{%   endif %}
- !
-{%   if config.address_family is vyos_defined %}
-{%     for afi, afi_config in config.address_family.items() %}
-{%       if afi == 'ipv4_unicast' %}
- address-family ipv4 unicast
-{%       elif afi == 'ipv4_multicast' %}
- address-family ipv4 multicast
-{%       elif afi == 'ipv4_labeled_unicast' %}
- address-family ipv4 labeled-unicast
-{%       elif afi == 'ipv4_vpn' %}
- address-family ipv4 vpn
-{%       elif afi == 'ipv4_flowspec' %}
- address-family ipv4 flowspec
-{%       elif afi == 'ipv6_unicast' %}
- address-family ipv6 unicast
-{%       elif afi == 'ipv6_multicast' %}
- address-family ipv6 multicast
-{%       elif afi == 'ipv6_labeled_unicast' %}
- address-family ipv6 labeled-unicast
-{%       elif afi == 'ipv6_vpn' %}
- address-family ipv6 vpn
-{%       elif afi == 'ipv6_flowspec' %}
- address-family ipv6 flowspec
-{%       elif afi == 'l2vpn_evpn' %}
- address-family l2vpn evpn
-{%       endif %}
-{%       if afi_config.addpath_tx_all is vyos_defined %}
-  neighbor {{ neighbor }} addpath-tx-all-paths
-{%       endif %}
-{%       if afi_config.addpath_tx_per_as is vyos_defined %}
-  neighbor {{ neighbor }} addpath-tx-bestpath-per-AS
-{%       endif %}
-{%       if afi_config.allowas_in is vyos_defined %}
-  neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is vyos_defined }}
-{%       endif %}
-{%       if afi_config.as_override is vyos_defined %}
-  neighbor {{ neighbor }} as-override
-{%       endif %}
-{%       if afi_config.conditionally_advertise is vyos_defined %}
-{%         if afi_config.conditionally_advertise.advertise_map is vyos_defined %}
-{%           set exist_non_exist_map = 'exist-map' %}
-{%           if afi_config.conditionally_advertise.exist_map is vyos_defined %}
-{%             set exist_non_exist_map = 'exist-map ' ~ afi_config.conditionally_advertise.exist_map %}
-{%           elif afi_config.conditionally_advertise.non_exist_map is vyos_defined %}
-{%             set exist_non_exist_map = 'non-exist-map ' ~ afi_config.conditionally_advertise.non_exist_map %}
-{%           endif %}
-  neighbor {{ neighbor }} advertise-map {{ afi_config.conditionally_advertise.advertise_map }} {{ exist_non_exist_map }}
 {%         endif %}
-{%       endif %}
-{%       if afi_config.remove_private_as is vyos_defined %}
+{%         if config.interface.v6only.remote_as is vyos_defined %}
+ neighbor {{ neighbor }} interface v6only remote-as {{ config.interface.v6only.remote_as }}
+{%         endif %}
+{%     endif %}
+{% endif %}
+ !
+{% if config.address_family is vyos_defined %}
+{%     for afi, afi_config in config.address_family.items() %}
+{%         if afi == 'ipv4_unicast' %}
+ address-family ipv4 unicast
+{%         elif afi == 'ipv4_multicast' %}
+ address-family ipv4 multicast
+{%         elif afi == 'ipv4_labeled_unicast' %}
+ address-family ipv4 labeled-unicast
+{%         elif afi == 'ipv4_vpn' %}
+ address-family ipv4 vpn
+{%         elif afi == 'ipv4_flowspec' %}
+ address-family ipv4 flowspec
+{%         elif afi == 'ipv6_unicast' %}
+ address-family ipv6 unicast
+{%         elif afi == 'ipv6_multicast' %}
+ address-family ipv6 multicast
+{%         elif afi == 'ipv6_labeled_unicast' %}
+ address-family ipv6 labeled-unicast
+{%         elif afi == 'ipv6_vpn' %}
+ address-family ipv6 vpn
+{%         elif afi == 'ipv6_flowspec' %}
+ address-family ipv6 flowspec
+{%         elif afi == 'l2vpn_evpn' %}
+ address-family l2vpn evpn
+{%         endif %}
+{%         if afi_config.addpath_tx_all is vyos_defined %}
+  neighbor {{ neighbor }} addpath-tx-all-paths
+{%         endif %}
+{%         if afi_config.addpath_tx_per_as is vyos_defined %}
+  neighbor {{ neighbor }} addpath-tx-bestpath-per-AS
+{%         endif %}
+{%         if afi_config.allowas_in is vyos_defined %}
+  neighbor {{ neighbor }} allowas-in {{ afi_config.allowas_in.number if afi_config.allowas_in.number is vyos_defined }}
+{%         endif %}
+{%         if afi_config.as_override is vyos_defined %}
+  neighbor {{ neighbor }} as-override
+{%         endif %}
+{%         if afi_config.conditionally_advertise is vyos_defined %}
+{%             if afi_config.conditionally_advertise.advertise_map is vyos_defined %}
+{%                 set exist_non_exist_map = 'exist-map' %}
+{%                 if afi_config.conditionally_advertise.exist_map is vyos_defined %}
+{%                     set exist_non_exist_map = 'exist-map ' ~ afi_config.conditionally_advertise.exist_map %}
+{%                 elif afi_config.conditionally_advertise.non_exist_map is vyos_defined %}
+{%                     set exist_non_exist_map = 'non-exist-map ' ~ afi_config.conditionally_advertise.non_exist_map %}
+{%                 endif %}
+  neighbor {{ neighbor }} advertise-map {{ afi_config.conditionally_advertise.advertise_map }} {{ exist_non_exist_map }}
+{%             endif %}
+{%         endif %}
+{%         if afi_config.remove_private_as is vyos_defined %}
   neighbor {{ neighbor }} remove-private-AS
-{%       endif %}
-{%       if afi_config.route_reflector_client is vyos_defined %}
+{%         endif %}
+{%         if afi_config.route_reflector_client is vyos_defined %}
   neighbor {{ neighbor }} route-reflector-client
-{%       endif %}
-{%       if afi_config.weight is vyos_defined %}
+{%         endif %}
+{%         if afi_config.weight is vyos_defined %}
   neighbor {{ neighbor }} weight {{ afi_config.weight }}
-{%       endif %}
-{%       if afi_config.attribute_unchanged is vyos_defined %}
+{%         endif %}
+{%         if afi_config.attribute_unchanged is vyos_defined %}
   neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is vyos_defined }}{{ 'med ' if afi_config.attribute_unchanged.med is vyos_defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is vyos_defined }}
-{%       endif %}
-{%       if afi_config.capability.orf.prefix_list.send is vyos_defined %}
+{%         endif %}
+{%         if afi_config.capability.orf.prefix_list.send is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list send
-{%       endif %}
-{%       if afi_config.capability.orf.prefix_list.receive is vyos_defined %}
+{%         endif %}
+{%         if afi_config.capability.orf.prefix_list.receive is vyos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list receive
-{%       endif %}
-{%       if afi_config.default_originate is vyos_defined %}
+{%         endif %}
+{%         if afi_config.default_originate is vyos_defined %}
   neighbor {{ neighbor }} default-originate {{ 'route-map ' ~ afi_config.default_originate.route_map if afi_config.default_originate.route_map is vyos_defined }}
-{%       endif %}
-{%       if afi_config.distribute_list.export is vyos_defined %}
+{%         endif %}
+{%         if afi_config.distribute_list.export is vyos_defined %}
   neighbor {{ neighbor }} distribute-list {{ afi_config.distribute_list.export }} out
-{%       endif %}
-{%       if afi_config.distribute_list.import is vyos_defined %}
+{%         endif %}
+{%         if afi_config.distribute_list.import is vyos_defined %}
   neighbor {{ neighbor }} distribute-list {{ afi_config.distribute_list.import }} in
-{%       endif %}
-{%       if afi_config.filter_list.export is vyos_defined %}
+{%         endif %}
+{%         if afi_config.filter_list.export is vyos_defined %}
   neighbor {{ neighbor }} filter-list {{ afi_config.filter_list.export }} out
-{%       endif %}
-{%       if afi_config.filter_list.import is vyos_defined %}
+{%         endif %}
+{%         if afi_config.filter_list.import is vyos_defined %}
   neighbor {{ neighbor }} filter-list {{ afi_config.filter_list.import }} in
-{%       endif %}
-{%       if afi_config.maximum_prefix is vyos_defined %}
+{%         endif %}
+{%         if afi_config.maximum_prefix is vyos_defined %}
   neighbor {{ neighbor }} maximum-prefix {{ afi_config.maximum_prefix }}
-{%       endif %}
-{%       if afi_config.maximum_prefix_out is vyos_defined %}
+{%         endif %}
+{%         if afi_config.maximum_prefix_out is vyos_defined %}
   neighbor {{ neighbor }} maximum-prefix-out {{ afi_config.maximum_prefix_out }}
-{%       endif %}
-{%       if afi_config.nexthop_self is vyos_defined %}
+{%         endif %}
+{%         if afi_config.nexthop_self is vyos_defined %}
   neighbor {{ neighbor }} next-hop-self {{ 'force' if afi_config.nexthop_self.force is vyos_defined }}
-{%       endif %}
-{%       if afi_config.route_server_client is vyos_defined %}
+{%         endif %}
+{%         if afi_config.route_server_client is vyos_defined %}
   neighbor {{ neighbor }} route-server-client
-{%       endif %}
-{%       if afi_config.route_map.export is vyos_defined %}
+{%         endif %}
+{%         if afi_config.route_map.export is vyos_defined %}
   neighbor {{ neighbor }} route-map {{ afi_config.route_map.export }} out
-{%       endif %}
-{%       if afi_config.route_map.import is vyos_defined %}
+{%         endif %}
+{%         if afi_config.route_map.import is vyos_defined %}
   neighbor {{ neighbor }} route-map {{ afi_config.route_map.import }} in
-{%       endif %}
-{%       if afi_config.prefix_list.export is vyos_defined %}
+{%         endif %}
+{%         if afi_config.prefix_list.export is vyos_defined %}
   neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.export }} out
-{%       endif %}
-{%       if afi_config.prefix_list.import is vyos_defined %}
+{%         endif %}
+{%         if afi_config.prefix_list.import is vyos_defined %}
   neighbor {{ neighbor }} prefix-list  {{ afi_config.prefix_list.import }} in
-{%       endif %}
-{%       if afi_config.soft_reconfiguration.inbound is vyos_defined %}
+{%         endif %}
+{%         if afi_config.soft_reconfiguration.inbound is vyos_defined %}
   neighbor {{ neighbor }} soft-reconfiguration inbound
-{%       endif %}
-{%       if afi_config.unsuppress_map is vyos_defined %}
+{%         endif %}
+{%         if afi_config.unsuppress_map is vyos_defined %}
   neighbor {{ neighbor }} unsuppress-map {{ afi_config.unsuppress_map }}
-{%       endif %}
-{%       if afi_config.disable_send_community.extended is vyos_defined %}
+{%         endif %}
+{%         if afi_config.disable_send_community.extended is vyos_defined %}
  no neighbor {{ neighbor }} send-community extended
-{%       endif %}
-{%       if afi_config.disable_send_community.standard is vyos_defined %}
+{%         endif %}
+{%         if afi_config.disable_send_community.standard is vyos_defined %}
  no neighbor {{ neighbor }} send-community standard
-{%       endif %}
+{%         endif %}
   neighbor {{ neighbor }} activate
  exit-address-family
  !
 {%     endfor %}
-{%   endif %}
+{% endif %}
 {% endmacro %}
 !
 router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
@@ -244,212 +242,212 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check
 {% if address_family is vyos_defined %}
-{%   for afi, afi_config in address_family.items() %}
+{%     for afi, afi_config in address_family.items() %}
  !
-{%     if afi == 'ipv4_unicast' %}
+{%         if afi == 'ipv4_unicast' %}
  address-family ipv4 unicast
-{%     elif afi == 'ipv4_multicast' %}
+{%         elif afi == 'ipv4_multicast' %}
  address-family ipv4 multicast
-{%     elif afi == 'ipv4_labeled_unicast' %}
+{%         elif afi == 'ipv4_labeled_unicast' %}
  address-family ipv4 labeled-unicast
-{%     elif afi == 'ipv4_vpn' %}
+{%         elif afi == 'ipv4_vpn' %}
  address-family ipv4 vpn
-{%     elif afi == 'ipv4_flowspec' %}
+{%         elif afi == 'ipv4_flowspec' %}
  address-family ipv4 flowspec
-{%     elif afi == 'ipv6_unicast' %}
+{%         elif afi == 'ipv6_unicast' %}
  address-family ipv6 unicast
-{%     elif afi == 'ipv6_multicast' %}
+{%         elif afi == 'ipv6_multicast' %}
  address-family ipv6 multicast
-{%     elif afi == 'ipv6_labeled_unicast' %}
+{%         elif afi == 'ipv6_labeled_unicast' %}
  address-family ipv6 labeled-unicast
-{%     elif afi == 'ipv6_vpn' %}
+{%         elif afi == 'ipv6_vpn' %}
  address-family ipv6 vpn
-{%     elif afi == 'ipv6_flowspec' %}
+{%         elif afi == 'ipv6_flowspec' %}
  address-family ipv6 flowspec
-{%     elif afi == 'l2vpn_evpn' %}
+{%         elif afi == 'l2vpn_evpn' %}
  address-family l2vpn evpn
-{%     if afi_config.rd is vyos_defined %}
+{%             if afi_config.rd is vyos_defined %}
   rd {{ afi_config.rd }}
-{%     endif %}
-{%     endif %}
-{%     if afi_config.aggregate_address is vyos_defined %}
-{%       for aggregate, aggregate_config in afi_config.aggregate_address.items() %}
-  aggregate-address {{ aggregate }}{{ ' as-set' if aggregate_config.as_set is vyos_defined }}{{ ' summary-only' if aggregate_config.summary_only is vyos_defined }}
-{%         if aggregate_config.route_map is vyos_defined %}
-  aggregate-address {{ aggregate }} route-map {{ aggregate_config.route_map }}
-{%         endif %}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.maximum_paths.ebgp is vyos_defined %}
-  maximum-paths {{ afi_config.maximum_paths.ebgp }}
-{%     endif %}
-{%     if afi_config.maximum_paths.ibgp is vyos_defined %}
-  maximum-paths ibgp {{ afi_config.maximum_paths.ibgp }}
-{%     endif %}
-{%     if afi_config.redistribute is vyos_defined %}
-{%       for protocol in afi_config.redistribute %}
-{%         if protocol == 'table' %}
-  redistribute table {{ afi_config.redistribute[protocol].table }}
-{%         else %}
-{%           set redistribution_protocol = protocol %}
-{%             if protocol == 'ospfv3' %}
-{%               set redistribution_protocol = 'ospf6' %}
 {%             endif %}
-  redistribute {{ redistribution_protocol }}{% if afi_config.redistribute[protocol].metric is vyos_defined %} metric {{ afi_config.redistribute[protocol].metric }}{% endif %}{% if afi_config.redistribute[protocol].route_map is vyos_defined %} route-map {{ afi_config.redistribute[protocol].route_map }}{% endif %}
-{#######   we need this blank line!! #######}
-
 {%         endif %}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.network is vyos_defined %}
-{%       for network in afi_config.network %}
-  network {{ network }}{% if afi_config.network[network].route_map is vyos_defined %} route-map {{ afi_config.network[network].route_map }}{% endif %}{% if afi_config.network[network].backdoor is vyos_defined %} backdoor{% endif %}{% if afi_config.network[network].rd is vyos_defined and afi_config.network[network].label is vyos_defined %} rd {{ afi_config.network[network].rd }} label {{ afi_config.network[network].label }}{% endif %}
+{%         if afi_config.aggregate_address is vyos_defined %}
+{%             for aggregate, aggregate_config in afi_config.aggregate_address.items() %}
+  aggregate-address {{ aggregate }}{{ ' as-set' if aggregate_config.as_set is vyos_defined }}{{ ' summary-only' if aggregate_config.summary_only is vyos_defined }}
+{%                 if aggregate_config.route_map is vyos_defined %}
+  aggregate-address {{ aggregate }} route-map {{ aggregate_config.route_map }}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.maximum_paths.ebgp is vyos_defined %}
+  maximum-paths {{ afi_config.maximum_paths.ebgp }}
+{%         endif %}
+{%         if afi_config.maximum_paths.ibgp is vyos_defined %}
+  maximum-paths ibgp {{ afi_config.maximum_paths.ibgp }}
+{%         endif %}
+{%         if afi_config.redistribute is vyos_defined %}
+{%             for protocol, protocol_config in afi_config.redistribute.items() %}
+{%                 if protocol == 'table' %}
+  redistribute table {{ protocol_config.table }}
+{%                 else %}
+{%                     set redistribution_protocol = protocol %}
+{%                     if protocol == 'ospfv3' %}
+{%                         set redistribution_protocol = 'ospf6' %}
+{%                     endif %}
+  redistribute {{ redistribution_protocol }} {{ 'metric ' ~ protocol_config.metric if protocol_config.metric is vyos_defined }} {{ 'route-map ' ~ protocol_config.route_map if protocol_config.route_map is vyos_defined }}
+  {#######   we need this blank line!! #######}
+
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.network is vyos_defined %}
+{%             for network, network_config in afi_config.network.items() %}
+  network {{ network }} {{ 'route-map ' ~ network_config.route_map if network_config.route_map is vyos_defined }} {{ 'backdoor' if network_config.backdoor is vyos_defined }} {{ 'rd ' ~ network_config.rd if network_config.rd is vyos_defined }} {{ 'label ' ~ network_config.label if network_config.label is vyos_defined }}
 {#######   we need this blank line!! #######}
 
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.advertise is vyos_defined %}
-{%       for adv_afi, adv_afi_config in afi_config.advertise.items() %}
-{%         if adv_afi_config.unicast is vyos_defined %}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.advertise is vyos_defined %}
+{%             for adv_afi, adv_afi_config in afi_config.advertise.items() %}
+{%                 if adv_afi_config.unicast is vyos_defined %}
   advertise {{ adv_afi }} unicast {{ 'route-map ' ~ adv_afi_config.unicast.route_map if adv_afi_config.unicast.route_map is vyos_defined }}
+{%                 endif %}
+{%             endfor %}
 {%         endif %}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.distance.external is vyos_defined and afi_config.distance.internal is vyos_defined and afi_config.distance.local is vyos_defined %}
+{%         if afi_config.distance.external is vyos_defined and afi_config.distance.internal is vyos_defined and afi_config.distance.local is vyos_defined %}
   distance bgp {{ afi_config.distance.external }} {{ afi_config.distance.internal }} {{ afi_config.distance.local }}
-{%     endif %}
-{%     if afi_config.distance.prefix is vyos_defined %}
-{%       for prefix in afi_config.distance.prefix %}
-  distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.export.vpn is vyos_defined %}
-  export vpn
-{%     endif %}
-{%     if afi_config.import.vpn is vyos_defined %}
-  import vpn
-{%     endif %}
-{%     if afi_config.import.vrf is vyos_defined %}
-{%       for vrf in afi_config.import.vrf %}
-  import vrf {{ vrf }}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.label.vpn.export is vyos_defined %}
-  label vpn export {{ afi_config.label.vpn.export }}
-{%     endif %}
-{%     if afi_config.local_install is vyos_defined %}
-{%       for interface in afi_config.local_install.interface %}
-  local-install {{ interface }}
-{%       endfor %}
-{%     endif %}
-{%     if afi_config.advertise_all_vni is vyos_defined %}
-  advertise-all-vni
-{%     endif %}
-{%     if afi_config.advertise_default_gw is vyos_defined %}
-  advertise-default-gw
-{%     endif %}
-{%     if afi_config.advertise_pip is vyos_defined %}
-  advertise-pip ip {{ afi_config.advertise_pip }}
-{%     endif %}
-{%     if afi_config.advertise_svi_ip is vyos_defined %}
-  advertise-svi-ip
-{%     endif %}
-{%     if afi_config.rt_auto_derive is vyos_defined %}
-  autort rfc8365-compatible
-{%     endif %}
-{%     if afi_config.flooding.disable is vyos_defined %}
-  flooding disable
-{%     endif %}
-{%     if afi_config.flooding.head_end_replication is vyos_defined %}
-  flooding head-end-replication
-{%     endif %}
-{%     if afi_config.rd.vpn.export is vyos_defined %}
-  rd vpn export {{ afi_config.rd.vpn.export }}
-{%     endif %}
-{%     if afi_config.route_target.vpn.both is vyos_defined %}
-  route-target vpn both {{ afi_config.route_target.vpn.both }}
-{%     else %}
-{%       if afi_config.route_target.vpn.export is vyos_defined %}
-  route-target vpn export {{ afi_config.route_target.vpn.export }}
-{%       endif %}
-{%       if afi_config.route_target.vpn.import is vyos_defined %}
-  route-target vpn import {{ afi_config.route_target.vpn.import }}
-{%       endif %}
-{%     endif %}
-{%     if afi_config.route_target.both is vyos_defined %}
-  route-target both {{ afi_config.route_target.both }}
-{%     else %}
-{%       if afi_config.route_target.export is vyos_defined %}
-  route-target export {{ afi_config.route_target.export }}
-{%       endif %}
-{%       if afi_config.route_target.import is vyos_defined %}
-  route-target import {{ afi_config.route_target.import }}
-{%       endif %}
-{%     endif %}
-{%     if afi_config.route_map.vpn.export is vyos_defined %}
-  route-map vpn export {{ afi_config.route_map.vpn.export }}
-{%     endif %}
-{%     if afi_config.route_map.vpn.import is vyos_defined %}
-  route-map vpn import {{ afi_config.route_map.vpn.import }}
-{%     endif %}
-{%     if afi_config.vni is vyos_defined %}
-{%       for vni, vni_config in afi_config.vni.items() %}
-  vni {{ vni }}
-{%         if vni_config.advertise_default_gw is vyos_defined %}
-   advertise-default-gw
 {%         endif %}
-{%     if vni_config.advertise_svi_ip is vyos_defined %}
+{%         if afi_config.distance.prefix is vyos_defined %}
+{%             for prefix in afi_config.distance.prefix %}
+  distance {{ afi_config.distance.prefix[prefix].distance }} {{ prefix }}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.export.vpn is vyos_defined %}
+  export vpn
+{%         endif %}
+{%         if afi_config.import.vpn is vyos_defined %}
+  import vpn
+{%         endif %}
+{%         if afi_config.import.vrf is vyos_defined %}
+{%             for vrf in afi_config.import.vrf %}
+  import vrf {{ vrf }}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.label.vpn.export is vyos_defined %}
+  label vpn export {{ afi_config.label.vpn.export }}
+{%         endif %}
+{%         if afi_config.local_install is vyos_defined %}
+{%             for interface in afi_config.local_install.interface %}
+  local-install {{ interface }}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.advertise_all_vni is vyos_defined %}
+  advertise-all-vni
+{%         endif %}
+{%         if afi_config.advertise_default_gw is vyos_defined %}
+  advertise-default-gw
+{%         endif %}
+{%         if afi_config.advertise_pip is vyos_defined %}
+  advertise-pip ip {{ afi_config.advertise_pip }}
+{%         endif %}
+{%         if afi_config.advertise_svi_ip is vyos_defined %}
+  advertise-svi-ip
+{%         endif %}
+{%         if afi_config.rt_auto_derive is vyos_defined %}
+  autort rfc8365-compatible
+{%         endif %}
+{%         if afi_config.flooding.disable is vyos_defined %}
+  flooding disable
+{%         endif %}
+{%         if afi_config.flooding.head_end_replication is vyos_defined %}
+  flooding head-end-replication
+{%         endif %}
+{%         if afi_config.rd.vpn.export is vyos_defined %}
+  rd vpn export {{ afi_config.rd.vpn.export }}
+{%         endif %}
+{%         if afi_config.route_target.vpn.both is vyos_defined %}
+  route-target vpn both {{ afi_config.route_target.vpn.both }}
+{%         else %}
+{%             if afi_config.route_target.vpn.export is vyos_defined %}
+  route-target vpn export {{ afi_config.route_target.vpn.export }}
+{%             endif %}
+{%             if afi_config.route_target.vpn.import is vyos_defined %}
+  route-target vpn import {{ afi_config.route_target.vpn.import }}
+{%             endif %}
+{%         endif %}
+{%         if afi_config.route_target.both is vyos_defined %}
+  route-target both {{ afi_config.route_target.both }}
+{%         else %}
+{%             if afi_config.route_target.export is vyos_defined %}
+  route-target export {{ afi_config.route_target.export }}
+{%             endif %}
+{%             if afi_config.route_target.import is vyos_defined %}
+  route-target import {{ afi_config.route_target.import }}
+{%             endif %}
+{%         endif %}
+{%         if afi_config.route_map.vpn.export is vyos_defined %}
+  route-map vpn export {{ afi_config.route_map.vpn.export }}
+{%         endif %}
+{%         if afi_config.route_map.vpn.import is vyos_defined %}
+  route-map vpn import {{ afi_config.route_map.vpn.import }}
+{%         endif %}
+{%         if afi_config.vni is vyos_defined %}
+{%             for vni, vni_config in afi_config.vni.items() %}
+  vni {{ vni }}
+{%                 if vni_config.advertise_default_gw is vyos_defined %}
+   advertise-default-gw
+{%                 endif %}
+{%                 if vni_config.advertise_svi_ip is vyos_defined %}
    advertise-svi-ip
-{%     endif %}
-{%     if vni_config.rd is vyos_defined %}
+{%                 endif %}
+{%                 if vni_config.rd is vyos_defined %}
    rd {{ vni_config.rd }}
-{%     endif %}
-{%     if vni_config.route_target.both is vyos_defined %}
+{%                 endif %}
+{%                 if vni_config.route_target.both is vyos_defined %}
    route-target both {{ vni_config.route_target.both }}
-{%     endif %}
-{%     if vni_config.route_target.export is vyos_defined %}
+{%                 endif %}
+{%                 if vni_config.route_target.export is vyos_defined %}
    route-target export {{ vni_config.route_target.export }}
-{%     endif %}
-{%     if vni_config.route_target.import is vyos_defined %}
+{%                 endif %}
+{%                 if vni_config.route_target.import is vyos_defined %}
    route-target import {{ vni_config.route_target.import }}
-{%     endif %}
+{%                 endif %}
   exit-vni
-{%       endfor %}
-{%     endif %}
+{%             endfor %}
+{%         endif %}
  exit-address-family
-{%   endfor %}
+{%     endfor %}
 {% endif %}
  !
 {% if peer_group is vyos_defined %}
-{%   for peer, config in peer_group.items() %}
+{%     for peer, config in peer_group.items() %}
 {{ bgp_neighbor(peer, config, true) }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
  !
 {% if neighbor is vyos_defined %}
-{%   for peer, config in neighbor.items() %}
+{%     for peer, config in neighbor.items() %}
 {{ bgp_neighbor(peer, config) }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
  !
 {% if listen.limit is vyos_defined %}
  bgp listen limit {{ listen.limit }}
 {% endif %}
 {% if listen.range is vyos_defined %}
-{%   for prefix, options in listen.range.items() %}
-{%     if options.peer_group is vyos_defined %}
+{%     for prefix, options in listen.range.items() %}
+{%         if options.peer_group is vyos_defined %}
  bgp listen range {{ prefix }} peer-group {{ options.peer_group }}
-{%     endif %}
-{%   endfor %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 {% if parameters.always_compare_med is vyos_defined %}
  bgp always-compare-med
 {% endif %}
 {% if parameters.bestpath.as_path is vyos_defined %}
-{%   for option in parameters.bestpath.as_path %}
+{%     for option in parameters.bestpath.as_path %}
 {# replace is required for multipath-relax option #}
- bgp bestpath as-path {{ option|replace('_', '-') }}
-{%   endfor %}
+ bgp bestpath as-path {{ option | replace('_', '-') }}
+{%     endfor %}
 {% endif %}
 {% if parameters.bestpath.bandwidth is vyos_defined %}
  bgp bestpath bandwidth {{ parameters.bestpath.bandwidth }}
@@ -486,9 +484,9 @@ router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
   distance bgp {{ parameters.distance.global.external }} {{ parameters.distance.global.internal }} {{ parameters.distance.global.local }}
 {% endif %}
 {% if parameters.distance.prefix is vyos_defined %}
-{%   for prefix in parameters.distance.prefix %}
+{%     for prefix in parameters.distance.prefix %}
   distance {{ parameters.distance.prefix[prefix].distance }} {{ prefix }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if parameters.fast_convergence is vyos_defined %}
   bgp fast-convergence

@@ -142,7 +142,7 @@ def generate(ospfv3):
     if not ospfv3 or 'deleted' in ospfv3:
         return None
 
-    ospfv3['new_frr_config'] = render_to_string('frr/ospf6d.frr.tmpl', ospfv3)
+    ospfv3['new_frr_config'] = render_to_string('frr/ospf6d.frr.j2', ospfv3)
     return None
 
 def apply(ospfv3):

@@ -108,7 +108,7 @@ def generate(igmp):
     if igmp is None:
         return None
 
-    render(config_file, 'frr/igmp.frr.tmpl', igmp)
+    render(config_file, 'frr/igmp.frr.j2', igmp)
     return None
 
 def apply(igmp):

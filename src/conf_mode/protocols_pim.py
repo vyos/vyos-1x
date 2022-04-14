@@ -135,7 +135,7 @@ def generate(pim):
     if pim is None:
         return None
 
-    render(config_file, 'frr/pimd.frr.tmpl', pim)
+    render(config_file, 'frr/pimd.frr.j2', pim)
     return None
 
 def apply(pim):

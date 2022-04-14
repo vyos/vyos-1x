@@ -1,0 +1,58 @@
+{% if profile is vyos_defined or peer is vyos_defined %}
+bfd
+{%     if profile is vyos_defined %}
+{%         for profile_name, profile_config in profile.items() %}
+ profile {{ profile_name }}
+  detect-multiplier {{ profile_config.interval.multiplier }}
+  receive-interval {{ profile_config.interval.receive }}
+  transmit-interval {{ profile_config.interval.transmit }}
+{%             if profile_config.interval.echo_interval is vyos_defined %}
+  echo transmit-interval {{ profile_config.interval.echo_interval }}
+  echo receive-interval {{ profile_config.interval.echo_interval }}
+{%             endif %}
+{%             if profile_config.echo_mode is vyos_defined %}
+  echo-mode
+{%             endif %}
+{%             if profile_config.passive is vyos_defined %}
+  passive-mode
+{%             endif %}
+{%             if profile_config.shutdown is vyos_defined %}
+  shutdown
+{%             else %}
+  no shutdown
+{%             endif %}
+ exit
+ !
+{%         endfor %}
+{%     endif %}
+{%     if peer is vyos_defined %}
+{%         for peer_name, peer_config in peer.items() %}
+ peer {{ peer_name }} {{ 'multihop' if peer_config.multihop is vyos_defined }} {{ 'local-address ' ~ peer_config.source.address if peer_config.source.address is vyos_defined }} {{ 'interface ' ~ peer_config.source.interface if peer_config.source.interface is vyos_defined }} {{ 'vrf ' ~ peer_config.vrf if peer_config.vrf is vyos_defined }}
+  detect-multiplier {{ peer_config.interval.multiplier }}
+  receive-interval {{ peer_config.interval.receive }}
+  transmit-interval {{ peer_config.interval.transmit }}
+{%             if peer_config.interval.echo_interval is vyos_defined %}
+  echo transmit-interval {{ peer_config.interval.echo_interval }}
+  echo receive-interval {{ peer_config.interval.echo_interval }}
+{%             endif %}
+{%             if peer_config.echo_mode is vyos_defined %}
+  echo-mode
+{%             endif %}
+{%             if peer_config.passive is vyos_defined %}
+  passive-mode
+{%             endif %}
+{%             if peer_config.profile is vyos_defined %}
+  profile {{ peer_config.profile }}
+{%             endif %}
+{%             if peer_config.shutdown is vyos_defined %}
+  shutdown
+{%             else %}
+  no shutdown
+{%             endif %}
+ exit
+ !
+{%         endfor %}
+{%     endif %}
+exit
+!
+{% endif %}

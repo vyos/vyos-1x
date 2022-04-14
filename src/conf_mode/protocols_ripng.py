@@ -93,7 +93,7 @@ def generate(ripng):
         ripng['new_frr_config'] = ''
         return None
 
-    ripng['new_frr_config'] = render_to_string('frr/ripngd.frr.tmpl', ripng)
+    ripng['new_frr_config'] = render_to_string('frr/ripngd.frr.j2', ripng)
     return None
 
 def apply(ripng):

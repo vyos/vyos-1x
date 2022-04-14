@@ -297,9 +297,9 @@ def generate(bgp):
     if not bgp or 'deleted' in bgp:
         return None
 
-    bgp['protocol'] = 'bgp' # required for frr/vrf.route-map.frr.tmpl
-    bgp['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.tmpl', bgp)
-    bgp['frr_bgpd_config']  = render_to_string('frr/bgpd.frr.tmpl', bgp)
+    bgp['protocol'] = 'bgp' # required for frr/vrf.route-map.frr.j2
+    bgp['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', bgp)
+    bgp['frr_bgpd_config']  = render_to_string('frr/bgpd.frr.j2', bgp)
 
     return None
 
