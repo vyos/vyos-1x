@@ -56,8 +56,8 @@ def generate(ntp):
     if not ntp:
         return None
 
-    render(config_file, 'ntp/ntpd.conf.tmpl', ntp)
-    render(systemd_override, 'ntp/override.conf.tmpl', ntp)
+    render(config_file, 'ntp/ntpd.conf.j2', ntp)
+    render(systemd_override, 'ntp/override.conf.j2', ntp)
 
     return None
 

@@ -16,27 +16,27 @@ restrict -6 ::1
 # Configurable section
 #
 {% if server is vyos_defined %}
-{%   for server, config in server.items() %}
-{%     set association = 'server' %}
-{%     if config.pool is vyos_defined %}
-{%       set association = 'pool' %}
-{%     endif %}
+{%     for server, config in server.items() %}
+{%         set association = 'server' %}
+{%         if config.pool is vyos_defined %}
+{%             set association = 'pool' %}
+{%         endif %}
 {{ association }} {{ server | replace('_', '-') }} iburst {{ 'noselect' if config.noselect is vyos_defined }} {{ 'preempt' if config.preempt is vyos_defined }} {{ 'prefer' if config.prefer is vyos_defined }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 {% if allow_clients.address is vyos_defined %}
 # Allowed clients configuration
 restrict default ignore
-{%   for address in allow_clients.address %}
-restrict {{ address|address_from_cidr }} mask {{ address|netmask_from_cidr }} nomodify notrap nopeer
-{%   endfor %}
+{%     for address in allow_clients.address %}
+restrict {{ address | address_from_cidr }} mask {{ address | netmask_from_cidr }} nomodify notrap nopeer
+{%     endfor %}
 {% endif %}
 
 {% if listen_address %}
 # NTP should listen on configured addresses only
 interface ignore wildcard
-{%   for address in listen_address %}
+{%     for address in listen_address %}
 interface listen {{ address }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}

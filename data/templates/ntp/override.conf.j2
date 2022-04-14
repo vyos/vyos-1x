@@ -1,0 +1,14 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+[Unit]
+StartLimitIntervalSec=0
+ConditionPathExists={{ config_file }}
+After=vyos-router.service
+
+[Service]
+ExecStart=
+ExecStart={{ vrf_command }}/usr/sbin/ntpd -g -p {{ config_file | replace('.conf', '.pid') }} -c {{ config_file }} -u ntp:ntp
+PIDFile=
+PIDFile={{ config_file | replace('.conf', '.pid') }}
+Restart=always
+RestartSec=10
+
