@@ -31,13 +31,13 @@ ap_scan=0
 fast_reauth=1
 
 network={
-{%  if eapol is vyos_defined %}
-{%    if eapol.ca_certificate is vyos_defined %}
+{% if eapol is vyos_defined %}
+{%     if eapol.ca_certificate is vyos_defined %}
     ca_cert="/run/wpa_supplicant/{{ ifname }}_ca.pem"
-{%    endif %}
+{%     endif %}
     client_cert="/run/wpa_supplicant/{{ ifname }}_cert.pem"
     private_key="/run/wpa_supplicant/{{ ifname }}_cert.key"
-{%  endif %}
+{% endif %}
 
     # list of accepted authenticated key management protocols
     key_mgmt=IEEE8021X

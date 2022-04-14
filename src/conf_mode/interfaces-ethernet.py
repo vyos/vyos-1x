@@ -152,7 +152,7 @@ def verify(ethernet):
 def generate(ethernet):
     if 'eapol' in ethernet:
         render(wpa_suppl_conf.format(**ethernet),
-               'ethernet/wpa_supplicant.conf.tmpl', ethernet)
+               'ethernet/wpa_supplicant.conf.j2', ethernet)
 
         ifname = ethernet['ifname']
         cert_file_path = os.path.join(cfg_dir, f'{ifname}_cert.pem')
