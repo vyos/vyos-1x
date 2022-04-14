@@ -165,5 +165,27 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
         self.cli_commit()
 
+    def test_bonding_uniq_member_description(self):
+        ethernet_path = ['interfaces', 'ethernet']
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_commit()
+
+        # Add any changes on bonding members
+        # For example add description on separate ethX interfaces
+        for interface in self._interfaces:
+            for member in self._members:
+                self.cli_set(ethernet_path + [member, 'description', member + '_interface'])
+
+            self.cli_commit()
+
+        # verify config
+        for interface in self._interfaces:
+            slaves = read_file(f'/sys/class/net/{interface}/bonding/slaves').split()
+            for member in self._members:
+                self.assertIn(member, slaves)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
