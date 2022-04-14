@@ -59,11 +59,11 @@ network={
     # OWE = Opportunistic Wireless Encryption (a.k.a. Enhanced Open)
     # DPP = Device Provisioning Protocol
     # If not set, this defaults to: WPA-PSK WPA-EAP
-{%   if security.wpa.mode is vyos_defined('wpa3') %}
+{%     if security.wpa.mode is vyos_defined('wpa3') %}
     key_mgmt=SAE
-{%   else %}
+{%     else %}
     key_mgmt=WPA-PSK WPA-PSK-SHA256
-{%   endif %}
+{%     endif %}
 
     # psk: WPA preshared key; 256-bit pre-shared key
     # The key used in WPA-PSK mode can be entered either as 64 hex-digits, i.e.,

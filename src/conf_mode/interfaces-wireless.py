@@ -244,11 +244,11 @@ def generate(wifi):
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['type'] == 'access-point':
-        render(hostapd_conf.format(**wifi), 'wifi/hostapd.conf.tmpl',
+        render(hostapd_conf.format(**wifi), 'wifi/hostapd.conf.j2',
                wifi)
 
     elif wifi['type'] == 'station':
-        render(wpa_suppl_conf.format(**wifi), 'wifi/wpa_supplicant.conf.tmpl',
+        render(wpa_suppl_conf.format(**wifi), 'wifi/wpa_supplicant.conf.j2',
                wifi)
 
     return None
