@@ -142,32 +142,40 @@ class Config(object):
 
     def exists(self, path):
         """
-        Checks if a node with given path exists in the running or proposed config
+        Checks if a node or value with given path exists in the proposed config.
+
+        Args:
+            path (str): Configuration tree path
 
         Returns:
-            True if node exists, False otherwise
+            True if node or value exists in the proposed config, False otherwise
 
         Note:
-            This function cannot be used outside a configuration sessions.
+            This function should not be used outside of configuration sessions.
             In operational mode scripts, use ``exists_effective``.
         """
-        if not self._session_config:
+        if self._session_config is None:
             return False
         if self._session_config.exists(self._make_path(path)):
             return True
-        else:
-            # libvyosconfig exists() works only for _nodes_, not _values_
-            # libvyattacfg one also worked for values, so we emulate that case here
-            if isinstance(path, str):
-                path = re.split(r'\s+', path)
-            path_without_value = path[:-1]
-            path_str = " ".join(path_without_value)
-            try:
-                value = self._session_config.return_value(self._make_path(path_str))
-                return (value == path[-1])
-            except vyos.configtree.ConfigTreeError:
-                # node doesn't exist at all
-                return False
+        # libvyosconfig exists() works only for _nodes_, not _values_
+        # libvyattacfg also worked for values, so we emulate that case here
+        if isinstance(path, str):
+            path = re.split(r'\s+', path)
+        path_without_value = path[:-1]
+        path_str = " ".join(path_without_value)
+        try:
+            value = self._session_config.return_value(self._make_path(path_str))
+            values = self._session_config.return_values(self._make_path(path_str))
+        except vyos.configtree.ConfigTreeError:
+            # node/value doesn't exist
+            return False
+        if value and path[-1] == value:
+            return True
+        if isinstance(values, list) and path[-1] in values:
+            return True
+
+        return False
 
     def session_changed(self):
         """
@@ -380,7 +388,7 @@ class Config(object):
 
     def exists_effective(self, path):
         """
-        Check if a node exists in the running (effective) config
+        Checks if a node or value exists in the running (effective) config.
 
         Args:
             path (str): Configuration tree path
@@ -392,8 +400,26 @@ class Config(object):
             This function is safe to use in operational mode. In configuration mode,
             it ignores uncommited changes.
         """
-        if self._running_config:
-            return(self._running_config.exists(self._make_path(path)))
+        if self._running_config is None:
+            return False
+        if self._running_config.exists(self._make_path(path)):
+            return True
+        # libvyosconfig exists() works only for _nodes_, not _values_
+        # libvyattacfg also worked for values, so we emulate that case here
+        if isinstance(path, str):
+            path = re.split(r'\s+', path)
+        path_without_value = path[:-1]
+        path_str = " ".join(path_without_value)
+        try:
+            value = self._running_config.return_value(self._make_path(path_str))
+            values = self._running_config.return_values(self._make_path(path_str))
+        except vyos.configtree.ConfigTreeError:
+            # node/value doesn't exist
+            return False
+        if value and path[-1] == value:
+            return True
+        if isinstance(values, list) and path[-1] in values:
+            return True
 
         return False
 
