@@ -98,7 +98,7 @@ def verify(macsec):
 
 def generate(macsec):
     render(wpa_suppl_conf.format(**macsec),
-           'macsec/wpa_supplicant.conf.tmpl', macsec)
+           'macsec/wpa_supplicant.conf.j2', macsec)
     return None
 
 
