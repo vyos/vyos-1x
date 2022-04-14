@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,12 +36,24 @@ sysfs_config = {
 }
 
 class TestFirewall(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, ['firewall'])
+
+        cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
+
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', 'eth0'])
-        self.cli_commit()
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'firewall'])
         self.cli_delete(['firewall'])
         self.cli_commit()
 
