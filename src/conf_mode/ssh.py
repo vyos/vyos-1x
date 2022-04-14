@@ -84,8 +84,8 @@ def generate(ssh):
         syslog(LOG_INFO, 'SSH ed25519 host key not found, generating new key!')
         call(f'ssh-keygen -q -N "" -t ed25519 -f {key_ed25519}')
 
-    render(config_file, 'ssh/sshd_config.tmpl', ssh)
-    render(systemd_override, 'ssh/override.conf.tmpl', ssh)
+    render(config_file, 'ssh/sshd_config.j2', ssh)
+    render(systemd_override, 'ssh/override.conf.j2', ssh)
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 

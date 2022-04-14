@@ -52,9 +52,9 @@ PasswordAuthentication {{ "no" if disable_password_authentication is vyos_define
 
 {% if listen_address is vyos_defined %}
 # Specifies the local addresses sshd should listen on
-{%   for address in listen_address %}
+{%     for address in listen_address %}
 ListenAddress {{ address }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 {% if ciphers is vyos_defined %}
@@ -73,22 +73,22 @@ KexAlgorithms {{ key_exchange | join(',') }}
 {% endif %}
 
 {% if access_control is vyos_defined %}
-{%   if access_control.allow.user is vyos_defined %}
+{%     if access_control.allow.user is vyos_defined %}
 # If specified, login is allowed only for user names that match
 AllowUsers {{ access_control.allow.user | join(' ') }}
-{%   endif %}
-{%   if access_control.allow.group is vyos_defined %}
+{%     endif %}
+{%     if access_control.allow.group is vyos_defined %}
 # If specified, login is allowed only for users whose primary group or supplementary group list matches
 AllowGroups {{ access_control.allow.group | join(' ') }}
-{%   endif %}
-{%   if access_control.deny.user is vyos_defined %}
+{%     endif %}
+{%     if access_control.deny.user is vyos_defined %}
 # Login is disallowed for user names that match
 DenyUsers {{ access_control.deny.user | join(' ') }}
-{%   endif %}
-{%   if access_control.deny.group is vyos_defined %}
+{%     endif %}
+{%     if access_control.deny.group is vyos_defined %}
 # Login is disallowed for users whose primary group or supplementary group list matches
 DenyGroups {{ access_control.deny.group | join(' ') }}
-{%   endif %}
+{%     endif %}
 {% endif %}
 
 {% if client_keepalive_interval is vyos_defined %}
