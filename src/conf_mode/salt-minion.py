@@ -39,7 +39,7 @@ default_config_data = {
     'user': 'minion',
     'group': 'vyattacfg',
     'salt_id': gethostname(),
-    'mine_interval': '60',
+    'interval': '60',
     'verify_master_pubkey_sign': 'false',
     'master_key': ''
 }
