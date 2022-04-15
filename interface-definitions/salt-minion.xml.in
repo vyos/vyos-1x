@@ -28,6 +28,10 @@
                 <description>Salt server IPv4 address</description>
               </valueHelp>
               <valueHelp>
+                <format>ipv6</format>
+                <description>Salt server IPv6 address</description>
+              </valueHelp>
+              <valueHelp>
                 <format>hostname</format>
                 <description>Salt server FQDN address</description>
               </valueHelp>

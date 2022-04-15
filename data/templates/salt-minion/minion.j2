@@ -38,7 +38,7 @@ log_level: warning
 # resolved, then the minion will fail to start.
 master:
 {% for host in master %}
-  - {{ host }}
+  - {{ host | bracketize_ipv6 }}
 {% endfor %}
 
 # The user to run salt
