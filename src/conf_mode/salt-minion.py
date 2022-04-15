@@ -25,6 +25,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
 from vyos.util import chown
+from vyos.verify import verify_interface_exists
 from vyos.xml import defaults
 from vyos import ConfigError
 
@@ -66,6 +67,12 @@ def get_config(config=None):
     return salt
 
 def verify(salt):
+    if not salt:
+        return None
+
+    if 'source_interface' in salt:
+        verify_interface_exists(salt['source_interface'])
+
     return None
 
 def generate(salt):

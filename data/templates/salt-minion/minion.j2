@@ -57,5 +57,11 @@ id: {{ id }}
 # The number of minutes between mine updates.
 mine_interval: {{ interval }}
 
-verify_master_pubkey_sign: {{ 'True' if master_key is vyos_defined else 'False' }}
+{% if source_interface is vyos_defined %}
+# The name of the interface to use when establishing the connection to the Master.
+source_interface_name = {{ source_interface }}
+{% endif %}
 
+# Enables verification of the master-public-signature returned by the master
+# in auth-replies.
+verify_master_pubkey_sign: {{ 'True' if master_key is vyos_defined else 'False' }}

@@ -68,11 +68,13 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         hash = 'sha1'
         id = 'foo'
         interval = '120'
+        interface = 'eth0'
 
         self.cli_set(base_path + ['master', server])
         self.cli_set(base_path + ['hash', hash])
         self.cli_set(base_path + ['id', id])
         self.cli_set(base_path + ['interval', interval])
+        self.cli_set(base_path + ['source_interface', interface])
 
         self.cli_commit()
 
@@ -84,7 +86,8 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'hash_type: {hash}', conf)
         self.assertIn(f'id: {id}', conf)
         self.assertIn(f'mine_interval: {interval}', conf)
-        self.assertIn(f'id: {id}', conf)
+        self.assertIn(f'id: {interface}', conf)
+        self.assertIn(f'source_interface_name: {id}', conf)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

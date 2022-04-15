@@ -66,6 +66,7 @@
               <help>URL with signature of master for auth reply verification</help>
             </properties>
           </leafNode>
+          #include <include/source-interface.xml.i>
         </children>
       </node>
     </children>
