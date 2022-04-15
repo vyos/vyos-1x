@@ -32,17 +32,17 @@ log_file: /var/log/salt/minion
 # ['garbage', 'trace', 'debug']
 #
 # Default: 'warning'
-log_level: {{ log_level }}
+log_level: warning
 
 # Set the location of the salt master server, if the master server cannot be
 # resolved, then the minion will fail to start.
 master:
 {% for host in master %}
-- {{ host }}
+  - {{ host }}
 {% endfor %}
 
 # The user to run salt
-user: {{ user }}
+user: minion
 
 # The directory to store the pki information in
 pki_dir: /config/salt/pki/minion
@@ -52,9 +52,10 @@ pki_dir: /config/salt/pki/minion
 # Since salt uses detached ids it is possible to run multiple minions on the
 # same machine but with different ids, this can be useful for salt compute
 # clusters.
-id: {{ salt_id }}
+id: {{ id }}
 
 # The number of minutes between mine updates.
 mine_interval: {{ interval }}
 
-verify_master_pubkey_sign: {{ verify_master_pubkey_sign }}
+verify_master_pubkey_sign: {{ 'True' if master_key is vyos_defined else 'False' }}
+

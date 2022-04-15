@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,14 +16,16 @@
 
 import os
 
-from copy import deepcopy
 from socket import gethostname
 from sys import exit
 from urllib3 import PoolManager
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.template import render
-from vyos.util import call, chown
+from vyos.util import call
+from vyos.util import chown
+from vyos.xml import defaults
 from vyos import ConfigError
 
 from vyos import airbag
@@ -32,20 +34,10 @@ airbag.enable()
 config_file = r'/etc/salt/minion'
 master_keyfile = r'/opt/vyatta/etc/config/salt/pki/minion/master_sign.pub'
 
-default_config_data = {
-    'hash': 'sha256',
-    'log_level': 'warning',
-    'master' : 'salt',
-    'user': 'minion',
-    'group': 'vyattacfg',
-    'salt_id': gethostname(),
-    'interval': '60',
-    'verify_master_pubkey_sign': 'false',
-    'master_key': ''
-}
+user='minion'
+group='vyattacfg'
 
 def get_config(config=None):
-    salt = deepcopy(default_config_data)
     if config:
         conf = config
     else:
@@ -54,28 +46,23 @@ def get_config(config=None):
 
     if not conf.exists(base):
         return None
+
+    salt = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    # ID default is dynamic thus we can not use defaults()
+    if 'id' not in salt:
+        salt['id'] = gethostname()
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    salt = dict_merge(default_values, salt)
+
+    if not conf.exists(base):
+        return None
     else:
         conf.set_level(base)
 
-    if conf.exists(['hash']):
-        salt['hash'] = conf.return_value(['hash'])
-
-    if conf.exists(['master']):
-        salt['master'] = conf.return_values(['master'])
-
-    if conf.exists(['id']):
-        salt['salt_id'] = conf.return_value(['id'])
-
-    if conf.exists(['user']):
-        salt['user'] = conf.return_value(['user'])
-
-    if conf.exists(['interval']):
-        salt['interval'] = conf.return_value(['interval'])
-
-    if conf.exists(['master-key']):
-        salt['master_key'] = conf.return_value(['master-key'])
-        salt['verify_master_pubkey_sign'] = 'true'
-
+    import pprint
+    pprint.pprint(salt)
     return salt
 
 def verify(salt):
@@ -85,13 +72,11 @@ def generate(salt):
     if not salt:
         return None
 
-    render(config_file, 'salt-minion/minion.j2', salt,
-           user=salt['user'], group=salt['group'])
+    render(config_file, 'salt-minion/minion.j2', salt, user=user, group=group)
 
     if not os.path.exists(master_keyfile):
-        if salt['master_key']:
+        if 'master_key' in salt:
             req = PoolManager().request('GET', salt['master_key'], preload_content=False)
-
             with open(master_keyfile, 'wb') as f:
                 while True:
                     data = req.read(1024)
@@ -100,7 +85,7 @@ def generate(salt):
                     f.write(data)
 
             req.release_conn()
-            chown(master_keyfile, salt['user'], salt['group'])
+            chown(master_keyfile, user, group)
 
     return None
 

@@ -55,7 +55,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
 
         # commiconf = read_file() Check configured port
         conf = read_file(SALT_CONF)
-        self.assertIn(f'- {server}', conf)
+        self.assertIn(f'  - {server}', conf)
 
         # defaults
         hostname = gethostname()
