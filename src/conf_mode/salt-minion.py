@@ -22,10 +22,10 @@ from urllib3 import PoolManager
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.util import call
 from vyos.util import chown
-from vyos.verify import verify_interface_exists
 from vyos.xml import defaults
 from vyos import ConfigError
 
