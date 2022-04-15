@@ -286,7 +286,7 @@ def generate(dhcp):
     # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw
     # parameters we can pass to ISC DHCPd
     tmp_file = '/tmp/dhcpd.conf'
-    render(tmp_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
+    render(tmp_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
     # XXX: as we have the ability for a user to pass in "raw" options via VyOS
     # CLI (see T3544) we now ask ISC dhcpd to test the newly rendered
@@ -299,7 +299,7 @@ def generate(dhcp):
 
     # Now that we know that the newly rendered configuration is "good" we can
     # render the "real" configuration
-    render(config_file, 'dhcp-server/dhcpd.conf.tmpl', dhcp,
+    render(config_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
 
     return None

@@ -161,7 +161,7 @@ def generate(dhcpv6):
     if not dhcpv6 or 'disable' in dhcpv6:
         return None
 
-    render(config_file, 'dhcp-server/dhcpdv6.conf.tmpl', dhcpv6)
+    render(config_file, 'dhcp-server/dhcpdv6.conf.j2', dhcpv6)
     return None
 
 def apply(dhcpv6):
