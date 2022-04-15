@@ -85,7 +85,7 @@ def generate(salt):
     if not salt:
         return None
 
-    render(config_file, 'salt-minion/minion.tmpl', salt,
+    render(config_file, 'salt-minion/minion.j2', salt,
            user=salt['user'], group=salt['group'])
 
     if not os.path.exists(master_keyfile):
@@ -105,13 +105,14 @@ def generate(salt):
     return None
 
 def apply(salt):
+    service_name = 'salt-minion.service'
     if not salt:
         # Salt removed from running config
-        call('systemctl stop salt-minion.service')
+        call(f'systemctl stop {service_name}')
         if os.path.exists(config_file):
             os.unlink(config_file)
     else:
-        call('systemctl restart salt-minion.service')
+        call(f'systemctl restart {service_name}')
 
     return None
 
