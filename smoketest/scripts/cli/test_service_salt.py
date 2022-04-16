@@ -26,6 +26,8 @@ PROCESS_NAME = 'salt-minion'
 SALT_CONF = '/etc/salt/minion'
 base_path = ['service', 'salt-minion']
 
+interface = 'dum4456'
+
 class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -34,6 +36,13 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+
+        cls.cli_set(cls, ['interfaces', 'dummy', interface, 'address', '100.64.0.1/16'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'dummy', interface])
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
         # Check for running process
@@ -68,7 +77,6 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
         hash = 'sha1'
         id = 'foo'
         interval = '120'
-        interface = 'eth0'
 
         self.cli_set(base_path + ['master', server])
         self.cli_set(base_path + ['hash', hash])
