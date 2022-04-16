@@ -1,4 +1,4 @@
-# Copyright 2018-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,12 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from textwrap import fill
+
+class Warning():
+    def __init__(self, message):
+        # Reformat the message and trim it to 72 characters in length
+        message = fill(message, width=72)
+        print(f'\nWARNING: {message}')
 
 class DeprecationWarning():
     def __init__(self, message):
