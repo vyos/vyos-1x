@@ -3,28 +3,28 @@
 
 {% if hosts %}
 -- from 'system static-host-mapping' and DHCP server
-{%   for tag, taghosts in hosts.items() %}
-{%     for host, hostprops in taghosts.items() %}
+{%     for tag, taghosts in hosts.items() %}
+{%         for host, hostprops in taghosts.items() %}
 addNTA("{{ host }}.", "{{ tag }}")
-{%       for a in hostprops['aliases'] %}
+{%             for a in hostprops['aliases'] %}
 addNTA("{{ a }}.", "{{ tag }} alias")
-{%       endfor %}
+{%             endfor %}
+{%         endfor %}
 {%     endfor %}
-{%   endfor %}
 {% endif %}
 
 {% if forward_zones is vyos_defined %}
 -- from 'service dns forwarding domain'
-{%   for zone, zonedata in forward_zones.items() %}
-{%     if zonedata.addnta is vyos_defined %}
+{%     for zone, zonedata in forward_zones.items() %}
+{%         if zonedata.addnta is vyos_defined %}
 addNTA("{{ zone }}", "static")
-{%     endif %}
-{%   endfor %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 
 {% if authoritative_zones is vyos_defined %}
 -- from 'service dns forwarding authoritative-domain'
-{%   for zone in authoritative_zones %}
+{%     for zone in authoritative_zones %}
 addNTA("{{ zone }}", "static")
-{%   endfor %}
+{%     endfor %}
 {% endif %}

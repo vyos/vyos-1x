@@ -279,10 +279,10 @@ def generate(dns):
     if not dns:
         return None
 
-    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.tmpl',
+    render(pdns_rec_config_file, 'dns-forwarding/recursor.conf.j2',
             dns, user=pdns_rec_user, group=pdns_rec_group)
 
-    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.tmpl',
+    render(pdns_rec_lua_conf_file, 'dns-forwarding/recursor.conf.lua.j2',
             dns, user=pdns_rec_user, group=pdns_rec_group)
 
     for zone_filename in glob(f'{pdns_rec_run_dir}/zone.*.conf'):
@@ -290,7 +290,7 @@ def generate(dns):
 
     if 'authoritative_zones' in dns:
         for zone in dns['authoritative_zones']:
-            render(zone['file'], 'dns-forwarding/recursor.zone.conf.tmpl',
+            render(zone['file'], 'dns-forwarding/recursor.zone.conf.j2',
                     zone, user=pdns_rec_user, group=pdns_rec_group)
 
 

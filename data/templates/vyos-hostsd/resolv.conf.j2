@@ -5,12 +5,12 @@
 {# the order of tags, then by the order of nameservers within that tag #}
 
 {% for tag in name_server_tags_system %}
-{%   if tag in name_servers %}
+{%     if tag in name_servers %}
 # {{ tag }}
-{%     for ns in name_servers[tag] %}
+{%         for ns in name_servers[tag] %}
 nameserver {{ ns }}
-{%     endfor %}
-{%   endif %}
+{%         endfor %}
+{%     endif %}
 {% endfor %}
 
 {% if domain_name %}
@@ -18,8 +18,8 @@ domain {{ domain_name }}
 {% endif %}
 
 {% for tag in name_server_tags_system %}
-{%   if tag in search_domains %}
+{%     if tag in search_domains %}
 # {{ tag }}
-search {{ search_domains[tag]|join(' ') }}
-{%   endif %}
+search {{ search_domains[tag] | join(' ') }}
+{%     endif %}
 {% endfor %}

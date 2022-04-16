@@ -421,12 +421,12 @@ def pdns_rec_control(command):
 
 def make_resolv_conf(state):
     logger.info(f"Writing {RESOLV_CONF_FILE}")
-    render(RESOLV_CONF_FILE, 'vyos-hostsd/resolv.conf.tmpl', state,
+    render(RESOLV_CONF_FILE, 'vyos-hostsd/resolv.conf.j2', state,
             user='root', group='root')
 
 def make_hosts(state):
     logger.info(f"Writing {HOSTS_FILE}")
-    render(HOSTS_FILE, 'vyos-hostsd/hosts.tmpl', state,
+    render(HOSTS_FILE, 'vyos-hostsd/hosts.j2', state,
             user='root', group='root')
 
 def make_pdns_rec_conf(state):
@@ -437,12 +437,12 @@ def make_pdns_rec_conf(state):
     chmod_755(PDNS_REC_RUN_DIR)
 
     render(PDNS_REC_LUA_CONF_FILE,
-            'dns-forwarding/recursor.vyos-hostsd.conf.lua.tmpl',
+            'dns-forwarding/recursor.vyos-hostsd.conf.lua.j2',
             state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
 
     logger.info(f"Writing {PDNS_REC_ZONES_FILE}")
     render(PDNS_REC_ZONES_FILE,
-            'dns-forwarding/recursor.forward-zones.conf.tmpl',
+            'dns-forwarding/recursor.forward-zones.conf.j2',
             state, user=PDNS_REC_USER, group=PDNS_REC_GROUP)
 
 def set_host_name(state, data):
