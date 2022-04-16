@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,6 +21,8 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import leaf_node_changed
+from vyos.configdict import node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_bridge_delete
@@ -42,6 +44,17 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'geneve']
     geneve = get_interface_dict(conf, base)
+
+    # GENEVE interfaces are picky and require recreation if certain parameters
+    # change. But a GENEVE interface should - of course - not be re-created if
+    # it's description or IP address is adjusted. Feels somehow logic doesn't it?
+    for cli_option in ['remote', 'vni']:
+        if leaf_node_changed(conf, cli_option):
+            geneve.update({'rebuild_required': {}})
+
+    if node_changed(conf, ['parameters'], recursive=True):
+        geneve.update({'rebuild_required': {}})
+
     return geneve
 
 def verify(geneve):
@@ -67,11 +80,12 @@ def generate(geneve):
 
 def apply(geneve):
     # Check if GENEVE interface already exists
-    if geneve['ifname'] in interfaces():
-        g = GeneveIf(geneve['ifname'])
-        # GENEVE is super picky and the tunnel always needs to be recreated,
-        # thus we can simply always delete it first.
-        g.remove()
+    if 'rebuild_required' in geneve or 'delete' in geneve:
+        if geneve['ifname'] in interfaces():
+            g = GeneveIf(geneve['ifname'])
+            # GENEVE is super picky and the tunnel always needs to be recreated,
+            # thus we can simply always delete it first.
+            g.remove()
 
     if 'deleted' not in geneve:
         # Finally create the new interface
