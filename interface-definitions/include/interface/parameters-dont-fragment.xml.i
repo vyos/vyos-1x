@@ -1,7 +1,7 @@
-<!-- include start from interface/parameters-df.xml.i -->
+<!-- include start from interface/parameters-dont-fragment.xml.i -->
 <leafNode name="dont-fragment">
   <properties>
-    <help>Specifies the usage of the dont fragment (DF) bit</help>
+    <help>Always set the DF (don't fragment) bit</help>
     <valueless/>
   </properties>
 </leafNode>
