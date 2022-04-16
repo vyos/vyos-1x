@@ -57,7 +57,7 @@ class VXLANIf(Interface):
             'group'                      : 'group',
             'external'                   : 'external',
             'gpe'                        : 'gpe',
-            'parameters.ip.dont_fragment': 'df set',
+            'parameters.ip.df'           : 'df',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',

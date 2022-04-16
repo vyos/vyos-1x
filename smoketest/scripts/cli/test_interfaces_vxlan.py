@@ -48,7 +48,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             for option in self._options.get(intf, []):
                 self.cli_set(self._base_path + [intf] + option.split())
 
-            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'dont-fragment'])
+            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'df', 'set'])
             self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'tos', tos])
             self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'ttl', str(ttl)])
             ttl += 10

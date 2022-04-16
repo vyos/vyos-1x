@@ -35,7 +35,7 @@
                   <help>IPv4 specific tunnel parameters</help>
                 </properties>
                 <children>
-                  #include <include/interface/parameters-dont-fragment.xml.i>
+                  #include <include/interface/parameters-df.xml.i>
                   #include <include/interface/parameters-tos.xml.i>
                   #include <include/interface/parameters-ttl.xml.i>
                 </children>

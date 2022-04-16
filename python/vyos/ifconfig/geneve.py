@@ -42,7 +42,7 @@ class GeneveIf(Interface):
         # arguments used by iproute2. For more information please refer to:
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
-            'parameters.ip.dont_fragment': 'df set',
+            'parameters.ip.df'           : 'df',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',

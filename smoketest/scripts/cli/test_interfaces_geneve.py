@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -43,7 +43,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
             for option in self._options.get(intf, []):
                 self.cli_set(self._base_path + [intf] + option.split())
 
-            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'dont-fragment'])
+            self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'df', 'set'])
             self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'tos', tos])
             self.cli_set(self._base_path + [intf, 'parameters', 'ip', 'ttl', str(ttl)])
             ttl += 10

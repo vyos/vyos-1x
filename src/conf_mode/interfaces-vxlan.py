@@ -23,6 +23,7 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
+from vyos.configdict import node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
@@ -51,11 +52,12 @@ def get_config(config=None):
     # change. But a VXLAN interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
     for cli_option in ['external', 'gpe', 'group', 'port', 'remote',
-                       'source-address', 'source-interface', 'vni',
-                       'parameters ip dont-fragment', 'parameters ip tos',
-                       'parameters ip ttl']:
-        if leaf_node_changed(conf, cli_option.split()):
+                       'source-address', 'source-interface', 'vni']:
+        if leaf_node_changed(conf, cli_option):
             vxlan.update({'rebuild_required': {}})
+
+    if node_changed(conf, ['parameters'], recursive=True):
+        vxlan.update({'rebuild_required': {}})
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation
