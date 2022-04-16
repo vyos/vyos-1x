@@ -26,6 +26,7 @@ from datetime import datetime
 
 from isc_dhcp_leases import Lease, IscDhcpLeases
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.util import is_systemd_service_running
 
@@ -203,7 +204,7 @@ if __name__ == '__main__':
 
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
     if not is_systemd_service_running('isc-dhcp-server6.service'):
-        print("WARNING: DHCPv6 server is configured but not started. Data may be stale.")
+        Warning('DHCPv6 server is configured but not started. Data may be stale.')
 
     if args.leases:
         leases = get_leases(conf, lease_file, args.state, args.pool, args.sort)

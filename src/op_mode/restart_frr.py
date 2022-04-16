@@ -22,6 +22,7 @@ import psutil
 from logging.handlers import SysLogHandler
 from shutil import rmtree
 
+from vyos.base import Warning
 from vyos.util import call
 from vyos.util import ask_yes_no
 from vyos.util import process_named_running
@@ -163,7 +164,7 @@ if cmd_args.action == 'restart':
     if cmd_args.daemon != ['']:
         for daemon in cmd_args.daemon:
             if not process_named_running(daemon):
-                print('WARNING: some of listed daemons are not running!')
+                Warning('some of listed daemons are not running!')
 
     # run command to restart daemon
     for daemon in cmd_args.daemon:
