@@ -82,19 +82,20 @@ def generate(relay):
     if not relay:
         return None
 
-    render(config_file, 'dhcp-relay/dhcrelay6.conf.tmpl', relay)
+    render(config_file, 'dhcp-relay/dhcrelay6.conf.j2', relay)
     return None
 
 def apply(relay):
     # bail out early - looks like removal from running config
+    service_name = 'isc-dhcp-relay6.service'
     if not relay:
         # DHCPv6 relay support is removed in the commit
-        call('systemctl stop isc-dhcp-relay6.service')
+        call(f'systemctl stop {service_name}')
         if os.path.exists(config_file):
             os.unlink(config_file)
         return None
 
-    call('systemctl restart isc-dhcp-relay6.service')
+    call(f'systemctl restart {service_name}')
 
     return None
 
