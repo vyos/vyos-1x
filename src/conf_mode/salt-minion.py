@@ -62,8 +62,6 @@ def get_config(config=None):
     else:
         conf.set_level(base)
 
-    import pprint
-    pprint.pprint(salt)
     return salt
 
 def verify(salt):
