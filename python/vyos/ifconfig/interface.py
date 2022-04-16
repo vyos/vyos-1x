@@ -1243,8 +1243,8 @@ class Interface(Control):
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
                     self._config = dict_merge(tmp, self._config)
 
-            render(options_file, 'dhcp-client/daemon-options.tmpl', self._config)
-            render(config_file, 'dhcp-client/ipv4.tmpl', self._config)
+            render(options_file, 'dhcp-client/daemon-options.j2', self._config)
+            render(config_file, 'dhcp-client/ipv4.j2', self._config)
 
             # When the DHCP client is restarted a brief outage will occur, as
             # the old lease is released a new one is acquired (T4203). We will
@@ -1274,8 +1274,7 @@ class Interface(Control):
         systemd_service = f'dhcp6c@{ifname}.service'
 
         if enable and 'disable' not in self._config:
-            render(config_file, 'dhcp-client/ipv6.tmpl',
-                   self._config)
+            render(config_file, 'dhcp-client/ipv6.j2', self._config)
 
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.

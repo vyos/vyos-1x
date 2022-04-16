@@ -8,12 +8,12 @@ initial-interval 2;
 interface "{{ ifname }}" {
     send host-name "{{ dhcp_options.host_name }}";
 {% if dhcp_options.client_id is vyos_defined %}
-{%   set client_id = dhcp_options.client_id %}
+{%     set client_id = dhcp_options.client_id %}
 {#   Use HEX representation of client-id as it is send in MAC-address style using hex characters. If not HEX, use double quotes ASCII format #}
-{%   if not dhcp_options.client_id.split(':') | length >= 5 %}
-{%     set client_id = '"' + dhcp_options.client_id + '"' %}
-{%   endif %}
-    send dhcp-client-identifier {{ client_id  }};
+{%     if not dhcp_options.client_id.split(':') | length >= 5 %}
+{%         set client_id = '"' + dhcp_options.client_id + '"' %}
+{%     endif %}
+    send dhcp-client-identifier {{ client_id }};
 {% endif %}
 {% if dhcp_options.vendor_class_id is vyos_defined %}
     send vendor-class-identifier "{{ dhcp_options.vendor_class_id }}";
