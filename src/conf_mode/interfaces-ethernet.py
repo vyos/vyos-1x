@@ -19,6 +19,7 @@ import os
 from glob import glob
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_address
@@ -142,8 +143,8 @@ def verify(ethernet):
             raise ConfigError('XDP requires additional TX queues, too few available!')
 
     if {'is_bond_member', 'mac'} <= set(ethernet):
-        print(f'WARNING: changing mac address "{mac}" will be ignored as "{ifname}" '
-              f'is a member of bond "{is_bond_member}"'.format(**ethernet))
+        Warning(f'changing mac address "{mac}" will be ignored as "{ifname}" ' \
+                f'is a member of bond "{is_bond_member}"'.format(**ethernet))
 
     # use common function to verify VLAN configuration
     verify_vlan_config(ethernet)

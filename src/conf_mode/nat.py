@@ -23,6 +23,7 @@ from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
@@ -142,14 +143,14 @@ def verify(nat):
                 raise ConfigError(f'{err_msg} outbound-interface not specified')
 
             if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
-                print(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
+                Warning(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
             addr = dict_search('translation.address', config)
             if addr != None:
                 if addr != 'masquerade' and not is_ip_network(addr):
                     for ip in addr.split('-'):
                         if not is_addr_assigned(ip):
-                            print(f'WARNING: IP address {ip} does not exist on the system!')
+                            Warning(f'IP address {ip} does not exist on the system!')
             elif 'exclude' not in config:
                 raise ConfigError(f'{err_msg}\n' \
                                   'translation address not specified')
@@ -167,7 +168,7 @@ def verify(nat):
                                   'inbound-interface not specified')
             else:
                 if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
-                    print(f'WARNING: rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
+                    Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
 
             if dict_search('translation.address', config) == None and 'exclude' not in config:

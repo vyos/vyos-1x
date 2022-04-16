@@ -22,6 +22,7 @@ from copy import deepcopy
 from glob import glob
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
@@ -68,8 +69,8 @@ def verify(tftpd):
 
     for address, address_config in tftpd['listen_address'].items():
         if not is_addr_assigned(address):
-            print(f'WARNING: TFTP server listen address "{address}" not ' \
-                  'assigned to any interface!')
+            Warning(f'TFTP server listen address "{address}" not ' \
+                     'assigned to any interface!')
         verify_vrf(address_config)
 
     return None

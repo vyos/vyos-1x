@@ -21,6 +21,7 @@ from glob import glob
 from json import loads
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
@@ -225,7 +226,7 @@ def verify_rule(firewall, rule_conf, ipv6):
                             raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
 
                         if not group_obj:
-                            print(f'WARNING: {error_group} "{group_name}" has no members')
+                            Warning(f'{error_group} "{group_name}" has no members!')
 
             if 'port' in side_conf or dict_search_args(side_conf, 'group', 'port_group'):
                 if 'protocol' not in rule_conf:
@@ -395,7 +396,7 @@ def resync_policy_route():
     # Update policy route as firewall groups were updated
     tmp = run(policy_route_conf_script)
     if tmp > 0:
-        print('Warning: Failed to re-apply policy route configuration')
+        Warning('Failed to re-apply policy route configuration!')
 
 def apply(firewall):
     if 'first_install' in firewall:

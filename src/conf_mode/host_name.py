@@ -21,13 +21,14 @@ import copy
 import vyos.util
 import vyos.hostsd_client
 
-from vyos import ConfigError
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.ifconfig import Section
 from vyos.template import is_ip
 from vyos.util import cmd
 from vyos.util import call
 from vyos.util import process_named_running
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
@@ -113,7 +114,7 @@ def verify(hosts):
     for interface, interface_config in hosts['nameservers_dhcp_interfaces'].items():
         # Warnin user if interface does not have DHCP or DHCPv6 configured
         if not set(interface_config).intersection(['dhcp', 'dhcpv6']):
-            print(f'WARNING: "{interface}" is not a DHCP interface but uses DHCP name-server option!')
+            Warning(f'"{interface}" is not a DHCP interface but uses DHCP name-server option!')
 
     return None
 

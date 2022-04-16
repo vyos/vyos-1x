@@ -19,6 +19,7 @@ import os
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
@@ -92,7 +93,7 @@ def generate(igmp_proxy):
 
     # bail out early - service is disabled, but inform user
     if 'disable' in igmp_proxy:
-        print('WARNING: IGMP Proxy will be deactivated because it is disabled')
+        Warning('IGMP Proxy will be deactivated because it is disabled')
         return None
 
     render(config_file, 'igmp-proxy/igmpproxy.conf.tmpl', igmp_proxy)

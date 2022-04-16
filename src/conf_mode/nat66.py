@@ -21,6 +21,7 @@ import os
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
@@ -117,12 +118,12 @@ def verify(nat):
                 raise ConfigError(f'{err_msg} outbound-interface not specified')
 
             if config['outbound_interface'] not in interfaces():
-                raise ConfigError(f'WARNING: rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
+                raise ConfigError(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
             addr = dict_search('translation.address', config)
             if addr != None:
                 if addr != 'masquerade' and not is_ipv6(addr):
-                    raise ConfigError(f'Warning: IPv6 address {addr} is not a valid address')
+                    raise ConfigError(f'IPv6 address {addr} is not a valid address')
             else:
                 raise ConfigError(f'{err_msg} translation address not specified')
 
@@ -140,7 +141,7 @@ def verify(nat):
                                   'inbound-interface not specified')
             else:
                 if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
-                    print(f'WARNING: rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
+                    Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
     return None
 

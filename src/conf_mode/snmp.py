@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
@@ -149,7 +150,7 @@ def verify(snmp):
 
             tmp = extension_opt['script']
             if not os.path.isfile(tmp):
-                print(f'WARNING: script "{tmp}" does not exist!')
+                Warning(f'script "{tmp}" does not exist!')
             else:
                 chmod_755(extension_opt['script'])
 
@@ -158,7 +159,7 @@ def verify(snmp):
             # We only wan't to configure addresses that exist on the system.
             # Hint the user if they don't exist
             if not is_addr_assigned(address):
-                print(f'WARNING: SNMP listen address "{address}" not configured!')
+                Warning(f'SNMP listen address "{address}" not configured!')
 
     if 'trap_target' in snmp:
         for trap, trap_config in snmp['trap_target'].items():

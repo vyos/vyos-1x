@@ -19,6 +19,7 @@ import os
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
@@ -78,7 +79,7 @@ def verify(vxlan):
         return None
 
     if int(vxlan['mtu']) < 1500:
-        print('WARNING: RFC7348 recommends VXLAN tunnels preserve a 1500 byte MTU')
+        Warning('RFC7348 recommends VXLAN tunnels preserve a 1500 byte MTU')
 
     if 'group' in vxlan:
         if 'source_interface' not in vxlan:

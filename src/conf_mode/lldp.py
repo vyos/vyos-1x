@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.validate import is_addr_assigned
@@ -84,11 +85,11 @@ def verify(lldp):
 
     if 'management_address' in lldp:
         for address in lldp['management_address']:
-            message = f'WARNING: LLDP management address "{address}" is invalid'
+            message = f'LLDP management address "{address}" is invalid'
             if is_loopback_addr(address):
-                print(f'{message} - loopback address')
+                Warning(f'{message} - loopback address')
             elif not is_addr_assigned(address):
-                print(f'{message} - not assigned to any interface')
+                Warning(f'{message} - not assigned to any interface')
 
     if 'interface' in lldp:
         for interface, interface_config in lldp['interface'].items():
