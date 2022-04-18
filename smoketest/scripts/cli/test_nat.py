@@ -59,36 +59,44 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        tmp = cmd('sudo nft -j list table nat')
+        tmp = cmd('sudo nft -j list chain ip nat POSTROUTING')
         data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
 
         for idx in range(0, len(data_json)):
-            rule = str(rules[idx])
             data = data_json[idx]
-            network = f'192.168.{rule}.0/24'
+            if idx == 0:
+                self.assertEqual(data['chain'], 'POSTROUTING')
+                self.assertEqual(data['family'], 'ip')
+                self.assertEqual(data['table'], 'nat')
 
-            self.assertEqual(data['chain'], 'POSTROUTING')
-            self.assertEqual(data['comment'], f'SRC-NAT-{rule}')
-            self.assertEqual(data['family'], 'ip')
-            self.assertEqual(data['table'], 'nat')
-
-            iface = dict_search('match.right', data['expr'][0])
-            direction = dict_search('match.left.payload.field', data['expr'][1])
-            address = dict_search('match.right.prefix.addr', data['expr'][1])
-            mask = dict_search('match.right.prefix.len', data['expr'][1])
-
-            if int(rule) < 200:
-                self.assertEqual(direction, 'saddr')
-                self.assertEqual(iface, outbound_iface_100)
-                # check for masquerade keyword
-                self.assertIn('masquerade', data['expr'][3])
+                jump_target = dict_search('jump.target', data['expr'][1])
+                self.assertEqual(jump_target,'VYOS_PRE_SNAT_HOOK')
             else:
-                self.assertEqual(direction, 'daddr')
-                self.assertEqual(iface, outbound_iface_200)
-                # check for return keyword due to 'exclude'
-                self.assertIn('return', data['expr'][3])
+                rule = str(rules[idx - 1])
+                network = f'192.168.{rule}.0/24'
 
-            self.assertEqual(f'{address}/{mask}', network)
+                self.assertEqual(data['chain'], 'POSTROUTING')
+                self.assertEqual(data['comment'], f'SRC-NAT-{rule}')
+                self.assertEqual(data['family'], 'ip')
+                self.assertEqual(data['table'], 'nat')
+
+                iface = dict_search('match.right', data['expr'][0])
+                direction = dict_search('match.left.payload.field', data['expr'][1])
+                address = dict_search('match.right.prefix.addr', data['expr'][1])
+                mask = dict_search('match.right.prefix.len', data['expr'][1])
+
+                if int(rule) < 200:
+                    self.assertEqual(direction, 'saddr')
+                    self.assertEqual(iface, outbound_iface_100)
+                    # check for masquerade keyword
+                    self.assertIn('masquerade', data['expr'][3])
+                else:
+                    self.assertEqual(direction, 'daddr')
+                    self.assertEqual(iface, outbound_iface_200)
+                    # check for return keyword due to 'exclude'
+                    self.assertIn('return', data['expr'][3])
+
+                self.assertEqual(f'{address}/{mask}', network)
 
     def test_dnat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
@@ -111,33 +119,42 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        tmp = cmd('sudo nft -j list table nat')
+        tmp = cmd('sudo nft -j list chain ip nat PREROUTING')
         data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
 
         for idx in range(0, len(data_json)):
-            rule = str(rules[idx])
             data = data_json[idx]
-            port = int(f'10{rule}')
+            if idx == 0:
+                self.assertEqual(data['chain'], 'PREROUTING')
+                self.assertEqual(data['family'], 'ip')
+                self.assertEqual(data['table'], 'nat')
 
-            self.assertEqual(data['chain'], 'PREROUTING')
-            self.assertEqual(data['comment'].split()[0], f'DST-NAT-{rule}')
-            self.assertEqual(data['family'], 'ip')
-            self.assertEqual(data['table'], 'nat')
-
-            iface = dict_search('match.right', data['expr'][0])
-            direction = dict_search('match.left.payload.field', data['expr'][1])
-            protocol = dict_search('match.left.payload.protocol', data['expr'][1])
-            dnat_addr = dict_search('dnat.addr', data['expr'][3])
-            dnat_port = dict_search('dnat.port', data['expr'][3])
-
-            self.assertEqual(direction, 'sport')
-            self.assertEqual(dnat_addr, '192.0.2.1')
-            self.assertEqual(dnat_port, port)
-            if int(rule) < 200:
-                self.assertEqual(iface, inbound_iface_100)
-                self.assertEqual(protocol, inbound_proto_100)
+                jump_target = dict_search('jump.target', data['expr'][1])
+                self.assertEqual(jump_target,'VYOS_PRE_DNAT_HOOK')
             else:
-                self.assertEqual(iface, inbound_iface_200)
+
+                rule = str(rules[idx - 1])
+                port = int(f'10{rule}')
+
+                self.assertEqual(data['chain'], 'PREROUTING')
+                self.assertEqual(data['comment'].split()[0], f'DST-NAT-{rule}')
+                self.assertEqual(data['family'], 'ip')
+                self.assertEqual(data['table'], 'nat')
+
+                iface = dict_search('match.right', data['expr'][0])
+                direction = dict_search('match.left.payload.field', data['expr'][1])
+                protocol = dict_search('match.left.payload.protocol', data['expr'][1])
+                dnat_addr = dict_search('dnat.addr', data['expr'][3])
+                dnat_port = dict_search('dnat.port', data['expr'][3])
+
+                self.assertEqual(direction, 'sport')
+                self.assertEqual(dnat_addr, '192.0.2.1')
+                self.assertEqual(dnat_port, port)
+                if int(rule) < 200:
+                    self.assertEqual(iface, inbound_iface_100)
+                    self.assertEqual(protocol, inbound_proto_100)
+                else:
+                    self.assertEqual(iface, inbound_iface_200)
 
     def test_snat_required_translation_address(self):
         # T2813: Ensure translation address is specified

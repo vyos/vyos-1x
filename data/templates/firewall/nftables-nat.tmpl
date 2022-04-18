@@ -138,8 +138,9 @@
 {%   endif %}
 {% endmacro %}
 
-# Start with clean NAT table
-flush table ip nat
+# Start with clean SNAT and DNAT chains
+flush chain ip nat PREROUTING
+flush chain ip nat POSTROUTING
 {% if helper_functions is vyos_defined('remove') %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
 {%   set base_command = 'delete rule ip raw' %}
@@ -164,6 +165,7 @@ add rule ip raw NAT_CONNTRACK counter accept
 #
 # Destination NAT rules build up here
 #
+add rule ip nat PREROUTING counter jump VYOS_PRE_DNAT_HOOK
 {% if destination.rule is vyos_defined %}
 {%   for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
 {{ nat_rule(rule, config, 'PREROUTING') }}
@@ -172,6 +174,7 @@ add rule ip raw NAT_CONNTRACK counter accept
 #
 # Source NAT rules build up here
 #
+add rule ip nat POSTROUTING counter jump VYOS_PRE_SNAT_HOOK
 {% if source.rule is vyos_defined %}
 {%   for rule, config in source.rule.items() if config.disable is not vyos_defined %}
 {{ nat_rule(rule, config, 'POSTROUTING') }}
