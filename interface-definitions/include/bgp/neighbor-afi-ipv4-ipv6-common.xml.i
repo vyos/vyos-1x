@@ -69,7 +69,7 @@
 #include <include/bgp/afi-allowas-in.xml.i>
 <leafNode name="as-override">
   <properties>
-    <help>AS for routes sent to this peer to be the local AS</help>
+    <help>Override ASN in outbound updates to configured neighbor local-as</help>
     <valueless/>
   </properties>
 </leafNode>
