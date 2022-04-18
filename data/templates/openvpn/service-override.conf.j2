@@ -1,4 +1,4 @@
-{% set options = namespace(value=0) %}
+{% set options = namespace(value='') %}
 {% if openvpn_option is vyos_defined %}
 {%     for option in openvpn_option %}
 {#         Remove the '--' prefix from variable if it is presented #}
