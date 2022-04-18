@@ -608,7 +608,7 @@ def generate(openvpn):
 
     # Generate User/Password authentication file
     if 'authentication' in openvpn:
-        render(openvpn['auth_user_pass_file'], 'openvpn/auth.pw.tmpl', openvpn,
+        render(openvpn['auth_user_pass_file'], 'openvpn/auth.pw.j2', openvpn,
                user=user, group=group, permission=0o600)
     else:
         # delete old auth file if present
@@ -624,16 +624,16 @@ def generate(openvpn):
             # Our client need's to know its subnet mask ...
             client_config['server_subnet'] = dict_search('server.subnet', openvpn)
 
-            render(client_file, 'openvpn/client.conf.tmpl', client_config,
+            render(client_file, 'openvpn/client.conf.j2', client_config,
                    user=user, group=group)
 
     # we need to support quoting of raw parameters from OpenVPN CLI
     # see https://phabricator.vyos.net/T1632
-    render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
+    render(cfg_file.format(**openvpn), 'openvpn/server.conf.j2', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 
     # Render 20-override.conf for OpenVPN service
-    render(service_file.format(**openvpn), 'openvpn/service-override.conf.tmpl', openvpn,
+    render(service_file.format(**openvpn), 'openvpn/service-override.conf.j2', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
     # Reload systemd services config to apply an override
     call(f'systemctl daemon-reload')
