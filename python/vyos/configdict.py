@@ -335,10 +335,12 @@ def get_dhcp_interfaces(conf, vrf=None):
 
     def check_dhcp(config, ifname):
         tmp = {}
-        if 'address' in config and 'dhcp' in config['address']:
+        if dict_search('address', config) == 'dhcp' or dict_search('default_route', config) != None:
             options = {}
-            if 'dhcp_options' in config and 'default_route_distance' in config['dhcp_options']:
+            if dict_search('dhcp_options.default_route_distance', config) != None:
                 options.update({'distance' : config['dhcp_options']['default_route_distance']})
+            if dict_search('default_route', config) != None:
+                options.update({'distance' : config['default_route']})
             if 'vrf' in config:
                 if vrf is config['vrf']: tmp.update({ifname : options})
             else: tmp.update({ifname : options})
@@ -346,6 +348,8 @@ def get_dhcp_interfaces(conf, vrf=None):
 
     for section, interface in dict.items():
         for ifname in interface:
+            # always reset config level
+            conf.set_level([])
             # we already have a dict representation of the config from get_config_dict(),
             # but with the extended information from get_interface_dict() we also
             # get the DHCP client default-route-distance default option if not specified.

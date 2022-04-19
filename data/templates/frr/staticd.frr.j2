@@ -18,9 +18,14 @@ vrf {{ vrf }}
 {# IPv4 default routes from DHCP interfaces #}
 {% if dhcp is vyos_defined %}
 {%     for interface, interface_config in dhcp.items() %}
-{%         set next_hop = interface | get_dhcp_router %}
-{%         if next_hop is vyos_defined %}
-{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ interface_config.distance }}
+{#         PPPoE routes behave a bit different ... #}
+{%         if interface.startswith('pppoe') and interface_config.default_route is vyos_defined and interface_config.default_route is not vyos_defined('none') %}
+{{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210
+{%         else %}
+{%             set next_hop = interface | get_dhcp_router %}
+{%             if next_hop is vyos_defined %}
+{{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ interface_config.distance if interface_config.distance is vyos_defined }}
+{%             endif %}
 {%         endif %}
 {%     endfor %}
 {% endif %}
