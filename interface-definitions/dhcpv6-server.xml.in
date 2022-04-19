@@ -338,6 +338,33 @@
                       </leafNode>
                     </children>
                   </tagNode>
+                  <node name="vsio">
+                    <properties>
+                      <help>Vendor-specific Information Option</help>
+                    </properties>
+                    <children>
+                      <node name="cisco">
+                        <properties>
+                          <help>Parameters for cisco</help>
+                        </properties>
+                        <children>
+                          <leafNode name="tftp-server">
+                            <properties>
+                              <help>Parameters for cisco VoIP</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>TFTP IPv6 address</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                              <multi/>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                 </children>
               </tagNode>
             </children>
