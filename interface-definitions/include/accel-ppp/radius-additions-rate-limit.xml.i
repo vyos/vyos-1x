@@ -21,6 +21,20 @@
         <valueless />
       </properties>
     </leafNode>
+    <leafNode name="multiplier">
+      <properties>
+        <help>Shaper multiplier</help>
+        <valueHelp>
+          <format>&lt;0.001-1000&gt;</format>
+          <description>Shaper multiplier</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 0.001-1000 --float"/>
+        </constraint>
+        <constraintErrorMessage>Multiplier needs to be between 0.001 and 1000</constraintErrorMessage>
+      </properties>
+      <defaultValue>1</defaultValue>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
