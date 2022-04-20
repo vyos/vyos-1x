@@ -129,6 +129,9 @@ def leaf_node_changed(conf, path):
         if old is None and isinstance(new, dict):
             # valueLess nodes return {} if node was added
             return True
+        if old is None and new is not None:
+            # node was added to the CLI, e.g. OpenVPN node "openvpn-options"
+            return True
         if old is None:
             return []
         if isinstance(old, str):
@@ -139,9 +142,6 @@ def leaf_node_changed(conf, path):
             elif isinstance(new, type(None)):
                 new = []
             return list_diff(old, new)
-        if old is None and new is not None:
-            # node was added to the CLI
-            return True
 
     return None
 
