@@ -32,7 +32,7 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
@@ -90,8 +90,8 @@ def get_config(config=None):
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
 
-        tmp = leaf_node_changed(conf, ['openvpn-option'])
-        if tmp: openvpn['restart_required'] = ''
+        if is_node_changed(conf, ['openvpn-option']):
+            openvpn.update({'restart_required': {}})
 
         # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
         # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.

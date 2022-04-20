@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -37,10 +37,46 @@ PROCESS_NAME = 'openvpn'
 
 base_path = ['interfaces', 'openvpn']
 
-cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
-key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
-dh_data = 'MIIBCAKCAQEApzGAPcQlLJiOyfGZgl1qxNgufXkdpjG7lMaOrO4TGr1giFe3jIFOFxJNC/G9Dn+KSukaWssVVR+Jwr/JesZFPawihS03wC7cZsccykNRIjiteqJDwYJZUHieOxyCuCeY4pqOUCl1uswRGjLvIFtwynpnXKKuz2YtjNifma90PEgv/vVWKix+Q0TAbdbzJzO5xp8UVn9DuYfSr10k3LbDqDM7w5ezHZxFk24S5pN/yoOpdbxB8TS67q3IYXxR3F+RseKu4J3AvkxXSP1j7COXddPpLnvbJT/SW8NrjuC/n0eKGvmeyqNv108Y89jnT79MxMMRQk66iwlsd1m4pa/OYwIBAg=='
-ovpn_key_data = '443f2a710ac411c36894b2531e62c4550b079b8f3f08997f4be57c64abfdaaa431d2396b01ecec3a2c0618959e8186d99f489742d25673ffb3268841ebb2e7042a2daabe584e79d51d2b1d7409bf8840f7e42efa3e660a521719b04ee88b9043e6315ae12da7c9abd55f67eeed71a9ee8c6e163b5d2661fc332cf90cb45658b4adf892f79537d37d3a3d90da283ce885adf325ffd2b5be92067cdf0345c7712c9d36b642c170351b6d9ce9f6230c7a2617b0c181121bce7d5373404fb68e65210b36e6d40ef2769cf8990503859f6f2db3c85ba74420430a6250d6a74ca51ece4b85124bfdfec0c8a530cefa7350378d81a4539f74bed832a902ae4798142e4a'
+cert_data = """
+MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
+WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
+MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
+BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
+UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
+QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
+BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
++JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
+ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
++dm/LDnp7C0=
+"""
+
+key_data = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
+2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
+u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+"""
+
+dh_data = """
+MIIBCAKCAQEApzGAPcQlLJiOyfGZgl1qxNgufXkdpjG7lMaOrO4TGr1giFe3jIFO
+FxJNC/G9Dn+KSukaWssVVR+Jwr/JesZFPawihS03wC7cZsccykNRIjiteqJDwYJZ
+UHieOxyCuCeY4pqOUCl1uswRGjLvIFtwynpnXKKuz2YtjNifma90PEgv/vVWKix+
+Q0TAbdbzJzO5xp8UVn9DuYfSr10k3LbDqDM7w5ezHZxFk24S5pN/yoOpdbxB8TS6
+7q3IYXxR3F+RseKu4J3AvkxXSP1j7COXddPpLnvbJT/SW8NrjuC/n0eKGvmeyqNv
+108Y89jnT79MxMMRQk66iwlsd1m4pa/OYwIBAg==
+"""
+
+ovpn_key_data = """
+443f2a710ac411c36894b2531e62c4550b079b8f3f08997f4be57c64abfdaaa4
+31d2396b01ecec3a2c0618959e8186d99f489742d25673ffb3268841ebb2e704
+2a2daabe584e79d51d2b1d7409bf8840f7e42efa3e660a521719b04ee88b9043
+e6315ae12da7c9abd55f67eeed71a9ee8c6e163b5d2661fc332cf90cb45658b4
+adf892f79537d37d3a3d90da283ce885adf325ffd2b5be92067cdf0345c7712c
+9d36b642c170351b6d9ce9f6230c7a2617b0c181121bce7d5373404fb68e6521
+0b36e6d40ef2769cf8990503859f6f2db3c85ba74420430a6250d6a74ca51ece
+4b85124bfdfec0c8a530cefa7350378d81a4539f74bed832a902ae4798142e4a
+"""
 
 remote_port = '1194'
 protocol = 'udp'
@@ -59,20 +95,28 @@ def get_vrf(interface):
         return tmp
 
 class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
-        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+    @classmethod
+    def setUpClass(cls):
+        super(cls, cls).setUpClass()
 
-        self.cli_set(['pki', 'ca', 'ovpn_test', 'certificate', cert_data])
-        self.cli_set(['pki', 'certificate', 'ovpn_test', 'certificate', cert_data])
-        self.cli_set(['pki', 'certificate', 'ovpn_test', 'private', 'key', key_data])
-        self.cli_set(['pki', 'dh', 'ovpn_test', 'parameters', dh_data])
-        self.cli_set(['pki', 'openvpn', 'shared-secret', 'ovpn_test', 'key', ovpn_key_data])
+        cls.cli_set(cls, ['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
+        cls.cli_set(cls, ['vrf', 'name', vrf_name, 'table', '12345'])
+
+        cls.cli_set(cls, ['pki', 'ca', 'ovpn_test', 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, ['pki', 'certificate', 'ovpn_test', 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, ['pki', 'certificate', 'ovpn_test', 'private', 'key', key_data.replace('\n','')])
+        cls.cli_set(cls, ['pki', 'dh', 'ovpn_test', 'parameters', dh_data.replace('\n','')])
+        cls.cli_set(cls, ['pki', 'openvpn', 'shared-secret', 'ovpn_test', 'key', ovpn_key_data.replace('\n','')])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'dummy', dummy_if])
+        cls.cli_delete(cls, ['vrf'])
+
+        super(cls, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)
-        self.cli_delete(['interfaces', 'dummy', dummy_if])
-        self.cli_delete(['vrf'])
         self.cli_commit()
 
     def test_openvpn_client_verify(self):
@@ -531,6 +575,46 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
 
         self.cli_commit()
+
+    def test_openvpn_options(self):
+        # Ensure OpenVPN process restart on openvpn-option CLI node change
+
+        interface = 'vtun5001'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.2'])
+        self.cli_set(path + ['remote-address', '192.168.0.3'])
+        self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+
+        self.cli_commit()
+
+        # Now verify the OpenVPN "raw" option passing. Once an openvpn-option is
+        # added, modified or deleted from the CLI, OpenVPN daemon must be restarted
+        cur_pid = process_named_running('openvpn')
+        self.cli_set(path + ['openvpn-option', '--persist-tun'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
+        cur_pid = new_pid
+
+        self.cli_set(path + ['openvpn-option', '--persist-key'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
+        cur_pid = new_pid
+
+        self.cli_delete(path + ['openvpn-option'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
+        cur_pid = new_pid
 
     def test_openvpn_site2site_interfaces_tun(self):
         # Create two OpenVPN site-to-site interfaces
