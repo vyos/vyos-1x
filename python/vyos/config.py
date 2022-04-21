@@ -156,26 +156,28 @@ class Config(object):
         """
         if self._session_config is None:
             return False
+
+        # Assume the path is a node path first
         if self._session_config.exists(self._make_path(path)):
             return True
-        # libvyosconfig exists() works only for _nodes_, not _values_
-        # libvyattacfg also worked for values, so we emulate that case here
-        if isinstance(path, str):
-            path = re.split(r'\s+', path)
-        path_without_value = path[:-1]
-        path_str = " ".join(path_without_value)
-        try:
-            value = self._session_config.return_value(self._make_path(path_str))
-            values = self._session_config.return_values(self._make_path(path_str))
-        except vyos.configtree.ConfigTreeError:
-            # node/value doesn't exist
-            return False
-        if value and path[-1] == value:
-            return True
-        if isinstance(values, list) and path[-1] in values:
-            return True
+        else:
+            # If that check fails, it may mean the path has a value at the end.
+            # libvyosconfig exists() works only for _nodes_, not _values_
+            # libvyattacfg also worked for values, so we emulate that case here
+            if isinstance(path, str):
+                path = re.split(r'\s+', path)
+            path_without_value = path[:-1]
+            try:
+                # return_values() is safe to use with single-value nodes,
+                # it simply returns a single-item list in that case.
+                values = self._session_config.return_values(self._make_path(path_without_value))
 
-        return False
+                # If we got this far, the node does exist and has values,
+                # so we need to check if it has the value in question among its values.
+                return (path[-1] in values)
+            except vyos.configtree.ConfigTreeError:
+                # Even the parent node doesn't exist at all
+                return False
 
     def session_changed(self):
         """
@@ -402,26 +404,29 @@ class Config(object):
         """
         if self._running_config is None:
             return False
+
+        # Assume the path is a node path first
         if self._running_config.exists(self._make_path(path)):
             return True
-        # libvyosconfig exists() works only for _nodes_, not _values_
-        # libvyattacfg also worked for values, so we emulate that case here
-        if isinstance(path, str):
-            path = re.split(r'\s+', path)
-        path_without_value = path[:-1]
-        path_str = " ".join(path_without_value)
-        try:
-            value = self._running_config.return_value(self._make_path(path_str))
-            values = self._running_config.return_values(self._make_path(path_str))
-        except vyos.configtree.ConfigTreeError:
-            # node/value doesn't exist
-            return False
-        if value and path[-1] == value:
-            return True
-        if isinstance(values, list) and path[-1] in values:
-            return True
+        else:
+            # If that check fails, it may mean the path has a value at the end.
+            # libvyosconfig exists() works only for _nodes_, not _values_
+            # libvyattacfg also worked for values, so we emulate that case here
+            if isinstance(path, str):
+                path = re.split(r'\s+', path)
+            path_without_value = path[:-1]
+            try:
+                # return_values() is safe to use with single-value nodes,
+                # it simply returns a single-item list in that case.
+                values = self._running_config.return_values(self._make_path(path_without_value))
 
-        return False
+                # If we got this far, the node does exist and has values,
+                # so we need to check if it has the value in question among its values.
+                return (path[-1] in values)
+            except vyos.configtree.ConfigTreeError:
+                # Even the parent node doesn't exist at all
+                return False
+
 
     def return_effective_value(self, path, default=None):
         """
