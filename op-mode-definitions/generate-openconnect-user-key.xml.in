@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="openconnect">
+        <properties>
+          <help>Generate OpenConnect client parameters</help>
+        </properties>
+        <children>
+          <tagNode name="username">
+            <properties>
+              <help>Username used for authentication</help>
+              <completionHelp>
+                <list>&lt;username&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="otp-key">
+                <properties>
+                  <help>Generate OpenConnect OTP token</help>
+                </properties>
+                <children>
+                  <node name="hotp-time">
+                    <properties>
+                      <help>HOTP time-based token</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/generate_openconnect_otp_key.py --username "$4" --interval 30 --digits 6</command>
+                    <children>
+                      <tagNode name="interval">
+                        <properties>
+                          <help>Duration of single time interval</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/generate_openconnect_otp_key.py --username "$4" --interval "$8" --digits 6</command>
+                        <children>
+                          <tagNode name="digits">
+                            <properties>
+                              <help>The number of digits in the one-time password</help>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/generate_openconnect_otp_key.py --username "$4" --interval "$8" --digits "${10}"</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                      <tagNode name="digits">
+                        <properties>
+                          <help>The number of digits in the one-time password</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/generate_openconnect_otp_key.py --username "$4" --interval 30 --digits "$8"</command>
+                        <children>
+                          <tagNode name="interval">
+                            <properties>
+                              <help>Duration of single time interval</help>
+                            </properties>
+                            <command>sudo ${vyos_op_scripts_dir}/generate_openconnect_otp_key.py --username "$4" --interval "${10}" --digits $8</command>
+                          </tagNode>
+                        </children>
+                      </tagNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
