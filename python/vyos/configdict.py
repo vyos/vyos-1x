@@ -383,7 +383,6 @@ def get_interface_dict(config, base, ifname=''):
 
     Return a dictionary with the necessary interface config keys.
     """
-
     if not ifname:
         from vyos import ConfigError
         # determine tagNode instance
@@ -484,6 +483,9 @@ def get_interface_dict(config, base, ifname=''):
     # identical for all types of VLAN interfaces as they all include the same
     # XML definitions which hold the defaults.
     for vif, vif_config in dict.get('vif', {}).items():
+        # Add subinterface name to dictionary
+        dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
+
         default_vif_values = defaults(base + ['vif'])
         # XXX: T2665: When there is no DHCPv6-PD configuration given, we can safely
         # remove the default values from the dict.
@@ -515,6 +517,9 @@ def get_interface_dict(config, base, ifname=''):
         if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : ''})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
+        # Add subinterface name to dictionary
+        dict['vif_s'][vif_s].update({'ifname' : f'{ifname}.{vif_s}'})
+
         default_vif_s_values = defaults(base + ['vif-s'])
         # XXX: T2665: we only wan't the vif-s defaults - do not care about vif-c
         if 'vif_c' in default_vif_s_values: del default_vif_s_values['vif_c']
@@ -551,6 +556,9 @@ def get_interface_dict(config, base, ifname=''):
         if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : ''})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+            # Add subinterface name to dictionary
+            dict['vif_s'][vif_s]['vif_c'][vif_c].update({'ifname' : f'{ifname}.{vif_s}.{vif_c}'})
+
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
 
             # XXX: T2665: When there is no DHCPv6-PD configuration given, we can safely

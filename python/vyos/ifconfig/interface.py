@@ -1587,12 +1587,10 @@ class Interface(Control):
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_s_id
 
-            vif_s_ifname = f'{ifname}.{vif_s_id}'
-            vif_s_config['ifname'] = vif_s_ifname
-
             # It is not possible to change the VLAN encapsulation protocol
             # "on-the-fly". For this "quirk" we need to actively delete and
             # re-create the VIF-S interface.
+            vif_s_ifname = f'{ifname}.{vif_s_id}'
             if self.exists(vif_s_ifname):
                 cur_cfg = get_interface_config(vif_s_ifname)
                 protocol = dict_search('linkinfo.info_data.protocol', cur_cfg).lower()
@@ -1614,7 +1612,6 @@ class Interface(Control):
                 tmp['vlan_id'] = vif_c_id
 
                 vif_c_ifname = f'{vif_s_ifname}.{vif_c_id}'
-                vif_c_config['ifname'] = vif_c_ifname
                 c_vlan = VLANIf(vif_c_ifname, **tmp)
                 c_vlan.update(vif_c_config)
 
@@ -1625,10 +1622,7 @@ class Interface(Control):
 
         # create/update 802.1q VLAN interfaces
         for vif_id, vif_config in config.get('vif', {}).items():
-
             vif_ifname = f'{ifname}.{vif_id}'
-            vif_config['ifname'] = vif_ifname
-
             tmp = deepcopy(VLANIf.get_config())
             tmp['source_interface'] = ifname
             tmp['vlan_id'] = vif_id
