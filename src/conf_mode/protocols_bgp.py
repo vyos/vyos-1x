@@ -164,6 +164,12 @@ def verify(bgp):
                 if not verify_remote_as(peer_config, bgp):
                     raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
+                # Peer-group member cannot override remote-as of peer-group
+                if 'peer_group' in peer_config:
+                    peer_group = peer_config['peer_group']
+                    if 'remote_as' in peer_config and 'remote_as' in bgp['peer_group'][peer_group]:
+                        raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
+
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
                 vrf = None

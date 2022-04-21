@@ -882,5 +882,29 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'  rt vpn import {rt_import}', afi_config)
             self.assertIn(f' exit-address-family', afi_config)
 
+    def test_bgp_14_remote_as_peer_group_override(self):
+        # Peer-group member cannot override remote-as of peer-group
+        remote_asn = str(int(ASN) + 150)
+        neighbor = '192.0.2.1'
+        peer_group = 'bar'
+
+        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
+        self.cli_set(base_path + ['neighbor', neighbor, 'peer-group', peer_group])
+        self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', remote_asn])
+
+        # Peer-group member cannot override remote-as of peer-group
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['neighbor', neighbor, 'remote-as'])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {neighbor} peer-group {peer_group}', frrconfig)
+        self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
+        self.assertIn(f' neighbor {peer_group} remote-as {remote_asn}', frrconfig)
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
