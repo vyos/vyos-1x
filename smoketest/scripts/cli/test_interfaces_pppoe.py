@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -60,7 +60,6 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             self.cli_set(base_path + [interface, 'authentication', 'user', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
-            self.cli_set(base_path + [interface, 'default-route', 'auto'])
             self.cli_set(base_path + [interface, 'mtu', mtu])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
@@ -136,7 +135,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
             self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
-            self.cli_set(base_path + [interface, 'default-route', 'none'])
+            self.cli_set(base_path + [interface, 'no-default-route'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,7 +28,8 @@ from syslog import openlog
 from syslog import LOG_PID
 from syslog import LOG_INFO
 
-from vyos.configquery import ConfigTreeQuery
+from vyos.configquery import Config
+from vyos.configdict import get_interface_dict
 from vyos.ifconfig import PPPoEIf
 from vyos.util import read_file
 
@@ -50,10 +51,9 @@ dialer_pid = read_file(f'/var/run/{interface}.pid')
 openlog(ident=f'pppd[{dialer_pid}]', facility=LOG_INFO)
 syslog('executing ' + argv[0])
 
-conf = ConfigTreeQuery()
-pppoe = conf.get_config_dict(['interfaces', 'pppoe', argv[6]],
-                             get_first_key=True, key_mangling=('-', '_'))
-pppoe['ifname'] = argv[6]
+conf = Config()
+pppoe = get_interface_dict(conf, ['interfaces', 'pppoe'], argv[6])
 
+# Update the config
 p = PPPoEIf(pppoe['ifname'])
 p.update(pppoe)

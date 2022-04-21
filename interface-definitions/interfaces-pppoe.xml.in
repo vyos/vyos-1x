@@ -21,31 +21,8 @@
           #include <include/interface/dial-on-demand.xml.i>
           #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
-          <leafNode name="default-route">
-            <properties>
-              <help>Default route insertion behaviour</help>
-              <completionHelp>
-                <list>auto none force</list>
-              </completionHelp>
-              <constraint>
-                <regex>^(auto|none|force)$</regex>
-              </constraint>
-              <constraintErrorMessage>PPPoE default-route option must be 'auto', 'none', or 'force'</constraintErrorMessage>
-              <valueHelp>
-                <format>auto</format>
-                <description>Automatically install a default route</description>
-              </valueHelp>
-              <valueHelp>
-                <format>none</format>
-                <description>Do not install a default route</description>
-              </valueHelp>
-              <valueHelp>
-                <format>force</format>
-                <description>Replace existing default route</description>
-              </valueHelp>
-            </properties>
-            <defaultValue>auto</defaultValue>
-          </leafNode>
+          #include <include/interface/no-default-route.xml.i>
+          #include <include/interface/default-route-distance.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>

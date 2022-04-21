@@ -331,48 +331,82 @@ def is_source_interface(conf, interface, intftype=None):
 def get_dhcp_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
+    # Cache and reset config level
+    old_level = conf.get_level()
+    conf.set_level([])
+
     dhcp_interfaces = {}
     dict = conf.get_config_dict(['interfaces'], get_first_key=True)
     if not dict:
         return dhcp_interfaces
 
-    def check_dhcp(config, ifname):
+    def check_dhcp(config):
+        ifname = config['ifname']
         tmp = {}
-        if dict_search('address', config) == 'dhcp' or dict_search('default_route', config) != None:
+        if 'address' in config and 'dhcp' in config['address']:
             options = {}
             if dict_search('dhcp_options.default_route_distance', config) != None:
-                options.update({'distance' : config['dhcp_options']['default_route_distance']})
-            if dict_search('default_route', config) != None:
-                options.update({'distance' : config['default_route']})
+                options.update({'dhcp_options' : config['dhcp_options']})
             if 'vrf' in config:
                 if vrf is config['vrf']: tmp.update({ifname : options})
             else: tmp.update({ifname : options})
+
         return tmp
 
     for section, interface in dict.items():
         for ifname in interface:
-            # always reset config level
+            # always reset config level, as get_interface_dict() will alter it
             conf.set_level([])
             # we already have a dict representation of the config from get_config_dict(),
             # but with the extended information from get_interface_dict() we also
             # get the DHCP client default-route-distance default option if not specified.
             ifconfig = get_interface_dict(conf, ['interfaces', section], ifname)
 
-            tmp = check_dhcp(ifconfig, ifname)
+            tmp = check_dhcp(ifconfig)
             dhcp_interfaces.update(tmp)
             # check per VLAN interfaces
             for vif, vif_config in ifconfig.get('vif', {}).items():
-                tmp = check_dhcp(vif_config, f'{ifname}.{vif}')
+                tmp = check_dhcp(vif_config)
                 dhcp_interfaces.update(tmp)
             # check QinQ VLAN interfaces
-            for vif_s, vif_s_config in ifconfig.get('vif-s', {}).items():
-                tmp = check_dhcp(vif_s_config, f'{ifname}.{vif_s}')
+            for vif_s, vif_s_config in ifconfig.get('vif_s', {}).items():
+                tmp = check_dhcp(vif_s_config)
                 dhcp_interfaces.update(tmp)
-                for vif_c, vif_c_config in vif_s_config.get('vif-c', {}).items():
-                    tmp = check_dhcp(vif_c_config, f'{ifname}.{vif_s}.{vif_c}')
+                for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
+                    tmp = check_dhcp(vif_c_config)
                     dhcp_interfaces.update(tmp)
 
+    # reset old config level
     return dhcp_interfaces
+
+def get_pppoe_interfaces(conf, vrf=None):
+    """ Common helper functions to retrieve all interfaces from current CLI
+    sessions that have DHCP configured. """
+    # Cache and reset config level
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    pppoe_interfaces = {}
+    for ifname in conf.list_nodes(['interfaces', 'pppoe']):
+        # always reset config level, as get_interface_dict() will alter it
+        conf.set_level([])
+        # we already have a dict representation of the config from get_config_dict(),
+        # but with the extended information from get_interface_dict() we also
+        # get the DHCP client default-route-distance default option if not specified.
+        ifconfig = get_interface_dict(conf, ['interfaces', 'pppoe'], ifname)
+
+        options = {}
+        if 'default_route_distance' in ifconfig:
+            options.update({'default_route_distance' : ifconfig['default_route_distance']})
+        if 'no_default_route' in ifconfig:
+            options.update({'no_default_route' : {}})
+        if 'vrf' in ifconfig:
+            if vrf is ifconfig['vrf']: pppoe_interfaces.update({ifname : options})
+        else: pppoe_interfaces.update({ifname : options})
+
+    # reset old config level
+    conf.set_level(old_level)
+    return pppoe_interfaces
 
 def get_interface_dict(config, base, ifname=''):
     """

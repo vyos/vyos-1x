@@ -27,12 +27,13 @@ class PPPoEIf(Interface):
         },
     }
 
-    def _remove_routes(self, vrf=''):
+    def _remove_routes(self, vrf=None):
         # Always delete default routes when interface is removed
+        vrf_cmd = ''
         if vrf:
-            vrf = f'-c "vrf {vrf}"'
-        self._cmd(f'vtysh -c "conf t" {vrf} -c "no ip route 0.0.0.0/0 {self.ifname} tag 210"')
-        self._cmd(f'vtysh -c "conf t" {vrf} -c "no ipv6 route ::/0 {self.ifname} tag 210"')
+            vrf_cmd = f'-c "vrf {vrf}"'
+        self._cmd(f'vtysh -c "conf t" {vrf_cmd} -c "no ip route 0.0.0.0/0 {self.ifname} tag 210"')
+        self._cmd(f'vtysh -c "conf t" {vrf_cmd} -c "no ipv6 route ::/0 {self.ifname} tag 210"')
 
     def remove(self):
         """
@@ -44,11 +45,11 @@ class PPPoEIf(Interface):
         >>> i = Interface('pppoe0')
         >>> i.remove()
         """
-
+        vrf = None
         tmp = get_interface_config(self.ifname)
-        vrf = ''
         if 'master' in tmp:
-            self._remove_routes(tmp['master'])
+            vrf = tmp['master']
+        self._remove_routes(vrf)
 
         # remove bond master which places members in disabled state
         super().remove()
@@ -84,10 +85,12 @@ class PPPoEIf(Interface):
         self._config = config
 
         # remove old routes from an e.g. old VRF assignment
-        vrf = ''
-        if 'vrf_old' in config:
-            vrf = config['vrf_old']
-        self._remove_routes(vrf)
+        if 'shutdown_required':
+            vrf = None
+            tmp = get_interface_config(self.ifname)
+            if 'master' in tmp:
+                vrf = tmp['master']
+            self._remove_routes(vrf)
 
         # DHCPv6 PD handling is a bit different on PPPoE interfaces, as we do
         # not require an 'address dhcpv6' CLI option as with other interfaces
@@ -98,54 +101,15 @@ class PPPoEIf(Interface):
 
         super().update(config)
 
-        if 'default_route' not in config or config['default_route'] == 'none':
-            return
-
-        #
-        # Set default routes pointing to pppoe interface
-        #
-        vrf = ''
-        sed_opt = '^ip route'
-
-        install_v4 = True
-        install_v6 = True
-
         # generate proper configuration string when VRFs are in use
+        vrf = ''
         if 'vrf' in config:
             tmp = config['vrf']
             vrf = f'-c "vrf {tmp}"'
-            sed_opt = f'vrf {tmp}'
 
-        if config['default_route'] == 'auto':
-            # only add route if there is no default route present
-            tmp = self._cmd(f'vtysh -c "show running-config staticd no-header" | sed -n "/{sed_opt}/,/!/p"')
-            for line in tmp.splitlines():
-                line = line.lstrip()
-                if line.startswith('ip route 0.0.0.0/0'):
-                    install_v4 = False
-                    continue
-
-                if 'ipv6' in config and line.startswith('ipv6 route ::/0'):
-                    install_v6 = False
-                    continue
-
-        elif config['default_route'] == 'force':
-            # Force means that all static routes are replaced with the ones from this interface
-            tmp = self._cmd(f'vtysh -c "show running-config staticd no-header" | sed -n "/{sed_opt}/,/!/p"')
-            for line in tmp.splitlines():
-                if self.ifname in line:
-                    # It makes no sense to remove a route with our interface and the later re-add it.
-                    # This will only make traffic disappear - which is a no-no!
-                    continue
-
-                line = line.lstrip()
-                if line.startswith('ip route 0.0.0.0/0'):
-                    self._cmd(f'vtysh -c "conf t" {vrf} -c "no {line}"')
-
-                if 'ipv6' in config and line.startswith('ipv6 route ::/0'):
-                    self._cmd(f'vtysh -c "conf t" {vrf} -c "no {line}"')
-
-        if install_v4:
-            self._cmd(f'vtysh -c "conf t" {vrf} -c "ip route 0.0.0.0/0 {self.ifname} tag 210"')
-        if install_v6 and 'ipv6' in config:
-            self._cmd(f'vtysh -c "conf t" {vrf} -c "ipv6 route ::/0 {self.ifname} tag 210"')
+        if 'no_default_route' not in config:
+            # Set default route(s) pointing to PPPoE interface
+            distance = config['default_route_distance']
+            self._cmd(f'vtysh -c "conf t" {vrf} -c "ip route 0.0.0.0/0 {self.ifname} tag 210 {distance}"')
+            if 'ipv6' in config:
+                self._cmd(f'vtysh -c "conf t" {vrf} -c "ipv6 route ::/0 {self.ifname} tag 210 {distance}"')

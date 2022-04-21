@@ -22,6 +22,7 @@ from sys import argv
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import get_dhcp_interfaces
+from vyos.configdict import get_pppoe_interfaces
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_vrf
 from vyos.template import render_to_string
@@ -59,7 +60,9 @@ def get_config(config=None):
 
     # T3680 - get a list of all interfaces currently configured to use DHCP
     tmp = get_dhcp_interfaces(conf, vrf)
-    if tmp: static['dhcp'] = tmp
+    if tmp: static.update({'dhcp' : tmp})
+    tmp = get_pppoe_interfaces(conf, vrf)
+    if tmp: static.update({'pppoe' : tmp})
 
     return static
 

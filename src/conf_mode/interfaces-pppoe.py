@@ -22,7 +22,9 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
+from vyos.configdict import get_pppoe_interfaces
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_interface_exists
@@ -52,28 +54,12 @@ def get_config(config=None):
     # We should only terminate the PPPoE session if critical parameters change.
     # All parameters that can be changed on-the-fly (like interface description)
     # should not lead to a reconnect!
-    tmp = leaf_node_changed(conf, ['access-concentrator'])
-    if tmp: pppoe.update({'shutdown_required': {}})
-
-    tmp = leaf_node_changed(conf, ['connect-on-demand'])
-    if tmp: pppoe.update({'shutdown_required': {}})
-
-    tmp = leaf_node_changed(conf, ['service-name'])
-    if tmp: pppoe.update({'shutdown_required': {}})
-
-    tmp = leaf_node_changed(conf, ['source-interface'])
-    if tmp: pppoe.update({'shutdown_required': {}})
-
-    tmp = leaf_node_changed(conf, ['vrf'])
-    # leaf_node_changed() returns a list, as VRF is a non-multi node, there
-    # will be only one list element
-    if tmp: pppoe.update({'vrf_old': tmp[0]})
-
-    tmp = leaf_node_changed(conf, ['authentication', 'user'])
-    if tmp: pppoe.update({'shutdown_required': {}})
-
-    tmp = leaf_node_changed(conf, ['authentication', 'password'])
-    if tmp: pppoe.update({'shutdown_required': {}})
+    for options in ['access-concentrator', 'connect-on-demand', 'service-name',
+                    'source-interface', 'vrf', 'no-default-route', 'authentication']:
+        if is_node_changed(conf, options):
+            pppoe.update({'shutdown_required': {}})
+            # bail out early - no need to further process other nodes
+            break
 
     return pppoe
 
@@ -120,7 +106,7 @@ def apply(pppoe):
         return None
 
     # reconnect should only be necessary when certain config options change,
-    # like ACS name, authentication, no-peer-dns, source-interface
+    # like ACS name, authentication ... (see get_config() for details)
     if ((not is_systemd_service_running(f'ppp@{ifname}.service')) or
         'shutdown_required' in pppoe):
 
@@ -130,6 +116,9 @@ def apply(pppoe):
             p.remove()
 
         call(f'systemctl restart ppp@{ifname}.service')
+        # When interface comes "live" a hook is called:
+        # /etc/ppp/ip-up.d/99-vyos-pppoe-callback
+        # which triggers PPPoEIf.update()
     else:
         if os.path.isdir(f'/sys/class/net/{ifname}'):
             p = PPPoEIf(ifname)
