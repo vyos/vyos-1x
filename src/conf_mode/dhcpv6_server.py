@@ -41,7 +41,9 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  get_first_key=True,
+                                  no_tag_node_value_mangle=True)
     return dhcpv6
 
 def verify(dhcpv6):
@@ -51,7 +53,7 @@ def verify(dhcpv6):
 
     # If DHCP is enabled we need one share-network
     if 'shared_network_name' not in dhcpv6:
-        raise ConfigError('No DHCPv6 shared networks configured. At least\n' \
+        raise ConfigError('No DHCPv6 shared networks configured. At least '\
                           'one DHCPv6 shared network must be configured.')
 
     # Inspect shared-network/subnet
@@ -60,8 +62,9 @@ def verify(dhcpv6):
     for network, network_config in dhcpv6['shared_network_name'].items():
         # A shared-network requires a subnet definition
         if 'subnet' not in network_config:
-            raise ConfigError(f'No DHCPv6 lease subnets configured for "{network}". At least one\n' \
-                              'lease subnet must be configured for each shared network!')
+            raise ConfigError(f'No DHCPv6 lease subnets configured for "{network}". '\
+                              'At least one lease subnet must be configured for '\
+                              'each shared network!')
 
         for subnet, subnet_config in network_config['subnet'].items():
             if 'address_range' in subnet_config:
@@ -83,20 +86,20 @@ def verify(dhcpv6):
 
                         # Stop address must be greater or equal to start address
                         if not ip_address(stop) >= ip_address(start):
-                            raise ConfigError(f'address-range stop address "{stop}" must be greater or equal\n' \
+                            raise ConfigError(f'address-range stop address "{stop}" must be greater then or equal ' \
                                               f'to the range start address "{start}"!')
 
                         # DHCPv6 range start address must be unique - two ranges can't
                         # start with the same address - makes no sense
                         if start in range6_start:
-                            raise ConfigError(f'Conflicting DHCPv6 lease range:\n' \
+                            raise ConfigError(f'Conflicting DHCPv6 lease range: '\
                                               f'Pool start address "{start}" defined multipe times!')
                         range6_start.append(start)
 
                         # DHCPv6 range stop address must be unique - two ranges can't
                         # end with the same address - makes no sense
                         if stop in range6_stop:
-                            raise ConfigError(f'Conflicting DHCPv6 lease range:\n' \
+                            raise ConfigError(f'Conflicting DHCPv6 lease range: '\
                                               f'Pool stop address "{stop}" defined multipe times!')
                         range6_stop.append(stop)
 
@@ -112,7 +115,7 @@ def verify(dhcpv6):
 
                 for prefix, prefix_config in subnet_config['prefix_delegation']['start'].items():
                     if 'stop' not in prefix_config:
-                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}"\n'
+                        raise ConfigError(f'Stop address of delegated IPv6 prefix range "{prefix}" '\
                                           f'must be configured')
 
                     if 'prefix_length' not in prefix_config:
@@ -149,8 +152,8 @@ def verify(dhcpv6):
                         raise ConfigError('DHCPv6 conflicting subnet ranges: {0} overlaps {1}'.format(net, net2))
 
     if not listen_ok:
-        raise ConfigError('None of the DHCPv6 subnets are connected to a subnet6 on\n' \
-                          'this machine. At least one subnet6 must be connected such that\n' \
+        raise ConfigError('None of the DHCPv6 subnets are connected to a subnet6 on '\
+                          'this machine. At least one subnet6 must be connected such that '\
                           'DHCPv6 listens on an interface!')
 
 
