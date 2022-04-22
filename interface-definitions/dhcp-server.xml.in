@@ -414,6 +414,32 @@
                       <multi/>
                     </properties>
                   </leafNode>
+                  <node name="vendor-option">
+                    <properties>
+                      <help>Vendor Specific Options</help>
+                    </properties>
+                    <children>
+                      <node name="ubiquity">
+                        <properties>
+                          <help>Ubiquity specific parameters</help>
+                        </properties>
+                        <children>
+                          <leafNode name="unifi-controller">
+                            <properties>
+                              <help>Address of UniFi controller</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>IP address of UniFi controller</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv4-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                   <leafNode name="wins-server">
                     <properties>
                       <help>IP address for Windows Internet Name Service (WINS) server</help>

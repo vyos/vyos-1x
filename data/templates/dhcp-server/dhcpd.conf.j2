@@ -23,6 +23,15 @@ option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 option wpad-url code 252 = text;
 
+# Vendor specific options - Ubiquity Networks
+option space ubnt;
+option ubnt.unifi-controller code 1 = ip-address;
+class "ubnt" {
+    match if substring (option vendor-class-identifier , 0, 4) = "ubnt";
+    option vendor-class-identifier "ubnt";
+    vendor-option-space ubnt;
+}
+
 {% if global_parameters is vyos_defined %}
 # The following {{ global_parameters | length }} line(s) have been added as
 # global-parameters in the CLI and have not been validated !!!
@@ -193,6 +202,9 @@ shared-network {{ network }} {
 {%                         endif %}
         }
 {%                     endfor %}
+{%                 endif %}
+{%                 if subnet_config.vendor_option.ubiquity.unifi_controller is vyos_defined %}
+        option ubnt.unifi-controller {{ subnet_config.vendor_option.ubiquity.unifi_controller }};
 {%                 endif %}
 {%                 if subnet_config.range is vyos_defined %}
 {#           pool configuration can only be used if there follows a range option #}
