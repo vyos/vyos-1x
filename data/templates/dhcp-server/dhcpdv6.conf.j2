@@ -11,7 +11,9 @@ option dhcp6.preference {{ preference }};
 {% if global_parameters.name_server is vyos_defined %}
 option dhcp6.name-servers {{ global_parameters.name_server | join(', ') }};
 {% endif %}
-option space cisco;
+
+# Vendor specific options - Cisco
+option space cisco code width 2 length width 2;
 option cisco.tftp-servers code 1 = array of ip6-address;
 option vsio.cisco code 9 = encapsulate cisco;
 
