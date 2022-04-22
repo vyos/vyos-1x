@@ -369,6 +369,18 @@
                   <leafNode name="tftp-server-name">
                     <properties>
                       <help>TFTP server name</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>TFTP server IPv4 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hostname</format>
+                        <description>TFTP server FQDN</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="fqdn"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                   <leafNode name="time-offset">
