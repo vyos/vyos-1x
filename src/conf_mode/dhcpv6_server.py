@@ -129,6 +129,10 @@ def verify(dhcpv6):
                         if ip_address(mapping_config['ipv6_address']) not in ip_network(subnet):
                             raise ConfigError(f'static-mapping address for mapping "{mapping}" is not in subnet "{subnet}"!')
 
+            if 'vendor_option' in subnet_config:
+                if len(dict_search('vendor_option.cisco.tftp_server', subnet_config)) > 2:
+                    raise ConfigError(f'No more then two Cisco tftp-servers should be defined for subnet "{subnet}"!')
+
             # Subnets must be unique
             if subnet in subnets:
                 raise ConfigError(f'DHCPv6 subnets must be unique! Subnet {subnet} defined multiple times!')
