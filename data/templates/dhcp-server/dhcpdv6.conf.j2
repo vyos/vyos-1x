@@ -118,8 +118,8 @@ shared-network {{ network }} {
         }
 {%                     endfor %}
 {%                 endif %}
-{%                 if subnet_config.vsio.cisco.tftp_server is vyos_defined %}
-        option cisco.tftp-servers {{ subnet_config.vsio.cisco.tftp_server | join(', ') }};
+{%                 if subnet_config.vendor_option.cisco.tftp_server is vyos_defined %}
+        option cisco.tftp-servers {{ subnet_config.vendor_option.cisco.tftp_server | join(', ') }};
 {%                 endif %}
     }
 {%             endfor %}

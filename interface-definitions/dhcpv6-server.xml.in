@@ -338,22 +338,22 @@
                       </leafNode>
                     </children>
                   </tagNode>
-                  <node name="vsio">
+                  <node name="vendor-option">
                     <properties>
-                      <help>Vendor-specific Information Option</help>
+                      <help>Vendor Specific Options</help>
                     </properties>
                     <children>
                       <node name="cisco">
                         <properties>
-                          <help>Parameters for cisco</help>
+                          <help>Cisco specific parameters</help>
                         </properties>
                         <children>
                           <leafNode name="tftp-server">
                             <properties>
-                              <help>Parameters for cisco VoIP</help>
+                              <help>TFTP server name</help>
                               <valueHelp>
                                 <format>ipv6</format>
-                                <description>TFTP IPv6 address</description>
+                                <description>TFTP server IPv6 address</description>
                               </valueHelp>
                               <constraint>
                                 <validator name="ipv6-address"/>
