@@ -42,14 +42,6 @@ def get_config(config=None):
         return None
 
     dhcpv6 = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
-
-    for network, network_config in dhcpv6['shared_network_name'].items():
-        # A shared-network requires a subnet definition
-        if 'subnet' in network_config:
-            for subnet, subnet_config in network_config['subnet'].items():
-                if dict_search('vsio.cisco.tftp_server', subnet_config):
-                    dhcpv6['vsio_cisco_tftp'] = True
-
     return dhcpv6
 
 def verify(dhcpv6):

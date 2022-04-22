@@ -11,11 +11,9 @@ option dhcp6.preference {{ preference }};
 {% if global_parameters.name_server is vyos_defined %}
 option dhcp6.name-servers {{ global_parameters.name_server | join(', ') }};
 {% endif %}
-{% if vsio_cisco_tftp %}
 option space cisco;
 option cisco.tftp-servers code 1 = array of ip6-address;
 option vsio.cisco code 9 = encapsulate cisco;
-{% endif %}
 
 # Shared network configration(s)
 {% if shared_network_name is vyos_defined %}
