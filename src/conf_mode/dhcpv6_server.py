@@ -173,15 +173,15 @@ def generate(dhcpv6):
 
 def apply(dhcpv6):
     # bail out early - looks like removal from running config
+    service_name = 'isc-dhcp-server6.service'
     if not dhcpv6 or 'disable' in dhcpv6:
         # DHCP server is removed in the commit
-        call('systemctl stop isc-dhcp-server6.service')
+        call(f'systemctl stop {service_name}')
         if os.path.exists(config_file):
             os.unlink(config_file)
-
         return None
 
-    call('systemctl restart isc-dhcp-server6.service')
+    call(f'systemctl restart {service_name}')
     return None
 
 if __name__ == '__main__':
