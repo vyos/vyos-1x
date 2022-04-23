@@ -171,11 +171,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'state', 'invalid', 'enable'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'state', 'new', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'connection-status', 'dnat'])
+
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'connection-status', 'nat', 'destination'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'new', 'enable'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'established', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'connection-status', 'snat'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'connection-status', 'nat', 'source'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
