@@ -1,4 +1,4 @@
-# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -205,10 +205,10 @@ def verify_mirror_redirect(config):
             raise ConfigError(f'Requested redirect interface "{redirect_ifname}" '\
                                'does not exist!')
 
-    if dict_search('traffic_policy.in', config) != None:
+    if ('mirror' in config or 'redirect' in config) and dict_search('traffic_policy.in', config) is not None:
         # XXX: support combination of limiting and redirect/mirror - this is an
         # artificial limitation
-        raise ConfigError('Can not use ingress policy tigether with mirror or redirect!')
+        raise ConfigError('Can not use ingress policy together with mirror or redirect!')
 
 def verify_authentication(config):
     """
