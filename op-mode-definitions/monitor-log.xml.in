@@ -46,67 +46,67 @@
                 <properties>
                   <help>Monitor log for OSPF</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/ospfd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ospfd</command>
               </leafNode>
               <leafNode name="ospfv3">
                 <properties>
                   <help>Monitor log for OSPF for IPv6</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/ospf6d</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ospf6d</command>
               </leafNode>
               <leafNode name="bgp">
                 <properties>
                   <help>Monitor log for BGP</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/bgpd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/bgpd</command>
               </leafNode>
               <leafNode name="rip">
                 <properties>
                   <help>Monitor log for RIP</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/ripd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ripd</command>
               </leafNode>
               <leafNode name="ripng">
                 <properties>
                   <help>Monitor log for RIPng</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/ripngd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ripngd</command>
               </leafNode>
               <leafNode name="static">
                 <properties>
                   <help>Monitor log for static route</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/staticd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/staticd</command>
               </leafNode>
               <leafNode name="multicast">
                 <properties>
                   <help>Monitor log for Multicast protocol</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/pimd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/pimd</command>
               </leafNode>
               <leafNode name="isis">
                 <properties>
                   <help>Monitor log for ISIS</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/isisd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/isisd</command>
               </leafNode>
               <leafNode name="nhrp">
                 <properties>
                   <help>Monitor log for NHRP</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/nhrpd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/nhrpd</command>
               </leafNode>
               <leafNode name="bfd">
                 <properties>
                   <help>Monitor log for BFD</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/bfdd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/bfdd</command>
               </leafNode>
               <leafNode name="mpls">
                 <properties>
                   <help>Monitor log for MPLS</help>
                 </properties>
-                <command>journalctl --follow --boot /usr/lib/frr/ldpd</command>
+                <command>journalctl --follow --no-hostname --boot /usr/lib/frr/ldpd</command>
               </leafNode>
             </children>
           </node>
