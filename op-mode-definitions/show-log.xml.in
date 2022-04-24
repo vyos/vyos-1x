@@ -179,9 +179,9 @@
           </tagNode>
           <leafNode name="kernel">
             <properties>
-              <help>Show messages in kernel ring buffer</help>
+              <help>Show log for Linux Kernel</help>
             </properties>
-            <command>sudo dmesg</command>
+            <command>journalctl --no-hostname --boot --dmesg</command>
           </leafNode>
           <leafNode name="lldp">
             <properties>
