@@ -14,6 +14,12 @@
             </properties>
             <command>grc journalctl --no-hostname --follow --boot</command>
           </node>
+          <leafNode name="kernel">
+            <properties>
+              <help>Monitor last lines of Linux Kernel log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --dmesg</command>
+          </leafNode>
           <node name="protocol">
             <properties>
               <help>Monitor log for Routing Protocols</help>
