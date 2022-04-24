@@ -20,6 +20,23 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --dmesg</command>
           </leafNode>
+          <node name="pppoe">
+            <properties>
+              <help>Monitor last lines of PPPoE log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit "ppp@pppoe*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of PPPoE log for specific interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py -t pppoe</script>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit "ppp@$6.service"</command>
+              </tagNode>
+            </children>
+          </node>
           <node name="protocol">
             <properties>
               <help>Monitor log for Routing Protocols</help>
