@@ -18,6 +18,7 @@ import argparse
 import os
 
 from jinja2 import Template
+from textwrap import fill
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig import Section
@@ -117,8 +118,11 @@ if __name__ == '__main__':
         exit(f'OpenVPN certificate key "{key}" does not exist!')
 
     ca = config.value(['pki', 'ca', ca, 'certificate'])
+    ca = fill(ca, width=64)
     cert = config.value(['pki', 'certificate', cert, 'certificate'])
+    cert = fill(cert, width=64)
     key = config.value(['pki', 'certificate', key, 'private', 'key'])
+    key = fill(key, width=64)
     remote_host = config.value(base + [interface, 'local-host'])
 
     ovpn_conf = config.get_config_dict(base + [interface], key_mangling=('-', '_'), get_first_key=True)
