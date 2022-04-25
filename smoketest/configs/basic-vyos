@@ -16,6 +16,15 @@ interfaces {
 }
 protocols {
     static {
+        arp 172.18.203.20 {
+            hwaddr 00:50:00:00:00:20
+        }
+        arp 172.18.203.30 {
+            hwaddr 00:50:00:00:00:30
+        }
+        arp 172.18.203.40 {
+            hwaddr 00:50:00:00:00:40
+        }
         route 0.0.0.0/0 {
             next-hop 100.64.0.1 {
             }
