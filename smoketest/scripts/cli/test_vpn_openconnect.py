@@ -24,8 +24,27 @@ OCSERV_CONF = '/run/ocserv/ocserv.conf'
 base_path = ['vpn', 'openconnect']
 
 pki_path = ['pki']
-cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
-key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
+
+cert_data = """
+MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
+WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
+MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
+BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
+UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
+QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
+BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
++JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
+ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
++dm/LDnp7C0=
+"""
+
+key_data = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
+2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
+u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+"""
 
 class TestVpnOpenconnect(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
@@ -42,16 +61,16 @@ class TestVpnOpenconnect(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(pki_path)
         self.cli_delete(base_path)
 
-        self.cli_set(pki_path + ['ca', 'openconnect', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'openconnect', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'openconnect', 'private', 'key', key_data])
+        self.cli_set(pki_path + ['ca', 'openconnect', 'certificate', cert_data.replace('\n','')])
+        self.cli_set(pki_path + ['certificate', 'openconnect', 'certificate', cert_data.replace('\n','')])
+        self.cli_set(pki_path + ['certificate', 'openconnect', 'private', 'key', key_data.replace('\n','')])
 
-        self.cli_set(base_path + ["authentication", "local-users", "username", user, "password", password])
-        self.cli_set(base_path + ["authentication", "local-users", "username", user, "otp", "key", otp])
-        self.cli_set(base_path + ["authentication", "mode", "local", "password-otp"])
-        self.cli_set(base_path + ["network-settings", "client-ip-settings", "subnet", "192.0.2.0/24"])
-        self.cli_set(base_path + ["ssl", "ca-certificate", 'openconnect'])
-        self.cli_set(base_path + ["ssl", "certificate", 'openconnect'])
+        self.cli_set(base_path + ['authentication', 'local-users', 'username', user, 'password', password])
+        self.cli_set(base_path + ['authentication', 'local-users', 'username', user, 'otp', 'key', otp])
+        self.cli_set(base_path + ['authentication', 'mode', 'local', 'password-otp'])
+        self.cli_set(base_path + ['network-settings', 'client-ip-settings', 'subnet', '192.0.2.0/24'])
+        self.cli_set(base_path + ['ssl', 'ca-certificate', 'openconnect'])
+        self.cli_set(base_path + ['ssl', 'certificate', 'openconnect'])
 
         self.cli_commit()
 
