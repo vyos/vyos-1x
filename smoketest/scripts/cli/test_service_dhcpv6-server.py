@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,16 +32,24 @@ dns_1 = '2001:db8::1'
 dns_2 = '2001:db8::2'
 domain = 'vyos.net'
 nis_servers = ['2001:db8:ffff::1', '2001:db8:ffff::2']
-interface = 'eth1'
+interface = 'eth0'
 interface_addr = inc_ip(subnet, 1) + '/64'
 
-class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'ethernet', interface, 'address', interface_addr])
+class TestServiceDHCPv6Server(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceDHCPv6Server, cls).setUpClass()
+        cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_addr])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'ethernet', interface, 'address', interface_addr])
+        cls.cli_commit(cls)
+
+        super(TestServiceDHCPv6Server, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)
-        self.cli_delete(['interfaces', 'ethernet', interface, 'address', interface_addr])
         self.cli_commit()
 
     def test_single_pool(self):
