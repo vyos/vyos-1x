@@ -18,10 +18,15 @@ import os
 import re
 import unittest
 
+from netifaces import AF_INET
+from netifaces import AF_INET6
+from netifaces import ifaddresses
+
 from base_interfaces_test import BasicInterfaceTest
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.pki import CERT_BEGIN
+from vyos.template import is_ipv6
 from vyos.util import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
@@ -140,10 +145,18 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_set(self._base_path + [interface, 'speed', 'auto'])
             self.cli_set(self._base_path + [interface, 'hw-id', self._macs[interface]])
 
-        # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
-        for span in self._mirror_interfaces:
-            section = Section.section(span)
-            self.cli_delete(['interfaces', section, span])
+        # Verify that no address remains on the system as this is an eternal
+        # interface.
+        for intf in self._interfaces:
+            self.assertNotIn(AF_INET, ifaddresses(intf))
+            # required for IPv6 link-local address
+            self.assertIn(AF_INET6, ifaddresses(intf))
+            for addr in ifaddresses(intf)[af]:
+                if is_ipv6(addr):
+                    # checking link local addresses makes no sense
+                    if is_ipv6_link_local(addr['addr']):
+                        continue
+                    self.assertFalse(is_intf_addr_assigned(intf, addr['addr']))
 
         self.cli_commit()
 
