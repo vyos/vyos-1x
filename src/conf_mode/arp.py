@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,92 +13,54 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
 
-import sys
-import os
-import re
-import syslog as sl
+from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import node_changed
 from vyos.util import call
 from vyos import ConfigError
-
 from vyos import airbag
 airbag.enable()
 
-arp_cmd = '/usr/sbin/arp'
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
-def get_config():
-  c = Config()
-  if not c.exists('protocols static arp'):
-    return None
+    base = ['protocols', 'static', 'arp']
+    arp = conf.get_config_dict(base)
+    tmp = node_changed(conf, base)
+    if tmp: arp.update({'removed' : node_changed(conf, base)})
 
-  c.set_level('protocols static')
-  config_data = {}
-  
-  for ip_addr in c.list_nodes('arp'):
-    config_data.update(
-        {
-          ip_addr : c.return_value('arp ' + ip_addr + ' hwaddr')
-        }
-    )
+    return arp
 
-  return config_data
+def verify(arp):
+    pass
 
-def generate(c):
-  c_eff = Config()
-  c_eff.set_level('protocols static')
-  c_eff_cnf = {}
-  for ip_addr in c_eff.list_effective_nodes('arp'):
-    c_eff_cnf.update(
-        {
-          ip_addr : c_eff.return_effective_value('arp ' + ip_addr + ' hwaddr')
-        }
-    )
+def generate(arp):
+    pass
 
-  config_data = {
-    'remove'  : [],
-    'update'  : {}
-  }
-  ### removal
-  if c == None:
-    for ip_addr in c_eff_cnf:
-      config_data['remove'].append(ip_addr)
-  else:
-    for ip_addr in c_eff_cnf:
-      if not ip_addr in c or c[ip_addr] == None:
-        config_data['remove'].append(ip_addr)
+def apply(arp):
+    if not arp:
+        return None
 
-  ### add/update
-  if c != None:
-    for ip_addr in c:
-      if not ip_addr in c_eff_cnf:
-        config_data['update'][ip_addr] = c[ip_addr]
-      if  ip_addr in c_eff_cnf:
-        if c[ip_addr] != c_eff_cnf[ip_addr] and c[ip_addr] != None:
-          config_data['update'][ip_addr] = c[ip_addr]
+    if 'removed' in arp:
+        for host in arp['removed']:
+            call(f'arp --delete {host}')
 
-  return config_data
-
-def apply(c):
-  for ip_addr in c['remove']:
-    sl.syslog(sl.LOG_NOTICE, "arp -d " + ip_addr)
-    call(f'{arp_cmd} -d {ip_addr} >/dev/null 2>&1')
-
-  for ip_addr in c['update']:
-    sl.syslog(sl.LOG_NOTICE, "arp -s " + ip_addr + " " + c['update'][ip_addr])
-    updated = c['update'][ip_addr]
-    call(f'{arp_cmd} -s {ip_addr} {updated}')
-
+    if 'arp' in arp:
+        for host, host_config in arp['arp'].items():
+            mac = host_config['hwaddr']
+            call(f'arp --set {host} {mac}')
 
 if __name__ == '__main__':
-  try:
-    c = get_config()
-    ## syntax verification is done via cli
-    config = generate(c)
-    apply(config)
-  except ConfigError as e:
-    print(e)
-    sys.exit(1)
+    try:
+        c = get_config()
+        verify(c)
+        generate(c)
+        apply(c)
+    except ConfigError as e:
+        print(e)
+        exit(1)
