@@ -32,7 +32,7 @@ interface = 'dum4456'
 class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestServiceSALT, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -43,7 +43,7 @@ class TestServiceSALT(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'dummy', interface])
-        super(cls, cls).tearDownClass()
+        super(TestServiceSALT, cls).tearDownClass()
 
     def tearDown(self):
         # Check for running process

@@ -33,14 +33,14 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(TestServiceWebProxy, cls).setUpClass()
         # create a test interfaces
         cls.cli_set(cls, ['interfaces', 'dummy', listen_if, 'address', listen_ip + '/32'])
 
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'dummy', listen_if])
-        super().tearDownClass()
+        super(TestServiceWebProxy, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)

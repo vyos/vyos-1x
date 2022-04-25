@@ -38,7 +38,7 @@ domain_name = 'vyos.net'
 class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestServiceDHCPServer, cls).setUpClass()
 
         cidr_mask = subnet.split('/')[-1]
         cls.cli_set(cls, ['interfaces', 'dummy', 'dum8765', 'address', f'{router}/{cidr_mask}'])
@@ -46,7 +46,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'dummy', 'dum8765'])
-        super(cls, cls).tearDownClass()
+        super(TestServiceDHCPServer, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)

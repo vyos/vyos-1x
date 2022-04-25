@@ -114,7 +114,7 @@ rgiyCHemtMepq57Pl1Nmj49eEA==
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestVPNIPsec, cls).setUpClass()
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -123,8 +123,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super(cls, cls).tearDownClass()
-
+        super(TestVPNIPsec, cls).tearDownClass()
         cls.cli_delete(cls, base_path + ['interface', f'{interface}.{vif}'])
 
     def setUp(self):

@@ -53,7 +53,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(MACsecInterfaceTest, cls).setUpClass()
 
     def test_macsec_encryption(self):
         # MACsec can be operating in authentication and encryption mode - both

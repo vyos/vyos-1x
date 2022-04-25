@@ -37,7 +37,7 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(TestServiceLLDP, cls).setUpClass()
 
         # create a test interfaces
         for addr in mgmt_addr:
@@ -50,7 +50,7 @@ class TestServiceLLDP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'dummy', mgmt_if])
-        super().tearDownClass()
+        super(TestServiceLLDP, cls).tearDownClass()
 
     def tearDown(self):
         # service must be running after it was configured

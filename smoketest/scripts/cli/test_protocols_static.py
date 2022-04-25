@@ -94,13 +94,13 @@ tables = ['80', '81', '82']
 class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestProtocolsStatic, cls).setUpClass()
         cls.cli_set(cls, ['vrf', 'name', 'black', 'table', '43210'])
 
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['vrf'])
-        super(cls, cls).tearDownClass()
+        super(TestProtocolsStatic, cls).tearDownClass()
 
     def tearDown(self):
         for route, route_config in routes.items():

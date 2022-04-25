@@ -33,7 +33,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         cls._interfaces = Section.interfaces('ethernet')
 
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(TestProtocolsISIS, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)

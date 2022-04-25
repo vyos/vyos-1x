@@ -128,7 +128,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             cls._macs[interface] = read_file(f'/sys/class/net/{interface}/address')
 
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(EthernetInterfaceTest, cls).setUpClass()
 
     def tearDown(self):
         for interface in self._interfaces:

@@ -39,7 +39,7 @@ class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(L2TPv3InterfaceTest, cls).setUpClass()
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

@@ -32,7 +32,7 @@ dst_path = base_path + ['destination']
 class TestNAT66(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestNAT66, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)

@@ -154,7 +154,7 @@ peer_group_config = {
 class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestProtocolsBGP, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)

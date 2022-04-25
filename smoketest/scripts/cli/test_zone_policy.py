@@ -23,13 +23,13 @@ from vyos.util import cmd
 class TestZonePolicy(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestZonePolicy, cls).setUpClass()
         cls.cli_set(cls, ['firewall', 'name', 'smoketest', 'default-action', 'drop'])
 
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['firewall'])
-        super(cls, cls).tearDownClass()
+        super(TestZonePolicy, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(['zone-policy'])

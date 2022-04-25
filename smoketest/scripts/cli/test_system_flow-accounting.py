@@ -32,7 +32,7 @@ uacctd_conf = '/run/pmacct/uacctd.conf'
 class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestSystemFlowAccounting, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)

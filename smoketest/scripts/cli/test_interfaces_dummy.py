@@ -24,7 +24,7 @@ class DummyInterfaceTest(BasicInterfaceTest.TestCase):
         cls._base_path = ['interfaces', 'dummy']
         cls._interfaces = ['dum435', 'dum8677', 'dum0931', 'dum089']
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(DummyInterfaceTest, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

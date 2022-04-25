@@ -34,7 +34,7 @@ class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(GeneveInterfaceTest, cls).setUpClass()
 
     def test_geneve_parameters(self):
         tos = '40'

@@ -29,7 +29,7 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
         cls._base_path = ['interfaces', 'loopback']
         cls._interfaces = ['lo']
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(LoopbackInterfaceTest, cls).setUpClass()
 
     def tearDown(self):
         self.cli_delete(self._base_path)

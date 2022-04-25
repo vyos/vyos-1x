@@ -97,7 +97,7 @@ def get_vrf(interface):
 class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestInterfacesOpenVPN, cls).setUpClass()
 
         cls.cli_set(cls, ['interfaces', 'dummy', dummy_if, 'address', '192.0.2.1/32'])
         cls.cli_set(cls, ['vrf', 'name', vrf_name, 'table', '12345'])
@@ -113,7 +113,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, ['interfaces', 'dummy', dummy_if])
         cls.cli_delete(cls, ['vrf'])
 
-        super(cls, cls).tearDownClass()
+        super(TestInterfacesOpenVPN, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(base_path)

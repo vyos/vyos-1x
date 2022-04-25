@@ -49,7 +49,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
                 if not '.' in tmp:
                     cls._interfaces.append(tmp)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(VRFTest, cls).setUpClass()
 
     def tearDown(self):
         # delete all VRFs

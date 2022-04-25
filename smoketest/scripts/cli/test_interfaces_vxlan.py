@@ -39,7 +39,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(VXLANInterfaceTest, cls).setUpClass()
 
     def test_vxlan_parameters(self):
         tos = '40'

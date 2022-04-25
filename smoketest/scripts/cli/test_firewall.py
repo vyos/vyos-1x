@@ -38,7 +38,7 @@ sysfs_config = {
 class TestFirewall(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestFirewall, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -49,8 +49,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
-
-        super(cls, cls).tearDownClass()
+        super(TestFirewall, cls).tearDownClass()
 
     def tearDown(self):
         self.cli_delete(['interfaces', 'ethernet', 'eth0', 'firewall'])

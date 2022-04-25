@@ -37,7 +37,7 @@ ipv6_addr = '2001:db8::1/64'
 class TestServiceUPnP(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestServiceUPnP, cls).setUpClass()
 
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
@@ -51,7 +51,7 @@ class TestServiceUPnP(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, address_base)
         cls._session.commit()
 
-        super(cls, cls).tearDownClass()
+        super(TestServiceUPnP, cls).tearDownClass()
 
     def tearDown(self):
         # Check for running process

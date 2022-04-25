@@ -48,7 +48,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(WirelessInterfaceTest, cls).setUpClass()
 
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly

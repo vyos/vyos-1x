@@ -33,7 +33,7 @@ default_area = '0'
 class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
-        super(cls, cls).setUpClass()
+        super(TestProtocolsOSPFv3, cls).setUpClass()
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
@@ -45,7 +45,7 @@ class TestProtocolsOSPFv3(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, ['policy', 'route-map', route_map])
-        super(cls, cls).tearDownClass()
+        super(TestProtocolsOSPFv3, cls).tearDownClass()
 
     def tearDown(self):
         # Check for running process

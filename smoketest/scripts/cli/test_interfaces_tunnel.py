@@ -42,7 +42,7 @@ class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
         }
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(TunnelInterfaceTest, cls).setUpClass()
 
         # create some test interfaces
         cls.cli_set(cls, ['interfaces', 'dummy', source_if, 'address', cls.local_v4 + '/32'])

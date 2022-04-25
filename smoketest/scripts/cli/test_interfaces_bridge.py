@@ -56,7 +56,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         cls._interfaces = list(cls._options)
 
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(BridgeInterfaceTest, cls).setUpClass()
 
     def tearDown(self):
         for intf in self._interfaces:

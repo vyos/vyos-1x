@@ -48,7 +48,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
 
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
-        super(cls, cls).setUpClass()
+        super(PEthInterfaceTest, cls).setUpClass()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
