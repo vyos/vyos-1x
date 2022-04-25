@@ -23,15 +23,9 @@
 from sys import argv
 from sys import exit
 
-from syslog import syslog
-from syslog import openlog
-from syslog import LOG_PID
-from syslog import LOG_INFO
-
-from vyos.configquery import Config
+from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import get_interface_dict
 from vyos.ifconfig import PPPoEIf
-from vyos.util import read_file
 
 # When the ppp link comes up, this script is called with the following
 # parameters
@@ -46,14 +40,10 @@ if (len(argv) < 7):
     exit(1)
 
 interface = argv[6]
-dialer_pid = read_file(f'/var/run/{interface}.pid')
 
-openlog(ident=f'pppd[{dialer_pid}]', facility=LOG_INFO)
-syslog('executing ' + argv[0])
-
-conf = Config()
-pppoe = get_interface_dict(conf, ['interfaces', 'pppoe'], argv[6])
+conf = ConfigTreeQuery()
+_, pppoe = get_interface_dict(conf.config, ['interfaces', 'pppoe'], interface)
 
 # Update the config
-p = PPPoEIf(pppoe['ifname'])
+p = PPPoEIf(interface)
 p.update(pppoe)
