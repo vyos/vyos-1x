@@ -11,19 +11,34 @@ interfaces {
         smp-affinity auto
         speed auto
     }
+    ethernet eth2 {
+        address 100.100.0.1/24
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
     loopback lo {
     }
 }
 protocols {
     static {
-        arp 172.18.203.20 {
+        arp 192.168.0.20 {
             hwaddr 00:50:00:00:00:20
         }
-        arp 172.18.203.30 {
+        arp 192.168.0.30 {
             hwaddr 00:50:00:00:00:30
         }
-        arp 172.18.203.40 {
+        arp 192.168.0.40 {
             hwaddr 00:50:00:00:00:40
+        }
+        arp 100.100.0.2 {
+            hwaddr 00:50:00:00:02:02
+        }
+        arp 100.100.0.3 {
+            hwaddr 00:50:00:00:02:03
+        }
+        arp 100.100.0.4 {
+            hwaddr 00:50:00:00:02:04
         }
         route 0.0.0.0/0 {
             next-hop 100.64.0.1 {
