@@ -88,7 +88,22 @@ def reset_profile(profile, tunnel):
 
 def debug_peer(peer, tunnel):
     if not peer or peer == "all":
-        call('sudo /usr/sbin/ipsec statusall')
+        debug_commands = [
+            "sudo ipsec statusall",
+            "sudo swanctl -L",
+            "sudo swanctl -l",
+            "sudo swanctl -P",
+            "sudo ip x sa show",
+            "sudo ip x policy show",
+            "sudo ip tunnel show",
+            "sudo ip address",
+            "sudo ip rule show",
+            "sudo ip route | head -100",
+            "sudo ip route show table 220"
+        ]
+        for debug_cmd in debug_commands:
+            print(f'\n### {debug_cmd} ###')
+            call(debug_cmd)
         return
 
     if not tunnel or tunnel == 'all':
