@@ -23,10 +23,13 @@ from vyos.configsession import ConfigSessionError
 base_path = ['interfaces', 'wireguard']
 
 class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
+    @classmethod
+    def setUpClass(cls):
+        super(WireGuardInterfaceTest, cls).setUpClass()
+
+        cls._test_addr = ['192.0.2.1/26', '192.0.2.255/31', '192.0.2.64/32',
                           '2001:db8:1::ffff/64', '2001:db8:101::1/112']
-        self._interfaces = ['wg0', 'wg1']
+        cls._interfaces = ['wg0', 'wg1']
 
     def tearDown(self):
         self.cli_delete(base_path)

@@ -34,9 +34,12 @@ def get_config_value(interface, key):
 
 # add a classmethod to setup a temporaray PPPoE server for "proper" validation
 class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
-        self._source_interface = 'eth0'
+    @classmethod
+    def setUpClass(cls):
+        super(PPPoEInterfaceTest, cls).setUpClass()
+
+        cls._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
+        cls._source_interface = 'eth0'
 
     def tearDown(self):
         # Validate PPPoE client process

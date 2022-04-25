@@ -78,18 +78,25 @@ class BasicInterfaceTest:
         # choose IPv6 minimum MTU value for tests - this must always work
         _mtu = '1280'
 
-        def setUp(self):
+        @classmethod
+        def setUpClass(cls):
+            super(BasicInterfaceTest.TestCase, cls).setUpClass()
+
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
-            for span in self._mirror_interfaces:
+            for span in cls._mirror_interfaces:
                 section = Section.section(span)
-                self.cli_set(['interfaces', section, span])
+                cls.cli_set(cls, ['interfaces', section, span])
+
+        @classmethod
+        def tearDownClass(cls):
+            # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
+            for span in cls._mirror_interfaces:
+                section = Section.section(span)
+                cls.cli_delete(cls, ['interfaces', section, span])
+
+            super(BasicInterfaceTest.TestCase, cls).tearDownClass()
 
         def tearDown(self):
-            # Tear down mirror interfaces for SPAN (Switch Port Analyzer)
-            for span in self._mirror_interfaces:
-                section = Section.section(span)
-                self.cli_delete(['interfaces', section, span])
-
             self.cli_delete(self._base_path)
             self.cli_commit()
 
@@ -232,6 +239,7 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
+                self.assertIn(AF_INET6, ifaddresses(interface))
                 for addr in ifaddresses(interface)[AF_INET6]:
                     self.assertTrue(is_ipv6_link_local(addr['addr']))
 
