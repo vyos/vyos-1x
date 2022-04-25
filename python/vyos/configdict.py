@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -107,7 +107,6 @@ def list_diff(first, second):
 def is_node_changed(conf, path):
    from vyos.configdiff import get_config_diff
    D = get_config_diff(conf, key_mangling=('-', '_'))
-   D.set_level(conf.get_level())
    return D.is_node_changed(path)
 
 def leaf_node_changed(conf, path):
@@ -120,7 +119,6 @@ def leaf_node_changed(conf, path):
     """
     from vyos.configdiff import get_config_diff
     D = get_config_diff(conf, key_mangling=('-', '_'))
-    D.set_level(conf.get_level())
     (new, old) = D.get_value_diff(path)
     if new != old:
         if isinstance(old, dict):
@@ -150,12 +148,11 @@ def node_changed(conf, path, key_mangling=None, recursive=False):
     """
     from vyos.configdiff import get_config_diff, Diff
     D = get_config_diff(conf, key_mangling)
-    D.set_level(conf.get_level())
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
     keys = D.get_child_nodes_diff(path, expand_nodes=Diff.DELETE, recursive=recursive)['delete'].keys()
     return list(keys)
 
-def get_removed_vlans(conf, dict):
+def get_removed_vlans(conf, path, dict):
     """
     Common function to parse a dictionary retrieved via get_config_dict() and
     determine any added/removed VLAN interfaces - be it 802.1q or Q-in-Q.
@@ -165,16 +162,17 @@ def get_removed_vlans(conf, dict):
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     D = get_config_diff(conf, key_mangling=('-', '_'))
     D.set_level(conf.get_level())
+
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(['vif'], expand_nodes=Diff.DELETE)['delete'].keys()
+    keys = D.get_child_nodes_diff(path + ['vif'], expand_nodes=Diff.DELETE)['delete'].keys()
     if keys: dict['vif_remove'] = [*keys]
 
     # get_child_nodes() will return dict_keys(), mangle this into a list with PEP448
-    keys = D.get_child_nodes_diff(['vif-s'], expand_nodes=Diff.DELETE)['delete'].keys()
+    keys = D.get_child_nodes_diff(path + ['vif-s'], expand_nodes=Diff.DELETE)['delete'].keys()
     if keys: dict['vif_s_remove'] = [*keys]
 
     for vif in dict.get('vif_s', {}).keys():
-        keys = D.get_child_nodes_diff(['vif-s', vif, 'vif-c'], expand_nodes=Diff.DELETE)['delete'].keys()
+        keys = D.get_child_nodes_diff(path + ['vif-s', vif, 'vif-c'], expand_nodes=Diff.DELETE)['delete'].keys()
         if keys: dict['vif_s'][vif]['vif_c_remove'] = [*keys]
 
     return dict
@@ -218,10 +216,6 @@ def is_member(conf, interface, intftype=None):
 
     intftype = intftypes if intftype == None else [intftype]
 
-    # set config level to root
-    old_level = conf.get_level()
-    conf.set_level([])
-
     for iftype in intftype:
         base = ['interfaces', iftype]
         for intf in conf.list_nodes(base):
@@ -231,7 +225,6 @@ def is_member(conf, interface, intftype=None):
                                            get_first_key=True, no_tag_node_value_mangle=True)
                 ret_val.update({intf : tmp})
 
-    old_level = conf.set_level(old_level)
     return ret_val
 
 def is_mirror_intf(conf, interface, direction=None):
@@ -253,8 +246,6 @@ def is_mirror_intf(conf, interface, direction=None):
     direction = directions if direction == None else [direction]
 
     ret_val = None
-    old_level = conf.get_level()
-    conf.set_level([])
     base = ['interfaces']
 
     for dir in direction:
@@ -268,7 +259,6 @@ def is_mirror_intf(conf, interface, direction=None):
                                                get_first_key=True)
                     ret_val = {intf : tmp}
 
-    old_level = conf.set_level(old_level)
     return ret_val
 
 def has_vlan_subinterface_configured(conf, intf):
@@ -282,15 +272,11 @@ def has_vlan_subinterface_configured(conf, intf):
     from vyos.ifconfig import Section
     ret = False
 
-    old_level = conf.get_level()
-    conf.set_level([])
-
     intfpath = ['interfaces', Section.section(intf), intf]
     if ( conf.exists(intfpath + ['vif']) or
             conf.exists(intfpath + ['vif-s'])):
         ret = True
 
-    conf.set_level(old_level)
     return ret
 
 def is_source_interface(conf, interface, intftype=None):
@@ -312,11 +298,6 @@ def is_source_interface(conf, interface, intftype=None):
             'have a source-interface')
 
     intftype = intftypes if intftype == None else [intftype]
-
-    # set config level to root
-    old_level = conf.get_level()
-    conf.set_level([])
-
     for it in intftype:
         base = ['interfaces', it]
         for intf in conf.list_nodes(base):
@@ -325,16 +306,11 @@ def is_source_interface(conf, interface, intftype=None):
                 ret_val = intf
                 break
 
-    old_level = conf.set_level(old_level)
     return ret_val
 
 def get_dhcp_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
-    # Cache and reset config level
-    old_level = conf.get_level()
-    conf.set_level([])
-
     dhcp_interfaces = {}
     dict = conf.get_config_dict(['interfaces'], get_first_key=True)
     if not dict:
@@ -360,7 +336,7 @@ def get_dhcp_interfaces(conf, vrf=None):
             # we already have a dict representation of the config from get_config_dict(),
             # but with the extended information from get_interface_dict() we also
             # get the DHCP client default-route-distance default option if not specified.
-            ifconfig = get_interface_dict(conf, ['interfaces', section], ifname)
+            _, ifconfig = get_interface_dict(conf, ['interfaces', section], ifname)
 
             tmp = check_dhcp(ifconfig)
             dhcp_interfaces.update(tmp)
@@ -376,16 +352,11 @@ def get_dhcp_interfaces(conf, vrf=None):
                     tmp = check_dhcp(vif_c_config)
                     dhcp_interfaces.update(tmp)
 
-    # reset old config level
     return dhcp_interfaces
 
 def get_pppoe_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
-    # Cache and reset config level
-    old_level = conf.get_level()
-    conf.set_level([])
-
     pppoe_interfaces = {}
     for ifname in conf.list_nodes(['interfaces', 'pppoe']):
         # always reset config level, as get_interface_dict() will alter it
@@ -404,8 +375,6 @@ def get_pppoe_interfaces(conf, vrf=None):
             if vrf is ifconfig['vrf']: pppoe_interfaces.update({ifname : options})
         else: pppoe_interfaces.update({ifname : options})
 
-    # reset old config level
-    conf.set_level(old_level)
     return pppoe_interfaces
 
 def get_interface_dict(config, base, ifname=''):
@@ -433,9 +402,8 @@ def get_interface_dict(config, base, ifname=''):
     for vif in ['vif', 'vif_s']:
         if vif in default_values: del default_values[vif]
 
-    # setup config level which is extracted in get_removed_vlans()
-    config.set_level(base + [ifname])
-    dict = config.get_config_dict([], key_mangling=('-', '_'), get_first_key=True,
+    dict = config.get_config_dict(base + [ifname], key_mangling=('-', '_'),
+                                  get_first_key=True,
                                   no_tag_node_value_mangle=True)
 
     # Check if interface has been removed. We must use exists() as
@@ -443,8 +411,8 @@ def get_interface_dict(config, base, ifname=''):
     # node like the following exists.
     # +macsec macsec1 {
     # +}
-    if not config.exists([]):
-        dict.update({'deleted' : ''})
+    if not config.exists(base + [ifname]):
+        dict.update({'deleted' : {}})
 
     # Add interface instance name into dictionary
     dict.update({'ifname': ifname})
@@ -471,7 +439,7 @@ def get_interface_dict(config, base, ifname=''):
     # XXX: T2665: blend in proper DHCPv6-PD default values
     dict = T2665_set_dhcpv6pd_defaults(dict)
 
-    address = leaf_node_changed(config, ['address'])
+    address = leaf_node_changed(config, base + [ifname, 'address'])
     if address: dict.update({'address_old' : address})
 
     # Check if we are a member of a bridge device
@@ -502,10 +470,10 @@ def get_interface_dict(config, base, ifname=''):
         tmp = is_member(config, dict['source_interface'], 'bonding')
         if tmp: dict.update({'source_interface_is_bond_member' : tmp})
 
-    mac = leaf_node_changed(config, ['mac'])
+    mac = leaf_node_changed(config, base + [ifname, 'mac'])
     if mac: dict.update({'mac_old' : mac})
 
-    eui64 = leaf_node_changed(config, ['ipv6', 'address', 'eui64'])
+    eui64 = leaf_node_changed(config, base + [ifname, 'ipv6', 'address', 'eui64'])
     if eui64:
         tmp = dict_search('ipv6.address', dict)
         if not tmp:
@@ -529,7 +497,7 @@ def get_interface_dict(config, base, ifname=''):
         # Only add defaults if interface is not about to be deleted - this is
         # to keep a cleaner config dict.
         if 'deleted' not in dict:
-            address = leaf_node_changed(config, ['vif', vif, 'address'])
+            address = leaf_node_changed(config, base + [ifname, 'vif', vif, 'address'])
             if address: dict['vif'][vif].update({'address_old' : address})
 
             dict['vif'][vif] = dict_merge(default_vif_values, dict['vif'][vif])
@@ -566,7 +534,7 @@ def get_interface_dict(config, base, ifname=''):
         # Only add defaults if interface is not about to be deleted - this is
         # to keep a cleaner config dict.
         if 'deleted' not in dict:
-            address = leaf_node_changed(config, ['vif-s', vif_s, 'address'])
+            address = leaf_node_changed(config, base + [ifname, 'vif-s', vif_s, 'address'])
             if address: dict['vif_s'][vif_s].update({'address_old' : address})
 
             dict['vif_s'][vif_s] = dict_merge(default_vif_s_values,
@@ -603,7 +571,7 @@ def get_interface_dict(config, base, ifname=''):
             # Only add defaults if interface is not about to be deleted - this is
             # to keep a cleaner config dict.
             if 'deleted' not in dict:
-                address = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c, 'address'])
+                address = leaf_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'address'])
                 if address: dict['vif_s'][vif_s]['vif_c'][vif_c].update(
                         {'address_old' : address})
 
@@ -630,8 +598,8 @@ def get_interface_dict(config, base, ifname=''):
             if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : ''})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
-    dict = get_removed_vlans(config, dict)
-    return dict
+    dict = get_removed_vlans(config, base + [ifname], dict)
+    return ifname, dict
 
 def get_vlan_ids(interface):
     """

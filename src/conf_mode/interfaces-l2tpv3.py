@@ -45,15 +45,15 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'l2tpv3']
-    l2tpv3 = get_interface_dict(conf, base)
+    ifname, l2tpv3 = get_interface_dict(conf, base)
 
     # To delete an l2tpv3 interface we need the current tunnel and session-id
     if 'deleted' in l2tpv3:
-        tmp = leaf_node_changed(conf, ['tunnel-id'])
+        tmp = leaf_node_changed(conf, base + [ifname, 'tunnel-id'])
         # leaf_node_changed() returns a list
         l2tpv3.update({'tunnel_id': tmp[0]})
 
-        tmp = leaf_node_changed(conf, ['session-id'])
+        tmp = leaf_node_changed(conf, base + [ifname, 'session-id'])
         l2tpv3.update({'session_id': tmp[0]})
 
     return l2tpv3

@@ -36,7 +36,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'loopback']
-    loopback = get_interface_dict(conf, base)
+    _, loopback = get_interface_dict(conf, base)
     return loopback
 
 def verify(loopback):

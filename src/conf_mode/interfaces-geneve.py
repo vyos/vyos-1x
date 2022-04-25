@@ -22,7 +22,7 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
-from vyos.configdict import node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_bridge_delete
@@ -43,16 +43,16 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'geneve']
-    geneve = get_interface_dict(conf, base)
+    ifname, geneve = get_interface_dict(conf, base)
 
     # GENEVE interfaces are picky and require recreation if certain parameters
     # change. But a GENEVE interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
     for cli_option in ['remote', 'vni']:
-        if leaf_node_changed(conf, cli_option):
+        if leaf_node_changed(conf, base + [ifname, cli_option]):
             geneve.update({'rebuild_required': {}})
 
-    if node_changed(conf, ['parameters'], recursive=True):
+    if is_node_changed(conf, base + [ifname, 'parameters']):
         geneve.update({'rebuild_required': {}})
 
     return geneve

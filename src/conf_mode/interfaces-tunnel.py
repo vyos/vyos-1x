@@ -48,10 +48,10 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'tunnel']
-    tunnel = get_interface_dict(conf, base)
+    ifname, tunnel = get_interface_dict(conf, base)
 
     if 'deleted' not in tunnel:
-        tmp = leaf_node_changed(conf, ['encapsulation'])
+        tmp = leaf_node_changed(conf, base + [ifname, 'encapsulation'])
         if tmp: tunnel.update({'encapsulation_changed': {}})
 
         # We also need to inspect other configured tunnels as there are Kernel

@@ -68,7 +68,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'bonding']
-    bond = get_interface_dict(conf, base)
+    ifname, bond = get_interface_dict(conf, base)
 
     # To make our own life easier transfor the list of member interfaces
     # into a dictionary - we will use this to add additional information
@@ -81,14 +81,14 @@ def get_config(config=None):
     if 'mode' in bond:
         bond['mode'] = get_bond_mode(bond['mode'])
 
-    tmp = leaf_node_changed(conf, ['mode'])
+    tmp = leaf_node_changed(conf, base + [ifname, 'mode'])
     if tmp: bond.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['lacp-rate'])
+    tmp = leaf_node_changed(conf, base + [ifname, 'lacp-rate'])
     if tmp: bond.update({'shutdown_required': {}})
 
     # determine which members have been removed
-    interfaces_removed = leaf_node_changed(conf, ['member', 'interface'])
+    interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
     if interfaces_removed:
         bond.update({'shutdown_required': {}})
         if 'member' not in bond:

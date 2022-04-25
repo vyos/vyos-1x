@@ -65,7 +65,7 @@ def get_config(config=None):
                                get_first_key=True, no_tag_node_value_mangle=True)
 
     base = ['interfaces', 'ethernet']
-    ethernet = get_interface_dict(conf, base)
+    _, ethernet = get_interface_dict(conf, base)
 
     if 'deleted' not in ethernet:
        if pki: ethernet['pki'] = pki

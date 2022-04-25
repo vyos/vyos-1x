@@ -37,7 +37,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'dummy']
-    dummy = get_interface_dict(conf, base)
+    _, dummy = get_interface_dict(conf, base)
     return dummy
 
 def verify(dummy):

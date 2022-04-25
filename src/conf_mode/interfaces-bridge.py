@@ -50,15 +50,15 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'bridge']
-    bridge = get_interface_dict(conf, base)
+    ifname, bridge = get_interface_dict(conf, base)
 
     # determine which members have been removed
-    tmp = node_changed(conf, ['member', 'interface'], key_mangling=('-', '_'))
+    tmp = node_changed(conf, base + [ifname, 'member', 'interface'], key_mangling=('-', '_'))
     if tmp:
         if 'member' in bridge:
-            bridge['member'].update({'interface_remove': tmp })
+            bridge['member'].update({'interface_remove' : tmp })
         else:
-            bridge.update({'member': {'interface_remove': tmp }})
+            bridge.update({'member' : {'interface_remove' : tmp }})
 
     if dict_search('member.interface', bridge):
         # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:

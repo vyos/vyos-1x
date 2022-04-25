@@ -18,7 +18,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -42,14 +42,14 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'pseudo-ethernet']
-    peth = get_interface_dict(conf, base)
+    ifname, peth = get_interface_dict(conf, base)
 
-    mode = leaf_node_changed(conf, ['mode'])
-    if mode: peth.update({'mode_old' : mode})
+    mode = is_node_changed(conf, ['mode'])
+    if mode: peth.update({'shutdown_required' : {}})
 
     if 'source_interface' in peth:
-        peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
-                                            peth['source_interface'])
+        _, peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
+                                               peth['source_interface'])
     return peth
 
 def verify(peth):

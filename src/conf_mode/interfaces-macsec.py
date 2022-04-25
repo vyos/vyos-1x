@@ -48,7 +48,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'macsec']
-    macsec = get_interface_dict(conf, base)
+    ifname, macsec = get_interface_dict(conf, base)
 
     # Check if interface has been removed
     if 'deleted' in macsec:

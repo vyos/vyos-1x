@@ -76,15 +76,19 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'wireless']
 
-    wifi = get_interface_dict(conf, base)
+    ifname, wifi = get_interface_dict(conf, base)
 
     # Cleanup "delete" default values when required user selectable values are
     # not defined at all
-    tmp = conf.get_config_dict([], key_mangling=('-', '_'), get_first_key=True)
+    tmp = conf.get_config_dict(base + [ifname], key_mangling=('-', '_'),
+                               get_first_key=True)
     if not (dict_search('security.wpa.passphrase', tmp) or
             dict_search('security.wpa.radius', tmp)):
         if 'deleted' not in wifi:
             del wifi['security']['wpa']
+            # if 'security' key is empty, drop it too
+            if len(wifi['security']) == 0:
+                del wifi['security']
 
     # defaults include RADIUS server specifics per TAG node which need to be
     # added to individual RADIUS servers instead - so we can simply delete them

@@ -21,7 +21,7 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mirror_redirect
@@ -50,42 +50,36 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'wwan']
-    wwan = get_interface_dict(conf, base)
+    ifname, wwan = get_interface_dict(conf, base)
 
     # We should only terminate the WWAN session if critical parameters change.
     # All parameters that can be changed on-the-fly (like interface description)
     # should not lead to a reconnect!
-    tmp = leaf_node_changed(conf, ['address'])
+    tmp = is_node_changed(conf, base + [ifname, 'address'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['apn'])
+    tmp = is_node_changed(conf, base + [ifname, 'apn'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['disable'])
+    tmp = is_node_changed(conf, base + [ifname, 'disable'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['vrf'])
-    # leaf_node_changed() returns a list, as VRF is a non-multi node, there
-    # will be only one list element
-    if tmp: wwan.update({'vrf_old': tmp[0]})
-
-    tmp = leaf_node_changed(conf, ['authentication', 'user'])
+    tmp = is_node_changed(conf, base + [ifname, 'vrf'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['authentication', 'password'])
+    tmp = is_node_changed(conf, base + [ifname, 'authentication'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['ipv6', 'address', 'autoconf'])
+    tmp = is_node_changed(conf, base + [ifname, 'ipv6', 'address', 'autoconf'])
     if tmp: wwan.update({'shutdown_required': {}})
 
     # We need to know the amount of other WWAN interfaces as ModemManager needs
     # to be started or stopped.
     conf.set_level(base)
-    wwan['other_interfaces'] = conf.get_config_dict([], key_mangling=('-', '_'),
-                                                    get_first_key=True,
-                                                    no_tag_node_value_mangle=True)
+    _, wwan['other_interfaces'] = conf.get_config_dict([], key_mangling=('-', '_'),
+                                                       get_first_key=True,
+                                                       no_tag_node_value_mangle=True)
 
-    ifname = wwan['ifname']
     # This if-clause is just to be sure - it will always evaluate to true
     if ifname in wwan['other_interfaces']:
         del wwan['other_interfaces'][ifname]

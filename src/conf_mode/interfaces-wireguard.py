@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -46,17 +46,17 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'wireguard']
-    wireguard = get_interface_dict(conf, base)
+    ifname, wireguard = get_interface_dict(conf, base)
 
     # Check if a port was changed
-    wireguard['port_changed'] = leaf_node_changed(conf, ['port'])
+    wireguard['port_changed'] = leaf_node_changed(conf, base + [ifname, 'port'])
 
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
     dict = {}
-    tmp = node_changed(conf, ['peer'], key_mangling=('-', '_'))
+    tmp = node_changed(conf, base + [ifname, 'peer'], key_mangling=('-', '_'))
     for peer in (tmp or []):
-        public_key = leaf_node_changed(conf, ['peer', peer, 'public_key'])
+        public_key = leaf_node_changed(conf, base + [ifname, 'peer', peer, 'public_key'])
         if public_key:
             dict = dict_merge({'peer_remove' : {peer : {'public_key' : public_key[0]}}}, dict)
             wireguard.update(dict)

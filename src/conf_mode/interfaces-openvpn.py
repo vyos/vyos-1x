@@ -85,12 +85,11 @@ def get_config(config=None):
     tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
 
-    openvpn = get_interface_dict(conf, base)
+    ifname, openvpn = get_interface_dict(conf, base)
 
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
-
-        if is_node_changed(conf, ['openvpn-option']):
+        if is_node_changed(conf, base + [ifname, 'openvpn-option']):
             openvpn.update({'restart_required': {}})
 
         # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'

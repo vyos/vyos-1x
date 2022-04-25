@@ -36,7 +36,7 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['interfaces', 'vti']
-    vti = get_interface_dict(conf, base)
+    _, vti = get_interface_dict(conf, base)
     return vti
 
 def verify(vti):

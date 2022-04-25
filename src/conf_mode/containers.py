@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,7 +28,6 @@ from vyos.configdict import node_changed
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import run
-from vyos.util import read_file
 from vyos.util import write_file
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -77,10 +76,10 @@ def get_config(config=None):
             container['name'][name] = dict_merge(default_values, container['name'][name])
 
     # Delete container network, delete containers
-    tmp = node_changed(conf, ['container', 'network'])
+    tmp = node_changed(conf, base + ['container', 'network'])
     if tmp: container.update({'network_remove' : tmp})
 
-    tmp = node_changed(conf, ['container', 'name'])
+    tmp = node_changed(conf, base + ['container', 'name'])
     if tmp: container.update({'container_remove' : tmp})
 
     return container
