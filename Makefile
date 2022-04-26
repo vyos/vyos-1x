@@ -77,7 +77,18 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions test j2lint vyshim
+all: clean interface_definitions op_mode_definitions check test j2lint vyshim
+
+.PHONY: check
+.ONESHELL:
+check:
+	@echo "Checking which CLI scripts are not enabled to work with vyos-configd..."
+	@for file in `ls src/conf_mode`
+	do
+		if ! grep -q $$file data/configd-include.json; then
+			echo "* $$file"
+		fi
+	done
 
 .PHONY: clean
 clean:
