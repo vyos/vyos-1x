@@ -15,15 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import urllib3
 
 from requests import request
+from urllib3.exceptions import InsecureRequestWarning
 
 from base_vyostest_shim import VyOSUnitTestSHIM
+from base_vyostest_shim import ignore_warning
 from vyos.util import read_file
 from vyos.util import run
-
-urllib3.disable_warnings()
 
 base_path = ['service', 'https']
 pki_base = ['pki']
@@ -100,6 +99,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         ret = run('sudo /usr/sbin/nginx -t')
         self.assertEqual(ret, 0)
 
+    @ignore_warning(InsecureRequestWarning)
     def test_api_auth(self):
         vhost_id = 'example'
         address = '127.0.0.1'
