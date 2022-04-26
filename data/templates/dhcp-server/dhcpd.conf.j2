@@ -23,7 +23,7 @@ option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 option wpad-url code 252 = text;
 
-# Vendor specific options - Ubiquity Networks
+# Vendor specific options - Ubiquiti Networks
 option space ubnt;
 option ubnt.unifi-controller code 1 = ip-address;
 class "ubnt" {
@@ -203,8 +203,8 @@ shared-network {{ network }} {
         }
 {%                     endfor %}
 {%                 endif %}
-{%                 if subnet_config.vendor_option.ubiquity.unifi_controller is vyos_defined %}
-        option ubnt.unifi-controller {{ subnet_config.vendor_option.ubiquity.unifi_controller }};
+{%                 if subnet_config.vendor_option.ubiquiti.unifi_controller is vyos_defined %}
+        option ubnt.unifi-controller {{ subnet_config.vendor_option.ubiquiti.unifi_controller }};
 {%                 endif %}
 {%                 if subnet_config.range is vyos_defined %}
 {#           pool configuration can only be used if there follows a range option #}

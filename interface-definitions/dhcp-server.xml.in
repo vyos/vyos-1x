@@ -419,9 +419,9 @@
                       <help>Vendor Specific Options</help>
                     </properties>
                     <children>
-                      <node name="ubiquity">
+                      <node name="Ubiquiti">
                         <properties>
-                          <help>Ubiquity specific parameters</help>
+                          <help>Ubiquiti specific parameters</help>
                         </properties>
                         <children>
                           <leafNode name="unifi-controller">
