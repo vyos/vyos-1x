@@ -553,13 +553,15 @@ def generate(ipsec):
                     if not local_prefixes or not remote_prefixes:
                         continue
 
-                    passthrough = []
+                    passthrough = None
 
                     for local_prefix in local_prefixes:
                         for remote_prefix in remote_prefixes:
                             local_net = ipaddress.ip_network(local_prefix)
                             remote_net = ipaddress.ip_network(remote_prefix)
                             if local_net.overlaps(remote_net):
+                                if passthrough is None:
+                                    passthrough = []
                                 passthrough.append(local_prefix)
 
                     ipsec['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough

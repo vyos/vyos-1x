@@ -152,7 +152,7 @@
 {%       endif %}
             }
 {%       if tunnel_conf.passthrough is vyos_defined %}
-            peer_{{ name }}_tunnel_{{ tunnel_id }}_passthough {
+            peer_{{ name }}_tunnel_{{ tunnel_id }}_passthrough {
                 local_ts = {{ tunnel_conf.passthrough | join(",") }}
                 remote_ts = {{ tunnel_conf.passthrough | join(",") }}
                 start_action = trap
