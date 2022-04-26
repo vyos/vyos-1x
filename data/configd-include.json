@@ -25,6 +25,7 @@
 "interfaces-pppoe.py",
 "interfaces-pseudo-ethernet.py",
 "interfaces-tunnel.py",
+"interfaces-vti.py",
 "interfaces-vxlan.py",
 "interfaces-wireguard.py",
 "interfaces-wireless.py",
