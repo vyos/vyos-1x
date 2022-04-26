@@ -16,6 +16,7 @@ import os
 import unittest
 
 from time import sleep
+from typing import Type
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
@@ -85,3 +86,17 @@ class VyOSUnitTestSHIM:
                 print(f'\n\ncommand "{command}" returned:\n')
                 pprint.pprint(out)
             return out
+
+# standard construction; typing suggestion: https://stackoverflow.com/a/70292317
+def ignore_warning(warning: Type[Warning]):
+    import warnings
+    from functools import wraps
+
+    def inner(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=warning)
+                return f(*args, **kwargs)
+        return wrapped
+    return inner
