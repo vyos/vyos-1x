@@ -419,7 +419,7 @@
                       <help>Vendor Specific Options</help>
                     </properties>
                     <children>
-                      <node name="Ubiquiti">
+                      <node name="ubiquiti">
                         <properties>
                           <help>Ubiquiti specific parameters</help>
                         </properties>
