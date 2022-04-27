@@ -30,9 +30,12 @@ def get_config(config=None):
         conf = Config()
 
     base = ['protocols', 'static', 'arp']
-    arp = conf.get_config_dict(base)
-    tmp = node_changed(conf, base)
-    if tmp: arp.update({'removed' : node_changed(conf, base)})
+    arp = conf.get_config_dict(base, get_first_key=True)
+
+    if 'interface' in arp:
+        for interface in arp['interface']:
+            tmp = node_changed(conf, base + ['interface', interface, 'address'], recursive=True)
+            if tmp: arp['interface'][interface].update({'address_old' : tmp})
 
     return arp
 
@@ -46,14 +49,19 @@ def apply(arp):
     if not arp:
         return None
 
-    if 'removed' in arp:
-        for host in arp['removed']:
-            call(f'arp --delete {host}')
+    if 'interface' in arp:
+        for interface, interface_config in arp['interface'].items():
+            # Delete old static ARP assignments first
+            if 'address_old' in interface_config:
+                for address in interface_config['address_old']:
+                    call(f'ip neigh del {address} dev {interface}')
 
-    if 'arp' in arp:
-        for host, host_config in arp['arp'].items():
-            mac = host_config['hwaddr']
-            call(f'arp --set {host} {mac}')
+            # Add new static ARP entries to interface
+            if 'address' not in interface_config:
+                continue
+            for address, address_config in interface_config['address'].items():
+                mac = address_config['mac']
+                call(f'ip neigh add {address} lladdr {mac} dev {interface}')
 
 if __name__ == '__main__':
     try:

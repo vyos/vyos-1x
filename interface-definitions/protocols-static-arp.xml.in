@@ -4,32 +4,46 @@
     <children>
       <node name="static">
         <children>
-          <tagNode name="arp" owner="${vyos_conf_scripts_dir}/arp.py">
+          <node name="arp" owner="${vyos_conf_scripts_dir}/arp.py">
             <properties>
               <help>Static ARP translation</help>
-              <valueHelp>
-                <format>ipv4</format>
-                <description>IPv4 destination address</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ipv4-address"/>
-              </constraint>
             </properties>
             <children>
-              <leafNode name="hwaddr">
+              <tagNode name="interface">
                 <properties>
-                  <help>Translation MAC address</help>
+                  <help>Interface configuration</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
                   <valueHelp>
-                    <format>macaddr</format>
-                    <description>Hardware (MAC) address</description>
+                    <format>txt</format>
+                    <description>Interface name</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="mac-address"/>
+                    <validator name="interface-name"/>
                   </constraint>
                 </properties>
-              </leafNode>
+                <children>
+                  <tagNode name="address">
+                    <properties>
+                      <help>IP address for static ARP entry</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 destination address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/generic-description.xml.i>
+                      #include <include/interface/mac.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
             </children>
-          </tagNode>
+          </node>
         </children>
       </node>
     </children>

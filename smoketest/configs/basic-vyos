@@ -6,16 +6,26 @@ interfaces {
         speed auto
     }
     ethernet eth1 {
-        address 100.64.0.0/31
         duplex auto
         smp-affinity auto
         speed auto
     }
     ethernet eth2 {
-        address 100.100.0.1/24
         duplex auto
         smp-affinity auto
         speed auto
+        vif 100 {
+            address 100.100.0.1/24
+        }
+        vif-s 200 {
+            address 100.64.200.254/24
+            vif-c 201 {
+                address 100.64.201.254/24
+            }
+            vif-c 202 {
+                address 100.64.202.254/24
+            }
+        }
     }
     loopback lo {
     }
@@ -39,6 +49,24 @@ protocols {
         }
         arp 100.100.0.4 {
             hwaddr 00:50:00:00:02:04
+        }
+        arp 100.64.200.1 {
+            hwaddr 00:50:00:00:00:01
+        }
+        arp 100.64.200.2 {
+            hwaddr 00:50:00:00:00:02
+        }
+        arp 100.64.201.10 {
+            hwaddr 00:50:00:00:00:10
+        }
+        arp 100.64.201.20 {
+            hwaddr 00:50:00:00:00:20
+        }
+        arp 100.64.202.30 {
+            hwaddr 00:50:00:00:00:30
+        }
+        arp 100.64.202.40 {
+            hwaddr 00:50:00:00:00:40
         }
         route 0.0.0.0/0 {
             next-hop 100.64.0.1 {

@@ -52,16 +52,16 @@ class TestARP(VyOSUnitTestSHIM.TestCase):
 
     def test_static_arp(self):
         test_data = {
-            '192.0.2.10' : { 'lladdr' : '00:01:02:03:04:0a' },
-            '192.0.2.11' : { 'lladdr' : '00:01:02:03:04:0b' },
-            '192.0.2.12' : { 'lladdr' : '00:01:02:03:04:0c' },
-            '192.0.2.13' : { 'lladdr' : '00:01:02:03:04:0d' },
-            '192.0.2.14' : { 'lladdr' : '00:01:02:03:04:0e' },
-            '192.0.2.15' : { 'lladdr' : '00:01:02:03:04:0f' },
+            '192.0.2.10' : { 'mac' : '00:01:02:03:04:0a' },
+            '192.0.2.11' : { 'mac' : '00:01:02:03:04:0b' },
+            '192.0.2.12' : { 'mac' : '00:01:02:03:04:0c' },
+            '192.0.2.13' : { 'mac' : '00:01:02:03:04:0d' },
+            '192.0.2.14' : { 'mac' : '00:01:02:03:04:0e' },
+            '192.0.2.15' : { 'mac' : '00:01:02:03:04:0f' },
         }
 
         for host, host_config in test_data.items():
-            self.cli_set(base_path + [host, 'hwaddr', host_config['lladdr']])
+            self.cli_set(base_path + ['interface', interface, 'address', host, 'mac', host_config['mac']])
 
         self.cli_commit()
 
@@ -76,7 +76,7 @@ class TestARP(VyOSUnitTestSHIM.TestCase):
                     continue
 
                 if entry['dst'] == host:
-                    self.assertEqual(entry['lladdr'], host_config['lladdr'])
+                    self.assertEqual(entry['lladdr'], host_config['mac'])
                     self.assertEqual(entry['dev'], interface)
                     found = True
 
