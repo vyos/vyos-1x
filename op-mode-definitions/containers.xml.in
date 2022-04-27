@@ -60,7 +60,7 @@
         <children>
           <leafNode name="image">
             <properties>
-              <help>Delete container image</help>
+              <help>Show container image</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/containers_op.py --image</command>
           </leafNode>
@@ -118,7 +118,7 @@
         <children>
           <tagNode name="image">
             <properties>
-              <help>Delete container image</help>
+              <help>Update container image</help>
               <completionHelp>
                 <path>container name</path>
               </completionHelp>
