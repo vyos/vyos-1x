@@ -14,7 +14,7 @@
       <description>Advanced Encryption Standard</description>
     </valueHelp>
     <constraint>
-      <regex>^(des|aes)$</regex>
+      <regex>(des|aes)</regex>
     </constraint>
   </properties>
   <defaultValue>des</defaultValue>

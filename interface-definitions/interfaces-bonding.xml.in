@@ -7,7 +7,7 @@
           <help>Bonding Interface/Link Aggregation</help>
           <priority>320</priority>
           <constraint>
-            <regex>^bond[0-9]+$</regex>
+            <regex>bond[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
           <valueHelp>
@@ -85,7 +85,7 @@
                 <description>combine encapsulated IP address and port to make hash</description>
               </valueHelp>
               <constraint>
-                <regex>^(layer2\+3|layer3\+4|layer2|encap2\+3|encap3\+4)$</regex>
+                <regex>(layer2\+3|layer3\+4|layer2|encap2\+3|encap3\+4)</regex>
               </constraint>
               <constraintErrorMessage>hash-policy must be layer2 layer2+3 layer3+4 encap2+3 or encap3+4</constraintErrorMessage>
             </properties>
@@ -122,7 +122,7 @@
                 <description>Request partner to transmit LACPDUs every 1 second</description>
               </valueHelp>
               <constraint>
-                <regex>^(slow|fast)$</regex>
+                <regex>(slow|fast)</regex>
               </constraint>
             </properties>
             <defaultValue>slow</defaultValue>
@@ -162,7 +162,7 @@
                 <description>Distribute based on MAC address</description>
               </valueHelp>
               <constraint>
-                <regex>^(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)$</regex>
+                <regex>(802.3ad|active-backup|broadcast|round-robin|transmit-load-balance|adaptive-load-balance|xor-hash)</regex>
               </constraint>
               <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, transmit-load-balance, adaptive-load-balance, or xor</constraintErrorMessage>
             </properties>

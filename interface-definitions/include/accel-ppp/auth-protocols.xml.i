@@ -22,7 +22,7 @@
       <description>Authentication via MS-CHAPv2 (Microsoft Challenge Handshake Authentication Protocol, version 2)</description>
     </valueHelp>
     <constraint>
-      <regex>^(pap|chap|mschap|mschap-v2)$</regex>
+      <regex>(pap|chap|mschap|mschap-v2)</regex>
     </constraint>
     <multi/>
   </properties>

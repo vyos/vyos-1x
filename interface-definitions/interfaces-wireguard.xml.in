@@ -7,7 +7,7 @@
           <help>WireGuard Interface</help>
           <priority>459</priority>
           <constraint>
-            <regex>^wg[0-9]+$</regex>
+            <regex>wg[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>WireGuard interface must be named wgN</constraintErrorMessage>
           <valueHelp>
@@ -46,7 +46,7 @@
             <properties>
               <help>Base64 encoded private key</help>
               <constraint>
-                <regex>[0-9a-zA-Z\+/]{43}=$</regex>
+                <regex>[0-9a-zA-Z\+/]{43}=</regex>
               </constraint>
               <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
             </properties>
@@ -55,7 +55,7 @@
             <properties>
               <help>peer alias</help>
               <constraint>
-                <regex>[^ ]{1,100}$</regex>
+                <regex>[^ ]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>peer alias too long (limit 100 characters)</constraintErrorMessage>
             </properties>
@@ -65,7 +65,7 @@
                 <properties>
                   <help>base64 encoded public key</help>
                   <constraint>
-                    <regex>[0-9a-zA-Z\+/]{43}=$</regex>
+                    <regex>[0-9a-zA-Z\+/]{43}=</regex>
                   </constraint>
                   <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
                 </properties>
@@ -74,7 +74,7 @@
                 <properties>
                   <help>base64 encoded preshared key</help>
                   <constraint>
-                    <regex>[0-9a-zA-Z\+/]{43}=$</regex>
+                    <regex>[0-9a-zA-Z\+/]{43}=</regex>
                   </constraint>
                   <constraintErrorMessage>Key is not valid 44-character (32-bytes) base64</constraintErrorMessage>
                 </properties>

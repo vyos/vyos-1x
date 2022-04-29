@@ -63,7 +63,7 @@
                     <description>Full blown DNSSEC validation. Send SERVFAIL to clients on bogus responses.</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(off|process-no-validate|process|log-fail|validate)$</regex>
+                    <regex>(off|process-no-validate|process|log-fail|validate)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>process-no-validate</defaultValue>
@@ -113,7 +113,7 @@
                     <description>An absolute DNS name</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^[-_a-zA-Z0-9.]{1,63}$</regex>
+                    <regex>[-_a-zA-Z0-9.]{1,63}</regex>
                   </constraint>
                 </properties>
                 <children>
@@ -134,7 +134,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -167,7 +167,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -200,7 +200,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -212,7 +212,7 @@
                                 <description>An absolute DNS name</description>
                               </valueHelp>
                               <constraint>
-                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                               </constraint>
                             </properties>
                           </leafNode>
@@ -232,7 +232,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -244,7 +244,7 @@
                                 <description>An absolute DNS name</description>
                               </valueHelp>
                               <constraint>
-                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                               </constraint>
                             </properties>
                             <children>
@@ -279,7 +279,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -291,7 +291,7 @@
                                 <description>An absolute DNS name</description>
                               </valueHelp>
                               <constraint>
-                                <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                               </constraint>
                             </properties>
                           </leafNode>
@@ -311,7 +311,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -341,7 +341,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -370,7 +370,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -394,7 +394,7 @@
                                     <description>An absolute DNS name</description>
                                   </valueHelp>
                                   <constraint>
-                                    <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                    <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                                   </constraint>
                                 </properties>
                               </leafNode>
@@ -454,7 +454,7 @@
                             <description>Root record</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)$</regex>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
                           </constraint>
                         </properties>
                         <children>
@@ -523,7 +523,7 @@
                                 <properties>
                                   <help>Service type</help>
                                   <constraint>
-                                    <regex>^[a-zA-Z][a-zA-Z0-9]{0,31}(\+[a-zA-Z][a-zA-Z0-9]{0,31})?$</regex>
+                                    <regex>[a-zA-Z][a-zA-Z0-9]{0,31}(\+[a-zA-Z][a-zA-Z0-9]{0,31})?</regex>
                                   </constraint>
                                 </properties>
                               </leafNode>
@@ -540,7 +540,7 @@
                                     <description>An absolute DNS name</description>
                                   </valueHelp>
                                   <constraint>
-                                    <regex>^[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)$</regex>
+                                    <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
                                   </constraint>
                                 </properties>
                               </leafNode>

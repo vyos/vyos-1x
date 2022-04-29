@@ -73,7 +73,7 @@
                 <description>Name of BFD profile</description>
               </valueHelp>
               <constraint>
-                <regex>^[-_a-zA-Z0-9]{1,32}$</regex>
+                <regex>[-_a-zA-Z0-9]{1,32}</regex>
               </constraint>
             </properties>
             <children>

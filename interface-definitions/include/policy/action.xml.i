@@ -14,7 +14,7 @@
       <description>Deny matching entries</description>
     </valueHelp>
     <constraint>
-      <regex>^(permit|deny)$</regex>
+      <regex>(permit|deny)</regex>
     </constraint>
   </properties>
 </leafNode>

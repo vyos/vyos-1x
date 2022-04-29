@@ -15,7 +15,7 @@
       <description>Default to suppress routing updates on all interfaces</description>
     </valueHelp>
     <constraint>
-      <regex>^(default)$</regex>
+      <regex>(default)</regex>
       <validator name="interface-name"/>
     </constraint>
     <multi/>

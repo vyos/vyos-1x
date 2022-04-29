@@ -66,7 +66,7 @@
       <description>ICMP type 18: address-mask-reply</description>
     </valueHelp>
     <constraint>
-      <regex>^(echo-reply|destination-unreachable|source-quench|redirect|echo-request|router-advertisement|router-solicitation|time-exceeded|parameter-problem|timestamp-request|timestamp-reply|info-request|info-reply|address-mask-request|address-mask-reply)$</regex>
+      <regex>(echo-reply|destination-unreachable|source-quench|redirect|echo-request|router-advertisement|router-solicitation|time-exceeded|parameter-problem|timestamp-request|timestamp-reply|info-request|info-reply|address-mask-request|address-mask-reply)</regex>
     </constraint>
   </properties>
 </leafNode>

@@ -252,7 +252,7 @@
                     <description>Do not allow tracking of previously established connections</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(enable|disable)$</regex>
+                    <regex>(enable|disable)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>enable</defaultValue>

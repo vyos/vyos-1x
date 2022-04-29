@@ -18,7 +18,7 @@
       <description>Enable BGP graceful restart helper only functionality</description>
     </valueHelp>
     <constraint>
-      <regex>^(enable|disable|restart-helper)$</regex>
+      <regex>(enable|disable|restart-helper)</regex>
     </constraint>
   </properties>
 </leafNode>

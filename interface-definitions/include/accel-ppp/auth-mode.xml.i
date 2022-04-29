@@ -11,7 +11,7 @@
       <description>Use RADIUS server for user autentication</description>
     </valueHelp>
     <constraint>
-      <regex>^(local|radius)$</regex>
+      <regex>(local|radius)</regex>
     </constraint>
     <completionHelp>
       <list>local radius</list>

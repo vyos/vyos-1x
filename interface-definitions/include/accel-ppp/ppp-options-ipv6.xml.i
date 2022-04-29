@@ -3,7 +3,7 @@
   <properties>
     <help>IPv6 (IPCP6) negotiation algorithm</help>
     <constraint>
-      <regex>^(deny|allow|prefer|require)$</regex>
+      <regex>(deny|allow|prefer|require)</regex>
     </constraint>
     <constraintErrorMessage>invalid value</constraintErrorMessage>
     <valueHelp>

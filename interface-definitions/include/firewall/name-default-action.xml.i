@@ -18,7 +18,7 @@
       <description>Accept if no prior rules are hit</description>
     </valueHelp>
     <constraint>
-      <regex>^(drop|reject|accept)$</regex>
+      <regex>(drop|reject|accept)</regex>
     </constraint>
   </properties>
 </leafNode>

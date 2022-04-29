@@ -25,7 +25,7 @@
                     <list>in out</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(in|out)$</regex>
+                    <regex>(in|out)</regex>
                   </constraint>
                   <multi/>
                 </properties>

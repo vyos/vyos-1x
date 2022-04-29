@@ -1106,7 +1106,7 @@
               <description>Ignore paths without link bandwidth for ECMP (if other paths have it)</description>
             </valueHelp>
             <constraint>
-              <regex>^(default-weight-for-missing|ignore|skip-missing)$</regex>
+              <regex>(default-weight-for-missing|ignore|skip-missing)</regex>
             </constraint>
           </properties>
         </leafNode>
@@ -1461,7 +1461,7 @@
   <properties>
     <help>Name of peer-group</help>
     <constraint>
-      <regex>^[-_a-zA-Z0-9]+$</regex>
+      <regex>[-_a-zA-Z0-9]+</regex>
     </constraint>
   </properties>
   <children>

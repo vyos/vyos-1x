@@ -7,7 +7,7 @@
           <help>Point-to-Point Protocol over Ethernet (PPPoE)</help>
           <priority>322</priority>
           <constraint>
-            <regex>^pppoe[0-9]+$</regex>
+            <regex>pppoe[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>PPPoE interface must be named pppoeN</constraintErrorMessage>
           <valueHelp>
@@ -106,7 +106,7 @@
             <properties>
               <help>Service name, only connect to access concentrators advertising this</help>
               <constraint>
-                <regex>[a-zA-Z0-9]+$</regex>
+                <regex>[a-zA-Z0-9]+</regex>
               </constraint>
               <constraintErrorMessage>Service name must be alphanumeric only</constraintErrorMessage>
             </properties>

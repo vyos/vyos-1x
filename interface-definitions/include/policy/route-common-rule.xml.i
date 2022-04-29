@@ -91,7 +91,7 @@
       <description>Disable log</description>
     </valueHelp>
     <constraint>
-      <regex>^(enable|disable)$</regex>
+      <regex>(enable|disable)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -196,7 +196,7 @@
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 1-200"/>
-          <regex>^(main)$</regex>
+          <regex>(main)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -260,7 +260,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -279,7 +279,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -298,7 +298,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -317,7 +317,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>

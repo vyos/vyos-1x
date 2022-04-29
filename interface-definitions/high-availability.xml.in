@@ -63,7 +63,7 @@
                         <description>AH - IPSEC (not recommended)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(plaintext-password|ah)$</regex>
+                        <regex>(plaintext-password|ah)</regex>
                       </constraint>
                       <constraintErrorMessage>Authentication type must be plaintext-password or ah</constraintErrorMessage>
                     </properties>
@@ -323,7 +323,7 @@
                 <description>Locality-Based least connection</description>
               </valueHelp>
               <constraint>
-                <regex>^(round-robin|weighted-round-robin|least-connection|weighted-least-connection|source-hashing|destination-hashing|locality-based-least-connection)$</regex>
+                <regex>(round-robin|weighted-round-robin|least-connection|weighted-least-connection|source-hashing|destination-hashing|locality-based-least-connection)</regex>
               </constraint>
             </properties>
             <defaultValue>least-connection</defaultValue>
@@ -360,7 +360,7 @@
                 <description>Tunneling</description>
               </valueHelp>
               <constraint>
-                <regex>^(direct|nat|tunnel)$</regex>
+                <regex>(direct|nat|tunnel)</regex>
               </constraint>
             </properties>
             <defaultValue>nat</defaultValue>
@@ -394,7 +394,7 @@
                 <description>UDP</description>
               </valueHelp>
               <constraint>
-                <regex>^(tcp|udp)$</regex>
+                <regex>(tcp|udp)</regex>
               </constraint>
             </properties>
             <defaultValue>tcp</defaultValue>

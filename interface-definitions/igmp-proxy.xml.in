@@ -56,7 +56,7 @@
                     <description>Disabled interface</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(upstream|downstream|disabled)$</regex>
+                    <regex>(upstream|downstream|disabled)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>downstream</defaultValue>

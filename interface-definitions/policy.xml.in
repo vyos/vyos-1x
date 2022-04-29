@@ -242,7 +242,7 @@
             <description>BGP extended community-list name</description>
           </valueHelp>
           <constraint>
-            <regex>^[-_a-zA-Z0-9]+$</regex>
+            <regex>[-_a-zA-Z0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Should be an alphanumeric name</constraintErrorMessage>
         </properties>
@@ -291,7 +291,7 @@
             <description>BGP large-community-list name</description>
           </valueHelp>
           <constraint>
-            <regex>^[-_a-zA-Z0-9]+$</regex>
+            <regex>[-_a-zA-Z0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Should be an alphanumeric name</constraintErrorMessage>
         </properties>
@@ -340,7 +340,7 @@
             <description>Name of IPv4 prefix-list</description>
           </valueHelp>
           <constraint>
-            <regex>^[-_a-zA-Z0-9]+$</regex>
+            <regex>[-_a-zA-Z0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Name of prefix-list can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
@@ -408,7 +408,7 @@
             <description>Name of IPv6 prefix-list</description>
           </valueHelp>
           <constraint>
-            <regex>^[-_a-zA-Z0-9]+$</regex>
+            <regex>[-_a-zA-Z0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
@@ -476,7 +476,7 @@
             <description>Route map name</description>
           </valueHelp>
           <constraint>
-            <regex>^[-_a-zA-Z0-9.]+$</regex>
+            <regex>[-_a-zA-Z0-9.]+</regex>
           </constraint>
           <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
         </properties>
@@ -582,7 +582,7 @@
                             <description>Prefix route</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(macip|multicast|prefix)$</regex>
+                            <regex>(macip|multicast|prefix)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -834,7 +834,7 @@
                         <description>Incomplete origin</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(egp|igp|incomplete)$</regex>
+                        <regex>(egp|igp|incomplete)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -869,7 +869,7 @@
                         <description>Match valid entries</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(invalid|notfound|valid)$</regex>
+                        <regex>(invalid|notfound|valid)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1070,7 +1070,7 @@
                           </valueHelp>
                           <constraint>
                             <validator name="numeric" argument="--range 1-25600"/>
-                            <regex>^(cumulative|num-multipaths)$</regex>
+                            <regex>(cumulative|num-multipaths)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -1086,7 +1086,7 @@
                             <description>Based on a router-id IP address</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(((\b(?:(?:2(?:[0-4][0-9]|5[0-5])|[0-1]?[0-9]?[0-9])\.){3}(?:(?:2([0-4][0-9]|5[0-5])|[0-1]?[0-9]?[0-9]))\b)|(\d+)):(\d+) ?)+$</regex>
+                            <regex>(((\b(?:(?:2(?:[0-4][0-9]|5[0-5])|[0-1]?[0-9]?[0-9])\.){3}(?:(?:2([0-4][0-9]|5[0-5])|[0-1]?[0-9]?[0-9]))\b)|(\d+)):(\d+) ?)+</regex>
                           </constraint>
                           <constraintErrorMessage>Should be in form: ASN:NN or IPADDR:NN where ASN is autonomous system number</constraintErrorMessage>
                         </properties>
@@ -1103,7 +1103,7 @@
                             <description>Based on a router-id IP address</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^((?:[0-9]{1,3}\.){3}[0-9]{1,3}|\d+):\d+$</regex>
+                            <regex>((?:[0-9]{1,3}\.){3}[0-9]{1,3}|\d+):\d+</regex>
                           </constraint>
                           <constraintErrorMessage>Should be in form: ASN:NN or IPADDR:NN where ASN is autonomous system number</constraintErrorMessage>
                         </properties>
@@ -1131,7 +1131,7 @@
                       </valueHelp>
                       <constraint>
                         <validator name="ipv4-address"/>
-                        <regex>^(unchanged|peer-address)$</regex>
+                        <regex>(unchanged|peer-address)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1251,7 +1251,7 @@
                         <description>OSPF external type 2 metric</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(type-1|type-2)$</regex>
+                        <regex>(type-1|type-2)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1274,7 +1274,7 @@
                         <description>Incomplete origin</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(igp|egp|incomplete)$</regex>
+                        <regex>(igp|egp|incomplete)</regex>
                       </constraint>
                     </properties>
                   </leafNode>

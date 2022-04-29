@@ -39,7 +39,7 @@
                 <description>Lanner, Watchguard, Nexcom NSA, Sophos UTM appliances</description>
               </valueHelp>
               <constraint>
-                <regex>^(cfa-533|cfa-631|cfa-633|cfa-635|hd44780|sdec)$</regex>
+                <regex>(cfa-533|cfa-631|cfa-633|cfa-635|hd44780|sdec)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -59,7 +59,7 @@
                 <description>TTY device name, USB based</description>
               </valueHelp>
               <constraint>
-                <regex>^(ttyS[0-9]+|usb[0-9]+b.*)$</regex>
+                <regex>(ttyS[0-9]+|usb[0-9]+b.*)</regex>
               </constraint>
             </properties>
           </leafNode>

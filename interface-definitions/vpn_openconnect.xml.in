@@ -34,7 +34,7 @@
                         <description>Password (first) + OTP local authentication</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(password|otp|password-otp)$</regex>
+                        <regex>(password|otp|password-otp)</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid authentication mode. Must be one of: password, otp or password-otp </constraintErrorMessage>
                       <completionHelp>

@@ -32,7 +32,7 @@
                         <list>ifname ifname:mac</list>
                       </completionHelp>
                       <constraint>
-                        <regex>^(ifname|ifname:mac)$</regex>
+                        <regex>(ifname|ifname:mac)</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid Called-Station-Id format</constraintErrorMessage>
                       <valueHelp>
@@ -108,7 +108,7 @@
                 <properties>
                   <help>Acceptable rate of connections (e.g. 1/min, 60/sec)</help>
                   <constraint>
-                    <regex>[0-9]+\/(min|sec)$</regex>
+                    <regex>[0-9]+\/(min|sec)</regex>
                   </constraint>
                   <constraintErrorMessage>illegal value</constraintErrorMessage>
                 </properties>
@@ -171,7 +171,7 @@
                 <properties>
                   <help>IPv4 (IPCP) negotiation algorithm</help>
                   <constraint>
-                    <regex>^(deny|allow|prefer|require)$</regex>
+                    <regex>(deny|allow|prefer|require)</regex>
                   </constraint>
                   <constraintErrorMessage>invalid value</constraintErrorMessage>
                   <valueHelp>
@@ -276,7 +276,7 @@
             <properties>
               <help>control sessions count</help>
               <constraint>
-                <regex>^(deny|disable|replace)$</regex>
+                <regex>(deny|disable|replace)</regex>
               </constraint>
               <constraintErrorMessage>Invalid value</constraintErrorMessage>
               <valueHelp>

@@ -91,7 +91,7 @@
       <description>Disable log</description>
     </valueHelp>
     <constraint>
-      <regex>^(enable|disable)$</regex>
+      <regex>(enable|disable)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -196,7 +196,7 @@
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 1-200"/>
-          <regex>^(main)$</regex>
+          <regex>(main)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -260,7 +260,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -279,7 +279,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -298,7 +298,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -317,7 +317,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -543,7 +543,7 @@
           <description>ICMP type/code name</description>
         </valueHelp>
         <constraint>
-          <regex>^(any|echo-reply|pong|destination-unreachable|network-unreachable|host-unreachable|protocol-unreachable|port-unreachable|fragmentation-needed|source-route-failed|network-unknown|host-unknown|network-prohibited|host-prohibited|TOS-network-unreachable|TOS-host-unreachable|communication-prohibited|host-precedence-violation|precedence-cutoff|source-quench|redirect|network-redirect|host-redirect|TOS-network-redirect|TOS host-redirect|echo-request|ping|router-advertisement|router-solicitation|time-exceeded|ttl-exceeded|ttl-zero-during-transit|ttl-zero-during-reassembly|parameter-problem|ip-header-bad|required-option-missing|timestamp-request|timestamp-reply|address-mask-request|address-mask-reply|packet-too-big)$</regex>
+          <regex>(any|echo-reply|pong|destination-unreachable|network-unreachable|host-unreachable|protocol-unreachable|port-unreachable|fragmentation-needed|source-route-failed|network-unknown|host-unknown|network-prohibited|host-prohibited|TOS-network-unreachable|TOS-host-unreachable|communication-prohibited|host-precedence-violation|precedence-cutoff|source-quench|redirect|network-redirect|host-redirect|TOS-network-redirect|TOS host-redirect|echo-request|ping|router-advertisement|router-solicitation|time-exceeded|ttl-exceeded|ttl-zero-during-transit|ttl-zero-during-reassembly|parameter-problem|ip-header-bad|required-option-missing|timestamp-request|timestamp-reply|address-mask-request|address-mask-reply|packet-too-big)</regex>
           <validator name="numeric" argument="--range 0-255"/>
         </constraint>
       </properties>

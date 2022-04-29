@@ -22,7 +22,7 @@
                     <properties>
                       <help>Authentication organization for InfluxDB v2 [REQUIRED]</help>
                       <constraint>
-                        <regex>^[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}$</regex>
+                        <regex>[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}</regex>
                       </constraint>
                       <constraintErrorMessage>Organization name must be alphanumeric and can contain hyphens, underscores and at symbol.</constraintErrorMessage>
                     </properties>
@@ -35,7 +35,7 @@
                         <description>Authentication token</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^[a-zA-Z0-9-_]{86}==$</regex>
+                        <regex>[a-zA-Z0-9-_]{86}==</regex>
                       </constraint>
                       <constraintErrorMessage>Token must be 88 characters long and must contain only [a-zA-Z0-9-_] and '==' characters.</constraintErrorMessage>
                     </properties>
@@ -79,7 +79,7 @@
                     <description>Telegraf internal statistics</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(all|hardware-utilization|logs|network|system|telegraf)$</regex>
+                    <regex>(all|hardware-utilization|logs|network|system|telegraf)</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -93,7 +93,7 @@
                     <description>Remote URL to InfluxDB v2</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?$</regex>
+                    <regex>(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?</regex>
                   </constraint>
                   <constraintErrorMessage>Incorrect URL format.</constraintErrorMessage>
                 </properties>

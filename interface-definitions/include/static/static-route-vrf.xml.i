@@ -11,7 +11,7 @@
       <description>Name of VRF to leak to</description>
     </valueHelp>
     <constraint>
-      <regex>^(default)$</regex>
+      <regex>(default)</regex>
       <validator name="vrf-name"/>
     </constraint>
   </properties>

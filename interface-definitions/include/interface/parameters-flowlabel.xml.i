@@ -14,7 +14,7 @@
       <description>Tunnel key, or hex value</description>
     </valueHelp>
     <constraint>
-      <regex>^((0x){0,1}(0?[0-9A-Fa-f]{1,5})|inherit)$</regex>
+      <regex>((0x){0,1}(0?[0-9A-Fa-f]{1,5})|inherit)</regex>
     </constraint>
     <constraintErrorMessage>Must be 'inherit' or a number</constraintErrorMessage>
   </properties>

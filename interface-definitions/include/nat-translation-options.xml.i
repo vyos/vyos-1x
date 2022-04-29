@@ -19,7 +19,7 @@
           <description>Random source or destination address allocation for each connection</description>
         </valueHelp>
         <constraint>
-          <regex>^(persistent|random)$</regex>
+          <regex>(persistent|random)</regex>
         </constraint>
       </properties>
       <defaultValue>random</defaultValue>
@@ -43,7 +43,7 @@
           <description>Do not apply port randomization</description>
         </valueHelp>
         <constraint>
-          <regex>^(random|fully-random|none)$</regex>
+          <regex>(random|fully-random|none)</regex>
         </constraint>
       </properties>
       <defaultValue>none</defaultValue>

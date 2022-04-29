@@ -10,7 +10,7 @@
         <properties>
           <help>Container name</help>
           <constraint>
-            <regex>^[-a-zA-Z0-9]+$</regex>
+            <regex>[-a-zA-Z0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Container name must be alphanumeric and can contain hyphens</constraintErrorMessage>
         </properties>
@@ -52,7 +52,7 @@
                 <description>Permission to set system clock</description>
               </valueHelp>
               <constraint>
-                <regex>^(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-time)$</regex>
+                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-time)</regex>
               </constraint>
               <multi/>
             </properties>
@@ -88,7 +88,7 @@
             <properties>
               <help>Add custom environment variables</help>
               <constraint>
-                <regex>^[-_a-zA-Z0-9]+$</regex>
+                <regex>[-_a-zA-Z0-9]+</regex>
               </constraint>
               <constraintErrorMessage>Environment variable name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
             </properties>
@@ -194,7 +194,7 @@
                     <list>tcp udp</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(tcp|udp)$</regex>
+                    <regex>(tcp|udp)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -219,7 +219,7 @@
                 <description>Restart containers when they exit, regardless of status, retrying indefinitely</description>
               </valueHelp>
               <constraint>
-                <regex>^(no|on-failure|always)$</regex>
+                <regex>(no|on-failure|always)</regex>
               </constraint>
             </properties>
             <defaultValue>on-failure</defaultValue>

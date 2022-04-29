@@ -25,7 +25,7 @@
             </valueHelp>
             <constraint>
               <validator name="numeric" argument="--range 0-1048575"/>
-              <regex>^(auto)$</regex>
+              <regex>(auto)</regex>
             </constraint>
           </properties>
         </leafNode>

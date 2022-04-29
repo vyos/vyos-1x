@@ -10,7 +10,7 @@
             <script>cd /sys/class/net; if compgen -G "wwan*" > /dev/null; then ls -d wwan*; fi</script>
           </completionHelp>
           <constraint>
-            <regex>^wwan[0-9]+$</regex>
+            <regex>wwan[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>Wireless Modem interface must be named wwanN</constraintErrorMessage>
           <valueHelp>

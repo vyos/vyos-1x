@@ -37,7 +37,7 @@
                     <description>Enable ESP compression</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(disable|enable)$</regex>
+                    <regex>(disable|enable)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>disable</defaultValue>
@@ -94,7 +94,7 @@
                     <description>Transport mode</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(tunnel|transport)$</regex>
+                    <regex>(tunnel|transport)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>tunnel</defaultValue>
@@ -202,7 +202,7 @@
                     <description>Disable PFS</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|disable)$</regex>
+                    <regex>(enable|dh-group1|dh-group2|dh-group5|dh-group14|dh-group15|dh-group16|dh-group17|dh-group18|dh-group19|dh-group20|dh-group21|dh-group22|dh-group23|dh-group24|dh-group25|dh-group26|dh-group27|dh-group28|dh-group29|dh-group30|dh-group31|dh-group32|disable)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>enable</defaultValue>
@@ -246,7 +246,7 @@
                     <description>Attempt to re-negotiate the connection immediately</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(none|hold|restart)$</regex>
+                    <regex>(none|hold|restart)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -274,7 +274,7 @@
                         <description>Attempt to re-negotiate the connection immediately</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(hold|clear|restart)$</regex>
+                        <regex>(hold|clear|restart)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -321,7 +321,7 @@
                     <description>Disable remote host re-authenticaton during an IKE rekey</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(yes|no)$</regex>
+                    <regex>(yes|no)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -340,7 +340,7 @@
                     <description>Use IKEv2 for key exchange</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(ikev1|ikev2)$</regex>
+                    <regex>(ikev1|ikev2)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -372,7 +372,7 @@
                     <description>Disable MOBIKE</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(enable|disable)$</regex>
+                    <regex>(enable|disable)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>enable</defaultValue>
@@ -392,7 +392,7 @@
                     <description>Use the aggressive mode (insecure, not recommended)</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(main|aggressive)$</regex>
+                    <regex>(main|aggressive)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>main</defaultValue>
@@ -501,7 +501,7 @@
                         <description>Diffie-Hellman group 32 (curve448)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32)$</regex>
+                        <regex>(1|2|5|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>2</defaultValue>
@@ -628,7 +628,7 @@
                     <description>Any subsystem</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(dmn|mgr|ike|chd|job|cfg|knl|net|asn|enc|lib|esp|tls|tnc|imc|imv|pts|any)$</regex>
+                    <regex>(dmn|mgr|ike|chd|job|cfg|knl|net|asn|enc|lib|esp|tls|tnc|imc|imv|pts|any)</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -747,7 +747,7 @@
                             <description>Use EAP-RADIUS authentication</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(eap-tls|eap-mschapv2|eap-radius)$</regex>
+                            <regex>(eap-tls|eap-mschapv2|eap-radius)</regex>
                           </constraint>
                         </properties>
                         <defaultValue>eap-mschapv2</defaultValue>
@@ -768,7 +768,7 @@
                             <description>Use x.509 certificate</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(pre-shared-secret|x509)$</regex>
+                            <regex>(pre-shared-secret|x509)</regex>
                           </constraint>
                         </properties>
                         <defaultValue>x509</defaultValue>
@@ -840,7 +840,7 @@
                         <description>Delete any existing connection if a new one for the same user gets established</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(never|keep|replace)$</regex>
+                        <regex>(never|keep|replace)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -976,7 +976,7 @@
                             <description>Use x.509 certificate</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(pre-shared-secret|rsa|x509)$</regex>
+                            <regex>(pre-shared-secret|rsa|x509)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -1017,7 +1017,7 @@
                         <description>Load the connection only</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(initiate|respond|none)$</regex>
+                        <regex>(initiate|respond|none)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1046,7 +1046,7 @@
                         <description>Do not force UDP encapsulation</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(enable|disable)$</regex>
+                        <regex>(enable|disable)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -1070,7 +1070,7 @@
                         <description>Inherit the reauth configuration form your IKE-group</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(yes|no|inherit)$</regex>
+                        <regex>(yes|no|inherit)</regex>
                       </constraint>
                     </properties>
                   </leafNode>

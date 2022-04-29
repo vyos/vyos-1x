@@ -35,7 +35,7 @@
           <description>VLAN-tagged frame (IEEE 802.1q), ethertype 0x8100</description>
         </valueHelp>
         <constraint>
-          <regex>^(802.1q|802.1ad)$</regex>
+          <regex>(802.1q|802.1ad)</regex>
         </constraint>
         <constraintErrorMessage>Ethertype must be 802.1ad or 802.1q</constraintErrorMessage>
       </properties>

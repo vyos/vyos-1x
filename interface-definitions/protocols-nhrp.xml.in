@@ -12,7 +12,7 @@
             <properties>
               <help>Tunnel for NHRP [REQUIRED]</help>
               <constraint>
-                <regex>^tun[0-9]+$</regex>
+                <regex>tun[0-9]+</regex>
               </constraint>
               <valueHelp>
                 <format>tunN</format>
@@ -85,7 +85,7 @@
                     <list>dynamic nhs</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(dynamic|nhs)$</regex>
+                    <regex>(dynamic|nhs)</regex>
                   </constraint>
                 </properties>
               </leafNode>

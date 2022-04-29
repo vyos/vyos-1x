@@ -184,7 +184,7 @@
           <description>Point-to-point network type</description>
         </valueHelp>
         <constraint>
-          <regex>^(broadcast|point-to-point)$</regex>
+          <regex>(broadcast|point-to-point)</regex>
         </constraint>
         <constraintErrorMessage>Must be broadcast or point-to-point</constraintErrorMessage>
       </properties>

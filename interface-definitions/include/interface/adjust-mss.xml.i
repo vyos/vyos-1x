@@ -16,7 +16,7 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 500-65535"/>
-      <regex>^(clamp-mss-to-pmtu)$</regex>
+      <regex>(clamp-mss-to-pmtu)</regex>
     </constraint>
   </properties>
 </leafNode>

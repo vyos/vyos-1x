@@ -28,7 +28,7 @@
                 <description>Xen console</description>
               </valueHelp>
               <constraint>
-                  <regex>^(ttyS[0-9]+|hvc[0-9]+|usb[0-9]+b.*)$</regex>
+                  <regex>(ttyS[0-9]+|hvc[0-9]+|usb[0-9]+b.*)</regex>
               </constraint>
             </properties>
             <children>
@@ -71,7 +71,7 @@
                     <description>115200 bps</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(1200|2400|4800|9600|19200|38400|57600|115200)$</regex>
+                    <regex>(1200|2400|4800|9600|19200|38400|57600|115200)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>115200</defaultValue>

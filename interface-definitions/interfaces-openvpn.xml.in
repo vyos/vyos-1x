@@ -7,7 +7,7 @@
           <help>OpenVPN Tunnel Interface</help>
           <priority>460</priority>
           <constraint>
-            <regex>^vtun[0-9]+$</regex>
+            <regex>vtun[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>OpenVPN tunnel interface must be named vtunN</constraintErrorMessage>
           <valueHelp>
@@ -51,7 +51,7 @@
                 <description>TAP device, required for OSI layer 2</description>
               </valueHelp>
               <constraint>
-                <regex>^(tun|tap)$</regex>
+                <regex>(tun|tap)</regex>
               </constraint>
             </properties>
             <defaultValue>tun</defaultValue>
@@ -113,7 +113,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(none|des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)$</regex>
+                    <regex>(none|des|3des|bf128|bf256|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -160,7 +160,7 @@
                     <description>AES algorithm with 256-bit key GCM</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(none|des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)$</regex>
+                    <regex>(none|des|3des|aes128|aes128gcm|aes192|aes192gcm|aes256|aes256gcm)</regex>
                   </constraint>
                   <multi/>
                 </properties>
@@ -196,7 +196,7 @@
                 <description>SHA-512 algorithm</description>
               </valueHelp>
               <constraint>
-                <regex>^(md5|sha1|sha256|sha384|sha512)$</regex>
+                <regex>(md5|sha1|sha256|sha384|sha512)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -298,7 +298,7 @@
                 <description>Server in client-server mode</description>
               </valueHelp>
               <constraint>
-                <regex>^(site-to-site|client|server)$</regex>
+                <regex>(site-to-site|client|server)</regex>
               </constraint>
             </properties>
           </leafNode>
@@ -336,7 +336,7 @@
                 <description>TCP and initiates connections actively</description>
               </valueHelp>
               <constraint>
-                <regex>^(udp|tcp-passive|tcp-active)$</regex>
+                <regex>(udp|tcp-passive|tcp-active)</regex>
               </constraint>
             </properties>
             <defaultValue>udp</defaultValue>
@@ -631,7 +631,7 @@
                     <description>Subnet topology</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(subnet|point-to-point|net30)$</regex>
+                    <regex>(subnet|point-to-point|net30)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>net30</defaultValue>
@@ -713,7 +713,7 @@
                             <description>Enable chalenge-response</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(disable|enable)$</regex>
+                            <regex>(disable|enable)</regex>
                           </constraint>
                         </properties>
                         <defaultValue>enable</defaultValue>
@@ -786,7 +786,7 @@
                     <description>TLS v1.3</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(1.0|1.1|1.2|1.3)$</regex>
+                    <regex>(1.0|1.1|1.2|1.3)</regex>
                   </constraint>
                 </properties>
               </leafNode>
@@ -805,7 +805,7 @@
                     <description>Wait for incoming TLS connection</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(active|passive)$</regex>
+                    <regex>(active|passive)</regex>
                   </constraint>
                 </properties>
               </leafNode>

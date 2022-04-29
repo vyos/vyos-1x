@@ -14,7 +14,7 @@
       <description>Listen protocol TCP</description>
     </valueHelp>
     <constraint>
-      <regex>^(udp|tcp)$</regex>
+      <regex>(udp|tcp)</regex>
     </constraint>
   </properties>
   <defaultValue>udp</defaultValue>

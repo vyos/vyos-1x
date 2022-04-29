@@ -29,7 +29,7 @@
                   <description>MD5 Key (16 characters or less)</description>
                 </valueHelp>
                 <constraint>
-                  <regex>^[^[:space:]]{1,16}$</regex>
+                  <regex>[^[:space:]]{1,16}</regex>
                 </constraint>
                 <constraintErrorMessage>Password must be 16 characters or less</constraintErrorMessage>
               </properties>
@@ -46,7 +46,7 @@
           <description>Plain text password (8 characters or less)</description>
         </valueHelp>
         <constraint>
-          <regex>^[^[:space:]]{1,8}$</regex>
+          <regex>[^[:space:]]{1,8}</regex>
         </constraint>
         <constraintErrorMessage>Password must be 8 characters or less</constraintErrorMessage>
       </properties>

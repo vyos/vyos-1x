@@ -94,7 +94,7 @@
                       <constraint>
                         <validator name="ipv6-address"/>
                         <validator name="ipv6-prefix"/>
-                        <regex>^(masquerade)$</regex>
+                        <regex>(masquerade)</regex>
                       </constraint>
                     </properties>
                   </leafNode>

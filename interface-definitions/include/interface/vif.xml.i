@@ -28,7 +28,7 @@
           <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
         </valueHelp>
         <constraint>
-          <regex>[:0-7 ]+$</regex>
+          <regex>[:0-7 ]+</regex>
         </constraint>
         <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
       </properties>
@@ -41,7 +41,7 @@
           <description>Format for qos mapping, e.g.: '0:1 1:6 7:6'</description>
         </valueHelp>
         <constraint>
-          <regex>[:0-7 ]+$</regex>
+          <regex>[:0-7 ]+</regex>
         </constraint>
         <constraintErrorMessage>QoS mapping should be in the format of '0:7 2:3' with numbers 0-9</constraintErrorMessage>
       </properties>

@@ -12,7 +12,7 @@
             <properties>
               <help>Local user account information</help>
               <constraint>
-                <regex>^[-_a-zA-Z0-9.]{1,100}</regex>
+                <regex>[-_a-zA-Z0-9.]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>
@@ -27,7 +27,7 @@
                       <help>Encrypted password</help>
                       <constraint>
                         <regex>(\*|\!)</regex>
-                        <regex>[a-zA-Z0-9\.\/]{13}$</regex>
+                        <regex>[a-zA-Z0-9\.\/]{13}</regex>
                         <regex>\$1\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{22}</regex>
                         <regex>\$5\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{43}</regex>
                         <regex>\$6\$[a-zA-Z0-9\./]*\$[a-zA-Z0-9\./]{86}</regex>
@@ -90,7 +90,7 @@
                             <description/>
                           </valueHelp>
                           <constraint>
-                            <regex>^(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)$</regex>
+                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
@@ -102,7 +102,7 @@
                 <properties>
                   <help>Full name of the user (use quotes for names with spaces)</help>
                   <constraint>
-                    <regex>[^:]*$</regex>
+                    <regex>[^:]*</regex>
                   </constraint>
                   <constraintErrorMessage>Cannot use ':' in full name</constraintErrorMessage>
                 </properties>

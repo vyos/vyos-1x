@@ -45,7 +45,7 @@
           <description>Filter static routes</description>
         </valueHelp>
         <constraint>
-          <regex>^(bgp|connected|isis|kernel|rip|static)$</regex>
+          <regex>(bgp|connected|isis|kernel|rip|static)</regex>
         </constraint>
         <constraintErrorMessage>Must be bgp, connected, kernel, rip, or static</constraintErrorMessage>
         <multi/>
@@ -123,7 +123,7 @@
                   <description>Never translate LSA types</description>
                 </valueHelp>
                 <constraint>
-                  <regex>^(always|candidate|never)$</regex>
+                  <regex>(always|candidate|never)</regex>
                 </constraint>
               </properties>
               <defaultValue>candidate</defaultValue>
@@ -172,7 +172,7 @@
           <description>Use MD5 authentication</description>
         </valueHelp>
         <constraint>
-          <regex>^(plaintext-password|md5)$</regex>
+          <regex>(plaintext-password|md5)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -252,7 +252,7 @@
           <description>Enable shortcutting mode</description>
         </valueHelp>
         <constraint>
-          <regex>^(default|disable|enable)$</regex>
+          <regex>(default|disable|enable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -432,7 +432,7 @@
           <description>Point-to-point network type</description>
         </valueHelp>
         <constraint>
-          <regex>^(broadcast|non-broadcast|point-to-multipoint|point-to-point)$</regex>
+          <regex>(broadcast|non-broadcast|point-to-multipoint|point-to-point)</regex>
         </constraint>
         <constraintErrorMessage>Must be broadcast, non-broadcast, point-to-multipoint or point-to-point</constraintErrorMessage>
       </properties>
@@ -586,7 +586,7 @@
           <description>Standard ABR type</description>
         </valueHelp>
         <constraint>
-          <regex>^(cisco|ibm|shortcut|standard)$</regex>
+          <regex>(cisco|ibm|shortcut|standard)</regex>
         </constraint>
       </properties>
       <defaultValue>cisco</defaultValue>
@@ -617,7 +617,7 @@
       <description>Default to suppress routing updates on all interfaces</description>
     </valueHelp>
     <constraint>
-      <regex>^(default)$</regex>
+      <regex>(default)</regex>
     </constraint>
   </properties>
 </leafNode>

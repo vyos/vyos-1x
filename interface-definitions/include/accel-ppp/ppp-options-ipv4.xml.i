@@ -3,7 +3,7 @@
   <properties>
     <help>IPv4 negotiation algorithm</help>
     <constraint>
-      <regex>^(deny|allow)$</regex>
+      <regex>(deny|allow)</regex>
     </constraint>
     <constraintErrorMessage>invalid value</constraintErrorMessage>
     <valueHelp>

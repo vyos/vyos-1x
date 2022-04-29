@@ -18,7 +18,7 @@
       <description>Drop matching entries</description>
     </valueHelp>
     <constraint>
-      <regex>^(accept|reject|drop)$</regex>
+      <regex>(accept|reject|drop)</regex>
     </constraint>
   </properties>
 </leafNode>

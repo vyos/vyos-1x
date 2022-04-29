@@ -20,7 +20,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      <regex>^(any)$</regex>
+      <regex>(any)</regex>
     </constraint>
   </properties>
 </leafNode>

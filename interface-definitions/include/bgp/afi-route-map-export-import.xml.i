@@ -10,7 +10,7 @@
       <description>Route map name</description>
     </valueHelp>
     <constraint>
-      <regex>^[-_a-zA-Z0-9.]+$</regex>
+      <regex>[-_a-zA-Z0-9.]+</regex>
     </constraint>
     <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
   </properties>
@@ -26,7 +26,7 @@
       <description>Route map name</description>
     </valueHelp>
     <constraint>
-      <regex>^[-_a-zA-Z0-9.]+$</regex>
+      <regex>[-_a-zA-Z0-9.]+</regex>
     </constraint>
     <constraintErrorMessage>Name of route-map can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
   </properties>

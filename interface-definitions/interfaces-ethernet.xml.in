@@ -14,7 +14,7 @@
             <description>Ethernet interface name</description>
           </valueHelp>
           <constraint>
-            <regex>^((eth|lan)[0-9]+|(eno|ens|enp|enx).+)$</regex>
+            <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)</regex>
           </constraint>
           <constraintErrorMessage>Invalid Ethernet interface name</constraintErrorMessage>
         </properties>
@@ -52,7 +52,7 @@
                 <description>Full duplex</description>
               </valueHelp>
               <constraint>
-                <regex>^(auto|half|full)$</regex>
+                <regex>(auto|half|full)</regex>
               </constraint>
               <constraintErrorMessage>duplex must be auto, half or full</constraintErrorMessage>
             </properties>
@@ -159,7 +159,7 @@
                 <description>100 Gbit/sec</description>
               </valueHelp>
               <constraint>
-                <regex>^(auto|10|100|1000|2500|5000|10000|25000|40000|50000|100000)$</regex>
+                <regex>(auto|10|100|1000|2500|5000|10000|25000|40000|50000|100000)</regex>
               </constraint>
               <constraintErrorMessage>Speed must be auto, 10, 100, 1000, 2500, 5000, 10000, 25000, 40000, 50000 or 100000</constraintErrorMessage>
             </properties>

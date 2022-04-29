@@ -7,7 +7,7 @@
           <help>Virtual Tunnel interface</help>
           <priority>381</priority>
           <constraint>
-            <regex>^vti[0-9]+$</regex>
+            <regex>vti[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>VTI interface must be named vtiN</constraintErrorMessage>
           <valueHelp>

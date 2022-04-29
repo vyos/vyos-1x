@@ -21,7 +21,7 @@
             <description>Disable processing of all IPv4 ICMP echo requests</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>enable</defaultValue>
@@ -41,7 +41,7 @@
             <description>Disable processing of broadcast IPv4 ICMP echo/timestamp requests</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -61,7 +61,7 @@
             <description>Disable sending SNMP trap on firewall configuration change</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -75,7 +75,7 @@
             <properties>
               <help>Firewall address-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -104,7 +104,7 @@
             <properties>
               <help>Firewall ipv6-address-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -133,7 +133,7 @@
             <properties>
               <help>Firewall ipv6-network-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -157,7 +157,7 @@
             <properties>
               <help>Firewall mac-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -181,7 +181,7 @@
             <properties>
               <help>Firewall network-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -205,7 +205,7 @@
             <properties>
               <help>Firewall port-group</help>
               <constraint>
-                <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
               </constraint>
             </properties>
             <children>
@@ -250,7 +250,7 @@
             <description>Disable processing of IPv4 packets with source route option</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -259,7 +259,7 @@
         <properties>
           <help>IPv6 firewall rule-set name</help>
           <constraint>
-            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
           </constraint>
         </properties>
         <children>
@@ -396,7 +396,7 @@
             <description>Disable processing of received ICMPv6 redirect messages</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -416,7 +416,7 @@
             <description>Disable processing of IPv6 packets with routing header</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -436,7 +436,7 @@
             <description>Disable logging of Ipv4 packets with invalid addresses</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>enable</defaultValue>
@@ -445,7 +445,7 @@
         <properties>
           <help>IPv4 firewall rule-set name</help>
           <constraint>
-            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
           </constraint>
         </properties>
         <children>
@@ -539,7 +539,7 @@
             <description>Disable processing of received IPv4 ICMP redirect messages</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -559,7 +559,7 @@
             <description>Disable sending IPv4 ICMP redirect messages</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>enable</defaultValue>
@@ -583,7 +583,7 @@
             <description>No source validation</description>
           </valueHelp>
           <constraint>
-            <regex>^(strict|loose|disable)$</regex>
+            <regex>(strict|loose|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
@@ -637,7 +637,7 @@
             <description>Disable use of TCP SYN cookies with IPv4</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>enable</defaultValue>
@@ -657,7 +657,7 @@
             <description>Disable RFC1337 TIME-WAIT hazards protection</description>
           </valueHelp>
           <constraint>
-            <regex>^(enable|disable)$</regex>
+            <regex>(enable|disable)</regex>
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>

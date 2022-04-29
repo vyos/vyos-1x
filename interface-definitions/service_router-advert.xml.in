@@ -70,7 +70,7 @@
                     <description>Default router has high preference</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(low|medium|high)$</regex>
+                    <regex>(low|medium|high)</regex>
                   </constraint>
                   <constraintErrorMessage>Default preference must be low, medium or high</constraintErrorMessage>
                 </properties>
@@ -170,7 +170,7 @@
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-4294967295"/>
-                        <regex>^(infinity)$</regex>
+                        <regex>(infinity)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>1800</defaultValue>
@@ -194,7 +194,7 @@
                         <description>Route has high preference</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(low|medium|high)$</regex>
+                        <regex>(low|medium|high)</regex>
                       </constraint>
                       <constraintErrorMessage>Route preference must be low, medium or high</constraintErrorMessage>
                     </properties>
@@ -248,7 +248,7 @@
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-4294967295"/>
-                        <regex>^(infinity)$</regex>
+                        <regex>(infinity)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>14400</defaultValue>
@@ -269,7 +269,7 @@
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 0-4294967295"/>
-                        <regex>^(infinity)$</regex>
+                        <regex>(infinity)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>2592000</defaultValue>

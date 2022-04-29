@@ -10,7 +10,7 @@
         <properties>
           <help>Network namespace name</help>
           <constraint>
-            <regex>^[a-zA-Z0-9-_]{1,100}</regex>
+            <regex>[a-zA-Z0-9-_]{1,100}</regex>
           </constraint>
           <constraintErrorMessage>Netns name must be alphanumeric and can contain hyphens and underscores.</constraintErrorMessage>
         </properties>

@@ -58,7 +58,7 @@
                     <description>Configure this server to be the secondary node</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(primary|secondary)$</regex>
+                    <regex>(primary|secondary)</regex>
                   </constraint>
                   <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
                 </properties>
@@ -259,7 +259,7 @@
                     <properties>
                       <help>DHCP lease range</help>
                       <constraint>
-                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                        <regex>[-_a-zA-Z0-9.]+</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid range name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>
@@ -294,7 +294,7 @@
                     <properties>
                       <help>Name of static mapping</help>
                       <constraint>
-                        <regex>^[-_a-zA-Z0-9.]+$</regex>
+                        <regex>[-_a-zA-Z0-9.]+</regex>
                       </constraint>
                       <constraintErrorMessage>Invalid static mapping name, may only be alphanumeric, dot and hyphen</constraintErrorMessage>
                     </properties>

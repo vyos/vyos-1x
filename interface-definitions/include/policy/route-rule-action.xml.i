@@ -10,7 +10,7 @@
       <description>Drop matching entries</description>
     </valueHelp>
     <constraint>
-      <regex>^(drop)$</regex>
+      <regex>(drop)</regex>
     </constraint>
   </properties>
 </leafNode>

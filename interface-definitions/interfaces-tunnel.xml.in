@@ -7,7 +7,7 @@
           <help>Tunnel interface</help>
           <priority>380</priority>
           <constraint>
-            <regex>^tun[0-9]+$</regex>
+            <regex>tun[0-9]+</regex>
           </constraint>
           <constraintErrorMessage>tunnel interface must be named tunN</constraintErrorMessage>
           <valueHelp>
@@ -102,7 +102,7 @@
                 <description>Simple Internet Transition (IPv6 in IPv4)</description>
               </valueHelp>
               <constraint>
-                <regex>^(erspan|gre|gretap|ip6erspan|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)$</regex>
+                <regex>(erspan|gre|gretap|ip6erspan|ip6gre|ip6gretap|ip6ip6|ipip|ipip6|sit)</regex>
               </constraint>
               <constraintErrorMessage>Invalid encapsulation, must be one of: erspan, gre, gretap, ip6erspan, ip6gre, ip6gretap, ipip, sit, ipip6 or ip6ip6</constraintErrorMessage>
             </properties>
@@ -123,7 +123,7 @@
                 <description>Disable multicast (default)</description>
               </valueHelp>
               <constraint>
-                <regex>^(enable|disable)$</regex>
+                <regex>(enable|disable)</regex>
               </constraint>
               <constraintErrorMessage>Must be 'disable' or 'enable'</constraintErrorMessage>
             </properties>
@@ -153,7 +153,7 @@
                         <description>Mirror egress traffic</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(ingress|egress)$</regex>
+                        <regex>(ingress|egress)</regex>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -248,7 +248,7 @@
                         <description>Disable encapsulation limit</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(none)$</regex>
+                        <regex>(none)</regex>
                         <validator name="numeric" argument="--range 0-255"/>
                       </constraint>
                       <constraintErrorMessage>Tunnel encaplimit must be 0-255 or none</constraintErrorMessage>

@@ -19,7 +19,7 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-4294967294"/>
-      <regex>^(external|internal)$</regex>
+      <regex>(external|internal)</regex>
     </constraint>
     <constraintErrorMessage>Invalid AS number</constraintErrorMessage>
   </properties>

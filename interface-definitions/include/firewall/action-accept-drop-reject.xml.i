@@ -18,7 +18,7 @@
       <description>Action to reject</description>
     </valueHelp>
     <constraint>
-      <regex>^(accept|drop|reject)$</regex>
+      <regex>(accept|drop|reject)</regex>
     </constraint>
   </properties>
 </leafNode>

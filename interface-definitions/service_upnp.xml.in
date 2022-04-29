@@ -211,7 +211,7 @@
                     <list>allow deny</list>
                   </completionHelp>
                   <constraint>
-                    <regex>^(allow|deny)$</regex>
+                    <regex>(allow|deny)</regex>
                   </constraint>
                 </properties>
               </leafNode>

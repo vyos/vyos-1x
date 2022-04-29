@@ -120,7 +120,7 @@
                         <description>zoneedit.com Services</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit|\w+)$</regex>
+                        <regex>(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit|\w+)</regex>
                       </constraint>
                       <constraintErrorMessage>You can use only predefined list of services or word characters (_, a-z, A-Z, 0-9) as service name</constraintErrorMessage>
                     </properties>
@@ -232,7 +232,7 @@
                             <description>Zoneedit protocol</description>
                           </valueHelp>
                           <constraint>
-                            <regex>^(changeip|cloudflare|dnsmadeeasy|dnspark|dondominio|dslreports1|dtdns|duckdns|dyndns2|easydns|freedns|freemyip|googledomains|hammernode1|namecheap|nfsn|noip|sitelutions|woima|yandex|zoneedit1)$</regex>
+                            <regex>(changeip|cloudflare|dnsmadeeasy|dnspark|dondominio|dslreports1|dtdns|duckdns|dyndns2|easydns|freedns|freemyip|googledomains|hammernode1|namecheap|nfsn|noip|sitelutions|woima|yandex|zoneedit1)</regex>
                           </constraint>
                           <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>

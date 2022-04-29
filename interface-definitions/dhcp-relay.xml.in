@@ -66,7 +66,7 @@
                     <description>discard packet (default action if giaddr not set in packet)</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(append|replace|forward|discard)$</regex>
+                    <regex>(append|replace|forward|discard)</regex>
                   </constraint>
                 </properties>
                 <defaultValue>forward</defaultValue>

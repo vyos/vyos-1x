@@ -66,7 +66,7 @@
       <description>ICMPv6 type 138: router-renumbering</description>
     </valueHelp>
     <constraint>
-      <regex>^(destination-unreachable|packet-too-big|time-exceeded|echo-request|echo-reply|mld-listener-query|mld-listener-report|mld-listener-reduction|nd-router-solicit|nd-router-advert|nd-neighbor-solicit|nd-neighbor-advert|nd-redirect|parameter-problem|router-renumbering)$</regex>
+      <regex>(destination-unreachable|packet-too-big|time-exceeded|echo-request|echo-reply|mld-listener-query|mld-listener-report|mld-listener-reduction|nd-router-solicit|nd-router-advert|nd-neighbor-solicit|nd-neighbor-advert|nd-redirect|parameter-problem|router-renumbering)</regex>
     </constraint>
   </properties>
 </leafNode>

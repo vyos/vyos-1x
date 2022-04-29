@@ -14,7 +14,7 @@
             <description>Zone name</description>
           </valueHelp>
           <constraint>
-            <regex>^[a-zA-Z0-9][\w\-\.]*$</regex>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
           </constraint>
         </properties>
         <children>
@@ -34,7 +34,7 @@
                 <description>Drop and notify source</description>
               </valueHelp>
               <constraint>
-                <regex>^(drop|reject)$</regex>
+                <regex>(drop|reject)</regex>
               </constraint>
             </properties>
             <defaultValue>drop</defaultValue>
@@ -105,7 +105,7 @@
                     <description>Drop silently</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(accept|drop)$</regex>
+                    <regex>(accept|drop)</regex>
                   </constraint>
                 </properties>
               </leafNode>

@@ -14,7 +14,7 @@
       <description>read write</description>
     </valueHelp>
     <constraint>
-      <regex>^(ro|rw)$</regex>
+      <regex>(ro|rw)</regex>
     </constraint>
     <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
   </properties>

@@ -18,7 +18,7 @@
       <description>No source validation</description>
     </valueHelp>
     <constraint>
-      <regex>^(strict|loose|disable)$</regex>
+      <regex>(strict|loose|disable)</regex>
     </constraint>
   </properties>
 </leafNode>

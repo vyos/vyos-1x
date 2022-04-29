@@ -27,7 +27,7 @@
                 <description>Poweroff system</description>
               </valueHelp>
               <constraint>
-                <regex>^(ignore|reboot|poweroff)$</regex>
+                <regex>(ignore|reboot|poweroff)</regex>
               </constraint>
               <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
             </properties>
@@ -84,7 +84,7 @@
                 <description>Tune for low network latency</description>
               </valueHelp>
               <constraint>
-                <regex>^(throughput|latency)$</regex>
+                <regex>(throughput|latency)</regex>
               </constraint>
             </properties>
            </leafNode>

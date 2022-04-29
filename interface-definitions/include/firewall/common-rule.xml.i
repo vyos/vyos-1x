@@ -70,7 +70,7 @@
           <description>integer/unit (Example: 5/minute)</description>
         </valueHelp>
         <constraint>
-          <regex>^\d+/(second|minute|hour|day)$</regex>
+          <regex>\d+/(second|minute|hour|day)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -91,7 +91,7 @@
       <description>Disable log</description>
     </valueHelp>
     <constraint>
-      <regex>^(enable|disable)$</regex>
+      <regex>(enable|disable)</regex>
     </constraint>
   </properties>
 </leafNode>
@@ -163,7 +163,7 @@
           <description>Source addresses seen COUNT times in the last hour</description>
         </valueHelp>
         <constraint>
-          <regex>^(second|minute|hour)$</regex>
+          <regex>(second|minute|hour)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -215,7 +215,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -234,7 +234,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -253,7 +253,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -272,7 +272,7 @@
           <description>Disable</description>
         </valueHelp>
         <constraint>
-          <regex>^(enable|disable)$</regex>
+          <regex>(enable|disable)</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -292,7 +292,7 @@
           <description>Enter date using following notation - YYYY-MM-DD</description>
         </valueHelp>
         <constraint>
-          <regex>^(\d{4}\-\d{2}\-\d{2})$</regex>
+          <regex>(\d{4}\-\d{2}\-\d{2})</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -304,7 +304,7 @@
           <description>Enter time using using 24 hour notation - hh:mm:ss</description>
         </valueHelp>
         <constraint>
-          <regex>^([0-2][0-9](\:[0-5][0-9]){1,2})$</regex>
+          <regex>([0-2][0-9](\:[0-5][0-9]){1,2})</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -316,7 +316,7 @@
           <description>Enter date using following notation - YYYY-MM-DD</description>
         </valueHelp>
         <constraint>
-          <regex>^(\d{4}\-\d{2}\-\d{2})$</regex>
+          <regex>(\d{4}\-\d{2}\-\d{2})</regex>
         </constraint>
       </properties>
     </leafNode>
@@ -328,7 +328,7 @@
           <description>Enter time using using 24 hour notation - hh:mm:ss</description>
         </valueHelp>
         <constraint>
-          <regex>^([0-2][0-9](\:[0-5][0-9]){1,2})$</regex>
+          <regex>([0-2][0-9](\:[0-5][0-9]){1,2})</regex>
         </constraint>
       </properties>
     </leafNode>

@@ -14,7 +14,7 @@
       <description>Secure Hash Algorithm</description>
     </valueHelp>
     <constraint>
-      <regex>^(md5|sha)$</regex>
+      <regex>(md5|sha)</regex>
     </constraint>
   </properties>
   <defaultValue>md5</defaultValue>

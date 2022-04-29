@@ -13,7 +13,7 @@
             <properties>
               <help>Community name</help>
               <constraint>
-                <regex>^[a-zA-Z0-9\-_]{1,100}$</regex>
+                <regex>[a-zA-Z0-9\-_]{1,100}</regex>
               </constraint>
               <constraintErrorMessage>Community string is limited to alphanumerical characters only with a total lenght of 100</constraintErrorMessage>
             </properties>
@@ -33,7 +33,7 @@
                     <description>Read-Write</description>
                   </valueHelp>
                   <constraint>
-                    <regex>^(ro|rw)$</regex>
+                    <regex>(ro|rw)</regex>
                   </constraint>
                   <constraintErrorMessage>Authorization type must be either 'rw' or 'ro'</constraintErrorMessage>
                 </properties>
@@ -72,7 +72,7 @@
             <properties>
               <help>Contact information</help>
               <constraint>
-                <regex>^.{1,255}$</regex>
+                <regex>.{1,255}</regex>
               </constraint>
               <constraintErrorMessage>Contact information is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -81,7 +81,7 @@
             <properties>
               <help>Description information</help>
               <constraint>
-                <regex>^.{1,255}$</regex>
+                <regex>.{1,255}</regex>
               </constraint>
               <constraintErrorMessage>Description is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -116,7 +116,7 @@
             <properties>
               <help>Location information</help>
               <constraint>
-                <regex>^.{1,255}$</regex>
+                <regex>.{1,255}</regex>
               </constraint>
               <constraintErrorMessage>Location is limited to 255 characters or less</constraintErrorMessage>
             </properties>
@@ -132,7 +132,7 @@
                 <description>Enable routing table OIDs (ipCidrRouteTable inetCidrRouteTable)</description>
               </valueHelp>
               <constraint>
-                <regex>^(route-table)$</regex>
+                <regex>(route-table)</regex>
               </constraint>
               <constraintErrorMessage>OID must be 'route-table'</constraintErrorMessage>
             </properties>
@@ -202,7 +202,7 @@
                 <properties>
                   <help>Specifies the EngineID that uniquely identify an agent (e.g. 000000000000000000000002)</help>
                   <constraint>
-                    <regex>^([0-9a-f][0-9a-f]){1,18}$</regex>
+                    <regex>([0-9a-f][0-9a-f]){1,18}</regex>
                   </constraint>
                   <constraintErrorMessage>ID must contain an even number (from 2 to 36) of hex digits</constraintErrorMessage>
                 </properties>
@@ -233,7 +233,7 @@
                         <description>Messages are authenticated and encrypted (authPriv)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(noauth|auth|priv)$</regex>
+                        <regex>(noauth|auth|priv)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>auth</defaultValue>
@@ -274,7 +274,7 @@
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>^[0-9a-f]*$</regex>
+                            <regex>[0-9a-f]*</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
@@ -283,7 +283,7 @@
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -304,7 +304,7 @@
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>^[0-9a-f]*$</regex>
+                            <regex>[0-9a-f]*</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
@@ -313,7 +313,7 @@
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -337,7 +337,7 @@
                         <description>Use TRAP</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^(inform|trap)$</regex>
+                        <regex>(inform|trap)</regex>
                       </constraint>
                     </properties>
                     <defaultValue>inform</defaultValue>
@@ -356,7 +356,7 @@
                 <properties>
                   <help>Specifies the user with name username</help>
                   <constraint>
-                    <regex>[^\(\)\|\-]+$</regex>
+                    <regex>[^\(\)\|\-]+</regex>
                   </constraint>
                   <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
                 </properties>
@@ -370,7 +370,7 @@
                         <properties>
                           <help>Defines the encrypted key for authentication</help>
                           <constraint>
-                            <regex>^[0-9a-f]*$</regex>
+                            <regex>[0-9a-f]*</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
@@ -379,7 +379,7 @@
                         <properties>
                           <help>Defines the clear text key for authentication</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -405,7 +405,7 @@
                         <properties>
                           <help>Defines the encrypted key for privacy protocol</help>
                           <constraint>
-                            <regex>^[0-9a-f]*$</regex>
+                            <regex>[0-9a-f]*</regex>
                           </constraint>
                           <constraintErrorMessage>Encrypted key must only contain hex digits</constraintErrorMessage>
                         </properties>
@@ -414,7 +414,7 @@
                         <properties>
                           <help>Defines the clear text key for privacy protocol</help>
                           <constraint>
-                            <regex>^.{8,}$</regex>
+                            <regex>.{8,}</regex>
                           </constraint>
                           <constraintErrorMessage>Key must contain 8 or more characters</constraintErrorMessage>
                         </properties>
@@ -428,7 +428,7 @@
                 <properties>
                   <help>Specifies the view with name viewname</help>
                   <constraint>
-                    <regex>[^\(\)\|\-]+$</regex>
+                    <regex>[^\(\)\|\-]+</regex>
                   </constraint>
                   <constraintErrorMessage>Illegal characters in name</constraintErrorMessage>
                 </properties>
@@ -437,7 +437,7 @@
                     <properties>
                       <help>Specifies the oid</help>
                       <constraint>
-                        <regex>^[0-9]+(\.[0-9]+)*$</regex>
+                        <regex>[0-9]+(\.[0-9]+)*</regex>
                       </constraint>
                       <constraintErrorMessage>OID must start from a number</constraintErrorMessage>
                     </properties>
@@ -451,7 +451,7 @@
                         <properties>
                           <help>Defines a bit-mask that is indicating which subidentifiers of the associated subtree OID should be regarded as significant</help>
                           <constraint>
-                            <regex>^[0-9a-f]{2}([\.:][0-9a-f]{2})*$</regex>
+                            <regex>[0-9a-f]{2}([\.:][0-9a-f]{2})*</regex>
                           </constraint>
                           <constraintErrorMessage>MASK is a list of hex octets, separated by '.' or ':'</constraintErrorMessage>
                         </properties>
@@ -471,7 +471,7 @@
                 <properties>
                   <help>Extension name</help>
                   <constraint>
-                    <regex>^[a-z0-9\.\-\_]+</regex>
+                    <regex>[a-z0-9\.\-\_]+</regex>
                   </constraint>
                   <constraintErrorMessage>Script extension contains invalid characters</constraintErrorMessage>
                 </properties>
@@ -483,7 +483,7 @@
                         <script>ls /config/user-data</script>
                       </completionHelp>
                       <constraint>
-                        <regex>^[a-z0-9\.\-\_\/]+</regex>
+                        <regex>[a-z0-9\.\-\_\/]+</regex>
                       </constraint>
                       <constraintErrorMessage>Script extension contains invalid characters</constraintErrorMessage>
                     </properties>

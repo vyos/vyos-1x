@@ -38,7 +38,7 @@
       <description>Default filter action is block</description>
     </valueHelp>
     <constraint>
-      <regex>^(allow|block)$</regex>
+      <regex>(allow|block)</regex>
     </constraint>
   </properties>
 </leafNode>

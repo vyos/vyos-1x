@@ -18,7 +18,7 @@
       <description>drop all mppe</description>
     </valueHelp>
     <constraint>
-      <regex>^(require|prefer|deny)$</regex>
+      <regex>(require|prefer|deny)</regex>
     </constraint>
   </properties>
   <defaultValue>prefer</defaultValue>
