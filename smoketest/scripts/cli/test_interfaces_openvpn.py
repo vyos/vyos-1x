@@ -607,6 +607,44 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
+    def test_openvpn_options(self):
+        # Ensure OpenVPN process restart on openvpn-option CLI node change
+
+        interface = 'vtun5001'
+        path = base_path + [interface]
+
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.2'])
+        self.cli_set(path + ['remote-address', '192.168.0.3'])
+        self.cli_set(path + ['shared-secret-key-file', s2s_key])
+
+        self.cli_commit()
+
+        # Now verify the OpenVPN "raw" option passing. Once an openvpn-option is
+        # added, modified or deleted from the CLI, OpenVPN daemon must be restarted
+        cur_pid = process_named_running('openvpn')
+        self.cli_set(path + ['openvpn-option', '--persist-tun'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
+        cur_pid = new_pid
+
+        self.cli_set(path + ['openvpn-option', '--persist-key'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
+        cur_pid = new_pid
+
+        self.cli_delete(path + ['openvpn-option'])
+        self.cli_commit()
+
+        # PID must be different as OpenVPN Must be restarted
+        new_pid = process_named_running('openvpn')
+        self.assertNotEqual(cur_pid, new_pid)
 
 if __name__ == '__main__':
     # Our SSL certificates need a subject ...

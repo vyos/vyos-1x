@@ -29,7 +29,7 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_diffie_hellman_length
@@ -83,8 +83,8 @@ def get_config(config=None):
     openvpn = get_interface_dict(conf, base)
 
     if 'deleted' not in openvpn:
-        tmp = leaf_node_changed(conf, ['openvpn-option'])
-        if tmp: openvpn['restart_required'] = ''
+        if is_node_changed(conf, ['openvpn-option']):
+            openvpn.update({'restart_required': {}})
 
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
     return openvpn
