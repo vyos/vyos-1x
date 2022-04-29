@@ -104,6 +104,12 @@ def list_diff(first, second):
     second = set(second)
     return [item for item in first if item not in second]
 
+def is_node_changed(conf, path):
+   from vyos.configdiff import get_config_diff
+   D = get_config_diff(conf, key_mangling=('-', '_'))
+   D.set_level(conf.get_level())
+   return D.is_node_changed(path)
+
 def leaf_node_changed(conf, path):
     """
     Check if a leaf node was altered. If it has been altered - values has been
