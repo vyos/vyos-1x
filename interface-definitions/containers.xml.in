@@ -283,10 +283,10 @@
       </tagNode>
       <leafNode name="registry">
         <properties>
-          <help>Add registry</help>
+          <help>Registry Name</help>
           <multi/>
         </properties>
-        <defaultValue>docker.io</defaultValue>
+        <defaultValue>docker.io quay.io</defaultValue>
       </leafNode>
     </children>
   </node>

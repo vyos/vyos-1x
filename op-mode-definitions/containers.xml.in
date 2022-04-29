@@ -50,6 +50,63 @@
       </node>
     </children>
   </node>
+  <node name="generate">
+    <children>
+      <node name="container">
+        <properties>
+          <help>Generate Container Image</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Name of container image (tag)</help>
+            </properties>
+            <children>
+              <tagNode name="path">
+                <properties>
+                  <help>Path to Dockerfile</help>
+                  <completionHelp>
+                    <list>&lt;filename&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo podman build --layers --force-rm --tag "$4" $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="monitor">
+    <children>
+      <node name="log">
+        <children>
+          <tagNode name="container">
+            <properties>
+              <help>Monitor last lines of container logs</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --follow --names "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+      <node name="log">
+        <children>
+          <tagNode name="container">
+            <properties>
+              <help>Show logs from a given container</help>
+              <completionHelp>
+                <path>container name</path>
+              </completionHelp>
+            </properties>
+            <command>sudo podman logs --names "$4"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="show">
     <children>
       <node name="container">

@@ -41,6 +41,20 @@ airbag.enable()
 config_containers_registry = '/etc/containers/registries.conf'
 config_containers_storage = '/etc/containers/storage.conf'
 
+def _run_rerun(container_cmd):
+    counter = 0
+    while True:
+        if counter >= 10:
+            break
+        try:
+            _cmd(container_cmd)
+            break
+        except:
+            counter = counter +1
+            sleep(0.5)
+
+    return None
+
 def _cmd(command):
     if os.path.exists('/tmp/vyos.container.debug'):
         print(command)
@@ -92,6 +106,20 @@ def verify(container):
     # Add new container
     if 'name' in container:
         for name, container_config in container['name'].items():
+            # Container image is a mandatory option
+            if 'image' not in container_config:
+                raise ConfigError(f'Container image for "{name}" is mandatory!')
+
+            # verify container image exists locally
+            image = container_config['image']
+
+            # Check if requested container image exists locally. If it does not
+            # exist locally - inform the user.
+            if run(f'podman image exists {image}') != 0:
+                raise ConfigError(f'Image "{image}" used in contianer "{name}" does not exist '\
+                                  f'locally.\nPlease use "add container image {image}" to add it '\
+                                  'to the system!')
+
             if 'network' in container_config:
                 if len(container_config['network']) > 1:
                     raise ConfigError(f'Only one network can be specified for container "{name}"!')
@@ -150,10 +178,6 @@ def verify(container):
                     if not os.path.exists(source):
                         raise ConfigError(f'Volume "{volume}" source path "{source}" does not exist!')
 
-            # Container image is a mandatory option
-            if 'image' not in container_config:
-                raise ConfigError(f'Container image for "{name}" is mandatory!')
-
             # If 'allow-host-networks' or 'network' not set.
             if 'allow_host_networks' not in container_config and 'network' not in container_config:
                 raise ConfigError(f'Must either set "network" or "allow-host-networks" for container "{name}"!')
@@ -193,6 +217,10 @@ def verify(container):
 def generate(container):
     # bail out early - looks like removal from running config
     if not container:
+        if os.path.exists(config_containers_registry):
+            os.unlink(config_containers_registry)
+        if os.path.exists(config_containers_storage):
+            os.unlink(config_containers_storage)
         return None
 
     if 'network' in container:
@@ -226,8 +254,8 @@ def generate(container):
 
             write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
 
-    render(config_containers_registry, 'containers/registry.tmpl', container)
-    render(config_containers_storage, 'containers/storage.tmpl', container)
+    render(config_containers_registry, 'containers/registries.conf.j2', container)
+    render(config_containers_storage, 'containers/storage.conf.j2', container)
 
     return None
 
@@ -261,13 +289,6 @@ def apply(container):
 
             memory = container_config['memory']
             restart = container_config['restart']
-
-            # Check if requested container image exists locally. If it does not, we
-            # pull it. print() is the best way to have a good response from the
-            # polling process to the user to display progress. If the image exists
-            # locally, a user can update it running `update container image <name>`
-            tmp = run(f'podman image exists {image}')
-            if tmp != 0: print(os.system(f'podman pull {image}'))
 
             # Add capability options. Should be in uppercase
             cap_add = ''
@@ -317,7 +338,7 @@ def apply(container):
                                  f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
                                  f'--name {name} {device} {port} {volume} {env_opt}'
             if 'allow_host_networks' in container_config:
-                run(f'{container_base_cmd} --net host {image}')
+                _run_rerun(f'{container_base_cmd} --net host {image}')
             else:
                 for network in container_config['network']:
                     ipparam = ''
@@ -325,24 +346,9 @@ def apply(container):
                         address = container_config['network'][network]['address']
                         ipparam = f'--ip {address}'
 
-                    run(f'{container_base_cmd} --net {network} {ipparam} {image}')
+                    _run_rerun(f'{container_base_cmd} --net {network} {ipparam} {image}')
 
     return None
-
-def run(container_cmd):
-    counter = 0
-    while True:
-        if counter >= 10:
-            break
-        try:
-            _cmd(container_cmd)
-            break
-        except:
-            counter = counter +1
-            sleep(0.5)
-
-    return None
-
 
 if __name__ == '__main__':
     try:
