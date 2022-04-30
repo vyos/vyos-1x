@@ -10,6 +10,7 @@
 "dhcpv6_server.py",
 "dns_forwarding.py",
 "dynamic_dns.py",
+"firewall.py",
 "flow_accounting_conf.py",
 "high-availability.py",
 "host_name.py",
