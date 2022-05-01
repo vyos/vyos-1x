@@ -18,23 +18,23 @@
 quickleave
 {% endif %}
 {% if interface is vyos_defined %}
-{%   for iface, config in interface.items() %}
+{%     for iface, config in interface.items() %}
 
 # Configuration for {{ iface }} ({{ config.role }} interface)
-{%     if config.role is vyos_defined('disabled') %}
+{%         if config.role is vyos_defined('disabled') %}
 phyint {{ iface }} disabled
-{%     else %}
+{%         else %}
 phyint {{ iface }} {{ config.role }} ratelimit 0 threshold {{ config.threshold }}
-{%     endif %}
-{%     if config.alt_subnet is vyos_defined %}
-{%       for subnet in config.alt_subnet %}
+{%         endif %}
+{%         if config.alt_subnet is vyos_defined %}
+{%             for subnet in config.alt_subnet %}
         altnet {{ subnet }}
-{%       endfor %}
-{%     endif %}
-{%     if config.whitelist is vyos_defined %}
-{%       for subnet in config.whitelist %}
+{%             endfor %}
+{%         endif %}
+{%         if config.whitelist is vyos_defined %}
+{%             for subnet in config.whitelist %}
         whitelist {{ subnet }}
-{%       endfor %}
-{%     endif %}
-{%   endfor %}
+{%             endfor %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
