@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2020 VyOS maintainers and contributors
+# Copyright (C) 2017-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -78,7 +78,7 @@ def generate(relay):
             continue
 
         config['instance'] = instance
-        render(config_file_base + instance, 'bcast-relay/udp-broadcast-relay.tmpl',
+        render(config_file_base + instance, 'bcast-relay/udp-broadcast-relay.j2',
                config)
 
     return None
