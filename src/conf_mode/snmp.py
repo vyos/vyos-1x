@@ -270,15 +270,15 @@ def generate(snmp):
                     call(f'/opt/vyatta/sbin/my_delete service snmp v3 user "{user}" privacy plaintext-password > /dev/null')
 
     # Write client config file
-    render(config_file_client, 'snmp/etc.snmp.conf.tmpl', snmp)
+    render(config_file_client, 'snmp/etc.snmp.conf.j2', snmp)
     # Write server config file
-    render(config_file_daemon, 'snmp/etc.snmpd.conf.tmpl', snmp)
+    render(config_file_daemon, 'snmp/etc.snmpd.conf.j2', snmp)
     # Write access rights config file
-    render(config_file_access, 'snmp/usr.snmpd.conf.tmpl', snmp)
+    render(config_file_access, 'snmp/usr.snmpd.conf.j2', snmp)
     # Write access rights config file
-    render(config_file_user, 'snmp/var.snmpd.conf.tmpl', snmp)
+    render(config_file_user, 'snmp/var.snmpd.conf.j2', snmp)
     # Write daemon configuration file
-    render(systemd_override, 'snmp/override.conf.tmpl', snmp)
+    render(systemd_override, 'snmp/override.conf.j2', snmp)
 
     return None
 
