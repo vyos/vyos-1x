@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2020 VyOS maintainers and contributors
+# Copyright (C) 2017-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -92,7 +92,7 @@ def generate(mdns):
         if len(mdns['interface']) < 2:
             return None
 
-    render(config_file, 'mdns-repeater/avahi-daemon.tmpl', mdns)
+    render(config_file, 'mdns-repeater/avahi-daemon.j2', mdns)
     return None
 
 def apply(mdns):
