@@ -197,7 +197,7 @@ def generate(login):
                     pass
 
     if 'radius' in login:
-        render(radius_config_file, 'login/pam_radius_auth.conf.tmpl', login,
+        render(radius_config_file, 'login/pam_radius_auth.conf.j2', login,
                    permission=0o600, user='root', group='root')
     else:
         if os.path.isfile(radius_config_file):
@@ -241,7 +241,7 @@ def apply(login):
                 #
                 # XXX: Should we deny using root at all?
                 home_dir = getpwnam(user).pw_dir
-                render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.tmpl',
+                render(f'{home_dir}/.ssh/authorized_keys', 'login/authorized_keys.j2',
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
