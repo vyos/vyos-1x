@@ -16,23 +16,23 @@ acl Safe_ports port 777         # multiling http
 acl CONNECT method CONNECT
 
 {% if authentication is vyos_defined %}
-{%   if authentication.children is vyos_defined %}
+{%     if authentication.children is vyos_defined %}
 auth_param basic children {{ authentication.children }}
-{%   endif %}
-{%   if authentication.credentials_ttl is vyos_defined %}
-auth_param basic credentialsttl {{ authentication.credentials_ttl }} minute
-{%   endif %}
-{%   if authentication.realm is vyos_defined %}
-auth_param basic realm "{{ authentication.realm }}"
-{%   endif %}
-{# LDAP based Authentication #}
-{%   if authentication.method is vyos_defined %}
-{%     if authentication.ldap is vyos_defined and authentication.method is vyos_defined('ldap') %}
-auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' ~ authentication.ldap.bind_dn ~ '"' if authentication.ldap.bind_dn is vyos_defined }} {{ '-w "' ~ authentication.ldap.password ~ '"' if authentication.ldap.password is vyos_defined }} {{ '-f "' ~ authentication.ldap.filter_expression ~ '"' if authentication.ldap.filter_expression is vyos_defined }} {{ '-u "' ~ authentication.ldap.username_attribute ~ '"' if authentication.ldap.username_attribute is vyos_defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is vyos_defined }} -R -h "{{ authentication.ldap.server }}"
 {%     endif %}
+{%     if authentication.credentials_ttl is vyos_defined %}
+auth_param basic credentialsttl {{ authentication.credentials_ttl }} minute
+{%     endif %}
+{%     if authentication.realm is vyos_defined %}
+auth_param basic realm "{{ authentication.realm }}"
+{%     endif %}
+{# LDAP based Authentication #}
+{%     if authentication.method is vyos_defined %}
+{%         if authentication.ldap is vyos_defined and authentication.method is vyos_defined('ldap') %}
+auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' ~ authentication.ldap.bind_dn ~ '"' if authentication.ldap.bind_dn is vyos_defined }} {{ '-w "' ~ authentication.ldap.password ~ '"' if authentication.ldap.password is vyos_defined }} {{ '-f "' ~ authentication.ldap.filter_expression ~ '"' if authentication.ldap.filter_expression is vyos_defined }} {{ '-u "' ~ authentication.ldap.username_attribute ~ '"' if authentication.ldap.username_attribute is vyos_defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is vyos_defined }} -R -h "{{ authentication.ldap.server }}"
+{%         endif %}
 acl auth proxy_auth REQUIRED
 http_access allow auth
-{%   endif %}
+{%     endif %}
 {% endif %}
 
 http_access allow manager localhost
@@ -44,18 +44,18 @@ http_access allow net
 http_access deny all
 
 {% if reply_block_mime is vyos_defined %}
-{%   for mime_type in reply_block_mime %}
+{%     for mime_type in reply_block_mime %}
 acl BLOCK_MIME rep_mime_type {{ mime_type }}
-{%   endfor %}
+{%     endfor %}
 http_reply_access deny BLOCK_MIME
 {% endif %}
 
 {% if cache_size is vyos_defined %}
-{%   if cache_size | int > 0 %}
+{%     if cache_size | int > 0 %}
 cache_dir ufs /var/spool/squid {{ cache_size }} 16 256
-{%   else %}
+{%     else %}
 # disabling disk cache
-{%   endif %}
+{%     endif %}
 {% endif %}
 {% if mem_cache_size is vyos_defined %}
 cache_mem {{ mem_cache_size }} MB
@@ -87,9 +87,9 @@ tcp_outgoing_address {{ outgoing_address }}
 
 
 {% if listen_address is vyos_defined %}
-{%   for address, config in listen_address.items() %}
+{%     for address, config in listen_address.items() %}
 http_port {{ address | bracketize_ipv6 }}:{{ config.port if config.port is vyos_defined else default_port }} {{ 'intercept' if config.disable_transparent is not vyos_defined }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 http_port 127.0.0.1:{{ default_port }}
 
@@ -104,8 +104,8 @@ url_rewrite_bypass on
 {% endif %}
 
 {% if cache_peer is vyos_defined %}
-{%   for peer, config in cache_peer.items() %}
+{%     for peer, config in cache_peer.items() %}
 cache_peer {{ config.address }} {{ config.type }} {{ config.http_port }} {{ config.icp_port }} {{ config.options }}
-{%   endfor %}
+{%     endfor %}
 never_direct allow all
 {% endif %}

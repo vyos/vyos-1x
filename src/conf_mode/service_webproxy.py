@@ -61,7 +61,7 @@ def generate_sg_localdb(category, list_type, role, proxy):
                    user=user_group, group=user_group)
 
         # temporary config file, deleted after generation
-        render(sg_tmp_file, 'squid/sg_acl.conf.tmpl', tmp,
+        render(sg_tmp_file, 'squid/sg_acl.conf.j2', tmp,
                user=user_group, group=user_group)
 
         call(f'su - {user_group} -c "squidGuard -d -c {sg_tmp_file} -C {db_file}"')
@@ -166,8 +166,8 @@ def generate(proxy):
     if not proxy:
         return None
 
-    render(squid_config_file, 'squid/squid.conf.tmpl', proxy)
-    render(squidguard_config_file, 'squid/squidGuard.conf.tmpl', proxy)
+    render(squid_config_file, 'squid/squid.conf.j2', proxy)
+    render(squidguard_config_file, 'squid/squidGuard.conf.j2', proxy)
 
     cat_dict = {
         'local-block' : 'domains',
