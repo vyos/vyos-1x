@@ -49,13 +49,13 @@ DriverPath=/usr/lib/x86_64-linux-gnu/lcdproc/
 #   text, tyan, ula200, vlsys_m428, xosd, yard2LCD
 
 {% if model is vyos_defined %}
-{%   if model.startswith('cfa-') %}
+{%     if model.startswith('cfa-') %}
 Driver=CFontzPacket
-{%   elif model == 'sdec' %}
+{%     elif model == 'sdec' %}
 Driver=sdeclcd
-{%   elif model == 'hd44780' %}
+{%     elif model == 'hd44780' %}
 Driver=hd44780
-{%   endif %}
+{%     endif %}
 {% endif %}
 
 # Tells the driver to bind to the given interface. [default: 127.0.0.1]
@@ -116,7 +116,7 @@ Heartbeat=off
 TitleSpeed=10
 
 {% if model is vyos_defined %}
-{%   if model.startswith('cfa-') %}
+{%     if model.startswith('cfa-') %}
 ## CrystalFontz packet driver (for CFA533, CFA631, CFA633 & CFA635) ##
 [CFontzPacket]
 Model={{ model.split('-')[1] }}
@@ -126,14 +126,14 @@ Brightness=500
 OffBrightness=50
 Reboot=yes
 USB=yes
-{%   elif model == 'sdec' %}
+{%     elif model == 'sdec' %}
 ## SDEC driver for Lanner, Watchguard, Sophos sppliances ##
 [sdeclcd]
 # No options
-{%   elif model == 'hd44780' %}
+{%     elif model == 'hd44780' %}
 [hd44780]
 ConnectionType=ezio
 Device={{ device }}
 Size=16x2
-{%   endif %}
+{%     endif %}
 {% endif %}
