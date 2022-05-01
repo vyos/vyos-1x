@@ -296,10 +296,10 @@ def generate(ipoe):
     if not ipoe:
         return None
 
-    render(ipoe_conf, 'accel-ppp/ipoe.config.tmpl', ipoe)
+    render(ipoe_conf, 'accel-ppp/ipoe.config.j2', ipoe)
 
     if ipoe['auth_mode'] == 'local':
-        render(ipoe_chap_secrets, 'accel-ppp/chap-secrets.ipoe.tmpl', ipoe)
+        render(ipoe_chap_secrets, 'accel-ppp/chap-secrets.ipoe.j2', ipoe)
         os.chmod(ipoe_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
 
     else:

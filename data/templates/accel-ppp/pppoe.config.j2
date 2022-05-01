@@ -49,9 +49,9 @@ disable
 
 {% if wins_server is vyos_defined %}
 [wins]
-{%   for server in wins_server %}
+{%     for server in wins_server %}
 wins{{ loop.index }}={{ server }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 {# Common chap-secrets and RADIUS server/option definitions #}
@@ -85,12 +85,12 @@ ipv4={{ ppp_options.ipv4 }}
 {# IPv6 #}
 {% if ppp_options.ipv6 is vyos_defined %}
 ipv6={{ ppp_options.ipv6 }}
-{%   if ppp_options.ipv6_intf_id is vyos_defined %}
+{%     if ppp_options.ipv6_intf_id is vyos_defined %}
 ipv6-intf-id={{ ppp_options.ipv6_intf_id }}
-{%   endif %}
-{%   if ppp_options.ipv6_peer_intf_id is vyos_defined %}
+{%     endif %}
+{%     if ppp_options.ipv6_peer_intf_id is vyos_defined %}
 ipv6-peer-intf-id={{ ppp_options.ipv6_peer_intf_id }}
-{%   endif %}
+{%     endif %}
 ipv6-accept-peer-intf-id={{ "1" if ppp_options.ipv6_accept_peer_intf_id is vyos_defined else "0" }}
 {% endif %}
 {# MTU #}
@@ -104,23 +104,23 @@ verbose=1
 ac-name={{ access_concentrator }}
 
 {% if interface is vyos_defined %}
-{%   for iface, iface_config in interface.items() %}
-{%     if iface_config.vlan_id is not vyos_defined and iface_config.vlan_range is not vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+{%         if iface_config.vlan_id is not vyos_defined and iface_config.vlan_range is not vyos_defined %}
 interface={{ iface }}
-{%     endif %}
-{%     if iface_config.vlan_range is vyos_defined %}
-{%       for regex in iface_config.regex %}
+{%         endif %}
+{%         if iface_config.vlan_range is vyos_defined %}
+{%             for regex in iface_config.regex %}
 interface=re:^{{ iface | replace('.', '\\.') }}\.({{ regex }})$
-{%       endfor %}
+{%             endfor %}
 vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
-{%     endif %}
-{%     if iface_config.vlan_id is vyos_defined %}
-{%       for vlan in iface_config.vlan_id %}
+{%         endif %}
+{%         if iface_config.vlan_id is vyos_defined %}
+{%             for vlan in iface_config.vlan_id %}
 vlan-mon={{ iface }},{{ vlan }}
 interface=re:^{{ iface | replace('.', '\\.') }}\.{{ vlan }}$
-{%       endfor %}
-{%     endif %}
-{%   endfor %}
+{%             endfor %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 
 {% if service_name %}
@@ -128,14 +128,14 @@ service-name={{ service_name | join(',') }}
 {% endif %}
 
 {% if pado_delay %}
-{%   set pado_delay_param = namespace(value='0') %}
-{%   for delay in pado_delay|sort(attribute='0') %}
-{%     if not loop.last %}
-{%       set pado_delay_param.value = pado_delay_param.value + ',' + delay + ':' + pado_delay[delay].sessions %}
-{%     else %}
-{%       set pado_delay_param.value = pado_delay_param.value + ',-1:' + pado_delay[delay].sessions %}
-{%     endif %}
-{%   endfor %}
+{%     set pado_delay_param = namespace(value='0') %}
+{%     for delay in pado_delay | sort(attribute='0') %}
+{%         if not loop.last %}
+{%             set pado_delay_param.value = pado_delay_param.value + ',' + delay + ':' + pado_delay[delay].sessions %}
+{%         else %}
+{%             set pado_delay_param.value = pado_delay_param.value + ',-1:' + pado_delay[delay].sessions %}
+{%         endif %}
+{%     endfor %}
 pado-delay={{ pado_delay_param.value }}
 {% endif %}
 {% if authentication.radius.called_sid_format is vyos_defined %}
@@ -144,15 +144,15 @@ called-sid={{ authentication.radius.called_sid_format }}
 
 {% if limits is vyos_defined %}
 [connlimit]
-{%   if limits.connection_limit is vyos_defined %}
+{%     if limits.connection_limit is vyos_defined %}
 limit={{ limits.connection_limit }}
-{%   endif %}
-{%   if limits.burst is vyos_defined %}
+{%     endif %}
+{%     if limits.burst is vyos_defined %}
 burst={{ limits.burst }}
-{%   endif %}
-{%   if limits.timeout is vyos_defined %}
+{%     endif %}
+{%     if limits.timeout is vyos_defined %}
 timeout={{ limits.timeout }}
-{%   endif %}
+{%     endif %}
 {% endif %}
 
 {# Common RADIUS shaper configuration #}
@@ -162,10 +162,10 @@ timeout={{ limits.timeout }}
 [pppd-compat]
 verbose=1
 radattr-prefix=/run/accel-pppd/radattr
-{% set script_name = {'on_up': 'ip-up', 'on_down': 'ip-down', 'on_change':'ip-change', 'on_pre_up':'ip-pre-up'} %}
-{%   for script in extended_scripts %}
+{%     set script_name = {'on_up': 'ip-up', 'on_down': 'ip-down', 'on_change':'ip-change', 'on_pre_up':'ip-pre-up'} %}
+{%     for script in extended_scripts %}
 {{ script_name[script] }}={{ extended_scripts[script] }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 [cli]

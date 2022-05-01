@@ -114,7 +114,7 @@ def generate(sstp):
         return None
 
     # accel-cmd reload doesn't work so any change results in a restart of the daemon
-    render(sstp_conf, 'accel-ppp/sstp.config.tmpl', sstp)
+    render(sstp_conf, 'accel-ppp/sstp.config.j2', sstp)
 
     cert_name = sstp['ssl']['certificate']
     pki_cert = sstp['pki']['certificate'][cert_name]
@@ -127,7 +127,7 @@ def generate(sstp):
     write_file(ca_cert_file_path, wrap_certificate(pki_ca['certificate']))
 
     if dict_search('authentication.mode', sstp) == 'local':
-        render(sstp_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
+        render(sstp_chap_secrets, 'accel-ppp/chap-secrets.config_dict.j2',
                sstp, permission=0o640)
     else:
         if os.path.exists(sstp_chap_secrets):

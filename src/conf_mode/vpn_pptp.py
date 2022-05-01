@@ -264,10 +264,10 @@ def generate(pptp):
     if not pptp:
         return None
 
-    render(pptp_conf, 'accel-ppp/pptp.config.tmpl', pptp)
+    render(pptp_conf, 'accel-ppp/pptp.config.j2', pptp)
 
     if pptp['local_users']:
-        render(pptp_chap_secrets, 'accel-ppp/chap-secrets.tmpl', pptp)
+        render(pptp_chap_secrets, 'accel-ppp/chap-secrets.j2', pptp)
         os.chmod(pptp_chap_secrets, S_IRUSR | S_IWUSR | S_IRGRP)
     else:
         if os.path.exists(pptp_chap_secrets):

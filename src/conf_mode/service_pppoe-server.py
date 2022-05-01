@@ -88,10 +88,10 @@ def generate(pppoe):
             for vlan_range in pppoe['interface'][iface]['vlan_range']:
                 pppoe['interface'][iface]['regex'].append(range_to_regex(vlan_range))
 
-    render(pppoe_conf, 'accel-ppp/pppoe.config.tmpl', pppoe)
+    render(pppoe_conf, 'accel-ppp/pppoe.config.j2', pppoe)
 
     if dict_search('authentication.mode', pppoe) == 'local':
-        render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.tmpl',
+        render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.j2',
                pppoe, permission=0o640)
     else:
         if os.path.exists(pppoe_chap_secrets):
