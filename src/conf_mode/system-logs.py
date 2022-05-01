@@ -57,13 +57,13 @@ def generate(logs_config):
     logrotate_atop = dict_search('logrotate.atop', logs_config)
     # generate new config file for atop
     syslog.debug('Adding logrotate config for atop')
-    render(logrotate_atop_file, 'logs/logrotate/vyos-atop.tmpl', logrotate_atop)
+    render(logrotate_atop_file, 'logs/logrotate/vyos-atop.j2', logrotate_atop)
 
     # get configuration for logrotate rsyslog
     logrotate_rsyslog = dict_search('logrotate.messages', logs_config)
     # generate new config file for rsyslog
     syslog.debug('Adding logrotate config for rsyslog')
-    render(logrotate_rsyslog_file, 'logs/logrotate/vyos-rsyslog.tmpl',
+    render(logrotate_rsyslog_file, 'logs/logrotate/vyos-rsyslog.j2',
            logrotate_rsyslog)
 
 
