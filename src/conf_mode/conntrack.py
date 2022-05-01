@@ -101,9 +101,9 @@ def verify(conntrack):
     return None
 
 def generate(conntrack):
-    render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.tmpl', conntrack)
-    render(sysctl_file, 'conntrack/sysctl.conf.tmpl', conntrack)
-    render(nftables_ct_file, 'conntrack/nftables-ct.tmpl', conntrack)
+    render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
+    render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
+    render(nftables_ct_file, 'conntrack/nftables-ct.j2', conntrack)
 
     # dry-run newly generated configuration
     tmp = run(f'nft -c -f {nftables_ct_file}')

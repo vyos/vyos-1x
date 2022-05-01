@@ -1,0 +1,48 @@
+#!/usr/sbin/nft -f
+
+{% set nft_ct_ignore_name = 'VYOS_CT_IGNORE' %}
+{% set nft_ct_timeout_name = 'VYOS_CT_TIMEOUT' %}
+
+# we first flush all chains and render the content from scratch - this makes
+# any delta check obsolete
+flush chain raw {{ nft_ct_ignore_name }}
+flush chain raw {{ nft_ct_timeout_name }}
+
+table raw {
+    chain {{ nft_ct_ignore_name }} {
+{% if ignore.rule is vyos_defined %}
+{%     for rule, rule_config in ignore.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
+{%         set nft_command = '' %}
+{%         if rule_config.inbound_interface is vyos_defined %}
+{%             set nft_command = nft_command ~ ' iifname ' ~ rule_config.inbound_interface %}
+{%         endif %}
+{%         if rule_config.protocol is vyos_defined %}
+{%             set nft_command = nft_command ~ ' ip protocol ' ~ rule_config.protocol %}
+{%         endif %}
+{%         if rule_config.destination.address is vyos_defined %}
+{%             set nft_command = nft_command ~ ' ip daddr ' ~ rule_config.destination.address %}
+{%         endif %}
+{%         if rule_config.destination.port is vyos_defined %}
+{%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' dport { ' ~ rule_config.destination.port ~ ' }' %}
+{%         endif %}
+{%         if rule_config.source.address is vyos_defined %}
+{%             set nft_command = nft_command ~ ' ip saddr ' ~ rule_config.source.address %}
+{%         endif %}
+{%         if rule_config.source.port is vyos_defined %}
+{%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' sport { ' ~ rule_config.source.port ~ ' }' %}
+{%         endif %}
+       {{ nft_command }} counter notrack comment ignore-{{ rule }}
+{%     endfor %}
+{% endif %}
+        return
+    }
+    chain {{ nft_ct_timeout_name }} {
+{% if timeout.custom.rule is vyos_defined %}
+{%     for rule, rule_config in timeout.custom.rule.items() %}
+        # rule-{{ rule }} {{ '- ' ~ rule_config.description if rule_config.description is vyos_defined }}
+{%     endfor %}
+{% endif %}
+        return
+    }
+}
