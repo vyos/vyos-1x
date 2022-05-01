@@ -117,7 +117,7 @@ def generate(http_api):
     with open(api_conf_file, 'w') as f:
         json.dump(http_api, f, indent=2)
 
-    render(systemd_service, 'https/vyos-http-api.service.tmpl', http_api)
+    render(systemd_service, 'https/vyos-http-api.service.j2', http_api)
     return None
 
 def apply(http_api):

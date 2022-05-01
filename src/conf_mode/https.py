@@ -214,8 +214,8 @@ def generate(https):
         'certbot': certbot
     }
 
-    render(config_file, 'https/nginx.default.tmpl', data)
-    render(systemd_override, 'https/override.conf.tmpl', https)
+    render(config_file, 'https/nginx.default.j2', data)
+    render(systemd_override, 'https/override.conf.j2', https)
     return None
 
 def apply(https):
