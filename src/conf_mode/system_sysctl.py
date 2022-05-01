@@ -50,7 +50,7 @@ def generate(sysctl):
             os.unlink(config_file)
         return None
 
-    render(config_file, 'system/sysctl.conf.tmpl', sysctl)
+    render(config_file, 'system/sysctl.conf.j2', sysctl)
     return None
 
 def apply(sysctl):
