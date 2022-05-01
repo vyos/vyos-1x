@@ -84,7 +84,7 @@ def verify(nhrp):
     return None
 
 def generate(nhrp):
-    render(opennhrp_conf, 'nhrp/opennhrp.conf.tmpl', nhrp)
+    render(opennhrp_conf, 'nhrp/opennhrp.conf.j2', nhrp)
     return None
 
 def apply(nhrp):

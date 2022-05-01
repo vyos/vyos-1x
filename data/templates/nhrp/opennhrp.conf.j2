@@ -1,0 +1,42 @@
+{# j2lint: disable=jinja-variable-format #}
+# Created by VyOS - manual changes will be overwritten
+
+{% if tunnel is vyos_defined %}
+{%     for name, tunnel_conf in tunnel.items() %}
+{%         set type = 'spoke' if tunnel_conf.map is vyos_defined or tunnel_conf.dynamic_map is vyos_defined else 'hub' %}
+{%         set profile_name = profile_map[name] if profile_map is vyos_defined and name in profile_map else '' %}
+interface {{ name }} #{{ type }} {{ profile_name }}
+{%         if tunnel_conf.map is vyos_defined %}
+{%             for map, map_conf in tunnel_conf.map.items() %}
+{%                 set cisco = ' cisco' if map_conf.cisco is vyos_defined else '' %}
+{%                 set register = ' register' if map_conf.register is vyos_defined else '' %}
+    map {{ map }} {{ map_conf.nbma_address }}{{ register }}{{ cisco }}
+{%             endfor %}
+{%         endif %}
+{%         if tunnel_conf.dynamic_map is vyos_defined %}
+{%             for map, map_conf in tunnel_conf.dynamic_map.items() %}
+    dynamic-map {{ map }} {{ map_conf.nbma_domain_name }}
+{%             endfor %}
+{%         endif %}
+{%         if tunnel_conf.cisco_authentication is vyos_defined %}
+    cisco-authentication {{ tunnel_conf.cisco_authentication }}
+{%         endif %}
+{%         if tunnel_conf.holding_time is vyos_defined %}
+    holding-time {{ tunnel_conf.holding_time }}
+{%         endif %}
+{%         if tunnel_conf.multicast is vyos_defined %}
+    multicast {{ tunnel_conf.multicast }}
+{%         endif %}
+{%         for key in ['non_caching', 'redirect', 'shortcut', 'shortcut_destination'] %}
+{%             if key in tunnel_conf %}
+    {{ key | replace("_", "-") }}
+{%             endif %}
+{%         endfor %}
+{%         if tunnel_conf.shortcut_target is vyos_defined %}
+{%             for target, shortcut_conf in tunnel_conf.shortcut_target.items() %}
+    shortcut-target {{ target }}{{ ' holding-time ' + shortcut_conf.holding_time if shortcut_conf.holding_time is vyos_defined }}
+{%             endfor %}
+{%         endif %}
+
+{%     endfor %}
+{% endif %}
