@@ -98,7 +98,7 @@ def generate(tftpd):
             config['vrf'] = address_config['vrf']
 
         file = config_file + str(idx)
-        render(file, 'tftp-server/default.tmpl', config)
+        render(file, 'tftp-server/default.j2', config)
         idx = idx + 1
 
     return None
