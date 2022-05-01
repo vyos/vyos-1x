@@ -3,21 +3,21 @@
 configure system platform VyOS
 configure system description "VyOS {{ version }}"
 {% if interface is vyos_defined %}
-{%   set tmp = [] %}
-{%   for iface, iface_options in interface.items() if not iface_options.disable %}
-{%     if iface == 'all' %}
-{%       set iface = '*' %}
-{%     endif %}
-{%     set _ = tmp.append(iface) %}
-{%     if iface_options.location is vyos_defined %}
-{%       if iface_options.location.elin is vyos_defined %}
+{%     set tmp = [] %}
+{%     for iface, iface_options in interface.items() if not iface_options.disable %}
+{%         if iface == 'all' %}
+{%             set iface = '*' %}
+{%         endif %}
+{%         set _ = tmp.append(iface) %}
+{%         if iface_options.location is vyos_defined %}
+{%             if iface_options.location.elin is vyos_defined %}
 configure ports {{ iface }} med location elin "{{ iface_options.location.elin }}"
-{%       endif %}
-{%       if iface_options.location.coordinate_based is vyos_defined %}
+{%             endif %}
+{%             if iface_options.location.coordinate_based is vyos_defined %}
 configure ports {{ iface }} med location coordinate latitude "{{ iface_options.location.coordinate_based.latitude }}" longitude "{{ iface_options.location.coordinate_based.longitude }}" altitude "{{ iface_options.location.coordinate_based.altitude }}m" datum "{{ iface_options.location.coordinate_based.datum }}"
-{%       endif %}
-{%     endif %}
-{%   endfor %}
+{%             endif %}
+{%         endif %}
+{%     endfor %}
 configure system interface pattern "{{ tmp | join(",") }}"
 {% endif %}
 {% if management_address is vyos_defined %}

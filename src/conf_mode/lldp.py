@@ -111,8 +111,8 @@ def generate(lldp):
     if lldp is None:
         return
 
-    render(config_file, 'lldp/lldpd.tmpl', lldp)
-    render(vyos_config_file, 'lldp/vyos.conf.tmpl', lldp)
+    render(config_file, 'lldp/lldpd.j2', lldp)
+    render(vyos_config_file, 'lldp/vyos.conf.j2', lldp)
 
 def apply(lldp):
     systemd_service = 'lldpd.service'
