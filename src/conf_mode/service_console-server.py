@@ -81,7 +81,7 @@ def generate(proxy):
     if not proxy:
         return None
 
-    render(config_file, 'conserver/conserver.conf.tmpl', proxy)
+    render(config_file, 'conserver/conserver.conf.j2', proxy)
     if 'device' in proxy:
         for device, device_config in proxy['device'].items():
             if 'ssh' not in device_config:
@@ -92,7 +92,7 @@ def generate(proxy):
                 'port' : device_config['ssh']['port'],
             }
             render(dropbear_systemd_file.format(**tmp),
-                   'conserver/dropbear@.service.tmpl', tmp)
+                   'conserver/dropbear@.service.j2', tmp)
 
     return None
 

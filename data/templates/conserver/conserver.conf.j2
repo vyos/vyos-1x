@@ -17,7 +17,7 @@ default * {
 ##
 {% for key, value in device.items() %}
 {#   Depending on our USB serial console we could require a path adjustment #}
-{%   set path = '/dev' if key.startswith('ttyS') else '/dev/serial/by-bus' %}
+{%     set path = '/dev' if key.startswith('ttyS') else '/dev/serial/by-bus' %}
 console {{ key }} {
     master localhost;
     type device;
