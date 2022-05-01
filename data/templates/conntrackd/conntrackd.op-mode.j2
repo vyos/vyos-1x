@@ -1,0 +1,13 @@
+Source                                           Destination                                      Protocol
+{% for parsed in data if parsed.flow.meta is vyos_defined %}
+{%     for key in parsed.flow.meta %}
+{%         if key['@direction'] == 'original' %}
+{%             set saddr    = key.layer3.src | bracketize_ipv6 %}
+{%             set sport    = key.layer4.sport %}
+{%             set daddr    = key.layer3.dst | bracketize_ipv6 %}
+{%             set dport    = key.layer4.dport %}
+{%             set protocol = key.layer4['@protoname'] %}
+{{ "%-48s" | format(saddr ~ ':' ~ sport) }} {{ "%-48s" | format(daddr ~ ':' ~ dport) }} {{ protocol }}
+{%         endif %}
+{%     endfor %}
+{% endfor %}

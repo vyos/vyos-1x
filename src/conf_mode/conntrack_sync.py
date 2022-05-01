@@ -111,7 +111,7 @@ def generate(conntrack):
             os.unlink(config_file)
         return None
 
-    render(config_file, 'conntrackd/conntrackd.conf.tmpl', conntrack)
+    render(config_file, 'conntrackd/conntrackd.conf.j2', conntrack)
 
     return None
 

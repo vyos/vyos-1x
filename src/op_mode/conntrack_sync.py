@@ -77,7 +77,7 @@ def xml_to_stdout(xml):
         parsed = xmltodict.parse(line)
         out.append(parsed)
 
-    print(render_to_string('conntrackd/conntrackd.op-mode.tmpl', {'data' : out}))
+    print(render_to_string('conntrackd/conntrackd.op-mode.j2', {'data' : out}))
 
 if __name__ == '__main__':
     args = parser.parse_args()
