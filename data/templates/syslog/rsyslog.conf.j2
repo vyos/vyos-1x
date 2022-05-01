@@ -2,9 +2,9 @@
 ## file based logging
 {% if files['global']['marker'] %}
 $ModLoad immark
-{%   if files['global']['marker-interval'] %}
-$MarkMessagePeriod  {{files['global']['marker-interval']}}
-{%   endif %}
+{%     if files['global']['marker-interval'] %}
+$MarkMessagePeriod {{ files['global']['marker-interval'] }}
+{%     endif %}
 {% endif %}
 {% if files['global']['preserver_fqdn'] %}
 $PreserveFQDN on
@@ -15,40 +15,40 @@ $outchannel {{ file }},{{ file_options['log-file'] }},{{ file_options['max-size'
 {% endfor %}
 {% if console is defined and console is not none %}
 ## console logging
-{%   for con, con_options in console.items() %}
+{%     for con, con_options in console.items() %}
 {{ con_options['selectors'] }} /dev/console
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if hosts is defined and hosts is not none %}
 ## remote logging
-{%   for host, host_options in hosts.items() %}
-{%     if host_options.proto == 'tcp' %}
-{%       if host_options.port is defined %}
-{%         if host_options.oct_count is defined %}
+{%     for host, host_options in hosts.items() %}
+{%         if host_options.proto == 'tcp' %}
+{%             if host_options.port is defined %}
+{%                 if host_options.oct_count is defined %}
 {{ host_options.selectors }} @@(o){{ host | bracketize_ipv6 }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
-{%         else %}
+{%                 else %}
 {{ host_options.selectors }} @@{{ host | bracketize_ipv6 }}:{{ host_options.port }}
-{%         endif %}
-{%       else %}
+{%                 endif %}
+{%             else %}
 {{ host_options.selectors }} @@{{ host | bracketize_ipv6 }}
-{%       endif %}
-{%     elif host_options.proto == 'udp' %}
-{%       if host_options.port is defined %}
+{%             endif %}
+{%         elif host_options.proto == 'udp' %}
+{%             if host_options.port is defined %}
 {{ host_options.selectors }} @{{ host | bracketize_ipv6 }}:{{ host_options.port }}{{ ';RSYSLOG_SyslogProtocol23Format' if host_options.oct_count is sameas true }}
-{%       else %}
+{%             else %}
 {{ host_options.selectors }} @{{ host | bracketize_ipv6 }}
-{%       endif %}
-{%     else %}
-{%       if host_options['port'] %}
+{%             endif %}
+{%         else %}
+{%             if host_options['port'] %}
 {{ host_options.selectors }} @{{ host | bracketize_ipv6 }}:{{ host_options.port }}
-{%       else %}
+{%             else %}
 {{ host_options.selectors }} @{{ host | bracketize_ipv6 }}
-{%       endif %}
-{%     endif %}
-{%   endfor %}
+{%             endif %}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 {% if user is defined and user is not none %}
-{%   for username, user_options in user.items() %}
+{%     for username, user_options in user.items() %}
 {{ user_options.selectors }} :omusrmsg:{{ username }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}

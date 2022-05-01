@@ -204,7 +204,7 @@ def generate(c):
         return None
 
     conf = '/etc/rsyslog.d/vyos-rsyslog.conf'
-    render(conf, 'syslog/rsyslog.conf.tmpl', c)
+    render(conf, 'syslog/rsyslog.conf.j2', c)
 
     # cleanup current logrotate config files
     logrotate_files = Path('/etc/logrotate.d/').glob('vyos-rsyslog-generated-*')
@@ -216,7 +216,7 @@ def generate(c):
     for filename, fileconfig in c.get('files', {}).items():
         if fileconfig['log-file'].startswith('/var/log/user/'):
             conf = '/etc/logrotate.d/vyos-rsyslog-generated-' + filename
-            render(conf, 'syslog/logrotate.tmpl', { 'config_render': fileconfig })
+            render(conf, 'syslog/logrotate.j2', { 'config_render': fileconfig })
 
 
 def verify(c):
