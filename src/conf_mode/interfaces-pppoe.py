@@ -92,7 +92,7 @@ def generate(pppoe):
         return None
 
     # Create PPP configuration files
-    render(config_pppoe, 'pppoe/peer.tmpl', pppoe, permission=0o640)
+    render(config_pppoe, 'pppoe/peer.j2', pppoe, permission=0o640)
 
     return None
 

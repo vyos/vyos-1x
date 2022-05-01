@@ -67,14 +67,14 @@ demand
 # See T2249. PPP default route options should only be set when in on-demand
 # mode. As soon as we are not in on-demand mode the default-route handling is
 # passed to the ip-up.d/ip-down.s scripts which is required for VRF support.
-{%   if 'auto' in default_route %}
+{%     if 'auto' in default_route %}
 defaultroute
 {{ 'defaultroute6' if ipv6 is vyos_defined }}
-{%   elif 'force' in default_route %}
+{%     elif 'force' in default_route %}
 defaultroute
 replacedefaultroute
 {{ 'defaultroute6' if ipv6 is vyos_defined }}
-{%   endif %}
+{%     endif %}
 {% else %}
 nodefaultroute
 noreplacedefaultroute
