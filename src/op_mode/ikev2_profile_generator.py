@@ -222,9 +222,9 @@ except KeyboardInterrupt:
 
 print('\n\n==== <snip> ====')
 if args.os == 'ios':
-    print(render_to_string('ipsec/ios_profile.tmpl', data))
+    print(render_to_string('ipsec/ios_profile.j2', data))
     print('==== </snip> ====\n')
     print('Save the XML from above to a new file named "vyos.mobileconfig" and E-Mail it to your phone.')
 elif args.os == 'windows':
-    print(render_to_string('ipsec/windows_profile.tmpl', data))
+    print(render_to_string('ipsec/windows_profile.j2', data))
     print('==== </snip> ====\n')

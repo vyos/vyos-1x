@@ -503,7 +503,7 @@ def generate(ipsec):
                             charon_radius_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
-        render(charon_conf, 'ipsec/charon.tmpl', {'install_routes': default_install_routes})
+        render(charon_conf, 'ipsec/charon.j2', {'install_routes': default_install_routes})
         return
 
     if ipsec['dhcp_no_address']:
@@ -567,13 +567,13 @@ def generate(ipsec):
                     ipsec['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
 
-    render(ipsec_conf, 'ipsec/ipsec.conf.tmpl', ipsec)
-    render(ipsec_secrets, 'ipsec/ipsec.secrets.tmpl', ipsec)
-    render(charon_conf, 'ipsec/charon.tmpl', ipsec)
-    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.tmpl', ipsec)
-    render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.tmpl', ipsec)
-    render(interface_conf, 'ipsec/interfaces_use.conf.tmpl', ipsec)
-    render(swanctl_conf, 'ipsec/swanctl.conf.tmpl', ipsec)
+    render(ipsec_conf, 'ipsec/ipsec.conf.j2', ipsec)
+    render(ipsec_secrets, 'ipsec/ipsec.secrets.j2', ipsec)
+    render(charon_conf, 'ipsec/charon.j2', ipsec)
+    render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.j2', ipsec)
+    render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.j2', ipsec)
+    render(interface_conf, 'ipsec/interfaces_use.conf.j2', ipsec)
+    render(swanctl_conf, 'ipsec/swanctl.conf.j2', ipsec)
 
 def resync_nhrp(ipsec):
     if ipsec and not ipsec['nhrp_exists']:

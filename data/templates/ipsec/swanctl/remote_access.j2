@@ -1,7 +1,7 @@
 {% macro conn(name, rw_conf, ike_group, esp_group) %}
-{#   peer needs to reference the global IKE configuration for certain values #}
-{%   set ike = ike_group[rw_conf.ike_group] %}
-{%   set esp = esp_group[rw_conf.esp_group] %}
+{# peer needs to reference the global IKE configuration for certain values #}
+{% set ike = ike_group[rw_conf.ike_group] %}
+{% set esp = esp_group[rw_conf.esp_group] %}
     ra-{{ name }} {
         remote_addrs = %any
         local_addrs = {{ rw_conf.local_address if rw_conf.local_address is vyos_defined else '%any' }}
@@ -10,28 +10,28 @@
         send_certreq = no
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
-{%   if rw_conf.unique is vyos_defined %}
+{% if rw_conf.unique is vyos_defined %}
         unique = {{ rw_conf.unique }}
-{%   endif %}
-{%   if rw_conf.pool is vyos_defined %}
+{% endif %}
+{% if rw_conf.pool is vyos_defined %}
         pools = {{ rw_conf.pool | join(',') }}
-{%   endif %}
+{% endif %}
         local {
-{%   if rw_conf.authentication.id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
+{% if rw_conf.authentication.id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
             id = '{{ rw_conf.authentication.id }}'
-{%   endif %}
-{%   if rw_conf.authentication.server_mode == 'x509' %}
+{% endif %}
+{% if rw_conf.authentication.server_mode == 'x509' %}
             auth = pubkey
             certs = {{ rw_conf.authentication.x509.certificate }}.pem
-{%   elif rw_conf.authentication.server_mode == 'pre-shared-secret' %}
+{% elif rw_conf.authentication.server_mode == 'pre-shared-secret' %}
             auth = psk
-{%   endif %}
+{% endif %}
         }
         remote {
             auth = {{ rw_conf.authentication.client_mode }}
-{%   if rw_conf.authentication.client_mode.startswith("eap") %}
+{% if rw_conf.authentication.client_mode.startswith("eap") %}
             eap_id = %any
-{%   endif %}
+{% endif %}
         }
         children {
             ikev2-vpn  {
@@ -40,9 +40,9 @@
                 rand_time = 540s
                 dpd_action = clear
                 inactivity = {{ rw_conf.timeout }}
-{%   set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
-{%   set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
-{%   set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
+{% set local_prefix = rw_conf.local.prefix if rw_conf.local.prefix is vyos_defined else ['0.0.0.0/0', '::/0'] %}
+{% set local_port = rw_conf.local.port if rw_conf.local.port is vyos_defined else '' %}
+{% set local_suffix = '[%any/{1}]'.format(local_port) if local_port else '' %}
                 local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
             }
         }

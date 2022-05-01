@@ -1,6 +1,5 @@
 # Options for the charon IKE daemon.
 charon {
-
     # Accept unencrypted ID and HASH payloads in IKEv1 Main Mode.
     # accept_unencrypted_mainmode_messages = no
 
@@ -23,13 +22,13 @@ charon {
     # Cisco FlexVPN
 {% if options is vyos_defined %}
     cisco_flexvpn = {{ 'yes' if options.flexvpn is vyos_defined else 'no' }}
-{%   if options.virtual_ip is vyos_defined %}
+{%     if options.virtual_ip is vyos_defined %}
     install_virtual_ip = yes
-{%   endif %}
-{%   if options.interface is vyos_defined %}
+{%     endif %}
+{%     if options.interface is vyos_defined %}
     install_virtual_ip_on = {{ options.interface }}
-{%   endif %}
-{%  endif %}
+{%     endif %}
+{% endif %}
 
     # Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
     # close_ike_on_child_failure = no

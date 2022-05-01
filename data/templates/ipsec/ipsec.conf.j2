@@ -1,0 +1,19 @@
+# Created by VyOS - manual changes will be overwritten
+
+config setup
+{% set charondebug = '' %}
+{% if log.subsystem is vyos_defined %}
+{%     set subsystem = log.subsystem %}
+{%     if 'any' in log.subsystem %}
+{%         set subsystem = ['dmn', 'mgr', 'ike', 'chd','job', 'cfg', 'knl',
+                            'net', 'asn', 'enc', 'lib', 'esp', 'tls', 'tnc',
+                            'imc', 'imv', 'pts'] %}
+{%     endif %}
+{%     set charondebug = subsystem | join (' ' ~ log.level ~ ', ') ~ ' ' ~ log.level %}
+{% endif %}
+    charondebug = "{{ charondebug }}"
+    uniqueids = {{ "no" if disable_uniqreqids is vyos_defined else "yes" }}
+
+{% if include_ipsec_conf is vyos_defined %}
+include {{ include_ipsec_conf }}
+{% endif %}

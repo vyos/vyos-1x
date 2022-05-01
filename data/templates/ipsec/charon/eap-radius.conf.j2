@@ -94,19 +94,19 @@ eap-radius {
 
     # Section to specify multiple RADIUS servers.
     servers {
-{%  if remote_access.radius.server is vyos_defined %}
-{%    for server, server_options in remote_access.radius.server.items() if server_options.disable is not vyos_defined %}
+{% if remote_access.radius.server is vyos_defined %}
+{%     for server, server_options in remote_access.radius.server.items() if server_options.disable is not vyos_defined %}
         {{ server | replace('.', '-') }} {
             address = {{ server }}
             secret = {{ server_options.key }}
             auth_port = {{ server_options.port }}
-{%      if server_options.disable_accounting is not vyos_defined %}
-            acct_port = {{ server_options.port | int +1 }}
-{%  endif %}
+{%         if server_options.disable_accounting is not vyos_defined %}
+            acct_port = {{ server_options.port | int + 1 }}
+{%         endif %}
             sockets = 20
         }
-{%    endfor %}
-{%  endif %}
+{%     endfor %}
+{% endif %}
     }
 
     # Section to configure multiple XAuth authentication rounds via RADIUS.
