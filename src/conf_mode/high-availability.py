@@ -152,7 +152,7 @@ def generate(ha):
     if not ha:
         return None
 
-    render(VRRP.location['config'], 'high-availability/keepalived.conf.tmpl', ha)
+    render(VRRP.location['config'], 'high-availability/keepalived.conf.j2', ha)
     return None
 
 def apply(ha):
