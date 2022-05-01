@@ -192,7 +192,7 @@ def generate(zone_policy):
             if 'local_zone' in zone_conf:
                 zone_conf['from_local'] = get_local_from(data, zone)
 
-    render(nftables_conf, 'zone_policy/nftables.tmpl', data)
+    render(nftables_conf, 'zone_policy/nftables.j2', data)
     return None
 
 def apply(zone_policy):
