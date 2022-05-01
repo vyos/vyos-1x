@@ -239,8 +239,8 @@ def generate(flow_config):
     if not flow_config:
         return None
 
-    render(uacctd_conf_path, 'pmacct/uacctd.conf.tmpl', flow_config)
-    render(systemd_override, 'pmacct/override.conf.tmpl', flow_config)
+    render(uacctd_conf_path, 'pmacct/uacctd.conf.j2', flow_config)
+    render(systemd_override, 'pmacct/override.conf.j2', flow_config)
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
