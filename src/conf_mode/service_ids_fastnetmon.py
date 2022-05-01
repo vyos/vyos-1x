@@ -67,8 +67,8 @@ def generate(fastnetmon):
 
         return
 
-    render(config_file, 'ids/fastnetmon.tmpl', fastnetmon)
-    render(networks_list, 'ids/fastnetmon_networks_list.tmpl', fastnetmon)
+    render(config_file, 'ids/fastnetmon.j2', fastnetmon)
+    render(networks_list, 'ids/fastnetmon_networks_list.j2', fastnetmon)
 
     return None
 
