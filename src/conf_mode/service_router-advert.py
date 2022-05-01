@@ -101,7 +101,7 @@ def generate(rtradv):
     if not rtradv:
         return None
 
-    render(config_file, 'router-advert/radvd.conf.tmpl', rtradv, permission=0o644)
+    render(config_file, 'router-advert/radvd.conf.j2', rtradv, permission=0o644)
     return None
 
 def apply(rtradv):
