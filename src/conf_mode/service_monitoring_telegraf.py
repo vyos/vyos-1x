@@ -145,10 +145,10 @@ def generate(monitoring):
         os.mkdir(custom_scripts_dir)
 
     # Render telegraf configuration and systemd override
-    render(config_telegraf, 'monitoring/telegraf.tmpl', monitoring)
-    render(systemd_telegraf_service, 'monitoring/systemd_vyos_telegraf_service.tmpl', monitoring)
-    render(systemd_override, 'monitoring/override.conf.tmpl', monitoring, permission=0o640)
-    render(syslog_telegraf, 'monitoring/syslog_telegraf.tmpl', monitoring)
+    render(config_telegraf, 'monitoring/telegraf.j2', monitoring)
+    render(systemd_telegraf_service, 'monitoring/systemd_vyos_telegraf_service.j2', monitoring)
+    render(systemd_override, 'monitoring/override.conf.j2', monitoring, permission=0o640)
+    render(syslog_telegraf, 'monitoring/syslog_telegraf.j2', monitoring)
 
     chown(base_dir, 'telegraf', 'telegraf')
 
