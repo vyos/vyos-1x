@@ -133,10 +133,10 @@ def verify(vrf):
 
 
 def generate(vrf):
-    render(config_file, 'vrf/vrf.conf.tmpl', vrf)
+    render(config_file, 'vrf/vrf.conf.j2', vrf)
     # Render nftables zones config
 
-    render(nft_vrf_config, 'firewall/nftables-vrf-zones.tmpl', vrf)
+    render(nft_vrf_config, 'firewall/nftables-vrf-zones.j2', vrf)
 
     return None
 
