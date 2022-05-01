@@ -327,8 +327,8 @@ def generate(firewall):
     else:
         firewall['cleanup_commands'] = cleanup_commands(firewall)
 
-    render(nftables_conf, 'firewall/nftables.tmpl', firewall)
-    render(nftables_defines_conf, 'firewall/nftables-defines.tmpl', firewall)
+    render(nftables_conf, 'firewall/nftables.j2', firewall)
+    render(nftables_defines_conf, 'firewall/nftables-defines.j2', firewall)
     return None
 
 def apply_sysfs(firewall):

@@ -5,9 +5,9 @@ ext_ifname={{ wan_interface }}
 {% if wan_ip is vyos_defined %}
 # If the WAN interface has several IP addresses, you
 # can specify the one to use below
-{%   for addr in wan_ip %}
+{%     for addr in wan_ip %}
 ext_ip={{ addr }}
-{%   endfor  %}
+{%     endfor  %}
 {% endif %}
 
 # LAN network interfaces IPs / networks
@@ -20,15 +20,15 @@ ext_ip={{ addr }}
 # When MULTIPLE_EXTERNAL_IP is enabled, the external IP
 # address associated with the subnet follows. For example:
 #  listening_ip=192.168.0.1/24 88.22.44.13
-{%   for addr in listen %}
-{%     if addr | is_ipv4  %}
+{%     for addr in listen %}
+{%         if addr | is_ipv4  %}
 listening_ip={{ addr }}
-{%     elif addr | is_ipv6  %}
+{%         elif addr | is_ipv6  %}
 ipv6_listening_ip={{ addr }}
-{%     else %}
+{%         else %}
 listening_ip={{ addr }}
-{%     endif  %}
-{%   endfor  %}
+{%         endif  %}
+{%     endfor  %}
 {% endif %}
 
 # CAUTION: mixing up WAN and LAN interfaces may introduce security risks!
@@ -57,12 +57,12 @@ enable_upnp=yes
 # PCP
 # Configure the minimum and maximum lifetime of a port mapping in seconds
 # 120s and 86400s (24h) are suggested values from PCP-base
-{% if pcp_lifetime.max is vyos_defined %}
+{%     if pcp_lifetime.max is vyos_defined %}
 max_lifetime={{ pcp_lifetime.max }}
-{% endif %}
-{% if pcp_lifetime.min is vyos_defined %}
+{%     endif %}
+{%     if pcp_lifetime.min is vyos_defined %}
 min_lifetime={{ pcp_lifetime.min }}
-{% endif %}
+{%     endif %}
 {% endif %}
 
 
@@ -142,11 +142,11 @@ lease_file=/config/upnp.leases
 # modify the IP ranges to match their own internal networks, and
 # also consider implementing network-specific restrictions
 # CAUTION: failure to enforce any rules may permit insecure requests to be made!
-{% for rule, config in rules.items() %}
-{%  if config.disable is vyos_defined %}
-{{ config.action}} {{ config.external_port_range }} {{ config.ip }} {{ config.internal_port_range }}
-{%  endif %}
-{% endfor %}
+{%     for rule, config in rules.items() %}
+{%         if config.disable is vyos_defined %}
+{{ config.action }} {{ config.external_port_range }} {{ config.ip }} {{ config.internal_port_range }}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 
 {% if stun is vyos_defined %}

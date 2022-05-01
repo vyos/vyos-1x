@@ -146,8 +146,8 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(nftables_nat66_config, 'firewall/nftables-nat66.tmpl', nat, permission=0o755)
-    render(ndppd_config, 'ndppd/ndppd.conf.tmpl', nat, permission=0o755)
+    render(nftables_nat66_config, 'firewall/nftables-nat66.j2', nat, permission=0o755)
+    render(ndppd_config, 'ndppd/ndppd.conf.j2', nat, permission=0o755)
     return None
 
 def apply(nat):

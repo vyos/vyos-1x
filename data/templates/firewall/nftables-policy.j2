@@ -1,9 +1,9 @@
 #!/usr/sbin/nft -f
 
 {% if cleanup_commands is vyos_defined %}
-{%   for command in cleanup_commands %}
+{%     for command in cleanup_commands %}
 {{ command }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 include "/run/nftables_defines.conf"
@@ -18,17 +18,17 @@ table ip mangle {
     }
 {% endif %}
 {% if route is vyos_defined %}
-{%   for route_text, conf in route.items() %}
+{%     for route_text, conf in route.items() %}
     chain VYOS_PBR_{{ route_text }} {
-{%     if conf.rule is vyos_defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
-{%       endfor %}
-{%     endif %}
+{%             endfor %}
+{%         endif %}
         {{ conf | nft_default_rule(route_text) }}
     }
-{%   endfor %}
-{%- endif %}
+{%     endfor %}
+{% endif %}
 }
 
 table ip6 mangle {
@@ -41,15 +41,15 @@ table ip6 mangle {
     }
 {% endif %}
 {% if route6 is vyos_defined %}
-{%   for route_text, conf in route6.items() %}
+{%     for route_text, conf in route6.items() %}
     chain VYOS_PBR6_{{ route_text }} {
-{%     if conf.rule is vyos_defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
-{%       endfor %}
-{%     endif %}
+{%             endfor %}
+{%         endif %}
         {{ conf | nft_default_rule(route_text) }}
     }
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 }

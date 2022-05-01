@@ -135,7 +135,7 @@ def generate(upnpd):
     if os.path.isfile(config_file):
         os.unlink(config_file)
 
-    render(config_file, 'firewall/upnpd.conf.tmpl', upnpd)
+    render(config_file, 'firewall/upnpd.conf.j2', upnpd)
 
 def apply(upnpd):
     systemd_service_name = 'miniupnpd.service'

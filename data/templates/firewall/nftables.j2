@@ -1,9 +1,9 @@
 #!/usr/sbin/nft -f
 
 {% if cleanup_commands is vyos_defined %}
-{%   for command in cleanup_commands %}
+{%     for command in cleanup_commands %}
 {{ command }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
 include "/run/nftables_defines.conf"
@@ -31,39 +31,39 @@ table ip filter {
     }
 {% endif %}
 {% if name is vyos_defined %}
-{%   set ns = namespace(sets=[]) %}
-{%   for name_text, conf in name.items() %}
+{%     set ns = namespace(sets=[]) %}
+{%     for name_text, conf in name.items() %}
     chain NAME_{{ name_text }} {
-{%     if conf.rule is vyos_defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(name_text, rule_id) }}
-{%         if rule_conf.recent is vyos_defined %}
-{%           set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
+{%                 if rule_conf.recent is vyos_defined %}
+{%                     set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
+{%                 endif %}
+{%             endfor %}
 {%         endif %}
-{%       endfor %}
-{%     endif %}
         {{ conf | nft_default_rule(name_text) }}
     }
-{%   endfor %}
-{%   for set_name in ns.sets %}
+{%     endfor %}
+{%     for set_name in ns.sets %}
     set RECENT_{{ set_name }} {
         type ipv4_addr
         size 65535
         flags dynamic
     }
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
-{%   if state_policy.established is vyos_defined %}
+{%     if state_policy.established is vyos_defined %}
         {{ state_policy.established | nft_state_policy('established') }}
-{%   endif %}
-{%   if state_policy.invalid is vyos_defined %}
+{%     endif %}
+{%     if state_policy.invalid is vyos_defined %}
         {{ state_policy.invalid | nft_state_policy('invalid') }}
-{%   endif %}
-{%   if state_policy.related is vyos_defined %}
+{%     endif %}
+{%     if state_policy.related is vyos_defined %}
         {{ state_policy.related | nft_state_policy('related') }}
-{%   endif %}
+{%     endif %}
         return
     }
 {% endif %}
@@ -92,39 +92,39 @@ table ip6 filter {
     }
 {% endif %}
 {% if ipv6_name is vyos_defined %}
-{%   set ns = namespace(sets=[]) %}
-{%   for name_text, conf in ipv6_name.items() %}
+{%     set ns = namespace(sets=[]) %}
+{%     for name_text, conf in ipv6_name.items() %}
     chain NAME6_{{ name_text }} {
-{%     if conf.rule is vyos_defined %}
-{%       for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(name_text, rule_id, 'ip6') }}
-{%         if rule_conf.recent is vyos_defined %}
-{%           set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
+{%                 if rule_conf.recent is vyos_defined %}
+{%                     set ns.sets = ns.sets + [name_text + '_' + rule_id] %}
+{%                 endif %}
+{%             endfor %}
 {%         endif %}
-{%       endfor %}
-{%     endif %}
         {{ conf | nft_default_rule(name_text) }}
     }
-{%   endfor %}
-{%   for set_name in ns.sets %}
+{%     endfor %}
+{%     for set_name in ns.sets %}
     set RECENT6_{{ set_name }} {
         type ipv6_addr
         size 65535
         flags dynamic
     }
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
-{%   if state_policy.established is vyos_defined %}
+{%     if state_policy.established is vyos_defined %}
         {{ state_policy.established | nft_state_policy('established', ipv6=True) }}
-{%   endif %}
-{%   if state_policy.invalid is vyos_defined %}
+{%     endif %}
+{%     if state_policy.invalid is vyos_defined %}
         {{ state_policy.invalid | nft_state_policy('invalid', ipv6=True) }}
-{%   endif %}
-{%   if state_policy.related is vyos_defined %}
+{%     endif %}
+{%     if state_policy.related is vyos_defined %}
         {{ state_policy.related | nft_state_policy('related', ipv6=True) }}
-{%   endif %}
+{%     endif %}
         return
     }
 {% endif %}

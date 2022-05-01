@@ -204,7 +204,7 @@ def generate(policy):
     else:
         policy['cleanup_commands'] = cleanup_commands(policy)
 
-    render(nftables_conf, 'firewall/nftables-policy.tmpl', policy)
+    render(nftables_conf, 'firewall/nftables-policy.j2', policy)
     return None
 
 def apply_table_marks(policy):

@@ -181,7 +181,7 @@ def verify(nat):
     return None
 
 def generate(nat):
-    render(nftables_nat_config, 'firewall/nftables-nat.tmpl', nat)
+    render(nftables_nat_config, 'firewall/nftables-nat.j2', nat)
 
     # dry-run newly generated configuration
     tmp = run(f'nft -c -f {nftables_nat_config}')

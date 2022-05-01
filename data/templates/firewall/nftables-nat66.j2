@@ -1,22 +1,22 @@
 #!/usr/sbin/nft -f
 
 {% macro nptv6_rule(rule,config, chain) %}
-{%   set comment  = '' %}
-{%   set base_log = '' %}
-{%   set src_prefix  = 'ip6 saddr ' ~ config.source.prefix if config.source.prefix is vyos_defined %}
-{%   set dest_address  = 'ip6 daddr ' ~ config.destination.address if config.destination.address is vyos_defined %}
-{%   if chain is vyos_defined('PREROUTING') %}
+{% set comment  = '' %}
+{% set base_log = '' %}
+{% set src_prefix  = 'ip6 saddr ' ~ config.source.prefix if config.source.prefix is vyos_defined %}
+{% set dest_address  = 'ip6 daddr ' ~ config.destination.address if config.destination.address is vyos_defined %}
+{% if chain is vyos_defined('PREROUTING') %}
 {%     set comment   = 'DST-NAT66-' ~ rule %}
 {%     set base_log  = '[NAT66-DST-' ~ rule %}
 {%     set interface = ' iifname "' ~ config.inbound_interface ~ '"' if config.inbound_interface is vyos_defined and config.inbound_interface is not vyos_defined('any') else '' %}
 {%     if config.translation.address | is_ip_network %}
-{#       support 1:1 network translation #}
-{%       set dnat_type = 'dnat prefix to ' %}
+{#         support 1:1 network translation #}
+{%         set dnat_type = 'dnat prefix to ' %}
 {%     else   %}
-{%       set dnat_type = 'dnat to ' %}
+{%         set dnat_type = 'dnat to ' %}
 {%     endif %}
 {%     set trns_address = dnat_type ~ config.translation.address if config.translation.address is vyos_defined %}
-{%   elif chain is vyos_defined('POSTROUTING') %}
+{% elif chain is vyos_defined('POSTROUTING') %}
 {%     set comment   = 'SRC-NAT66-' ~ rule %}
 {%     set base_log  = '[NAT66-SRC-' ~ rule %}
 {%     if config.translation.address is vyos_defined %}
@@ -33,34 +33,34 @@
 {%         endif %}
 {%     endif   %}
 {%     set interface = ' oifname "' ~ config.outbound_interface ~ '"' if config.outbound_interface is vyos_defined else '' %}
-{%   endif %}
-{%   if config.log is vyos_defined %}
+{% endif %}
+{% if config.log is vyos_defined %}
 {%     if config.translation.address is vyos_defined('masquerade') %}
-{%       set log = base_log +'-MASQ]' %}
+{%         set log = base_log ~ '-MASQ]' %}
 {%     else %}
-{%       set log = base_log ~ ']' %}
+{%         set log = base_log ~ ']' %}
 {%     endif %}
-{%   endif %}
-{%   set output = 'add rule ip6 nat ' ~ chain ~ interface %}
-{#   Count packets #}
-{%   set output = output ~ ' counter' %}
-{#   Special handling of log option, we must repeat the entire rule before the #}
-{#   NAT translation options are added, this is essential                      #}
-{%   if log is vyos_defined %}
+{% endif %}
+{% set output = 'add rule ip6 nat ' ~ chain ~ interface %}
+{# Count packets #}
+{% set output = output ~ ' counter' %}
+{# Special handling of log option, we must repeat the entire rule before the #}
+{# NAT translation options are added, this is essential                      #}
+{% if log is vyos_defined %}
 {%     set log_output = output ~ ' log prefix "' ~ log ~ '" comment "' ~ comment ~ '"' %}
-{%   endif %}
-{%   if src_prefix is vyos_defined %}
+{% endif %}
+{% if src_prefix is vyos_defined %}
 {%     set output = output ~ ' ' ~ src_prefix %}
-{%   endif %}
-{%   if dest_address is vyos_defined %}
+{% endif %}
+{% if dest_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ dest_address %}
-{%   endif %}
-{%   if trns_address is vyos_defined %}
+{% endif %}
+{% if trns_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ trns_address %}
-{%   endif %}
-{%   if comment is vyos_defined %}
+{% endif %}
+{% if comment is vyos_defined %}
 {%     set output = output ~ ' comment "' ~ comment ~ '"' %}
-{%   endif %}
+{% endif %}
 {{ log_output if log_output is vyos_defined }}
 {{ output }}
 {% endmacro %}
@@ -69,9 +69,9 @@
 flush table ip6 nat
 {% if helper_functions is vyos_defined('remove') %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
-{%   set base_command = 'delete rule ip6 raw' %}
-{{base_command}} PREROUTING handle {{ pre_ct_conntrack }}
-{{base_command}} OUTPUT handle {{ out_ct_conntrack }}
+{%     set base_command = 'delete rule ip6 raw' %}
+{{ base_command }} PREROUTING handle {{ pre_ct_conntrack }}
+{{ base_command }} OUTPUT handle {{ out_ct_conntrack }}
 
 delete chain ip6 raw NAT_CONNTRACK
 
@@ -79,7 +79,7 @@ delete chain ip6 raw NAT_CONNTRACK
 {# NAT if enabled - add targets to nftables #}
 add chain ip6 raw NAT_CONNTRACK
 add rule ip6 raw NAT_CONNTRACK counter accept
-{%   set base_command = 'add rule ip6 raw' %}
+{%     set base_command = 'add rule ip6 raw' %}
 {{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
 {{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
@@ -88,15 +88,15 @@ add rule ip6 raw NAT_CONNTRACK counter accept
 # Destination NAT66 rules build up here
 #
 {% if destination.rule is vyos_defined %}
-{%   for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
+{%     for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
 {{ nptv6_rule(rule, config, 'PREROUTING') }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 #
 # Source NAT66 rules build up here
 #
 {% if source.rule is vyos_defined %}
-{%   for rule, config in source.rule.items() if config.disable is not vyos_defined %}
+{%     for rule, config in source.rule.items() if config.disable is not vyos_defined %}
 {{ nptv6_rule(rule, config, 'POSTROUTING') }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
