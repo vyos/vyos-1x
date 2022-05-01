@@ -254,8 +254,8 @@ def generate(container):
 
             write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
 
-    render(config_containers_registry, 'containers/registries.conf.j2', container)
-    render(config_containers_storage, 'containers/storage.conf.j2', container)
+    render(config_containers_registry, 'container/registries.conf.j2', container)
+    render(config_containers_storage, 'container/storage.conf.j2', container)
 
     return None
 
