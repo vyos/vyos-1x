@@ -103,7 +103,7 @@ def generate(console):
         config_file = base_dir + f'/serial-getty@{device}.service'
         getty_wants_symlink = base_dir + f'/getty.target.wants/serial-getty@{device}.service'
 
-        render(config_file, 'getty/serial-getty.service.tmpl', device_config)
+        render(config_file, 'getty/serial-getty.service.j2', device_config)
         os.symlink(config_file, getty_wants_symlink)
 
     # GRUB
