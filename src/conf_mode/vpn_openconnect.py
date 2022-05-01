@@ -157,9 +157,9 @@ def generate(ocserv):
 
     if "radius" in ocserv["authentication"]["mode"]:
         # Render radius client configuration
-        render(radius_cfg, 'ocserv/radius_conf.tmpl', ocserv["authentication"]["radius"])
+        render(radius_cfg, 'ocserv/radius_conf.j2', ocserv["authentication"]["radius"])
         # Render radius servers
-        render(radius_servers, 'ocserv/radius_servers.tmpl', ocserv["authentication"]["radius"])
+        render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
     elif "local" in ocserv["authentication"]["mode"]:
         # if mode "OTP", generate OTP users file parameters
         if "otp" in ocserv["authentication"]["mode"]["local"]:
@@ -184,24 +184,24 @@ def generate(ocserv):
 
         if "password-otp" in ocserv["authentication"]["mode"]["local"]:
             # Render local users ocpasswd
-            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.j2', ocserv["authentication"]["local_users"])
             # Render local users OTP keys
-            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.j2', ocserv["authentication"]["local_users"])
         elif "password" in ocserv["authentication"]["mode"]["local"]:
             # Render local users ocpasswd
-            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.j2', ocserv["authentication"]["local_users"])
         elif "otp" in ocserv["authentication"]["mode"]["local"]:
             # Render local users OTP keys
-            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_otp_usr, 'ocserv/ocserv_otp_usr.j2', ocserv["authentication"]["local_users"])
         else:
             # Render local users ocpasswd
-            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.j2', ocserv["authentication"]["local_users"])
     else:
         if "local_users" in ocserv["authentication"]:
             for user in ocserv["authentication"]["local_users"]["username"]:
                 ocserv["authentication"]["local_users"]["username"][user]["hash"] = get_hash(ocserv["authentication"]["local_users"]["username"][user]["password"])
             # Render local users
-            render(ocserv_passwd, 'ocserv/ocserv_passwd.tmpl', ocserv["authentication"]["local_users"])
+            render(ocserv_passwd, 'ocserv/ocserv_passwd.j2', ocserv["authentication"]["local_users"])
 
     if "ssl" in ocserv:
         cert_file_path = os.path.join(cfg_dir, 'cert.pem')
@@ -227,7 +227,7 @@ def generate(ocserv):
                 f.write(wrap_certificate(pki_ca_cert['certificate']))
 
     # Render config
-    render(ocserv_conf, 'ocserv/ocserv_config.tmpl', ocserv)
+    render(ocserv_conf, 'ocserv/ocserv_config.j2', ocserv)
 
 
 def apply(ocserv):

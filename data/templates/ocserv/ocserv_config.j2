@@ -9,13 +9,13 @@ run-as-group = daemon
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf]"
 {% elif "local" in authentication.mode %}
-{%   if authentication.mode.local == "password-otp" %}
+{%     if authentication.mode.local == "password-otp" %}
 auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
-{%   elif authentication.mode.local == "otp" %}
+{%     elif authentication.mode.local == "otp" %}
 auth = "plain[otp=/run/ocserv/users.oath]"
-{%   else %}
+{%     else %}
 auth = "plain[/run/ocserv/ocpasswd]"
-{%   endif %}
+{%     endif %}
 {% else %}
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}
@@ -23,9 +23,9 @@ auth = "plain[/run/ocserv/ocpasswd]"
 {% if ssl.certificate is vyos_defined %}
 server-cert = /run/ocserv/cert.pem
 server-key = /run/ocserv/cert.key
-{% if ssl.passphrase is vyos_defined %}
+{%     if ssl.passphrase is vyos_defined %}
 key-pin = {{ ssl.passphrase }}
-{% endif %}
+{%     endif %}
 {% endif %}
 
 {% if ssl.ca_certificate is vyos_defined %}
@@ -59,33 +59,33 @@ device = sslvpn
 # An alternative way of specifying the network:
 {% if network_settings %}
 # DNS settings
-{%   if network_settings.name_server is string %}
+{%     if network_settings.name_server is string %}
 dns = {{ network_settings.name_server }}
-{%   else %}
-{%     for dns in network_settings.name_server %}
+{%     else %}
+{%         for dns in network_settings.name_server %}
 dns = {{ dns }}
-{%     endfor %}
-{%   endif %}
-# IPv4 network pool
-{%   if network_settings.client_ip_settings %}
-{%     if network_settings.client_ip_settings.subnet %}
-ipv4-network = {{ network_settings.client_ip_settings.subnet }}
+{%         endfor %}
 {%     endif %}
-{%   endif %}
+# IPv4 network pool
+{%     if network_settings.client_ip_settings %}
+{%         if network_settings.client_ip_settings.subnet %}
+ipv4-network = {{ network_settings.client_ip_settings.subnet }}
+{%         endif %}
+{%     endif %}
 # IPv6 network pool
-{%   if network_settings.client_ipv6_pool %}
-{%     if network_settings.client_ipv6_pool.prefix %}
+{%     if network_settings.client_ipv6_pool %}
+{%         if network_settings.client_ipv6_pool.prefix %}
 ipv6-network = {{ network_settings.client_ipv6_pool.prefix }}
 ipv6-subnet-prefix = {{ network_settings.client_ipv6_pool.mask }}
+{%         endif %}
 {%     endif %}
-{%   endif %}
 {% endif %}
 
 {% if network_settings.push_route is string %}
 route = {{ network_settings.push_route }}
 {% else %}
-{%   for route in network_settings.push_route %}
+{%     for route in network_settings.push_route %}
 route = {{ route }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 
