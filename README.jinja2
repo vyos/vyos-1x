@@ -1,0 +1,84 @@
+# Jinja2 style guide
+
+Our templates are large. We must keep them easy to read and modify
+if we want to be able to maintain and grow VyOS in the future.
+
+Consistent style that ensures readability and editability is crucial
+to ensure it.
+
+## General guidelines
+
+### Statements per line
+
+One line should have only one template tag.
+
+No:
+
+```
+{% if foo %} {% if bar %}
+{% endif %} {% endif %}
+```
+
+Yes:
+
+```
+{% if foo %}
+    {% if bar %}
+    {% endif %}
+{% endif %}
+```
+
+## Indentation
+
+### Example
+
+```
+{% for item in items %}
+    {% if item %}
+        There is {{ item }}  
+    {% endif %}
+{% endfor}
+
+{% if foo is defined %}
+    Foo is defined!
+{% endif %}
+```
+
+### Indent width
+
+Indent width is four spaces, for consistency with our Python code.
+
+### Indent position
+
+Indentation goes before the opening template tag, not inside the template tag.
+
+No:
+
+```
+{% if foo %}
+{%    if bar %}
+    baz
+{%    endif %}
+{% endif %}
+```
+
+Yes:
+
+```      
+{% if foo %}
+    {% if bar %}
+        baz
+    {% endif %}
+{% endif %}
+```
+
+Rationale:
+
+* Templates are easy to re-indent with built-in tools of any editor.
+* The opening tag is a part of the template syntax.
+
+### Content inside template logic blocks must be indented
+
+Content inside block is essentially a statement to emit that content.
+A level of indentation is a visual aid for separating logic for emitting that content
+from the content itself.
