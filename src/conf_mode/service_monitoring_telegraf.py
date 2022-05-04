@@ -124,6 +124,15 @@ def verify(monitoring):
         if 'url' not in monitoring:
             raise ConfigError(f'Monitoring "url" is mandatory!')
 
+    # Verify Splunk
+    if 'splunk' in monitoring:
+        if 'authentication' not in monitoring['splunk'] or \
+           'token' not in monitoring['splunk']['authentication']:
+            raise ConfigError(f'Authentication "organization and token" are mandatory!')
+
+        if 'url' not in monitoring['splunk']:
+            raise ConfigError(f'Monitoring splunk "url" is mandatory!')
+
     return None
 
 def generate(monitoring):
