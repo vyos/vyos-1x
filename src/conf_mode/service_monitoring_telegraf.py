@@ -99,6 +99,15 @@ def get_config(config=None):
     monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
     monitoring['nft_chains'] = get_nft_filter_chains()
 
+    if 'authentication' in monitoring or \
+       'url' in monitoring:
+        monitoring['influxdb_configured'] = True
+
+    # Ignore default XML values if config doesn't exists
+    # Delete key from dict
+    if not conf.exists(base + ['prometheus-client']):
+        del monitoring['prometheus_client']
+
     return monitoring
 
 def verify(monitoring):
@@ -106,13 +115,14 @@ def verify(monitoring):
     if not monitoring:
         return None
 
-    if 'authentication' not in monitoring or \
-       'organization' not in monitoring['authentication'] or \
-       'token' not in monitoring['authentication']:
-        raise ConfigError(f'Authentication "organization and token" are mandatory!')
+    if 'influxdb_configured' in monitoring:
+        if 'authentication' not in monitoring or \
+           'organization' not in monitoring['authentication'] or \
+           'token' not in monitoring['authentication']:
+            raise ConfigError(f'Authentication "organization and token" are mandatory!')
 
-    if 'url' not in monitoring:
-        raise ConfigError(f'Monitoring "url" is mandatory!')
+        if 'url' not in monitoring:
+            raise ConfigError(f'Monitoring "url" is mandatory!')
 
     return None
 
