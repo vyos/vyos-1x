@@ -168,6 +168,44 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="splunk">
+                <properties>
+                  <help>Output plugin Splunk</help>
+                </properties>
+                <children>
+                  <node name="authentication">
+                    <properties>
+                      <help>HTTP basic authentication parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="token">
+                        <properties>
+                          <help>Authorization token</help>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="insecure">
+                        <properties>
+                          <help>Use TLS but skip host validation</help>
+                          <valueless/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="url">
+                    <properties>
+                      <help>Remote URL [REQUIRED]</help>
+                      <valueHelp>
+                        <format>url</format>
+                        <description>Remote URL to Splunk collector</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>^(http(s?):\/\/.*):(\d*)\/?(.*)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Incorrect URL format</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="url">
                 <properties>
                   <help>Remote URL [REQUIRED]</help>

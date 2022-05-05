@@ -15,14 +15,17 @@
   hostname = ""
   omit_hostname = false
 {% if influxdb_configured is vyos_defined %}
+### InfluxDB2 ###
 [[outputs.influxdb_v2]]
   urls = ["{{ url }}:{{ port }}"]
   insecure_skip_verify = true
   token = "$INFLUX_TOKEN"
   organization = "{{ authentication.organization }}"
   bucket = "{{ bucket }}"
+### End InfluxDB2 ###
 {% endif %}
 {% if prometheus_client is vyos_defined %}
+### Prometheus ###
 [[outputs.prometheus_client]]
   ## Address to listen on
   listen = "{{ prometheus_client.listen_address if prometheus_client.listen_address is vyos_defined else '' }}:{{ prometheus_client.port }}"
@@ -35,6 +38,30 @@
 {%     if prometheus_client.allow_from is vyos_defined %}
   ip_range = {{ prometheus_client.allow_from }}
 {%     endif %}
+### End Prometheus ###
+{% endif %}
+{% if splunk is vyos_defined %}
+### Splunk ###
+[[outputs.http]]
+  ## URL is the address to send metrics to
+  url = "{{ splunk.url }}"
+  ## Timeout for HTTP message
+  # timeout = "5s"
+  ## Use TLS but skip chain & host verification
+{%     if splunk.authentication.insecure is vyos_defined %}
+  insecure_skip_verify = true
+{%     endif %}
+  ## Data format to output
+  data_format = "splunkmetric"
+  ## Provides time, index, source overrides for the HEC
+  splunkmetric_hec_routing = true
+  ## Additional HTTP headers
+   [outputs.http.headers]
+   # Should be set manually to "application/json" for json data_format
+     Content-Type = "application/json"
+     Authorization = "Splunk {{ splunk.authentication.token }}"
+     X-Splunk-Request-Channel = "{{ splunk.authentication.token }}"
+### End Splunk ###
 {% endif %}
 [[inputs.cpu]]
     percpu = true
