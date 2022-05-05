@@ -63,7 +63,7 @@ op_mode_definitions: $(op_xml_obj)
 	# XXX: ping and traceroute must be able to recursivly call itself as the
 	# options are provided from the script itself
 	ln -s ../node.tag $(OP_TMPL_DIR)/ping/node.tag/node.tag/
-        ln -s ../node.tag $(OP_TMPL_DIR)/traceroute/node.tag/node.tag/
+	ln -s ../node.tag $(OP_TMPL_DIR)/traceroute/node.tag/node.tag/
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
