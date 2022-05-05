@@ -238,11 +238,14 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.set.aggregator.as is vyos_defined and rule_config.set.aggregator.ip is vyos_defined %}
  set aggregator as {{ rule_config.set.aggregator.as }} {{ rule_config.set.aggregator.ip }}
 {%                     endif %}
-{%                     if rule_config.set.as_path_exclude is vyos_defined %}
- set as-path exclude {{ rule_config.set.as_path_exclude }}
+{%                     if rule_config.set.as_path.exclude is vyos_defined %}
+ set as-path exclude {{ rule_config.set.as_path.exclude }}
 {%                     endif %}
-{%                     if rule_config.set.as_path_prepend is vyos_defined %}
- set as-path prepend {{ rule_config.set.as_path_prepend }}
+{%                     if rule_config.set.as_path.prepend is vyos_defined %}
+ set as-path prepend {{ rule_config.set.as_path.prepend }}
+{%                     endif %}
+{%                     if rule_config.set.as_path.prepend_last_as is vyos_defined %}
+ set as-path prepend last-as {{ rule_config.set.as_path.prepend_last_as }}
 {%                     endif %}
 {%                     if rule_config.set.atomic_aggregate is vyos_defined %}
  set atomic-aggregate

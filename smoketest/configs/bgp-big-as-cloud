@@ -982,6 +982,10 @@ policy {
                     }
                 }
             }
+            set {
+                as-path-exclude "100 200 300"
+                as-path-prepend "64512 64512 64512"
+            }
         }
         rule 100 {
             action deny

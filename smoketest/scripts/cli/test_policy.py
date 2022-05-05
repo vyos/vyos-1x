@@ -800,27 +800,28 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     '10' : {
                         'action' : 'deny',
                         'set' : {
-                            'aggregator-as'       : '1234567890',
-                            'aggregator-ip'       : '10.255.255.0',
-                            'as-path-exclude'     : '1234',
-                            'as-path-prepend'     : '1234567890 987654321',
-                            'atomic-aggregate'    : '',
-                            'distance'            : '110',
-                            'extcommunity-bw'     : '20000',
-                            'extcommunity-rt'     : '123:456',
-                            'extcommunity-soo'    : '456:789',
-                            'ipv6-next-hop-global': '2001::1',
-                            'ipv6-next-hop-local' : 'fe80::1',
-                            'ip-next-hop'         : '192.168.1.1',
-                            'large-community'     : '100:200:300',
-                            'local-preference'    : '500',
-                            'metric'              : '150',
-                            'metric-type'         : 'type-1',
-                            'origin'              : 'incomplete',
-                            'originator-id'       : '172.16.10.1',
-                            'src'                 : '100.0.0.1',
-                            'tag'                 : '65530',
-                            'weight'              : '2',
+                            'aggregator-as'           : '1234567890',
+                            'aggregator-ip'           : '10.255.255.0',
+                            'as-path-exclude'         : '1234',
+                            'as-path-prepend'         : '1234567890 987654321',
+                            'as-path-prepend-last-as' : '5',
+                            'atomic-aggregate'        : '',
+                            'distance'                : '110',
+                            'extcommunity-bw'         : '20000',
+                            'extcommunity-rt'         : '123:456',
+                            'extcommunity-soo'        : '456:789',
+                            'ipv6-next-hop-global'    : '2001::1',
+                            'ipv6-next-hop-local'     : 'fe80::1',
+                            'ip-next-hop'             : '192.168.1.1',
+                            'large-community'         : '100:200:300',
+                            'local-preference'        : '500',
+                            'metric'                  : '150',
+                            'metric-type'             : 'type-1',
+                            'origin'                  : 'incomplete',
+                            'originator-id'           : '172.16.10.1',
+                            'src'                     : '100.0.0.1',
+                            'tag'                     : '65530',
+                            'weight'                  : '2',
                         },
                     },
                 },
@@ -958,9 +959,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'aggregator-ip' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'aggregator', 'ip', rule_config['set']['aggregator-ip']])
                     if 'as-path-exclude' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'as-path-exclude', rule_config['set']['as-path-exclude']])
+                        self.cli_set(path + ['rule', rule, 'set', 'as-path', 'exclude', rule_config['set']['as-path-exclude']])
                     if 'as-path-prepend' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'as-path-prepend', rule_config['set']['as-path-prepend']])
+                        self.cli_set(path + ['rule', rule, 'set', 'as-path', 'prepend', rule_config['set']['as-path-prepend']])
                     if 'atomic-aggregate' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'atomic-aggregate'])
                     if 'distance' in rule_config['set']:
@@ -1118,6 +1119,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'as-path exclude ' + rule_config['set']['as-path-exclude']
                     elif 'as-path-prepend' in rule_config['set']:
                         tmp += 'as-path prepend ' + rule_config['set']['as-path-prepend']
+                    elif 'as-path-prepend-last-as' in rule_config['set']:
+                        tmp += 'as-path prepend last-as' + rule_config['set']['as-path-prepend-last-as']
                     elif 'atomic-aggregate' in rule_config['set']:
                         tmp += 'atomic-aggregate'
                     elif 'distance' in rule_config['set']:

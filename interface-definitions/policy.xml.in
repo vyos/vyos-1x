@@ -948,24 +948,49 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="as-path-exclude">
+                  <node name="as-path">
                     <properties>
-                      <help>Remove ASN(s) from a Border Gateway Protocol (BGP) AS-path attribute</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>BGP AS path exclude string (ex: "456 64500 45001")</description>
-                      </valueHelp>
+                      <help>Transform BGP AS_PATH attribute</help>
                     </properties>
-                  </leafNode>
-                  <leafNode name="as-path-prepend">
-                    <properties>
-                      <help>Prepend string for a Border Gateway Protocol (BGP) AS-path attribute</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>BGP AS path prepend string (ex: "64501 64501")</description>
-                      </valueHelp>
-                    </properties>
-                  </leafNode>
+                    <children>
+                      <leafNode name="exclude">
+                        <properties>
+                          <help>Remove/exclude from the as-path attribute</help>
+                          <valueHelp>
+                            <format>u32</format>
+                            <description>AS number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="as-number-list"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="prepend">
+                        <properties>
+                          <help>Prepend to the as-path</help>
+                          <valueHelp>
+                            <format>u32</format>
+                            <description>AS number</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="as-number-list"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="prepend-last-as">
+                        <properties>
+                          <help>Use the last AS-number in the as-path</help>
+                          <valueHelp>
+                            <format>u32:1-10</format>
+                            <description>Number of times to insert</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-10"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                   <leafNode name="atomic-aggregate">
                     <properties>
                       <help>BGP atomic aggregate attribute</help>

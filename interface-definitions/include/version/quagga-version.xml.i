@@ -1,3 +1,3 @@
 <!-- include start from include/version/quagga-version.xml.i -->
-<syntaxVersion component='quagga' version='9'></syntaxVersion>
+<syntaxVersion component='quagga' version='10'></syntaxVersion>
 <!-- include end -->
