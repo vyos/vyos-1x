@@ -103,10 +103,27 @@ def get_config(config=None):
        'url' in monitoring:
         monitoring['influxdb_configured'] = True
 
+    # Redefine azure group-metrics 'single-table' and 'table-per-metric'
+    if 'azure_data_explorer' in monitoring:
+        if 'single-table' in monitoring['azure_data_explorer']['group_metrics']:
+            monitoring['azure_data_explorer']['group_metrics'] = 'SingleTable'
+        else:
+            monitoring['azure_data_explorer']['group_metrics'] = 'TablePerMetric'
+        # Set azure env
+        if 'authentication' in monitoring['azure_data_explorer']:
+            auth_config = monitoring['azure_data_explorer']['authentication']
+            if {'client_id', 'client_secret', 'tenant_id'} <= set(auth_config):
+                os.environ['AZURE_CLIENT_ID'] = auth_config['client_id']
+                os.environ['AZURE_CLIENT_SECRET'] = auth_config['client_secret']
+                os.environ['AZURE_TENANT_ID'] = auth_config['tenant_id']
+
     # Ignore default XML values if config doesn't exists
     # Delete key from dict
     if not conf.exists(base + ['prometheus-client']):
         del monitoring['prometheus_client']
+
+    if not conf.exists(base + ['azure-data-explorer']):
+        del monitoring['azure_data_explorer']
 
     return monitoring
 
@@ -123,6 +140,24 @@ def verify(monitoring):
 
         if 'url' not in monitoring:
             raise ConfigError(f'Monitoring "url" is mandatory!')
+
+    # Verify azure-data-explorer
+    if 'azure_data_explorer' in monitoring:
+        if 'authentication' not in monitoring['azure_data_explorer'] or \
+           'client_id' not in monitoring['azure_data_explorer']['authentication'] or \
+           'client_secret' not in monitoring['azure_data_explorer']['authentication'] or \
+           'tenant_id' not in monitoring['azure_data_explorer']['authentication']:
+            raise ConfigError(f'Authentication "client-id, client-secret and tenant-id" are mandatory!')
+
+        if 'database' not in monitoring['azure_data_explorer']:
+            raise ConfigError(f'Monitoring "database" is mandatory!')
+
+        if 'url' not in monitoring['azure_data_explorer']:
+            raise ConfigError(f'Monitoring "url" is mandatory!')
+
+        if monitoring['azure_data_explorer']['group_metrics'] == 'SingleTable' and \
+            'table' not in monitoring['azure_data_explorer']:
+             raise ConfigError(f'Monitoring "table" name for single-table mode is mandatory!')
 
     # Verify Splunk
     if 'splunk' in monitoring:

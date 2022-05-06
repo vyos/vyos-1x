@@ -42,6 +42,94 @@
                   </leafNode>
                 </children>
               </node>
+              <node name="azure-data-explorer">
+                <properties>
+                  <help>Output plugin Azure Data Explorer</help>
+                </properties>
+                <children>
+                  <node name="authentication">
+                    <properties>
+                      <help>Authentication parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="client-id">
+                        <properties>
+                          <help>Application client id</help>
+                          <constraint>
+                            <regex>[-_a-zA-Z0-9]+</regex>
+                          </constraint>
+                          <constraintErrorMessage>Client-id is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="client-secret">
+                        <properties>
+                          <help>Application client secret</help>
+                          <constraint>
+                            <regex>[-_a-zA-Z0-9]+</regex>
+                          </constraint>
+                          <constraintErrorMessage>Client-secret is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="tenant-id">
+                        <properties>
+                          <help>Set tenant id</help>
+                          <constraint>
+                            <regex>[-_a-zA-Z0-9]+</regex>
+                          </constraint>
+                          <constraintErrorMessage>Tenant-id is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="database">
+                    <properties>
+                      <help>Remote database name [REQUIRED]</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Remote database name</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[-_a-zA-Z0-9]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Database is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="group-metrics">
+                    <properties>
+                      <help>Type of metrics grouping when push to Azure Data Explorer</help>
+                      <completionHelp>
+                        <list>single-table table-per-metric</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>single-table</format>
+                        <description>Metrics stores in one table</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>table-per-metric</format>
+                        <description>One table per gorups of metric by the metric name</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(single-table|table-per-metric)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>table-per-metric</defaultValue>
+                  </leafNode>
+                  <leafNode name="table">
+                    <properties>
+                      <help>Name of the single table [Only if set group-metrics single-table]</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Table name</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>[-_a-zA-Z0-9]+</regex>
+                      </constraint>
+                      <constraintErrorMessage>Table is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  #include <include/monitoring/url.xml.i>
+                </children>
+              </node>
               <leafNode name="bucket">
                 <properties>
                   <help>Remote bucket</help>
@@ -206,19 +294,7 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="url">
-                <properties>
-                  <help>Remote URL [REQUIRED]</help>
-                  <valueHelp>
-                    <format>url</format>
-                    <description>Remote URL to InfluxDB v2</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?</regex>
-                  </constraint>
-                  <constraintErrorMessage>Incorrect URL format.</constraintErrorMessage>
-                </properties>
-              </leafNode>
+              #include <include/monitoring/url.xml.i>
               #include <include/port-number.xml.i>
               <leafNode name="port">
                 <defaultValue>8086</defaultValue>
