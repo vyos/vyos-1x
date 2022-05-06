@@ -18,7 +18,8 @@
 {% endif %}
         local {
 {% if rw_conf.authentication.id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
-            id = '{{ rw_conf.authentication.id }}'
+{#          please use " quotes - else Apple iOS goes crazy #}
+            id = "{{ rw_conf.authentication.id }}"
 {% endif %}
 {% if rw_conf.authentication.server_mode == 'x509' %}
             auth = pubkey
