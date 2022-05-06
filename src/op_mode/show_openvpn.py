@@ -26,10 +26,10 @@ outp_tmpl = """
 {% if clients %}
 OpenVPN status on {{ intf }}
 
-Client CN       Remote Host           Local Host            TX bytes    RX bytes   Connected Since
----------       -----------           ----------            --------    --------   ---------------
+Client CN       Remote Host            Tunnel IP        Local Host            TX bytes    RX bytes   Connected Since
+---------       -----------            ---------        ----------            --------    --------   ---------------
 {% for c in clients %}
-{{ "%-15s"|format(c.name) }} {{ "%-21s"|format(c.remote) }} {{ "%-21s"|format(local) }} {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.rx_bytes) }}  {{ c.online_since }}
+{{ "%-15s"|format(c.name) }}  {{ "%-21s"|format(c.remote) }}  {{ "%-15s"|format(c.tunnel) }}  {{ "%-21s"|format(local) }} {{ "%-9s"|format(c.tx_bytes) }}   {{ "%-9s"|format(c.rx_bytes) }}  {{ c.online_since }}
 {% endfor %}
 {% endif %}
 """
@@ -49,6 +49,19 @@ def bytes2HR(size):
 
     output="{0:.1f} {1}".format(size, suff[suffIdx])
     return output
+
+def get_vpn_tunnel_address(peer, interface):
+    lst = []
+    status_file = '/var/run/openvpn/{}.status'.format(interface)
+
+    with open(status_file, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if peer in line:
+                lst.append(line)
+        tunnel_ip = lst[1].split(',')[0]
+
+        return tunnel_ip
 
 def get_status(mode, interface):
     status_file = '/var/run/openvpn/{}.status'.format(interface)
@@ -110,7 +123,7 @@ def get_status(mode, interface):
                         'tx_bytes': bytes2HR(line.split(',')[3]),
                         'online_since': line.split(',')[4]
                     }
-
+                    client["tunnel"] = get_vpn_tunnel_address(client['remote'], interface)
                     data['clients'].append(client)
                     continue
             else:
@@ -172,6 +185,8 @@ if __name__ == '__main__':
 
                 if len(remote_host) >= 1:
                     client['remote'] = str(remote_host[0]) + ':' + remote_port
+
+                client['tunnel'] = 'N/A'
 
         tmpl = jinja2.Template(outp_tmpl)
         print(tmpl.render(data))
