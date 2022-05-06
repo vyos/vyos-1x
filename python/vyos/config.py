@@ -142,31 +142,41 @@ class Config(object):
 
     def exists(self, path):
         """
-        Checks if a node with given path exists in the running or proposed config
+        Checks if a node or value with given path exists in the proposed config.
+
+        Args:
+            path (str): Configuration tree path
 
         Returns:
-            True if node exists, False otherwise
+            True if node or value exists in the proposed config, False otherwise
 
         Note:
-            This function cannot be used outside a configuration sessions.
+            This function should not be used outside of configuration sessions.
             In operational mode scripts, use ``exists_effective``.
         """
-        if not self._session_config:
+        if self._session_config is None:
             return False
+
+        # Assume the path is a node path first
         if self._session_config.exists(self._make_path(path)):
             return True
         else:
+            # If that check fails, it may mean the path has a value at the end.
             # libvyosconfig exists() works only for _nodes_, not _values_
-            # libvyattacfg one also worked for values, so we emulate that case here
+            # libvyattacfg also worked for values, so we emulate that case here
             if isinstance(path, str):
                 path = re.split(r'\s+', path)
             path_without_value = path[:-1]
-            path_str = " ".join(path_without_value)
             try:
-                value = self._session_config.return_value(self._make_path(path_str))
-                return (value == path[-1])
+                # return_values() is safe to use with single-value nodes,
+                # it simply returns a single-item list in that case.
+                values = self._session_config.return_values(self._make_path(path_without_value))
+
+                # If we got this far, the node does exist and has values,
+                # so we need to check if it has the value in question among its values.
+                return (path[-1] in values)
             except vyos.configtree.ConfigTreeError:
-                # node doesn't exist at all
+                # Even the parent node doesn't exist at all
                 return False
 
     def session_changed(self):
@@ -380,7 +390,7 @@ class Config(object):
 
     def exists_effective(self, path):
         """
-        Check if a node exists in the running (effective) config
+        Checks if a node or value exists in the running (effective) config.
 
         Args:
             path (str): Configuration tree path
@@ -392,10 +402,31 @@ class Config(object):
             This function is safe to use in operational mode. In configuration mode,
             it ignores uncommited changes.
         """
-        if self._running_config:
-            return(self._running_config.exists(self._make_path(path)))
+        if self._running_config is None:
+            return False
 
-        return False
+        # Assume the path is a node path first
+        if self._running_config.exists(self._make_path(path)):
+            return True
+        else:
+            # If that check fails, it may mean the path has a value at the end.
+            # libvyosconfig exists() works only for _nodes_, not _values_
+            # libvyattacfg also worked for values, so we emulate that case here
+            if isinstance(path, str):
+                path = re.split(r'\s+', path)
+            path_without_value = path[:-1]
+            try:
+                # return_values() is safe to use with single-value nodes,
+                # it simply returns a single-item list in that case.
+                values = self._running_config.return_values(self._make_path(path_without_value))
+
+                # If we got this far, the node does exist and has values,
+                # so we need to check if it has the value in question among its values.
+                return (path[-1] in values)
+            except vyos.configtree.ConfigTreeError:
+                # Even the parent node doesn't exist at all
+                return False
+
 
     def return_effective_value(self, path, default=None):
         """
