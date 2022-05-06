@@ -887,6 +887,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         remote_asn = str(int(ASN) + 150)
         neighbor = '192.0.2.1'
         peer_group = 'bar'
+        interface = 'eth0'
 
         self.cli_set(base_path + ['local-as', ASN])
         self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
@@ -897,6 +898,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(base_path + ['neighbor', neighbor, 'remote-as'])
+
+        # re-test with interface based peer-group
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'peer-group', peer_group])
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'remote-as', 'external'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['neighbor', interface, 'interface', 'remote-as'])
+
+        # re-test with interface based v6only peer-group
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'v6only', 'peer-group', peer_group])
+        self.cli_set(base_path + ['neighbor', interface, 'interface', 'v6only', 'remote-as', 'external'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['neighbor', interface, 'interface', 'v6only', 'remote-as'])
 
         self.cli_commit()
 

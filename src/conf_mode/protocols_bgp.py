@@ -169,6 +169,16 @@ def verify(bgp):
                     peer_group = peer_config['peer_group']
                     if 'remote_as' in peer_config and 'remote_as' in bgp['peer_group'][peer_group]:
                         raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
+                if 'interface' in peer_config:
+                    if 'peer_group' in peer_config['interface']:
+                        peer_group = peer_config['interface']['peer_group']
+                        if 'remote_as' in peer_config['interface'] and 'remote_as' in bgp['peer_group'][peer_group]:
+                            raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
+                    if 'v6only' in peer_config['interface']:
+                        if 'peer_group' in peer_config['interface']['v6only']:
+                            peer_group = peer_config['interface']['v6only']['peer_group']
+                            if 'remote_as' in peer_config['interface']['v6only'] and 'remote_as' in bgp['peer_group'][peer_group]:
+                                raise ConfigError(f'Peer-group member "{peer}" cannot override remote-as of peer-group "{peer_group}"!')
 
                 # Only checks for ipv4 and ipv6 neighbors
                 # Check if neighbor address is assigned as system interface address
