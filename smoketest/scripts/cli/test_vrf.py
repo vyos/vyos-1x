@@ -127,6 +127,9 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         for vrf in vrfs:
             # Ensure VRF was created
             self.assertIn(vrf, interfaces())
+            # Verify IP forwarding is 1 (enabled)
+            self.assertEqual(read_file(f'/proc/sys/net/ipv4/conf/{vrf}/forwarding'), '1')
+            self.assertEqual(read_file(f'/proc/sys/net/ipv6/conf/{vrf}/forwarding'), '1')
             # Test for proper loopback IP assignment
             for addr in loopbacks:
                 self.assertTrue(is_intf_addr_assigned(vrf, addr))
@@ -266,6 +269,27 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         # Delete Interface
         self.cli_delete(['interfaces', 'dummy', interface])
         self.cli_commit()
+
+    def test_vrf_disable_forwarding(self):
+        table = '2000'
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', table])
+            self.cli_set(base + ['ip', 'disable-forwarding'])
+            self.cli_set(base + ['ipv6', 'disable-forwarding'])
+            table = str(int(table) + 1)
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        loopbacks = ['127.0.0.1', '::1']
+        for vrf in vrfs:
+            # Ensure VRF was created
+            self.assertIn(vrf, interfaces())
+            # Verify IP forwarding is 0 (disabled)
+            self.assertEqual(read_file(f'/proc/sys/net/ipv4/conf/{vrf}/forwarding'), '0')
+            self.assertEqual(read_file(f'/proc/sys/net/ipv6/conf/{vrf}/forwarding'), '0')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

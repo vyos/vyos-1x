@@ -28,6 +28,22 @@
         <children>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/disable-forwarding.xml.i>
+            </children>
+          </node>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/disable-forwarding.xml.i>
+            </children>
+          </node>
           <node name="protocols">
             <properties>
               <help>Routing protocol parameters</help>

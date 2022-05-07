@@ -83,7 +83,8 @@ def get_config(config=None):
         conf = Config()
 
     base = ['vrf']
-    vrf = conf.get_config_dict(base, get_first_key=True)
+    vrf = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               no_tag_node_value_mangle=True, get_first_key=True)
 
     # determine which VRF has been removed
     for name in node_changed(conf, base + ['name']):
@@ -152,7 +153,7 @@ def apply(vrf):
 
     # set the default VRF global behaviour
     bind_all = '0'
-    if 'bind-to-all' in vrf:
+    if 'bind_to_all' in vrf:
         bind_all = '1'
     sysctl_write('net.ipv4.tcp_l3mdev_accept', bind_all)
     sysctl_write('net.ipv4.udp_l3mdev_accept', bind_all)
@@ -221,6 +222,15 @@ def apply(vrf):
             vrf_if.add_addr('::1/128')
             # add VRF description if available
             vrf_if.set_alias(config.get('description', ''))
+
+            # Enable/Disable IPv4 forwarding
+            tmp = dict_search('ip.disable_forwarding', config)
+            value = '0' if (tmp != None) else '1'
+            vrf_if.set_ipv4_forwarding(value)
+            # Enable/Disable IPv6 forwarding
+            tmp = dict_search('ipv6.disable_forwarding', config)
+            value = '0' if (tmp != None) else '1'
+            vrf_if.set_ipv6_forwarding(value)
 
             # Enable/Disable of an interface must always be done at the end of the
             # derived class to make use of the ref-counting set_admin_state()
