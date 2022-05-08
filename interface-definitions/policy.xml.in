@@ -1070,6 +1070,44 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <node name="evpn">
+                    <properties>
+                      <help>Ethernet Virtual Private Network</help>
+                    </properties>
+                    <children>
+                      <node name="gateway">
+                        <properties>
+                          <help>Set gateway IP for prefix advertisement route</help>
+                        </properties>
+                        <children>
+                          <leafNode name="ipv4">
+                            <properties>
+                              <help>Set gateway IPv4 address</help>
+                              <valueHelp>
+                                <format>ipv4</format>
+                                <description>Gateway IPv4 address</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv4-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="ipv6">
+                            <properties>
+                              <help>Set gateway IPv6 address</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>Gateway IPv6 address</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                   <node name="extcommunity">
                     <properties>
                       <help>BGP extended community attribute</help>

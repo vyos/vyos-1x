@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -849,6 +849,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'evpn-vni'            : '1234',
                         },
                     },
+                    '20' : {
+                        'action' : 'permit',
+                        'set' : {
+                            'evpn-gateway-ipv4'   : '192.0.2.99',
+                            'evpn-gateway-ipv6'   : '2001:db8:f00::1',
+                        },
+                    },
                 },
             },
         }
@@ -996,6 +1003,10 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'set', 'tag', rule_config['set']['tag']])
                     if 'weight' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'weight', rule_config['set']['weight']])
+                    if 'evpn-gateway-ipv4' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'evpn', 'gateway', 'ipv4', rule_config['set']['evpn-gateway-ipv4']])
+                    if 'evpn-gateway-ipv6' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'evpn', 'gateway', 'ipv6', rule_config['set']['evpn-gateway-ipv6']])
 
         self.cli_commit()
 
@@ -1155,6 +1166,10 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'tag ' + rule_config['set']['tag']
                     elif 'weight' in rule_config['set']:
                         tmp += 'weight ' + rule_config['set']['weight']
+                    elif 'vpn-gateway-ipv4' in rule_config['set']:
+                        tmp += 'evpn gateway ipv4 ' + rule_config['set']['vpn-gateway-ipv4']
+                    elif 'vpn-gateway-ipv6' in rule_config['set']:
+                        tmp += 'evpn gateway ipv6 ' + rule_config['set']['vpn-gateway-ipv6']
 
                     self.assertIn(tmp, config)
 

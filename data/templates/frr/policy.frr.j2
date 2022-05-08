@@ -259,6 +259,12 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.set.distance is vyos_defined %}
  set distance {{ rule_config.set.distance }}
 {%                     endif %}
+{%                     if rule_config.set.evpn.gateway.ipv4 is vyos_defined %}
+ set evpn gateway-ip ipv4 {{ rule_config.set.evpn.gateway.ipv4 }}
+{%                     endif %}
+{%                     if rule_config.set.evpn.gateway.ipv6 is vyos_defined %}
+ set evpn gateway-ip ipv6 {{ rule_config.set.evpn.gateway.ipv6 }}
+{%                     endif %}
 {%                     if rule_config.set.extcommunity.bandwidth is vyos_defined %}
  set extcommunity bandwidth {{ rule_config.set.extcommunity.bandwidth }}
 {%                     endif %}
