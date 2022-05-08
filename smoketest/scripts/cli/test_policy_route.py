@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,15 +23,26 @@ from vyos.util import cmd
 mark = '100'
 table_mark_offset = 0x7fffffff
 table_id = '101'
+interface = 'eth0'
+interface_ip = '172.16.10.1/24'
 
 class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
-        self.cli_set(['protocols', 'static', 'table', '101', 'route', '0.0.0.0/0', 'interface', 'eth0'])
+    @classmethod
+    def setUpClass(cls):
+        super(TestPolicyRoute, cls).setUpClass()
+
+        cls.cli_set(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
+        cls.cli_set(cls, ['protocols', 'static', 'table', table_id, 'route', '0.0.0.0/0', 'interface', interface])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'ethernet', interface, 'address', interface_ip])
+        cls.cli_delete(cls, ['protocols', 'static', 'table', table_id])
+
+        super(TestPolicyRoute, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', 'eth0'])
-        self.cli_delete(['protocols', 'static'])
+        self.cli_delete(['interfaces', 'ethernet', interface, 'policy'])
         self.cli_delete(['policy', 'route'])
         self.cli_delete(['policy', 'route6'])
         self.cli_commit()
@@ -41,14 +52,14 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'mark', mark])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'policy', 'route', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'policy', 'route', 'smoketest'])
 
         self.cli_commit()
 
         mark_hex = "{0:#010x}".format(int(mark))
 
         nftables_search = [
-            ['iifname "eth0"', 'jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
             ['ip daddr 172.16.10.10', 'ip saddr 172.16.20.10', 'meta mark set ' + mark_hex],
         ]
 
@@ -72,8 +83,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'destination', 'port', '8888'])
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'set', 'table', table_id])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'policy', 'route', 'smoketest'])
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'policy', 'route6', 'smoketest6'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'policy', 'route', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'policy', 'route6', 'smoketest6'])
 
         self.cli_commit()
 
@@ -82,7 +93,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # IPv4
 
         nftables_search = [
-            ['iifname "eth0"', 'jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'meta mark set ' + mark_hex]
         ]
 
@@ -99,7 +110,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # IPv6
 
         nftables6_search = [
-            ['iifname "eth0"', 'jump VYOS_PBR6_smoketest'],
+            [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'meta mark set ' + mark_hex]
         ]
 
