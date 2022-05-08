@@ -11,7 +11,7 @@
             <properties>
               <help>Pull a new image for container</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --pull "${4}"</command>
+            <command>sudo podman image pull "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -44,7 +44,7 @@
                 <script>sudo podman image ls -q</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --remove "${4}"</command>
+            <command>sudo podman image rm --force "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -100,13 +100,13 @@
         <properties>
           <help>Show containers</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/containers_op.py --all</command>
+        <command>sudo podman ps --all</command>
         <children>
           <leafNode name="image">
             <properties>
               <help>Show container image</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --image</command>
+            <command>sudo podman image ls</command>
           </leafNode>
           <tagNode name="log">
             <properties>
@@ -121,7 +121,7 @@
             <properties>
               <help>Show available container networks</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --networks</command>
+            <command>sudo podman network ls</command>
           </leafNode>
         </children>
       </node>
@@ -167,7 +167,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/containers_op.py --update "${4}"</command>
+            <command>if cli-shell-api existsActive container name "$4"; then sudo podman pull $(cli-shell-api returnActiveValue container name "$4" image); else echo "Container $4 does not exist"; fi</command>
           </tagNode>
         </children>
       </node>
