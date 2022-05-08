@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
-  <node name="container" owner="${vyos_conf_scripts_dir}/containers.py">
+  <node name="container" owner="${vyos_conf_scripts_dir}/container.py">
     <properties>
       <help>Container applications</help>
       <priority>1280</priority>
