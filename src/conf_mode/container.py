@@ -15,13 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import json
 
 from ipaddress import ip_address
 from ipaddress import ip_network
 from time import sleep
 from json import dumps as json_write
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
@@ -110,15 +110,21 @@ def verify(container):
             if 'image' not in container_config:
                 raise ConfigError(f'Container image for "{name}" is mandatory!')
 
-            # verify container image exists locally
-            image = container_config['image']
-
             # Check if requested container image exists locally. If it does not
-            # exist locally - inform the user.
+            # exist locally - inform the user. This is required as there is a
+            # shared container image storage accross all VyOS images. A user can
+            # delete a container image from the system, boot into another version
+            # of VyOS and then it would fail to boot. This is to prevent any
+            # configuration error when container images are deleted from the
+            # global storage. A per image local storage would be a super waste
+            # of diskspace as there will be a full copy (up tu several GB/image)
+            # on upgrade. This is the "cheapest" and fastest solution in terms
+            # of image upgrade and deletion.
+            image = container_config['image']
             if run(f'podman image exists {image}') != 0:
-                raise ConfigError(f'Image "{image}" used in contianer "{name}" does not exist '\
-                                  f'locally.\nPlease use "add container image {image}" to add it '\
-                                  'to the system!')
+                Warning(f'Image "{image}" used in contianer "{name}" does not exist '\
+                        f'locally. Please use "add container image {image}" to add it '\
+                        f'to the system! Container "{name}" will not be started!')
 
             if 'network' in container_config:
                 if len(container_config['network']) > 1:
@@ -278,6 +284,11 @@ def apply(container):
     if 'name' in container:
         for name, container_config in container['name'].items():
             image = container_config['image']
+
+            if run(f'podman image exists {image}') != 0:
+                # container image does not exist locally - user already got
+                # informed by a WARNING in verfiy() - bail out early
+                continue
 
             if 'disable' in container_config:
                 # check if there is a container by that name running
