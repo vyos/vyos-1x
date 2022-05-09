@@ -173,6 +173,45 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 nftables_output = cmd(f'sudo nft list chain {table} {chain}')
                 self.assertTrue('jump VYOS_STATE_POLICY' in nftables_output)
 
+    def test_state_and_status_rules(self):
+        self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'state', 'related', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'state', 'invalid', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'state', 'new', 'enable'])
+
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'connection-status', 'nat', 'destination'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'new', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'connection-status', 'nat', 'source'])
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['iifname "eth0"', 'jump NAME_smoketest'],
+            ['ct state { established, related }', 'return'],
+            ['ct state { invalid }', 'reject'],
+            ['ct state { new }', 'ct status { dnat }', 'return'],
+            ['ct state { established, new }', 'ct status { snat }', 'return'],
+            ['smoketest default-action', 'drop']
+        ]
+
+        nftables_output = cmd('sudo nft list table ip filter')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(matched, msg=search)
+
     def test_sysfs(self):
         for name, conf in sysfs_config.items():
             paths = glob(conf['sysfs'])
