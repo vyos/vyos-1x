@@ -1,0 +1,205 @@
+interfaces {
+    ethernet eth0 {
+        address 10.1.1.100/24
+        traffic-policy {
+          out FS
+        }
+    }
+    ethernet eth1 {
+        address 10.2.1.1/24
+        traffic-policy {
+          out M2
+        }
+    }
+    ethernet eth2 {
+        address 10.9.9.1/24
+        traffic-policy {
+            out MY-HTB
+        }
+    }
+    loopback lo {
+    }
+}
+protocols {
+    static {
+        route 0.0.0.0/0 {
+            next-hop 10.9.9.2 {
+            }
+            next-hop 10.1.1.1 {
+            }
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 10
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sip
+            sqlnet
+            tftp
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$r/Yw/07NXNY$/ZB.Rjf9jxEV.BYoDyLdH.kH14rU52pOBtrX.4S34qlPt77chflCHvpTCq9a6huLzwaMR50rEICzA5GoIRZlM0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+        server time3.vyos.net {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+traffic-policy {
+    shaper M2 {
+        bandwidth auto
+        class 10 {
+            bandwidth 100%
+            burst 15k
+            match ADDRESS10 {
+                ip {
+                    dscp CS4
+                }
+            }
+            queue-type fair-queue
+            set-dscp CS5
+        }
+        default {
+            bandwidth 10mbit
+            burst 15k
+            queue-type fair-queue
+        }
+    }
+    shaper MY-HTB {
+        bandwidth 10mbit
+        class 30 {
+            bandwidth 10%
+            burst 15k
+            ceiling 50%
+            match ADDRESS30 {
+                ip {
+                    source {
+                        address 10.1.1.0/24
+                    }
+                }
+            }
+            priority 5
+            queue-type fair-queue
+        }
+        class 40 {
+            bandwidth 90%
+            burst 15k
+            ceiling 100%
+            match ADDRESS40 {
+                ip {
+                    dscp CS4
+                    source {
+                        address 10.2.1.0/24
+                    }
+                }
+            }
+            priority 5
+            queue-type fair-queue
+        }
+        class 50 {
+            bandwidth 100%
+            burst 15k
+            match ADDRESS50 {
+                ip {
+                    dscp CS5
+                }
+            }
+            queue-type fair-queue
+            set-dscp CS7
+        }
+        default {
+            bandwidth 10%
+            burst 15k
+            ceiling 100%
+            priority 7
+            queue-type fair-queue
+            set-dscp CS1
+        }
+    }
+    shaper FS {
+        bandwidth auto
+        class 10 {
+            bandwidth 100%
+            burst 15k
+            match ADDRESS10 {
+                ip {
+                    source {
+                        address 172.17.1.2/32
+                    }
+                }
+            }
+            queue-type fair-queue
+            set-dscp CS4
+        }
+        class 20 {
+            bandwidth 100%
+            burst 15k
+            match ADDRESS20 {
+                ip {
+                    source {
+                        address 172.17.1.3/32
+                    }
+                }
+            }
+            queue-type fair-queue
+            set-dscp CS5
+        }
+        class 30 {
+            bandwidth 100%
+            burst 15k
+            match ADDRESS30 {
+                ip {
+                    source {
+                        address 172.17.1.4/32
+                    }
+                }
+            }
+            queue-type fair-queue
+            set-dscp CS6
+        }
+        default {
+            bandwidth 10%
+            burst 15k
+            ceiling 100%
+            priority 7
+            queue-type fair-queue
+        }
+    }
+}
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.1
+
