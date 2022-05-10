@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -33,6 +33,9 @@ airbag.enable()
 config_file = r'/run/sshd/sshd_config'
 systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
 
+sshguard_config_file = '/etc/sshguard/sshguard.conf'
+sshguard_whitelist = '/etc/sshguard/whitelist'
+
 key_rsa = '/etc/ssh/ssh_host_rsa_key'
 key_dsa = '/etc/ssh/ssh_host_dsa_key'
 key_ed25519 = '/etc/ssh/ssh_host_ed25519_key'
@@ -53,6 +56,11 @@ def get_config(config=None):
     ssh = dict_merge(default_values, ssh)
     # pass config file path - used in override template
     ssh['config_file'] = config_file
+
+    # Ignore default XML values if config doesn't exists
+    # Delete key from dict
+    if not conf.exists(base + ['dynamic-protection']):
+         del ssh['dynamic_protection']
 
     return ssh
 
@@ -86,6 +94,10 @@ def generate(ssh):
 
     render(config_file, 'ssh/sshd_config.j2', ssh)
     render(systemd_override, 'ssh/override.conf.j2', ssh)
+
+    if 'dynamic_protection' in ssh:
+        render(sshguard_config_file, 'ssh/sshguard_config.j2', ssh)
+        render(sshguard_whitelist, 'ssh/sshguard_whitelist.j2', ssh)
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
@@ -95,7 +107,12 @@ def apply(ssh):
     if not ssh:
         # SSH access is removed in the commit
         call('systemctl stop ssh.service')
+        call('systemctl stop sshguard.service')
         return None
+    if 'dynamic_protection' not in ssh:
+        call('systemctl stop sshguard.service')
+    else:
+        call('systemctl restart sshguard.service')
 
     call('systemctl restart ssh.service')
     return None
