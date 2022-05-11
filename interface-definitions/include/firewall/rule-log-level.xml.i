@@ -1,7 +1,7 @@
-<!-- include start from firewall/name-default-log.xml.i -->
-<leafNode name="enable-default-log">
+<!-- include start from firewall/common-rule.xml.i -->
+<leafNode name="log">
   <properties>
-    <help>Option to log packets matching default-action</help>
+    <help>Option to log packets matching rule</help>
     <completionHelp>
       <list>emerg alert crit err warn notice info debug</list>
     </completionHelp>

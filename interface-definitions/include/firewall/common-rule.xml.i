@@ -76,25 +76,7 @@
     </leafNode>
   </children>
 </node>
-<leafNode name="log">
-  <properties>
-    <help>Option to log packets matching rule</help>
-    <completionHelp>
-      <list>enable disable</list>
-    </completionHelp>
-    <valueHelp>
-      <format>enable</format>
-      <description>Enable log</description>
-    </valueHelp>
-    <valueHelp>
-      <format>disable</format>
-      <description>Disable log</description>
-    </valueHelp>
-    <constraint>
-      <regex>(enable|disable)</regex>
-    </constraint>
-  </properties>
-</leafNode>
+#include <include/firewall/rule-log-level.xml.i>
 <node name="connection-status">
   <properties>
     <help>Connection status</help>

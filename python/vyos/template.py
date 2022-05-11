@@ -554,7 +554,8 @@ def nft_default_rule(fw_conf, fw_name):
 
     if 'enable_default_log' in fw_conf:
         action_suffix = default_action[:1].upper()
-        output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}] "')
+        log_level = fw_conf['enable_default_log']
+        output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}]" level {log_level}')
 
     output.append(nft_action(default_action))
     output.append(f'comment "{fw_name} default-action {default_action}"')
