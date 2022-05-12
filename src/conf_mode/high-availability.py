@@ -28,7 +28,6 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import call
-from vyos.util import is_systemd_service_running
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -161,12 +160,7 @@ def apply(ha):
         call(f'systemctl stop {service_name}')
         return None
 
-    # XXX: T3944 - reload keepalived configuration if service is already running
-    # to not cause any service disruption when applying changes.
-    if is_systemd_service_running(service_name):
-        call(f'systemctl reload {service_name}')
-    else:
-        call(f'systemctl restart {service_name}')
+    call(f'systemctl reload-or-restart {service_name}')
     return None
 
 if __name__ == '__main__':
