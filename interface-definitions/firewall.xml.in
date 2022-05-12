@@ -599,7 +599,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
-              #include <include/firewall/log.xml.i>
+              #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>
           <node name="invalid">
@@ -608,7 +608,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
-              #include <include/firewall/log.xml.i>
+              #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>
           <node name="related">
@@ -617,7 +617,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
-              #include <include/firewall/log.xml.i>
+              #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>
         </children>

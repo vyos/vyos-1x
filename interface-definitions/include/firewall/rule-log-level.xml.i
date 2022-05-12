@@ -1,7 +1,7 @@
 <!-- include start from firewall/common-rule.xml.i -->
-<leafNode name="log">
+<leafNode name="log-level">
   <properties>
-    <help>Option to log packets matching rule</help>
+    <help>Set log-level. Log must be enable.</help>
     <completionHelp>
       <list>emerg alert crit err warn notice info debug</list>
     </completionHelp>
