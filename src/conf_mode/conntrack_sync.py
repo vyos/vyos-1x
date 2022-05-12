@@ -116,6 +116,7 @@ def generate(conntrack):
     return None
 
 def apply(conntrack):
+    systemd_service = 'conntrackd.service'
     if not conntrack:
         # Failover mechanism daemon should be indicated that it no longer needs
         # to execute conntrackd actions on transition. This is only required
@@ -123,7 +124,7 @@ def apply(conntrack):
         if process_named_running('conntrackd'):
             resync_vrrp()
 
-        call('systemctl stop conntrackd.service')
+        call(f'systemctl stop {systemd_service}')
         return None
 
     # Failover mechanism daemon should be indicated that it needs to execute
@@ -132,7 +133,7 @@ def apply(conntrack):
     if not process_named_running('conntrackd'):
         resync_vrrp()
 
-    call('systemctl restart conntrackd.service')
+    call(f'systemctl reload-or-restart {systemd_service}')
     return None
 
 if __name__ == '__main__':
