@@ -104,7 +104,7 @@ def apply(nhrp):
         if rule_handle:
             remove_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', rule_handle)
 
-    action = 'reload-or-restart' if nhrp and 'tunnel' in nhrp else 'stop'
+    action = 'restart' if nhrp and 'tunnel' in nhrp else 'stop'
     run(f'systemctl {action} opennhrp')
     return None
 
