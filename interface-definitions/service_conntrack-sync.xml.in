@@ -5,7 +5,8 @@
       <node name="conntrack-sync" owner="${vyos_conf_scripts_dir}/conntrack_sync.py">
         <properties>
           <help>Connection tracking synchronization</help>
-          <priority>995</priority>
+          <!-- before VRRP / HA -->
+          <priority>799</priority>
         </properties>
         <children>
           <leafNode name="accept-protocol">
