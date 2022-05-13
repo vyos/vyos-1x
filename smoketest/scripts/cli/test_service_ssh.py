@@ -214,19 +214,22 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(test_user, usernames)
 
     def test_ssh_dynamic_protection(self):
-        """
-        check sshguard service
-        """
+        # check sshguard service
+
         SSHGUARD_CONFIG = '/etc/sshguard/sshguard.conf'
+        SSHGUARD_WHITELIST = '/etc/sshguard/whitelist'
         SSHGUARD_PROCESS = 'sshguard'
         block_time = '123'
         detect_time = '1804'
         port = '22'
         threshold = '10'
+        allow_list = ['192.0.2.0/24', '2001:db8::/48']
 
         self.cli_set(base_path + ['dynamic-protection', 'block-time', block_time])
         self.cli_set(base_path + ['dynamic-protection', 'detect-time', detect_time])
         self.cli_set(base_path + ['dynamic-protection', 'threshold', threshold])
+        for allow in allow_list:
+            self.cli_set(base_path + ['dynamic-protection', 'allow-from', allow])
 
         # commit changes
         self.cli_commit()
@@ -245,9 +248,12 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         ]
 
         tmp_sshguard_conf = read_file(SSHGUARD_CONFIG)
-
         for line in sshguard_lines:
             self.assertIn(line, tmp_sshguard_conf)
+
+        tmp_whitelist_conf = read_file(SSHGUARD_WHITELIST)
+        for allow in allow_list:
+            self.assertIn(allow, tmp_whitelist_conf)
 
         # Delete service ssh dynamic-protection
         # but not service ssh itself
@@ -255,7 +261,6 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertFalse(process_named_running(SSHGUARD_PROCESS))
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
