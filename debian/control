@@ -147,6 +147,7 @@ Depends:
   squid,
   squidclient,
   squidguard,
+  sshguard,
   ssl-cert,
   strongswan (>= 5.9),
   strongswan-swanctl (>= 5.9),
