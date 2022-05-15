@@ -68,6 +68,8 @@ def get_config(config=None):
 
     if conf.exists('gql'):
         http_api['gql'] = True
+        if conf.exists('gql introspection'):
+            http_api['introspection'] = True
 
     if conf.exists('socket'):
         http_api['socket'] = True

@@ -107,12 +107,19 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="gql">
+              <node name="gql">
                 <properties>
                   <help>GraphQL support</help>
-                  <valueless/>
                 </properties>
-              </leafNode>
+                <children>
+                  <leafNode name="introspection">
+                    <properties>
+                      <help>Schema introspection</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="cors">
                 <properties>
                   <help>Set CORS options</help>
