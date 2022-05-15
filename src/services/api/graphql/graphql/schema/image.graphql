@@ -1,4 +1,5 @@
 input AddSystemImageInput {
+    key: String!
     location: String!
 }
 
@@ -14,6 +15,7 @@ type AddSystemImageResult {
 }
 
 input DeleteSystemImageInput {
+    key: String!
     name: String!
 }
 

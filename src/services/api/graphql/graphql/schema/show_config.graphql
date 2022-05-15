@@ -5,6 +5,7 @@ JSON-serialize in case of JSON output.
 scalar Generic
 
 input ShowConfigInput {
+    key: String!
     path: [String!]!
     configFormat: String
 }

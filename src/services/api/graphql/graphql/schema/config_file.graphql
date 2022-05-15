@@ -1,4 +1,5 @@
 input SaveConfigFileInput {
+    key: String!
     fileName: String
 }
 
@@ -13,6 +14,7 @@ type SaveConfigFileResult {
 }
 
 input LoadConfigFileInput {
+    key: String!
     fileName: String!
 }
 

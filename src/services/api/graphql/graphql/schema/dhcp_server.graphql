@@ -1,4 +1,5 @@
 input DhcpServerConfigInput {
+    key: String!
     sharedNetworkName: String
     subnet: String
     defaultRouter: String
