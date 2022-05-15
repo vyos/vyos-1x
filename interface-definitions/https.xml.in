@@ -107,6 +107,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="gql">
+                <properties>
+                  <help>GraphQL support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <node name="cors">
                 <properties>
                   <help>Set CORS options</help>
