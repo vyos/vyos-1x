@@ -48,6 +48,14 @@ class ShowConfigDirective(VyosDirective):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_show_config_resolver)
 
+class SystemStatusDirective(VyosDirective):
+    """
+    Class providing implementation of 'system_status' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_system_status_resolver)
+
 class ConfigFileDirective(VyosDirective):
     """
     Class providing implementation of 'configfile' directive in schema.
@@ -74,6 +82,7 @@ class ImageDirective(VyosDirective):
 
 directives_dict = {"configure": ConfigureDirective,
                    "showconfig": ShowConfigDirective,
+                   "systemstatus": SystemStatusDirective,
                    "configfile": ConfigFileDirective,
                    "show": ShowDirective,
                    "image": ImageDirective}

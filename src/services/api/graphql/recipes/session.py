@@ -136,3 +136,17 @@ class Session:
             raise error
 
         return res
+
+    def system_status(self):
+        import api.graphql.recipes.queries.system_status as system_status
+
+        session = self._session
+        data = self._data
+
+        status = {}
+        status['host_name'] = session.show(['host', 'name']).strip()
+        status['version'] = system_status.get_system_version()
+        status['uptime'] = system_status.get_system_uptime()
+        status['ram'] = system_status.get_system_ram_usage()
+
+        return status

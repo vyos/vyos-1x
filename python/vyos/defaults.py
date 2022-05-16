@@ -18,6 +18,7 @@ import os
 directories = {
   "data": "/usr/share/vyos/",
   "conf_mode": "/usr/libexec/vyos/conf_mode",
+  "op_mode": "/usr/libexec/vyos/op_mode",
   "config": "/opt/vyatta/etc/config",
   "current": "/opt/vyatta/etc/config-migrate/current",
   "migrate": "/opt/vyatta/etc/config-migrate/migrate",

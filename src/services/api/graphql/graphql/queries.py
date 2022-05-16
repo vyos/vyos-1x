@@ -94,6 +94,10 @@ def make_show_config_resolver(query_name):
     class_name = query_name
     return make_query_resolver(query_name, class_name, 'show_config')
 
+def make_system_status_resolver(query_name):
+    class_name = query_name
+    return make_query_resolver(query_name, class_name, 'system_status')
+
 def make_show_resolver(query_name):
     class_name = query_name
     return make_query_resolver(query_name, class_name, 'show')
