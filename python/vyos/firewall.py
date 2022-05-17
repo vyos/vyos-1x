@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,8 +16,70 @@
 
 import re
 
+from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search_args
+
+
+# Functions for firewall group domain-groups
+def get_ips_domains_dict(list_domains):
+    """
+    Get list of IPv4 addresses by list of domains
+    Ex: get_ips_domains_dict(['ex1.com', 'ex2.com'])
+        ['192.0.2.1', '192.0.2.2', '192.0.2.3']
+    """
+    from socket import gethostbyname_ex
+    from socket import gaierror
+
+    ip_list = []
+    for domain in list_domains:
+        try:
+            _, _, ips = gethostbyname_ex(domain)
+            for entry in ips:
+                ip_list.append(entry)
+        except gaierror:
+            pass
+
+    return ip_list
+
+def nft_init_set(group_name, table="filter", family="ip"):
+    """
+    table ip filter {
+        set GROUP_NAME
+            type ipv4_addr
+           flags interval
+        }
+    """
+    return call(f'nft add set ip {table} {group_name} {{ type ipv4_addr\\; flags interval\\; }}')
+
+
+def nft_add_set_elements(group_name, elements, table="filter", family="ip"):
+    """
+    table ip filter {
+        set GROUP_NAME {
+            type ipv4_addr
+            flags interval
+            elements = { 192.0.2.1, 192.0.2.2 }
+        }
+    """
+    elements = ", ".join(elements)
+    return call(f'nft add element {family} {table} {group_name} {{ {elements} }} ')
+
+def nft_flush_set(group_name, table="filter", family="ip"):
+    """
+    Flush elements of nft set
+    """
+    return call(f'nft flush set {family} {table} {group_name}')
+
+def nft_update_set_elements(group_name, elements, table="filter", family="ip"):
+    """
+    Update elements of nft set
+    """
+    flush_set = nft_flush_set(group_name, table="filter", family="ip")
+    nft_add_set = nft_add_set_elements(group_name, elements, table="filter", family="ip")
+    return flush_set, nft_add_set
+
+# END firewall group domain-group (sets)
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle
@@ -118,6 +180,14 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                         operator = '!='
                         group_name = group_name[1:]
                     output.append(f'{ip_name} {prefix}addr {operator} $A{def_suffix}_{group_name}')
+                # Generate firewall group domain-group
+                elif 'domain_group' in group:
+                    group_name = group['domain_group']
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} @{group_name}')
                 elif 'network_group' in group:
                     group_name = group['network_group']
                     operator = ''

@@ -1,0 +1,11 @@
+[Unit]
+Description=VyOS firewall domain-group resolver
+After=vyos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos-domain-group-resolve.py
+
+[Install]
+WantedBy=multi-user.target
