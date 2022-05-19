@@ -4,6 +4,7 @@
     <help>IPv4 or IPv6 address of a local interface to use for VPN</help>
     <completionHelp>
       <list>any</list>
+      <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
     </completionHelp>
     <valueHelp>
       <format>ipv4</format>
