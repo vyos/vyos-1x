@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -45,6 +45,25 @@ NFT6_CHAINS = {
     'local': 'VYOS_FW6_LOCAL'
 }
 
+
+def get_vrf(iface):
+    """
+    Get VRF name by interface name
+    If VRF not found return original interface name
+    Ex:
+        >>> get_vrf('eth0')
+        'MGMT'
+        >>> get_vrf('eth1')
+        'eth1'
+        >>>
+    """
+    from vyos.util import get_interface_config
+    if "linkinfo" in get_interface_config(iface):
+        kind = get_interface_config(iface).get('linkinfo').get('info_slave_kind')
+        if kind == "vrf":
+            iface = get_interface_config(iface).get('master')
+    return iface
+
 def get_config(config=None):
     if config:
         conf = config
@@ -58,6 +77,14 @@ def get_config(config=None):
     if_firewall = conf.get_config_dict(if_firewall_path, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
+    # T3933 replace interface name => vrf name
+    # Only for forward-in and local directions
+    # For deleting also firewall return vrf name
+    if not if_firewall:
+        ifname = get_vrf(ifname)
+    for direction in if_firewall:
+        if 'in' in direction or 'local' in direction:
+            ifname = get_vrf(ifname)
     if_firewall['ifname'] = ifname
     if_firewall['firewall'] = conf.get_config_dict(['firewall'], key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
