@@ -85,6 +85,85 @@
                 </properties>
                 <defaultValue>all</defaultValue>
               </leafNode>
+              <node name="prometheus-client">
+                 <properties>
+                   <help>Output plugin Prometheus client</help>
+                 </properties>
+                 <children>
+                   <node name="authentication">
+                     <properties>
+                       <help>HTTP basic authentication parameters</help>
+                     </properties>
+                     <children>
+                       #include <include/username.xml.i>
+                       <leafNode name="password">
+                         <properties>
+                           <help>Authentication password</help>
+                           <valueHelp>
+                             <format>txt</format>
+                             <description>Authentication password</description>
+                           </valueHelp>
+                         </properties>
+                       </leafNode>
+                     </children>
+                   </node>
+                   <leafNode name="allow-from">
+                     <properties>
+                       <help>Networks allowed to query this server</help>
+                       <valueHelp>
+                         <format>ipv4net</format>
+                         <description>IP address and prefix length</description>
+                       </valueHelp>
+                       <valueHelp>
+                         <format>ipv6net</format>
+                         <description>IPv6 address and prefix length</description>
+                       </valueHelp>
+                       <multi/>
+                       <constraint>
+                         <validator name="ip-prefix"/>
+                       </constraint>
+                     </properties>
+                   </leafNode>
+                   <leafNode name="listen-address">
+                     <properties>
+                       <help>Local IP addresses to listen on</help>
+                       <completionHelp>
+                         <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
+                       </completionHelp>
+                       <valueHelp>
+                         <format>ipv4</format>
+                         <description>IPv4 address to listen for incoming connections</description>
+                       </valueHelp>
+                       <valueHelp>
+                         <format>ipv6</format>
+                         <description>IPv6 address to listen for incoming connections</description>
+                       </valueHelp>
+                       <constraint>
+                         <validator name="ipv4-address"/>
+                         <validator name="ipv6-address"/>
+                         <validator name="ipv6-link-local"/>
+                       </constraint>
+                     </properties>
+                   </leafNode>
+                   <leafNode name="metric-version">
+                     <properties>
+                       <help>Metric version control mapping from Telegraf to Prometheus format</help>
+                       <valueHelp>
+                         <format>u32:1-2</format>
+                         <description>Metric version (default: 2)</description>
+                       </valueHelp>
+                       <constraint>
+                         <validator name="numeric" argument="--range 1-2"/>
+                       </constraint>
+                     </properties>
+                     <defaultValue>2</defaultValue>
+                   </leafNode>
+                   #include <include/port-number.xml.i>
+                   <leafNode name="port">
+                     <defaultValue>9273</defaultValue>
+                   </leafNode>
+                 </children>
+               </node>
               <leafNode name="url">
                 <properties>
                   <help>Remote URL [REQUIRED]</help>
