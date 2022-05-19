@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -81,6 +81,11 @@ def verify(nhrp):
                 for map_name, map_conf in nhrp_conf['dynamic_map'].items():
                     if 'nbma_domain_name' not in map_conf:
                         raise ConfigError(f'nbma-domain-name missing on dynamic-map {map_name} on tunnel {name}')
+
+            if 'cisco_authentication' in nhrp_conf:
+                if len(nhrp_conf['cisco_authentication']) > 8:
+                    raise ConfigError('Maximum length of the secret is 8 characters!')
+
     return None
 
 def generate(nhrp):
