@@ -220,7 +220,7 @@
               </leafNode>
               <tagNode name="server">
                 <properties>
-                  <help>Server to export NetFlow [REQUIRED]</help>
+                  <help>NetFlow destination server</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 server to export NetFlow</description>
@@ -398,7 +398,7 @@
               </leafNode>
               <tagNode name="server">
                 <properties>
-                  <help>Server to export sFlow [REQUIRED]</help>
+                  <help>sFlow destination server</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 server to export sFlow</description>
