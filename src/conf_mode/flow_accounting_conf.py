@@ -109,6 +109,9 @@ def _nftables_config(configured_ifaces, direction, length=None):
         iface_prefix = "o" if direction == "egress" else "i"
         rule_definition = f'{iface_prefix}ifname "{iface}" counter log group 2 snaplen {length} queue-threshold 100 comment "FLOW_ACCOUNTING_RULE"'
         nftable_commands.append(f'nft insert rule {nftables_table} {nftables_chain} {rule_definition}')
+        # Also add IPv6 ingres logging
+        if nftables_table == nftables_nflog_table:
+            nftable_commands.append(f'nft insert rule ip6 {nftables_table} {nftables_chain} {rule_definition}')
 
     # change nftables
     for command in nftable_commands:
