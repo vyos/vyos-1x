@@ -16,18 +16,18 @@
           </node>
           <node name="dhcp">
             <properties>
-              <help>Show log for Dynamic Host Control Protocol (DHCP)</help>
+              <help>Monitor last lines of Dynamic Host Control Protocol (DHCP)</help>
             </properties>
             <children>
               <node name="server">
                 <properties>
-                  <help>Show log for DHCP server</help>
+                  <help>Monitor last lines of DHCP server</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server.service</command>
               </node>
               <node name="client">
                 <properties>
-                  <help>Show DHCP client logs</help>
+                  <help>Monitor last lines of DHCP client</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit "dhclient@*.service"</command>
                 <children>
@@ -46,18 +46,18 @@
           </node>
           <node name="dhcpv6">
             <properties>
-              <help>Show log for Dynamic Host Control Protocol IPv6 (DHCPv6)</help>
+              <help>Monitor last lines of Dynamic Host Control Protocol IPv6 (DHCPv6)</help>
             </properties>
             <children>
               <node name="server">
                 <properties>
-                  <help>Show log for DHCPv6 server</help>
+                  <help>Monitor last lines of DHCPv6 server</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server6.service</command>
               </node>
               <node name="client">
                 <properties>
-                  <help>Show DHCPv6 client logs</help>
+                  <help>Monitor last lines of DHCPv6 client</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@*.service"</command>
                 <children>
@@ -74,11 +74,23 @@
               </node>
             </children>
           </node>
+          <leafNode name="flow-accounting">
+            <properties>
+              <help>Monitor last lines of flow-accounting log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit uacctd.service</command>
+          </leafNode>
           <leafNode name="kernel">
             <properties>
               <help>Monitor last lines of Linux Kernel log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --dmesg</command>
+          </leafNode>
+          <leafNode name="nhrp">
+            <properties>
+              <help>Monitor last lines of NHRP log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
           </leafNode>
           <node name="pppoe">
             <properties>

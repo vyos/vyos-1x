@@ -139,6 +139,12 @@
               </tagNode>
             </children>
           </node>
+          <leafNode name="flow-accounting">
+            <properties>
+              <help>Show log for flow-accounting</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit uacctd.service</command>
+          </leafNode>
           <leafNode name="https">
             <properties>
               <help>Show log for HTTPs</help>
@@ -194,6 +200,12 @@
               <help>Show log for Network Address Translation (NAT)</help>
             </properties>
             <command>egrep -i "kernel:.*\[NAT-[A-Z]{3,}-[0-9]+(-MASQ)?\]" $(find /var/log -maxdepth 1 -type f -name messages\* | sort -t. -k2nr)</command>
+          </leafNode>
+          <leafNode name="nhrp">
+            <properties>
+              <help>Show log for NHRP</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
           </leafNode>
           <node name="openvpn">
             <properties>
