@@ -110,7 +110,7 @@ def apply(nhrp):
             remove_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', rule_handle)
 
     action = 'restart' if nhrp and 'tunnel' in nhrp else 'stop'
-    run(f'systemctl {action} opennhrp')
+    run(f'systemctl {action} opennhrp.service')
     return None
 
 if __name__ == '__main__':
