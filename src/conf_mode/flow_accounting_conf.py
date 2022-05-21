@@ -22,6 +22,7 @@ import ipaddress
 
 from ipaddress import ip_address
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.ifconfig import Section
@@ -175,7 +176,7 @@ def verify(flow_config):
         if interface not in Section.interfaces():
             # Changed from error to warning to allow adding dynamic interfaces
             # and interface templates
-            print(f'Warning: Interface "{interface}" is not presented in the system')
+            Warning(f'Interface "{interface}" is not presented in the system')
 
     # check sFlow configuration
     if 'sflow' in flow_config:
@@ -203,7 +204,13 @@ def verify(flow_config):
         if 'agent_address' in flow_config['sflow']:
             tmp = flow_config['sflow']['agent_address']
             if not is_addr_assigned(tmp):
-                print(f'Warning: Configured "sflow agent-address {tmp}" does not exist in the system!')
+                raise ConfigError(f'Configured "sflow agent-address {tmp}" does not exist in the system!')
+
+        # Check if configured netflow source-address exist in the system
+        if 'source_address' in flow_config['sflow']:
+            if not is_addr_assigned(flow_config['sflow']['source_address']):
+                tmp = flow_config['sflow']['source_address']
+                raise ConfigError(f'Configured "sflow source-address {tmp}" does not exist on the system!')
 
     # check NetFlow configuration
     if 'netflow' in flow_config:
@@ -215,7 +222,7 @@ def verify(flow_config):
         if 'source_address' in flow_config['netflow']:
             if not is_addr_assigned(flow_config['netflow']['source_address']):
                 tmp = flow_config['netflow']['source_address']
-                print(f'Warning: Configured "netflow source-address {tmp}" does not exist on the system!')
+                raise ConfigError(f'Configured "netflow source-address {tmp}" does not exist on the system!')
 
         # Check if engine-id compatible with selected protocol version
         if 'engine_id' in flow_config['netflow']:
