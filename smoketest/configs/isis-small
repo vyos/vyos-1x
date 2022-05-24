@@ -74,7 +74,6 @@ system {
                 encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
                 plaintext-password ""
             }
-            level admin
         }
     }
     ntp {
