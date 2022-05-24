@@ -78,7 +78,7 @@ if config.exists(log_mode):
 base_interfaces = base + ['ipsec-interfaces', 'interface']
 if config.exists(base_interfaces):
     config.copy(base_interfaces, base + ['interface'])
-    config.delete(base_interfaces)
+    config.delete(base + ['ipsec-interfaces'])
 
 # Remove deprecated "auto-update" option
 tmp = base + ['auto-update']
