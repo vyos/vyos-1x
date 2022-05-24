@@ -32,7 +32,7 @@ interfaces {
 nat {
     source {
         rule 10 {
-            log enable
+            log
             outbound-interface pppoe1
             source {
                 address 172.17.0.0/16
