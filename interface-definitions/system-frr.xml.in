@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="frr" owner="${vyos_conf_scripts_dir}/system_frr.py">
+        <properties>
+          <help>Configure FRR parameters</help>
+          <!-- Before components that use FRR -->
+          <priority>150</priority>
+        </properties>
+        <children>
+          <leafNode name="bmp">
+            <properties>
+              <help>Enable BGP Monitoring Protocol support</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="irdp">
+            <properties>
+              <help>Enable ICMP Router Discovery Protocol support</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="snmp">
+            <properties>
+              <help>Enable SNMP integration for next daemons</help>
+            </properties>
+            <children>
+              <leafNode name="bgpd">
+                <properties>
+                  <help>BGP</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="isisd">
+                <properties>
+                  <help>IS-IS</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ldpd">
+                <properties>
+                  <help>LDP</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ospf6d">
+                <properties>
+                  <help>OSPFv3</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ospfd">
+                <properties>
+                  <help>OSPFv2</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="ripd">
+                <properties>
+                  <help>RIP</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="zebra">
+                <properties>
+                  <help>Zebra (IP routing manager)</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

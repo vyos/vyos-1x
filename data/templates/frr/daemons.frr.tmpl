@@ -1,0 +1,54 @@
+zebra=yes
+bgpd=yes
+ospfd=yes
+ospf6d=yes
+ripd=yes
+ripngd=yes
+isisd=yes
+pimd=no
+ldpd=yes
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=no
+bfdd=yes
+staticd=yes
+
+vtysh_enable=yes
+zebra_options="  -s 90000000 --daemon -A 127.0.0.1
+{%- if irdp is defined %} -M irdp{% endif -%}
+{%- if snmp is defined and snmp.zebra is defined %} -M snmp{% endif -%}
+"
+bgpd_options="   --daemon -A 127.0.0.1
+{%- if bmp is defined %} -M bmp{% endif -%}
+{%- if snmp is defined and snmp.bgpd is defined %} -M snmp{% endif -%}
+"
+ospfd_options="  --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.ospfd is defined %} -M snmp{% endif -%}
+"
+ospf6d_options=" --daemon -A ::1
+{%- if snmp is defined and snmp.ospf6d is defined %} -M snmp{% endif -%}
+"
+ripd_options="   --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.ripd is defined %} -M snmp{% endif -%}
+"
+ripngd_options=" --daemon -A ::1"
+isisd_options="  --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.isisd is defined %} -M snmp{% endif -%}
+"
+pimd_options="  --daemon -A 127.0.0.1"
+ldpd_options="  --daemon -A 127.0.0.1
+{%- if snmp is defined and snmp.ldpd is defined %} -M snmp{% endif -%}
+"
+nhrpd_options="  --daemon -A 127.0.0.1"
+eigrpd_options="  --daemon -A 127.0.0.1"
+babeld_options="  --daemon -A 127.0.0.1"
+sharpd_options="  --daemon -A 127.0.0.1"
+pbrd_options="  --daemon -A 127.0.0.1"
+staticd_options="  --daemon -A 127.0.0.1"
+bfdd_options="  --daemon -A 127.0.0.1"
+
+watchfrr_enable=no
+valgrind_enable=no
+
