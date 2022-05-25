@@ -34,7 +34,7 @@ server {
         ssl_protocols TLSv1.2 TLSv1.3;
 
         # proxy settings for HTTP API, if enabled; 503, if not
-        location ~ /(retrieve|configure|config-file|image|generate|show|docs|openapi.json|redoc|graphql) {
+        location ~ /(retrieve|configure|config-file|image|generate|show|reset|docs|openapi.json|redoc|graphql) {
 {%     if server.api %}
 {%         if server.api.socket %}
                 proxy_pass http://unix:/run/api.sock;

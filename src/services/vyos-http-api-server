@@ -201,6 +201,20 @@ class ShowModel(ApiModel):
             }
         }
 
+class ResetModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "key": "id_key",
+                "op": "reset",
+                "path": ["op", "mode", "path"],
+            }
+        }
+
+
 class Success(BaseModel):
     success: bool
     data: Union[str, bool, Dict]
@@ -372,7 +386,7 @@ class MultipartRoute(APIRoute):
                         return error(400, "Malformed command \"{0}\": \"value\" field must be a string".format(json.dumps(request.offending_command)))
                     if request.ERR_PATH_NOT_LIST_OF_STR:
                         return error(400, "Malformed command \"{0}\": \"path\" field must be a list of strings".format(json.dumps(request.offending_command)))
-                if endpoint in ('/retrieve','/generate','/show'):
+                if endpoint in ('/retrieve','/generate','/show','/reset'):
                     if request.ERR_NO_OP or request.ERR_NO_PATH:
                         return error(400, "Missing required field. \"op\" and \"path\" fields are required")
                 if endpoint in ('/config-file', '/image'):
@@ -606,6 +620,27 @@ def show_op(data: ShowModel):
         return error(500, "An internal error occured. Check the logs for details.")
 
     return success(res)
+
+@app.post('/reset')
+def reset_op(data: ResetModel):
+    session = app.state.vyos_session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'reset':
+            res = session.reset(path)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
 
 ###
 # GraphQL integration
