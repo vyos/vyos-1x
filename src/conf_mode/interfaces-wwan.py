@@ -21,7 +21,7 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_vrf
@@ -54,27 +54,25 @@ def get_config(config=None):
     # We should only terminate the WWAN session if critical parameters change.
     # All parameters that can be changed on-the-fly (like interface description)
     # should not lead to a reconnect!
-    tmp = leaf_node_changed(conf, ['address'])
+    tmp = is_node_changed(conf, ['address'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['apn'])
+    tmp = is_node_changed(conf, ['apn'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['disable'])
+    tmp = is_node_changed(conf, ['disable'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['vrf'])
-    # leaf_node_changed() returns a list, as VRF is a non-multi node, there
-    # will be only one list element
-    if tmp: wwan.update({'vrf_old': tmp[0]})
+    tmp = is_node_changed(conf, ['vrf'])
+    if tmp: wwan.update({'vrf_old': {}})
 
-    tmp = leaf_node_changed(conf, ['authentication', 'user'])
+    tmp = is_node_changed(conf, ['authentication', 'user'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['authentication', 'password'])
+    tmp = is_node_changed(conf, ['authentication', 'password'])
     if tmp: wwan.update({'shutdown_required': {}})
 
-    tmp = leaf_node_changed(conf, ['ipv6', 'address', 'autoconf'])
+    tmp = is_node_changed(conf, ['ipv6', 'address', 'autoconf'])
     if tmp: wwan.update({'shutdown_required': {}})
 
     # We need to know the amount of other WWAN interfaces as ModemManager needs
