@@ -114,6 +114,16 @@ for vrf in config.list_nodes(base):
                     if config.exists(vrf_path):
                         config.rename(vrf_path, 'vrf')
 
+            next_hop = route_path + [route, 'interface']
+            if config.exists(next_hop):
+                for interface in config.list_nodes(next_hop):
+                    interface_path = next_hop + [interface, 'next-hop-interface']
+                    if config.exists(interface_path):
+                        config.rename(interface_path, 'interface')
+                    vrf_path = next_hop + [interface, 'next-hop-vrf']
+                    if config.exists(vrf_path):
+                        config.rename(vrf_path, 'vrf')
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

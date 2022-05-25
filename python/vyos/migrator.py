@@ -105,6 +105,11 @@ class Migrator(object):
         sys_keys = list(sys_versions.keys())
         sys_keys.sort()
 
+        # XXX 'bgp' needs to follow 'quagga':
+        if 'bgp' in sys_keys and 'quagga' in sys_keys:
+            sys_keys.insert(sys_keys.index('quagga'),
+                            sys_keys.pop(sys_keys.index('bgp')))
+
         rev_versions = {}
 
         for key in sys_keys:
