@@ -1,5 +1,5 @@
 # configsession -- the write API for the VyOS running config
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -33,6 +33,7 @@ INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image', '--url']
 REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
+RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -201,3 +202,6 @@ class ConfigSession(object):
         out = self.__run_command(SHOW + path)
         return out
 
+    def reset(self, path):
+        out = self.__run_command(RESET + path)
+        return out
