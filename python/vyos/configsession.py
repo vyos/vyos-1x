@@ -33,6 +33,7 @@ INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image', '--url']
 REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
+RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -200,3 +201,6 @@ class ConfigSession(object):
         out = self.__run_command(SHOW + path)
         return out
 
+    def reset(self, path):
+        out = self.__run_command(RESET + path)
+        return out
