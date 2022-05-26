@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
+from vyos.configdict import dict_merge
 from vyos.configverify import verify_accel_ppp_base_service
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
@@ -27,6 +28,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import write_file
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -50,6 +52,11 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     sstp = get_accel_dict(conf, base, sstp_chap_secrets)
+
+    default_values = defaults(base)
+    sstp = dict_merge(default_values, sstp)
+    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+    del sstp['authentication']['local_users']['username']['static_ip']
 
     if sstp:
         sstp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
@@ -121,7 +128,6 @@ def generate(sstp):
 
     ca_cert_name = sstp['ssl']['ca_certificate']
     pki_ca = sstp['pki']['ca'][ca_cert_name]
-
     write_file(cert_file_path, wrap_certificate(pki_cert['certificate']))
     write_file(cert_key_path, wrap_private_key(pki_cert['private']['key']))
     write_file(ca_cert_file_path, wrap_certificate(pki_ca['certificate']))

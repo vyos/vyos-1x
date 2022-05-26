@@ -37,6 +37,20 @@
             </children>
           </node>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
+          <leafNode name="port">
+            <properties>
+              <help>SSTP server listening port</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>SSTP server listening port</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+              <constraintErrorMessage>SSTP server listening port must be between 1 and 65535</constraintErrorMessage>
+            </properties>
+            <defaultValue>443</defaultValue>
+          </leafNode>
           <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>
