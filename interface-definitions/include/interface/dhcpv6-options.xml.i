@@ -71,11 +71,11 @@
               <properties>
                 <help>Interface site-Level aggregator (SLA)</help>
                 <valueHelp>
-                  <format>u32:0-128</format>
+                  <format>u32:0-65535</format>
                   <description>Decimal integer which fits in the length of SLA IDs</description>
                 </valueHelp>
                 <constraint>
-                  <validator name="numeric" argument="--range 0-128"/>
+                  <validator name="numeric" argument="--range 0-65535"/>
                 </constraint>
               </properties>
             </leafNode>
