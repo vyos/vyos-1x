@@ -146,5 +146,16 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig(zebra_route_map)
         self.assertNotIn(zebra_route_map, frrconfig)
 
+    def test_rip_03_version(self):
+        version = '1'
+
+        self.cli_set(base_path + ['version', version])
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR configuration
+        frrconfig = self.getFRRconfig('router rip')
+        self.assertIn(f'version {version}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

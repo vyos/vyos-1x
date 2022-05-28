@@ -84,6 +84,9 @@ router rip
 {%     endif %}
 {% endif %}
 {% include 'frr/rip_ripng.frr.j2' %}
+{% if version is vyos_defined %}
+ version {{ version }}
+{% endif %}
 exit
 !
 {% if route_map is vyos_defined %}
