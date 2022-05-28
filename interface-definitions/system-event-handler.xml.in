@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <tagNode name="event-handler" owner="${vyos_conf_scripts_dir}/system_event_handler.py">
+        <properties>
+          <help>Event handler name</help>
+        </properties>
+        <children>
+          <leafNode name="pattern">
+            <properties>
+              <help>Match pattern (regex)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="script">
+            <properties>
+              <help>Event handler script file</help>
+              <constraint>
+                <validator name="script"/>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
