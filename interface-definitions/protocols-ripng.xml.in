@@ -21,14 +21,14 @@
               <multi/>
             </properties>
           </leafNode>
-          #include <include/rip/rip-default-information.xml.i>
-          #include <include/rip/rip-default-metric.xml.i>
+          #include <include/rip/default-information.xml.i>
+          #include <include/rip/default-metric.xml.i>
           <node name="distribute-list">
             <properties>
               <help>Filter networks in routing updates</help>
             </properties>
             <children>
-              #include <include/rip/rip-access-list6.xml.i>
+              #include <include/rip/access-list6.xml.i>
               <tagNode name="interface">
                 <properties>
                   <help>Apply filtering to an interface</help>
@@ -44,14 +44,14 @@
                   </constraint>
                 </properties>
                 <children>
-                  #include <include/rip/rip-access-list6.xml.i>
-                  #include <include/rip/rip-prefix-list6.xml.i>
+                  #include <include/rip/access-list6.xml.i>
+                  #include <include/rip/prefix-list6.xml.i>
                 </children>
               </tagNode>
-              #include <include/rip/rip-prefix-list6.xml.i>
+              #include <include/rip/prefix-list6.xml.i>
             </children>
           </node>
-          #include <include/rip/rip-interface.xml.i>
+          #include <include/rip/interface.xml.i>
           <leafNode name="network">
             <properties>
               <help>RIPng network</help>
@@ -88,7 +88,7 @@
                   <help>Redistribute BGP routes</help>
                 </properties>
                 <children>
-                  #include <include/rip/rip-redistribute.xml.i>
+                  #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
               <node name="connected">
@@ -96,7 +96,7 @@
                   <help>Redistribute connected routes</help>
                 </properties>
                 <children>
-                  #include <include/rip/rip-redistribute.xml.i>
+                  #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
               <node name="kernel">
@@ -104,7 +104,7 @@
                   <help>Redistribute kernel routes</help>
                 </properties>
                 <children>
-                  #include <include/rip/rip-redistribute.xml.i>
+                  #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
               <node name="ospfv3">
@@ -112,7 +112,7 @@
                   <help>Redistribute OSPFv3 routes</help>
                 </properties>
                 <children>
-                  #include <include/rip/rip-redistribute.xml.i>
+                  #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
               <node name="static">
@@ -120,7 +120,7 @@
                   <help>Redistribute static routes</help>
                 </properties>
                 <children>
-                  #include <include/rip/rip-redistribute.xml.i>
+                  #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
             </children>
@@ -139,7 +139,7 @@
             </properties>
           </leafNode>
           #include <include/route-map.xml.i>
-          #include <include/rip/rip-timers.xml.i>
+          #include <include/rip/timers.xml.i>
         </children>
       </node>
     </children>

@@ -1,4 +1,4 @@
-<!-- include start from rip/rip-access-list.xml.i -->
+<!-- include start from rip/access-list.xml.i -->
 <node name="access-list">
   <properties>
     <help>Access-list</help>
@@ -12,7 +12,7 @@
           <description>Access list to apply to input packets</description>
         </valueHelp>
         <completionHelp>
-          <path>policy access-list6</path>
+          <path>policy access-list</path>
         </completionHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-4294967295"/>
@@ -27,7 +27,7 @@
           <description>Access list to apply to output packets</description>
         </valueHelp>
         <completionHelp>
-          <path>policy access-list6</path>
+          <path>policy access-list</path>
         </completionHelp>
         <constraint>
           <validator name="numeric" argument="--range 0-4294967295"/>

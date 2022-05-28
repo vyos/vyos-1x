@@ -1,4 +1,4 @@
-<!-- include start from rip/rip-prefix-list.xml.i -->
+<!-- include start from rip/prefix-list.xml.i -->
 <node name="prefix-list">
   <properties>
     <help>Prefix-list</help>
@@ -12,7 +12,7 @@
           <description>Prefix-list to apply to input packets</description>
         </valueHelp>
         <completionHelp>
-          <path>policy prefix-list</path>
+          <path>policy prefix-list6</path>
         </completionHelp>
       </properties>
     </leafNode>
@@ -24,7 +24,7 @@
           <description>Prefix-list to apply to output packets</description>
         </valueHelp>
         <completionHelp>
-          <path>policy prefix-list</path>
+          <path>policy prefix-list6</path>
         </completionHelp>
       </properties>
     </leafNode>

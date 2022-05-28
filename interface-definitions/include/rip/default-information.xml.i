@@ -1,4 +1,4 @@
-<!-- include start from rip/rip-default-information.xml.i -->
+<!-- include start from rip/default-information.xml.i -->
 <node name="default-information">
   <properties>
     <help>Control distribution of default route</help>

@@ -1,4 +1,4 @@
-<!-- include start from rip/rip-interface.xml.i -->
+<!-- include start from rip/interface.xml.i -->
 <tagNode name="interface">
   <properties>
     <help>Interface name</help>
