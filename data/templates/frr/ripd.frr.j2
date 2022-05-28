@@ -32,6 +32,12 @@ interface {{ iface }}
 {%         if iface_config.split_horizon.poison_reverse is vyos_defined %}
  ip rip split-horizon poisoned-reverse
 {%         endif %}
+{%         if iface_config.receive.version is vyos_defined %}
+ ip rip receive version {{ iface_config.receive.version }}
+{%         endif %}
+{%         if iface_config.send.version is vyos_defined %}
+ ip rip send version {{ iface_config.send.version }}
+{%         endif %}
 exit
 !
 {%     endfor %}

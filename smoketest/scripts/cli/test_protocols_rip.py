@@ -160,14 +160,23 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
 
     def test_rip_03_version(self):
         version = '1'
+        interface = 'eth0'
 
         self.cli_set(base_path + ['version', version])
+        self.cli_set(base_path + ['interface', interface, 'send', 'version', version])
+        self.cli_set(base_path + ['interface', interface, 'receive', 'version', version])
+
         # commit changes
         self.cli_commit()
 
         # Verify FRR configuration
         frrconfig = self.getFRRconfig('router rip')
         self.assertIn(f'version {version}', frrconfig)
+
+        frrconfig = self.getFRRconfig(f'interface {interface}')
+        self.assertIn(f' ip rip receive version {version}', frrconfig)
+        self.assertIn(f' ip rip send version {version}', frrconfig)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
