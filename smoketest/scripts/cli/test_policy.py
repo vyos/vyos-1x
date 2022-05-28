@@ -718,6 +718,11 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         tag = '6542'
         goto = '25'
 
+        ipv4_nexthop_address= '192.0.2.2'
+        ipv4_nexthop_plen= '18'
+        ipv4_nexthop_type= 'blackhole'
+        
+
         test_data = {
             'foo-map-bar' : {
                 'rule' : {
@@ -791,6 +796,24 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'metric': metric,
                             'origin-egp': '',
                             'peer' : peer,
+                        },
+                    },
+                    '40' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-nexthop-addr' : ipv4_nexthop_address,
+                        },
+                    },
+                    '42' : {
+                        'action' : 'deny',
+                        'match' : {
+                            'ip-nexthop-plen' : ipv4_nexthop_plen,
+                        },
+                    },
+                    '44' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-nexthop-type' : ipv4_nexthop_type,
                         },
                     },
                 },
@@ -921,6 +944,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'access-list', rule_config['match']['ip-nexthop-acl']])
                     if 'ip-nexthop-pfx' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'prefix-list', rule_config['match']['ip-nexthop-pfx']])
+                    if 'ip-nexthop-addr' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'address', rule_config['match']['ip-nexthop-addr']])
+                    if 'ip-nexthop-plen' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'prefix-len', rule_config['match']['ip-nexthop-plen']])
+                    if 'ip-nexthop-type' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'type', rule_config['match']['ip-nexthop-type']])
                     if 'ip-route-source-acl' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'route-source', 'access-list', rule_config['match']['ip-route-source-acl']])
                     if 'ip-route-source-pfx' in rule_config['match']:
@@ -1062,6 +1091,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'ip-nexthop-pfx' in rule_config['match']:
                         tmp = f'match ip next-hop prefix-list {rule_config["match"]["ip-nexthop-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-nexthop-addr' in rule_config['match']:
+                        tmp = f'match ip next-hop address {rule_config["match"]["ip-nexthop-addr"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-nexthop-plen' in rule_config['match']:
+                        tmp = f'match ip next-hop prefix-len {rule_config["match"]["ip-nexthop-plen"]}'
+                        self.assertIn(tmp, config)
+                    if 'ip-nexthop-type' in rule_config['match']:
+                        tmp = f'match ip next-hop type {rule_config["match"]["ip-nexthop-type"]}'
                         self.assertIn(tmp, config)
                     if 'ip-route-source-acl' in rule_config['match']:
                         tmp = f'match ip route-source {rule_config["match"]["ip-route-source-acl"]}'
