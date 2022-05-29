@@ -7,7 +7,7 @@
     <children>
        <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py">
         <properties>
-          <help>Static route parameters</help>
+          <help>Static Routing</help>
           <priority>480</priority>
         </properties>
         <children>

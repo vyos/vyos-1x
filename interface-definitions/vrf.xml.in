@@ -96,7 +96,7 @@
               </node>
               <node name="static" owner="${vyos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
                 <properties>
-                  <help>Static route parameters</help>
+                  <help>Static Routing</help>
                   <priority>481</priority>
                 </properties>
                 <children>
