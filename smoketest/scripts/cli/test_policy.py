@@ -719,7 +719,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         goto = '25'
 
         ipv4_nexthop_address= '192.0.2.2'
-        ipv4_nexthop_plen= '18'
+        ipv4_prefix_len= '18'
+        ipv6_prefix_len= '122'
         ipv4_nexthop_type= 'blackhole'
         
 
@@ -791,6 +792,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         'action' : 'permit',
                         'match' : {
                             'ipv6-nexthop' : ipv6_nexthop,
+                            'ipv6-address-pfx-len' : ipv6_prefix_len,
                             'large-community' : large_community_list,
                             'local-pref' : local_pref,
                             'metric': metric,
@@ -802,12 +804,13 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         'action' : 'permit',
                         'match' : {
                             'ip-nexthop-addr' : ipv4_nexthop_address,
+                            'ip-address-pfx-len' : ipv4_prefix_len,
                         },
                     },
                     '42' : {
                         'action' : 'deny',
                         'match' : {
-                            'ip-nexthop-plen' : ipv4_nexthop_plen,
+                            'ip-nexthop-plen' : ipv4_prefix_len,
                         },
                     },
                     '44' : {
@@ -940,6 +943,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'address', 'access-list', rule_config['match']['ip-address-acl']])
                     if 'ip-address-pfx' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'address', 'prefix-list', rule_config['match']['ip-address-pfx']])
+                    if 'ip-address-pfx-len' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ip', 'address', 'prefix-len', rule_config['match']['ip-address-pfx-len']])
                     if 'ip-nexthop-acl' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ip', 'nexthop', 'access-list', rule_config['match']['ip-nexthop-acl']])
                     if 'ip-nexthop-pfx' in rule_config['match']:
@@ -958,6 +963,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'access-list', rule_config['match']['ipv6-address-acl']])
                     if 'ipv6-address-pfx' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'prefix-list', rule_config['match']['ipv6-address-pfx']])
+                    if 'ipv6-address-pfx-len' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'prefix-len', rule_config['match']['ipv6-address-pfx-len']])
                     if 'ipv6-nexthop' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', rule_config['match']['ipv6-nexthop']])
                     if 'large-community' in rule_config['match']:
@@ -1086,6 +1093,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'ip-address-pfx' in rule_config['match']:
                         tmp = f'match ip address prefix-list {rule_config["match"]["ip-address-pfx"]}'
                         self.assertIn(tmp, config)
+                    if 'ip-address-pfx-len' in rule_config['match']:
+                        tmp = f'match ip address prefix-len {rule_config["match"]["ip-address-pfx-len"]}'
+                        self.assertIn(tmp, config)
                     if 'ip-nexthop-acl' in rule_config['match']:
                         tmp = f'match ip next-hop {rule_config["match"]["ip-nexthop-acl"]}'
                         self.assertIn(tmp, config)
@@ -1112,6 +1122,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'ipv6-address-pfx' in rule_config['match']:
                         tmp = f'match ipv6 address prefix-list {rule_config["match"]["ipv6-address-pfx"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-address-pfx-len' in rule_config['match']:
+                        tmp = f'match ipv6 address prefix-len {rule_config["match"]["ipv6-address-pfx-len"]}'
                         self.assertIn(tmp, config)
                     if 'ipv6-nexthop' in rule_config['match']:
                         tmp = f'match ipv6 next-hop address {rule_config["match"]["ipv6-nexthop"]}'

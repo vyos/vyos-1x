@@ -637,6 +637,18 @@
                               </completionHelp>
                             </properties>
                           </leafNode>
+                          <leafNode name="prefix-len">
+                            <properties>
+                              <help>IP prefix-length to match</help>
+                              <valueHelp>
+                                <format>u32:0-32</format>
+                                <description>Prefix length</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-32"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>
                         </children>
                       </node>
                 <!--  T3304 but it overwrite node nexthop
@@ -692,7 +704,7 @@
                           </leafNode>
                           <leafNode name="prefix-len">
                             <properties>
-                              <help>IP prefix-lenght to match</help>
+                              <help>IP prefix-length to match</help>
                               <valueHelp>
                                 <format>u32:0-32</format>
                                 <description>Prefix length</description>
@@ -729,7 +741,7 @@
                       </node>
                       <node name="route-source">
                         <properties>
-                          <help>test</help>
+                          <help>Match advertising source address of route</help>
                         </properties>
                         <children>
                           <leafNode name="access-list">
@@ -793,6 +805,18 @@
                               <completionHelp>
                                 <path>policy prefix-list6</path>
                               </completionHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-len">
+                            <properties>
+                              <help>IPv6 prefix-length to match</help>
+                              <valueHelp>
+                                <format>u32:0-128</format>
+                                <description>Prefix length</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="numeric" argument="--range 0-128"/>
+                              </constraint>
                             </properties>
                           </leafNode>
                         </children>
