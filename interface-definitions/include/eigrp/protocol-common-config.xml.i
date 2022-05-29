@@ -1,4 +1,16 @@
 <!-- include start from eigrp/protocol-common-config.xml.i -->
+<leafNode name="local-as">
+  <properties>
+    <help>Autonomous System Number (ASN)</help>
+    <valueHelp>
+      <format>u32:1-65535</format>
+      <description>Autonomous System Number</description>
+    </valueHelp>
+    <constraint>
+      <validator name="numeric" argument="--range 1-65535"/>
+    </constraint>
+  </properties>
+</leafNode>
 <leafNode name="maximum-paths">
   <properties>
     <help>Forward packets over multiple paths</help>
