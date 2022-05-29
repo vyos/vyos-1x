@@ -71,28 +71,24 @@ topology {{ server.topology }}
 {%             endif %}
 {%             for subnet in server.subnet %}
 {%                 if subnet | is_ipv4 %}
-server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} nopool
+server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }}
 {# First ip address is used as gateway. It's allows to use metrics #}
 {%                     if server.push_route is vyos_defined %}
 {%                         for route, route_config in server.push_route.items() %}
 {%                             if route | is_ipv4 %}
 push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }} {{ subnet | first_host_address ~ ' ' ~ route_config.metric if route_config.metric is vyos_defined }}"
-{%                             elif route | is_ipv6 %}
+{%                             endif %}
+{%                         endfor %}
+{%                     endif %}
+{%                 elif subnet | is_ipv6 %}
+server-ipv6 {{ subnet }}
+{%                     if server.push_route is vyos_defined %}
+{%                         for route, route_config in server.push_route.items() %}
+{%                             if route | is_ipv6 %}
 push "route-ipv6 {{ route }}"
 {%                             endif %}
 {%                         endfor %}
 {%                     endif %}
-{# OpenVPN assigns the first IP address to its local interface so the pool used #}
-{# in net30 topology - where each client receives a /30 must start from the second subnet #}
-{%                     if server.topology is vyos_defined('net30') %}
-ifconfig-pool {{ subnet | inc_ip('4') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
-{%                     else %}
-{# OpenVPN assigns the first IP address to its local interface so the pool must #}
-{# start from the second address and end on the last address #}
-ifconfig-pool {{ subnet | first_host_address | inc_ip('1') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tun' else '' }}
-{%                     endif %}
-{%                 elif subnet | is_ipv6 %}
-server-ipv6 {{ subnet }}
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
