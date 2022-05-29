@@ -90,6 +90,7 @@
     </constraint>
   </properties>
 </leafNode>
+#include <include/route-map.xml.i>
 #include <include/router-id.xml.i>
 <!-- FRR timers not implemented yet -->
 <leafNode name="variance">

@@ -1,0 +1,21 @@
+!
+router eigrp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
+{% if maximum_paths is vyos_defined %}
+maximum-paths {{ maximum_paths }}
+{% endif %}
+{% if metric.weights is vyos_defined %}
+metric weights {{ metric.weights }}
+{% endif %}
+{% if network is vyos_defined %}
+{%     for net in network %}
+network {{ net }}
+{%     endfor %}
+{% endif %}
+{% if redistribute is vyos_defined %}
+{%     for protocol in redistribute %}
+redistribute {{ protocol }}
+{%     endfor %}
+{% endif %}
+{% if variance is vyos_defined %}
+variance {{ variance }}
+{% endif %}

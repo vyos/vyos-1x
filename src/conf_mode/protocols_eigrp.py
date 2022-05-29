@@ -14,6 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from sys import exit
+from sys import argv
+
+from vyos.config import Config
+from vyos.configdict import dict_merge
+from vyos.template import render_to_string
+from vyos import ConfigError
+from vyos import frr
+from vyos import airbag
+airbag.enable()
+
+
 def get_config(config=None):
     if config:
         conf = config
@@ -65,10 +77,40 @@ def verify(eigrp):
     pass
 
 def generate(eigrp):
-    pass
+    if not eigrp or 'deleted' in eigrp:
+        return None
+
+    eigrp['protocol'] = 'eigrp' # required for frr/vrf.route-map.frr.j2
+    eigrp['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', eigrp)
+    eigrp['frr_eigrpd_config']  = render_to_string('frr/eigrpd.frr.j2', eigrp)
 
 def apply(eigrp):
-    pass
+    eigrp_daemon = 'eigrpd'
+    zebra_daemon = 'zebra'
+
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'(\s+)?ip protocol eigrp route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    if 'frr_zebra_config' in eigrp:
+        frr_cfg.add_before(frr.default_add_before, eigrp['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
+
+    # Generate empty helper string which can be ammended to FRR commands, it
+    # will be either empty (default VRF) or contain the "vrf <name" statement
+    vrf = ''
+    if 'vrf' in eigrp:
+        vrf = ' vrf ' + eigrp['vrf']
+
+    frr_cfg.load_configuration(eigrp_daemon)
+    frr_cfg.modify_section(f'^router eigrp \d+{vrf}', stop_pattern='^exit', remove_stop_mark=True)
+    if 'frr_eigrpd_config' in eigrp:
+        frr_cfg.add_before(frr.default_add_before, eigrp['frr_eigrpd_config'])
+    frr_cfg.commit_configuration(eigrp_daemon)
+
+    return None
 
 if __name__ == '__main__':
     try:
