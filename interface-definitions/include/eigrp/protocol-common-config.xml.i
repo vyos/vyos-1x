@@ -100,6 +100,7 @@
     <constraint>
       <regex>(bgp|connected|nhrp|ospf|rip|static|vnc)</regex>
     </constraint>
+    <multi/>
   </properties>
 </leafNode>
 #include <include/route-map.xml.i>
