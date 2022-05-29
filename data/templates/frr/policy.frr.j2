@@ -188,8 +188,17 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.ip.nexthop.access_list is vyos_defined %}
  match ip next-hop {{ rule_config.match.ip.nexthop.access_list }}
 {%                     endif %}
+{%                     if rule_config.match.ip.nexthop.address is vyos_defined %}
+ match ip next-hop address {{ rule_config.match.ip.nexthop.address }}
+{%                     endif %}
+{%                     if rule_config.match.ip.nexthop.prefix_len is vyos_defined %}
+ match ip next-hop prefix-len {{ rule_config.match.ip.nexthop.prefix_len }}
+{%                     endif %}
 {%                     if rule_config.match.ip.nexthop.prefix_list is vyos_defined %}
  match ip next-hop prefix-list {{ rule_config.match.ip.nexthop.prefix_list }}
+{%                     endif %}
+{%                     if rule_config.match.ip.nexthop.type is vyos_defined %}
+ match ip next-hop type {{ rule_config.match.ip.nexthop.type }}
 {%                     endif %}
 {%                     if rule_config.match.ip.route_source.access_list is vyos_defined %}
  match ip route-source {{ rule_config.match.ip.route_source.access_list }}
