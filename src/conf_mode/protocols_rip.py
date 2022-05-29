@@ -56,23 +56,8 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
-
-    # T2665: we can not blend in default values of tagNodes - delete and add
-    # individual values later on ...
-    if 'interface' in default_values:
-        del default_values['interface']
     # merge in remaining default values
     rip = dict_merge(default_values, rip)
-
-    # T2665: add individual per interface defaults
-
-    # T2665: blend in per interface defaults
-    if 'interface' in rip:
-        default_values = defaults(base + ['interface'])
-        for interface in rip['interface']:
-            # merge in default values
-            rip['interface'][interface] = dict_merge(default_values,
-                                                     rip['interface'][interface])
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().

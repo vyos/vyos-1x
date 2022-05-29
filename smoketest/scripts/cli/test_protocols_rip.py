@@ -159,24 +159,24 @@ class TestProtocolsRIP(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(zebra_route_map, frrconfig)
 
     def test_rip_03_version(self):
-        version = '1'
+        rx_version = '1'
+        tx_version = '2'
         interface = 'eth0'
 
-        self.cli_set(base_path + ['version', version])
-        self.cli_set(base_path + ['interface', interface, 'send', 'version', version])
-        self.cli_set(base_path + ['interface', interface, 'receive', 'version', version])
+        self.cli_set(base_path + ['version', tx_version])
+        self.cli_set(base_path + ['interface', interface, 'send', 'version', tx_version])
+        self.cli_set(base_path + ['interface', interface, 'receive', 'version', rx_version])
 
         # commit changes
         self.cli_commit()
 
         # Verify FRR configuration
         frrconfig = self.getFRRconfig('router rip')
-        self.assertIn(f'version {version}', frrconfig)
+        self.assertIn(f'version {tx_version}', frrconfig)
 
         frrconfig = self.getFRRconfig(f'interface {interface}')
-        self.assertIn(f' ip rip receive version {version}', frrconfig)
-        self.assertIn(f' ip rip send version {version}', frrconfig)
-
+        self.assertIn(f' ip rip receive version {rx_version}', frrconfig)
+        self.assertIn(f' ip rip send version {tx_version}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
