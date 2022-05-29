@@ -58,6 +58,15 @@
                   #include <include/bgp/protocol-common-config.xml.i>
                 </children>
               </node>
+              <node name="eigrp" owner="${vyos_conf_scripts_dir}/protocols_eigrp.py $VAR(../../@)">
+                <properties>
+                  <help>Enhanced Interior Gateway Routing Protocol (EIGRP)</help>
+                  <priority>821</priority>
+                </properties>
+                <children>
+                  #include <include/eigrp/protocol-common-config.xml.i>
+                </children>
+              </node>
               <node name="isis" owner="${vyos_conf_scripts_dir}/protocols_isis.py $VAR(../../@)">
                 <properties>
                   <help>Intermediate System to Intermediate System (IS-IS)</help>
