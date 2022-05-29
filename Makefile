@@ -37,6 +37,11 @@ interface_definitions: $(config_xml_obj)
 	rm -rf $(TMPL_DIR)/qos
 	rm -rf $(TMPL_DIR)/interfaces/input
 
+	# T2472 - EIGRP support
+	rm -rf $(TMPL_DIR)/protocols/eigrp
+	# T2773 - EIGRP support for VRF
+	rm -rf $(TMPL_DIR)/vrf/name/node.tag/protocols
+
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- Enhanced Interior Gateway Routing Protocol (EIGRP) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="eigrp" owner="${vyos_conf_scripts_dir}/protocols_eigrp.py">
+        <properties>
+          <help>Enhanced Interior Gateway Routing Protocol (EIGRP)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          #include <include/eigrp/protocol-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
