@@ -653,10 +653,7 @@ def generate_openvpn_key(name, install=False, file=False):
         if version_search:
             key_version = version_search[1]
 
-        base = f"set pki openvpn shared-secret {name}"
-        print("Configure mode commands to install OpenVPN key:")
-        print(f"{base} key '{key_data}'")
-        print(f"{base} version '{key_version}'")
+        install_openvpn_key(name, key_data, key_version)
 
     if file:
         write_file(f'{name}.key', result)
