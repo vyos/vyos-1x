@@ -40,7 +40,7 @@ interface_definitions: $(config_xml_obj)
 	# T2472 - EIGRP support
 	rm -rf $(TMPL_DIR)/protocols/eigrp
 	# T2773 - EIGRP support for VRF
-	rm -rf $(TMPL_DIR)/vrf/name/node.tag/protocols
+	rm -rf $(TMPL_DIR)/vrf/name/node.tag/protocols/eigrp
 
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
