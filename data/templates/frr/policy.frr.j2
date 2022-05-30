@@ -185,6 +185,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.ip.address.prefix_list is vyos_defined %}
  match ip address prefix-list {{ rule_config.match.ip.address.prefix_list }}
 {%                     endif %}
+{%                     if rule_config.match.ip.address.prefix_len is vyos_defined %}
+ match ip address prefix-len {{ rule_config.match.ip.address.prefix_len }}
+{%                     endif %}
 {%                     if rule_config.match.ip.nexthop.access_list is vyos_defined %}
  match ip next-hop {{ rule_config.match.ip.nexthop.access_list }}
 {%                     endif %}
@@ -211,6 +214,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     endif %}
 {%                     if rule_config.match.ipv6.address.prefix_list is vyos_defined %}
  match ipv6 address prefix-list {{ rule_config.match.ipv6.address.prefix_list }}
+{%                     endif %}
+{%                     if rule_config.match.ipv6.address.prefix_len is vyos_defined %}
+ match ipv6 address prefix-len {{ rule_config.match.ipv6.address.prefix_len }}
 {%                     endif %}
 {%                     if rule_config.match.ipv6.nexthop is vyos_defined %}
  match ipv6 next-hop address {{ rule_config.match.ipv6.nexthop }}
