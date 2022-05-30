@@ -349,6 +349,141 @@
       </node>
     </children>
   </node>
+  <node name="import">
+    <properties>
+      <help>Import an object</help>
+    </properties>
+    <children>
+      <node name="pki">
+        <properties>
+          <help>Import file into PKI configuration</help>
+        </properties>
+        <children>
+          <tagNode name="ca">
+            <properties>
+              <help>Import CA certificate into PKI</help>
+              <completionHelp>
+                <list>&lt;name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Path to CA certificate file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --ca "$4" --filename "$6"</command>
+              </tagNode>
+              <tagNode name="key-file">
+                <properties>
+                  <help>Path to private key file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --ca "$4" --key-filename "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="certificate">
+            <properties>
+              <help>Import certificate into PKI</help>
+              <completionHelp>
+                <list>&lt;name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Path to certificate file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --certificate "$4" --filename "$6"</command>
+              </tagNode>
+              <tagNode name="key-file">
+                <properties>
+                  <help>Path to private key file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --certificate "$4" --key-filename "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="crl">
+            <properties>
+              <help>Import certificate revocation list into PKI</help>
+              <completionHelp>
+                <list>&lt;CA name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Path to CRL file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --crl "$4" --filename "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="dh">
+            <properties>
+              <help>Import DH parameters into PKI</help>
+              <completionHelp>
+                <list>&lt;name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="file">
+                <properties>
+                  <help>Path to DH parameters file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --dh "$4" --filename "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="key-pair">
+            <properties>
+              <help>Import key pair into PKI</help>
+              <completionHelp>
+                <list>&lt;name&gt;</list>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="public-file">
+                <properties>
+                  <help>Path to public key file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --keypair "$4" --filename "$6"</command>
+              </tagNode>
+              <tagNode name="private-file">
+                <properties>
+                  <help>Path to private key file</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --keypair "$4" --key-filename "$6"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+          <node name="openvpn">
+            <properties>
+              <help>Import OpenVPN keys into PKI</help>
+            </properties>
+            <children>
+              <tagNode name="shared-secret">
+                <properties>
+                  <help>Import OpenVPN shared secret key into PKI</help>
+                  <completionHelp>
+                    <list>&lt;name&gt;</list>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="file">
+                    <properties>
+                      <help>Path to shared secret key file</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/pki.py --action import --openvpn "$5" --filename "$7"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="show">
     <children>
       <node name="pki">
