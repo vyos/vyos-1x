@@ -821,6 +821,7 @@
                           </leafNode>
                         </children>
                       </node>
+                <!--  T3976 but it overwrite node nexthop
                       <leafNode name="nexthop">
                         <properties>
                           <help>IPv6 next-hop of route to match</help>
@@ -833,6 +834,47 @@
                           </constraint>
                         </properties>
                       </leafNode>
+                    </children>
+                  </node> -->
+                      <node name="nexthop">
+                        <properties>
+                          <help>IPv6 next-hop of route to match</help>
+                        </properties>
+                        <children>
+                          <leafNode name="address">
+                            <properties>
+                              <help>IPv6 address of next-hop</help>
+                              <valueHelp>
+                                <format>ipv6</format>
+                                <description>Nexthop IPv6 address</description>
+                              </valueHelp>
+                              <constraint>
+                                <validator name="ipv6-address"/>
+                              </constraint>
+                            </properties>
+                          </leafNode>                           
+                          <leafNode name="access-list">
+                            <properties>
+                              <help>IPv6 access-list to match</help>
+                              <valueHelp>
+                                <format>txt</format>
+                                <description>IPV6 access list name</description>
+                              </valueHelp>
+                              <completionHelp>
+                                <path>policy access-list6</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                          <leafNode name="prefix-list">
+                            <properties>
+                              <help>IPv6 prefix-list to match</help>
+                              <completionHelp>
+                                <path>policy prefix-list6</path>
+                              </completionHelp>
+                            </properties>
+                          </leafNode>
+                        </children>
+                      </node>
                     </children>
                   </node>
                   <node name="large-community">

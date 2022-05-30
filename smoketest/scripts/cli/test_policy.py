@@ -711,7 +711,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         large_community_list = 'bgp-large-community-123456'
         prefix_list = 'foo-pfx-list'
-        ipv6_nexthop = 'fe80::1'
+        ipv6_nexthop_address = 'fe80::1'
         local_pref = '300'
         metric = '50'
         peer = '2.3.4.5'
@@ -791,7 +791,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     '30' : {
                         'action' : 'permit',
                         'match' : {
-                            'ipv6-nexthop' : ipv6_nexthop,
+                            'ipv6-nexthop-address' : ipv6_nexthop_address,
+                            'ipv6-nexthop-access-list' : access_list,
+                            'ipv6-nexthop-prefix-list' : prefix_list,
                             'ipv6-address-pfx-len' : ipv6_prefix_len,
                             'large-community' : large_community_list,
                             'local-pref' : local_pref,
@@ -965,8 +967,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'prefix-list', rule_config['match']['ipv6-address-pfx']])
                     if 'ipv6-address-pfx-len' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'address', 'prefix-len', rule_config['match']['ipv6-address-pfx-len']])
-                    if 'ipv6-nexthop' in rule_config['match']:
-                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', rule_config['match']['ipv6-nexthop']])
+                    if 'ipv6-nexthop-address' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'address', rule_config['match']['ipv6-nexthop-address']])
+                    if 'ipv6-nexthop-access-list' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'access-list' rule_config['match']['ipv6-nexthop-access-list']])
+                    if 'ipv6-nexthop-prefix-list' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'prefix-list', rule_config['match']['ipv6-nexthop-prefix-list']])
                     if 'large-community' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'large-community', 'large-community-list', rule_config['match']['large-community']])
                     if 'local-pref' in rule_config['match']:
@@ -1126,8 +1132,14 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'ipv6-address-pfx-len' in rule_config['match']:
                         tmp = f'match ipv6 address prefix-len {rule_config["match"]["ipv6-address-pfx-len"]}'
                         self.assertIn(tmp, config)
-                    if 'ipv6-nexthop' in rule_config['match']:
-                        tmp = f'match ipv6 next-hop address {rule_config["match"]["ipv6-nexthop"]}'
+                    if 'ipv6-nexthop-address' in rule_config['match']:
+                        tmp = f'match ipv6 next-hop address {rule_config["match"]["ipv6-nexthop-address"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-nexthop-access-list' in rule_config['match']:
+                        tmp = f'match ipv6 next-hop {rule_config["match"]["ipv6-nexthop-access-list"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-nexthop-prefix-list' in rule_config['match']:
+                        tmp = f'match ipv6 next-hop prefix-list {rule_config["match"]["ipv6-nexthop-prefix-list"]}'
                         self.assertIn(tmp, config)
                     if 'large-community' in rule_config['match']:
                         tmp = f'match large-community {rule_config["match"]["large-community"]}'

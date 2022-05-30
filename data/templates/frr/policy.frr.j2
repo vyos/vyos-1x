@@ -218,8 +218,14 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.ipv6.address.prefix_len is vyos_defined %}
  match ipv6 address prefix-len {{ rule_config.match.ipv6.address.prefix_len }}
 {%                     endif %}
-{%                     if rule_config.match.ipv6.nexthop is vyos_defined %}
- match ipv6 next-hop address {{ rule_config.match.ipv6.nexthop }}
+{%                     if rule_config.match.ipv6.nexthop.address is vyos_defined %}
+ match ipv6 next-hop address {{ rule_config.match.ipv6.nexthop.address }}
+{%                     endif %}
+{%                     if rule_config.match.ipv6.nexthop.access_list is vyos_defined %}
+ match ipv6 next-hop {{ rule_config.match.ipv6.nexthop.access_list }}
+{%                     endif %}
+{%                     if rule_config.match.ipv6.nexthop.prefix_list is vyos_defined %}
+ match ipv6 next-hop prefix-list {{ rule_config.match.ipv6.nexthop.prefix_list }}
 {%                     endif %}
 {%                     if rule_config.match.large_community.large_community_list is vyos_defined %}
  match large-community {{ rule_config.match.large_community.large_community_list }}
