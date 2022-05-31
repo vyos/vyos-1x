@@ -757,21 +757,26 @@ def dict_search_args(dict_object, *path):
         dict_object = dict_object[item]
     return dict_object
 
-def dict_search_recursive(dict_object, key):
+def dict_search_recursive(dict_object, key, path=[]):
     """ Traverse a dictionary recurisvely and return the value of the key
     we are looking for.
 
     Thankfully copied from https://stackoverflow.com/a/19871956
+
+    Modified to yield optional path to found keys
     """
     if isinstance(dict_object, list):
         for i in dict_object:
-            for x in dict_search_recursive(i, key):
-               yield x
+            new_path = path + [i]
+            for x in dict_search_recursive(i, key, new_path):
+                yield x
     elif isinstance(dict_object, dict):
         if key in dict_object:
-            yield dict_object[key]
-        for j in dict_object.values():
-            for x in dict_search_recursive(j, key):
+            new_path = path + [key]
+            yield dict_object[key], new_path
+        for k, j in dict_object.items():
+            new_path = path + [k]
+            for x in dict_search_recursive(j, key, new_path):
                 yield x
 
 def get_bridge_fdb(interface):

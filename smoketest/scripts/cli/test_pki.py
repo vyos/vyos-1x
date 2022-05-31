@@ -128,6 +128,27 @@ g6a75NnEXo0J6YLAOOxd8fD2/HidhbceCmTF+3msidIzCsBidBkgn6V5TXx2IyMS
 xGsJxVHfSKeooUQn6q76sg==
 """
 
+valid_update_cert = """
+MIICJTCCAcugAwIBAgIUZJqjNmPfVQwePjNFBtB6WI31ThMwCgYIKoZIzj0EAwIw
+VzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzEQMA4GA1UEAwwHdnlvcy5pbzAeFw0yMjA1
+MzExNTE3NDlaFw0yMzA1MzExNTE3NDlaMFcxCzAJBgNVBAYTAkdCMRMwEQYDVQQI
+DApTb21lLVN0YXRlMRIwEAYDVQQHDAlTb21lLUNpdHkxDTALBgNVBAoMBFZ5T1Mx
+EDAOBgNVBAMMB3Z5b3MuaW8wWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQMe0h/
+3CdD8mEgy+klk55QfJ8R3ZycefxCn4abWjzTXz/TuCIxqb4wpRT8DZtIn4NRimFT
+mODYdEDOYxFtZm37o3UwczAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAT
+BgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQUqH7KSZpzArpMFuxLXqI8e1QD
+fBkwHwYDVR0jBBgwFoAUqH7KSZpzArpMFuxLXqI8e1QDfBkwCgYIKoZIzj0EAwID
+SAAwRQIhAKofUgRtcUljmbubPF6sqHtn/3TRvuafl8VfPbk3s2bJAiBp3Q1AnU/O
+i7t5FGhCgnv5m8DW2F3LZPCJdW4ELQ3d9A==
+"""
+
+valid_update_private_key = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgvyODf22w/p7Zgfz9
+dyLIT09LqLOrUN6zbAecfukiiiyhRANCAAQMe0h/3CdD8mEgy+klk55QfJ8R3Zyc
+efxCn4abWjzTXz/TuCIxqb4wpRT8DZtIn4NRimFTmODYdEDOYxFtZm37
+"""
+
 class TestPKI(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -188,6 +209,42 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
 
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+    def test_certificate_in_use(self):
+        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        self.cli_commit()
+
+        self.cli_set(['service', 'https', 'certificates', 'certificate', 'smoketest'])
+        self.cli_commit()
+
+        self.cli_delete(base_path + ['certificate', 'smoketest'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['service', 'https', 'certificates', 'certificate'])
+
+    def test_certificate_https_update(self):
+        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        self.cli_commit()
+
+        self.cli_set(['service', 'https', 'certificates', 'certificate', 'smoketest'])
+        self.cli_commit()
+
+        cert_data = None
+
+        with open('/etc/ssl/certs/smoketest.pem') as f:
+            cert_data = f.read()
+
+        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_update_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_update_private_key.replace('\n','')])
+        self.cli_commit()
+
+        with open('/etc/ssl/certs/smoketest.pem') as f:
+            self.assertNotEqual(cert_data, f.read())
+
+        self.cli_delete(['service', 'https', 'certificates', 'certificate'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
