@@ -970,7 +970,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     if 'ipv6-nexthop-address' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'address', rule_config['match']['ipv6-nexthop-address']])
                     if 'ipv6-nexthop-access-list' in rule_config['match']:
-                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'access-list' rule_config['match']['ipv6-nexthop-access-list']])
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'access-list', rule_config['match']['ipv6-nexthop-access-list']])
                     if 'ipv6-nexthop-prefix-list' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'prefix-list', rule_config['match']['ipv6-nexthop-prefix-list']])
                     if 'large-community' in rule_config['match']:
