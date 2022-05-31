@@ -269,6 +269,14 @@ policy {
                 }
             }
         }
+        rule 31 {
+            action deny
+            match {
+                ipv6 {
+                    nexthop 2001:db8::1
+                }
+            }
+        }
         rule 40 {
             action permit
             set {
