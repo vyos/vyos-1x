@@ -247,7 +247,7 @@ def load_private_key(raw_data, passphrase=None, wrap_tags=True):
     if wrap_tags:
         raw_data = wrap_private_key(raw_data, passphrase)
 
-    if passphrase:
+    if passphrase is not None:
         passphrase = bytes(passphrase, 'utf-8')
 
     try:
