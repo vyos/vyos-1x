@@ -13,44 +13,43 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-​
+
 # T3976: change cli
 #     from: set policy route-map FOO rule 10 match ipv6 nexthop 'h:h:h:h:h:h:h:h'
 #       to: set policy route-map FOO rule 10 match ipv6 nexthop address 'h:h:h:h:h:h:h:h'
-​
+
 from sys import argv
 from sys import exit
-​
+
 from vyos.configtree import ConfigTree
-​
+
 if (len(argv) < 1):
     print("Must specify file name!")
     exit(1)
-​
+
 file_name = argv[1]
-​
+
 with open(file_name, 'r') as f:
     config_file = f.read()
-​
+
 base = ['policy', 'route-map']
 config = ConfigTree(config_file)
-​
+
 if not config.exists(base):
     # Nothing to do
     exit(0)
-​
-​
+
 for route_map in config.list_nodes(base):
     if not config.exists(base + [route_map, 'rule']):
         continue
     for rule in config.list_nodes(base + [route_map, 'rule']):
         base_rule = base + [route_map, 'rule', rule]
-​
+
         if config.exists(base_rule + ['match', 'ipv6', 'nexthop']):
             tmp = config.return_value(base_rule + ['match', 'ipv6', 'nexthop'])
             config.delete(base_rule + ['match', 'ipv6', 'nexthop'])
             config.set(base_rule + ['match', 'ipv6', 'nexthop', 'address'], value=tmp)
-​
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
