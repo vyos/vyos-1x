@@ -150,6 +150,16 @@ def verify(policy):
                 tmp = dict_search('match.ipv6.address.prefix_list', rule_config)
                 if tmp and tmp not in policy.get('prefix_list6', []):
                     raise ConfigError(f'prefix-list6 {tmp} does not exist!')
+                    
+                # Specified access_list6 in nexthop must exist
+                tmp = dict_search('match.ipv6.nexthop.access_list', rule_config)
+                if tmp and tmp not in policy.get('access_list6', []):
+                    raise ConfigError(f'access_list6 {tmp} does not exist!')
+
+                # Specified prefix-list6 in nexthop must exist
+                tmp = dict_search('match.ipv6.nexthop.prefix_list', rule_config)
+                if tmp and tmp not in policy.get('prefix_list6', []):
+                    raise ConfigError(f'prefix-list6 {tmp} does not exist!')
 
     # When routing protocols are active some use prefix-lists, route-maps etc.
     # to apply the systems routing policy to the learned or redistributed routes.
