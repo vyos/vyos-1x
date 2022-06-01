@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="update">
+    <children>
+      <leafNode name="geoip">
+        <properties>
+          <help>Update GeoIP database and firewall sets</help>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/geoip-update.py --force</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

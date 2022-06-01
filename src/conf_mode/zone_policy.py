@@ -155,7 +155,7 @@ def get_local_from(zone_policy, local_zone_name):
 def cleanup_commands():
     commands = []
     for table in ['ip filter', 'ip6 filter']:
-        json_str = cmd(f'nft -j list table {table}')
+        json_str = cmd(f'nft -t -j list table {table}')
         obj = loads(json_str)
         if 'nftables' not in obj:
             continue
