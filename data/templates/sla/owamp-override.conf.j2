@@ -1,0 +1,16 @@
+[Unit]
+Description==OWAMP server
+After=vyos-router.service
+# Only start if there is a configuration file
+ConditionFileNotEmpty=/etc/owamp-server/owamp-server.conf
+
+[Service]
+KillMode=process
+Type=simple
+ExecStart=/usr/sbin/owampd -c /etc/owamp-server -R /var/run
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/run/owamp-server.pid
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="sla" owner="${vyos_conf_scripts_dir}/service_sla.py">
+        <properties>
+          <help>Service level agreement (SLA)</help>
+        </properties>
+        <children>
+          <node name="owamp-server">
+            <properties>
+              <help>One-way active measurement protocol (OWAMP) server</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>861</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="twamp-server">
+            <properties>
+              <help>Two-way active measurement protocol (TWAMP) server</help>
+            </properties>
+            <children>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>862</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

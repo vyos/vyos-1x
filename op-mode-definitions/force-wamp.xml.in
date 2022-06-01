@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <tagNode name="owping">
+        <properties>
+          <help>IP address of the remote OWAMP server</help>
+          <completionHelp>
+            <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>owping $3</command>
+      </tagNode>
+      <tagNode name="twping">
+        <properties>
+          <help>IP address of the remote TWAMP server</help>
+          <completionHelp>
+            <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>twping $3</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
