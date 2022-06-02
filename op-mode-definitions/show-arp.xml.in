@@ -6,7 +6,7 @@
         <properties>
           <help>Show Address Resolution Protocol (ARP) information</help>
         </properties>
-        <command>/usr/sbin/arp -e -n</command>
+        <command>${vyos_op_scripts_dir}/show_neigh.py --family inet</command>
         <children>
           <tagNode name="interface">
             <properties>
@@ -15,7 +15,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py -b</script>
               </completionHelp>
             </properties>
-            <command>/usr/sbin/arp -e -n -i "$4"</command>
+            <command>${vyos_op_scripts_dir}/show_neigh.py --family inet --interface "$4"</command>
           </tagNode>
         </children>
       </node>

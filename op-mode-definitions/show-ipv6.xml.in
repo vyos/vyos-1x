@@ -4,7 +4,7 @@
     <children>
       <node name="ipv6">
         <properties>
-          <help>Show IPv6 routing information</help>
+          <help>Show IPv6 networking information</help>
         </properties>
         <children>
           <node name="access-list">
