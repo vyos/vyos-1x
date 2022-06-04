@@ -227,6 +227,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.match.ipv6.nexthop.prefix_list is vyos_defined %}
  match ipv6 next-hop prefix-list {{ rule_config.match.ipv6.nexthop.prefix_list }}
 {%                     endif %}
+{%                     if rule_config.match.ipv6.nexthop.type is vyos_defined %}
+ match ipv6 next-hop type {{ rule_config.match.ipv6.nexthop.type }}
+{%                     endif %}
 {%                     if rule_config.match.large_community.large_community_list is vyos_defined %}
  match large-community {{ rule_config.match.large_community.large_community_list }}
 {%                     endif %}
