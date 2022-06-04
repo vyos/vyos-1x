@@ -873,6 +873,21 @@
                               </completionHelp>
                             </properties>
                           </leafNode>
+                          <leafNode name="type">
+                            <properties>
+                              <help>Match type</help>
+                              <completionHelp>
+                                <list>blackhole</list>
+                              </completionHelp>
+                              <valueHelp>
+                                <format>blackhole</format>
+                                <description>Blackhole</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>(blackhole)</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
                         </children>
                       </node>
                     </children>

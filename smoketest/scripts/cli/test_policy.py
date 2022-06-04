@@ -722,6 +722,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         ipv4_prefix_len= '18'
         ipv6_prefix_len= '122'
         ipv4_nexthop_type= 'blackhole'
+        ipv6_nexthop_type= 'blackhole'
         
 
         test_data = {
@@ -794,6 +795,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'ipv6-nexthop-address' : ipv6_nexthop_address,
                             'ipv6-nexthop-access-list' : access_list,
                             'ipv6-nexthop-prefix-list' : prefix_list,
+                            'ipv6-nexthop-type' : ipv6_nexthop_type,
                             'ipv6-address-pfx-len' : ipv6_prefix_len,
                             'large-community' : large_community_list,
                             'local-pref' : local_pref,
@@ -973,6 +975,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'access-list', rule_config['match']['ipv6-nexthop-access-list']])
                     if 'ipv6-nexthop-prefix-list' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'prefix-list', rule_config['match']['ipv6-nexthop-prefix-list']])
+                    if 'ipv6-nexthop-type' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'ipv6', 'nexthop', 'type', rule_config['match']['ipv6-nexthop-type']])
                     if 'large-community' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'large-community', 'large-community-list', rule_config['match']['large-community']])
                     if 'local-pref' in rule_config['match']:
@@ -1140,6 +1144,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'ipv6-nexthop-prefix-list' in rule_config['match']:
                         tmp = f'match ipv6 next-hop prefix-list {rule_config["match"]["ipv6-nexthop-prefix-list"]}'
+                        self.assertIn(tmp, config)
+                    if 'ipv6-nexthop-type' in rule_config['match']:
+                        tmp = f'match ipv6 next-hop type {rule_config["match"]["ipv6-nexthop-type"]}'
                         self.assertIn(tmp, config)
                     if 'large-community' in rule_config['match']:
                         tmp = f'match large-community {rule_config["match"]["large-community"]}'
