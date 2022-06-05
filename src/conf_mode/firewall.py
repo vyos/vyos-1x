@@ -427,7 +427,8 @@ def apply(firewall):
                     domains.append(address)
                 # Add elements to domain-group, try to resolve domain => ip
                 # and add elements to nft set
-                elements = get_ips_domains_dict(domains)
+                ip_dict = get_ips_domains_dict(domains)
+                elements = sum(ip_dict.values(), [])
                 nft_init_set(group)
                 nft_add_set_elements(group, elements)
         else:

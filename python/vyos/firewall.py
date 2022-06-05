@@ -26,21 +26,20 @@ def get_ips_domains_dict(list_domains):
     """
     Get list of IPv4 addresses by list of domains
     Ex: get_ips_domains_dict(['ex1.com', 'ex2.com'])
-        ['192.0.2.1', '192.0.2.2', '192.0.2.3']
+        {'ex1.com': ['192.0.2.1'], 'ex2.com': ['192.0.2.2', '192.0.2.3']}
     """
     from socket import gethostbyname_ex
     from socket import gaierror
 
-    ip_list = []
+    ip_dict = {}
     for domain in list_domains:
         try:
             _, _, ips = gethostbyname_ex(domain)
-            for entry in ips:
-                ip_list.append(entry)
+            ip_dict[domain] = ips
         except gaierror:
             pass
 
-    return ip_list
+    return ip_dict
 
 def nft_init_set(group_name, table="filter", family="ip"):
     """
