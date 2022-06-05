@@ -28,10 +28,11 @@ from vyos.util import call
 
 base = ['firewall', 'group', 'domain-group']
 check_required = True
-count_failed = 0
+# count_failed = 0
 # Timeout in sec between checks
 timeout = 300
 
+domain_state = {}
 
 if __name__ == '__main__':
 
@@ -41,14 +42,19 @@ if __name__ == '__main__':
             domain_groups = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
             for set_name, domain_config in domain_groups.items():
                 list_domains = domain_config['address']
-                elements = get_ips_domains_dict(list_domains)
+                elements = []
+                ip_dict = get_ips_domains_dict(list_domains)
+
+                for domain in list_domains:
+                    # Resolution succeeded, update domain state
+                    if domain in ip_dict:
+                        domain_state[domain] = ip_dict[domain]
+                        elements += ip_dict[domain]
+                    # Resolution failed, use previous domain state
+                    elif domain in domain_state:
+                        elements += domain_state[domain]
+
                 # Resolve successful
-                if bool(elements):
+                if elements:
                     nft_update_set_elements(set_name, elements)
-                    count_failed = 0
-                else:
-                    count_failed += 1
-                    # Domains not resolved 3 times by timeout
-                    if count_failed >= timeout * 3:
-                        nft_flush_set(set_name)
         time.sleep(timeout)
