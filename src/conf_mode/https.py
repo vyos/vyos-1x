@@ -142,6 +142,10 @@ def get_config(config=None):
              'api_set': api_set,
              'certbot': certbot}
 
+    vrf_path = ['service', 'https', 'vrf']
+    if conf.exists(vrf_path):
+        https['vrf'] = conf.return_value(vrf_path)
+
     return https
 
 def verify(https):
