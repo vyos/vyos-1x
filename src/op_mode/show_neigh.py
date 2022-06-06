@@ -35,16 +35,16 @@ def get_raw_data(family, device=None, state=None):
     from vyos.util import cmd
 
     if device:
-        device = "dev {0}".format(device)
+        device = f"dev {device}"
     else:
         device = ""
 
     if state:
-        state = "nud {0}".format(state)
+        state = f"nud {state}"
     else:
         state = ""
 
-    neigh_cmd = "ip --family {0} --json neighbor list {1} {2}".format(family, device, state)
+    neigh_cmd = f"ip --family {family} --json neighbor list {device} {state}"
 
     data = loads(cmd(neigh_cmd))
 
@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     if args.state:
         if args.state not in ["reachable", "failed", "stale", "permanent"]:
-            raise ValueError("Incorrect state {0}! Must be one of: reachable, stale, failed, permanent".format(args.state))
+            raise ValueError(f"""Incorrect state "{args.state}"! Must be one of: reachable, stale, failed, permanent""")
 
     try:
         print(get_formatted_output(args.family, device=args.interface, state=args.state))
