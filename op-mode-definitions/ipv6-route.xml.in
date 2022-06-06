@@ -7,7 +7,7 @@
     <children>
       <node name="ipv6">
         <properties>
-          <help>Show IPv6 routing information</help>
+          <help>Show IPv6 networking information</help>
         </properties>
         <children>
           <leafNode name="groups">
@@ -16,14 +16,32 @@
             </properties>
             <command>netstat -gn6</command>
           </leafNode>
-
-          <leafNode name="neighbors">
+          <node name="neighbors">
             <properties>
-              <help>Show IPv6 Neighbor Discovery (ND) information</help>
+              <help>Show IPv6 neighbor (NDP) table</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show_neigh.py --family inet6</command>
-          </leafNode>
-
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show IPv6 neighbor table for specified interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py -b</script>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_neigh.py --family inet6 --interface "$5"</command>
+              </tagNode>
+              <tagNode name="state">
+                <properties>
+                  <help>Show IPv6 neighbors with specified state</help>
+                  <completionHelp>
+                    <list>reachable stale failed permanent</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show_neigh.py --family inet6 --state "$5"</command>
+              </tagNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
