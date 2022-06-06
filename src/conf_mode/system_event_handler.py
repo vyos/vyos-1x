@@ -15,22 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 
 from vyos.config import Config
-from vyos.configdict import node_changed
-from vyos.util import cmd
 from vyos.util import call
-from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
-
-systemd_dir = '/etc/systemd/system'
-systemd_service = 'vyos-event-handler'
-service_path = f'{systemd_dir}/{systemd_service}.service'
-event_conf = '/run/vyos-event-handler.conf'
+service_name = 'vyos-event-handler'
+service_conf = Path(f'/run/{service_name}.conf')
 
 
 def get_config(config=None):
@@ -40,41 +35,43 @@ def get_config(config=None):
         conf = Config()
 
     base = ['system', 'event-handler']
-    event = conf.get_config_dict(base, get_first_key=True, no_tag_node_value_mangle=True)
+    config = conf.get_config_dict(base,
+                                  get_first_key=True,
+                                  no_tag_node_value_mangle=True)
 
-    return event
+    return config
 
-def verify(event):
+
+def verify(config):
     # bail out early - looks like removal from running config
-    if not event:
+    if not config:
         return None
 
-    for name, event_config in event.items():
+    for name, event_config in config.items():
         if 'pattern' not in event_config or 'script' not in event_config:
-            raise ConfigError(f'Event-handler "pattern and script" are mandatory!')
+            raise ConfigError(
+                'Event-handler: both pattern and script items are mandatory!')
 
-def generate(event):
-    if not event:
+
+def generate(config):
+    if not config:
+        # Remove old config and return
+        service_conf.unlink(missing_ok=True)
         return None
 
-    conf_json = json.dumps(event, indent = 4)
-    with open(event_conf, 'w') as f:
-        f.write(conf_json)
-
-    render(service_path, 'event-handler/systemd_event_handler_service.j2', event)
+    # Write configuration file
+    conf_json = json.dumps(config, indent=4)
+    service_conf.write_text(conf_json)
 
     return None
 
-def apply(event):
-    call('systemctl daemon-reload')
-    if event:
-        call(f'systemctl restart {systemd_service}.service')
-    else:
-        call(f'systemctl stop {systemd_service}.service')
 
-        for f in [service_path, event_conf]:
-            if os.path.isfile(f):
-                os.unlink(f)
+def apply(config):
+    if config:
+        call(f'systemctl restart {service_name}.service')
+    else:
+        call(f'systemctl stop {service_name}.service')
+
 
 if __name__ == '__main__':
     try:
