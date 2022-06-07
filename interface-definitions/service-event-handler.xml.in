@@ -12,14 +12,38 @@
               <help>Match pattern (regex)</help>
             </properties>
           </leafNode>
-          <leafNode name="script">
+          <node name="script">
             <properties>
               <help>Event handler script file</help>
-              <constraint>
-                <validator name="script"/>
-              </constraint>
             </properties>
-          </leafNode>
+            <children>
+              <leafNode name="arguments">
+                <properties>
+                  <help>Script arguments</help>
+                </properties>
+              </leafNode>
+              <tagNode name="environment">
+                <properties>
+                  <help>Script environment arguments</help>
+                </properties>
+                <children>
+                  <leafNode name="value">
+                    <properties>
+                      <help>Environment value</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <leafNode name="path">
+                <properties>
+                  <help>Path to the script</help>
+                  <constraint>
+                    <validator name="script"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </tagNode>
     </children>
