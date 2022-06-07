@@ -1,0 +1,11 @@
+[Unit]
+Description=VyOS event handler
+After=network.target vyos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/system/vyos-event-handler.py --config /run/vyos-event-handler.conf
+
+[Install]
+WantedBy=multi-user.target
