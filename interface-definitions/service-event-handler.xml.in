@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interfaceDefinition>
-  <node name="system">
+  <node name="service">
     <children>
-      <tagNode name="event-handler" owner="${vyos_conf_scripts_dir}/system_event_handler.py">
+      <tagNode name="event-handler" owner="${vyos_conf_scripts_dir}/service_event_handler.py">
         <properties>
           <help>Event handler name</help>
         </properties>

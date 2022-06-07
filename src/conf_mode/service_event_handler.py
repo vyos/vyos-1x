@@ -34,7 +34,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['system', 'event-handler']
+    base = ['service', 'event-handler']
     config = conf.get_config_dict(base,
                                   get_first_key=True,
                                   no_tag_node_value_mangle=True)
