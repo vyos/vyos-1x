@@ -18,12 +18,12 @@ import argparse
 import select
 import re
 import json
-from os import getpid
+from os import getpid, environ
 from pathlib import Path
 from signal import signal, SIGTERM, SIGINT
 from systemd import journal
 from sys import exit
-from vyos.util import call
+from vyos.util import run, dict_search
 
 # Identify this script
 my_pid = getpid()
@@ -41,25 +41,72 @@ def handle_signal(signal_type, frame):
     exit(0)
 
 
-# Execute script safely
-def script_run(pattern: str, script_path: str) -> None:
-    try:
-        call(script_path)
-        journal.send(
-            f'Pattern found: "{pattern}", script executed: "{script_path}"',
-            SYSLOG_IDENTIFIER=my_name)
-    except Exception as err:
-        journal.send(
-            f'Pattern found: "{pattern}", failed to execute script "{script_path}": {err}',
-            SYSLOG_IDENTIFIER=my_name)
+# Class for analyzing and process messages
+class Analyzer:
+    # Initialize settings
+    def __init__(self, config: dict) -> None:
+        self.config = {}
+        # Prepare compiled regex objects
+        for event_id, event_config in config.items():
+            script = dict_search('script.path', event_config)
+            # Check for arguments
+            if dict_search('script.arguments', event_config):
+                script_arguments = dict_search('script.arguments', event_config)
+                script = f'{script} {script_arguments}'
+            # Prepare environment
+            environment = environ
+            # Check for additional environment options
+            if dict_search('script.environment', event_config):
+                for env_variable, env_value in dict_search(
+                        'script.environment', event_config).items():
+                    environment[env_variable] = env_value.get('value')
+            # Create final config dictionary
+            pattern_raw = event_config['filter']['pattern']
+            pattern_compiled = re.compile(
+                rf'{event_config["filter"]["pattern"]}')
+            pattern_config = {
+                pattern_compiled: {
+                    'pattern_raw':
+                        pattern_raw,
+                    'syslog_id':
+                        dict_search('filter.syslog_identifier', event_config),
+                    'pattern_script': {
+                        'path': script,
+                        'environment': environment
+                    }
+                }
+            }
+            self.config.update(pattern_config)
 
+    # Execute script safely
+    def script_run(self, pattern: str, script_path: str,
+                   script_env: dict) -> None:
+        try:
+            run(script_path, env=script_env)
+            journal.send(
+                f'Pattern found: "{pattern}", script executed: "{script_path}"',
+                SYSLOG_IDENTIFIER=my_name)
+        except Exception as err:
+            journal.send(
+                f'Pattern found: "{pattern}", failed to execute script "{script_path}": {err}',
+                SYSLOG_IDENTIFIER=my_name)
 
-# iterate trough regexp items
-def analyze_message(message: str, regex_patterns: dict) -> None:
-    for pattern_compiled, pattern_config in regex_patterns.items():
-        if pattern_compiled.match(message):
-            script_run(pattern_config['pattern_raw'],
-                       pattern_config['pattern_script'])
+    # Analyze a message
+    def process_message(self, message: dict) -> None:
+        for pattern_compiled, pattern_config in self.config.items():
+            # Check if syslog id is presented in config and matches
+            syslog_id = pattern_config.get('syslog_id')
+            if syslog_id and message['SYSLOG_IDENTIFIER'] != syslog_id:
+                continue
+            if pattern_compiled.fullmatch(message['MESSAGE']):
+                # Add message to environment variables
+                pattern_config['pattern_script']['environment'][
+                    'message'] = message['MESSAGE']
+                # Run script
+                self.script_run(
+                    pattern=pattern_config['pattern_raw'],
+                    script_path=pattern_config['pattern_script']['path'],
+                    script_env=pattern_config['pattern_script']['environment'])
 
 
 if __name__ == '__main__':
@@ -76,6 +123,8 @@ if __name__ == '__main__':
     try:
         config_path = Path(args.config)
         config = json.loads(config_path.read_text())
+        # Create an object for analazyng messages
+        analyzer = Analyzer(config)
     except Exception as err:
         print(
             f'Configuration file "{config_path}" does not exist or malformed: {err}'
@@ -93,19 +142,6 @@ if __name__ == '__main__':
     p = select.poll()
     p.register(data, data.get_events())
 
-    # Prepare compiled regex objects
-    patterns = {}
-    for name, event_config in config.items():
-        pattern_raw = f'{event_config["pattern"]}'
-        pattern_compiled = re.compile(rf'{event_config["pattern"]}')
-        pattern_config = {
-            pattern_compiled: {
-                'pattern_raw': pattern_raw,
-                'pattern_script': event_config['script']
-            }
-        }
-        patterns.update(pattern_config)
-
     journal.send(f'Started with configuration: {config}',
                  SYSLOG_IDENTIFIER=my_name)
 
@@ -117,4 +153,8 @@ if __name__ == '__main__':
             pid = entry['_PID']
             # Skip empty messages and messages from this process
             if message and pid != my_pid:
-                analyze_message(message, patterns)
+                try:
+                    analyzer.process_message(entry)
+                except Exception as err:
+                    journal.send(f'Unable to process message: {err}',
+                                 SYSLOG_IDENTIFIER=my_name)

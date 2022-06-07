@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.util import call, dict_search
 from vyos import ConfigError
 from vyos import airbag
 
@@ -48,9 +48,16 @@ def verify(config):
         return None
 
     for name, event_config in config.items():
-        if 'pattern' not in event_config or 'script' not in event_config:
+        if not dict_search('filter.pattern', event_config) or not dict_search(
+                'script.path', event_config):
             raise ConfigError(
-                'Event-handler: both pattern and script items are mandatory!')
+                'Event-handler: both pattern and script path items are mandatory'
+            )
+
+        if dict_search('script.environment.message', event_config):
+            raise ConfigError(
+                'Event-handler: "message" environment variable is reserved for log message text'
+            )
 
 
 def generate(config):
