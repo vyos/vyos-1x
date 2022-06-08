@@ -20,6 +20,7 @@ from ipaddress import ip_interface
 from ipaddress import ip_address
 from sys import exit, argv
 from vyos.configtree import ConfigTree
+from vyos.template import is_ipv4
 
 if (len(argv) < 1):
     print("Must specify file name!")
@@ -37,6 +38,9 @@ def fixup_cli(config, path, interface):
     if config.exists(path + ['address']):
         for address in config.return_values(path + ['address']):
             tmp = ip_interface(address)
+            # ARP is only available for IPv4 ;-)
+            if not is_ipv4(tmp):
+                continue
             if ip_address(host) in tmp.network.hosts():
                 mac = config.return_value(tmp_base + [host, 'hwaddr'])
                 iface_path = ['protocols', 'static', 'arp', 'interface']
