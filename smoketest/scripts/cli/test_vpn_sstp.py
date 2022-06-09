@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,8 @@
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
-from vyos.util import cmd
+from vyos.util import read_file
+
 
 pki_path = ['pki']
 cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
@@ -40,12 +41,23 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         self.cli_set(pki_path + ['ca', 'sstp', 'certificate', cert_data])
         self.cli_set(pki_path + ['certificate', 'sstp', 'certificate', cert_data])
         self.cli_set(pki_path + ['certificate', 'sstp', 'private', 'key', key_data])
+
         # SSL is mandatory
         self.set(['ssl', 'ca-certificate', 'sstp'])
         self.set(['ssl', 'certificate', 'sstp'])
         self.set(['client-ip-pool', 'subnet', '192.0.2.0/24'])
 
         super().basic_config()
+
+    def test_accel_local_authentication(self):
+        # Change default port
+        port = '8443'
+        self.set(['port', port])
+
+        super().test_accel_local_authentication()
+
+        config = read_file(self._config_file)
+        self.assertIn(f'port={port}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
