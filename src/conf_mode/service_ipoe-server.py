@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -41,6 +41,7 @@ default_config_data = {
     'interfaces': [],
     'dnsv4': [],
     'dnsv6': [],
+    'client_named_ip_pool': [],
     'client_ipv6_pool': [],
     'client_ipv6_delegate_prefix': [],
     'radius_server': [],
@@ -219,6 +220,22 @@ def get_config(config=None):
 
 
     conf.set_level(base_path)
+    # Named client-ip-pool
+    if conf.exists(['client-ip-pool', 'name']):
+        for name in conf.list_nodes(['client-ip-pool', 'name']):
+            tmp = {
+                'name': name,
+                'gateway_address': '',
+                'subnet': ''
+            }
+
+            if conf.exists(['client-ip-pool', 'name', name, 'gateway-address']):
+                tmp['gateway_address'] += conf.return_value(['client-ip-pool', 'name', name, 'gateway-address'])
+            if conf.exists(['client-ip-pool', 'name', name, 'subnet']):
+                tmp['subnet'] += conf.return_value(['client-ip-pool', 'name', name, 'subnet'])
+
+            ipoe['client_named_ip_pool'].append(tmp)
+
     if conf.exists(['client-ipv6-pool', 'prefix']):
         for prefix in conf.list_nodes(['client-ipv6-pool', 'prefix']):
             tmp = {
@@ -253,10 +270,6 @@ def verify(ipoe):
 
     if not ipoe['interfaces']:
         raise ConfigError('No IPoE interface configured')
-
-    for interface in ipoe['interfaces']:
-        if not interface['range']:
-            raise ConfigError(f'No IPoE client subnet defined on interface "{ interface }"')
 
     if len(ipoe['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')
