@@ -28,6 +28,7 @@ disable
 [sstp]
 verbose=1
 ifname=sstp%d
+port={{ port }}
 accept=ssl
 ssl-ca-file=/run/accel-pppd/sstp-ca.pem
 ssl-pemfile=/run/accel-pppd/sstp-cert.pem
