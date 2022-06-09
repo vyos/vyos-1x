@@ -28,7 +28,6 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import write_file
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -52,15 +51,10 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     sstp = get_accel_dict(conf, base, sstp_chap_secrets)
-
-    default_values = defaults(base)
-    sstp = dict_merge(default_values, sstp)
-    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
-    del sstp['authentication']['local_users']['username']['static_ip']
-
     if sstp:
         sstp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
+                                           get_first_key=True,
+                                           no_tag_node_value_mangle=True)
 
     return sstp
 
