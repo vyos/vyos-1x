@@ -12,6 +12,14 @@
         </completionHelp>
       </properties>
     </leafNode>
+    <leafNode name="domain-group">
+      <properties>
+        <help>Group of domains</help>
+        <completionHelp>
+          <path>firewall group domain-group</path>
+        </completionHelp>
+      </properties>
+    </leafNode>
     #include <include/firewall/mac-group.xml.i>
     <leafNode name="network-group">
       <properties>

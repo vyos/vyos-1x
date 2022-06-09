@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,7 +26,13 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
+from vyos.firewall import get_ips_domains_dict
+from vyos.firewall import nft_add_set_elements
+from vyos.firewall import nft_flush_set
+from vyos.firewall import nft_init_set
+from vyos.firewall import nft_update_set_elements
 from vyos.template import render
+from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search_args
 from vyos.util import process_named_running
@@ -407,6 +413,26 @@ def apply(firewall):
     install_result = run(f'nft -f {nftables_conf}')
     if install_result == 1:
         raise ConfigError('Failed to apply firewall')
+
+    # set fireall group domain-group xxx
+    if 'group' in firewall:
+        if 'domain_group' in firewall['group']:
+            # T970 Enable a resolver (systemd daemon) that checks
+            # domain-group addresses and update entries for domains by timeout
+            # If router loaded without internet connection or for synchronization
+            call('systemctl restart vyos-domain-group-resolve.service')
+            for group, group_config in firewall['group']['domain_group'].items():
+                domains = []
+                for address in group_config['address']:
+                    domains.append(address)
+                # Add elements to domain-group, try to resolve domain => ip
+                # and add elements to nft set
+                ip_dict = get_ips_domains_dict(domains)
+                elements = sum(ip_dict.values(), [])
+                nft_init_set(group)
+                nft_add_set_elements(group, elements)
+        else:
+            call('systemctl stop vyos-domain-group-resolve.service')
 
     if 'state_policy' in firewall and not state_policy_rule_exists():
         for chain in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']:

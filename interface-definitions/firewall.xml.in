@@ -100,6 +100,31 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          <tagNode name="domain-group">
+            <properties>
+              <help>Firewall domain-group</help>
+              <constraint>
+                <regex>[a-zA-Z_][a-zA-Z0-9][\w\-\.]*</regex>
+              </constraint>
+              <constraintErrorMessage>Name of domain-group can only contain alpha-numeric letters, hyphen, underscores and not start with numeric</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Domain-group member</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Domain address to match</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
           <tagNode name="ipv6-address-group">
             <properties>
               <help>Firewall ipv6-address-group</help>
