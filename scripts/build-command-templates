@@ -192,12 +192,12 @@ def get_properties(p, default=None):
             # so we get to emulate it
             comp_exprs = []
             for i in lists:
-                comp_exprs.append("echo \"{0}\"".format(i.text))
+                comp_exprs.append(f'echo "{i.text}"')
             for i in paths:
-                comp_exprs.append("/bin/cli-shell-api listNodes {0}".format(i.text))
+                comp_exprs.append(f'/bin/cli-shell-api listNodes {i.text}')
             for i in scripts:
-                comp_exprs.append("sh -c \"{0}\"".format(i.text))
-            comp_help = " && ".join(comp_exprs)
+                comp_exprs.append(f'sh -c "{i.text}"')
+            comp_help = ' && echo " " && '.join(comp_exprs)
             props["comp_help"] = comp_help
     except:
         props["comp_help"] = []
