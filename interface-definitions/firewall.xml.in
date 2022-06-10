@@ -97,6 +97,15 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another address-group</help>
+                  <completionHelp>
+                    <path>firewall group address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
@@ -151,6 +160,15 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another ipv6-address-group</help>
+                  <completionHelp>
+                    <path>firewall group ipv6-address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
@@ -173,6 +191,15 @@
                   <constraint>
                     <validator name="ipv6-prefix"/>
                   </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another ipv6-network-group</help>
+                  <completionHelp>
+                    <path>firewall group ipv6-network-group</path>
+                  </completionHelp>
                   <multi/>
                 </properties>
               </leafNode>
@@ -200,6 +227,15 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another mac-group</help>
+                  <completionHelp>
+                    <path>firewall group mac-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
           <tagNode name="network-group">
@@ -221,6 +257,15 @@
                   <constraint>
                     <validator name="ipv4-prefix"/>
                   </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another network-group</help>
+                  <completionHelp>
+                    <path>firewall group network-group</path>
+                  </completionHelp>
                   <multi/>
                 </properties>
               </leafNode>
@@ -254,6 +299,15 @@
                   <constraint>
                     <validator name="port-range"/>
                   </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another port-group</help>
+                  <completionHelp>
+                    <path>firewall group port-group</path>
+                  </completionHelp>
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
