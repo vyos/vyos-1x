@@ -64,6 +64,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         for ips in example_org:
             self.cli_set(hostmap_path + ['example.org', 'inet', ips])
 
+        self.cli_commit()
+
         self.cli_set(['firewall', 'group', 'mac-group', 'smoketest_mac', 'mac-address', '00:01:02:03:04:05'])
         self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '53'])
