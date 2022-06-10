@@ -231,6 +231,13 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 value = rule_conf['hop_limit'][op]
                 output.append(f'ip6 hoplimit {operator} {value}')
 
+    if 'ttl' in rule_conf:
+        operators = {'eq': '==', 'gt': '>', 'lt': '<'}
+        for op, operator in operators.items():
+            if op in rule_conf['ttl']:
+                value = rule_conf['ttl'][op]
+                output.append(f'ip ttl {operator} {value}')
+
     for icmp in ['icmp', 'icmpv6']:
         if icmp in rule_conf:
             if 'type_name' in rule_conf[icmp]:

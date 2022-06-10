@@ -116,6 +116,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log', 'enable'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log-level', 'debug'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'ttl', 'eq', '15'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'destination', 'port', '8888'])
@@ -123,6 +124,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'log-level', 'err'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'ttl', 'gt', '102'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
@@ -135,8 +137,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug','return'],
-            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'reject'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15','return'],
+            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop']
         ]
