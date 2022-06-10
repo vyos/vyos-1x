@@ -27,6 +27,10 @@
                     <format>txt</format>
                     <description>Pass phrase for cisco authentication</description>
                   </valueHelp>
+                  <constraint>
+                    <regex>[^[:space:]]{1,8}</regex>
+                </constraint>
+                <constraintErrorMessage>Password must be 8 characters or less and not null</constraintErrorMessage>
                 </properties>
               </leafNode>
               <tagNode name="dynamic-map">
