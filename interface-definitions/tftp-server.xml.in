@@ -11,7 +11,7 @@
         <children>
           <leafNode name="directory">
             <properties>
-              <help>Folder containing files served by TFTP [REQUIRED]</help>
+              <help>Folder containing files served by TFTP</help>
             </properties>
           </leafNode>
           <leafNode name="allow-upload">

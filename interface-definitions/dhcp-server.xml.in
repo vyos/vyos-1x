@@ -338,7 +338,7 @@
                   </tagNode>
                   <tagNode name="static-route">
                     <properties>
-                      <help>Classless static route destination subnet [REQUIRED]</help>
+                      <help>Classless static route destination subnet</help>
                       <valueHelp>
                         <format>ipv4net</format>
                         <description>IPv4 address and prefix length</description>

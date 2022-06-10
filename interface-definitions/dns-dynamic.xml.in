@@ -14,7 +14,7 @@
             <children>
               <tagNode name="interface">
                 <properties>
-                  <help>Interface to send DDNS updates for [REQUIRED]</help>
+                  <help>Interface to send DDNS updates for</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
@@ -27,7 +27,7 @@
                     <children>
                       <leafNode name="key">
                         <properties>
-                          <help>File containing the secret key shared with remote DNS server [REQUIRED]</help>
+                          <help>File containing the secret key shared with remote DNS server</help>
                           <valueHelp>
                             <format>filename</format>
                             <description>File in /config/auth directory</description>
@@ -36,13 +36,13 @@
                       </leafNode>
                       <leafNode name="record">
                         <properties>
-                          <help>Record to be updated [REQUIRED]</help>
+                          <help>Record to be updated</help>
                           <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="server">
                         <properties>
-                          <help>Server to be updated [REQUIRED]</help>
+                          <help>Server to be updated</help>
                         </properties>
                       </leafNode>
                       <leafNode name="ttl">
@@ -60,14 +60,14 @@
                       </leafNode>
                       <leafNode name="zone">
                         <properties>
-                          <help>Zone to be updated [REQUIRED]</help>
+                          <help>Zone to be updated</help>
                         </properties>
                       </leafNode>
                     </children>
                   </tagNode>
                   <tagNode name="service">
                     <properties>
-                      <help>Service being used for Dynamic DNS [REQUIRED]</help>
+                      <help>Service being used for Dynamic DNS</help>
                       <completionHelp>
                         <list>afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
                       </completionHelp>
@@ -127,23 +127,23 @@
                     <children>
                       <leafNode name="host-name">
                         <properties>
-                          <help>Hostname registered with DDNS service [REQUIRED]</help>
+                          <help>Hostname registered with DDNS service</help>
                           <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="login">
                         <properties>
-                          <help>Login for DDNS service [REQUIRED]</help>
+                          <help>Login for DDNS service</help>
                         </properties>
                       </leafNode>
                       <leafNode name="password">
                         <properties>
-                          <help>Password for DDNS service [REQUIRED]</help>
+                          <help>Password for DDNS service</help>
                         </properties>
                       </leafNode>
                       <leafNode name="protocol">
                         <properties>
-                          <help>ddclient protocol used for DDNS service [REQUIRED FOR CUSTOM]</help>
+                          <help>ddclient protocol used for DDNS service</help>
                           <completionHelp>
                             <list>changeip cloudflare dnsmadeeasy dnspark dondominio dslreports1 dtdns duckdns dyndns2 easydns freedns freemyip googledomains hammernode1 namecheap nfsn noip sitelutions woima yandex zoneedit1</list>
                           </completionHelp>
@@ -239,7 +239,7 @@
                       </leafNode>
                       <leafNode name="server">
                         <properties>
-                          <help>Server to send DDNS update to [REQUIRED FOR CUSTOM]</help>
+                          <help>Server to send DDNS update to</help>
                           <valueHelp>
                             <format>IPv4</format>
                             <description>IP address of DDNS server</description>

@@ -10,7 +10,7 @@
         <children>
           <tagNode name="interface">
             <properties>
-              <help>Interface to send RA on [REQUIRED]</help>
+              <help>Interface to send RA on</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>

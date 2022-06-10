@@ -1156,7 +1156,7 @@
       <children>
         <leafNode name="identifier">
           <properties>
-            <help>Confederation AS identifier [REQUIRED]</help>
+            <help>Confederation AS identifier</help>
             <valueHelp>
               <format>u32:1-4294967294</format>
               <description>Confederation AS id</description>
@@ -1208,7 +1208,7 @@
       <children>
         <leafNode name="half-life">
           <properties>
-            <help>Half-life time for dampening [REQUIRED]</help>
+            <help>Half-life time for dampening</help>
             <valueHelp>
               <format>u32:1-45</format>
               <description>Half-life penalty in minutes</description>
@@ -1220,7 +1220,7 @@
         </leafNode>
         <leafNode name="max-suppress-time">
           <properties>
-            <help>Maximum duration to suppress a stable route [REQUIRED]</help>
+            <help>Maximum duration to suppress a stable route</help>
             <valueHelp>
               <format>u32:1-255</format>
               <description>Maximum suppress duration in minutes</description>
@@ -1232,7 +1232,7 @@
         </leafNode>
         <leafNode name="re-use">
           <properties>
-            <help>Threshold to start reusing a route [REQUIRED]</help>
+            <help>Threshold to start reusing a route</help>
             <valueHelp>
               <format>u32:1-20000</format>
               <description>Re-use penalty points</description>
@@ -1244,7 +1244,7 @@
         </leafNode>
         <leafNode name="start-suppress-time">
           <properties>
-            <help>When to start suppressing a route [REQUIRED]</help>
+            <help>When to start suppressing a route</help>
             <valueHelp>
               <format>u32:1-20000</format>
               <description>Start-suppress penalty points</description>

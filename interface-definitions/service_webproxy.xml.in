@@ -288,7 +288,7 @@
           </leafNode>
           <tagNode name="listen-address">
             <properties>
-              <help>IPv4 listen-address for WebProxy [REQUIRED]</help>
+              <help>IPv4 listen-address for WebProxy</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
               </completionHelp>
@@ -452,7 +452,7 @@
                       </leafNode>
                       <leafNode name="source-group">
                         <properties>
-                          <help>Source-group for this rule [REQUIRED]</help>
+                          <help>Source-group for this rule</help>
                           <valueHelp>
                             <format>group</format>
                             <description>Source group identifier for this rule</description>

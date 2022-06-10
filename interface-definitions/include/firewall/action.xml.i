@@ -1,7 +1,7 @@
 <!-- include start from firewall/action.xml.i -->
 <leafNode name="action">
   <properties>
-    <help>Rule action [REQUIRED]</help>
+    <help>Rule action</help>
     <completionHelp>
       <list>accept reject drop</list>
     </completionHelp>

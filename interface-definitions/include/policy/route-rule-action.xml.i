@@ -1,7 +1,7 @@
 <!-- include start from policy/route-rule-action.xml.i -->
 <leafNode name="action">
   <properties>
-    <help>Rule action [REQUIRED]</help>
+    <help>Rule action</help>
     <completionHelp>
       <list>drop</list>
     </completionHelp>

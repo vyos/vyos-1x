@@ -1,7 +1,7 @@
 <!-- include start from bgp/remote-as.xml.i -->
 <leafNode name="remote-as">
   <properties>
-    <help>Neighbor BGP AS number [REQUIRED]</help>
+    <help>Neighbor BGP AS number</help>
     <completionHelp>
       <list>external internal</list>
     </completionHelp>

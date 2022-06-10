@@ -10,7 +10,7 @@
         <children>
           <leafNode name="model">
             <properties>
-              <help>Model of the display attached to this system [REQUIRED]</help>
+              <help>Model of the display attached to this system</help>
               <completionHelp>
                 <list>cfa-533 cfa-631 cfa-633 cfa-635 hd44780 sdec</list>
               </completionHelp>

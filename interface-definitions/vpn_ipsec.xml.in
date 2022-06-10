@@ -209,7 +209,7 @@
               </leafNode>
               <tagNode name="proposal">
                 <properties>
-                  <help>ESP group proposal [REQUIRED]</help>
+                  <help>ESP group proposal</help>
                   <valueHelp>
                     <format>u32:1-65535</format>
                     <description>ESP group proposal number</description>
@@ -669,7 +669,7 @@
               #include <include/generic-disable-node.xml.i>
               <node name="authentication">
                 <properties>
-                  <help>Authentication [REQUIRED]</help>
+                  <help>Authentication</help>
                 </properties>
                 <children>
                   <leafNode name="mode">
@@ -951,7 +951,7 @@
                   #include <include/generic-disable-node.xml.i>
                   <node name="authentication">
                     <properties>
-                      <help>Peer authentication [REQUIRED]</help>
+                      <help>Peer authentication</help>
                     </properties>
                     <children>
                       #include <include/ipsec/authentication-id.xml.i>
@@ -1077,10 +1077,10 @@
                   #include <include/ipsec/local-address.xml.i>
                   <tagNode name="tunnel">
                     <properties>
-                      <help>Peer tunnel [REQUIRED]</help>
+                      <help>Peer tunnel</help>
                       <valueHelp>
                         <format>u32</format>
-                        <description>Peer tunnel [REQUIRED]</description>
+                        <description>Peer tunnel</description>
                       </valueHelp>
                     </properties>
                     <children>
@@ -1144,7 +1144,7 @@
                   </leafNode>
                   <node name="vti">
                     <properties>
-                      <help>Virtual tunnel interface [REQUIRED]</help>
+                      <help>Virtual tunnel interface</help>
                     </properties>
                     <children>
                       <leafNode name="bind">

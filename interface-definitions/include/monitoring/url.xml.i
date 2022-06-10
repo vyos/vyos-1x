@@ -1,7 +1,7 @@
 <!-- include start from monitoring/url.xml.i -->
 <leafNode name="url">
   <properties>
-    <help>Remote URL [REQUIRED]</help>
+    <help>Remote URL</help>
     <valueHelp>
       <format>url</format>
       <description>Remote URL</description>

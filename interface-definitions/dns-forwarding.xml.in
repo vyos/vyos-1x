@@ -140,7 +140,7 @@
                         <children>
                           <leafNode name="address">
                             <properties>
-                              <help>IPv4 address [REQUIRED]</help>
+                              <help>IPv4 address</help>
                               <valueHelp>
                                 <format>ipv4</format>
                                 <description>IPv4 address</description>
@@ -173,7 +173,7 @@
                         <children>
                           <leafNode name="address">
                             <properties>
-                              <help>IPv6 address [REQUIRED]</help>
+                              <help>IPv6 address</help>
                               <valueHelp>
                                 <format>ipv6</format>
                                 <description>IPv6 address</description>
@@ -206,7 +206,7 @@
                         <children>
                           <leafNode name="target">
                             <properties>
-                              <help>Target DNS name [REQUIRED]</help>
+                              <help>Target DNS name</help>
                               <valueHelp>
                                 <format>name.example.com</format>
                                 <description>An absolute DNS name</description>
@@ -238,7 +238,7 @@
                         <children>
                           <tagNode name="server">
                             <properties>
-                              <help>Mail server [REQUIRED]</help>
+                              <help>Mail server</help>
                               <valueHelp>
                                 <format>name.example.com</format>
                                 <description>An absolute DNS name</description>
@@ -285,7 +285,7 @@
                         <children>
                           <leafNode name="target">
                             <properties>
-                              <help>Target DNS name [REQUIRED]</help>
+                              <help>Target DNS name</help>
                               <valueHelp>
                                 <format>name.example.com</format>
                                 <description>An absolute DNS name</description>
@@ -317,7 +317,7 @@
                         <children>
                           <leafNode name="value">
                             <properties>
-                              <help>Record contents [REQUIRED]</help>
+                              <help>Record contents</help>
                               <valueHelp>
                                 <format>text</format>
                                 <description>Record contents</description>
@@ -347,7 +347,7 @@
                         <children>
                           <leafNode name="value">
                             <properties>
-                              <help>Record contents [REQUIRED]</help>
+                              <help>Record contents</help>
                               <valueHelp>
                                 <format>text</format>
                                 <description>Record contents</description>
@@ -376,7 +376,7 @@
                         <children>
                           <tagNode name="entry">
                             <properties>
-                              <help>Service entry [REQUIRED]</help>
+                              <help>Service entry</help>
                               <valueHelp>
                                 <format>u32:0-65535</format>
                                 <description>Entry number</description>
@@ -388,7 +388,7 @@
                             <children>
                               <leafNode name="hostname">
                                 <properties>
-                                  <help>Server hostname [REQUIRED]</help>
+                                  <help>Server hostname</help>
                                   <valueHelp>
                                     <format>name.example.com</format>
                                     <description>An absolute DNS name</description>
@@ -400,7 +400,7 @@
                               </leafNode>
                               <leafNode name="port">
                                 <properties>
-                                  <help>Port number [REQUIRED]</help>
+                                  <help>Port number</help>
                                   <valueHelp>
                                     <format>u32:0-65535</format>
                                     <description>TCP/UDP port number</description>
@@ -460,7 +460,7 @@
                         <children>
                           <tagNode name="rule">
                             <properties>
-                              <help>NAPTR rule [REQUIRED]</help>
+                              <help>NAPTR rule</help>
                               <valueHelp>
                                 <format>u32:0-65535</format>
                                 <description>Rule number</description>

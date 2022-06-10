@@ -20,7 +20,7 @@
                 <children>
                   <leafNode name="organization">
                     <properties>
-                      <help>Authentication organization for InfluxDB v2 [REQUIRED]</help>
+                      <help>Authentication organization for InfluxDB v2</help>
                       <constraint>
                         <regex>[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}</regex>
                       </constraint>
@@ -29,7 +29,7 @@
                   </leafNode>
                   <leafNode name="token">
                     <properties>
-                      <help>Authentication token for InfluxDB v2 [REQUIRED]</help>
+                      <help>Authentication token for InfluxDB v2</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>Authentication token</description>
@@ -83,7 +83,7 @@
                   </node>
                   <leafNode name="database">
                     <properties>
-                      <help>Remote database name [REQUIRED]</help>
+                      <help>Remote database name</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>Remote database name</description>
@@ -281,7 +281,7 @@
                   </node>
                   <leafNode name="url">
                     <properties>
-                      <help>Remote URL [REQUIRED]</help>
+                      <help>Remote URL</help>
                       <valueHelp>
                         <format>url</format>
                         <description>Remote URL to Splunk collector</description>

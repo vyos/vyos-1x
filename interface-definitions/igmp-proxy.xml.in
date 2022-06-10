@@ -18,7 +18,7 @@
           </leafNode>
           <tagNode name="interface">
             <properties>
-              <help>Interface for IGMP proxy [REQUIRED]</help>
+              <help>Interface for IGMP proxy</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>

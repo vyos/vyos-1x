@@ -1,7 +1,7 @@
 <!-- include start from policy/action.xml.i -->
 <leafNode name="action">
   <properties>
-    <help>Action to take on entries matching this rule [REQUIRED]</help>
+    <help>Action to take on entries matching this rule</help>
     <completionHelp>
       <list>permit deny</list>
     </completionHelp>

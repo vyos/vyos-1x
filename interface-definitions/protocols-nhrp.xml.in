@@ -10,7 +10,7 @@
         <children>
           <tagNode name="tunnel">
             <properties>
-              <help>Tunnel for NHRP [REQUIRED]</help>
+              <help>Tunnel for NHRP</help>
               <constraint>
                 <regex>tun[0-9]+</regex>
               </constraint>
@@ -44,7 +44,7 @@
                 <children>
                   <leafNode name="nbma-domain-name">
                     <properties>
-                      <help>Set HUB fqdn (nbma-address - fqdn) [REQUIRED]</help>
+                      <help>Set HUB fqdn (nbma-address - fqdn)</help>
                       <valueHelp>
                         <format>&lt;fqdn&gt;</format>
                         <description>Set the external HUB fqdn</description>
@@ -71,7 +71,7 @@
                   </leafNode>
                   <leafNode name="nbma-address">
                     <properties>
-                      <help>Set HUB address (nbma-address - external hub address or fqdn) [REQUIRED]</help>
+                      <help>Set HUB address (nbma-address - external hub address or fqdn)</help>
                     </properties>
                   </leafNode>
                   <leafNode name="register">

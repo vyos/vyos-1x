@@ -16,7 +16,7 @@
   <children>
     <leafNode name="export">
       <properties>
-        <help>Filter for outgoing routing update [REQUIRED]</help>
+        <help>Filter for outgoing routing update</help>
         <completionHelp>
           <list>bgp connected kernel rip static</list>
         </completionHelp>
@@ -178,10 +178,10 @@
     </leafNode>
     <leafNode name="network">
       <properties>
-        <help>OSPF network [REQUIRED]</help>
+        <help>OSPF network</help>
         <valueHelp>
           <format>ipv4net</format>
-          <description>OSPF network [REQUIRED]</description>
+          <description>OSPF network</description>
         </valueHelp>
         <constraint>
           <validator name="ipv4-prefix"/>

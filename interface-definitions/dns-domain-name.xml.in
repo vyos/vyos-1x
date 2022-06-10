@@ -91,7 +91,7 @@
               </leafNode>
               <leafNode name="inet">
                 <properties>
-                  <help>IP Address [REQUIRED]</help>
+                  <help>IP Address</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 address</description>
