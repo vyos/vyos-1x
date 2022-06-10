@@ -85,8 +85,14 @@ nft6_iface_chains = ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
 
 valid_groups = [
     'address_group',
+    'domain_group',
     'network_group',
     'port_group'
+]
+
+group_types = [
+    'address_group', 'network_group', 'port_group',
+    'ipv6_address_group', 'ipv6_network_group'
 ]
 
 snmp_change_type = {
@@ -241,10 +247,33 @@ def verify_rule(firewall, rule_conf, ipv6):
                 if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
+def verify_nested_group(group_name, group, groups, seen):
+    if 'include' not in group:
+        return
+
+    for g in group['include']:
+        if g not in groups:
+            raise ConfigError(f'Nested group "{g}" does not exist')
+
+        if g in seen:
+            raise ConfigError(f'Group "{group_name}" has a circular reference')
+            
+        seen.append(g)
+
+        if 'include' in groups[g]:
+            verify_nested_group(g, groups[g], groups, seen)
+
 def verify(firewall):
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         if not firewall['trap_targets']:
             raise ConfigError(f'Firewall config-trap enabled but "service snmp trap-target" is not defined')
+
+    if 'group' in firewall:
+        for group_type in group_types:
+            if group_type in firewall['group']:
+                groups = firewall['group'][group_type]
+                for group_name, group in groups.items():
+                    verify_nested_group(group_name, group, groups, [])
 
     for name in ['name', 'ipv6_name']:
         if name in firewall:

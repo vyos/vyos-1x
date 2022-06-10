@@ -20,6 +20,7 @@ from glob import glob
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 
 sysfs_config = {
@@ -107,6 +108,44 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['system', 'static-host-mapping'])
         self.cli_commit()
+
+    def test_nested_groups(self):
+        self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'network', '172.16.99.0/24'])
+        self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network1', 'network', '172.16.101.0/24'])
+        self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network1', 'include', 'smoketest_network'])
+        self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '53'])
+        self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port1', 'port', '123'])
+        self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port1', 'include', 'smoketest_port'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'group', 'network-group', 'smoketest_network1'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'group', 'port-group', 'smoketest_port1'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
+
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+
+        self.cli_commit()
+
+        # Test circular includes
+        self.cli_set(['firewall', 'group', 'network-group', 'smoketest_network', 'include', 'smoketest_network1'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['firewall', 'group', 'network-group', 'smoketest_network', 'include', 'smoketest_network1'])
+
+        nftables_search = [
+            ['iifname "eth0"', 'jump NAME_smoketest'],
+            ['ip saddr { 172.16.99.0/24, 172.16.101.0/24 }', 'th dport { 53, 123 }', 'return']
+        ]
+
+        nftables_output = cmd('sudo nft list table ip filter')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(matched, msg=search)
 
     def test_basic_rules(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
