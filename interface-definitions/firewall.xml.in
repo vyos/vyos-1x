@@ -117,7 +117,7 @@
                     <description>Domain address to match</description>
                   </valueHelp>
                   <constraint>
-                    <regex>[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}?(\/.*)?</regex>
+                    <regex>[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,99}?(\/.*)?</regex>
                   </constraint>
                   <multi/>
                 </properties>

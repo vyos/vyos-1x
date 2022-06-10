@@ -423,8 +423,9 @@ def apply(firewall):
             call('systemctl restart vyos-domain-group-resolve.service')
             for group, group_config in firewall['group']['domain_group'].items():
                 domains = []
-                for address in group_config['address']:
-                    domains.append(address)
+                if group_config.get('address') is not None:
+                    for address in group_config.get('address'):
+                        domains.append(address)
                 # Add elements to domain-group, try to resolve domain => ip
                 # and add elements to nft set
                 ip_dict = get_ips_domains_dict(domains)
