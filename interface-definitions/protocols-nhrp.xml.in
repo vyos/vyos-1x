@@ -30,7 +30,7 @@
                   <constraint>
                     <regex>[^[:space:]]{1,8}</regex>
                 </constraint>
-                <constraintErrorMessage>Password must be 8 characters or less and not null</constraintErrorMessage>
+                <constraintErrorMessage>Password should contain up to eight non-whitespace characters</constraintErrorMessage>
                 </properties>
               </leafNode>
               <tagNode name="dynamic-map">
