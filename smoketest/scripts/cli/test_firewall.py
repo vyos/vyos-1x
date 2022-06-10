@@ -110,18 +110,24 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_basic_rules(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'enable-default-log'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'address', '172.16.20.10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log-level', 'debug'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'destination', 'port', '8888'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'log', 'enable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'log-level', 'err'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'limit', 'rate', '5/minute'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'log', 'disable'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -129,10 +135,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'return'],
-            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'reject'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug','return'],
+            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'reject'],
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
-            ['smoketest default-action', 'drop']
+            ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop']
         ]
 
         nftables_output = cmd('sudo nft list table ip filter')
@@ -147,9 +153,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_basic_rules_ipv6(self):
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'enable-default-log'])
+
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'source', 'address', '2002::1'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'destination', 'address', '2002::1:1'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'log-level', 'crit'])
+
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'destination', 'port', '8888'])
@@ -160,9 +171,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME6_v6-smoketest'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'return'],
+            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
-            ['smoketest default-action', 'drop']
+            ['smoketest default-action', 'log prefix "[v6-smoketest-default-D]"', 'drop']
         ]
 
         nftables_output = cmd('sudo nft list table ip6 filter')

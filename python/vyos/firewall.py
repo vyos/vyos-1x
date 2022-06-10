@@ -217,7 +217,12 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
-        output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}] "')
+        output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
+
+        if 'log_level' in rule_conf:
+            log_level = rule_conf['log_level']
+            output.append(f'level {log_level}')
+
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
