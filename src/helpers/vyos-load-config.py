@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,26 +26,35 @@ Example: load https://somewhere.net/some.config
 import os
 import sys
 import gzip
+import argparse
 import tempfile
-import vyos.defaults
-import vyos.remote
-from vyos.configsource import ConfigSourceSession
+from vyos.configsource import ConfigSourceSession, VyOSError
 from vyos.configtree import ConfigTree, DiffTree
 from vyos.migrator import Migrator, VirtualMigrator, MigratorError
+from vyos.remote import get_remote_config
+from vyos.defaults import directories
 from vyos.util import cmd, DEVNULL
+
+DEFAULT_CONFIG_PATH = os.path.join(directories['current'], 'config.boot')
+protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
 
 class LoadConfig(ConfigSourceSession):
     """A subclass for loading a config file.
     This does not belong in configsource.py, and only has a single caller.
     """
+    def __init__(self):
+        super().__init__()
+        if not self.in_session():
+            raise VyOSError("Config can only be loaded from config session.")
+
     def load_config(self, file_path):
         try:
             with open(file_path) as f:
                 config_file = f.read()
             load_ct = ConfigTree(config_file)
         except (OSError, ValueError) as e:
-            print(e)
-            return
+            print(repr(e))
+            return -1
 
         eff_ct, _ = self.get_configtree_tuple()
         diff = DiffTree(eff_ct, load_ct)
@@ -56,23 +65,19 @@ class LoadConfig(ConfigSourceSession):
         command_list = [c for c in command_list if c]
 
         if not command_list:
-            return
+            return 0
         for op in command_list:
             try:
                 cmd(f'/opt/vyatta/sbin/my_{op}', shell=True, stderr=DEVNULL)
             except OSError as e:
-                print(e)
-                return
+                print(e.strerror)
+                return e.errno
 
-file_name = sys.argv[1] if len(sys.argv) > 1 else 'config.boot'
-configdir = vyos.defaults.directories['config']
-protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
+        return 0
 
 def get_local_config(filename):
     if os.path.isfile(filename):
         fname = filename
-    elif os.path.isfile(os.path.join(configdir, filename)):
-        fname = os.path.join(configdir, filename)
     else:
         sys.exit(f"No such file '{filename}'")
 
@@ -81,46 +86,71 @@ def get_local_config(filename):
             try:
                 config_str = f.read().decode()
             except OSError as e:
-                sys.exit(e)
+                sys.exit(repr(e))
     else:
         with open(fname, 'r') as f:
             try:
                 config_str = f.read()
             except OSError as e:
-                sys.exit(e)
+                sys.exit(repr(e))
 
     return config_str
 
-if any(x in file_name for x in protocols):
-    config_string = vyos.remote.get_remote_config(file_name)
-    if not config_string:
-        sys.exit(f"No such config file at '{file_name}'")
-else:
-    config_string = get_local_config(file_name)
+def main():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('config_file', type=str, nargs='?',
+                           default=DEFAULT_CONFIG_PATH,
+                           help="configuration file to load")
+    argparser.add_argument('--debug', action='store_true', help="Debug")
+    args = argparser.parse_args()
 
-config = LoadConfig()
+    file_name = args.config_file
+    debug = args.debug
 
-print(f"Loading configuration from '{file_name}'")
+    if any(x in file_name for x in protocols):
+        config_string = get_remote_config(file_name)
+        if not config_string:
+            sys.exit(f"No such config file at '{file_name}'")
+    else:
+        config_string = get_local_config(file_name)
 
-with tempfile.NamedTemporaryFile() as fp:
-    with open(fp.name, 'w') as fd:
+    try:
+        config = LoadConfig()
+    except VyOSError as e:
+        sys.exit(repr(e))
+
+    print(f"Loading configuration from '{file_name}'")
+
+    tmp_config = tempfile.NamedTemporaryFile(dir='/tmp', delete=False).name
+    if debug:
+        print(f"migrated config at {tmp_config}")
+    with open(tmp_config, 'w') as fd:
         fd.write(config_string)
 
-    virtual_migration = VirtualMigrator(fp.name)
+    virtual_migration = VirtualMigrator(tmp_config)
     try:
         virtual_migration.run()
-    except MigratorError as err:
-        sys.exit('{}'.format(err))
+    except MigratorError as e:
+        sys.exit(repr(e))
 
-    migration = Migrator(fp.name)
+    migration = Migrator(tmp_config)
     try:
         migration.run()
-    except MigratorError as err:
-        sys.exit('{}'.format(err))
+    except MigratorError as e:
+        sys.exit(repr(e))
 
-    config.load_config(fp.name)
+    res = config.load_config(tmp_config)
 
-if config.session_changed():
-    print("Load complete. Use 'commit' to make changes effective.")
-else:
-    print("No configuration changes to commit.")
+    if not debug:
+        os.remove(tmp_config)
+
+    if res != 0:
+        sys.exit(res)
+
+    if config.session_changed():
+        print("Load complete. Use 'commit' to make changes effective.")
+    else:
+        print("No configuration changes to commit.")
+
+if __name__ == '__main__':
+    main()

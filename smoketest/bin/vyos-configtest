@@ -45,8 +45,8 @@ class DynamicClassBase(unittest.TestCase):
 def make_test_function(filename):
     def test_config_load(self):
         config_path = os.path.join(config_dir, filename)
-        self.session.migrate_and_load_config(config_path)
         try:
+            self.session.migrate_and_load_config(config_path)
             self.session.commit()
         except (ConfigError, ConfigSessionError):
             self.session.discard()
