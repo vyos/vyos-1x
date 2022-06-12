@@ -192,7 +192,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     if group_name[0] == '!':
                         operator = '!='
                         group_name = group_name[1:]
-                    output.append(f'{ip_name} {prefix}addr {operator} $A{def_suffix}_{group_name}')
+                    output.append(f'{ip_name} {prefix}addr {operator} @A{def_suffix}_{group_name}')
                 # Generate firewall group domain-group
                 elif 'domain_group' in group:
                     group_name = group['domain_group']
@@ -207,14 +207,14 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     if group_name[0] == '!':
                         operator = '!='
                         group_name = group_name[1:]
-                    output.append(f'{ip_name} {prefix}addr {operator} $N{def_suffix}_{group_name}')
+                    output.append(f'{ip_name} {prefix}addr {operator} @N{def_suffix}_{group_name}')
                 if 'mac_group' in group:
                     group_name = group['mac_group']
                     operator = ''
                     if group_name[0] == '!':
                         operator = '!='
                         group_name = group_name[1:]
-                    output.append(f'ether {prefix}addr {operator} $M_{group_name}')
+                    output.append(f'ether {prefix}addr {operator} @M_{group_name}')
                 if 'port_group' in group:
                     proto = rule_conf['protocol']
                     group_name = group['port_group']
@@ -227,7 +227,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                         operator = '!='
                         group_name = group_name[1:]
 
-                    output.append(f'{proto} {prefix}port {operator} $P_{group_name}')
+                    output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'

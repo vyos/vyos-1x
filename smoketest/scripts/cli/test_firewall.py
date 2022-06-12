@@ -57,6 +57,29 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['firewall'])
         self.cli_commit()
 
+        # Verify chains/sets are cleaned up from nftables
+        nftables_search = [
+            ['set M_smoketest_mac'],
+            ['set N_smoketest_network'],
+            ['set P_smoketest_port'],
+            ['set smoketest_domain'],
+            ['set RECENT_smoketest_4'],
+            ['chain NAME_smoketest']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip filter', inverse=True)
+
+    def verify_nftables(self, nftables_search, table, inverse=False):
+        nftables_output = cmd(f'sudo nft list table {table}')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(not matched if inverse else matched, msg=search)
+
     def test_groups(self):
         hostmap_path = ['system', 'static-host-mapping', 'host-name']
         example_org = ['192.0.2.8', '192.0.2.10', '192.0.2.11']
@@ -88,23 +111,17 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['ip saddr { 172.16.99.0/24 }', 'ip daddr 172.16.10.10', 'th dport { 53, 123 }', 'return'],
-            ['ether saddr { 00:01:02:03:04:05 }', 'return'],
+            ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'return'],
+            ['elements = { 172.16.99.0/24 }'],
+            ['elements = { 53, 123 }'],
+            ['ether saddr @M_smoketest_mac', 'return'],
+            ['elements = { 00:01:02:03:04:05 }'],
             ['set smoketest_domain'],
             ['elements = { 192.0.2.5, 192.0.2.8,'],
             ['192.0.2.10, 192.0.2.11 }'],
             ['ip saddr @smoketest_domain', 'return']
         ]
-
-        nftables_output = cmd('sudo nft list table ip filter')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched, msg=search)
+        self.verify_nftables(nftables_search, 'ip filter')
 
         self.cli_delete(['system', 'static-host-mapping'])
         self.cli_commit()
@@ -134,18 +151,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['ip saddr { 172.16.99.0/24, 172.16.101.0/24 }', 'th dport { 53, 123 }', 'return']
+            ['ip saddr @N_smoketest_network1', 'th dport @P_smoketest_port1', 'return'],
+            ['elements = { 172.16.99.0/24, 172.16.101.0/24 }'],
+            ['elements = { 53, 123 }']
         ]
 
-        nftables_output = cmd('sudo nft list table ip filter')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched, msg=search)
+        self.verify_nftables(nftables_search, 'ip filter')
 
     def test_basic_rules(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
@@ -169,6 +180,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'limit', 'rate', '5/minute'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'log', 'disable'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'drop'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'destination', 'port', '22'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'count', '10'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'time', 'minute'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -179,18 +195,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15','return'],
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
-            ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop']
+            ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
+            ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop']
         ]
 
-        nftables_output = cmd('sudo nft list table ip filter')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched, msg=search)
+        self.verify_nftables(nftables_search, 'ip filter')
 
     def test_basic_rules_ipv6(self):
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'default-action', 'drop'])
@@ -217,15 +226,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['smoketest default-action', 'log prefix "[v6-smoketest-default-D]"', 'drop']
         ]
 
-        nftables_output = cmd('sudo nft list table ip6 filter')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched, msg=search)
+        self.verify_nftables(nftables_search, 'ip6 filter')
 
     def test_state_policy(self):
         self.cli_set(['firewall', 'state-policy', 'established', 'action', 'accept'])
@@ -273,15 +274,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['smoketest default-action', 'drop']
         ]
 
-        nftables_output = cmd('sudo nft list table ip filter')
-
-        for search in nftables_search:
-            matched = False
-            for line in nftables_output.split("\n"):
-                if all(item in line for item in search):
-                    matched = True
-                    break
-            self.assertTrue(matched, msg=search)
+        self.verify_nftables(nftables_search, 'ip filter')
 
     def test_sysfs(self):
         for name, conf in sysfs_config.items():

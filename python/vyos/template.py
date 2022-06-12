@@ -592,37 +592,24 @@ def nft_intra_zone_action(zone_conf, ipv6=False):
     return 'return'
 
 @register_filter('nft_nested_group')
-def nft_nested_group(out_list, includes, prefix):
+def nft_nested_group(out_list, includes, groups, key):
     if not vyos_defined(out_list):
         out_list = []
+
+    def add_includes(name):
+        if key in groups[name]:
+            for item in groups[name][key]:
+                if item in out_list:
+                    continue
+                out_list.append(item)
+
+        if 'include' in groups[name]:
+            for name_inc in groups[name]['include']:
+                add_includes(name_inc)
+
     for name in includes:
-        out_list.append(f'${prefix}{name}')
+        add_includes(name)
     return out_list
-
-@register_filter('sort_nested_groups')
-def sort_nested_groups(groups):
-    seen = []
-    out = {}
-
-    def include_iterate(group_name):
-        group = groups[group_name]
-        if 'include' not in group:
-            if group_name not in out:
-                out[group_name] = groups[group_name]
-            return
-
-        for inc_group_name in group['include']:
-            if inc_group_name not in seen:
-                seen.append(inc_group_name)
-                include_iterate(inc_group_name)
-
-        if group_name not in out:
-            out[group_name] = groups[group_name]
-
-    for group_name in groups:
-        include_iterate(group_name)
-
-    return out.items()
 
 @register_test('vyos_defined')
 def vyos_defined(value, test_value=None, var_type=None):

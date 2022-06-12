@@ -1,38 +1,76 @@
+{% macro groups(group, is_ipv6) %}
 {% if group is vyos_defined %}
-{%     if group.address_group is vyos_defined %}
-{%         for group_name, group_conf in group.address_group | sort_nested_groups %}
+{%     set ip_type = 'ipv6_addr' if is_ipv6 else 'ipv4_addr' %}
+{%     if group.address_group is vyos_defined and not is_ipv6 %}
+{%         for group_name, group_conf in group.address_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define A_{{ group_name }} = { {{ group_conf.address | nft_nested_group(includes, 'A_') | join(",") }} }
+    set A_{{ group_name }} {
+        type {{ ip_type }}
+        flags interval
+{%             if group_conf.address is vyos_defined or includes %}
+        elements = { {{ group_conf.address | nft_nested_group(includes, group.address_group, 'address') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
-{%     if group.ipv6_address_group is vyos_defined %}
-{%         for group_name, group_conf in group.ipv6_address_group | sort_nested_groups %}
+{%     if group.ipv6_address_group is vyos_defined and is_ipv6 %}
+{%         for group_name, group_conf in group.ipv6_address_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define A6_{{ group_name }} = { {{ group_conf.address | nft_nested_group(includes, 'A6_') | join(",") }} }
+    set A6_{{ group_name }} {
+        type {{ ip_type }}
+        flags interval
+{%             if group_conf.address is vyos_defined or includes %}
+        elements = { {{ group_conf.address | nft_nested_group(includes, group.ipv6_address_group, 'address') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
 {%     if group.mac_group is vyos_defined %}
-{%         for group_name, group_conf in group.mac_group | sort_nested_groups %}
+{%         for group_name, group_conf in group.mac_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define M_{{ group_name }} = { {{ group_conf.mac_address | nft_nested_group(includes, 'M_') | join(",") }} }
+    set M_{{ group_name }} {
+        type ether_addr
+{%             if group_conf.mac_address is vyos_defined or includes %}
+        elements = { {{ group_conf.mac_address | nft_nested_group(includes, group.mac_group, 'mac_address') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
-{%     if group.network_group is vyos_defined %}
-{%         for group_name, group_conf in group.network_group | sort_nested_groups %}
+{%     if group.network_group is vyos_defined and not is_ipv6 %}
+{%         for group_name, group_conf in group.network_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define N_{{ group_name }} = { {{ group_conf.network | nft_nested_group(includes, 'N_') | join(",") }} }
+    set N_{{ group_name }} {
+        type {{ ip_type }}
+        flags interval
+{%             if group_conf.network is vyos_defined or includes %}
+        elements = { {{ group_conf.network | nft_nested_group(includes, group.network_group, 'network') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
-{%     if group.ipv6_network_group is vyos_defined %}
-{%         for group_name, group_conf in group.ipv6_network_group | sort_nested_groups %}
+{%     if group.ipv6_network_group is vyos_defined and is_ipv6 %}
+{%         for group_name, group_conf in group.ipv6_network_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define N6_{{ group_name }} = { {{ group_conf.network | nft_nested_group(includes, 'N6_') | join(",") }} }
+    set N6_{{ group_name }} {
+        type {{ ip_type }}
+        flags interval
+{%             if group_conf.network is vyos_defined or includes %}
+        elements = { {{ group_conf.network | nft_nested_group(includes, group.ipv6_network_group, 'network') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
 {%     if group.port_group is vyos_defined %}
-{%         for group_name, group_conf in group.port_group | sort_nested_groups %}
+{%         for group_name, group_conf in group.port_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
-define P_{{ group_name }} = { {{ group_conf.port | nft_nested_group(includes, 'P_') | join(",") }} }
+    set P_{{ group_name }} {
+        type inet_service
+        flags interval
+{%             if group_conf.port is vyos_defined or includes %}
+        elements = { {{ group_conf.port | nft_nested_group(includes, group.port_group, 'port') | join(",") }} }
+{%             endif %}
+    }
 {%         endfor %}
 {%     endif %}
 {% endif %}
+{% endmacro %}
