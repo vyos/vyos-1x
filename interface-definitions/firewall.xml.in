@@ -366,6 +366,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>
@@ -376,6 +377,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>
@@ -552,6 +554,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address.xml.i>
+                  #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>
@@ -562,6 +565,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address.xml.i>
+                  #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
                 </children>

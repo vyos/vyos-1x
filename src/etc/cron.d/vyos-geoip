@@ -1,0 +1,1 @@
+30 4 * * 1 root sg vyattacfg "/usr/libexec/vyos/geoip-update.py --force" >/tmp/geoip-update.log 2>&1

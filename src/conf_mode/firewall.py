@@ -26,6 +26,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
+from vyos.firewall import geoip_update
 from vyos.firewall import get_ips_domains_dict
 from vyos.firewall import nft_add_set_elements
 from vyos.firewall import nft_flush_set
@@ -35,6 +36,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search_args
+from vyos.util import dict_search_recursive
 from vyos.util import process_named_running
 from vyos.util import run
 from vyos.xml import defaults
@@ -150,6 +152,38 @@ def get_firewall_zones(conf):
 
     return {'name': used_v4, 'ipv6_name': used_v6}
 
+def geoip_updated(conf, firewall):
+    diff = get_config_diff(conf)
+    node_diff = diff.get_child_nodes_diff(['firewall'], expand_nodes=Diff.DELETE, recursive=True)
+
+    out = {
+        'name': [],
+        'ipv6_name': [],
+        'deleted_name': [],
+        'deleted_ipv6_name': []
+    }
+    updated = False
+
+    for key, path in dict_search_recursive(firewall, 'geoip'):
+        if path[0] == 'name':
+            out['name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+        elif path[0] == 'ipv6_name':
+            out['ipv6_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+        updated = True
+
+    if 'delete' in node_diff:
+        for key, path in dict_search_recursive(node_diff['delete'], 'geoip'):
+            if path[0] == 'name':
+                out['deleted_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+            elif path[0] == 'ipv6-name':
+                out['deleted_ipv6_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+            updated = True
+
+    if updated:
+        return out
+
+    return False
+
 def get_config(config=None):
     if config:
         conf = config
@@ -173,6 +207,8 @@ def get_config(config=None):
         firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
                                         key_mangling=('-', '_'), get_first_key=True,
                                         no_tag_node_value_mangle=True)
+
+    firewall['geoip_updated'] = geoip_updated(conf, firewall)
 
     return firewall
 
@@ -218,6 +254,16 @@ def verify_rule(firewall, rule_conf, ipv6):
     for side in ['destination', 'source']:
         if side in rule_conf:
             side_conf = rule_conf[side]
+
+            if dict_search_args(side_conf, 'geoip', 'country_code'):
+                if 'address' in side_conf:
+                    raise ConfigError('Address and GeoIP cannot both be defined')
+
+                if dict_search_args(side_conf, 'group', 'address_group'):
+                    raise ConfigError('Address-group and GeoIP cannot both be defined')
+
+                if dict_search_args(side_conf, 'group', 'network_group'):
+                    raise ConfigError('Network-group and GeoIP cannot both be defined')
 
             if 'group' in side_conf:
                 if {'address_group', 'network_group'} <= set(side_conf['group']):
@@ -322,8 +368,13 @@ def cleanup_commands(firewall):
     commands = []
     commands_end = []
     for table in ['ip filter', 'ip6 filter']:
+        geoip_list = []
+        if firewall['geoip_updated']:
+            geoip_key = 'deleted_ipv6_name' if table == 'ip6 filter' else 'deleted_name'
+            geoip_list = dict_search_args(firewall, 'geoip_updated', geoip_key) or []
+
         state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
-        json_str = cmd(f'nft -j list table {table}')
+        json_str = cmd(f'nft -t -j list table {table}')
         obj = loads(json_str)
         if 'nftables' not in obj:
             continue
@@ -353,6 +404,8 @@ def cleanup_commands(firewall):
                             commands.append(f'delete rule {table} {chain} handle {handle}')
             elif 'set' in item:
                 set_name = item['set']['name']
+                if set_name.startswith('GEOIP_CC_') and set_name not in geoip_list:
+                    continue
                 commands_end.append(f'delete set {table} {set_name}')
     return commands + commands_end
 
@@ -475,6 +528,12 @@ def apply(firewall):
 
     if firewall['policy_resync']:
         resync_policy_route()
+
+    if firewall['geoip_updated']:
+        # Call helper script to Update set contents
+        if 'name' in firewall['geoip_updated'] or 'ipv6_name' in firewall['geoip_updated']:
+            print('Updating GeoIP. Please wait...')
+            geoip_update(firewall)
 
     post_apply_trap(firewall)
 
