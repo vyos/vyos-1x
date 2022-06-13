@@ -1,0 +1,11 @@
+[Unit]
+Description=Failover route service
+After=vyos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos-failover.py --config /run/vyos-failover.conf
+
+[Install]
+WantedBy=multi-user.target
