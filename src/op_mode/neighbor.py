@@ -30,7 +30,7 @@
 import sys
 import typing
 
-import opmode
+import vyos.opmode
 
 
 def get_raw_data(family, interface=None, state=None):
