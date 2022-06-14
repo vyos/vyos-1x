@@ -100,6 +100,7 @@ nested_group_types = [
 group_set_prefix = {
     'A_': 'address_group',
     'A6_': 'ipv6_address_group',
+    'D_': 'domain_group',
     'M_': 'mac_group',
     'N_': 'network_group',
     'N6_': 'ipv6_network_group',
@@ -535,8 +536,8 @@ def apply(firewall):
                 # and add elements to nft set
                 ip_dict = get_ips_domains_dict(domains)
                 elements = sum(ip_dict.values(), [])
-                nft_init_set(group)
-                nft_add_set_elements(group, elements)
+                nft_init_set(f'D_{group}')
+                nft_add_set_elements(f'D_{group}', elements)
         else:
             call('systemctl stop vyos-domain-group-resolve.service')
 

@@ -62,7 +62,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['set M_smoketest_mac'],
             ['set N_smoketest_network'],
             ['set P_smoketest_port'],
-            ['set smoketest_domain'],
+            ['set D_smoketest_domain'],
             ['set RECENT_smoketest_4'],
             ['chain NAME_smoketest']
         ]
@@ -116,10 +116,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['elements = { 53, 123 }'],
             ['ether saddr @M_smoketest_mac', 'return'],
             ['elements = { 00:01:02:03:04:05 }'],
-            ['set smoketest_domain'],
+            ['set D_smoketest_domain'],
             ['elements = { 192.0.2.5, 192.0.2.8,'],
             ['192.0.2.10, 192.0.2.11 }'],
-            ['ip saddr @smoketest_domain', 'return']
+            ['ip saddr @D_smoketest_domain', 'return']
         ]
         self.verify_nftables(nftables_search, 'ip filter')
 

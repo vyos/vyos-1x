@@ -200,7 +200,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     if group_name[0] == '!':
                         operator = '!='
                         group_name = group_name[1:]
-                    output.append(f'{ip_name} {prefix}addr {operator} @{group_name}')
+                    output.append(f'{ip_name} {prefix}addr {operator} @D_{group_name}')
                 elif 'network_group' in group:
                     group_name = group['network_group']
                     operator = ''

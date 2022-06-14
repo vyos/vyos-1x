@@ -47,7 +47,7 @@ table ip filter {
 {%     endfor %}
 {%     if group is vyos_defined and group.domain_group is vyos_defined %}
 {%         for name, name_config in group.domain_group.items() %}
-    set {{ name }} {
+    set D_{{ name }} {
         type ipv4_addr
         flags interval
     }
