@@ -11,7 +11,7 @@
             <properties>
               <help>Show IPv4 neighbor (ARP) table</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/neighbor.py --family inet</command>
+            <command>${vyos_op_scripts_dir}/neighbor.py show --family inet</command>
             <children>
               <tagNode name="interface">
                 <properties>
@@ -20,7 +20,7 @@
                     <script>${vyos_completion_dir}/list_interfaces.py -b</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/neighbor.py --family inet --interface "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet --interface "$5"</command>
               </tagNode>
               <tagNode name="state">
                 <properties>
@@ -29,7 +29,7 @@
                     <list>reachable stale failed permanent</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/neighbor.py --family inet --state "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet --state "$5"</command>
               </tagNode>
             </children>
           </node>
