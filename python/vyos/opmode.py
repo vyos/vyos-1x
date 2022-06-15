@@ -103,16 +103,20 @@ def run(module):
        parser.print_usage()
        sys.exit(1)
 
-    func = functions[args["subcommand"]]
+    function_name = args["subcommand"]
+    func = functions[function_name]
 
     # Remove the subcommand from the arguments,
     # it would cause an extra argument error when we pass the dict to a function
     del args["subcommand"]
 
-    if "raw" not in args:
+    # Show commands must always get the "raw" argument,
+    # but other commands (clear/reset/restart) should not,
+    # because they produce no output and it makes no sense for them.
+    if ("raw" not in args) and re.match(r"^show", function_name):
         args["raw"] = False
 
-    if function_name == "show":
+    if re.match(r"^show", function_name):
         # Show commands are slightly special:
         # they may return human-formatted output
         # or a raw dict that we need to serialize in JSON for printing
