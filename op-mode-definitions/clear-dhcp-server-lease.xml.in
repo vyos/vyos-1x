@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="dhcp-server">
+        <properties>
+          <help>clear DHCP server lease</help>
+        </properties>
+        <children>
+          <tagNode name="lease">
+            <properties>
+              <help>DHCP server lease</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/clear_dhcp_lease.py --ip $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
