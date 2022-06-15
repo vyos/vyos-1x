@@ -56,5 +56,5 @@ if __name__ == '__main__':
 
                 # Resolve successful
                 if elements:
-                    nft_update_set_elements(set_name, elements)
+                    nft_update_set_elements(f'D_{set_name}', elements)
         time.sleep(timeout)

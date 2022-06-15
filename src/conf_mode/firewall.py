@@ -92,10 +92,20 @@ valid_groups = [
     'port_group'
 ]
 
-group_types = [
-    'address_group', 'network_group', 'port_group',
-    'ipv6_address_group', 'ipv6_network_group'
+nested_group_types = [
+    'address_group', 'network_group', 'mac_group',
+    'port_group', 'ipv6_address_group', 'ipv6_network_group'
 ]
+
+group_set_prefix = {
+    'A_': 'address_group',
+    'A6_': 'ipv6_address_group',
+    'D_': 'domain_group',
+    'M_': 'mac_group',
+    'N_': 'network_group',
+    'N6_': 'ipv6_network_group',
+    'P_': 'port_group'
+}
 
 snmp_change_type = {
     'unknown': 0,
@@ -165,18 +175,20 @@ def geoip_updated(conf, firewall):
     updated = False
 
     for key, path in dict_search_recursive(firewall, 'geoip'):
+        set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
         if path[0] == 'name':
-            out['name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+            out['name'].append(set_name)
         elif path[0] == 'ipv6_name':
-            out['ipv6_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+            out['ipv6_name'].append(set_name)
         updated = True
 
     if 'delete' in node_diff:
         for key, path in dict_search_recursive(node_diff['delete'], 'geoip'):
+            set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
             if path[0] == 'name':
-                out['deleted_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+                out['deleted_name'].append(set_name)
             elif path[0] == 'ipv6-name':
-                out['deleted_ipv6_name'].append(f'GEOIP_CC_{path[1]}_{path[3]}')
+                out['deleted_ipv6_name'].append(set_name)
             updated = True
 
     if updated:
@@ -315,7 +327,7 @@ def verify(firewall):
             raise ConfigError(f'Firewall config-trap enabled but "service snmp trap-target" is not defined')
 
     if 'group' in firewall:
-        for group_type in group_types:
+        for group_type in nested_group_types:
             if group_type in firewall['group']:
                 groups = firewall['group'][group_type]
                 for group_name, group in groups.items():
@@ -352,62 +364,75 @@ def verify(firewall):
 
     return None
 
-def cleanup_rule(table, jump_chain):
-    commands = []
-    chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
-    for chain in chains:
-        results = cmd(f'nft -a list chain {table} {chain}').split("\n")
-        for line in results:
-            if f'jump {jump_chain}' in line:
-                handle_search = re.search('handle (\d+)', line)
-                if handle_search:
-                    commands.append(f'delete rule {table} {chain} handle {handle_search[1]}')
-    return commands
-
 def cleanup_commands(firewall):
     commands = []
-    commands_end = []
+    commands_chains = []
+    commands_sets = []
     for table in ['ip filter', 'ip6 filter']:
+        name_node = 'name' if table == 'ip filter' else 'ipv6_name'
+        chain_prefix = NAME_PREFIX if table == 'ip filter' else NAME6_PREFIX
+        state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
+        iface_chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
+
         geoip_list = []
         if firewall['geoip_updated']:
             geoip_key = 'deleted_ipv6_name' if table == 'ip6 filter' else 'deleted_name'
             geoip_list = dict_search_args(firewall, 'geoip_updated', geoip_key) or []
-
-        state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
+ 
         json_str = cmd(f'nft -t -j list table {table}')
         obj = loads(json_str)
+
         if 'nftables' not in obj:
             continue
+
         for item in obj['nftables']:
             if 'chain' in item:
                 chain = item['chain']['name']
-                if chain in ['VYOS_STATE_POLICY', 'VYOS_STATE_POLICY6']:
-                    if 'state_policy' not in firewall:
-                        commands.append(f'delete chain {table} {chain}')
-                    else:
-                        commands.append(f'flush chain {table} {chain}')
-                elif chain not in preserve_chains and not chain.startswith("VZONE"):
-                    if table == 'ip filter' and dict_search_args(firewall, 'name', chain.replace(NAME_PREFIX, "", 1)) != None:
-                        commands.append(f'flush chain {table} {chain}')
-                    elif table == 'ip6 filter' and dict_search_args(firewall, 'ipv6_name', chain.replace(NAME6_PREFIX, "", 1)) != None:
-                        commands.append(f'flush chain {table} {chain}')
-                    else:
-                        commands += cleanup_rule(table, chain)
-                        commands.append(f'delete chain {table} {chain}')
-            elif 'rule' in item:
-                rule = item['rule']
-                if rule['chain'] in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL', 'VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
-                    if 'expr' in rule and any([True for expr in rule['expr'] if dict_search_args(expr, 'jump', 'target') == state_chain]):
-                        if 'state_policy' not in firewall:
-                            chain = rule['chain']
-                            handle = rule['handle']
-                            commands.append(f'delete rule {table} {chain} handle {handle}')
-            elif 'set' in item:
-                set_name = item['set']['name']
-                if set_name.startswith('GEOIP_CC_') and set_name not in geoip_list:
+                if chain in preserve_chains or chain.startswith("VZONE"):
                     continue
-                commands_end.append(f'delete set {table} {set_name}')
-    return commands + commands_end
+
+                if chain == state_chain:
+                    command = 'delete' if 'state_policy' not in firewall else 'flush'
+                    commands_chains.append(f'{command} chain {table} {chain}')
+                elif dict_search_args(firewall, name_node, chain.replace(chain_prefix, "", 1)) != None:
+                    commands.append(f'flush chain {table} {chain}')
+                else:
+                    commands_chains.append(f'delete chain {table} {chain}')
+
+            if 'rule' in item:
+                rule = item['rule']
+                chain = rule['chain']
+                handle = rule['handle']
+
+                if chain in iface_chains:
+                    target, _ = next(dict_search_recursive(rule['expr'], 'target'))
+
+                    if target == state_chain and 'state_policy' not in firewall:
+                        commands.append(f'delete rule {table} {chain} handle {handle}')
+
+                    if target.startswith(chain_prefix):
+                        if dict_search_args(firewall, name_node, target.replace(chain_prefix, "", 1)) == None:
+                            commands.append(f'delete rule {table} {chain} handle {handle}')
+
+            if 'set' in item:
+                set_name = item['set']['name']
+
+                if set_name.startswith('GEOIP_CC_') and set_name in geoip_list:
+                    commands_sets.append(f'delete set {table} {set_name}')
+                    continue
+                
+                if set_name.startswith("RECENT_"):
+                    commands_sets.append(f'delete set {table} {set_name}')
+                    continue
+
+                for prefix, group_type in group_set_prefix.items():
+                    if set_name.startswith(prefix):
+                        group_name = set_name.replace(prefix, "", 1)
+                        if dict_search_args(firewall, 'group', group_type, group_name) != None:
+                            commands_sets.append(f'flush set {table} {set_name}')
+                        else:
+                            commands_sets.append(f'delete set {table} {set_name}')
+    return commands + commands_chains + commands_sets
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):
@@ -416,7 +441,6 @@ def generate(firewall):
         firewall['cleanup_commands'] = cleanup_commands(firewall)
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
-    render(nftables_defines_conf, 'firewall/nftables-defines.j2', firewall)
     return None
 
 def apply_sysfs(firewall):
@@ -512,8 +536,8 @@ def apply(firewall):
                 # and add elements to nft set
                 ip_dict = get_ips_domains_dict(domains)
                 elements = sum(ip_dict.values(), [])
-                nft_init_set(group)
-                nft_add_set_elements(group, elements)
+                nft_init_set(f'D_{group}')
+                nft_add_set_elements(f'D_{group}', elements)
         else:
             call('systemctl stop vyos-domain-group-resolve.service')
 

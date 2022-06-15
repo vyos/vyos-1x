@@ -1,12 +1,12 @@
 #!/usr/sbin/nft -f
 
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
 {% if cleanup_commands is vyos_defined %}
 {%     for command in cleanup_commands %}
 {{ command }}
 {%     endfor %}
 {% endif %}
-
-include "/run/nftables_defines.conf"
 
 table ip filter {
 {% if first_install is vyos_defined %}
@@ -47,7 +47,7 @@ table ip filter {
 {%     endfor %}
 {%     if group is vyos_defined and group.domain_group is vyos_defined %}
 {%         for name, name_config in group.domain_group.items() %}
-    set {{ name }} {
+    set D_{{ name }} {
         type ipv4_addr
         flags interval
     }
@@ -69,6 +69,9 @@ table ip filter {
 {%         endfor %}
 {%     endif %}
 {% endif %}
+
+{{ group_tmpl.groups(group, False) }}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
 {%     if state_policy.established is vyos_defined %}
@@ -138,6 +141,9 @@ table ip6 filter {
 {%         endfor %}
 {%     endif %}
 {% endif %}
+
+{{ group_tmpl.groups(group, True) }}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
 {%     if state_policy.established is vyos_defined %}
