@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import typing
 
 
@@ -96,6 +97,11 @@ def run(module):
     # Get options as a dict rather than a namespace,
     # so that we can modify it and pack for passing to functions
     args = vars(parser.parse_args())
+
+    if not args["subcommand"]:
+       print("Subcommand required!")
+       parser.print_usage()
+       sys.exit(1)
 
     func = functions[args["subcommand"]]
 
