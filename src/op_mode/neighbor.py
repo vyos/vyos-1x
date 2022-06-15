@@ -92,12 +92,25 @@ def show(raw: bool, family: str, interface: typing.Optional[str], state: typing.
     else:
         return format_neighbors(data, interface)
 
+def reset(family: str, interface: typing.Optional[str], address: typing.Optional[str]):
+    from vyos.util import run
+
+    if address and interface:
+        raise ValueError("interface and address parameters are mutually exclusive")
+    elif address:
+        run(f"""ip --family {family} neighbor flush to {address}""")
+    elif interface:
+        run(f"""ip --family {family} neighbor flush dev {interface}""")
+    else:
+        # Flush an entire neighbor table
+        run(f"""ip --family {family} neighbor flush""")
+
 
 if __name__ == '__main__':
-    from argparse import ArgumentParser
-
     try:
-        print(opmode.run(sys.modules[__name__]))
+        res = opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
     except ValueError as e:
         print(e)
         sys.exit(1)

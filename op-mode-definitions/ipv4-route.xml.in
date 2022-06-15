@@ -39,7 +39,7 @@
                     <list>&lt;x.x.x.x&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo ip neigh flush to "$5"</command>
+                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet --address "$5"</command>
               </tagNode>
               <tagNode name="interface">
                 <properties>
@@ -48,8 +48,14 @@
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ip neigh flush dev "$5"</command>
+                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet --interface "$5"</command>
               </tagNode>
+              <node name="table">
+                <properties>
+                  <help>Flush the ARP cache completely</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet</command>
+              </node>
             </children>
           </node>
           <node name="route">
