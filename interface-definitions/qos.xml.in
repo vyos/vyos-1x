@@ -24,17 +24,17 @@
             <properties>
               <help>Interface ingress traffic policy</help>
               <completionHelp>
-                <path>traffic-policy drop-tail</path>
-                <path>traffic-policy fair-queue</path>
-                <path>traffic-policy fq-codel</path>
-                <path>traffic-policy limiter</path>
-                <path>traffic-policy network-emulator</path>
-                <path>traffic-policy priority-queue</path>
-                <path>traffic-policy random-detect</path>
-                <path>traffic-policy rate-control</path>
-                <path>traffic-policy round-robin</path>
-                <path>traffic-policy shaper</path>
-                <path>traffic-policy shaper-hfsc</path>
+                <path>qos policy drop-tail</path>
+                <path>qos policy fair-queue</path>
+                <path>qos policy fq-codel</path>
+                <path>qos policy limiter</path>
+                <path>qos policy network-emulator</path>
+                <path>qos policy priority-queue</path>
+                <path>qos policy random-detect</path>
+                <path>qos policy rate-control</path>
+                <path>qos policy round-robin</path>
+                <path>qos policy shaper</path>
+                <path>qos policy shaper-hfsc</path>
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
@@ -46,17 +46,17 @@
             <properties>
               <help>Interface egress traffic policy</help>
               <completionHelp>
-                <path>traffic-policy drop-tail</path>
-                <path>traffic-policy fair-queue</path>
-                <path>traffic-policy fq-codel</path>
-                <path>traffic-policy limiter</path>
-                <path>traffic-policy network-emulator</path>
-                <path>traffic-policy priority-queue</path>
-                <path>traffic-policy random-detect</path>
-                <path>traffic-policy rate-control</path>
-                <path>traffic-policy round-robin</path>
-                <path>traffic-policy shaper</path>
-                <path>traffic-policy shaper-hfsc</path>
+                <path>qos policy drop-tail</path>
+                <path>qos policy fair-queue</path>
+                <path>qos policy fq-codel</path>
+                <path>qos policy limiter</path>
+                <path>qos policy network-emulator</path>
+                <path>qos policy priority-queue</path>
+                <path>qos policy random-detect</path>
+                <path>qos policy rate-control</path>
+                <path>qos policy round-robin</path>
+                <path>qos policy shaper</path>
+                <path>qos policy shaper-hfsc</path>
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
@@ -139,7 +139,7 @@
           </tagNode>
           <tagNode name="fq-codel">
             <properties>
-              <help>Fair Queuing Controlled Delay</help>
+              <help>Fair Queuing (FQ) with Controlled Delay (CoDel)</help>
               <valueHelp>
                 <format>txt</format>
                 <description>Policy name</description>
@@ -357,7 +357,7 @@
           </tagNode>
           <tagNode name="random-detect">
             <properties>
-              <help>Priority queuing based policy</help>
+              <help>Weighted Random Early Detect policy</help>
               <valueHelp>
                 <format>txt</format>
                 <description>Policy name</description>
