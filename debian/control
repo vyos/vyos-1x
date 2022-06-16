@@ -69,7 +69,7 @@ Depends:
   ipaddrcheck,
   iperf,
   iperf3,
-  iproute2,
+  iproute2 (>= 6.0.0),
   iputils-arping,
   isc-dhcp-client,
   isc-dhcp-relay,

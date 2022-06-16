@@ -1,7 +1,14 @@
-<!-- include start from qos/bandwidth.xml.i -->
+<!-- include start from qos/bandwidth-auto.xml.i -->
 <leafNode name="bandwidth">
   <properties>
     <help>Available bandwidth for this policy</help>
+    <completionHelp>
+      <list>auto</list>
+    </completionHelp>
+    <valueHelp>
+      <format>auto</format>
+      <description>Rate matches interface speed</description>
+    </valueHelp>
     <valueHelp>
       <format>&lt;number&gt;</format>
       <description>Bits per second</description>
@@ -31,5 +38,6 @@
       <regex>\d+(bit|kbit|mbit|gbit|tbit)</regex>
     </constraint>
   </properties>
+  <defaultValue>auto</defaultValue>
 </leafNode>
 <!-- include end -->

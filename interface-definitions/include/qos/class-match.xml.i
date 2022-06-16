@@ -1,4 +1,4 @@
-<!-- include start from qos/match.xml.i -->
+<!-- include start from qos/class-match.xml.i -->
 <tagNode name="match">
   <properties>
     <help>Class matching rule name</help>
@@ -99,22 +99,11 @@
             <help>Match on destination port or address</help>
           </properties>
           <children>
-            <leafNode name="address">
-              <properties>
-                <help>IPv4 destination address for this match</help>
-                <valueHelp>
-                  <format>ipv4net</format>
-                  <description>IPv4 address and prefix length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv4"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/qos/class-match-ipv4-address.xml.i>
             #include <include/port-number.xml.i>
           </children>
         </node>
-        #include <include/qos/dscp.xml.i>
+        #include <include/qos/match-dscp.xml.i>
         #include <include/qos/max-length.xml.i>
         #include <include/ip-protocol.xml.i>
         <node name="source">
@@ -122,18 +111,7 @@
             <help>Match on source port or address</help>
           </properties>
           <children>
-            <leafNode name="address">
-              <properties>
-                <help>IPv4 source address for this match</help>
-                <valueHelp>
-                  <format>ipv4net</format>
-                  <description>IPv4 address and prefix length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv4"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/qos/class-match-ipv4-address.xml.i>
             #include <include/port-number.xml.i>
           </children>
         </node>
@@ -150,22 +128,11 @@
             <help>Match on destination port or address</help>
           </properties>
           <children>
-            <leafNode name="address">
-              <properties>
-                <help>IPv6 destination address for this match</help>
-                <valueHelp>
-                  <format>ipv6net</format>
-                  <description>IPv6 address and prefix length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv6"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/qos/class-match-ipv6-address.xml.i>
             #include <include/port-number.xml.i>
           </children>
         </node>
-        #include <include/qos/dscp.xml.i>
+        #include <include/qos/match-dscp.xml.i>
         #include <include/qos/max-length.xml.i>
         #include <include/ip-protocol.xml.i>
         <node name="source">
@@ -173,18 +140,7 @@
             <help>Match on source port or address</help>
           </properties>
           <children>
-            <leafNode name="address">
-              <properties>
-                <help>IPv6 source address for this match</help>
-                <valueHelp>
-                  <format>ipv6net</format>
-                  <description>IPv6 address and prefix length</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="ipv6"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/qos/class-match-ipv6-address.xml.i>
             #include <include/port-number.xml.i>
           </children>
         </node>
