@@ -723,7 +723,6 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         ipv6_prefix_len= '122'
         ipv4_nexthop_type= 'blackhole'
         ipv6_nexthop_type= 'blackhole'
-        
 
         test_data = {
             'foo-map-bar' : {
@@ -884,6 +883,28 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         'set' : {
                             'evpn-gateway-ipv4'   : '192.0.2.99',
                             'evpn-gateway-ipv6'   : '2001:db8:f00::1',
+                        },
+                    },
+                },
+            },
+            'relative-metric' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-nexthop-addr' : ipv4_nexthop_address,
+                        },
+                        'set' : {
+                            'metric' : '+10',
+                        },
+                    },
+                    '20' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'ip-nexthop-addr' : ipv4_nexthop_address,
+                        },
+                        'set' : {
+                            'metric' : '-20',
                         },
                     },
                 },
