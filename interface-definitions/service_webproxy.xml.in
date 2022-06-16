@@ -484,7 +484,7 @@
                         <description>Name of source group</description>
                       </valueHelp>
                       <constraint>
-                        <regex>[^0-9]</regex>
+                        <regex>[^0-9][a-zA-Z_][a-zA-Z0-9][\w\-\.]*</regex>
                       </constraint>
                       <constraintErrorMessage>URL-filter source-group cannot start with a number!</constraintErrorMessage>
                     </properties>
