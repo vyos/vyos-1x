@@ -13,22 +13,19 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import sys
 import typing
 
 
 def _is_op_mode_function_name(name):
-    from re import match
-
-    if match(r"^(show|clear|reset|restart)", name):
+    if re.match(r"^(show|clear|reset|restart)", name):
         return True
     else:
         return False
 
 def _is_show(name):
-    from re import match
-
-    if match(r"^show", name):
+    if re.match(r"^show", name):
         return True
     else:
         return False
