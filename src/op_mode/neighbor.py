@@ -108,7 +108,7 @@ def reset(family: str, interface: typing.Optional[str], address: typing.Optional
 
 if __name__ == '__main__':
     try:
-        res = opmode.run(sys.modules[__name__])
+        res = vyos.opmode.run(sys.modules[__name__])
         if res:
             print(res)
     except ValueError as e:
