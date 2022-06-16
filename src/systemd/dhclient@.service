@@ -13,6 +13,9 @@ PIDFile=/var/lib/dhcp/dhclient_%i.pid
 ExecStart=/sbin/dhclient -4 $DHCLIENT_OPTS
 ExecStop=/sbin/dhclient -4 $DHCLIENT_OPTS -r
 Restart=always
+TimeoutStopSec=20
+SendSIGKILL=SIGKILL
+FinalKillSignal=SIGABRT
 
 [Install]
 WantedBy=multi-user.target
