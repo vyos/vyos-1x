@@ -20,7 +20,7 @@
             <properties>
               <help>Show IPv6 neighbor (NDP) table</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/neighbor.py --family inet6</command>
+            <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6</command>
             <children>
               <tagNode name="interface">
                 <properties>
@@ -29,7 +29,7 @@
                     <script>${vyos_completion_dir}/list_interfaces.py -b</script>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/neighbor.py --family inet6 --interface "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --interface "$5"</command>
               </tagNode>
               <tagNode name="state">
                 <properties>
@@ -38,7 +38,7 @@
                     <list>reachable stale failed permanent</list>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/neighbor.py --family inet6 --state "$5"</command>
+                <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --state "$5"</command>
               </tagNode>
             </children>
           </node>
