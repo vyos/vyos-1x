@@ -32,12 +32,17 @@ import typing
 
 import vyos.opmode
 
+def interface_exists(interface):
+    import os
+    return os.path.exists(f'/sys/class/net/{interface}')
 
 def get_raw_data(family, interface=None, state=None):
     from json import loads
     from vyos.util import cmd
 
     if interface:
+        if not interface_exists(interface):
+            raise ValueError(f"Interface '{interface}' does not exist in the system")
         interface = f"dev {interface}"
     else:
         interface = ""
