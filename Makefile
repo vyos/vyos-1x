@@ -3,6 +3,7 @@ OP_TMPL_DIR := templates-op
 BUILD_DIR := build
 DATA_DIR := data
 SHIM_DIR := src/shim
+VALIDATORS_GO_DIR := src/validators-go
 XDP_DIR := src/xdp
 LIBS := -lzmq
 CFLAGS :=
@@ -73,6 +74,13 @@ op_mode_definitions: $(op_xml_obj)
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(OP_TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
+.PHONY: vygovalidators
+vygovalidators:
+	@for file in `ls $(VALIDATORS_GO_DIR)`
+	do
+		go build -o src/validators/ $(VALIDATORS_GO_DIR)/$$file
+	done
 
 .PHONY: vyshim
 vyshim:
