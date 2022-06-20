@@ -67,10 +67,7 @@
           </node>
           <leafNode name="global-parameters">
             <properties>
-              <help>Additional global parameters for DHCP server. You must
-                use the syntax of dhcpd.conf in this text-field. Using this
-                without proper knowledge may result in a crashed DHCP server.
-                Check system log to look for errors.</help>
+              <help>Additional global parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
               <multi/>
             </properties>
           </leafNode>
@@ -111,10 +108,7 @@
               #include <include/name-server-ipv4.xml.i>
               <leafNode name="shared-network-parameters">
                 <properties>
-                  <help>Additional shared-network parameters for DHCP server.
-                You must use the syntax of dhcpd.conf in this text-field.
-                Using this without proper knowledge may result in a crashed
-                DHCP server. Check system log to look for errors.</help>
+                  <help>Additional shared-network parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
                   <multi/>
                 </properties>
               </leafNode>
@@ -347,11 +341,7 @@
                       </leafNode>
                       <leafNode name="static-mapping-parameters">
                         <properties>
-                          <help>Additional static-mapping parameters for DHCP server.
-                Will be placed inside the "host" block of the mapping.
-                You must use the syntax of dhcpd.conf in this text-field.
-                Using this without proper knowledge may result in a crashed
-                DHCP server. Check system log to look for errors.</help>
+                          <help>Additional static-mapping parameters for DHCP server. Will be placed inside the "host" block of the mapping. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
                           <multi/>
                         </properties>
                       </leafNode>
@@ -385,10 +375,7 @@
                   </tagNode >
                   <leafNode name="subnet-parameters">
                     <properties>
-                      <help>Additional subnet parameters for DHCP server. You must
-                use the syntax of dhcpd.conf in this text-field. Using this
-                without proper knowledge may result in a crashed DHCP server.
-                Check system log to look for errors.</help>
+                      <help>Additional subnet parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
                       <multi/>
                     </properties>
                   </leafNode>

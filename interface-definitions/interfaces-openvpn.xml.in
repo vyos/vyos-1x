@@ -305,10 +305,7 @@
           </leafNode>
           <leafNode name="openvpn-option">
             <properties>
-              <help>Additional OpenVPN options. You must
-                use the syntax of openvpn.conf in this text-field. Using this
-                without proper knowledge may result in a crashed OpenVPN server.
-                Check system log to look for errors.</help>
+              <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server. Check system log to look for errors.</help>
               <multi/>
             </properties>
           </leafNode>
@@ -502,10 +499,7 @@
                   </leafNode>
                   <leafNode name="subnet-mask">
                     <properties>
-                      <help>Subnet mask pushed to dynamic clients.
-                If not set the server subnet mask will be used.
-                Only used with topology subnet or device type tap.
-                Not used with bridged interfaces.</help>
+                      <help>Subnet mask pushed to dynamic clients. If not set the server subnet mask will be used. Only used with topology subnet or device type tap. Not used with bridged interfaces.</help>
                       <constraint>
                         <validator name="ipv4-address"/>
                       </constraint>

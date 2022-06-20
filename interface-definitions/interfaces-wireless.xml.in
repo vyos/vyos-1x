@@ -716,9 +716,7 @@
                   </leafNode>
                   <leafNode name="passphrase">
                     <properties>
-                      <help>WPA personal shared pass phrase. If you are
-                using special characters in the WPA passphrase then single
-                quotes are required.</help>
+                      <help>WPA personal shared pass phrase. If you are using special characters in the WPA passphrase then single quotes are required.</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>Passphrase of at least 8 but not more than 63 printable characters</description>
