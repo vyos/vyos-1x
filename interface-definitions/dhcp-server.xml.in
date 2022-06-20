@@ -134,6 +134,9 @@
                   <leafNode name="bootfile-name">
                     <properties>
                       <help>Bootstrap file name</help>
+                      <constraint>
+                        <regex>[-_a-zA-Z0-9./]+</regex>
+                      </constraint>
                     </properties>
                   </leafNode>
                   <leafNode name="bootfile-server">
@@ -155,7 +158,14 @@
                   </leafNode>
                   <leafNode name="bootfile-size">
                     <properties>
-                      <help>Bootstrap file size in 512 byte blocks</help>
+                      <help>Bootstrap file size</help>
+                      <valueHelp>
+                        <format>u32:1-16</format>
+                        <description>Bootstrap file size in 512 byte blocks</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-16"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                   <leafNode name="client-prefix-length">
