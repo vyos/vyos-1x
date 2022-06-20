@@ -84,7 +84,7 @@ def run(module):
             # Show commands require an option to choose between raw JSON and human-readable
             # formatted output.
             # For interactive use, they default to formatted output.
-            if (function_name == "show") and (opt == "raw"):
+            if _is_show(function_name) and (opt == "raw"):
                 subparser.add_argument(f"--raw",  action='store_true')
             elif _is_optional_type(th):
                 subparser.add_argument(f"--{opt}", type=_get_arg_type(th), default=None)
@@ -110,7 +110,7 @@ def run(module):
     # Show commands must always get the "raw" argument,
     # but other commands (clear/reset/restart) should not,
     # because they produce no output and it makes no sense for them.
-    if ("raw" not in args) and re.match(r"^show", function_name):
+    if ("raw" not in args) and _is_show(function_name):
         args["raw"] = False
 
     if re.match(r"^show", function_name):
