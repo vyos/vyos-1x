@@ -27,6 +27,7 @@ import copy
 import functools
 
 from lxml import etree as ET
+from textwrap import fill
 
 # Defaults
 
@@ -130,6 +131,7 @@ def get_properties(p, default=None):
             # DNS forwarding for instance has multiple defaults - specified as whitespace separated list
             tmp = ', '.join(default.text.split())
             help += f' (default: {tmp})'
+        help = fill(help, width=64, subsequent_indent='\t\t\t')
         props["help"] = help
     except:
         pass
