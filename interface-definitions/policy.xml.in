@@ -961,8 +961,13 @@
                         <format>ipv4</format>
                         <description>Peer IP address</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Peer IPv6 address</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
                       </constraint>
                     </properties>
                   </leafNode>
