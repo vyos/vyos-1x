@@ -715,6 +715,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         local_pref = '300'
         metric = '50'
         peer = '2.3.4.5'
+        peerv6 = '2001:db8::1'
         tag = '6542'
         goto = '25'
 
@@ -803,6 +804,14 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'peer' : peer,
                         },
                     },
+
+                    '31' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'peer' : peerv6,
+                        },
+                    },
+
                     '40' : {
                         'action' : 'permit',
                         'match' : {
