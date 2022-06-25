@@ -456,8 +456,8 @@ def get_interface_dict(config, base, ifname=''):
     if bond: dict.update({'is_bond_member' : bond})
 
     # Check if any DHCP options changed which require a client restat
-    dhcp = node_changed(config, ['dhcp-options'], recursive=True)
-    if dhcp: dict.update({'dhcp_options_changed' : ''})
+    dhcp = is_node_changed(config, base + [ifname, 'dhcp-options'])
+    if dhcp: dict.update({'dhcp_options_changed' : {}})
 
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
@@ -516,8 +516,8 @@ def get_interface_dict(config, base, ifname=''):
         if bridge: dict['vif'][vif].update({'is_bridge_member' : bridge})
 
         # Check if any DHCP options changed which require a client restat
-        dhcp = node_changed(config, ['vif', vif, 'dhcp-options'], recursive=True)
-        if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : ''})
+        dhcp = is_node_changed(config, base + [ifname, 'vif', vif, 'dhcp-options'])
+        if dhcp: dict['vif'][vif].update({'dhcp_options_changed' : {}})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         # Add subinterface name to dictionary
@@ -555,8 +555,8 @@ def get_interface_dict(config, base, ifname=''):
         if bridge: dict['vif_s'][vif_s].update({'is_bridge_member' : bridge})
 
         # Check if any DHCP options changed which require a client restat
-        dhcp = node_changed(config, ['vif-s', vif_s, 'dhcp-options'], recursive=True)
-        if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : ''})
+        dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'dhcp-options'])
+        if dhcp: dict['vif_s'][vif_s].update({'dhcp_options_changed' : {}})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             # Add subinterface name to dictionary
@@ -595,8 +595,8 @@ def get_interface_dict(config, base, ifname=''):
                 {'is_bridge_member' : bridge})
 
             # Check if any DHCP options changed which require a client restat
-            dhcp = node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'], recursive=True)
-            if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : ''})
+            dhcp = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'dhcp-options'])
+            if dhcp: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : {}})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, base + [ifname], dict)
