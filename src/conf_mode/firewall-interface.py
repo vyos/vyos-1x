@@ -64,6 +64,11 @@ def get_config(config=None):
 
     return if_firewall
 
+def verify_chain(table, chain):
+    # Verify firewall applied
+    code = run(f'nft list chain {table} {chain}')
+    return code == 0
+
 def verify(if_firewall):
     # bail out early - looks like removal from running config
     if not if_firewall:
@@ -80,6 +85,9 @@ def verify(if_firewall):
                 if name not in if_firewall['firewall']['name']:
                     raise ConfigError(f'Invalid firewall name "{name}"')
 
+                if not verify_chain('ip filter', f'{NAME_PREFIX}{name}'):
+                    raise ConfigError('Firewall did not apply')
+
             if 'ipv6_name' in if_firewall[direction]:
                 name = if_firewall[direction]['ipv6_name']
 
@@ -88,6 +96,9 @@ def verify(if_firewall):
 
                 if name not in if_firewall['firewall']['ipv6_name']:
                     raise ConfigError(f'Invalid firewall ipv6-name "{name}"')
+
+                if not verify_chain('ip6 filter', f'{NAME6_PREFIX}{name}'):
+                    raise ConfigError('Firewall did not apply')
 
     return None
 

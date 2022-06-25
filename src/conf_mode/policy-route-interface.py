@@ -24,6 +24,7 @@ from vyos.config import Config
 from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.util import cmd
+from vyos.util import run
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -47,6 +48,11 @@ def get_config(config=None):
 
     return if_policy
 
+def verify_chain(table, chain):
+    # Verify policy route applied
+    code = run(f'nft list chain {table} {chain}')
+    return code == 0
+
 def verify(if_policy):
     # bail out early - looks like removal from running config
     if not if_policy:
@@ -61,6 +67,12 @@ def verify(if_policy):
 
             if route_name not in if_policy['policy'][route]:
                 raise ConfigError(f'Invalid policy route name "{name}"')
+
+            nft_prefix = 'VYOS_PBR6_' if route == 'route6' else 'VYOS_PBR_'
+            nft_table = 'ip6 mangle' if route == 'route6' else 'ip mangle'
+
+            if not verify_chain(nft_table, nft_prefix + route_name):
+                raise ConfigError('Policy route did not apply')
 
     return None
 
