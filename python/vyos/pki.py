@@ -332,6 +332,25 @@ def verify_certificate(cert, ca_cert):
     except InvalidSignature:
         return False
 
+def verify_ca_chain(sorted_names, pki_node):
+    if len(sorted_names) == 1: # Single cert, no chain
+        return True
+
+    for name in sorted_names:
+        cert = load_certificate(pki_node[name]['certificate'])
+        verified = False
+        for ca_name in sorted_names:
+            if name == ca_name:
+                continue
+            ca_cert = load_certificate(pki_node[ca_name]['certificate'])
+            if verify_certificate(cert, ca_cert):
+                verified = True
+                break
+        if not verified and name != sorted_names[-1]:
+            # Only permit top-most certificate to fail verify (e.g. signed by public CA not explicitly in chain)
+            return False
+    return True
+
 # Certificate chain
 
 def find_parent(cert, ca_certs):
@@ -357,3 +376,16 @@ def find_chain(cert, ca_certs):
             chain.append(parent)
 
     return chain
+
+def sort_ca_chain(ca_names, pki_node):
+    def ca_cmp(ca_name1, ca_name2, pki_node):
+        cert1 = load_certificate(pki_node[ca_name1]['certificate'])
+        cert2 = load_certificate(pki_node[ca_name2]['certificate'])
+
+        if verify_certificate(cert1, cert2): # cert1 is child of cert2
+            return -1
+        return 1
+
+    from functools import cmp_to_key
+    return sorted(ca_names, key=cmp_to_key(lambda cert1, cert2: ca_cmp(cert1, cert2, pki_node)))
+
