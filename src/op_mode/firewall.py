@@ -270,7 +270,7 @@ def show_firewall_group(name=None):
             references = find_references(group_type, group_name)
             row = [group_name, group_type, '\n'.join(references) or 'N/A']
             if 'address' in group_conf:
-                row.append("\n".join(sorted(group_conf['address'], key=ipaddress.ip_address)))
+                row.append("\n".join(sorted(group_conf['address'])))
             elif 'network' in group_conf:
                 row.append("\n".join(sorted(group_conf['network'], key=ipaddress.ip_network)))
             elif 'mac_address' in group_conf:
