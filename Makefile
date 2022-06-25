@@ -77,9 +77,9 @@ op_mode_definitions: $(op_xml_obj)
 
 .PHONY: vygovalidators
 vygovalidators:
-	@for file in `ls $(VALIDATORS_GO_DIR)`
+	@for module in `ls $(VALIDATORS_GO_DIR)`
 	do
-		go build -o src/validators/ $(VALIDATORS_GO_DIR)/$$file
+		go build -a -trimpath -o src/validators/$$module-go $(VALIDATORS_GO_DIR)/$$module/$$module.go
 	done
 
 .PHONY: vyshim
@@ -91,7 +91,7 @@ vyxdp:
 	$(MAKE) -C $(XDP_DIR)
 
 .PHONY: all
-all: clean interface_definitions op_mode_definitions check test j2lint vyshim
+all: clean interface_definitions op_mode_definitions check test j2lint vyshim vygovalidators
 
 .PHONY: check
 .ONESHELL:
