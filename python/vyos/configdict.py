@@ -358,13 +358,14 @@ def get_pppoe_interfaces(conf, vrf=None):
     """ Common helper functions to retrieve all interfaces from current CLI
     sessions that have DHCP configured. """
     pppoe_interfaces = {}
+    conf.set_level([])
     for ifname in conf.list_nodes(['interfaces', 'pppoe']):
         # always reset config level, as get_interface_dict() will alter it
         conf.set_level([])
         # we already have a dict representation of the config from get_config_dict(),
         # but with the extended information from get_interface_dict() we also
         # get the DHCP client default-route-distance default option if not specified.
-        ifconfig = get_interface_dict(conf, ['interfaces', 'pppoe'], ifname)
+        _, ifconfig = get_interface_dict(conf, ['interfaces', 'pppoe'], ifname)
 
         options = {}
         if 'default_route_distance' in ifconfig:

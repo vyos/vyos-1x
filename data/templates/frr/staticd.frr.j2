@@ -17,7 +17,7 @@ vrf {{ vrf }}
 {% endif %}
 {# IPv4 default routes from DHCP interfaces #}
 {% if dhcp is vyos_defined %}
-{%     for interface, interface_config in dhcp.items() %}
+{%     for interface, interface_config in dhcp.items() if interface_config.dhcp_options.no_default_route is not vyos_defined %}
 {%         set next_hop = interface | get_dhcp_router %}
 {%         if next_hop is vyos_defined %}
 {{ ip_prefix }} route 0.0.0.0/0 {{ next_hop }} {{ interface }} tag 210 {{ interface_config.dhcp_options.default_route_distance if interface_config.dhcp_options.default_route_distance is vyos_defined }}
@@ -26,7 +26,7 @@ vrf {{ vrf }}
 {% endif %}
 {# IPv4 default routes from PPPoE interfaces #}
 {% if pppoe is vyos_defined %}
-{%     for interface, interface_config in pppoe.items() %}
+{%     for interface, interface_config in pppoe.items() if interface_config.no_default_route is not vyos_defined %}
 {{ ip_prefix }} route 0.0.0.0/0 {{ interface }} tag 210 {{ interface_config.default_route_distance if interface_config.default_route_distance is vyos_defined }}
 {%     endfor %}
 {% endif %}
