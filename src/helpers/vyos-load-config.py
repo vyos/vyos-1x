@@ -24,19 +24,24 @@ Example: load https://somewhere.net/some.config
 """
 
 import os
+import re
 import sys
 import gzip
 import argparse
 import tempfile
+from subprocess import run, PIPE, STDOUT, CalledProcessError
+
 from vyos.configsource import ConfigSourceSession, VyOSError
 from vyos.configtree import ConfigTree, DiffTree
 from vyos.migrator import Migrator, VirtualMigrator, MigratorError
 from vyos.remote import get_remote_config
 from vyos.defaults import directories
-from vyos.util import cmd, DEVNULL
 
 DEFAULT_CONFIG_PATH = os.path.join(directories['current'], 'config.boot')
 protocols = ['scp', 'sftp', 'http', 'https', 'ftp', 'tftp']
+
+BATCH_DELETE = '/opt/vyatta/sbin/my_batch_delete'
+BATCH_SET = '/opt/vyatta/sbin/my_batch_set'
 
 class LoadConfig(ConfigSourceSession):
     """A subclass for loading a config file.
@@ -66,12 +71,36 @@ class LoadConfig(ConfigSourceSession):
 
         if not command_list:
             return 0
-        for op in command_list:
-            try:
-                cmd(f'/opt/vyatta/sbin/my_{op}', shell=True, stderr=DEVNULL)
-            except OSError as e:
-                print(e.strerror)
-                return e.errno
+
+        set_list = tempfile.NamedTemporaryFile(dir='/tmp', delete=False).name
+        del_list = tempfile.NamedTemporaryFile(dir='/tmp', delete=False).name
+        with open(set_list, 'w') as set_f, open(del_list, 'w') as del_f:
+            for c in command_list:
+                if re.match(r'^set', c):
+                    set_f.write(c.replace('set', '', 1).strip()+"\n")
+                if re.match(r'^delete', c):
+                    del_f.write(c.replace('delete', '', 1).strip()+"\n")
+
+        try:
+            run([BATCH_DELETE+' '+del_list], shell=True, stdout=PIPE, stderr=STDOUT,
+                                             check=True, text=True).stdout
+        except CalledProcessError as e:
+            print(repr(e))
+            print(e.returncode)
+            print(f"list of delete commands at {del_list}")
+            return -1
+        else:
+            os.remove(del_list)
+        try:
+            run([BATCH_SET+' '+set_list], shell=True, stdout=PIPE, stderr=STDOUT,
+                                          check=True, text=True).stdout
+        except CalledProcessError as e:
+            print(repr(e))
+            print(e.returncode)
+            print(f"list of set commands at {set_list}")
+            return -1
+        else:
+            os.remove(set_list)
 
         return 0
 
