@@ -6,7 +6,7 @@
       <node name="mpls" owner="${vyos_conf_scripts_dir}/protocols_mpls.py">
         <properties>
           <help>Multiprotocol Label Switching (MPLS)</help>
-          <priority>299</priority>
+          <priority>400</priority>
         </properties>
         <children>
           <node name="ldp">
