@@ -90,10 +90,10 @@ def get_config(config=None):
             container['name'][name] = dict_merge(default_values, container['name'][name])
 
     # Delete container network, delete containers
-    tmp = node_changed(conf, base + ['container', 'network'])
+    tmp = node_changed(conf, base + ['network'])
     if tmp: container.update({'network_remove' : tmp})
 
-    tmp = node_changed(conf, base + ['container', 'name'])
+    tmp = node_changed(conf, base + ['name'])
     if tmp: container.update({'container_remove' : tmp})
 
     return container
@@ -270,12 +270,13 @@ def apply(container):
     # Option "--force" allows to delete containers with any status
     if 'container_remove' in container:
         for name in container['container_remove']:
-            call(f'podman stop {name}')
+            call(f'podman stop --time 3 {name}')
             call(f'podman rm --force {name}')
 
     # Delete old networks if needed
     if 'network_remove' in container:
         for network in container['network_remove']:
+            call(f'podman network rm {network}')
             tmp = f'/etc/cni/net.d/{network}.conflist'
             if os.path.exists(tmp):
                 os.unlink(tmp)
@@ -294,7 +295,7 @@ def apply(container):
                 # check if there is a container by that name running
                 tmp = _cmd('podman ps -a --format "{{.Names}}"')
                 if name in tmp:
-                    _cmd(f'podman stop {name}')
+                    _cmd(f'podman stop --time 3 {name}')
                     _cmd(f'podman rm --force {name}')
                 continue
 
