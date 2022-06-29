@@ -90,6 +90,10 @@ class BridgeIf(Interface):
             'validate': assert_boolean,
             'location': '/sys/class/net/{ifname}/bridge/multicast_querier',
         },
+        'multicast_snooping': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/bridge/multicast_snooping',
+        },
     }}
 
     _command_set = {**Interface._command_set, **{
@@ -198,6 +202,18 @@ class BridgeIf(Interface):
         """
         self.set_interface('multicast_querier', enable)
 
+    def set_multicast_snooping(self, enable):
+        """
+        Enable or disable multicast snooping on the bridge.
+
+        Use enable=1 to enable or enable=0 to disable
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> BridgeIf('br0').set_multicast_snooping(1)
+        """
+        self.set_interface('multicast_snooping', enable)
+
     def add_port(self, interface):
         """
         Add physical interface to bridge (member port)
@@ -256,6 +272,11 @@ class BridgeIf(Interface):
         # enable/disable spanning tree
         value = '1' if 'stp' in config else '0'
         self.set_stp(value)
+
+        # enable or disable multicast snooping
+        tmp = dict_search('igmp.snooping', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_multicast_snooping(value)
 
         # enable or disable IGMP querier
         tmp = dict_search('igmp.querier', config)

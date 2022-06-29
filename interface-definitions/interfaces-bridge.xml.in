@@ -73,12 +73,18 @@
           </leafNode>
           <node name="igmp">
             <properties>
-              <help>Internet Group Management Protocol (IGMP) settings</help>
+              <help>Internet Group Management Protocol (IGMP) and Multicast Listener Discovery (MLD) settings</help>
             </properties>
             <children>
               <leafNode name="querier">
                 <properties>
-                  <help>Enable IGMP querier</help>
+                  <help>Enable IGMP/MLD querier</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="snooping">
+                <properties>
+                  <help>Enable IGMP/MLD snooping</help>
                   <valueless/>
                 </properties>
               </leafNode>
