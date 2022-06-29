@@ -122,6 +122,7 @@ interfaces {
         tls {
             ca-cert-file /config/auth/ovpn_test_chain.pem
             cert-file /config/auth/ovpn_test_server.pem
+            crl-file /config/auth/ovpn_test_ca.crl
             key-file /config/auth/ovpn_test_server.key
             auth-file /config/auth/ovpn_test_tls_auth.key
         }
