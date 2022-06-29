@@ -332,6 +332,35 @@ def verify_certificate(cert, ca_cert):
     except InvalidSignature:
         return False
 
+def verify_crl(crl, ca_cert):
+    # Verify CRL was signed by specified CA
+    if ca_cert.subject != crl.issuer:
+        return False
+
+    ca_public_key = ca_cert.public_key()
+    try:
+        if isinstance(ca_public_key, rsa.RSAPublicKeyWithSerialization):
+            ca_public_key.verify(
+                crl.signature,
+                crl.tbs_certlist_bytes,
+                padding=padding.PKCS1v15(),
+                algorithm=crl.signature_hash_algorithm)
+        elif isinstance(ca_public_key, dsa.DSAPublicKeyWithSerialization):
+            ca_public_key.verify(
+                crl.signature,
+                crl.tbs_certlist_bytes,
+                algorithm=crl.signature_hash_algorithm)
+        elif isinstance(ca_public_key, ec.EllipticCurvePublicKeyWithSerialization):
+            ca_public_key.verify(
+                crl.signature,
+                crl.tbs_certlist_bytes,
+                signature_algorithm=ec.ECDSA(crl.signature_hash_algorithm))
+        else:
+            return False # We cannot verify it
+        return True
+    except InvalidSignature:
+        return False
+
 def verify_ca_chain(sorted_names, pki_node):
     if len(sorted_names) == 1: # Single cert, no chain
         return True

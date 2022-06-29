@@ -120,7 +120,7 @@ interfaces {
         persistent-tunnel
         remote-host 192.0.2.10
         tls {
-            ca-cert-file /config/auth/ovpn_test_ca.pem
+            ca-cert-file /config/auth/ovpn_test_chain.pem
             cert-file /config/auth/ovpn_test_server.pem
             key-file /config/auth/ovpn_test_server.key
             auth-file /config/auth/ovpn_test_tls_auth.key
@@ -152,7 +152,7 @@ interfaces {
         remote-host 01.foo.com
         remote-port 1194
         tls {
-            ca-cert-file /config/auth/ovpn_test_ca.pem
+            ca-cert-file /config/auth/ovpn_test_chain.pem
             auth-file /config/auth/ovpn_test_tls_auth.key
         }
     }
