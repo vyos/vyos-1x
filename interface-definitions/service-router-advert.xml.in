@@ -136,6 +136,23 @@
                 </children>
               </node>
               #include <include/name-server-ipv6.xml.i>
+              <leafNode name="name-server-lifetime">
+                <properties>
+                  <help>Maximum duration how long the RDNSS entries are used</help>
+                  <valueHelp>
+                    <format>u32:0</format>
+                    <description>Name-servers should no longer be used</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:1-7200</format>
+                    <description>Maximum interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-7200"/>
+                  </constraint>
+                  <constraintErrorMessage>Maximum interval must be between 1 and 7200 seconds</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="other-config-flag">
                 <properties>
                   <help>Hosts use the administered (stateful) protocol for autoconfiguration of other (non-address) information</help>

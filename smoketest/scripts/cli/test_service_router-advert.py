@@ -17,6 +17,7 @@
 import re
 import unittest
 
+from vyos.configsession import ConfigSessionError
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.util import read_file
@@ -93,6 +94,7 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
     def test_dns(self):
         nameserver = ['2001:db8::1', '2001:db8::2']
         dnssl = ['vyos.net', 'vyos.io']
+        ns_lifetime = '599'
 
         self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
         self.cli_set(base_path + ['other-config-flag'])
@@ -102,6 +104,14 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         for sl in dnssl:
             self.cli_set(base_path + ['dnssl', sl])
 
+        self.cli_set(base_path + ['name-server-lifetime', ns_lifetime])
+        # The value, if not 0, must be at least interval max (defaults to 600).
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        ns_lifetime = '600'
+        self.cli_set(base_path + ['name-server-lifetime', ns_lifetime])
+
         # commit changes
         self.cli_commit()
 
@@ -110,8 +120,12 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = 'RDNSS ' + ' '.join(nameserver) + ' {'
         self.assertIn(tmp, config)
 
+        tmp = f'AdvRDNSSLifetime {ns_lifetime};'
+        self.assertIn(tmp, config)
+
         tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
         self.assertIn(tmp, config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

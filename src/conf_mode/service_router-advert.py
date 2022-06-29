@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,7 @@
 import os
 
 from sys import exit
-
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
@@ -79,21 +79,34 @@ def verify(rtradv):
     if 'interface' not in rtradv:
         return None
 
-    for interface in rtradv['interface']:
-        interface = rtradv['interface'][interface]
+    for interface, interface_config in rtradv['interface'].items():
         if 'prefix' in interface:
-            for prefix in interface['prefix']:
-                prefix = interface['prefix'][prefix]
-                valid_lifetime = prefix['valid_lifetime']
+            for prefix, prefix_config in interface_config['prefix'].items():
+                valid_lifetime = prefix_config['valid_lifetime']
                 if valid_lifetime == 'infinity':
                     valid_lifetime = 4294967295
 
-                preferred_lifetime = prefix['preferred_lifetime']
+                preferred_lifetime = prefix_config['preferred_lifetime']
                 if preferred_lifetime == 'infinity':
                     preferred_lifetime = 4294967295
 
                 if not (int(valid_lifetime) > int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
+
+        if 'name_server_lifetime' in interface_config:
+            # man page states:
+            # The maximum duration how long the RDNSS entries are used for name
+            # resolution. A value of 0 means the nameserver must no longer be
+            # used. The value, if not 0, must be at least MaxRtrAdvInterval. To
+            # ensure stale RDNSS info gets removed in a timely fashion, this
+            # should not be greater than 2*MaxRtrAdvInterval.
+            lifetime = int(interface_config['name_server_lifetime'])
+            interval_max = int(interface_config['interval']['max'])
+            if lifetime > 0:
+                if lifetime < int(interval_max):
+                    raise ConfigError(f'RDNSS lifetime must be at least "{interval_max}" seconds!')
+                if lifetime > 2* interval_max:
+                    Warning(f'RDNSS lifetime should not exceed "{2 * interval_max}" which is two times "interval max"!')
 
     return None
 
@@ -105,15 +118,16 @@ def generate(rtradv):
     return None
 
 def apply(rtradv):
+    systemd_service = 'radvd.service'
     if not rtradv:
         # bail out early - looks like removal from running config
-        call('systemctl stop radvd.service')
+        call(f'systemctl stop {systemd_service}')
         if os.path.exists(config_file):
             os.unlink(config_file)
 
         return None
 
-    call('systemctl restart radvd.service')
+    call(f'systemctl reload-or-restart {systemd_service}')
 
     return None
 

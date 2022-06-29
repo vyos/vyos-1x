@@ -55,6 +55,9 @@ interface {{ iface }} {
 {%         endif %}
 {%         if iface_config.name_server is vyos_defined %}
     RDNSS {{ iface_config.name_server | join(" ") }} {
+{%             if iface_config.name_server_lifetime is vyos_defined %}
+        AdvRDNSSLifetime {{ iface_config.name_server_lifetime }};
+{%             endif %}
     };
 {%         endif %}
 {%         if iface_config.dnssl is vyos_defined %}
