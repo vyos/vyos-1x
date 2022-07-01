@@ -232,6 +232,9 @@ class BasicInterfaceTest:
 
             for interface in self._interfaces:
                 base = self._base_path + [interface]
+                # just set the interface base without any option - some interfaces
+                # (VTI) do not require any option to be brought up
+                self.cli_set(base)
                 for option in self._options.get(interface, []):
                     self.cli_set(base + option.split())
 
