@@ -16,19 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          <leafNode name="address">
-            <properties>
-              <help>IP address</help>
-              <valueHelp>
-                <format>ipv4net</format>
-                <description>IPv4 address and prefix length</description>
-              </valueHelp>
-              <constraint>
-                <validator name="ipv4-host"/>
-              </constraint>
-              <multi/>
-            </properties>
-          </leafNode>
+          #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/interface/description.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/ipv4-options.xml.i>
