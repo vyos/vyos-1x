@@ -4,7 +4,7 @@
     <children>
       <tagNode name="vti" owner="${vyos_conf_scripts_dir}/interfaces-vti.py">
         <properties>
-          <help>Virtual Tunnel interface</help>
+          <help>Virtual Tunnel Interface (XFRM)</help>
           <priority>381</priority>
           <constraint>
             <regex>vti[0-9]+</regex>
