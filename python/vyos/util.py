@@ -197,7 +197,7 @@ def read_file(fname, defaultonfailure=None):
             return defaultonfailure
         raise e
 
-def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=None):
+def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=None, append=False):
     """
     Write content of data to given fname, should defaultonfailure be not None,
     it is returned on failure to read.
@@ -212,7 +212,7 @@ def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=N
     try:
         """ Write a file to string """
         bytes = 0
-        with open(fname, 'w') as f:
+        with open(fname, 'w' if not append else 'a') as f:
             bytes = f.write(data)
         chown(fname, user, group)
         chmod(fname, mode)

@@ -741,7 +741,7 @@
                 </properties>
               </leafNode>
               #include <include/pki/certificate.xml.i>
-              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/ca-certificate-multi.xml.i>
               <leafNode name="dh-params">
                 <properties>
                   <help>Diffie Hellman parameters (server only)</help>

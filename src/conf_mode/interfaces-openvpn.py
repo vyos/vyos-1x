@@ -39,6 +39,8 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import VTunIf
 from vyos.pki import load_dh_parameters
 from vyos.pki import load_private_key
+from vyos.pki import sort_ca_chain
+from vyos.pki import verify_ca_chain
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_crl
 from vyos.pki import wrap_dh_parameters
@@ -148,8 +150,14 @@ def verify_pki(openvpn):
         if 'ca_certificate' not in tls:
             raise ConfigError(f'Must specify "tls ca-certificate" on openvpn interface {interface}')
 
-        if tls['ca_certificate'] not in pki['ca']:
-            raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
+        for ca_name in tls['ca_certificate']:
+            if ca_name not in pki['ca']:
+                raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
+
+        if len(tls['ca_certificate']) > 1:
+            sorted_chain = sort_ca_chain(tls['ca_certificate'], pki['ca'])
+            if not verify_ca_chain(sorted_chain, pki['ca']):
+                raise ConfigError(f'CA certificates are not a valid chain')
 
         if mode != 'client' and 'auth_key' not in tls:
             if 'certificate' not in tls:
@@ -516,21 +524,28 @@ def generate_pki_files(openvpn):
 
     if tls:
         if 'ca_certificate' in tls:
-            cert_name = tls['ca_certificate']
-            pki_ca = pki['ca'][cert_name]
+            cert_path = os.path.join(cfg_dir, f'{interface}_ca.pem')
+            crl_path = os.path.join(cfg_dir, f'{interface}_crl.pem')
 
-            if 'certificate' in pki_ca:
-                cert_path = os.path.join(cfg_dir, f'{interface}_ca.pem')
-                write_file(cert_path, wrap_certificate(pki_ca['certificate']),
-                           user=user, group=group, mode=0o600)
+            if os.path.exists(cert_path):
+                os.unlink(cert_path)
 
-            if 'crl' in pki_ca:
-                for crl in pki_ca['crl']:
-                    crl_path = os.path.join(cfg_dir, f'{interface}_crl.pem')
-                    write_file(crl_path, wrap_crl(crl), user=user, group=group,
-                               mode=0o600)
+            if os.path.exists(crl_path):
+                os.unlink(crl_path)
 
-                openvpn['tls']['crl'] = True
+            for cert_name in sort_ca_chain(tls['ca_certificate'], pki['ca']):
+                pki_ca = pki['ca'][cert_name]
+
+                if 'certificate' in pki_ca:
+                    write_file(cert_path, wrap_certificate(pki_ca['certificate']) + "\n",
+                               user=user, group=group, mode=0o600, append=True)
+
+                if 'crl' in pki_ca:
+                    for crl in pki_ca['crl']:
+                        write_file(crl_path, wrap_crl(crl) + "\n", user=user, group=group,
+                                   mode=0o600, append=True)
+
+                    openvpn['tls']['crl'] = True
 
         if 'certificate' in tls:
             cert_name = tls['certificate']
