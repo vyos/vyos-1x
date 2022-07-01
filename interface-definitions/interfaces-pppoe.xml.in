@@ -4,7 +4,7 @@
     <children>
       <tagNode name="pppoe" owner="${vyos_conf_scripts_dir}/interfaces-pppoe.py">
         <properties>
-          <help>Point-to-Point Protocol over Ethernet (PPPoE)</help>
+          <help>Point-to-Point Protocol over Ethernet (PPPoE) Interface</help>
           <priority>322</priority>
           <constraint>
             <regex>pppoe[0-9]+</regex>

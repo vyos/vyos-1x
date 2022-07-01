@@ -4,7 +4,7 @@
     <children>
       <tagNode name="pseudo-ethernet" owner="${vyos_conf_scripts_dir}/interfaces-pseudo-ethernet.py">
         <properties>
-          <help>Pseudo Ethernet</help>
+          <help>Pseudo Ethernet Interface (Macvlan)</help>
           <priority>321</priority>
           <constraint>
             <regex>peth[0-9]+</regex>
