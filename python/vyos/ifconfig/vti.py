@@ -1,4 +1,4 @@
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -53,3 +53,7 @@ class VTIIf(Interface):
 
         self._cmd(cmd.format(**self.config))
         self.set_interface('admin_state', 'down')
+
+    def get_mac(self):
+        """ Get a synthetic MAC address. """
+        return self.get_mac_synthetic()
