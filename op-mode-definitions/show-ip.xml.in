@@ -7,12 +7,6 @@
           <help>Show IPv4 networking information</help>
         </properties>
         <children>
-          <node name="external">
-            <properties>
-              <help>Show IPv4 external address</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/show_ip_external.sh</command>
-          </node>
           <node name="neighbors">
             <properties>
               <help>Show IPv4 neighbor (ARP) table</help>
