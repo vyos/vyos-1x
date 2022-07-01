@@ -19,6 +19,7 @@ import os
 from sys import exit
 from sys import argv
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_prefix_list
@@ -199,7 +200,7 @@ def verify(bgp):
                         raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
 
             if 'address_family' not in peer_config:
-                print(f'Neighbor "{peer}" requires address-family!')
+                Warning(f'BGP neighbor "{peer}" requires address-family!')
 
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
