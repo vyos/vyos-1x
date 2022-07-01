@@ -69,7 +69,7 @@ class Analyzer:
                     'pattern_raw':
                         pattern_raw,
                     'syslog_id':
-                        dict_search('filter.syslog_identifier', event_config),
+                        dict_search('filter.syslog-identifier', event_config),
                     'pattern_script': {
                         'path': script,
                         'environment': environment
