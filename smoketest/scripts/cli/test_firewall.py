@@ -69,8 +69,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip filter', inverse=True)
 
-    def verify_nftables(self, nftables_search, table, inverse=False):
-        nftables_output = cmd(f'sudo nft list table {table}')
+    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
+        nftables_output = cmd(f'sudo nft {args} list table {table}')
 
         for search in nftables_search:
             matched = False
@@ -79,6 +79,24 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     matched = True
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
+
+    def test_geoip(self):
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'se'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'gb'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'de'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'country-code', 'fr'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'source', 'geoip', 'inverse-match'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip saddr @GEOIP_CC_smoketest_1', 'drop'],
+            ['ip saddr != @GEOIP_CC_smoketest_2', 'return']
+        ]
+        # -t prevents 1000+ GeoIP elements being returned
+        self.verify_nftables(nftables_search, 'ip filter', args='-t')
 
     def test_groups(self):
         hostmap_path = ['system', 'static-host-mapping', 'host-name']
