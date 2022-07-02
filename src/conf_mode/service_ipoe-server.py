@@ -53,6 +53,8 @@ default_config_data = {
     'radius_nas_ip': '',
     'radius_source_address': '',
     'radius_shaper_attr': '',
+    'radius_shaper_enable': False,
+    'radius_shaper_multiplier': '',
     'radius_shaper_vendor': '',
     'radius_dynamic_author': '',
     'thread_cnt': get_half_cpus()
@@ -195,6 +197,18 @@ def get_config(config=None):
 
     if conf.exists(['nas-ip-address']):
         ipoe['radius_nas_ip'] = conf.return_value(['nas-ip-address'])
+
+    if conf.exists(['rate-limit', 'attribute']):
+        ipoe['radius_shaper_attr'] = conf.return_value(['rate-limit', 'attribute'])
+
+    if conf.exists(['rate-limit', 'enable']):
+        ipoe['radius_shaper_enable'] = True
+
+    if conf.exists(['rate-limit', 'multiplier']):
+        ipoe['radius_shaper_multiplier'] = conf.return_value(['rate-limit', 'multiplier'])
+
+    if conf.exists(['rate-limit', 'vendor']):
+        ipoe['radius_shaper_vendor'] = conf.return_value(['rate-limit', 'vendor'])
 
     if conf.exists(['source-address']):
         ipoe['radius_source_address'] = conf.return_value(['source-address'])
