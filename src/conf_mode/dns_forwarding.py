@@ -266,6 +266,12 @@ def verify(dns):
             if 'server' not in dns['domain'][domain]:
                 raise ConfigError(f'No server configured for domain {domain}!')
 
+    if 'dns64_prefix' in dns:
+        dns_prefix = dns['dns64_prefix'].split('/')[1]
+        # RFC 6147 requires prefix /96
+        if int(dns_prefix) != 96:
+            raise ConfigError('DNS forwarding "dns64-prefix" must be /96')
+
     if ('authoritative_zone_errors' in dns) and dns['authoritative_zone_errors']:
         for error in dns['authoritative_zone_errors']:
             print(error)

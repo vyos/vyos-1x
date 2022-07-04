@@ -32,6 +32,11 @@ local-address={{ listen_address | join(',') }}
 # dnssec
 dnssec={{ dnssec }}
 
+{% if dns64_prefix is vyos_defined %}
+# dns64-prefix
+dns64-prefix={{ dns64_prefix }}
+{% endif %}
+
 # serve rfc1918 records
 serve-rfc1918={{ 'no' if no_serve_rfc1918 is vyos_defined else 'yes' }}
 
