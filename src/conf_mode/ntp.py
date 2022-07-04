@@ -50,6 +50,8 @@ def verify(ntp):
     if 'allow_clients' in ntp and 'server' not in ntp:
         raise ConfigError('NTP server not configured')
 
+    verify_vrf(ntp)
+
     if 'interface' in ntp:
         # If ntpd should listen on a given interface, ensure it exists
         for interface in ntp['interface']:
@@ -63,7 +65,6 @@ def verify(ntp):
                     raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
                                       f'does not belong to this VRF!')
 
-    verify_vrf(ntp)
     return None
 
 def generate(ntp):
