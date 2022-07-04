@@ -98,6 +98,9 @@ def get_config(config=None):
                             dns['authoritative_zone_errors'].append('{}.{}: at least one address is required'.format(subnode, node))
                             continue
 
+                        if subnode == 'any':
+                            subnode = '*'
+
                         for address in rdata['address']:
                             zone['records'].append({
                                 'name': subnode,
