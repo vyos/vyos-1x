@@ -152,7 +152,10 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 output.append(f'{ip_name} {prefix}addr {suffix}')
             
             if dict_search_args(side_conf, 'geoip', 'country_code'):
-                output.append(f'{ip_name} {prefix}addr @GEOIP_CC_{fw_name}_{rule_id}')
+                operator = ''
+                if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
+                    operator = '!='
+                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf["mac_address"]
@@ -429,22 +432,13 @@ def geoip_update(firewall, force=False):
 
         # Map country codes to set names
         for codes, path in dict_search_recursive(firewall, 'country_code'):
+            set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
             if path[0] == 'name':
-                set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
-                ipv4_sets[set_name] = []
                 for code in codes:
-                    if code not in ipv4_codes:
-                        ipv4_codes[code] = [set_name]
-                    else:
-                        ipv4_codes[code].append(set_n)
+                    ipv4_codes.setdefault(code, []).append(set_name)
             elif path[0] == 'ipv6_name':
-                set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
-                ipv6_sets[set_name] = []
                 for code in codes:
-                    if code not in ipv6_codes:
-                        ipv6_codes[code] = [set_name]
-                    else:
-                        ipv6_codes[code].append(set_name)
+                    ipv6_codes.setdefault(code, []).append(set_name)
 
         if not ipv4_codes and not ipv6_codes:
             if force:
@@ -459,11 +453,11 @@ def geoip_update(firewall, force=False):
             if code in ipv4_codes and ipv4:
                 ip_range = f'{start}-{end}' if start != end else start
                 for setname in ipv4_codes[code]:
-                    ipv4_sets[setname].append(ip_range)
+                    ipv4_sets.setdefault(setname, []).append(ip_range)
             if code in ipv6_codes and not ipv4:
                 ip_range = f'{start}-{end}' if start != end else start
                 for setname in ipv6_codes[code]:
-                    ipv6_sets[setname].append(ip_range)
+                    ipv6_sets.setdefault(setname, []).append(ip_range)
 
         render(nftables_geoip_conf, 'firewall/nftables-geoip-update.j2', {
             'ipv4_sets': ipv4_sets,

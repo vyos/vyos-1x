@@ -17,6 +17,12 @@
         <multi />
       </properties>
     </leafNode>
+    <leafNode name="inverse-match">
+      <properties>
+        <help>Inverse match of country-codes</help>
+        <valueless/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
