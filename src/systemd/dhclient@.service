@@ -14,7 +14,7 @@ ExecStart=/sbin/dhclient -4 $DHCLIENT_OPTS
 ExecStop=/sbin/dhclient -4 $DHCLIENT_OPTS -r
 Restart=always
 TimeoutStopSec=20
-SendSIGKILL=SIGKILL
+SendSIGKILL=true
 FinalKillSignal=SIGABRT
 
 [Install]
