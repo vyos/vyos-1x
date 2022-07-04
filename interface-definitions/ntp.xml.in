@@ -81,6 +81,7 @@
               </leafNode>
             </children>
           </node>
+          #include <include/generic-interface-multi.xml.i>
           #include <include/listen-address.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
