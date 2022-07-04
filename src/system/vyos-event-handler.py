@@ -15,14 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import select
-import re
 import json
+import re
+import select
+from copy import deepcopy
 from os import getpid, environ
 from pathlib import Path
 from signal import signal, SIGTERM, SIGINT
-from systemd import journal
 from sys import exit
+from systemd import journal
+
 from vyos.util import run, dict_search
 
 # Identify this script
@@ -54,7 +56,7 @@ class Analyzer:
                 script_arguments = dict_search('script.arguments', event_config)
                 script = f'{script} {script_arguments}'
             # Prepare environment
-            environment = environ
+            environment = deepcopy(environ)
             # Check for additional environment options
             if dict_search('script.environment', event_config):
                 for env_variable, env_value in dict_search(
