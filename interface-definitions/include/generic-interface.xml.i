@@ -1,7 +1,7 @@
 <!-- include start from generic-interface.xml.i -->
 <leafNode name="interface">
   <properties>
-    <help>Interface Name to use</help>
+    <help>Interface to use</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces.py</script>
     </completionHelp>
