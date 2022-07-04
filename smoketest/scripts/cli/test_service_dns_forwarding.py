@@ -48,6 +48,7 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # Check basic DNS forwarding settings
         cache_size = '20'
         negative_ttl = '120'
+        dns_prefix = '64:ff9b::/96'
 
         self.cli_set(base_path + ['cache-size', cache_size])
         self.cli_set(base_path + ['negative-ttl', negative_ttl])
@@ -63,6 +64,12 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
+
+        # Check dns64-prefix - must be prefix /96
+        self.cli_set(base_path + ['dns64-prefix', '2001:db8:aabb::/64'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['dns64-prefix', dns_prefix])
 
         # configure DNSSEC
         self.cli_set(base_path + ['dnssec', 'validate'])
@@ -92,6 +99,10 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # Do not use local /etc/hosts file in name resolution
         tmp = get_config_value('export-etc-hosts')
         self.assertEqual(tmp, 'no')
+
+        # dns64-prefix
+        tmp = get_config_value('dns64-prefix')
+        self.assertEqual(tmp, dns_prefix)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
