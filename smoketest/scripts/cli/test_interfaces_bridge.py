@@ -86,8 +86,82 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
             # validate member interface configuration
             for member in self._members:
                 tmp = get_interface_config(member)
+                # verify member is assigned to the bridge
+                self.assertEqual(interface, tmp['master'])
                 # Isolated must be enabled as configured above
                 self.assertTrue(tmp['linkinfo']['info_slave_data']['isolated'])
+
+    def test_igmp_querier_snooping(self):
+        # Add member interfaces to bridge
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+
+            # assign members to bridge interface
+            for member in self._members:
+                base_member = base + ['member', 'interface', member]
+                self.cli_set(base_member)
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            # Verify IGMP default configuration
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_snooping')
+            self.assertEqual(tmp, '0')
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_querier')
+            self.assertEqual(tmp, '0')
+
+        # Enable IGMP snooping
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['igmp', 'snooping'])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            # Verify IGMP snooping configuration
+            # Verify IGMP default configuration
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_snooping')
+            self.assertEqual(tmp, '1')
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_querier')
+            self.assertEqual(tmp, '0')
+
+        # Enable IGMP querieer
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_set(base + ['igmp', 'querier'])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            # Verify IGMP snooping & querier configuration
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_snooping')
+            self.assertEqual(tmp, '1')
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_querier')
+            self.assertEqual(tmp, '1')
+
+        # Disable IGMP
+        for interface in self._interfaces:
+            base = self._base_path + [interface]
+            self.cli_delete(base + ['igmp'])
+
+        # commit config
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            # Verify IGMP snooping & querier configuration
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_snooping')
+            self.assertEqual(tmp, '0')
+            tmp = read_file(f'/sys/class/net/{interface}/bridge/multicast_querier')
+            self.assertEqual(tmp, '0')
+
+            # validate member interface configuration
+            for member in self._members:
+                tmp = get_interface_config(member)
+                # verify member is assigned to the bridge
+                self.assertEqual(interface, tmp['master'])
 
 
     def test_add_remove_bridge_member(self):
