@@ -33,10 +33,17 @@ restrict {{ address|address_from_cidr }} mask {{ address|netmask_from_cidr }} no
 {%   endfor %}
 {% endif %}
 
-{% if listen_address %}
+{% if listen_address is defined or interface is defined %}
 # NTP should listen on configured addresses only
 interface ignore wildcard
-{%   for address in listen_address %}
+{%   if listen_address is defined %}
+{%     for address in listen_address %}
 interface listen {{ address }}
-{%   endfor %}
+{%     endfor %}
+{%   endif %}
+{%   if interface is defined %}
+{%     for ifname in interface %}
+interface listen {{ ifname }}
+{%     endfor %}
+{%   endif %}
 {% endif %}

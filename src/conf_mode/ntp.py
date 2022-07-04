@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,9 +18,11 @@ import os
 
 from vyos.config import Config
 from vyos.configverify import verify_vrf
-from vyos import ConfigError
+from vyos.configverify import verify_interface_exists
 from vyos.util import call
+from vyos.util import get_interface_config
 from vyos.template import render
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
@@ -47,6 +49,19 @@ def verify(ntp):
 
     if 'allow_clients' in ntp and 'server' not in ntp:
         raise ConfigError('NTP server not configured')
+
+    if 'interface' in ntp:
+        # If ntpd should listen on a given interface, ensure it exists
+        for interface in ntp['interface']:
+            verify_interface_exists(interface)
+
+            # If we run in a VRF, our interface must belong to this VRF, too
+            if 'vrf' in ntp:
+                tmp = get_interface_config(interface)
+                vrf_name = ntp['vrf']
+                if 'master' not in tmp or tmp['master'] != vrf_name:
+                    raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
+                                      f'does not belong to this VRF!')
 
     verify_vrf(ntp)
     return None
