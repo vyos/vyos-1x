@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022, VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from os import system
+from vyos.pki import create_private_key
+from vyos.pki import create_certificate_request
+from vyos.pki import create_certificate
+from vyos.pki import create_certificate_revocation_list
+from vyos.pki import create_dh_parameters
+from vyos.pki import encode_certificate
+from vyos.pki import encode_dh_parameters
+from vyos.pki import encode_private_key
+
+subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos'}
+ca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos CA'}
+subca_subject = {'country': 'DE', 'state': 'BY', 'locality': 'Cloud', 'organization': 'VyOS', 'common_name': 'vyos SubCA'}
+
+ca_cert = '/config/auth/ovpn_test_ca.pem'
+ca_key = '/config/auth/ovpn_test_ca.key'
+ca_cert_chain = '/config/auth/ovpn_test_chain.pem'
+ca_crl = '/config/auth/ovpn_test_ca.crl'
+subca_cert = '/config/auth/ovpn_test_subca.pem'
+subca_csr = '/tmp/subca.csr'
+subca_key = '/config/auth/ovpn_test_subca.key'
+ssl_cert = '/config/auth/ovpn_test_server.pem'
+ssl_key  = '/config/auth/ovpn_test_server.key'
+dh_pem   = '/config/auth/ovpn_test_dh.pem'
+s2s_key  = '/config/auth/ovpn_test_site2site.key'
+auth_key = '/config/auth/ovpn_test_tls_auth.key'
+
+def create_cert(subject, cert_path, key_path, sign_by=None, sign_by_key=None, ca=False, sub_ca=False):
+    priv_key = create_private_key('rsa', 2048)
+    cert_req = create_certificate_request(subject, priv_key)
+    cert = create_certificate(
+        cert_req,
+        sign_by if sign_by else cert_req,
+        sign_by_key if sign_by_key else priv_key,
+        is_ca=ca, is_sub_ca=sub_ca)
+
+    with open(cert_path, 'w') as f:
+        f.write(encode_certificate(cert))
+
+    with open(key_path, 'w') as f:
+        f.write(encode_private_key(priv_key))
+
+    return cert, priv_key
+
+def create_empty_crl(crl_path, sign_by, sign_by_key):
+    crl = create_certificate_revocation_list(sign_by, sign_by_key, [1])
+
+    with open(crl_path, 'w') as f:
+        f.write(encode_certificate(crl))
+
+    return crl
+
+if __name__ == '__main__':
+    # Create Root CA
+    ca_cert_obj, ca_key_obj = create_cert(ca_subject, ca_cert, ca_key, ca=True)
+
+    # Create Empty CRL
+    create_empty_crl(ca_crl, ca_cert_obj, ca_key_obj)
+
+    # Create Intermediate CA
+    subca_cert_obj, subca_key_obj = create_cert(
+        subca_subject, subca_cert, subca_key,
+        sign_by=ca_cert_obj, sign_by_key=ca_key_obj,
+        ca=True, sub_ca=True)
+
+    # Create Chain
+    with open(ca_cert_chain, 'w') as f:
+        f.write(encode_certificate(subca_cert_obj) + "\n")
+        f.write(encode_certificate(ca_cert_obj) + "\n")
+
+    # Create Server Cert
+    create_cert(subject, ssl_cert, ssl_key, sign_by=subca_cert_obj, sign_by_key=subca_key_obj)
+
+    # Create DH params
+    dh_params = create_dh_parameters()
+
+    with open(dh_pem, 'w') as f:
+        f.write(encode_dh_parameters(dh_params))
+
+    # OpenVPN S2S Key
+    system(f'openvpn --genkey secret {s2s_key}')
+
+    # OpenVPN Auth Key
+    system(f'openvpn --genkey secret {auth_key}')
