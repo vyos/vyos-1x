@@ -6,7 +6,7 @@
         <children>
           <node name="bgp">
             <properties>
-              <help>Clear Border Gateway Protocol (BGP) statistics or status</help>
+              <help>Border Gateway Protocol (BGP) information</help>
             </properties>
             <children>
               <leafNode name="all">
@@ -41,108 +41,8 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <node name="external">
-                <properties>
-                  <help>Clear all external peers</help>
-                  <completionHelp>
-                    <list>WORD</list>
-                  </completionHelp>
-                </properties>
-                <command>vtysh -c "clear bgp ipv4 external"</command>
-                <children>
-                  <node name="in">
-                    <properties>
-                      <help>Send route-refresh unless using 'soft-reconfiguration inbound'</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 external in"</command>
-                    <children>
-                      <leafNode name="prefix-filter">
-                        <properties>
-                          <help>Push out prefix-list ORF and do inbound soft reconfig</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 external in prefix-filter"</command>
-                      </leafNode>
-                    </children>
-                  </node>
-                  <node name="out">
-                    <properties>
-                      <help>Resend all outbound updates</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 external out"</command>
-                  </node>
-                  <node name="soft">
-                    <properties>
-                      <help>Soft reconfig inbound and outbound updates</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 external soft"</command>
-                    <children>
-                      <node name="in">
-                        <properties>
-                          <help>Clear via soft reconfig of inbound update</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 external soft in"</command>
-                      </node>
-                      <node name="out">
-                        <properties>
-                          <help>Resend all outbound updates</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 external soft out"</command>
-                      </node>
-                    </children>
-                  </node>
-                </children>
-              </node>
-              <tagNode name="peer-group">
-                <properties>
-                  <help>Clear BGP statistics or status for given peer-group</help>
-                  <completionHelp>
-                    <list>WORD</list>
-                  </completionHelp>
-                </properties>
-                <command>vtysh -c "clear bgp ipv4 peer-group $5"</command>
-                <children>
-                  <node name="in">
-                    <properties>
-                      <help>Send route-refresh unless using 'soft-reconfiguration inbound'</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 peer-group $5 in"</command>
-                    <children>
-                      <leafNode name="prefix-filter">
-                        <properties>
-                          <help>Push out prefix-list ORF and do inbound soft reconfig</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 peer-group $5 in prefix-filter"</command>
-                      </leafNode>
-                    </children>
-                  </node>
-                  <node name="out">
-                    <properties>
-                      <help>Resend all outbound updates</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 peer-group $5 out"</command>
-                  </node>
-                  <node name="soft">
-                    <properties>
-                      <help>Soft reconfig inbound and outbound updates</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 peer-group $5 soft"</command>
-                    <children>
-                      <node name="in">
-                        <properties>
-                          <help>Clear via soft reconfig of inbound update</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 peer-group $5 soft in"</command>
-                      </node>
-                      <node name="out">
-                        <properties>
-                          <help>Resend all outbound updates</help>
-                        </properties>
-                        <command>vtysh -c "clear bgp ipv4 peer-group $5 soft out"</command>
-                      </node>
-                    </children>
-                  </node>
-                </children>
-              </tagNode>
+              #include <include/bgp/reset-bgp-afi-common.xml.i>
+              #include <include/bgp/reset-bgp-peer-group.xml.i>
               <tagNode name="vrf">
                 <properties>
                   <help>Clear BGP statistics or status for vrf</help>
@@ -172,53 +72,14 @@
           </node>
           <tagNode name="bgp">
             <properties>
-              <help>Clear BGP neighbor IP address</help>
+              <help>BGP IPv4/IPv6 neighbor to clear</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
               </completionHelp>
             </properties>
-            <command>vtysh -c "clear bgp ipv4 $4"</command>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             <children>
-              <node name="in">
-                <properties>
-                  <help>Send route-refresh unless using 'soft-reconfiguration inbound'</help>
-                </properties>
-                <command>vtysh -c "clear bgp ipv4 $4 in"</command>
-                <children>
-                  <leafNode name="prefix-filter">
-                    <properties>
-                      <help>Push out prefix-list ORF and do inbound soft reconfig</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 $4 in prefix-filter"</command>
-                  </leafNode>
-                </children>
-              </node>
-              <node name="out">
-                <properties>
-                  <help>Resend all outbound updates</help>
-                </properties>
-                <command>vtysh -c "clear bgp ipv4 $4 out"</command>
-              </node>
-              <node name="soft">
-                <properties>
-                  <help>Soft reconfig inbound and outbound updates</help>
-                </properties>
-                <command>vtysh -c "clear bgp ipv4 $4 soft"</command>
-                <children>
-                  <node name="in">
-                    <properties>
-                      <help>Clear via soft reconfig of inbound update</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 $4 soft in"</command>
-                  </node>
-                  <node name="out">
-                    <properties>
-                      <help>Resend all outbound updates</help>
-                    </properties>
-                    <command>vtysh -c "clear bgp ipv4 $4 soft out"</command>
-                  </node>
-                </children>
-              </node>
+              #include <include/bgp/reset-bgp-neighbor-options.xml.i>
             </children>
           </tagNode>
         </children>
