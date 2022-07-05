@@ -127,13 +127,18 @@ bind={{ radius_source_address }}
 dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {% endif %}
 
-{% if radius_shaper_attr %}
+{% if radius_shaper_enable %}
 [shaper]
 verbose=1
+{%     if radius_shaper_attr %}
 attr={{ radius_shaper_attr }}
-{% if radius_shaper_vendor %}
+{%     endif %}
+{%     if radius_shaper_multiplier %}
+rate-multiplier={{ radius_shaper_multiplier }}
+{%     endif %}
+{%     if radius_shaper_vendor %}
 vendor={{ radius_shaper_vendor }}
-{% endif %}
+{%     endif %}
 {% endif %}
 {% endif %}
 
