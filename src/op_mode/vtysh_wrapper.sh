@@ -1,5 +1,6 @@
 #!/bin/sh
 declare -a tmp
-# FRR uses ospf6 where we use ospfv3, thus alter the command
-tmp=$(echo $@ | sed -e "s/ospfv3/ospf6/")
+# FRR uses ospf6 where we use ospfv3, and we use reset over clear for BGP,
+# thus alter the commands
+tmp=$(echo $@ | sed -e "s/ospfv3/ospf6/" | sed -e "s/^reset bgp/clear bgp/")
 vtysh -c "$tmp"

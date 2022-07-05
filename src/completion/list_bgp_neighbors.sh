@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,19 +18,21 @@
 
 ipv4=0
 ipv6=0
+vrf=""
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -4|--ipv4) ipv4=1 ;;
         -6|--ipv6) ipv6=1 ;;
         -b|--both) ipv4=1; ipv6=1 ;;
+        --vrf) vrf="vrf name $2"; shift ;;
         *) echo "Unknown parameter passed: $1" ;;
     esac
     shift
 done
 
 declare -a vals
-eval "vals=($(cli-shell-api listActiveNodes protocols bgp neighbor))"
+eval "vals=($(cli-shell-api listActiveNodes $vrf protocols bgp neighbor))"
 
 if [ $ipv4 -eq 1 ] && [ $ipv6 -eq 1 ]; then
     echo -n '<x.x.x.x>' '<h:h:h:h:h:h:h:h>' ${vals[@]}
@@ -54,9 +56,10 @@ elif [ $ipv6 -eq 1 ] ; then
      done
 else
     echo "Usage:"
-    echo "-4|--ipv4    list only IPv4 peers"
-    echo "-6|--ipv6    list only IPv6 peers"
-    echo "--both       list both IP4 and IPv6 peers"
+    echo "-4|--ipv4      list only IPv4 peers"
+    echo "-6|--ipv6      list only IPv6 peers"
+    echo "--both         list both IP4 and IPv6 peers"
+    echo "--vrf <name>   apply command to given VRF (optional)"
     echo ""
     exit 1
 fi
