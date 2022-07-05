@@ -81,13 +81,10 @@ def run(module):
         for opt in type_hints:
             th = type_hints[opt]
 
-            # Show commands require an option to choose between raw JSON and human-readable
-            # formatted output.
-            # For interactive use, they default to formatted output.
-            if _is_show(function_name) and (opt == "raw"):
-                subparser.add_argument(f"--raw",  action='store_true')
-            elif _is_optional_type(th):
+            if _is_optional_type(th):
                 subparser.add_argument(f"--{opt}", type=_get_arg_type(th), default=None)
+            elif _get_arg_type(th) == bool:
+                subparser.add_argument(f"--{opt}", action='store_true')
             else:
                 subparser.add_argument(f"--{opt}", type=_get_arg_type(th), required=True)
 
