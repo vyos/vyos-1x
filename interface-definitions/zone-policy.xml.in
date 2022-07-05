@@ -19,6 +19,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
+          #include <include/firewall/name-default-log.xml.i>
           <leafNode name="default-action">
             <properties>
               <help>Default-action for traffic coming into this zone</help>

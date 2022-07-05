@@ -16,7 +16,7 @@ table ip filter {
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME_{{ from_conf.firewall.name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
@@ -24,7 +24,7 @@ table ip filter {
         oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME_{{ from_conf.firewall.name }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
 {%         else %}
     chain VZONE_{{ zone_name }} {
@@ -38,7 +38,7 @@ table ip filter {
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%                 endif %}
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
 {%         endif %}
 {%     endfor %}
@@ -53,7 +53,7 @@ table ip6 filter {
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME6_{{ from_conf.firewall.ipv6_name }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone6_' + zone_name) }}
     }
     chain VZONE6_{{ zone_name }}_OUT {
         oifname lo counter return
@@ -61,7 +61,7 @@ table ip6 filter {
         oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME6_{{ from_conf.firewall.ipv6_name }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone6_' + zone_name) }}
     }
 {%         else %}
     chain VZONE6_{{ zone_name }} {
@@ -75,7 +75,7 @@ table ip6 filter {
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%                 endif %}
 {%             endfor %}
-        counter {{ zone_conf.default_action }}
+        {{ zone_conf | nft_default_rule('zone6_' + zone_name) }}
     }
 {%         endif %}
 {%     endfor %}
