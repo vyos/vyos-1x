@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2016-2020 VyOS maintainers and contributors
+# Copyright (C) 2016-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,11 +19,14 @@
 #    Used by the "run show version" command.
 
 import argparse
+import sys
+import typing
+
+import vyos.opmode
 import vyos.version
 import vyos.limericks
 
 from jinja2 import Template
-from sys import exit
 from vyos.util import call
 
 version_output_tmpl = """
@@ -45,32 +48,39 @@ Hardware S/N:     {{hardware_serial}}
 Hardware UUID:    {{hardware_uuid}}
 
 Copyright:        VyOS maintainers and contributors
+{%- if limerick %}
+{{limerick}}
+{% endif -%}
 """
 
-def get_raw_data():
+def _get_raw_data(funny=False):
     version_data = vyos.version.get_full_version_data()
+
+    if funny:
+        version_data["limerick"] = vyos.limericks.get_random()
+
     return version_data
 
-def get_formatted_output():
-    version_data = get_raw_data()
+def _get_formatted_output(version_data):
     tmpl = Template(version_output_tmpl)
-    return tmpl.render(version_data)
+    return tmpl.render(version_data).strip()
+
+def show(raw: bool, funny: bool):
+    """ Display neighbor table contents """
+    version_data = _get_raw_data(funny=funny)
+
+    if raw:
+        return version_data
+    else:
+        return _get_formatted_output(version_data)
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--funny", action="store_true", help="Add something funny to the output")
-    parser.add_argument("-j", "--json", action="store_true", help="Produce JSON output")
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
 
-    args = parser.parse_args()
-
-    version_data = vyos.version.get_full_version_data()
-
-    if args.json:
-        import json
-        print(json.dumps(version_data))
-        exit(0)
-    else:
-        print(get_formatted_output())
-
-    if args.funny:
-        print(vyos.limericks.get_random())
