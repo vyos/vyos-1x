@@ -36,6 +36,18 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="dns64-prefix">
+                <properties>
+                  <help>Help to communicate between IPv6-only client and IPv4-only server</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and /96 only prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="dnssec">
                 <properties>
                   <help>DNSSEC mode</help>
