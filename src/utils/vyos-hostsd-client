@@ -129,7 +129,8 @@ try:
             params = h.split(",")
             if len(params) < 2:
                 raise ValueError("Malformed host entry")
-            entry['address'] = params[1]
+            # Address needs to be a list because of changes made in T2683
+            entry['address'] = [params[1]]
             entry['aliases'] = params[2:]
             data[params[0]] = entry
         client.add_hosts({args.tag: data})
