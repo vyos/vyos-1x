@@ -143,6 +143,31 @@
                   </node>
                 </children>
               </tagNode>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Clear BGP statistics or status for vrf</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="all">
+                    <properties>
+                      <help>Clear all BGP peering sessions for vrf</help>
+                    </properties>
+                    <command>vtysh -c "clear bgp vrf $5 *"</command>
+                  </leafNode>
+                  <leafNode name="node.tag">
+                    <properties>
+                      <help>Clear BGP neighbor IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>vtysh -c "clear bgp vrf $5 $6"</command>
+                  </leafNode>
+                </children>
+              </tagNode>
             </children>
           </node>
           <tagNode name="bgp">
