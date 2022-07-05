@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def get_system_memory():
+import sys
+
+import vyos.opmode
+
+
+def _get_system_memory():
     from re import search as re_search
 
     def find_value(keyword, mem_data):
@@ -43,10 +48,10 @@ def get_system_memory():
 
     return res
 
-def get_system_memory_human():
+def _get_system_memory_human():
     from vyos.util import bytes_to_human
 
-    mem = get_system_memory()
+    mem = _get_system_memory()
 
     for key in mem:
         # The Linux kernel exposes memory values in kilobytes,
@@ -55,17 +60,31 @@ def get_system_memory_human():
 
     return mem
 
-def get_raw_data():
-    return get_system_memory_human()
+def _get_raw_data():
+    return _get_system_memory_human()
 
-def get_formatted_output():
-    mem = get_raw_data()
-
+def _get_formatted_output(mem):
     out = "Total: {}\n".format(mem["total"])
     out += "Free:  {}\n".format(mem["free"])
     out += "Used:  {}".format(mem["used"])
 
     return out
 
+def show(raw: bool):
+    ram_data = _get_raw_data()
+
+    if raw:
+        return ram_data
+    else:
+        return _get_formatted_output(ram_data)
+
+
 if __name__ == '__main__':
-    print(get_formatted_output())
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
+
