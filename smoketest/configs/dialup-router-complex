@@ -66,6 +66,27 @@ firewall {
             action accept
             protocol icmpv6
         }
+        rule 15 {
+            action accept
+            icmpv6 {
+                type 1
+            }
+            protocol icmpv6
+        }
+        rule 16 {
+            action accept
+            icmpv6 {
+                type 1/1
+            }
+            protocol icmpv6
+        }
+        rule 17 {
+            action accept
+            icmpv6 {
+                type destination-unreachable
+            }
+            protocol icmpv6
+        }
     }
     ipv6-name ALLOW-ESTABLISHED-6 {
         default-action drop

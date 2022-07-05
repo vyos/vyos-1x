@@ -194,11 +194,12 @@ if config.exists(base + ['ipv6-name']):
 
             if config.exists(rule_icmp + ['type']):
                 tmp = config.return_value(rule_icmp + ['type'])
-                type_code_match = re.match(r'^(\d+)/(\d+)$', tmp)
+                type_code_match = re.match(r'^(\d+)(?:/(\d+))?$', tmp)
 
                 if type_code_match:
                     config.set(rule_icmp + ['type'], value=type_code_match[1])
-                    config.set(rule_icmp + ['code'], value=type_code_match[2])
+                    if type_code_match[2]:
+                        config.set(rule_icmp + ['code'], value=type_code_match[2])
                 elif tmp in icmpv6_remove:
                     config.delete(rule_icmp + ['type'])
                 elif tmp in icmpv6_translations:
