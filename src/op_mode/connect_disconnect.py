@@ -20,6 +20,7 @@ import argparse
 from psutil import process_iter
 
 from vyos.util import call
+from vyos.util import commit_in_progress
 from vyos.util import DEVNULL
 from vyos.util import is_wwan_connected
 
@@ -87,6 +88,9 @@ def main():
     args = parser.parse_args()
 
     if args.connect:
+        if commit_in_progress():
+            print('Cannot connect while a commit is in progress')
+            exit(1)
         connect(args.connect)
     elif args.disconnect:
         disconnect(args.disconnect)

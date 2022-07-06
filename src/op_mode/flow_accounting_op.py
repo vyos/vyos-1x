@@ -22,7 +22,9 @@ import ipaddress
 import os.path
 from tabulate import tabulate
 from json import loads
-from vyos.util import cmd, run
+from vyos.util import cmd
+from vyos.util import commit_in_progress
+from vyos.util import run
 from vyos.logger import syslog
 
 # some default values
@@ -224,6 +226,9 @@ if not _uacctd_running():
 
 # restart pmacct daemon
 if cmd_args.action == 'restart':
+    if commit_in_progress():
+        print('Cannot restart flow-accounting while a commit is in progress')
+        exit(1)
     # run command to restart flow-accounting
     cmd('systemctl restart uacctd.service',
         message='Failed to restart flow-accounting')

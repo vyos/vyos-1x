@@ -17,6 +17,7 @@
 import os
 from sys import argv, exit
 from vyos.util import call
+from vyos.util import commit_in_progress
 
 if __name__ == '__main__':
     if (len(argv) < 1):
@@ -25,6 +26,9 @@ if __name__ == '__main__':
 
     interface = argv[1]
     if os.path.isfile(f'/run/openvpn/{interface}.conf'):
+        if commit_in_progress():
+            print('Cannot restart OpenVPN while a commit is in progress')
+            exit(1)
         call(f'systemctl restart openvpn@{interface}.service')
     else:
         print(f'OpenVPN interface "{interface}" does not exist!')

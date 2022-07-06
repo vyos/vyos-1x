@@ -17,9 +17,14 @@
 from sys import exit
 from vyos.util import ask_yes_no
 from vyos.util import cmd
+from vyos.util import commit_in_progress
 
 if not ask_yes_no('Do you really want to remove the existing SSH host keys?'):
     exit(0)
+
+if commit_in_progress():
+    print('Cannot restart SSH while a commit is in progress')
+    exit(1)
 
 cmd('rm -v /etc/ssh/ssh_host_*')
 cmd('dpkg-reconfigure openssh-server')

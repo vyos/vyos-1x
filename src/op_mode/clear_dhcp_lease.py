@@ -9,6 +9,7 @@ from isc_dhcp_leases import IscDhcpLeases
 from vyos.configquery import ConfigTreeQuery
 from vyos.util import ask_yes_no
 from vyos.util import call
+from vyos.util import commit_in_progress
 
 
 config = ConfigTreeQuery()
@@ -64,6 +65,10 @@ if __name__ == '__main__':
     address = args.ip
 
     if not is_ip_in_leases(address):
+        exit(1)
+
+    if commit_in_progress():
+        print('Cannot clear DHCP lease while a commit is in progress')
         exit(1)
 
     if not ask_yes_no(f'This will restart DHCP server.\nContinue?'):

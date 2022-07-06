@@ -24,6 +24,7 @@ import os
 
 import vyos.config
 from vyos.util import call
+from vyos.util import commit_in_progress
 
 
 parser = argparse.ArgumentParser()
@@ -39,6 +40,9 @@ if __name__ == '__main__':
         if not c.exists_effective('service dhcp-relay'):
             print("DHCP relay service not configured")
         else:
+            if commit_in_progress():
+                print('Cannot restart DHCP relay while a commit is in progress')
+                exit(1)
             call('systemctl restart isc-dhcp-server.service')
 
         sys.exit(0)
@@ -47,6 +51,9 @@ if __name__ == '__main__':
         if not c.exists_effective('service dhcpv6-relay'):
             print("DHCPv6 relay service not configured")
         else:
+            if commit_in_progress():
+                print('Cannot restart DHCPv6 relay while commit is in progress')
+                exit(1)
             call('systemctl restart isc-dhcp-server6.service')
 
         sys.exit(0)
