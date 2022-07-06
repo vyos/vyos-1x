@@ -4,7 +4,7 @@
     nomail
     notifempty
     rotate 10
-    size 1M
+    size 262144
     postrotate
         # inform rsyslog service about rotation
         /usr/lib/rsyslog/rsyslog-rotate
