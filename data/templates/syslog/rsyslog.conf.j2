@@ -10,7 +10,11 @@ $MarkMessagePeriod {{ files['global']['marker-interval'] }}
 $PreserveFQDN on
 {% endif %}
 {% for file, file_options in files.items() %}
+{%     if file_options['max-size'] is vyos_defined %}
 $outchannel {{ file }},{{ file_options['log-file'] }},{{ file_options['max-size'] }},{{ file_options['action-on-max-size'] }}
+{%     else %}
+$outchannel {{ file }},{{ file_options['log-file'] }}
+{%     endif %}
 {{ file_options['selectors'] }} :omfile:${{ file }}
 {% endfor %}
 {% if console is defined and console is not none %}
