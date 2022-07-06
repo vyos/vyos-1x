@@ -12,7 +12,7 @@
             <properties>
               <help>Monitor the last lines of the squid access log</help>
             </properties>
-            <command>if [ -f /var/log/squid3/access.log ]; then sudo tail --follow=name /var/log/squid3/access.log; else echo "WebProxy cache-log does not exist"; fi</command>
+            <command>if [ -f /var/log/squid/access.log ]; then sudo tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
           </node>
           <node name="background">
             <properties>
@@ -37,7 +37,7 @@
             <properties>
               <help>Monitor the last lines of the squid cache log</help>
             </properties>
-            <command>if [ -f /var/log/squid3/cache.log ]; then sudo tail --follow=name /var/log/squid3/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+            <command>if [ -f /var/log/squid/cache.log ]; then sudo tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
           </node>
         </children>
       </node>
