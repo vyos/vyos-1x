@@ -390,31 +390,6 @@
               <help>Logging to system standard location</help>
             </properties>
             <children>
-              <node name="archive">
-                <properties>
-                  <help>Log file size and rotation characteristics</help>
-                </properties>
-                <children>
-                  <leafNode name="file">
-                    <properties>
-                      <help>Number of saved files (default is 5)</help>
-                      <constraint>
-                        <regex>[0-9]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="size">
-                    <properties>
-                      <help>Size of log files (in kbytes, default is 256)</help>
-                      <constraint>
-                        <regex>[0-9]+</regex>
-                      </constraint>
-                      <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                </children>
-              </node>
               <tagNode name="facility">
                 <properties>
                   <help>Facility for logging</help>

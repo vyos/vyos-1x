@@ -52,8 +52,6 @@ def get_config(config=None):
         {
             'global': {
                 'log-file': '/var/log/messages',
-                'max-size': 262144,
-                'action-on-max-size': '/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog',
                 'selectors': '*.notice;local7.debug',
                 'max-files': '5',
                 'preserver_fqdn': False
