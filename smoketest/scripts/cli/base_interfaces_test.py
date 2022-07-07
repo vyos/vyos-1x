@@ -635,6 +635,7 @@ class BasicInterfaceTest:
                 self.cli_set(path + ['ip', 'arp-cache-timeout', arp_tmo])
                 self.cli_set(path + ['ip', 'disable-arp-filter'])
                 self.cli_set(path + ['ip', 'disable-forwarding'])
+                self.cli_set(path + ['ip', 'enable-directed-broadcast'])
                 self.cli_set(path + ['ip', 'enable-arp-accept'])
                 self.cli_set(path + ['ip', 'enable-arp-announce'])
                 self.cli_set(path + ['ip', 'enable-arp-ignore'])
@@ -670,6 +671,9 @@ class BasicInterfaceTest:
 
                 tmp = read_file(f'{proc_base}/forwarding')
                 self.assertEqual('0', tmp)
+
+                tmp = read_file(f'{proc_base}/bc_forwarding')
+                self.assertEqual('1', tmp)
 
                 tmp = read_file(f'{proc_base}/proxy_arp')
                 self.assertEqual('1', tmp)

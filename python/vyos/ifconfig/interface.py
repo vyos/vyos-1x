@@ -168,6 +168,10 @@ class Interface(Control):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/forwarding',
         },
+        'ipv4_directed_broadcast': {
+            'validate': assert_boolean,
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/bc_forwarding',
+        },
         'rp_filter': {
             'validate': lambda flt: assert_range(flt,0,3),
             'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
@@ -233,6 +237,9 @@ class Interface(Control):
         },
         'ipv4_forwarding': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/forwarding',
+        },
+        'ipv4_directed_broadcast': {
+            'location': '/proc/sys/net/ipv4/conf/{ifname}/bc_forwarding',
         },
         'rp_filter': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
@@ -712,6 +719,13 @@ class Interface(Control):
         if tmp == forwarding:
             return None
         return self.set_interface('ipv4_forwarding', forwarding)
+
+    def set_ipv4_directed_broadcast(self, forwarding):
+        """ Configure IPv4 directed broadcast forwarding. """
+        tmp = self.get_interface('ipv4_directed_broadcast')
+        if tmp == forwarding:
+            return None
+        return self.set_interface('ipv4_directed_broadcast', forwarding)
 
     def set_ipv4_source_validation(self, value):
         """
@@ -1497,6 +1511,11 @@ class Interface(Control):
         tmp = dict_search('ip.disable_forwarding', config)
         value = '0' if (tmp != None) else '1'
         self.set_ipv4_forwarding(value)
+
+        # IPv4 directed broadcast forwarding
+        tmp = dict_search('ip.enable_directed_broadcast', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_ipv4_directed_broadcast(value)
 
         # IPv4 source-validation
         tmp = dict_search('ip.source_validation', config)
