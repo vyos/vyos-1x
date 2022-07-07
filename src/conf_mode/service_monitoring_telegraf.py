@@ -99,10 +99,6 @@ def get_config(config=None):
     monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
     monitoring['nft_chains'] = get_nft_filter_chains()
 
-    if 'authentication' in monitoring or \
-       'url' in monitoring:
-        monitoring['influxdb_configured'] = True
-
     # Redefine azure group-metrics 'single-table' and 'table-per-metric'
     if 'azure_data_explorer' in monitoring:
         if 'single-table' in monitoring['azure_data_explorer']['group_metrics']:
@@ -119,6 +115,9 @@ def get_config(config=None):
 
     # Ignore default XML values if config doesn't exists
     # Delete key from dict
+    if not conf.exists(base + ['influxdb']):
+        del monitoring['influxdb']
+
     if not conf.exists(base + ['prometheus-client']):
         del monitoring['prometheus_client']
 
@@ -132,14 +131,15 @@ def verify(monitoring):
     if not monitoring:
         return None
 
-    if 'influxdb_configured' in monitoring:
-        if 'authentication' not in monitoring or \
-           'organization' not in monitoring['authentication'] or \
-           'token' not in monitoring['authentication']:
-            raise ConfigError(f'Authentication "organization and token" are mandatory!')
+    # Verify influxdb
+    if 'influxdb' in monitoring:
+        if 'authentication' not in monitoring['influxdb'] or \
+           'organization' not in monitoring['influxdb']['authentication'] or \
+           'token' not in monitoring['influxdb']['authentication']:
+            raise ConfigError(f'influxdb authentication "organization and token" are mandatory!')
 
-        if 'url' not in monitoring:
-            raise ConfigError(f'Monitoring "url" is mandatory!')
+        if 'url' not in monitoring['influxdb']:
+            raise ConfigError(f'Monitoring influxdb "url" is mandatory!')
 
     # Verify azure-data-explorer
     if 'azure_data_explorer' in monitoring:
