@@ -22,6 +22,7 @@ from argparse import ArgumentParser
 from vyos.configquery import CliShellApiConfigQuery
 from vyos.configquery import ConfigTreeQuery
 from vyos.util import call
+from vyos.util import commit_in_progress
 from vyos.util import cmd
 from vyos.util import run
 from vyos.template import render_to_string
@@ -86,6 +87,9 @@ if __name__ == '__main__':
 
     if args.restart:
         is_configured()
+        if commit_in_progress():
+            print('Cannot restart conntrackd while a commit is in progress')
+            exit(1)
 
         syslog.syslog('Restarting conntrack sync service...')
         cmd('systemctl restart conntrackd.service')

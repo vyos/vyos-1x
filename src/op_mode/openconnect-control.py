@@ -19,7 +19,10 @@ import argparse
 import json
 
 from vyos.config import Config
-from vyos.util import popen, run, DEVNULL
+from vyos.util import commit_in_progress
+from vyos.util import popen
+from vyos.util import run
+from vyos.util import DEVNULL
 from tabulate import tabulate
 
 occtl        = '/usr/bin/occtl'
@@ -56,6 +59,10 @@ def main():
 
     # Check is Openconnect server configured
     is_ocserv_configured()
+
+    if commit_in_progress():
+        print('Cannot restart openconnect while a commit is in progress')
+        exit(1)
 
     if args.action == "restart":
         run("sudo systemctl restart ocserv.service")
