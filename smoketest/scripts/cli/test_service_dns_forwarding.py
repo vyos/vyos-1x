@@ -62,7 +62,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # Check basic DNS forwarding settings
         cache_size = '20'
         negative_ttl = '120'
-        dns_prefix = '64:ff9b::/96'
 
         self.cli_set(base_path + ['cache-size', cache_size])
         self.cli_set(base_path + ['negative-ttl', negative_ttl])
@@ -78,12 +77,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
-
-        # Check dns64-prefix - must be prefix /96
-        self.cli_set(base_path + ['dns64-prefix', '2001:db8:aabb::/64'])
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_set(base_path + ['dns64-prefix', dns_prefix])
 
         # configure DNSSEC
         self.cli_set(base_path + ['dnssec', 'validate'])
@@ -117,10 +110,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # RFC1918 addresses are looked up by default
         tmp = get_config_value('serve-rfc1918')
         self.assertEqual(tmp, 'yes')
-
-        # dns64-prefix
-        tmp = get_config_value('dns64-prefix')
-        self.assertEqual(tmp, dns_prefix)
 
     def test_dnssec(self):
         # DNSSEC option testing
@@ -213,6 +202,27 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # verify configuration
         tmp = get_config_value('serve-rfc1918')
         self.assertEqual(tmp, 'no')
+
+    def test_dns64(self):
+        dns_prefix = '64:ff9b::/96'
+
+        for network in allow_from:
+            self.cli_set(base_path + ['allow-from', network])
+        for address in listen_adress:
+            self.cli_set(base_path + ['listen-address', address])
+
+        # Check dns64-prefix - must be prefix /96
+        self.cli_set(base_path + ['dns64-prefix', '2001:db8:aabb::/64'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + ['dns64-prefix', dns_prefix])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify dns64-prefix configuration
+        tmp = get_config_value('dns64-prefix')
+        self.assertEqual(tmp, dns_prefix)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
