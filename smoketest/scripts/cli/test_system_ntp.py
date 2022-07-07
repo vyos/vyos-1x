@@ -108,5 +108,22 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for listen in listen_address:
             self.assertIn(f'interface listen {listen}', config)
 
+    def test_03_ntp_interface(self):
+        interfaces = ['eth0', 'eth1']
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        # Check generated client address configuration
+        config = read_file(NTP_CONF)
+        self.assertIn('interface ignore wildcard', config)
+        for interface in interfaces:
+            self.assertIn(f'interface listen {interface}', config)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
