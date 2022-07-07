@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,7 +39,18 @@ def get_config_value(key, file=CONFIG_FILE):
     return tmp[0]
 
 class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestServicePowerDNS, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         # Delete DNS forwarding configuration
         self.cli_delete(base_path)
         self.cli_commit()
@@ -111,9 +122,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_dnssec(self):
         # DNSSEC option testing
 
@@ -131,9 +139,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
 
             tmp = get_config_value('dnssec')
             self.assertEqual(tmp, option)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_external_nameserver(self):
         # Externe Domain Name Servers (DNS) addresses
@@ -157,9 +162,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # default: yes
         tmp = get_config_value('export-etc-hosts')
         self.assertEqual(tmp, 'yes')
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_domain_forwarding(self):
         for network in allow_from:
@@ -197,9 +199,6 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             if domain == domains[1]:
                 self.assertIn(f'addNTA("{domain}", "static")', hosts_conf)
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_no_rfc1918_forwarding(self):
         for network in allow_from:
             self.cli_set(base_path + ['allow-from', network])
@@ -215,9 +214,5 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('serve-rfc1918')
         self.assertEqual(tmp, 'no')
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-
