@@ -87,7 +87,7 @@ def verify(dns):
         dns_prefix = dns['dns64_prefix'].split('/')[1]
         # RFC 6147 requires prefix /96
         if int(dns_prefix) != 96:
-            raise ConfigError('DNS forwarding "dns64-prefix" must be /96')
+            raise ConfigError('DNS 6to4 prefix must be of length /96')
 
     if 'system' in dns:
         if not 'system_name_server' in dns:
