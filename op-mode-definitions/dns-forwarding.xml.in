@@ -1,5 +1,46 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="log">
+        <children>
+          <node name="dns">
+            <properties>
+              <help>Monitor last lines of Domain Name Service (DNS)</help>
+            </properties>
+            <children>
+              <node name="forwarding">
+                <properties>
+                  <help>Monitor last lines of DNS forwarding</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit pdns-recursor.service</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+      <node name="dns">
+        <properties>
+          <help>Show DNS information</help>
+        </properties>
+        <children>
+          <node name="forwarding">
+            <properties>
+              <help>Show DNS forwarding information</help>
+            </properties>
+            <children>
+              <leafNode name="statistics">
+                <properties>
+                  <help>Show DNS forwarding statistics</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_statistics.py</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="show">
     <children>
       <node name="log">
@@ -13,7 +54,7 @@
                 <properties>
                   <help>Show log for DNS Forwarding</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "pdns_recursor"</command>
+                <command>journalctl --no-hostname --boot --unit pdns-recursor.service</command>
               </node>
             </children>
           </node>
