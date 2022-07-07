@@ -8,7 +8,7 @@
         </properties>
         <command>journalctl --no-hostname --follow --boot</command>
         <children>
-          <node name="colored">
+          <node name="color">
             <properties>
               <help>Output log in a colored fashion</help>
             </properties>
