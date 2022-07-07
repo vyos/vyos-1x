@@ -39,10 +39,10 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_01_basic_config(self):
-        self.cli_set(base_path + ['authentication', 'organization', org])
-        self.cli_set(base_path + ['authentication', 'token', token])
-        self.cli_set(base_path + ['port', port])
-        self.cli_set(base_path + ['url', url])
+        self.cli_set(base_path + ['influxdb', 'authentication', 'organization', org])
+        self.cli_set(base_path + ['influxdb', 'authentication', 'token', token])
+        self.cli_set(base_path + ['influxdb', 'port', port])
+        self.cli_set(base_path + ['influxdb', 'url', url])
 
         # commit changes
         self.cli_commit()
