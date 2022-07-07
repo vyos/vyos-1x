@@ -28,6 +28,11 @@ local-address={{ listen_address | join(',') }}
 # dnssec
 dnssec={{ dnssec }}
 
+{% if dns64_prefix is defined %}
+# dns64-prefix
+dns64-prefix={{ dns64_prefix }}
+{% endif %}
+
 {# dns: T3277: #}
 {% if no_serve_rfc1918 is defined %}
 # serve-rfc1918
