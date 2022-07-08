@@ -31,14 +31,14 @@
 {%     endif %}
 ### End Azure Data Explorer ###
 {% endif %}
-{% if influxdb_configured is vyos_defined %}
+{% if influxdb is vyos_defined %}
 ### InfluxDB2 ###
 [[outputs.influxdb_v2]]
-  urls = ["{{ url }}:{{ port }}"]
+  urls = ["{{ influxdb.url }}:{{ influxdb.port }}"]
   insecure_skip_verify = true
   token = "$INFLUX_TOKEN"
-  organization = "{{ authentication.organization }}"
-  bucket = "{{ bucket }}"
+  organization = "{{ influxdb.authentication.organization }}"
+  bucket = "{{ influxdb.bucket }}"
 ### End InfluxDB2 ###
 {% endif %}
 {% if prometheus_client is vyos_defined %}

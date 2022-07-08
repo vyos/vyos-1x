@@ -13,32 +13,50 @@
               <help>Telegraf monitoring</help>
             </properties>
             <children>
-              <node name="authentication">
+              <node name="influxdb">
                 <properties>
-                  <help>Authentication parameters</help>
+                  <help>Output plugin InfluxDB</help>
                 </properties>
                 <children>
-                  <leafNode name="organization">
+                  <node name="authentication">
                     <properties>
-                      <help>Authentication organization for InfluxDB v2</help>
-                      <constraint>
-                        <regex>[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}</regex>
-                      </constraint>
-                      <constraintErrorMessage>Organization name must be alphanumeric and can contain hyphens, underscores and at symbol.</constraintErrorMessage>
+                      <help>Authentication parameters</help>
                     </properties>
+                    <children>
+                      <leafNode name="organization">
+                        <properties>
+                          <help>Authentication organization for InfluxDB v2</help>
+                          <constraint>
+                            <regex>[a-zA-Z][1-9a-zA-Z@_\-.]{2,50}</regex>
+                          </constraint>
+                          <constraintErrorMessage>Organization name must be alphanumeric and can contain hyphens, underscores and at symbol.</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="token">
+                        <properties>
+                          <help>Authentication token for InfluxDB v2</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Authentication token</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>[a-zA-Z0-9-_]{86}==</regex>
+                          </constraint>
+                          <constraintErrorMessage>Token must be 88 characters long and must contain only [a-zA-Z0-9-_] and '==' characters.</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <leafNode name="bucket">
+                    <properties>
+                      <help>Remote bucket</help>
+                    </properties>
+                    <defaultValue>main</defaultValue>
                   </leafNode>
-                  <leafNode name="token">
-                    <properties>
-                      <help>Authentication token for InfluxDB v2</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>Authentication token</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>[a-zA-Z0-9-_]{86}==</regex>
-                      </constraint>
-                      <constraintErrorMessage>Token must be 88 characters long and must contain only [a-zA-Z0-9-_] and '==' characters.</constraintErrorMessage>
-                    </properties>
+                  #include <include/monitoring/url.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>8086</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -130,12 +148,6 @@
                   #include <include/monitoring/url.xml.i>
                 </children>
               </node>
-              <leafNode name="bucket">
-                <properties>
-                  <help>Remote bucket</help>
-                </properties>
-                <defaultValue>main</defaultValue>
-              </leafNode>
               <leafNode name="source">
                 <properties>
                   <help>Source parameters for monitoring</help>
@@ -294,11 +306,6 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/monitoring/url.xml.i>
-              #include <include/port-number.xml.i>
-              <leafNode name="port">
-                <defaultValue>8086</defaultValue>
-              </leafNode>
             </children>
           </node>
         </children>
