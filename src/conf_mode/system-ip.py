@@ -65,7 +65,7 @@ def apply(opt):
     write_file('/proc/sys/net/ipv4/conf/all/forwarding', value)
 
     # enable/disable IPv4 directed broadcast forwarding
-    tmp = dict_search('disable_directed_broadcast_forwarding', opt)
+    tmp = dict_search('disable_directed_broadcast', opt)
     value = '0' if (tmp != None) else '1'
     write_file('/proc/sys/net/ipv4/conf/all/bc_forwarding', value)
 

@@ -38,12 +38,12 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(read_file(all_forwarding), '0')
 
     def test_system_ip_directed_broadcast_forwarding(self):
-        # Test if IPv4 directed broadcast forwarding can be disabled globally, default is '1'
-        # which means forwarding enabled
+        # Test if IPv4 directed broadcast forwarding can be disabled globally,
+        # default is '1' which means forwarding enabled
         bc_forwarding = '/proc/sys/net/ipv4/conf/all/bc_forwarding'
         self.assertEqual(read_file(bc_forwarding), '1')
 
-        self.cli_set(base_path + ['disable-directed-broadcast-forwarding'])
+        self.cli_set(base_path + ['disable-directed-broadcast'])
         self.cli_commit()
 
         self.assertEqual(read_file(bc_forwarding), '0')
