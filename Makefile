@@ -6,6 +6,7 @@ SHIM_DIR := src/shim
 XDP_DIR := src/xdp
 LIBS := -lzmq
 CFLAGS :=
+BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
 
 J2LINT := $(shell command -v j2lint 2> /dev/null)
 
@@ -45,6 +46,14 @@ interface_definitions: $(config_xml_obj)
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'
+
+	@echo BUILD_ARCH IS $(BUILD_ARCH)
+ifneq ($(BUILD_ARCH),amd64)
+	# There is no telegraf support - remove CLI definitions
+	rm -rf $(TMPL_DIR)/service/monitoring/telegraf
+	# We also do not select the SALT minion package for arm64
+	rm -rf $(TMPL_DIR)/service/salt-minion
+endif
 
 .PHONY: op_mode_definitions
 .ONESHELL:
