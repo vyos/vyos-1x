@@ -28,7 +28,7 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
 
     def test_system_ip_forwarding(self):
         # Test if IPv4 forwarding can be disabled globally, default is '1'
-        # which means forwearding enabled
+        # which means forwarding enabled
         all_forwarding = '/proc/sys/net/ipv4/conf/all/forwarding'
         self.assertEqual(read_file(all_forwarding), '1')
 
@@ -36,6 +36,17 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertEqual(read_file(all_forwarding), '0')
+
+    def test_system_ip_directed_broadcast_forwarding(self):
+        # Test if IPv4 directed broadcast forwarding can be disabled globally, default is '1'
+        # which means forwarding enabled
+        bc_forwarding = '/proc/sys/net/ipv4/conf/all/bc_forwarding'
+        self.assertEqual(read_file(bc_forwarding), '1')
+
+        self.cli_set(base_path + ['disable-directed-broadcast-forwarding'])
+        self.cli_commit()
+
+        self.assertEqual(read_file(bc_forwarding), '0')
 
     def test_system_ip_multipath(self):
         # Test IPv4 multipathing options, options default to off -> '0'
