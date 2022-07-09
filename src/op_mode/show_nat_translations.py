@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -83,11 +83,23 @@ def pipe():
     return xml
 
 
+def xml_to_dict(xml):
+    """
+    Convert XML to dictionary
+    Return: dictionary
+    """
+    parse = xmltodict.parse(xml)
+    # If only one NAT entry we must change dict T4499
+    if 'meta' in parse['conntrack']['flow']:
+        return dict(conntrack={'flow': [parse['conntrack']['flow']]})
+    return parse
+
+
 def process(data, stats, protocol, pipe, verbose, flowtype=''):
     if not data:
         return
 
-    parsed = xmltodict.parse(data)
+    parsed = xml_to_dict(data)
 
     print(headers(verbose, pipe))
 
