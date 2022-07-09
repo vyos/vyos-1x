@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="conntrack">
+        <properties>
+          <help>Show conntrack tables entries</help>
+        </properties>
+        <children>
+          <node name="table">
+            <properties>
+              <help>Show conntrack entries for table</help>
+            </properties>
+            <children>
+              <node name="ipv4">
+                <properties>
+                  <help>Show conntrack entries for IPv4 protocol</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/show_conntrack.py</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
