@@ -151,6 +151,29 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 defined_policy = read_file(f'/sys/class/net/{interface}/bonding/xmit_hash_policy').split()
                 self.assertEqual(defined_policy[0], hash_policy)
 
+    def test_bonding_mii_monitoring_interval(self):
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+        self.cli_commit()
+
+        # verify default
+        for interface in self._interfaces:
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/miimon').split()
+            self.assertIn('100', tmp)
+
+        mii_mon = '250'
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'mii-mon-interval', mii_mon])
+
+        self.cli_commit()
+
+        # verify new CLI value
+        for interface in self._interfaces:
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/miimon').split()
+            self.assertIn(mii_mon, tmp)
+
     def test_bonding_multi_use_member(self):
         # Define available bonding hash policies
         for interface in ['bond10', 'bond20']:

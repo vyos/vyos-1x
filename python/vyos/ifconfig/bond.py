@@ -372,7 +372,8 @@ class BondIf(Interface):
             self.set_admin_state('down')
 
         # Specifies the MII link monitoring frequency in milliseconds
-        self.set_miimon_interval('250')
+        value = config.get('mii_mon_interval')
+        self.set_miimon_interval(value)
 
         # Bonding transmit hash policy
         value = config.get('hash_policy')
