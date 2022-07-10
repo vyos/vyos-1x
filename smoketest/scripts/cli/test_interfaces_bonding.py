@@ -185,6 +185,26 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         slaves = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
         self.assertIn(member, slaves)
 
+    def test_bonding_source_bridge_interface(self):
+        # Re-use member interface that is already a source-interface
+        bond = 'bond1097'
+        bridge = 'br6327'
+        member = next(iter(self._members))
+
+        self.cli_set(self._base_path + [bond, 'member', 'interface', member])
+        self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', member])
+
+        # check validate() - can not add interface to bond, it is a member of bridge ...
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'bridge', bridge])
+        self.cli_commit()
+
+        # verify config
+        slaves = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
+        self.assertIn(member, slaves)
+
     def test_bonding_uniq_member_description(self):
         ethernet_path = ['interfaces', 'ethernet']
         for interface in self._interfaces:
