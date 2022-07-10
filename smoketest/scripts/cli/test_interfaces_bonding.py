@@ -136,7 +136,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_bonding_hash_policy(self):
         # Define available bonding hash policies
-        hash_policies = ['layer2', 'layer2+3', 'layer2+3', 'encap2+3', 'encap3+4']
+        hash_policies = ['layer2', 'layer2+3', 'encap2+3', 'encap3+4']
         for hash_policy in hash_policies:
             for interface in self._interfaces:
                 for option in self._options.get(interface, []):
