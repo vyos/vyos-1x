@@ -179,6 +179,21 @@ class BondIf(Interface):
         """
         self.set_interface('bond_lacp_rate', slow_fast)
 
+    def set_miimon_interval(self, interval):
+        """
+        Specifies the MII link monitoring frequency in milliseconds. This
+        determines how often the link state of each slave is inspected for link
+        failures. A value of zero disables MII link monitoring. A value of 100
+        is a good starting point.
+
+        The default value is 0.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_miimon_interval('100')
+        """
+        return self.set_interface('bond_miimon', interval)
+
     def set_arp_interval(self, interval):
         """
         Specifies the ARP link monitoring frequency in milliseconds.
@@ -372,6 +387,8 @@ class BondIf(Interface):
         if 'shutdown_required' in config:
             self.set_admin_state('down')
 
+        # Specifies the MII link monitoring frequency in milliseconds
+        self.set_miimon_interval('250')
 
         # Bonding transmit hash policy
         value = config.get('hash_policy')
