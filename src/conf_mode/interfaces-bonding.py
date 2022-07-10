@@ -109,20 +109,22 @@ def get_config(config=None):
         for interface, interface_config in bond['member']['interface'].items():
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp: interface_config.update({'is_bridge_member' : tmp})
+            if tmp: bond['member']['interface'][interface].update({'is_bridge_member' : tmp})
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            if tmp and bond['ifname'] not in tmp:
-                interface_config.update({'is_bond_member' : tmp})
+            for tmp in is_member(conf, interface, 'bonding'):
+                if bond['ifname'] == tmp:
+                    continue
+                bond['member']['interface'][interface].update({'is_bond_member' : tmp})
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
-            if tmp: interface_config.update({'is_source_interface' : tmp})
+            if tmp: bond['member']['interface'][interface].update({'is_source_interface' : tmp})
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp: interface_config.update({'has_address' : ''})
+            if tmp: bond['member']['interface'][interface].update({'has_address' : {}})
 
     return bond
 
@@ -167,11 +169,11 @@ def verify(bond):
                 raise ConfigError(error_msg + 'it does not exist!')
 
             if 'is_bridge_member' in interface_config:
-                tmp = next(iter(interface_config['is_bridge_member']))
+                tmp = interface_config['is_bridge_member']
                 raise ConfigError(error_msg + f'it is already a member of bridge "{tmp}"!')
 
             if 'is_bond_member' in interface_config:
-                tmp = next(iter(interface_config['is_bond_member']))
+                tmp = interface_config['is_bond_member']
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
 
             if 'is_source_interface' in interface_config:

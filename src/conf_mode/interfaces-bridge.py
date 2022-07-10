@@ -118,11 +118,11 @@ def verify(bridge):
                 raise ConfigError('Loopback interface "lo" can not be added to a bridge')
 
             if 'is_bridge_member' in interface_config:
-                tmp = next(iter(interface_config['is_bridge_member']))
+                tmp = interface_config['is_bridge_member']
                 raise ConfigError(error_msg + f'it is already a member of bridge "{tmp}"!')
 
             if 'is_bond_member' in interface_config:
-                tmp = next(iter(interface_config['is_bond_member']))
+                tmp = interface_config['is_bond_member']
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
 
             if 'is_source_interface' in interface_config:
@@ -134,7 +134,7 @@ def verify(bridge):
 
             if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
-                    raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
+                    raise ConfigError(error_msg + 'it has VLAN subinterface(s) assigned!')
 
                 if 'wlan' in interface:
                     raise ConfigError(error_msg + 'VLAN aware cannot be set!')
