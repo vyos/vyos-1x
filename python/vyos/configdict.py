@@ -203,11 +203,12 @@ def is_member(conf, interface, intftype=None):
     intftype is optional, if not passed it will search all known types
     (currently bridge and bonding)
 
-    Returns:
-    None -> Interface is not a member
-    interface name -> Interface is a member of this interface
-    False -> interface type cannot have members
+    Returns: dict
+    empty -> Interface is not a member
+    key -> Interface is a member of this interface
     """
+    from vyos.ifconfig import Section
+
     ret_val = {}
     intftypes = ['bonding', 'bridge']
 
@@ -227,9 +228,8 @@ def is_member(conf, interface, intftype=None):
         for intf in conf.list_nodes(base):
             member = base + [intf, 'member', 'interface', interface]
             if conf.exists(member):
-                tmp = conf.get_config_dict(member, key_mangling=('-', '_'),
-                                           get_first_key=True, no_tag_node_value_mangle=True)
-                ret_val.update({intf : tmp})
+                if conf.exists(['interfaces', Section.section(interface), interface]):
+                    ret_val.update({intf : {}})
 
     old_level = conf.set_level(old_level)
     return ret_val

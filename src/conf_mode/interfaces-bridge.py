@@ -132,7 +132,7 @@ def verify(bridge):
 
             if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
-                    raise ConfigError(error_msg + 'it has an VLAN subinterface assigned!')
+                    raise ConfigError(error_msg + 'it has VLAN subinterface(s) assigned!')
 
                 if 'wlan' in interface:
                     raise ConfigError(error_msg + 'VLAN aware cannot be set!')
