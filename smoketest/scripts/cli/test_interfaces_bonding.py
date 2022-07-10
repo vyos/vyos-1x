@@ -49,7 +49,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 if not '.' in tmp:
                     cls._members.append(tmp)
 
-        cls._options['bond0'] = []
+        cls._options = {'bond0' : []}
         for member in cls._members:
             cls._options['bond0'].append(f'member interface {member}')
         cls._interfaces = list(cls._options)
@@ -164,6 +164,26 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(self._base_path + ['bond20'])
 
         self.cli_commit()
+
+    def test_bonding_source_interface(self):
+        # Re-use member interface that is already a source-interface
+        bond = 'bond99'
+        pppoe = 'pppoe98756'
+        member = next(iter(self._members))
+
+        self.cli_set(self._base_path + [bond, 'member', 'interface', member])
+        self.cli_set(['interfaces', 'pppoe', pppoe, 'source-interface', member])
+
+        # check validate() - can not add interface to bond, it is the source-interface of ...
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'pppoe', pppoe])
+        self.cli_commit()
+
+        # verify config
+        slaves = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
+        self.assertIn(member, slaves)
 
     def test_bonding_uniq_member_description(self):
         ethernet_path = ['interfaces', 'ethernet']
