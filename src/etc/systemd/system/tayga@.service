@@ -1,0 +1,15 @@
+[Unit]
+Description=Managing TAYGA interface %I
+After=vyos-router.service
+
+[Service]
+Type=exec
+ExecStartPre=/usr/bin/mkdir -p /run/tayga/%i.d
+ExecStartPre=/usr/bin/chown -R tayga: /run/tayga/%i.d
+WorkingDirectory=/run/tayga
+ExecStart=/usr/sbin/tayga -d --config /run/tayga/%i.conf --nodetach --user tayga --group tayga --chroot
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

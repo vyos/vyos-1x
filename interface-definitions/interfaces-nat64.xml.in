@@ -1,0 +1,147 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="nat64" owner="${vyos_conf_scripts_dir}/interfaces-nat64.py">
+        <properties>
+          <help>NAT64 Interface</help>
+          <priority>300</priority>
+          <constraint>
+            <regex>nat64eth[0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>NAT64 interface must be named nat64ethN</constraintErrorMessage>
+          <valueHelp>
+            <format>nat64ethN</format>
+            <description>NAT64 interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/interface/description.xml.i>
+          #include <include/interface/disable.xml.i>
+          #include <include/interface/interface-firewall.xml.i>
+          #include <include/interface/interface-policy.xml.i>
+          <leafNode name="ipv4-address">
+            <properties>
+              <help>IPv4 address of the NAT64 translator</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 address to send ICMP messages</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="ipv6-address">
+            <properties>
+              <help>IPv6 address of the NAT64 translator</help>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address to send ICMPv6 messages</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv6-address"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <node name="stateful">
+            <properties>
+              <help>Stateful NAT64 options</help>
+            </properties>
+            <children>
+              <leafNode name="prefix">
+                <properties>
+                  <help>NAT64 prefix</help>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>The IPv4 address space will be mapped into the IPv6 address by prepending this prefix to the IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-prefix" />
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="ipv4-pool">
+                <properties>
+                  <help>IPv4 dynamic pool</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv6 host will be assigned an IPv4 address from this prefix</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix" />
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="host-mapping">
+            <properties>
+              <help>Stateless host mappings</help>
+            </properties>
+            <children>
+              <tagNode name="ipv6">
+                <properties>
+                  <help>IPv6 address</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="description">
+                    <properties>
+                      <help>Description</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="disable">
+                    <properties>
+                      <help>Disable this NAT64 mapping</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ipv4">
+                    <properties>
+                      <help>IPv4 address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/adjust-mss.xml.i>
+              #include <include/interface/source-validation.xml.i>
+            </children>
+          </node>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/adjust-mss.xml.i>
+            </children>
+          </node>
+          #include <include/interface/mtu-68-16000.xml.i>
+          #include <include/interface/mirror.xml.i>
+          #include <include/interface/redirect.xml.i>
+          #include <include/interface/vrf.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

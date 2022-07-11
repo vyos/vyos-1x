@@ -153,6 +153,7 @@ Depends:
   strongswan-swanctl (>= 5.9),
   sudo,
   systemd,
+  tayga,
   telegraf (>= 1.20),
   tcpdump,
   tcptraceroute,

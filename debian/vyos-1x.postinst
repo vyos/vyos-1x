@@ -58,6 +58,11 @@ if ! grep -q '^dhcpd' /etc/passwd; then
     adduser --quiet dhcpd hostsd
 fi
 
+# add tayga user for tayga
+if ! grep -q '^tayga' /etc/passwd; then
+    adduser --quiet --system --group --disabled-login --no-create-home --home /run/tayga tayga
+fi
+
 # ensure hte proxy user has a proper shell
 chsh -s /bin/sh proxy
 
