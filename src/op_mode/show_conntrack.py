@@ -47,27 +47,45 @@ def _get_formatted_output(xml):
     data_entries = []
     dict_data = _xml_to_dict(xml)
     for entry in dict_data['conntrack']['flow']:
-        src, dst, sport, dport, proto = {}, {}, {}, {}, {}
+        orig_src, orig_dst, orig_sport, orig_dport = {}, {}, {}, {}
+        reply_src, reply_dst, reply_sport, reply_dport = {}, {}, {}, {}
+        proto = {}
         for meta in entry['meta']:
             direction = meta['@direction']
             if direction in ['original']:
                 if 'layer3' in meta:
-                    src = meta['layer3']['src']
-                    dst = meta['layer3']['dst']
+                    orig_src = meta['layer3']['src']
+                    orig_dst = meta['layer3']['dst']
                 if 'layer4' in meta:
                     if meta.get('layer4').get('sport'):
-                        sport = meta['layer4']['sport']
+                        orig_sport = meta['layer4']['sport']
                     if meta.get('layer4').get('dport'):
-                        dport = meta['layer4']['dport']
+                        orig_dport = meta['layer4']['dport']
+                    proto = meta['layer4']['@protoname']
+            if direction in ['reply']:
+                if 'layer3' in meta:
+                    reply_src = meta['layer3']['src']
+                    reply_dst = meta['layer3']['dst']
+                if 'layer4' in meta:
+                    if meta.get('layer4').get('sport'):
+                        reply_sport = meta['layer4']['sport']
+                    if meta.get('layer4').get('dport'):
+                        reply_dport = meta['layer4']['dport']
                     proto = meta['layer4']['@protoname']
             if direction == 'independent':
                 conn_id = meta['id']
                 timeout = meta['timeout']
-                src = f'{src}:{sport}' if sport else src
-                dst = f'{dst}:{dport}' if dport else dst
+                orig_src = f'{orig_src}:{orig_sport}' if orig_sport else orig_src
+                orig_dst = f'{orig_dst}:{orig_dport}' if orig_dport else orig_dst
+                reply_src = f'{reply_src}:{reply_sport}' if reply_sport else reply_src
+                reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
                 state = meta['state'] if 'state' in meta else ''
-                data_entries.append([conn_id, src, dst, proto, state, timeout])
-    headers = ["Connection id", "Source", "Destination", "Protocol", "State", "Timeout"]
+                mark = meta['mark']
+                zone = meta['zone'] if 'zone' in meta else ''
+                data_entries.append(
+                    [conn_id, orig_src, orig_dst, reply_src, reply_dst, proto, state, timeout, mark, zone])
+    headers = ["Id", "Original src", "Original dst", "Reply src", "Reply dst", "Protocol", "State", "Timeout", "Mark",
+               "Zone"]
     output = tabulate(data_entries, headers, numalign="left")
     return output
 
