@@ -224,7 +224,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_delete(self._base_path + [interface, 'member'])
 
 
-    def test_bridge_vlan_members(self):
+    def test_bridge_vif_members(self):
         # T2945: ensure that VIFs are not dropped from bridge
         vifs = ['300', '400']
         for interface in self._interfaces:
@@ -248,6 +248,35 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
                 for vif in vifs:
                     self.cli_delete(['interfaces', 'ethernet', member, 'vif', vif])
                     self.cli_delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif}'])
+
+    def test_bridge_vif_s_vif_c_members(self):
+        # T2945: ensure that VIFs are not dropped from bridge
+        vifs = ['300', '400']
+        vifc = ['301', '401']
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif_s in vifs:
+                    for vif_c in vifc:
+                        self.cli_set(['interfaces', 'ethernet', member, 'vif-s', vif_s, 'vif-c', vif_c])
+                        self.cli_set(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif_s}.{vif_c}'])
+
+        self.cli_commit()
+
+        # Verify config
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif_s in vifs:
+                    for vif_c in vifc:
+                        # member interface must be assigned to the bridge
+                        self.assertTrue(os.path.exists(f'/sys/class/net/{interface}/lower_{member}.{vif_s}.{vif_c}'))
+
+        # delete all members
+        for interface in self._interfaces:
+            for member in self._members:
+                for vif_s in vifs:
+                    self.cli_delete(['interfaces', 'ethernet', member, 'vif-s', vif_s])
+                    for vif_c in vifc:
+                        self.cli_delete(['interfaces', 'bridge', interface, 'member', 'interface', f'{member}.{vif_s}.{vif_c}'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
