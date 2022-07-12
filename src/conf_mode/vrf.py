@@ -108,8 +108,14 @@ def verify(vrf):
                                   f'static routes installed!')
 
     if 'name' in vrf:
+        reserved_names = ["add", "all", "broadcast", "default", "delete", "dev", "get", "inet", "mtu", "link", "type",
+                          "vrf"]
         table_ids = []
         for name, config in vrf['name'].items():
+            # Reserved VRF names
+            if name in reserved_names:
+                raise ConfigError(f'VRF name "{name}" is reserved and connot be used!')
+
             # table id is mandatory
             if 'table' not in config:
                 raise ConfigError(f'VRF "{name}" table id is mandatory!')
