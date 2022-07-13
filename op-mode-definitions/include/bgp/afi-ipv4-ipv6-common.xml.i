@@ -151,7 +151,7 @@
 </leafNode>
 <tagNode name="neighbors">
   <properties>
-    <help>Show detailed BGP IPv4 unicast neighbor information</help>
+    <help>Show BGP information for specified neighbor</help>
     <completionHelp>
       <script>vtysh -c 'show bgp summary' | awk '{print $1'} | grep -e '^[0-9a-f]'</script>
     </completionHelp>
