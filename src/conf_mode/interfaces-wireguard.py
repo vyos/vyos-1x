@@ -28,6 +28,7 @@ from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WireGuardIf
 from vyos.util import check_kmod
 from vyos import ConfigError
@@ -69,6 +70,7 @@ def verify(wireguard):
     verify_mtu_ipv6(wireguard)
     verify_address(wireguard)
     verify_vrf(wireguard)
+    verify_bond_bridge_member(wireguard)
 
     if not os.path.exists(wireguard['private_key']):
         raise ConfigError('Wireguard private-key not found! Execute: ' \

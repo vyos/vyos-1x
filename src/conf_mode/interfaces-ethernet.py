@@ -30,6 +30,7 @@ from vyos.configverify import verify_mtu
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ethtool import Ethtool
 from vyos.ifconfig import EthernetIf
 from vyos.template import render
@@ -67,6 +68,7 @@ def verify(ethernet):
     verify_dhcpv6(ethernet)
     verify_address(ethernet)
     verify_vrf(ethernet)
+    verify_bond_bridge_member(ethernet)
     verify_eapol(ethernet)
     verify_mirror(ethernet)
 
