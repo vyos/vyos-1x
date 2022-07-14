@@ -27,6 +27,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mirror_redirect
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import GeneveIf
 from vyos import ConfigError
 
@@ -64,6 +65,7 @@ def verify(geneve):
 
     verify_mtu_ipv6(geneve)
     verify_address(geneve)
+    verify_bond_bridge_member(geneve)
     verify_mirror_redirect(geneve)
 
     if 'remote' not in geneve:

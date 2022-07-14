@@ -26,6 +26,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import L2TPv3If
 from vyos.util import check_kmod
 from vyos.validate import is_addr_assigned
@@ -77,6 +78,7 @@ def verify(l2tpv3):
 
     verify_mtu_ipv6(l2tpv3)
     verify_address(l2tpv3)
+    verify_bond_bridge_member(l2tpv3)
     verify_mirror_redirect(l2tpv3)
     return None
 

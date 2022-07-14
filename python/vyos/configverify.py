@@ -99,6 +99,18 @@ def verify_vrf(config):
                 'Interface "{ifname}" cannot be both a member of VRF "{vrf}" '
                 'and bridge "{is_bridge_member}"!'.format(**config))
 
+def verify_bond_bridge_member(config):
+    """
+    Checks if interface has a VRF configured and is also part of a bond or
+    bridge, which is not allowed!
+    """
+    if 'vrf' in config:
+        ifname = config['ifname']
+        if 'is_bond_member' in config:
+            raise ConfigError(f'Can not add interface "{ifname}" to bond, it has a VRF assigned!')
+        if 'is_bridge_member' in config:
+            raise ConfigError(f'Can not add interface "{ifname}" to bridge, it has a VRF assigned!')
+
 def verify_tunnel(config):
     """
     This helper is used to verify the common part of the tunnel

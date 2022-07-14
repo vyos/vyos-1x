@@ -26,6 +26,7 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_mtu_parent
 from vyos.configverify import verify_mirror_redirect
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import MACVLANIf
 from vyos import ConfigError
 
