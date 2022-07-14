@@ -21,7 +21,7 @@ imt_mem_pools_number: 169
 {% endif %}
 plugins: {% if templatecfg['netflow']['servers'] != none %}
 {%   for server in templatecfg['netflow']['servers'] %}
-{%     if loop.last %}nfprobe[nf_{{ server['address'] }}]{% else %}nfprobe[nf_{{ server['address'] }}],{% endif %}
+{%     if loop.last %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }}]{% else %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }} ],{% endif %}
 {%   endfor %}
 {% set plugins_presented = true %}
 {% endif %}
@@ -41,35 +41,35 @@ plugins: {% if templatecfg['netflow']['servers'] != none %}
 
 {% if templatecfg['netflow']['servers'] != none %}
 {% for server in templatecfg['netflow']['servers'] %}
-nfprobe_receiver[nf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
-nfprobe_version[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['version'] }}
+nfprobe_receiver[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ server['address'] | bracketize_ipv6 }}:{{ server['port'] }}
+nfprobe_version[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['version'] }}
 {% if templatecfg['netflow']['engine-id'] != none %}
-nfprobe_engine[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['engine-id'] }}
+nfprobe_engine[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['engine-id'] }}
 {% endif %}
 {% if templatecfg['netflow']['max-flows'] != none %}
-nfprobe_maxflows[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['max-flows'] }}
+nfprobe_maxflows[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['max-flows'] }}
 {% endif %}
 {% if templatecfg['netflow']['sampling-rate'] != none %}
-sampling_rate[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['sampling-rate'] }}
+sampling_rate[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['sampling-rate'] }}
 {% endif %}
 {% if templatecfg['netflow']['source-ip'] != none %}
-nfprobe_source_ip[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['source-ip'] }}
+nfprobe_source_ip[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['source-ip'] }}
 {% endif %}
 {% if templatecfg['netflow']['timeout_string'] != '' %}
-nfprobe_timeouts[nf_{{ server['address'] }}]: {{ templatecfg['netflow']['timeout_string'] }}
+nfprobe_timeouts[nf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['netflow']['timeout_string'] }}
 {% endif %}
 {% endfor %}
 {% endif %}
 
 {% if templatecfg['sflow']['servers'] != none %}
 {% for server in templatecfg['sflow']['servers'] %}
-sfprobe_receiver[sf_{{ server['address'] }}]: {{ server['address'] }}:{{ server['port'] }}
-sfprobe_agentip[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['agent-address'] }}
+sfprobe_receiver[sf_{{ server['address'] | dot_colon_to_dash }}]: {{ server['address'] | bracketize_ipv6 }}:{{ server['port'] }}
+sfprobe_agentip[sf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['sflow']['agent-address'] }}
 {% if templatecfg['sflow']['sampling-rate'] != none %}
-sampling_rate[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['sampling-rate'] }}
+sampling_rate[sf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['sflow']['sampling-rate'] }}
 {% endif %}
 {% if templatecfg['sflow']['source-address'] != none %}
-sfprobe_source_ip[sf_{{ server['address'] }}]: {{ templatecfg['sflow']['source-address'] }}
+sfprobe_source_ip[sf_{{ server['address'] | dot_colon_to_dash }}]: {{ templatecfg['sflow']['source-address'] }}
 {% endif %}
 {% endfor %}
 {% endif %}
