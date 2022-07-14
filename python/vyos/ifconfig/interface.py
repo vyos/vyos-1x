@@ -1454,14 +1454,22 @@ class Interface(Control):
         if dhcpv6pd:
             self.set_dhcpv6(True)
 
-        # There are some items in the configuration which can only be applied
-        # if this instance is not bound to a bridge. This should be checked
-        # by the caller but better save then sorry!
-        if not any(k in ['is_bond_member', 'is_bridge_member'] for k in config):
-            # Bind interface to given VRF or unbind it if vrf node is not set.
-            # unbinding will call 'ip link set dev eth0 nomaster' which will
-            # also drop the interface out of a bridge or bond - thus this is
-            # checked before
+        # XXX: Bind interface to given VRF or unbind it if vrf is not set. Unbinding
+        # will call 'ip link set dev eth0 nomaster' which will also drop the
+        # interface out of any bridge or bond - thus this is checked before.
+        if 'is_bond_member' in config:
+            bond_if = next(iter(config['is_bond_member']))
+            tmp = get_interface_config(config['ifname'])
+            if 'master' in tmp and tmp['master'] != bond_if:
+                self.set_vrf('')
+
+        elif 'is_bridge_member' in config:
+            bridge_if = next(iter(config['is_bridge_member']))
+            tmp = get_interface_config(config['ifname'])
+            if 'master' in tmp and tmp['master'] != bridge_if:
+                self.set_vrf('')
+
+        else:
             self.set_vrf(config.get('vrf', ''))
 
         # Add this section after vrf T4331
@@ -1575,8 +1583,8 @@ class Interface(Control):
 
         # re-add ourselves to any bridge we might have fallen out of
         if 'is_bridge_member' in config:
-            bridge_dict = config.get('is_bridge_member')
-            self.add_to_bridge(bridge_dict)
+            tmp = config.get('is_bridge_member')
+            self.add_to_bridge(tmp)
 
         # eXpress Data Path - highly experimental
         self.set_xdp('xdp' in config)
