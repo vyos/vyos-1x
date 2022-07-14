@@ -35,6 +35,7 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
 from vyos.util import dict_search
 from vyos.validate import has_address_configured
+from vyos.validate import has_vrf_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -125,6 +126,10 @@ def get_config(config=None):
             tmp = has_address_configured(conf, interface)
             if tmp: bond['member']['interface'][interface].update({'has_address' : {}})
 
+            # bond members must not have a VRF attached
+            tmp = has_vrf_configured(conf, interface)
+            if tmp: bond['member']['interface'][interface].update({'has_vrf' : {}})
+
     return bond
 
 
@@ -181,6 +186,8 @@ def verify(bond):
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
 
+            if 'has_vrf' in interface_config:
+                raise ConfigError(error_msg + 'it has a VRF assigned!')
 
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:
