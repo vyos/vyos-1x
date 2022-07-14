@@ -1319,8 +1319,9 @@ class Interface(Control):
 
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
-        self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
+        if not 'traffic_policy' in self._config:
+            self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
+            self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
 
         # Apply interface mirror policy
         if mirror_config:
