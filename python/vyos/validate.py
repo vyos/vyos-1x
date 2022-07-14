@@ -264,3 +264,22 @@ def has_address_configured(conf, intf):
 
     conf.set_level(old_level)
     return ret
+
+def has_vrf_configured(conf, intf):
+    """
+    Checks if interface has a VRF configured.
+
+    Returns True if interface has VRF configured, False if it doesn't.
+    """
+    from vyos.ifconfig import Section
+    ret = False
+
+    old_level = conf.get_level()
+    conf.set_level([])
+
+    tmp = ['interfaces', Section.get_config_path(intf), 'vrf']
+    if conf.exists(tmp):
+        ret = True
+
+    conf.set_level(old_level)
+    return ret

@@ -31,6 +31,7 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
 from vyos.validate import has_address_configured
+from vyos.validate import has_vrf_configured
 from vyos.xml import defaults
 
 from vyos.util import cmd
@@ -93,6 +94,10 @@ def get_config(config=None):
             tmp = has_address_configured(conf, interface)
             if tmp: bridge['member']['interface'][interface].update({'has_address' : ''})
 
+            # Bridge members must not have a VRF attached
+            tmp = has_vrf_configured(conf, interface)
+            if tmp: bridge['member']['interface'][interface].update({'has_vrf' : ''})
+
             # VLAN-aware bridge members must not have VLAN interface configuration
             tmp = has_vlan_subinterface_configured(conf,interface)
             if 'enable_vlan' in bridge and tmp:
@@ -131,6 +136,9 @@ def verify(bridge):
 
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
+
+            if 'has_vrf' in interface_config:
+                raise ConfigError(error_msg + 'it has a VRF assigned!')
 
             if 'enable_vlan' in bridge:
                 if 'has_vlan' in interface_config:
