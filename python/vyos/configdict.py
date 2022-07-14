@@ -233,13 +233,19 @@ def is_member(conf, interface, intftype=None):
                 interface = interface.split('.')
                 if len(interface) == 3:
                     if conf.exists(['interfaces', member_type, interface[0], 'vif-s', interface[1], 'vif-c', interface[2]]):
-                        ret_val.update({intf : {}})
+                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
+                                                   key_mangling=('-', '_'), get_first_key=True)
+                        ret_val.update({intf : tmp})
                 elif len(interface) == 2:
                     if conf.exists(['interfaces', member_type, interface[0], 'vif', interface[1]]):
-                        ret_val.update({intf : {}})
+                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
+                                                   key_mangling=('-', '_'), get_first_key=True)
+                        ret_val.update({intf : tmp})
                 else:
                     if conf.exists(['interfaces', member_type, interface[0]]):
-                        ret_val.update({intf : {}})
+                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
+                                                   key_mangling=('-', '_'), get_first_key=True)
+                        ret_val.update({intf : tmp})
 
     old_level = conf.set_level(old_level)
     return ret_val
