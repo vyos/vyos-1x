@@ -144,14 +144,15 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'plugins: memory', uacctd)
 
         for server, server_config in sflow_server.items():
+            plugin_name = server.replace('.', '-')
             if 'port' in server_config:
-                self.assertIn(f'sfprobe_receiver[sf_{server}]: {server}', uacctd)
+                self.assertIn(f'sfprobe_receiver[sf_{plugin_name}]: {server}', uacctd)
             else:
-                self.assertIn(f'sfprobe_receiver[sf_{server}]: {server}:6343', uacctd)
+                self.assertIn(f'sfprobe_receiver[sf_{plugin_name}]: {server}:6343', uacctd)
 
-            self.assertIn(f'sfprobe_agentip[sf_{server}]: {agent_address}', uacctd)
-            self.assertIn(f'sampling_rate[sf_{server}]: {sampling_rate}', uacctd)
-            self.assertIn(f'sfprobe_source_ip[sf_{server}]: {source_address}', uacctd)
+            self.assertIn(f'sfprobe_agentip[sf_{plugin_name}]: {agent_address}', uacctd)
+            self.assertIn(f'sampling_rate[sf_{plugin_name}]: {sampling_rate}', uacctd)
+            self.assertIn(f'sfprobe_source_ip[sf_{plugin_name}]: {source_address}', uacctd)
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])
 
@@ -194,8 +195,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
         for server, server_config in sflow_server.items():
             tmp_srv = server
-            if is_ipv6(tmp_srv):
-                tmp_srv = tmp_srv.replace(':', '.')
+            tmp_srv = tmp_srv.replace(':', '-')
 
             if 'port' in server_config:
                 self.assertIn(f'sfprobe_receiver[sf_{tmp_srv}]: {bracketize_ipv6(server)}', uacctd)
@@ -265,16 +265,16 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         tmp = []
         for server, server_config in netflow_server.items():
             tmp_srv = server
-            if is_ipv6(tmp_srv):
-                tmp_srv = tmp_srv.replace(':', '.')
+            tmp_srv = tmp_srv.replace('.', '-')
+            tmp_srv = tmp_srv.replace(':', '-')
             tmp.append(f'nfprobe[nf_{tmp_srv}]')
         tmp.append('memory')
         self.assertIn('plugins: ' + ','.join(tmp), uacctd)
 
         for server, server_config in netflow_server.items():
             tmp_srv = server
-            if is_ipv6(tmp_srv):
-                tmp_srv = tmp_srv.replace(':', '.')
+            tmp_srv = tmp_srv.replace('.', '-')
+            tmp_srv = tmp_srv.replace(':', '-')
 
             self.assertIn(f'nfprobe_engine[nf_{tmp_srv}]: {engine_id}', uacctd)
             self.assertIn(f'nfprobe_maxflows[nf_{tmp_srv}]: {max_flows}', uacctd)
