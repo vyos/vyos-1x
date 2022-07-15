@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -64,7 +64,8 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         # verify configuration
         tmp = cmd('sudo iptables-save -t raw')
         for interface in Section.interfaces('ethernet'):
-            self.assertIn(f'-A VYATTA_CT_PREROUTING_HOOK -i {interface} -m comment --comment FLOW_ACCOUNTING_RULE -j NFLOG --nflog-group 2 --nflog-size 128 --nflog-threshold 100', tmp)
+            self.assertIn(f'-A VYATTA_CT_PREROUTING_HOOK -i {interface} -m comment --comment FLOW_ACCOUNTING_RULE -j '
+                          f'NFLOG --nflog-group 2 --nflog-size 128 --nflog-threshold 100', tmp)
 
         uacctd = read_file(uacctd_conf)
         # circular queue size - buffer_size
@@ -130,14 +131,15 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertNotIn(f'plugins: memory', uacctd)
 
         for server, server_config in sflow_server.items():
+            tmp_srv = server.replace('.', '-')
             if 'port' in server_config:
-                self.assertIn(f'sfprobe_receiver[sf_{server}]: {server}', uacctd)
+                self.assertIn(f'sfprobe_receiver[sf_{tmp_srv}]: {server}', uacctd)
             else:
-                self.assertIn(f'sfprobe_receiver[sf_{server}]: {server}:6343', uacctd)
+                self.assertIn(f'sfprobe_receiver[sf_{tmp_srv}]: {server}:6343', uacctd)
 
-            self.assertIn(f'sfprobe_agentip[sf_{server}]: {agent_address}', uacctd)
-            self.assertIn(f'sampling_rate[sf_{server}]: {sampling_rate}', uacctd)
-            self.assertIn(f'sfprobe_source_ip[sf_{server}]: {source_address}', uacctd)
+            self.assertIn(f'sfprobe_agentip[sf_{tmp_srv}]: {agent_address}', uacctd)
+            self.assertIn(f'sampling_rate[sf_{tmp_srv}]: {sampling_rate}', uacctd)
+            self.assertIn(f'sfprobe_source_ip[sf_{tmp_srv}]: {source_address}', uacctd)
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])
 
@@ -203,23 +205,27 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
 
         tmp = 'plugins: '
         for server, server_config in netflow_server.items():
-            tmp += f'nfprobe[nf_{server}],'
+            tmp_srv = server.replace('.', '-')
+            tmp += f'nfprobe[nf_{tmp_srv}],'
         tmp += 'memory'
         self.assertIn(f'{tmp}', uacctd)
 
         for server, server_config in netflow_server.items():
-            self.assertIn(f'nfprobe_engine[nf_{server}]: {engine_id}', uacctd)
-            self.assertIn(f'nfprobe_maxflows[nf_{server}]: {max_flows}', uacctd)
-            self.assertIn(f'sampling_rate[nf_{server}]: {sampling_rate}', uacctd)
-            self.assertIn(f'nfprobe_source_ip[nf_{server}]: {source_address}', uacctd)
-            self.assertIn(f'nfprobe_version[nf_{server}]: {version}', uacctd)
+            tmp_srv = server.replace('.', '-')
+            self.assertIn(f'nfprobe_engine[nf_{tmp_srv}]: {engine_id}', uacctd)
+            self.assertIn(f'nfprobe_maxflows[nf_{tmp_srv}]: {max_flows}', uacctd)
+            self.assertIn(f'sampling_rate[nf_{tmp_srv}]: {sampling_rate}', uacctd)
+            self.assertIn(f'nfprobe_source_ip[nf_{tmp_srv}]: {source_address}', uacctd)
+            self.assertIn(f'nfprobe_version[nf_{tmp_srv}]: {version}', uacctd)
 
             if 'port' in server_config:
-                self.assertIn(f'nfprobe_receiver[nf_{server}]: {server}', uacctd)
+                self.assertIn(f'nfprobe_receiver[nf_{tmp_srv}]: {server}', uacctd)
             else:
-                self.assertIn(f'nfprobe_receiver[nf_{server}]: {server}:2055', uacctd)
+                self.assertIn(f'nfprobe_receiver[nf_{tmp_srv}]: {server}:2055', uacctd)
 
-            self.assertIn(f'nfprobe_timeouts[nf_{server}]: expint={tmo_expiry}:general={tmo_flow}:icmp={tmo_icmp}:maxlife={tmo_max}:tcp.fin={tmo_tcp_fin}:tcp={tmo_tcp_generic}:tcp.rst={tmo_tcp_rst}:udp={tmo_udp}', uacctd)
+            self.assertIn(f'nfprobe_timeouts[nf_{tmp_srv}]: expint={tmo_expiry}:general={tmo_flow}:'
+                          f'icmp={tmo_icmp}:maxlife={tmo_max}:tcp.fin={tmo_tcp_fin}:tcp={tmo_tcp_generic}:'
+                          f'tcp.rst={tmo_tcp_rst}:udp={tmo_udp}', uacctd)
 
 
         self.cli_delete(['interfaces', 'dummy', dummy_if])

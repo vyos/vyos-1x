@@ -21,7 +21,7 @@ imt_mem_pools_number: 169
 {% endif %}
 plugins: {% if templatecfg['netflow']['servers'] != none %}
 {%   for server in templatecfg['netflow']['servers'] %}
-{%     if loop.last %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }}]{% else %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }} ],{% endif %}
+{%     if loop.last %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }}]{% else %}nfprobe[nf_{{ server['address'] | dot_colon_to_dash }}],{% endif %}
 {%   endfor %}
 {% set plugins_presented = true %}
 {% endif %}
