@@ -21,13 +21,13 @@ imt_mem_pools_number: 169
 {% set plugin = [] %}
 {% if netflow.server is vyos_defined %}
 {%     for server in netflow.server %}
-{%         set nf_server_key = 'nf_' ~ server | replace(':', '.') %}
+{%         set nf_server_key = 'nf_' ~ server | dot_colon_to_dash %}
 {%         set _ = plugin.append('nfprobe['~ nf_server_key ~ ']') %}
 {%     endfor %}
 {% endif %}
 {% if sflow.server is vyos_defined %}
 {%     for server in sflow.server %}
-{%         set sf_server_key = 'sf_' ~ server | replace(':', '.') %}
+{%         set sf_server_key = 'sf_' ~ server | dot_colon_to_dash %}
 {%         set _ = plugin.append('sfprobe[' ~ sf_server_key ~ ']') %}
 {%     endfor %}
 {% endif %}
@@ -40,7 +40,7 @@ plugins: {{ plugin | join(',') }}
 # NetFlow servers
 {%     for server, server_config in netflow.server.items() %}
 {#         # prevent pmacct syntax error when using IPv6 flow collectors #}
-{%         set nf_server_key = 'nf_' ~ server | replace(':', '.') %}
+{%         set nf_server_key = 'nf_' ~ server | dot_colon_to_dash %}
 nfprobe_receiver[{{ nf_server_key }}]: {{ server | bracketize_ipv6 }}:{{ server_config.port }}
 nfprobe_version[{{ nf_server_key }}]: {{ netflow.version }}
 {%         if netflow.engine_id is vyos_defined %}
@@ -66,7 +66,7 @@ nfprobe_timeouts[{{ nf_server_key }}]: expint={{ netflow.timeout.expiry_interval
 # sFlow servers
 {%     for server, server_config in sflow.server.items() %}
 {#         # prevent pmacct syntax error when using IPv6 flow collectors #}
-{%         set sf_server_key = 'sf_' ~ server | replace(':', '.') %}
+{%         set sf_server_key = 'sf_' ~ server | dot_colon_to_dash %}
 sfprobe_receiver[{{ sf_server_key }}]: {{ server | bracketize_ipv6 }}:{{ server_config.port }}
 sfprobe_agentip[{{ sf_server_key }}]: {{ sflow.agent_address }}
 {%         if sflow.sampling_rate is vyos_defined %}
