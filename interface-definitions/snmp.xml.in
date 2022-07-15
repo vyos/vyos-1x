@@ -129,6 +129,26 @@
               <constraintErrorMessage>Location is limited to 255 characters or less</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="protocol">
+            <properties>
+              <help>Listen protocol for SNMP</help>
+              <completionHelp>
+                <list>udp tcp</list>
+              </completionHelp>
+              <valueHelp>
+                <format>udp</format>
+                <description>Listen protocol UDP (default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>tcp</format>
+                <description>Listen protocol TCP</description>
+              </valueHelp>
+              <constraint>
+                <regex>^(udp|tcp)$</regex>
+              </constraint>
+            </properties>
+            <defaultValue>udp</defaultValue>
+          </leafNode>
           <leafNode name="smux-peer">
             <properties>
               <help>Register a subtree for SMUX-based processing</help>
