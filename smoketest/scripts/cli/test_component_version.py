@@ -26,11 +26,25 @@ class TestComponentVersion(unittest.TestCase):
     def setUp(self):
         self.legacy_d = get_system_versions()
         self.xml_d = get_system_component_version()
+        self.set_legacy_d = set(self.legacy_d)
+        self.set_xml_d = set(self.xml_d)
 
     def test_component_version(self):
-        self.assertTrue(set(self.legacy_d).issubset(set(self.xml_d)))
+        bool_issubset = (self.set_legacy_d.issubset(self.set_xml_d))
+        if not bool_issubset:
+            missing = self.set_legacy_d.difference(self.set_xml_d)
+            print(f'\n\ncomponents in legacy but not in XML: {missing}')
+            print('new components must be listed in xml-component-version.xml.in')
+        self.assertTrue(bool_issubset)
+
+        bad_component_version = False
         for k, v in self.legacy_d.items():
-            self.assertTrue(v <= self.xml_d[k])
+            bool_inequality = (v <= self.xml_d[k])
+            if not bool_inequality:
+                print(f'\n\n{k} has not been updated in XML component versions:')
+                print(f'legacy version {v}; XML version {self.xml_d[k]}')
+                bad_component_version = True
+        self.assertFalse(bad_component_version)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
