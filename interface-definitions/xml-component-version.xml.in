@@ -20,6 +20,7 @@
   #include <include/version/l2tp-version.xml.i>
   #include <include/version/lldp-version.xml.i>
   #include <include/version/mdns-version.xml.i>
+  #include <include/version/monitoring-version.xml.i>
   #include <include/version/nat66-version.xml.i>
   #include <include/version/nat-version.xml.i>
   #include <include/version/ntp-version.xml.i>
