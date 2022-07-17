@@ -33,13 +33,13 @@ def load_as_module(name: str):
     return mod
 
 def get_system_version() -> dict:
-    show_version = load_as_module('show_version.py')
-    return show_version.get_raw_data()
+    show_version = load_as_module('version.py')
+    return show_version.show(raw=True, funny=False)
 
 def get_system_uptime() -> dict:
     show_uptime = load_as_module('show_uptime.py')
     return show_uptime.get_raw_data()
 
 def get_system_ram_usage() -> dict:
-    show_ram = load_as_module('show_ram.py')
-    return show_ram.get_raw_data()
+    show_ram = load_as_module('memory.py')
+    return show_ram.show(raw=True)
