@@ -13,6 +13,7 @@ if ! grep -q '^minion' /etc/passwd; then
     adduser --quiet minion dip
     adduser --quiet minion disk
     adduser --quiet minion users
+    adduser --quiet minion frr
 fi
 
 # OpenVPN should get its own user
@@ -45,6 +46,7 @@ if ! grep -q '^radius_priv_user' /etc/passwd; then
     adduser --quiet radius_priv_user dip
     adduser --quiet radius_priv_user disk
     adduser --quiet radius_priv_user users
+    adduser --quiet radius_priv_user frr
 fi
 
 # add hostsd group for vyos-hostsd

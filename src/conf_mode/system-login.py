@@ -231,7 +231,7 @@ def apply(login):
             if tmp: command += f" --home '{tmp}'"
             else: command += f" --home '/home/{user}'"
 
-            command += f' --groups frrvty,vyattacfg,sudo,adm,dip,disk {user}'
+            command += f' --groups frr,frrvty,vyattacfg,sudo,adm,dip,disk {user}'
             try:
                 cmd(command)
 
