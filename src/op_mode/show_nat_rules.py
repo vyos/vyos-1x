@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -99,8 +99,9 @@ if args.source or args.destination:
                     if addr_tmp and len_tmp:
                         tran_addr += addr_tmp + '/' + str(len_tmp) + ' '
 
-                if isinstance(tran_addr_json['port'],int):
-                    tran_addr += 'port ' + str(tran_addr_json['port'])
+                if tran_addr_json.get('port'):
+                    if isinstance(tran_addr_json['port'],int):
+                        tran_addr += 'port ' + str(tran_addr_json['port'])
 
             else:
                 if 'masquerade' in data['expr'][i]:
@@ -111,6 +112,8 @@ if args.source or args.destination:
         if srcdest != '':
             srcdests.append(srcdest)
             srcdest = ''
+        else:
+            srcdests.append('any')
         print(format_nat_rule.format(rule, srcdests[0], tran_addr, interface))
 
         for i in range(1, len(srcdests)):
