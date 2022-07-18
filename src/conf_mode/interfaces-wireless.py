@@ -29,6 +29,7 @@ from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WiFiIf
 from vyos.template import render
 from vyos.util import call
@@ -188,6 +189,7 @@ def verify(wifi):
 
     verify_address(wifi)
     verify_vrf(wifi)
+    verify_bond_bridge_member(wifi)
 
     # use common function to verify VLAN configuration
     verify_vlan_config(wifi)

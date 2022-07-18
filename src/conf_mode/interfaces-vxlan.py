@@ -26,6 +26,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
 from vyos.template import is_ipv6
@@ -113,6 +114,8 @@ def verify(vxlan):
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
+    verify_bond_bridge_member(vxlan)
+
     return None
 
 def generate(vxlan):

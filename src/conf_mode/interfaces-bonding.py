@@ -35,6 +35,7 @@ from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
 from vyos.util import dict_search
 from vyos.validate import has_address_configured
+from vyos.validate import has_vrf_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -108,20 +109,26 @@ def get_config(config=None):
         for interface, interface_config in bond['member']['interface'].items():
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp: interface_config.update({'is_bridge_member' : tmp})
+            if tmp: bond['member']['interface'][interface].update({'is_bridge_member' : tmp})
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
-            if tmp and bond['ifname'] not in tmp:
-                interface_config.update({'is_bond_member' : tmp})
+            for tmp in is_member(conf, interface, 'bonding'):
+                if bond['ifname'] == tmp:
+                    continue
+                bond['member']['interface'][interface].update({'is_bond_member' : tmp})
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
-            if tmp: interface_config.update({'is_source_interface' : tmp})
+            if tmp: bond['member']['interface'][interface].update({'is_source_interface' : tmp})
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp: interface_config.update({'has_address' : ''})
+            if tmp: bond['member']['interface'][interface].update({'has_address' : {}})
+
+            # bond members must not have a VRF attached
+            tmp = has_vrf_configured(conf, interface)
+            if tmp: bond['member']['interface'][interface].update({'has_vrf' : {}})
 
     return bond
 
@@ -179,6 +186,8 @@ def verify(bond):
             if 'has_address' in interface_config:
                 raise ConfigError(error_msg + 'it has an address assigned!')
 
+            if 'has_vrf' in interface_config:
+                raise ConfigError(error_msg + 'it has a VRF assigned!')
 
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:

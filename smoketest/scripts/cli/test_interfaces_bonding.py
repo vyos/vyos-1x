@@ -49,7 +49,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 if not '.' in tmp:
                     cls._members.append(tmp)
 
-        cls._options['bond0'] = []
+        cls._options = {'bond0' : []}
         for member in cls._members:
             cls._options['bond0'].append(f'member interface {member}')
         cls._interfaces = list(cls._options)
@@ -136,7 +136,7 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
 
     def test_bonding_hash_policy(self):
         # Define available bonding hash policies
-        hash_policies = ['layer2', 'layer2+3', 'layer2+3', 'encap2+3', 'encap3+4']
+        hash_policies = ['layer2', 'layer2+3', 'encap2+3', 'encap3+4']
         for hash_policy in hash_policies:
             for interface in self._interfaces:
                 for option in self._options.get(interface, []):
@@ -151,6 +151,29 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 defined_policy = read_file(f'/sys/class/net/{interface}/bonding/xmit_hash_policy').split()
                 self.assertEqual(defined_policy[0], hash_policy)
 
+    def test_bonding_mii_monitoring_interval(self):
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+        self.cli_commit()
+
+        # verify default
+        for interface in self._interfaces:
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/miimon').split()
+            self.assertIn('100', tmp)
+
+        mii_mon = '250'
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'mii-mon-interval', mii_mon])
+
+        self.cli_commit()
+
+        # verify new CLI value
+        for interface in self._interfaces:
+            tmp = read_file(f'/sys/class/net/{interface}/bonding/miimon').split()
+            self.assertIn(mii_mon, tmp)
+
     def test_bonding_multi_use_member(self):
         # Define available bonding hash policies
         for interface in ['bond10', 'bond20']:
@@ -164,6 +187,46 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_delete(self._base_path + ['bond20'])
 
         self.cli_commit()
+
+    def test_bonding_source_interface(self):
+        # Re-use member interface that is already a source-interface
+        bond = 'bond99'
+        pppoe = 'pppoe98756'
+        member = next(iter(self._members))
+
+        self.cli_set(self._base_path + [bond, 'member', 'interface', member])
+        self.cli_set(['interfaces', 'pppoe', pppoe, 'source-interface', member])
+
+        # check validate() - can not add interface to bond, it is the source-interface of ...
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'pppoe', pppoe])
+        self.cli_commit()
+
+        # verify config
+        slaves = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
+        self.assertIn(member, slaves)
+
+    def test_bonding_source_bridge_interface(self):
+        # Re-use member interface that is already a source-interface
+        bond = 'bond1097'
+        bridge = 'br6327'
+        member = next(iter(self._members))
+
+        self.cli_set(self._base_path + [bond, 'member', 'interface', member])
+        self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', member])
+
+        # check validate() - can not add interface to bond, it is a member of bridge ...
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_delete(['interfaces', 'bridge', bridge])
+        self.cli_commit()
+
+        # verify config
+        slaves = read_file(f'/sys/class/net/{bond}/bonding/slaves').split()
+        self.assertIn(member, slaves)
 
     def test_bonding_uniq_member_description(self):
         ethernet_path = ['interfaces', 'ethernet']

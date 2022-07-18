@@ -176,6 +176,21 @@ class BondIf(Interface):
         """
         self.set_interface('bond_lacp_rate', slow_fast)
 
+    def set_miimon_interval(self, interval):
+        """
+        Specifies the MII link monitoring frequency in milliseconds. This
+        determines how often the link state of each slave is inspected for link
+        failures. A value of zero disables MII link monitoring. A value of 100
+        is a good starting point.
+
+        The default value is 0.
+
+        Example:
+        >>> from vyos.ifconfig import BondIf
+        >>> BondIf('bond0').set_miimon_interval('100')
+        """
+        return self.set_interface('bond_miimon', interval)
+
     def set_arp_interval(self, interval):
         """
         Specifies the ARP link monitoring frequency in milliseconds.
@@ -199,16 +214,7 @@ class BondIf(Interface):
         >>> from vyos.ifconfig import BondIf
         >>> BondIf('bond0').set_arp_interval('100')
         """
-        if int(interval) == 0:
-            """
-            Specifies the MII link monitoring frequency in milliseconds.
-            This determines how often the link state of each slave is
-            inspected for link failures. A value of zero disables MII
-            link monitoring. A value of 100 is a good starting point.
-            """
-            return self.set_interface('bond_miimon', interval)
-        else:
-            return self.set_interface('bond_arp_interval', interval)
+        return self.set_interface('bond_arp_interval', interval)
 
     def get_arp_ip_target(self):
         """
@@ -365,26 +371,9 @@ class BondIf(Interface):
         if 'shutdown_required' in config:
             self.set_admin_state('down')
 
-        # ARP monitor targets need to be synchronized between sysfs and CLI.
-        # Unfortunately an address can't be send twice to sysfs as this will
-        # result in the following exception:  OSError: [Errno 22] Invalid argument.
-        #
-        # We remove ALL addresses prior to adding new ones, this will remove
-        # addresses manually added by the user too - but as we are limited to 16 adresses
-        # from the kernel side this looks valid to me. We won't run into an error
-        # when a user added manual adresses which would result in having more
-        # then 16 adresses in total.
-        arp_tgt_addr = list(map(str, self.get_arp_ip_target().split()))
-        for addr in arp_tgt_addr:
-            self.set_arp_ip_target('-' + addr)
-
-        # Add configured ARP target addresses
-        value = dict_search('arp_monitor.target', config)
-        if isinstance(value, str):
-            value = [value]
-        if value:
-            for addr in value:
-                self.set_arp_ip_target('+' + addr)
+        # Specifies the MII link monitoring frequency in milliseconds
+        value = config.get('mii_mon_interval')
+        self.set_miimon_interval(value)
 
         # Bonding transmit hash policy
         value = config.get('hash_policy')
@@ -413,6 +402,32 @@ class BondIf(Interface):
             # LACPDU transmission rate - default value
             if mode == '802.3ad':
                 self.set_lacp_rate(config.get('lacp_rate'))
+
+            if mode not in ['802.3ad', 'balance-tlb', 'balance-alb']:
+                tmp = dict_search('arp_monitor.interval', config)
+                value = tmp if (tmp != None) else '0'
+                self.set_arp_interval(value)
+
+                # ARP monitor targets need to be synchronized between sysfs and CLI.
+                # Unfortunately an address can't be send twice to sysfs as this will
+                # result in the following exception:  OSError: [Errno 22] Invalid argument.
+                #
+                # We remove ALL addresses prior to adding new ones, this will remove
+                # addresses manually added by the user too - but as we are limited to 16 adresses
+                # from the kernel side this looks valid to me. We won't run into an error
+                # when a user added manual adresses which would result in having more
+                # then 16 adresses in total.
+                arp_tgt_addr = list(map(str, self.get_arp_ip_target().split()))
+                for addr in arp_tgt_addr:
+                    self.set_arp_ip_target('-' + addr)
+
+                # Add configured ARP target addresses
+                value = dict_search('arp_monitor.target', config)
+                if isinstance(value, str):
+                    value = [value]
+                if value:
+                    for addr in value:
+                        self.set_arp_ip_target('+' + addr)
 
             # Add (enslave) interfaces to bond
             value = dict_search('member.interface', config)

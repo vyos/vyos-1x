@@ -30,6 +30,7 @@ from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
+from vyos.configverify import verify_bond_bridge_member
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -66,6 +67,7 @@ def verify(macsec):
     verify_vrf(macsec)
     verify_mtu_ipv6(macsec)
     verify_address(macsec)
+    verify_bond_bridge_member(macsec)
 
     if not (('security' in macsec) and
             ('cipher' in macsec['security'])):
