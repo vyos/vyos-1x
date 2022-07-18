@@ -101,6 +101,17 @@ def verify_remote_as(peer_config, bgp_config):
 
     return None
 
+def verify_afi(peer_config, bgp_config):
+    if 'address_family' in peer_config:
+        return True
+
+    if 'peer_group' in peer_config:
+        peer_group_name = peer_config['peer_group']
+        tmp = dict_search(f'peer_group.{peer_group_name}.address_family', bgp_config)
+        if tmp: return True
+
+    return False
+
 def verify(bgp):
     if not bgp or 'deleted' in bgp:
         if 'dependent_vrfs' in bgp:
@@ -165,6 +176,9 @@ def verify(bgp):
                 if not verify_remote_as(peer_config, bgp):
                     raise ConfigError(f'Neighbor "{peer}" remote-as must be set!')
 
+                if not verify_afi(peer_config, bgp):
+                    Warning(f'BGP neighbor "{peer}" requires address-family!')
+
                 # Peer-group member cannot override remote-as of peer-group
                 if 'peer_group' in peer_config:
                     peer_group = peer_config['peer_group']
@@ -198,9 +212,6 @@ def verify(bgp):
                         raise ConfigError(f'remote-as must be set under the interface node of "{peer}"')
                     if 'source_interface' in peer_config['interface']:
                         raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
-
-            if 'address_family' not in peer_config:
-                Warning(f'BGP neighbor "{peer}" requires address-family!')
 
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
