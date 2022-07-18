@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,10 +21,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.ifconfig import MACsecIf
-from vyos.ifconfig import Interface
-from vyos.template import render
-from vyos.util import call
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -32,6 +29,12 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_bond_bridge_member
+from vyos.ifconfig import MACsecIf
+from vyos.ifconfig import Interface
+from vyos.template import render
+from vyos.util import call
+from vyos.util import dict_search
+from vyos.util import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -56,6 +59,12 @@ def get_config(config=None):
         source_interface = conf.return_effective_value(['source-interface'])
         macsec.update({'source_interface': source_interface})
 
+    if is_node_changed(conf, base + [ifname, 'security']):
+        macsec.update({'shutdown_required': {}})
+
+    if is_node_changed(conf, base + [ifname, 'source_interface']):
+        macsec.update({'shutdown_required': {}})
+
     return macsec
 
 
@@ -71,20 +80,12 @@ def verify(macsec):
     verify_bond_bridge_member(macsec)
     verify_mirror_redirect(macsec)
 
-    if not (('security' in macsec) and
-            ('cipher' in macsec['security'])):
-        raise ConfigError(
-            'Cipher suite must be set for MACsec "{ifname}"'.format(**macsec))
+    if dict_search('security.cipher', macsec) == None:
+        raise ConfigError('Cipher suite must be set for MACsec "{ifname}"'.format(**macsec))
 
-    if (('security' in macsec) and
-        ('encrypt' in macsec['security'])):
-        tmp = macsec.get('security')
-
-        if not (('mka' in tmp) and
-                ('cak' in tmp['mka']) and
-                ('ckn' in tmp['mka'])):
-            raise ConfigError('Missing mandatory MACsec security '
-                              'keys as encryption is enabled!')
+    if dict_search('security.encrypt', macsec) != None:
+        if dict_search('security.mka.cak', macsec) == None or dict_search('security.mka.ckn', macsec) == None:
+            raise ConfigError('Missing mandatory MACsec security keys as encryption is enabled!')
 
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
@@ -99,33 +100,35 @@ def verify(macsec):
 
 
 def generate(macsec):
-    render(wpa_suppl_conf.format(**macsec),
-           'macsec/wpa_supplicant.conf.j2', macsec)
+    render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.j2', macsec)
     return None
 
 
 def apply(macsec):
-    # Remove macsec interface
-    if 'deleted' in macsec:
-        call('systemctl stop wpa_supplicant-macsec@{source_interface}'
-             .format(**macsec))
+    systemd_service = 'wpa_supplicant-macsec@{source_interface}'.format(**macsec)
+
+    # Remove macsec interface on deletion or mandatory parameter change
+    if 'deleted' in macsec or 'shutdown_required' in macsec:
+        call(f'systemctl stop {systemd_service}')
 
         if macsec['ifname'] in interfaces():
             tmp = MACsecIf(macsec['ifname'])
             tmp.remove()
 
-        # delete configuration on interface removal
-        if os.path.isfile(wpa_suppl_conf.format(**macsec)):
-            os.unlink(wpa_suppl_conf.format(**macsec))
+        if 'deleted' in macsec:
+            # delete configuration on interface removal
+            if os.path.isfile(wpa_suppl_conf.format(**macsec)):
+                os.unlink(wpa_suppl_conf.format(**macsec))
 
-    else:
-        # It is safe to "re-create" the interface always, there is a sanity
-        # check that the interface will only be create if its non existent
-        i = MACsecIf(**macsec)
-        i.update(macsec)
+            return None
 
-        call('systemctl restart wpa_supplicant-macsec@{source_interface}'
-             .format(**macsec))
+    # It is safe to "re-create" the interface always, there is a sanity
+    # check that the interface will only be create if its non existent
+    i = MACsecIf(**macsec)
+    i.update(macsec)
+
+    if not is_systemd_service_running(systemd_service) or 'shutdown_required' in macsec:
+        call(f'systemctl reload-or-restart {systemd_service}')
 
     return None
 
