@@ -65,7 +65,7 @@ def _get_formatted_output(version_data):
     tmpl = Template(version_output_tmpl)
     return tmpl.render(version_data).strip()
 
-def show(raw: bool, funny: bool):
+def show(raw: bool, funny: typing.Optional[bool]):
     """ Display neighbor table contents """
     version_data = _get_raw_data(funny=funny)
 

@@ -62,7 +62,7 @@ def _get_arg_type(t):
        Doesn't work with anything else at the moment!
     """
     if _is_optional_type(t):
-        t.__args__[0]
+        return t.__args__[0]
     else:
         return t
 
@@ -81,12 +81,13 @@ def run(module):
         for opt in type_hints:
             th = type_hints[opt]
 
-            if _is_optional_type(th):
-                subparser.add_argument(f"--{opt}", type=_get_arg_type(th), default=None)
-            elif _get_arg_type(th) == bool:
+            if _get_arg_type(th) == bool:
                 subparser.add_argument(f"--{opt}", action='store_true')
             else:
-                subparser.add_argument(f"--{opt}", type=_get_arg_type(th), required=True)
+                if _is_optional_type(th):
+                    subparser.add_argument(f"--{opt}", type=_get_arg_type(th), default=None)
+                else:
+                    subparser.add_argument(f"--{opt}", type=_get_arg_type(th), required=True)
 
     # Get options as a dict rather than a namespace,
     # so that we can modify it and pack for passing to functions
