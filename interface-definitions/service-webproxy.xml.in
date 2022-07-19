@@ -8,6 +8,32 @@
           <priority>500</priority>
         </properties>
         <children>
+          <leafNode name="safe-ports">
+            <properties>
+              <help>Safe port ACL</help>
+              <valueHelp>
+                <format>u32:1-1024</format>
+                <description>Port number. Ports included by default: 21,70,80,210,280,443,488,591,777,873,1025-65535</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-20 --range 22-69 --range 71-79 --range 81-209 --range 211-279 --range 281-442 --range 444-487 --range 489-590 --range 592-776 --range 778-872 --range 874-1024"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="ssl-safe-ports">
+            <properties>
+              <help>SSL safe port</help>
+              <valueHelp>
+                <format>u32:1-65535</format>
+                <description>Port number. Ports included by default: 443</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-442 --range 444-65535"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
           <leafNode name="append-domain">
             <properties>
               <help>Default domain name</help>
