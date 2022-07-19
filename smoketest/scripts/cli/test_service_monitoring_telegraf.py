@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -35,8 +35,14 @@ inputs = ['cpu', 'disk', 'mem', 'net', 'system', 'kernel', 'interrupts', 'syslog
 
 class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # Check for not longer running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_01_basic_config(self):
         self.cli_set(base_path + ['influxdb', 'authentication', 'organization', org])
@@ -46,9 +52,6 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
 
         # commit changes
         self.cli_commit()
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
         config = read_file(TELEGRAF_CONF)
 
