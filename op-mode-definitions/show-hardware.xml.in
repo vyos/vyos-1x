@@ -9,21 +9,21 @@
         <children>
           <node name="cpu">
             <properties>
-              <help>Show CPU info</help>
+              <help>Show CPU informaion</help>
             </properties>
-            <command>lscpu</command>
+            <command>${vyos_op_scripts_dir}/cpu.py show</command>
             <children>
               <node name="detail">
                 <properties>
-                  <help> Show system CPU details</help>
+                  <help>Show system CPU details</help>
                 </properties>
                 <command>cat /proc/cpuinfo</command>
               </node>
               <node name="summary">
                 <properties>
-                  <help>Show system CPUs</help>
+                  <help>Show system CPUs summary</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/cpu_summary.py</command>
+                <command>${vyos_op_scripts_dir}/cpu.py show_summary</command>
               </node>
             </children>
           </node>

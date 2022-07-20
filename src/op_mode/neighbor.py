@@ -28,29 +28,37 @@
 # ]
 
 import sys
+import typing
 
+import vyos.opmode
 
-def get_raw_data(family, device=None, state=None):
+def interface_exists(interface):
+    import os
+    return os.path.exists(f'/sys/class/net/{interface}')
+
+def get_raw_data(family, interface=None, state=None):
     from json import loads
     from vyos.util import cmd
 
-    if device:
-        device = f"dev {device}"
+    if interface:
+        if not interface_exists(interface):
+            raise ValueError(f"Interface '{interface}' does not exist in the system")
+        interface = f"dev {interface}"
     else:
-        device = ""
+        interface = ""
 
     if state:
         state = f"nud {state}"
     else:
         state = ""
 
-    neigh_cmd = f"ip --family {family} --json neighbor list {device} {state}"
+    neigh_cmd = f"ip --family {family} --json neighbor list {interface} {state}"
 
     data = loads(cmd(neigh_cmd))
 
     return data
 
-def get_formatted_output(family, device=None, state=None):
+def format_neighbors(neighs, interface=None):
     from tabulate import tabulate
 
     def entry_to_list(e, intf=None):
@@ -68,35 +76,47 @@ def get_formatted_output(family, device=None, state=None):
         # Device field is absent from outputs of `ip neigh list dev ...`
         if "dev" in e:
             dev = e["dev"]
-        elif device:
-            dev = device
+        elif interface:
+            dev = interface
         else:
             raise ValueError("interface is not defined")
 
         return [dst, dev, lladdr, state]
 
-    neighs = get_raw_data(family, device=device, state=state)
     neighs = map(entry_to_list, neighs)
 
     headers = ["Address", "Interface", "Link layer address",  "State"]
     return tabulate(neighs, headers)
 
+def show(raw: bool, family: str, interface: typing.Optional[str], state: typing.Optional[str]):
+    """ Display neighbor table contents """
+    data = get_raw_data(family, interface, state=state)
+
+    if raw:
+        return data
+    else:
+        return format_neighbors(data, interface)
+
+def reset(family: str, interface: typing.Optional[str], address: typing.Optional[str]):
+    from vyos.util import run
+
+    if address and interface:
+        raise ValueError("interface and address parameters are mutually exclusive")
+    elif address:
+        run(f"""ip --family {family} neighbor flush to {address}""")
+    elif interface:
+        run(f"""ip --family {family} neighbor flush dev {interface}""")
+    else:
+        # Flush an entire neighbor table
+        run(f"""ip --family {family} neighbor flush""")
+
+
 if __name__ == '__main__':
-    from argparse import ArgumentParser
-
-    parser = ArgumentParser()
-    parser.add_argument("-f", "--family", type=str, default="inet", help="Address family")
-    parser.add_argument("-i", "--interface", type=str, help="Network interface")
-    parser.add_argument("-s", "--state", type=str, help="Neighbor table entry state")
-
-    args = parser.parse_args()
-
-    if args.state:
-        if args.state not in ["reachable", "failed", "stale", "permanent"]:
-            raise ValueError(f"""Incorrect state "{args.state}"! Must be one of: reachable, stale, failed, permanent""")
-
     try:
-        print(get_formatted_output(args.family, device=args.interface, state=args.state))
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
     except ValueError as e:
         print(e)
         sys.exit(1)
+

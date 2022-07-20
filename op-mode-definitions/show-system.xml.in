@@ -104,7 +104,7 @@
             <properties>
               <help>Show system memory usage</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_ram.py</command>
+            <command>${vyos_op_scripts_dir}/memory.py show</command>
             <children>
               <leafNode name="cache">
                 <properties>
