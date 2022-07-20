@@ -14,15 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
 import sys
-import typing
 
 import vyos.cpu
 import vyos.opmode
 
 from jinja2 import Template
-from vyos.util import popen, DEVNULL
 
 cpu_template = Template("""
 {% for cpu in cpus %}

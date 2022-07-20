@@ -18,7 +18,6 @@
 #    Displays image version and system information.
 #    Used by the "run show version" command.
 
-import argparse
 import sys
 import typing
 
@@ -27,7 +26,6 @@ import vyos.version
 import vyos.limericks
 
 from jinja2 import Template
-from vyos.util import call
 
 version_output_tmpl = """
 Version:          VyOS {{version}}
