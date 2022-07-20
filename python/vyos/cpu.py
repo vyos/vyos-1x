@@ -32,7 +32,8 @@ import re
 
 def _read_cpuinfo():
     with open('/proc/cpuinfo', 'r') as f:
-        return f.readlines()
+        lines = f.read().strip()
+        return re.split(r'\n+', lines)
 
 def _split_line(l):
     l = l.strip()
