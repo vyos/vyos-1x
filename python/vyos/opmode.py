@@ -94,9 +94,9 @@ def run(module):
     args = vars(parser.parse_args())
 
     if not args["subcommand"]:
-       print("Subcommand required!")
-       parser.print_usage()
-       sys.exit(1)
+        print("Subcommand required!")
+        parser.print_usage()
+        sys.exit(1)
 
     function_name = args["subcommand"]
     func = functions[function_name]
