@@ -46,7 +46,7 @@ neighbor_config = {
         'shutdown'         : '',
         'cap_over'         : '',
         'ttl_security'     : '5',
-        'local_as'         : '300',
+        'system_as'        : '300',
         'route_map_in'     : route_map_in,
         'route_map_out'    : route_map_out,
         'no_send_comm_ext' : '',
@@ -87,7 +87,7 @@ neighbor_config = {
         'shutdown'         : '',
         'cap_over'         : '',
         'ttl_security'     : '5',
-        'local_as'         : '300',
+        'system_as'        : '300',
         'solo'             : '',
         'route_map_in'     : route_map_in,
         'route_map_out'    : route_map_out,
@@ -131,7 +131,7 @@ peer_group_config = {
         'remote_as'        : '200',
         'shutdown'         : '',
         'no_cap_nego'      : '',
-        'local_as'         : '300',
+        'system_as'        : '300',
         'pfx_list_in'      : prefix_list_in,
         'pfx_list_out'     : prefix_list_out,
         'no_send_comm_ext' : '',
@@ -177,7 +177,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, ['policy'])
 
     def setUp(self):
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
 
     def tearDown(self):
         self.cli_delete(['vrf'])
@@ -266,12 +266,12 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
 
-        # Local AS number MUST be defined - as this is set in setUp() we remove
+        # System AS number MUST be defined - as this is set in setUp() we remove
         # this once for testing of the proper error
-        self.cli_delete(base_path + ['local-as'])
+        self.cli_delete(base_path + ['system-as'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
 
         # Default local preference (higher = more preferred, default value is 100)
         self.cli_set(base_path + ['parameters', 'default', 'local-pref', local_pref])
@@ -760,13 +760,13 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # templates and Jinja2 FRR template.
         table = '1000'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         # testing only one AFI is sufficient as it's generic code
 
         for vrf in vrfs:
             vrf_base = ['vrf', 'name', vrf]
             self.cli_set(vrf_base + ['table', table])
-            self.cli_set(vrf_base + ['protocols', 'bgp', 'local-as', ASN])
+            self.cli_set(vrf_base + ['protocols', 'bgp', 'system-as', ASN])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'parameters', 'router-id', router_id])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'route-map', route_map_in])
             table = str(int(table) + 1000)
@@ -804,7 +804,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         confed_id = str(int(ASN) + 1)
         confed_asns = '10 20 30 40'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'confederation', 'identifier', confed_id])
         for asn in confed_asns.split():
@@ -825,7 +825,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         remote_asn = str(int(ASN) + 10)
         interface = 'eth0'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         self.cli_set(base_path + ['neighbor', interface, 'address-family', 'ipv6-unicast'])
         self.cli_set(base_path + ['neighbor', interface, 'interface', 'v6only', 'remote-as', remote_asn])
 
@@ -850,7 +850,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         rt_export = f'{neighbor}:1002 1.2.3.4:567'
         rt_import = f'{neighbor}:1003 500:100'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         # testing only one AFI is sufficient as it's generic code
         for afi in ['ipv4-unicast', 'ipv6-unicast']:
             self.cli_set(base_path + ['address-family', afi, 'export', 'vpn'])
@@ -889,7 +889,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         peer_group = 'bar'
         interface = 'eth0'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
         self.cli_set(base_path + ['neighbor', neighbor, 'peer-group', peer_group])
         self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', remote_asn])
