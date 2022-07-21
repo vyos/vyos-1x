@@ -27,8 +27,8 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/etc/fastnetmon.conf'
-networks_list = r'/etc/networks_list'
+config_file = r'/run/fastnetmon/fastnetmon.conf'
+networks_list = r'/run/fastnetmon/networks_list'
 
 def get_config(config=None):
     if config:
@@ -36,8 +36,10 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['service', 'ids', 'ddos-protection']
-    fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    if not conf.exists(base):
+        return None
 
+    fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
@@ -65,24 +67,23 @@ def verify(fastnetmon):
 
 def generate(fastnetmon):
     if not fastnetmon:
-        if os.path.isfile(config_file):
-            os.unlink(config_file)
-        if os.path.isfile(networks_list):
-            os.unlink(networks_list)
+        for file in [config_file, networks_list]:
+            if os.path.isfile(file):
+                os.unlink(file)
 
-        return
+        return None
 
     render(config_file, 'ids/fastnetmon.j2', fastnetmon)
     render(networks_list, 'ids/fastnetmon_networks_list.j2', fastnetmon)
-
     return None
 
 def apply(fastnetmon):
+    systemd_service = 'fastnetmon.service'
     if not fastnetmon:
         # Stop fastnetmon service if removed
-        call('systemctl stop fastnetmon.service')
+        call(f'systemctl stop {systemd_service}')
     else:
-        call('systemctl restart fastnetmon.service')
+        call(f'systemctl reload-or-restart {systemd_service}')
 
     return None
 

@@ -88,8 +88,10 @@ fi
 
 # Remove unwanted daemon files from /etc
 # conntackd
+# pmacct
+# fastnetmon
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
-        /etc/default/pmacctd /etc/pmacct"
+        /etc/default/pmacctd /etc/pmacct /etc/networks_list /etc/fastnetmon.conf"
 for file in $DELETE; do
     if [ -f ${file} ]; then
         rm -f ${file}

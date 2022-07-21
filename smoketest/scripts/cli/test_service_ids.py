@@ -24,7 +24,7 @@ from vyos.util import process_named_running
 from vyos.util import read_file
 
 PROCESS_NAME = 'fastnetmon'
-FASTNETMON_CONF = '/etc/fastnetmon.conf'
+FASTNETMON_CONF = '/run/fastnetmon/fastnetmon.conf'
 base_path = ['service', 'ids', 'ddos-protection']
 
 class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
