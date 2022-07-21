@@ -1,14 +1,13 @@
 # enable this option if you want to send logs to local syslog facility
+logging:logging_level = debug
 logging:local_syslog_logging = on
 
 # list of all your networks in CIDR format
-networks_list_path = /etc/networks_list
-
-# list networks in CIDR format which will be not monitored for attacks
-white_list_path = /etc/networks_whitelist
+networks_list_path = /run/fastnetmon/networks_list
 
 # Enable/Disable any actions in case of attack
 enable_ban = on
+enable_ban_ipv6 = on
 
 ## How many packets will be collected from attack traffic
 ban_details_records_count = 500

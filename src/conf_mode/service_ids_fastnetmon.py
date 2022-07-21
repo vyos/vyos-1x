@@ -49,22 +49,19 @@ def verify(fastnetmon):
     if not fastnetmon:
         return None
 
-    if not "mode" in fastnetmon:
-        raise ConfigError('ddos-protection mode is mandatory!')
+    if 'mode' not in fastnetmon:
+        raise ConfigError('Specify operating mode!')
 
-    if not "network" in fastnetmon:
-        raise ConfigError('Required define network!')
+    if 'listen_interface' not in fastnetmon:
+        raise ConfigError('Specify interface(s) for traffic capture')
 
-    if not "listen_interface" in fastnetmon:
-        raise ConfigError('Define listen-interface is mandatory!')
-
-    if "alert_script" in fastnetmon:
-        if os.path.isfile(fastnetmon["alert_script"]):
+    if 'alert_script' in fastnetmon:
+        if os.path.isfile(fastnetmon['alert_script']):
             # Check script permissions
-            if not os.access(fastnetmon["alert_script"], os.X_OK):
-                raise ConfigError('Script {0} does not have permissions for execution'.format(fastnetmon["alert_script"]))
+            if not os.access(fastnetmon['alert_script'], os.X_OK):
+                raise ConfigError('Script "{alert_script}" is not executable!'.format(fastnetmon['alert_script']))
         else:
-           raise ConfigError('File {0} does not exists!'.format(fastnetmon["alert_script"]))
+           raise ConfigError('File "{alert_script}" does not exists!'.format(fastnetmon))
 
 def generate(fastnetmon):
     if not fastnetmon:

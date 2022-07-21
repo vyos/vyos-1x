@@ -68,13 +68,18 @@
               </node>
               <leafNode name="network">
                 <properties>
-                  <help>Define monitoring networks</help>
+                  <help>Specify IPv4 and IPv6 networks which belong to you</help>
                   <valueHelp>
                     <format>ipv4net</format>
-                    <description>Processed network</description>
+                    <description>Your IPv4 prefix(es)</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>Your IPv6 prefix(es)</description>
                   </valueHelp>
                   <constraint>
                     <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
                   </constraint>
                   <multi/>
                 </properties>

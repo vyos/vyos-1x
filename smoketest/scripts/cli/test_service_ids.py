@@ -86,6 +86,10 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'threshold_mbps = {mbps}', config)
         self.assertIn(f'ban_for_pps = on', config)
         self.assertIn(f'threshold_pps = {pps}', config)
+        # default
+        self.assertIn(f'enable_ban = on', config)
+        self.assertIn(f'enable_ban_ipv6 = on', config)
+        self.assertIn(f'ban_time = 1900', config)
 
         tmp = ','.join(interfaces)
         self.assertIn(f'interfaces = {tmp}', config)
