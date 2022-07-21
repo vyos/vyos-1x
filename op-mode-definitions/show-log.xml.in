@@ -32,6 +32,19 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit conntrackd.service</command>
           </leafNode>
+          <node name="ids">
+            <properties>
+              <help>Show log for for Intrusion Detection System</help>
+            </properties>
+            <children>
+              <leafNode name="ddos-protection">
+                <properties>
+                  <help>Show log for DDOS protection</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit fastnetmon.service</command>
+              </leafNode>
+            </children>
+          </node>
           <node name="dhcp">
             <properties>
               <help>Show log for Dynamic Host Control Protocol (DHCP)</help>
@@ -243,7 +256,7 @@
           </node>
           <node name="protocol">
             <properties>
-              <help>Show log for Routing Protocols</help>
+              <help>Show log for Routing Protocol</help>
             </properties>
             <children>
               <leafNode name="ospf">

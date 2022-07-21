@@ -14,6 +14,19 @@
             </properties>
             <command>grc journalctl --no-hostname --follow --boot</command>
           </node>
+          <node name="ids">
+            <properties>
+              <help>Monitor log for Intrusion Detection System</help>
+            </properties>
+            <children>
+              <leafNode name="ddos-protection">
+                <properties>
+                  <help>Monitor last lines of DDOS protection</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit fastnetmon.service</command>
+              </leafNode>
+            </children>
+          </node>
           <node name="dhcp">
             <properties>
               <help>Monitor last lines of Dynamic Host Control Protocol (DHCP)</help>
@@ -111,7 +124,7 @@
           </node>
           <node name="protocol">
             <properties>
-              <help>Monitor log for Routing Protocols</help>
+              <help>Monitor log for Routing Protocol</help>
             </properties>
             <children>
               <leafNode name="ospf">
