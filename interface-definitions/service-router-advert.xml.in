@@ -249,6 +249,18 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <leafNode name="deprecate-prefix">
+                    <properties>
+                      <help>Upon shutdown, this option will deprecate the prefix by announcing it in the shutdown RA</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="decrement-lifetime">
+                    <properties>
+                      <help>Lifetime is decremented by the number of seconds since the last RA - use in conjunction with a DHCPv6-PD prefix</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="preferred-lifetime">
                     <properties>
                       <help>Time in seconds that the prefix will remain preferred</help>
