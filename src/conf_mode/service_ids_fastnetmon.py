@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,9 +19,11 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import call
+from vyos.configdict import dict_merge
 from vyos.template import render
+from vyos.util import call
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
@@ -35,6 +37,12 @@ def get_config(config=None):
         conf = Config()
     base = ['service', 'ids', 'ddos-protection']
     fastnetmon = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    fastnetmon = dict_merge(default_values, fastnetmon)
+
     return fastnetmon
 
 def verify(fastnetmon):
