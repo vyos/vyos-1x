@@ -15,7 +15,11 @@ ban_details_records_count = 500
 
 ## How long (in seconds) we should keep an IP in blocked state
 ## If you set 0 here it completely disables unban capability
+{% if ban_time is vyos_defined %}
+ban_time = {{ ban_time }}
+{% else %}
 ban_time = 1900
+{% endif %}
 
 # Check if the attack is still active, before triggering an unban callback with this option
 # If the attack is still active, check each run of the unban watchdog
