@@ -25,6 +25,7 @@ from vyos.util import read_file
 
 PROCESS_NAME = 'fastnetmon'
 FASTNETMON_CONF = '/run/fastnetmon/fastnetmon.conf'
+NETWORKS_CONF = '/run/fastnetmon/networks_list'
 base_path = ['service', 'ids', 'ddos-protection']
 
 class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
@@ -48,7 +49,7 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_fastnetmon(self):
-        networks = ['10.0.0.0/24', '10.5.5.0/24']
+        networks = ['10.0.0.0/24', '10.5.5.0/24', '2001:db8:10::/64', '2001:db8:20::/64']
         interfaces = ['eth0', 'eth1']
         fps = '3500'
         mbps = '300'
@@ -93,6 +94,11 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
 
         tmp = ','.join(interfaces)
         self.assertIn(f'interfaces = {tmp}', config)
+
+
+        network_config = read_file(NETWORKS_CONF)
+        for tmp in networks:
+            self.assertIn(f'{tmp}', network_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
