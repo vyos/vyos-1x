@@ -5,8 +5,9 @@ After=vyos-router.service
 ConditionPathExists={{ config_file }}
 
 [Service]
+EnvironmentFile=
 ExecStart=
-ExecStart={{ vrf_command }}/usr/sbin/sshd -f {{ config_file }} -D $SSHD_OPTS
+ExecStart={{ vrf_command }}/usr/sbin/sshd -f {{ config_file }}
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10
