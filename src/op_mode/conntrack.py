@@ -14,17 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import xmltodict
 
 from tabulate import tabulate
 from vyos.util import cmd
+from vyos.util import run
+
+import vyos.opmode
 
 
-def _get_raw_data():
+def _get_xml_data(family):
     """
     Get conntrack XML output
     """
-    return cmd(f'sudo  conntrack --dump --output xml')
+    return cmd(f'sudo conntrack --dump --family {family} --output xml')
 
 
 def _xml_to_dict(xml):
@@ -32,26 +36,34 @@ def _xml_to_dict(xml):
     Convert XML to dictionary
     Return: dictionary
     """
-    parse = xmltodict.parse(xml)
+    parse = xmltodict.parse(xml, attr_prefix='')
     # If only one conntrack entry we must change dict
     if 'meta' in parse['conntrack']['flow']:
         return dict(conntrack={'flow': [parse['conntrack']['flow']]})
     return parse
 
 
-def _get_formatted_output(xml):
+def _get_raw_data(family):
+    """
+    Return: dictionary
+    """
+    xml = _get_xml_data(family)
+    return _xml_to_dict(xml)
+
+
+def get_formatted_output(dict_data):
     """
     :param xml:
     :return: formatted output
     """
     data_entries = []
-    dict_data = _xml_to_dict(xml)
+    #dict_data = _get_raw_data(family)
     for entry in dict_data['conntrack']['flow']:
         orig_src, orig_dst, orig_sport, orig_dport = {}, {}, {}, {}
         reply_src, reply_dst, reply_sport, reply_dport = {}, {}, {}, {}
         proto = {}
         for meta in entry['meta']:
-            direction = meta['@direction']
+            direction = meta['direction']
             if direction in ['original']:
                 if 'layer3' in meta:
                     orig_src = meta['layer3']['src']
@@ -61,7 +73,7 @@ def _get_formatted_output(xml):
                         orig_sport = meta['layer4']['sport']
                     if meta.get('layer4').get('dport'):
                         orig_dport = meta['layer4']['dport']
-                    proto = meta['layer4']['@protoname']
+                    proto = meta['layer4']['protoname']
             if direction in ['reply']:
                 if 'layer3' in meta:
                     reply_src = meta['layer3']['src']
@@ -71,7 +83,7 @@ def _get_formatted_output(xml):
                         reply_sport = meta['layer4']['sport']
                     if meta.get('layer4').get('dport'):
                         reply_dport = meta['layer4']['dport']
-                    proto = meta['layer4']['@protoname']
+                    proto = meta['layer4']['protoname']
             if direction == 'independent':
                 conn_id = meta['id']
                 timeout = meta['timeout']
@@ -90,13 +102,20 @@ def _get_formatted_output(xml):
     return output
 
 
-def show(raw: bool):
-    conntrack_data = _get_raw_data()
+def show(raw: bool, family: str):
+    family = 'ipv6' if family == 'inet6' else 'ipv4'
+    conntrack_data = _get_raw_data(family)
     if raw:
         return conntrack_data
     else:
-        return _get_formatted_output(conntrack_data)
+        return get_formatted_output(conntrack_data)
 
 
 if __name__ == '__main__':
-    print(show(raw=False))
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
