@@ -195,6 +195,18 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="snmp">
+            <properties>
+              <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP)</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit snmpd.service</command>
+          </leafNode>
+          <leafNode name="ssh">
+            <properties>
+              <help>onitor last lines of Secure Shell (SSH)</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
+          </leafNode>
         </children>
       </node>
     </children>
