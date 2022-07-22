@@ -151,5 +151,21 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(tmp, config)
 
 
+    def test_deprecate_prefix(self):
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['prefix', prefix, 'deprecate-prefix'])
+        self.cli_set(base_path + ['prefix', prefix, 'decrement-lifetime'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = get_config_value('DeprecatePrefix')
+        self.assertEqual(tmp, 'on')
+
+        tmp = get_config_value('DecrementLifetimes')
+        self.assertEqual(tmp, 'on')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
