@@ -1,11 +1,9 @@
 [Unit]
-Description=WPA supplicant daemon (macsec-specific version)
+Description=WPA supplicant daemon (MACsec-specific version)
 Requires=sys-subsystem-net-devices-%i.device
 ConditionPathExists=/run/wpa_supplicant/%I.conf
 After=vyos-router.service
 RequiresMountsFor=/run
-
-# NetworkManager users will probably want the dbus version instead.
 
 [Service]
 Type=simple
