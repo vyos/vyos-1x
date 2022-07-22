@@ -91,10 +91,11 @@ fi
 # pmacct
 # fastnetmon
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
-        /etc/default/pmacctd /etc/pmacct /etc/networks_list /etc/fastnetmon.conf"
-for file in $DELETE; do
-    if [ -f ${file} ]; then
-        rm -f ${file}
+        /etc/default/pmacctd /etc/pmacct
+        /etc/networks_list /etc/networks_whitelist /etc/fastnetmon.conf"
+for tmp in $DELETE; do
+    if [ -e ${tmp} ]; then
+        rm -rf ${tmp}
     fi
 done
 
