@@ -94,7 +94,7 @@ fi
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
         /etc/default/pmacctd /etc/pmacct
         /etc/networks_list /etc/networks_whitelist /etc/fastnetmon.conf
-        /etc/ntp.conf
+        /etc/ntp.conf /etc/default/ssh
         /etc/powerdns /etc/default/pdns-recursor"
 for tmp in $DELETE; do
     if [ -e ${tmp} ]; then
