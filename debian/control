@@ -9,6 +9,7 @@ Build-Depends:
   gcc-multilib [amd64],
   clang [amd64],
   llvm [amd64],
+  libbpf-dev [amd64],
   libelf-dev (>= 0.2) [amd64],
   libpcap-dev [amd64],
   build-essential,
@@ -25,7 +26,8 @@ Build-Depends:
   python3-sphinx,
   python3-xmltodict,
   quilt,
-  whois
+  whois,
+  zlib1g-dev [amd64]
 Standards-Version: 3.9.6
 
 Package: vyos-1x
@@ -175,7 +177,8 @@ Depends:
   wireless-regdb,
   wpasupplicant (>= 0.6.7),
   ndppd,
-  miniupnpd-nftables
+  miniupnpd-nftables,
+  zlib1g [amd64]
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
