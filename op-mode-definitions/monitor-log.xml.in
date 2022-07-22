@@ -203,7 +203,7 @@
           </leafNode>
           <leafNode name="ssh">
             <properties>
-              <help>onitor last lines of Secure Shell (SSH)</help>
+              <help>Monitor last lines of Secure Shell (SSH)</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
