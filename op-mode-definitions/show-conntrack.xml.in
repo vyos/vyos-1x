@@ -16,7 +16,13 @@
                 <properties>
                   <help>Show conntrack entries for IPv4 protocol</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_conntrack.py</command>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack.py show --family inet</command>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>Show conntrack entries for IPv6 protocol</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/conntrack.py show --family inet6</command>
               </node>
             </children>
           </node>
