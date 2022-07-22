@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,11 +23,13 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.util import read_file
 from vyos.util import process_named_running
 
+PROCESS_NAME = 'radvd'
 RADVD_CONF = '/run/radvd/radvd.conf'
 
 interface = 'eth1'
 base_path = ['service', 'router-advert', 'interface', interface]
 address_base = ['interfaces', 'ethernet', interface, 'address']
+prefix = '::/64'
 
 def get_config_value(key):
     tmp = read_file(RADVD_CONF)
@@ -35,18 +37,36 @@ def get_config_value(key):
     return tmp[0].split()[0].replace(';','')
 
 class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(address_base + ['2001:db8::1/64'])
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceRADVD, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, ['service', 'router-advert'])
+
+        cls.cli_set(cls, address_base + ['2001:db8::1/64'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, address_base)
+        super(TestServiceRADVD, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(address_base)
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_commit()
 
+        # Check for no longer running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
+
     def test_common(self):
-        self.cli_set(base_path + ['prefix', '::/64', 'no-on-link-flag'])
-        self.cli_set(base_path + ['prefix', '::/64', 'no-autonomous-flag'])
-        self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['prefix', prefix, 'no-on-link-flag'])
+        self.cli_set(base_path + ['prefix', prefix, 'no-autonomous-flag'])
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
         self.cli_set(base_path + ['other-config-flag'])
 
         # commit changes
@@ -57,7 +77,7 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, interface)
 
         tmp = get_config_value('prefix')
-        self.assertEqual(tmp, '::/64')
+        self.assertEqual(tmp, prefix)
 
         tmp = get_config_value('AdvOtherConfigFlag')
         self.assertEqual(tmp, 'on')
@@ -88,15 +108,19 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('AdvOnLink')
         self.assertEqual(tmp, 'off')
 
-        # Check for running process
-        self.assertTrue(process_named_running('radvd'))
+        tmp = get_config_value('DeprecatePrefix')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('DecrementLifetimes')
+        self.assertEqual(tmp, 'off')
+
 
     def test_dns(self):
         nameserver = ['2001:db8::1', '2001:db8::2']
         dnssl = ['vyos.net', 'vyos.io']
         ns_lifetime = '599'
 
-        self.cli_set(base_path + ['prefix', '::/64', 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
         self.cli_set(base_path + ['other-config-flag'])
 
         for ns in nameserver:
