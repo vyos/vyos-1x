@@ -6,7 +6,7 @@
         <properties>
           <help>Show VRF information</help>
         </properties>
-        <command>${vyos_op_scripts_dir}/show_vrf.py -e</command>
+        <command>${vyos_op_scripts_dir}/vrf.py show</command>
       </node>
       <tagNode name="vrf">
         <properties>
