@@ -43,6 +43,24 @@
                   <multi/>
                 </properties>
               </leafNode>
+              <leafNode name="excluded-network">
+                <properties>
+                  <help>Specify IPv4 and IPv6 networks which are going to be excluded from protection</help>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 prefix(es) to exclude</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 prefix(es) to exclude</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-prefix"/>
+                    <validator name="ipv6-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
               <leafNode name="listen-interface">
                 <properties>
                   <help>Listen interface for mirroring traffic</help>
