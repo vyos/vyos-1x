@@ -639,7 +639,7 @@
                           </leafNode>
                           <leafNode name="prefix-len">
                             <properties>
-                              <help>IP prefix-length to match (cannot be used for BGP routes)</help>
+                              <help>IP prefix-length to match (can be used for kernel routes only)</help>
                               <valueHelp>
                                 <format>u32:0-32</format>
                                 <description>Prefix length</description>
@@ -809,7 +809,7 @@
                           </leafNode>
                           <leafNode name="prefix-len">
                             <properties>
-                              <help>IPv6 prefix-length to match (cannot be used for BGP routes)</help>
+                              <help>IPv6 prefix-length to match (can be used for kernel routes only)</help>
                               <valueHelp>
                                 <format>u32:0-128</format>
                                 <description>Prefix length</description>
