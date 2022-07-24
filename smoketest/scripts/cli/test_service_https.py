@@ -138,5 +138,62 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # Must get HTTP code 401 on missing key (Unauthorized)
         self.assertEqual(r.status_code, 401)
 
+        # GraphQL auth test: a missing key will return status code 400, as
+        # 'key' is a non-nullable field in the schema; an incorrect key is
+        # caught by the resolver, and returns success 'False', so one must
+        # check the return value.
+
+        self.cli_set(base_path + ['api', 'gql'])
+        self.cli_commit()
+
+        gql_url = f'https://{address}/graphql'
+
+        query_valid_key = f"""
+        {{
+          SystemStatus (data: {{key: "{key}"}}) {{
+            success
+            errors
+            data {{
+              result
+            }}
+          }}
+        }}
+        """
+
+        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_valid_key})
+        success = r.json()['data']['SystemStatus']['success']
+        self.assertTrue(success)
+
+        query_invalid_key = """
+        {
+          SystemStatus (data: {key: "invalid"}) {
+            success
+            errors
+            data {
+              result
+            }
+          }
+        }
+        """
+
+        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_invalid_key})
+        success = r.json()['data']['SystemStatus']['success']
+        self.assertFalse(success)
+
+        query_no_key = """
+        {
+          SystemStatus (data: {}) {
+            success
+            errors
+            data {
+              result
+            }
+          }
+        }
+        """
+
+        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_no_key})
+        self.assertEqual(r.status_code, 400)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
