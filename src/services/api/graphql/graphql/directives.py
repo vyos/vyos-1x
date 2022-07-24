@@ -80,9 +80,27 @@ class ImageDirective(VyosDirective):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_image_resolver)
 
+class GenOpQueryDirective(VyosDirective):
+    """
+    Class providing implementation of 'genopquery' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_gen_op_query_resolver)
+
+class GenOpMutationDirective(VyosDirective):
+    """
+    Class providing implementation of 'genopmutation' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_gen_op_mutation_resolver)
+
 directives_dict = {"configure": ConfigureDirective,
                    "showconfig": ShowConfigDirective,
                    "systemstatus": SystemStatusDirective,
                    "configfile": ConfigFileDirective,
                    "show": ShowDirective,
-                   "image": ImageDirective}
+                   "image": ImageDirective,
+                   "genopquery": GenOpQueryDirective,
+                   "genopmutation": GenOpMutationDirective}

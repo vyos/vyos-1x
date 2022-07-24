@@ -39,3 +39,17 @@ def is_show_function_name(name):
     if re.match(r"^show", name):
         return True
     return False
+
+def _nth_rsplit(delim: str, n: int, s: str):
+    groups = s.split(delim)
+    l = len(groups)
+    if n > l-1:
+        return ('', s)
+    return (delim.join(groups[:l-n]), delim.join(groups[l-n:]))
+
+def split_compound_op_mode_name(name: str, files: list):
+    for i in range(1, name.count('_') + 1):
+        pair = _nth_rsplit('_', i, name)
+        if pair[1] in files:
+            return pair
+    return (name, '')

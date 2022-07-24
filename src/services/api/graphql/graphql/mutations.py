@@ -1,4 +1,4 @@
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -63,6 +63,10 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                      "errors": ['invalid API key']
                 }
 
+            # We are finished with the 'key' entry, and may remove so as to
+            # pass the rest of data (if any) to function.
+            del data['key']
+
             session = state.settings['app'].state.vyos_session
 
             # one may override the session functions with a local subclass
@@ -71,7 +75,7 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                 klass = getattr(mod, class_name)
             except ImportError:
                 # otherwise, dynamically generate subclass to invoke subclass
-                # name based templates
+                # name based functions
                 klass = type(class_name, (Session,), {})
             k = klass(session, data)
             method = getattr(k, session_func)
@@ -107,3 +111,7 @@ def make_config_file_resolver(mutation_name):
 
 def make_image_resolver(mutation_name):
     return make_prefix_resolver(mutation_name, prefix=['add', 'delete'])
+
+def make_gen_op_mutation_resolver(mutation_name):
+    class_name = mutation_name
+    return make_mutation_resolver(mutation_name, class_name, 'gen_op_mutation')
