@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -94,6 +94,51 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.cli_delete(['interfaces', 'dummy', dummy_if])
 
+    def test_snmp_tcp(self):
+        dummy_if = 'dum123'
+        dummy_addr = '100.64.0.1/32'
+        self.cli_set(['interfaces', 'dummy', dummy_if, 'address', dummy_addr])
+
+        # Check if SNMP can be configured and service runs
+        clients = ['192.0.2.1', '2001:db8::1']
+        networks = ['192.0.2.128/25', '2001:db8:babe::/48']
+        listen = ['127.0.0.1', '::1', address_from_cidr(dummy_addr)]
+        port = '2325'
+
+        for auth in ['ro', 'rw']:
+            community = 'VyOS' + auth
+            self.cli_set(base_path + ['community', community, 'authorization', auth])
+            for client in clients:
+                self.cli_set(base_path + ['community', community, 'client', client])
+            for network in networks:
+                self.cli_set(base_path + ['community', community, 'network', network])
+
+        for addr in listen:
+            self.cli_set(base_path + ['listen-address', addr, 'port', port])
+
+        self.cli_set(base_path + ['contact', 'maintainers@vyos.io'])
+        self.cli_set(base_path + ['location', 'qemu'])
+        self.cli_set(base_path + ['protocol', 'tcp'])
+
+        self.cli_commit()
+
+        # verify listen address, it will be returned as
+        # ['unix:/run/snmpd.socket,tcp:127.0.0.1:161,tcp6:[::1]:161']
+        # thus we need to transfor this into a proper list
+        config = get_config_value('agentaddress')
+        expected = 'unix:/run/snmpd.socket'
+        self.assertIn(expected, config)
+
+        for addr in listen:
+            if is_ipv4(addr):
+                expected = f'tcp:{addr}:{port}'
+            else:
+                expected = f'tcp6:[{addr}]:{port}'
+            self.assertIn(expected, config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.cli_delete(['interfaces', 'dummy', dummy_if])
 
     def test_snmpv3_sha(self):
         # Check if SNMPv3 can be configured with SHA authentication

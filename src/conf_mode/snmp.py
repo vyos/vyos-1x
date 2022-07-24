@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -56,6 +56,7 @@ default_config_data = {
     'communities': [],
     'smux_peers': [],
     'location' : '',
+    'protocol' : 'udp',
     'description' : '',
     'contact' : '',
     'trap_source': '',
@@ -153,6 +154,9 @@ def get_config():
 
     if conf.exists('location'):
         snmp['location'] = conf.return_value('location')
+
+    if conf.exists('protocol'):
+        snmp['protocol'] = conf.return_value('protocol')
 
     if conf.exists('smux-peer'):
         snmp['smux_peers'] = conf.return_values('smux-peer')
@@ -404,14 +408,15 @@ def verify(snmp):
     for listen in snmp['listen_address']:
         addr = listen[0]
         port = listen[1]
+        protocol = snmp['protocol']
 
         tmp = None
         if is_ipv4(addr):
             # example: udp:127.0.0.1:161
-            tmp = f'udp:{addr}:{port}'
+            tmp = f'{protocol}:{addr}:{port}'
         elif snmp['ipv6_enabled']:
             # example: udp6:[::1]:161
-            tmp = f'udp6:[{addr}]:{port}'
+            tmp = f'{protocol}6:[{addr}]:{port}'
 
         # We only wan't to configure addresses that exist on the system.
         # Hint the user if they don't exist
