@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -87,6 +87,7 @@ def reset_profile(profile, tunnel):
     print('Profile reset result: ' + ('success' if result == 0 else 'failed'))
 
 def debug_peer(peer, tunnel):
+    peer = peer.replace(':', '-')
     if not peer or peer == "all":
         debug_commands = [
             "sudo ipsec statusall",
@@ -109,7 +110,7 @@ def debug_peer(peer, tunnel):
     if not tunnel or tunnel == 'all':
         tunnel = ''
 
-    conn = get_peer_connections(peer, tunnel)
+    conns = get_peer_connections(peer, tunnel, return_all = (tunnel == '' or tunnel == 'all'))
 
     if not conns:
         print('Peer not found, aborting')
