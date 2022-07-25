@@ -19,16 +19,16 @@
                 <properties>
                   <help>Reset a specific tunnel for given peer</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="reset-peer" --name="$4" --tunnel="$6"</command>
+                <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="$6"</command>
               </tagNode>
               <node name="vti">
                 <properties>
                   <help>Reset the VTI tunnel for given peer</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="reset-peer" --name="$4" --tunnel="vti"</command>
+                <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="vti"</command>
               </node>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="reset-peer" --name="$4" --tunnel="all"</command>
+            <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="all"</command>
           </tagNode>
           <tagNode name="ipsec-profile">
             <properties>
