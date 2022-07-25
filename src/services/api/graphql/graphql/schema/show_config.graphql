@@ -2,9 +2,9 @@
 Use 'scalar Generic' for show config output, to avoid attempts to
 JSON-serialize in case of JSON output.
 """
-scalar Generic
 
 input ShowConfigInput {
+    key: String!
     path: [String!]!
     configFormat: String
 }

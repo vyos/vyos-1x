@@ -1,4 +1,5 @@
 input ShowInput {
+    key: String!
     path: [String!]!
 }
 

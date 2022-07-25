@@ -1,4 +1,5 @@
 input CreateFirewallAddressGroupInput {
+    key: String!
     name: String!
     address: [String]
 }
@@ -15,6 +16,7 @@ type CreateFirewallAddressGroupResult {
 }
 
 input UpdateFirewallAddressGroupMembersInput {
+    key: String!
     name: String!
     address: [String!]!
 }
@@ -31,6 +33,7 @@ type UpdateFirewallAddressGroupMembersResult {
 }
 
 input RemoveFirewallAddressGroupMembersInput {
+    key: String!
     name: String!
     address: [String!]!
 }
@@ -47,6 +50,7 @@ type RemoveFirewallAddressGroupMembersResult {
 }
 
 input CreateFirewallAddressIpv6GroupInput {
+    key: String!
     name: String!
     address: [String]
 }
@@ -63,6 +67,7 @@ type CreateFirewallAddressIpv6GroupResult {
 }
 
 input UpdateFirewallAddressIpv6GroupMembersInput {
+    key: String!
     name: String!
     address: [String!]!
 }
@@ -79,6 +84,7 @@ type UpdateFirewallAddressIpv6GroupMembersResult {
 }
 
 input RemoveFirewallAddressIpv6GroupMembersInput {
+    key: String!
     name: String!
     address: [String!]!
 }

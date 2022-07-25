@@ -1,4 +1,5 @@
 input InterfaceEthernetConfigInput {
+    key: String!
     interface: String
     address: String
     replace: Boolean = true

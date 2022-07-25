@@ -20,6 +20,7 @@ from graphql import GraphQLResolveInfo
 from makefun import with_signature
 
 from .. import state
+from .. import key_auth
 from api.graphql.recipes.session import Session
 
 query = ObjectType("Query")
@@ -53,6 +54,15 @@ def make_query_resolver(query_name, class_name, session_func):
                 }
 
             data = kwargs['data']
+            key = data['key']
+
+            auth = key_auth.auth_required(key)
+            if auth is None:
+                return {
+                     "success": False,
+                     "errors": ['invalid API key']
+                }
+
             session = state.settings['app'].state.vyos_session
 
             # one may override the session functions with a local subclass
@@ -83,6 +93,10 @@ def make_query_resolver(query_name, class_name, session_func):
 def make_show_config_resolver(query_name):
     class_name = query_name
     return make_query_resolver(query_name, class_name, 'show_config')
+
+def make_system_status_resolver(query_name):
+    class_name = query_name
+    return make_query_resolver(query_name, class_name, 'system_status')
 
 def make_show_resolver(query_name):
     class_name = query_name

@@ -66,14 +66,10 @@ def get_config(config=None):
     if conf.exists('debug'):
         http_api['debug'] = True
 
-    # this node is not available by CLI by default, and is reserved for
-    # the graphql tools. One can enable it for testing, with the warning
-    # that this will open an unauthenticated server. To do so
-    # mkdir /opt/vyatta/share/vyatta-cfg/templates/service/https/api/gql
-    # touch /opt/vyatta/share/vyatta-cfg/templates/service/https/api/gql/node.def
-    # and configure; editing the config alone is insufficient.
     if conf.exists('gql'):
         http_api['gql'] = True
+        if conf.exists('gql introspection'):
+            http_api['introspection'] = True
 
     if conf.exists('socket'):
         http_api['socket'] = True
