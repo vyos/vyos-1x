@@ -1,0 +1,5 @@
+{% if excluded_network is vyos_defined %}
+{%     for net in excluded_network %}
+{{ net }}
+{%     endfor %}
+{% endif %}

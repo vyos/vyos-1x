@@ -29,6 +29,7 @@ airbag.enable()
 
 config_file = r'/run/fastnetmon/fastnetmon.conf'
 networks_list = r'/run/fastnetmon/networks_list'
+excluded_networks_list = r'/run/fastnetmon/excluded_networks_list'
 
 def get_config(config=None):
     if config:
@@ -75,6 +76,7 @@ def generate(fastnetmon):
 
     render(config_file, 'ids/fastnetmon.j2', fastnetmon)
     render(networks_list, 'ids/fastnetmon_networks_list.j2', fastnetmon)
+    render(excluded_networks_list, 'ids/fastnetmon_excluded_networks_list.j2', fastnetmon)
     return None
 
 def apply(fastnetmon):

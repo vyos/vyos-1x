@@ -26,6 +26,7 @@ from vyos.util import read_file
 PROCESS_NAME = 'fastnetmon'
 FASTNETMON_CONF = '/run/fastnetmon/fastnetmon.conf'
 NETWORKS_CONF = '/run/fastnetmon/networks_list'
+EXCLUDED_NETWORKS_CONF = '/run/fastnetmon/excluded_networks_list'
 base_path = ['service', 'ids', 'ddos-protection']
 
 class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
@@ -50,6 +51,7 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
 
     def test_fastnetmon(self):
         networks = ['10.0.0.0/24', '10.5.5.0/24', '2001:db8:10::/64', '2001:db8:20::/64']
+        excluded_networks = ['10.0.0.1/32', '2001:db8:10::1/128']
         interfaces = ['eth0', 'eth1']
         fps = '3500'
         mbps = '300'
@@ -61,6 +63,12 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         for tmp in networks:
             self.cli_set(base_path + ['network', tmp])
+
+        # optional excluded-network!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        for tmp in excluded_networks:
+            self.cli_set(base_path + ['excluded-network', tmp])
 
         # Required interface(s)!
         with self.assertRaises(ConfigSessionError):
@@ -99,6 +107,10 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
         network_config = read_file(NETWORKS_CONF)
         for tmp in networks:
             self.assertIn(f'{tmp}', network_config)
+
+        excluded_network_config = read_file(EXCLUDED_NETWORKS_CONF)
+        for tmp in excluded_networks:
+            self.assertIn(f'{tmp}', excluded_network_config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
