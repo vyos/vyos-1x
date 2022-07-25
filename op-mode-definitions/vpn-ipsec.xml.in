@@ -76,6 +76,9 @@
               <tagNode name="peer">
                 <properties>
                   <help>Show debugging information for a peer</help>
+                  <completionHelp>
+                    <path>vpn ipsec site-to-site peer</path>
+                  </completionHelp>
                 </properties>
                 <children>
                   <tagNode name="tunnel">
