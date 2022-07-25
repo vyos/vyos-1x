@@ -921,5 +921,31 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' neighbor {peer_group} peer-group', frrconfig)
         self.assertIn(f' neighbor {peer_group} remote-as {remote_asn}', frrconfig)
 
+    def test_bgp_15_local_as_ebgp(self):
+        # https://phabricator.vyos.net/T4560
+        # local-as allowed only for ebgp peers
+
+        neighbor = '192.0.2.99'
+        remote_asn = '500'
+        local_asn = '400'
+
+        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', ASN])
+        self.cli_set(base_path + ['neighbor', neighbor, 'local-as', local_asn])
+
+        # check validate() - local-as allowed only for ebgp peers
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', remote_asn])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f' neighbor {neighbor} remote-as {remote_asn}', frrconfig)
+        self.assertIn(f' neighbor {neighbor} local-as {local_asn}', frrconfig)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

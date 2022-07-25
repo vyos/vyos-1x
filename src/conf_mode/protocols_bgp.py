@@ -213,6 +213,12 @@ def verify(bgp):
                     if 'source_interface' in peer_config['interface']:
                         raise ConfigError(f'"source-interface" option not allowed for neighbor "{peer}"')
 
+            # Local-AS allowed only for EBGP peers
+            if 'local_as' in peer_config:
+                remote_as = verify_remote_as(peer_config, bgp)
+                if remote_as == bgp['local_as']:
+                    raise ConfigError(f'local-as configured for "{peer}", allowed only for eBGP peers!')
+
             for afi in ['ipv4_unicast', 'ipv4_multicast', 'ipv4_labeled_unicast', 'ipv4_flowspec',
                         'ipv6_unicast', 'ipv6_multicast', 'ipv6_labeled_unicast', 'ipv6_flowspec',
                         'l2vpn_evpn']:
