@@ -17,6 +17,7 @@
 import jmespath
 import json
 import sys
+import typing
 
 from sys import exit
 from tabulate import tabulate
@@ -40,6 +41,33 @@ def _get_raw_data_summary():
     """
     data = _get_json_data()
     data_dict = json.loads(data)
+    return data_dict
+
+
+def _get_raw_data_vlan():
+    """
+    :returns dict
+    """
+    json_data = cmd('sudo bridge --json --compressvlans vlan show')
+    data_dict = json.loads(json_data)
+    return data_dict
+
+
+def _get_raw_data_fdb(bridge):
+    """Get MAC-address for the bridge brX
+    :returns list
+    """
+    json_data = cmd(f'sudo bridge --json fdb show br {bridge}')
+    data_dict = json.loads(json_data)
+    return data_dict
+
+
+def _get_raw_data_mdb(bridge):
+    """Get MAC-address multicast gorup for the bridge brX
+    :return list
+    """
+    json_data = cmd(f'bridge --json  mdb show br {bridge}')
+    data_dict = json.loads(json_data)
     return data_dict
 
 
@@ -86,12 +114,82 @@ def _get_formatted_output_summary(data):
     return output
 
 
+def _get_formatted_output_vlan(data):
+    data_entries = []
+    for entry in data:
+        interface = entry.get('ifname')
+        vlans = entry.get('vlans')
+        for vlan_entry in vlans:
+            vlan = vlan_entry.get('vlan')
+            if vlan_entry.get('vlanEnd'):
+                vlan_end = vlan_entry.get('vlanEnd')
+                vlan = f'{vlan}-{vlan_end}'
+            flags = ', '.join(vlan_entry.get('flags')).lower()
+            data_entries.append([interface, vlan, flags])
+
+    headers = ["Interface", "Vlan", "Flags"]
+    output = tabulate(data_entries, headers)
+    return output
+
+
+def _get_formatted_output_fdb(data):
+    data_entries = []
+    for entry in data:
+        interface = entry.get('ifname')
+        mac = entry.get('mac')
+        state = entry.get('state')
+        flags = ','.join(entry['flags'])
+        data_entries.append([interface, mac, state, flags])
+
+    headers = ["Interface", "Mac address", "State", "Flags"]
+    output = tabulate(data_entries, headers, numalign="left")
+    return output
+
+
+def _get_formatted_output_mdb(data):
+    data_entries = []
+    for entry in data:
+        for mdb_entry in entry['mdb']:
+            interface = mdb_entry.get('port')
+            group = mdb_entry.get('grp')
+            state = mdb_entry.get('state')
+            flags = ','.join(mdb_entry.get('flags'))
+            data_entries.append([interface, group, state, flags])
+    headers = ["Interface", "Group", "State", "Flags"]
+    output = tabulate(data_entries, headers)
+    return output
+
+
 def show(raw: bool):
     bridge_data = _get_raw_data_summary()
     if raw:
         return bridge_data
     else:
         return _get_formatted_output_summary(bridge_data)
+
+
+def show_vlan(raw: bool):
+    bridge_vlan = _get_raw_data_vlan()
+    if raw:
+        return bridge_vlan
+    else:
+        return _get_formatted_output_vlan(bridge_vlan)
+
+
+def show_fdb(raw: bool, interface: str):
+    fdb_data = _get_raw_data_fdb(interface)
+    if raw:
+        return fdb_data
+    else:
+        return _get_formatted_output_fdb(fdb_data)
+
+
+def show_mdb(raw: bool, interface: str):
+    mdb_data = _get_raw_data_mdb(interface)
+    if raw:
+        return mdb_data
+    else:
+        return _get_formatted_output_mdb(mdb_data)
 
 
 if __name__ == '__main__':
