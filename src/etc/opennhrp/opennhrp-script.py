@@ -62,7 +62,7 @@ def add_peer_route(nbma_src: str, nbma_dst: str, mtu: str) -> None:
     for route_item in route_info_data:
         route_dev = route_item.get('dev')
         route_dst = route_item.get('dst')
-        route_gateway = route_item.get('route_gateway')
+        route_gateway = route_item.get('gateway')
         # Prepare a command to add a route
         route_add_cmd = 'sudo ip route add'
         if route_dst:
