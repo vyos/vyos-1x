@@ -19,7 +19,7 @@
         <properties>
           <help>Show bridging information</help>
         </properties>
-        <command>bridge -c link show</command>
+        <command>${vyos_op_scripts_dir}/bridge.py show</command>
       </leafNode>
       <tagNode name="bridge">
         <properties>
