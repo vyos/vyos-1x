@@ -192,6 +192,11 @@ def verify(flow_config):
                     raise ConfigError("All sFlow servers must use the same IP protocol")
             else:
                 sflow_collector_ipver = ip_address(server).version
+	
+        # check if vrf is defined for Sflow
+        sflow_vrf = None
+        if 'vrf' in flow_config:
+            sflow_vrf = flow_config['vrf']
 
         # check agent-id for sFlow: we should avoid mixing IPv4 agent-id with IPv6 collectors and vice-versa
         for server in flow_config['sflow']['server']:
@@ -203,12 +208,12 @@ def verify(flow_config):
 
         if 'agent_address' in flow_config['sflow']:
             tmp = flow_config['sflow']['agent_address']
-            if not is_addr_assigned(tmp):
+            if not is_addr_assigned(tmp, sflow_vrf):
                 raise ConfigError(f'Configured "sflow agent-address {tmp}" does not exist in the system!')
 
         # Check if configured netflow source-address exist in the system
         if 'source_address' in flow_config['sflow']:
-            if not is_addr_assigned(flow_config['sflow']['source_address']):
+            if not is_addr_assigned(flow_config['sflow']['source_address'], sflow_vrf):
                 tmp = flow_config['sflow']['source_address']
                 raise ConfigError(f'Configured "sflow source-address {tmp}" does not exist on the system!')
 
