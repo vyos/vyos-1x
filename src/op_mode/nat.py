@@ -52,6 +52,9 @@ def _get_raw_data_rules(direction):
 
 
 def _get_formatted_output_rules(data, direction):
+    # Add default values before loop
+    sport, dport, proto = 'any', 'any', 'any'
+    saddr, daddr = '0.0.0.0/0', '0.0.0.0/0'
     data_entries = []
     for rule in data:
         if 'comment' in rule['rule']:
