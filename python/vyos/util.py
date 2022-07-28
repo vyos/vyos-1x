@@ -164,6 +164,27 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
     return decoded
 
 
+def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
+           stdout=PIPE, stderr=STDOUT, decode='utf-8'):
+    """
+    A wrapper around popen, which returns the return code
+    of a command and stdout
+
+    % rc_cmd('uname')
+    (0, 'Linux')
+    % rc_cmd('ip link show dev eth99')
+    (1, 'Device "eth99" does not exist.')
+    """
+    out, code = popen(
+        command, flag,
+        stdout=stdout, stderr=stderr,
+        input=input, timeout=timeout,
+        env=env, shell=shell,
+        decode=decode,
+    )
+    return code, out
+
+
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
          stdout=PIPE, stderr=PIPE, decode='utf-8'):
     """
