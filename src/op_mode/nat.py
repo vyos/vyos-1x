@@ -147,12 +147,38 @@ port {port}'''
     return output
 
 
+def _get_formatted_output_statistics(data, direction):
+    data_entries = []
+    for rule in data:
+        if 'comment' in rule['rule']:
+            comment = rule.get('rule').get('comment')
+            rule_number = comment.split('-')[-1]
+            rule_number = rule_number.split(' ')[0]
+        if 'expr' in rule['rule']:
+            interface = rule.get('rule').get('expr')[0].get('match').get('right') \
+                if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
+            packets = jmespath.search('rule.expr[*].counter.packets | [0]', rule)
+            _bytes = jmespath.search('rule.expr[*].counter.bytes | [0]', rule)
+        data_entries.append([rule_number, packets, _bytes, interface])
+    headers = ["Rule", "Packets", "Bytes", "Interface"]
+    output = tabulate(data_entries, headers, numalign="left")
+    return output
+
+
 def show_rules(raw: bool, direction: str):
     nat_rules = _get_raw_data_rules(direction)
     if raw:
         return nat_rules
     else:
         return _get_formatted_output_rules(nat_rules, direction)
+
+
+def show_statistics(raw: bool, direction: str):
+    nat_statistics = _get_raw_data_rules(direction)
+    if raw:
+        return nat_statistics
+    else:
+        return _get_formatted_output_statistics(nat_statistics, direction)
 
 
 if __name__ == '__main__':
