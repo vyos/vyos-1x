@@ -9,6 +9,8 @@ directive @show on FIELD_DEFINITION
 directive @showconfig on FIELD_DEFINITION
 directive @systemstatus on FIELD_DEFINITION
 directive @image on FIELD_DEFINITION
+directive @genopquery on FIELD_DEFINITION
+directive @genopmutation on FIELD_DEFINITION
 
 scalar Generic
 

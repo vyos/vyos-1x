@@ -1,4 +1,4 @@
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,14 +13,19 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import json
 
 from ariadne import convert_camel_case_to_snake
 
-import vyos.defaults
 from vyos.config import Config
 from vyos.configtree import ConfigTree
+from vyos.defaults import directories
 from vyos.template import render
+
+from api.graphql.utils.util import load_op_mode_as_module, split_compound_op_mode_name
+
+op_mode_include_file = os.path.join(directories['data'], 'op-mode-standardized.json')
 
 class Session:
     """
@@ -33,6 +38,12 @@ class Session:
         self._data = data
         self._name = convert_camel_case_to_snake(type(self).__name__)
 
+        try:
+            with open(op_mode_include_file) as f:
+                self._op_mode_list = f.read()
+        except Exception:
+            self._op_mode_list = None
+
     def configure(self):
         session = self._session
         data = self._data
@@ -40,7 +51,7 @@ class Session:
 
         tmpl_file = f'{func_base_name}.tmpl'
         cmd_file = f'/tmp/{func_base_name}.cmds'
-        tmpl_dir = vyos.defaults.directories['api_templates']
+        tmpl_dir = directories['api_templates']
 
         try:
             render(cmd_file, tmpl_file, data, location=tmpl_dir)
@@ -150,3 +161,47 @@ class Session:
         status['ram'] = system_status.get_system_ram_usage()
 
         return status
+
+    def gen_op_query(self):
+        session = self._session
+        data = self._data
+        name = self._name
+        op_mode_list = self._op_mode_list
+
+        # handle the case that the op-mode file contains underscores:
+        if op_mode_list is None:
+            raise FileNotFoundError(f"No op-mode file list at '{op_mode_include_file}'")
+        (func_name, basename) = split_compound_op_mode_name(name, op_mode_list)
+        if basename == '':
+            raise FileNotFoundError(f"No op-mode file basename in string '{name}'")
+
+        mod = load_op_mode_as_module(f'{basename}.py')
+        func = getattr(mod, func_name)
+        if len(list(data)) > 0:
+            res = func(True, **data)
+        else:
+            res = func(True)
+
+        return res
+
+    def gen_op_mutation(self):
+        session = self._session
+        data = self._data
+        name = self._name
+        op_mode_list = self._op_mode_list
+
+        # handle the case that the op-mode file name contains underscores:
+        if op_mode_list is None:
+            raise FileNotFoundError(f"No op-mode file list at '{op_mode_include_file}'")
+        (func_name, basename) = split_compound_op_mode_name(name, op_mode_list)
+        if basename == '':
+            raise FileNotFoundError(f"No op-mode file basename in string '{name}'")
+
+        mod = load_op_mode_as_module(f'{basename}.py')
+        func = getattr(mod, func_name)
+        if len(list(data)) > 0:
+            res = func(**data)
+        else:
+            res = func()
+
+        return res

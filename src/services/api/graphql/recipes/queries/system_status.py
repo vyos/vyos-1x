@@ -23,23 +23,16 @@ import importlib.util
 
 from vyos.defaults import directories
 
-OP_PATH = directories['op_mode']
-
-def load_as_module(name: str):
-    path = os.path.join(OP_PATH, name)
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+from api.graphql.utils.util import load_op_mode_as_module
 
 def get_system_version() -> dict:
-    show_version = load_as_module('version.py')
+    show_version = load_op_mode_as_module('version.py')
     return show_version.show(raw=True, funny=False)
 
 def get_system_uptime() -> dict:
-    show_uptime = load_as_module('show_uptime.py')
+    show_uptime = load_op_mode_as_module('show_uptime.py')
     return show_uptime.get_raw_data()
 
 def get_system_ram_usage() -> dict:
-    show_ram = load_as_module('memory.py')
+    show_ram = load_op_mode_as_module('memory.py')
     return show_ram.show(raw=True)
