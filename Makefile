@@ -43,6 +43,9 @@ interface_definitions: $(config_xml_obj)
 	# T2773 - EIGRP support for VRF
 	rm -rf $(TMPL_DIR)/vrf/name/node.tag/protocols/eigrp
 
+	# T4518, T4470 Load-balancing wan
+	rm -rf $(TMPL_DIR)/load-balancing
+
 	# XXX: test if there are empty node.def files - this is not allowed as these
 	# could mask help strings or mandatory priority statements
 	find $(TMPL_DIR) -name node.def -type f -empty -exec false {} + || sh -c 'echo "There are empty node.def files! Check your interface definitions." && exit 1'

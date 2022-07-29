@@ -1,0 +1,395 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="load-balancing">
+    <properties>
+      <help>Configure load-balancing</help>
+    </properties>
+    <children>
+      <node name="wan" owner="${vyos_conf_scripts_dir}/load-balancing-wan.py">
+        <properties>
+          <help>Configure Wide Area Network (WAN) load-balancing</help>
+        </properties>
+        <children>
+          <leafNode name="disable-source-nat">
+            <properties>
+              <help>Disable source NAT rules from being configured for WAN load balancing</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="enable-local-traffic">
+            <properties>
+              <help>Enable WAN load balancing for locally sourced traffic</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="flush-connections">
+            <properties>
+              <help>Flush connection tracking tables on connection state change</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="hook">
+            <properties>
+              <help>Script to be executed on interface status change</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Script in /config/scripts</description>
+              </valueHelp>
+              <constraint>
+                <validator name="script"/>
+              </constraint>
+            </properties>
+          </leafNode>
+          <tagNode name="interface-health">
+            <properties>
+              <help>Interface name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="failure-count">
+                <properties>
+                  <help>Failure count</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Failure count</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="nexthop">
+                <properties>
+                  <help>Outbound interface nexthop address. Can be 'DHCP or IPv4 address' [REQUIRED]</help>
+                  <completionHelp>
+                    <list>dhcp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Nexthop IP address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dhcp</format>
+                    <description>Set the nexthop via DHCP</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                    <regex>(dhcp)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="success-count">
+                <properties>
+                  <help>Success count</help>
+                  <valueHelp>
+                    <format>u32:1-10</format>
+                    <description>Success count</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-10"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <tagNode name="test">
+                <properties>
+                  <help>Rule number</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Rule number</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="resp-time">
+                    <properties>
+                      <help>Ping response time (seconds)</help>
+                      <valueHelp>
+                        <format>u32:1-30</format>
+                        <description>Response time (seconds)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-30"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="target">
+                    <properties>
+                      <help>Health target address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Health target address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="test-script">
+                    <properties>
+                      <help>Path to user-defined script</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Script in /config/scripts</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ttl-limit">
+                    <properties>
+                      <help>TTL limit (hop count)</help>
+                      <valueHelp>
+                        <format>u32:1-254</format>
+                        <description>Number of hops</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-254"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="type">
+                    <properties>
+                      <help>WLB test type</help>
+                      <completionHelp>
+                        <list>ping ttl user-defined</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>ping</format>
+                        <description>Test with ICMP echo response</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ttl</format>
+                        <description>Test with UDP TTL expired response</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>user-defined</format>
+                        <description>User-defined test script</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(ping|ttl|user-defined)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+          <tagNode name="rule">
+            <properties>
+              <help>Rule number (1-9999)</help>
+              <valueHelp>
+                <format>u32:1-9999</format>
+                <description>Rule number</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-9999"/>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="description">
+                <properties>
+                  <help>Description for this rule</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Description for this rule</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <node name="destination">
+                <properties>
+                  <help>Destination</help>
+                </properties>
+                <children>
+                  #include <include/ipv4-address-prefix-range.xml.i>
+                  #include <include/port-port-range.xml.i>
+                </children>
+              </node>
+              <leafNode name="exclude">
+                <properties>
+                  <help>Exclude packets matching this rule from WAN load balance</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="failover">
+                <properties>
+                  <help>Enable failover for packets matching this rule from WAN load balance</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="inbound-interface">
+                <properties>
+                  <help>Inbound interface name (e.g., "eth0") [REQUIRED]</help>
+                  <completionHelp>
+                    <list>any</list>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+              </leafNode>
+              <tagNode name="interface">
+                <properties>
+                  <help>Interface name [REQUIRED]</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <leafNode name="weight">
+                    <properties>
+                      <help>Load-balance weight</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Interface weight</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                      <constraintErrorMessage>Weight must be between 1 and 255</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+              <node name="limit">
+                <properties>
+                  <help>Enable packet limit for this rule</help>
+                </properties>
+                <children>
+                  <leafNode name="burst">
+                    <properties>
+                      <help>Burst limit for matching packets</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Burst limit for matching packets</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="period">
+                    <properties>
+                      <help>Time window for rate calculation</help>
+                      <completionHelp>
+                        <list>hour minute second</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>hour</format>
+                        <description>hour</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>minute</format>
+                        <description>minute</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>second</format>
+                        <description>second</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(hour|minute|second)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rate">
+                    <properties>
+                      <help>Number of packets used for rate limit</help>
+                      <valueHelp>
+                        <format>u32:0-4294967295</format>
+                        <description>Number of packets used for rate limit</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-4294967295"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="threshold">
+                    <properties>
+                      <help>Threshold behavior for limit</help>
+                      <completionHelp>
+                        <list>above below</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>above</format>
+                        <description>Above limit</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>below</format>
+                        <description>Below limit</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(above|below)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <leafNode name="per-packet-balancing">
+                <properties>
+                  <help>Option to match traffic per-packet instead of the default, per-flow</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Protocol to match (protocol name, number, or "all")</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_protocols.sh</script>
+                    <list>all tcp_udp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>all</format>
+                    <description>All IP protocols</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tcp_udp</format>
+                    <description>Both TCP and UDP</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>u32:0-255</format>
+                    <description>IP protocol number</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;protocol&gt;</format>
+                    <description>IP protocol name</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>!&lt;protocol&gt;</format>
+                    <description>IP protocol name</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-protocol"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="source">
+                <properties>
+                  <help>Source information</help>
+                </properties>
+                <children>
+                  #include <include/ipv4-address-prefix-range.xml.i>
+                  #include <include/port-port-range.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <node name="sticky-connections">
+            <properties>
+              <help>Configure sticky connections</help>
+            </properties>
+            <children>
+              <leafNode name="inbound">
+                <properties>
+                  <help>Enable sticky incoming WAN connections</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
