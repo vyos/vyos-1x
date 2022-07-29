@@ -22,7 +22,7 @@
                 <properties>
                   <help>Show statistics for configured source NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --source</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_statistics --direction source</command>
               </node>
               <node name="translations">
                 <properties>
