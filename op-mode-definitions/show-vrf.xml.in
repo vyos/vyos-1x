@@ -15,7 +15,7 @@
             <path>vrf name</path>
           </completionHelp>
         </properties>
-        <command>${vyos_op_scripts_dir}/show_vrf.py -e "$3"</command>
+        <command>${vyos_op_scripts_dir}/vrf.py show --name="$3"</command>
         <children>
           <leafNode name="processes">
             <properties>
