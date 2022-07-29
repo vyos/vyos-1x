@@ -11,7 +11,7 @@
             <properties>
               <help>View the VLAN filter settings of the bridge</help>
             </properties>
-            <command>bridge -c vlan show</command>
+            <command>${vyos_op_scripts_dir}/bridge.py show_vlan</command>
           </leafNode>
         </children>
       </node>
@@ -34,13 +34,13 @@
             <properties>
               <help>Displays the multicast group database for the bridge</help>
             </properties>
-            <command>bridge -c mdb show dev $3</command>
+            <command>${vyos_op_scripts_dir}/bridge.py show_mdb --interface=$3</command>
           </leafNode>
           <leafNode name="fdb">
             <properties>
               <help>Show the forwarding database of the bridge</help>
             </properties>
-            <command>bridge -c fdb show br $3</command>
+            <command>${vyos_op_scripts_dir}/bridge.py show_fdb --interface=$3</command>
           </leafNode>
         </children>
       </tagNode>
