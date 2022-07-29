@@ -16,6 +16,7 @@
 
 import json
 import sys
+import typing
 
 from tabulate import tabulate
 from vyos.util import cmd
@@ -23,12 +24,23 @@ from vyos.util import cmd
 import vyos.opmode
 
 
-def _get_raw_data():
+def _get_raw_data(name=None):
     """
-    :return: list
+    If vrf name is not set - get all VRFs
+    If vrf name is set - get only this name data
+    If vrf name set and not found - return []
     """
     output = cmd('sudo ip --json --brief link show type vrf')
     data = json.loads(output)
+    if not data:
+        return []
+    if name:
+        is_vrf_exists = True if [vrf for vrf in data if vrf.get('ifname') == name] else False
+        if is_vrf_exists:
+            output = cmd(f'sudo ip --json --brief link show dev {name}')
+            data = json.loads(output)
+            return data
+        return []
     return data
 
 
@@ -62,8 +74,8 @@ def _get_formatted_output(raw_data):
     return output
 
 
-def show(raw: bool):
-    vrf_data = _get_raw_data()
+def show(raw: bool, name: typing.Optional[str]):
+    vrf_data = _get_raw_data(name=name)
     if raw:
         return vrf_data
     else:
