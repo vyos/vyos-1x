@@ -118,6 +118,11 @@ def verify(vxlan):
             # in use.
             vxlan_overhead += 20
 
+        # If source_address is not used - check IPv6 'remote' list
+        elif 'remote' in vxlan:
+            if any(is_ipv6(a) for a in vxlan['remote']):
+                vxlan_overhead += 20
+
         lower_mtu = Interface(vxlan['source_interface']).get_mtu()
         if lower_mtu < (int(vxlan['mtu']) + vxlan_overhead):
             raise ConfigError(f'Underlaying device MTU is to small ({lower_mtu} '\
