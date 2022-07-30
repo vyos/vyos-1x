@@ -74,7 +74,7 @@
                 <properties>
                   <help>Show DNS forwarding statistics</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_statistics.py</command>
+                <command>sudo ${vyos_op_scripts_dir}/dns.py show_forwarding_statistics</command>
               </leafNode>
             </children>
           </node>
