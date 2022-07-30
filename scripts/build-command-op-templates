@@ -27,6 +27,7 @@ import copy
 import functools
 
 from lxml import etree as ET
+from textwrap import fill
 
 # Defaults
 validator_dir = "/opt/vyatta/libexec/validators"
@@ -123,13 +124,15 @@ def make_node_def(props, command):
     node_def = ""
 
     if "help" in props:
-        node_def += "help: {0}\n".format(props["help"])
+        help = props["help"]
+        help = fill(help, width=64, subsequent_indent='\t\t\t')
+        node_def += f'help: {help}\n'
     if "comp_help" in props:
-        node_def += "allowed: {0}\n".format(props["comp_help"])
+        node_def += f'allowed: {props["comp_help"]}\n'
     if command is not None:
-        node_def += "run: {0}\n".format(command.text)
+        node_def += f'run: {command.text}\n'
     if debug:
-        print("The contents of the node.def file:\n", node_def)
+        print('Contents of the node.def file:\n', node_def)
 
     return node_def
 
