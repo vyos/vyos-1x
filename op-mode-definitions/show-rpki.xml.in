@@ -4,7 +4,7 @@
     <children>
       <node name="rpki">
         <properties>
-          <help>Show RPKI information</help>
+          <help>Show RPKI (Resource Public Key Infrastructure) information</help>
         </properties>
         <children>
           <leafNode name="cache-connection">

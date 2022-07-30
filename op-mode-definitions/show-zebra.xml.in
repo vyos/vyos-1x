@@ -4,7 +4,7 @@
     <children>
       <node name="zebra">
         <properties>
-          <help>Zebra routing information</help>
+          <help>Show Zebra routing information</help>
         </properties>
         <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
         <children>

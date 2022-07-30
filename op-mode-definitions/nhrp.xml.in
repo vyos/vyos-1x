@@ -43,7 +43,7 @@
     <children>
       <node name="nhrp">
         <properties>
-          <help>Show NHRP info</help>
+          <help>Show NHRP (Next Hop Resolution Protocol) information</help>
         </properties>
         <children>
           <leafNode name="interface">

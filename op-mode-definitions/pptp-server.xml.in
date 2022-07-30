@@ -4,7 +4,7 @@
     <children>
       <node name="pptp-server">
         <properties>
-          <help>Show PPTP server information</help>
+          <help>Show PPTP (Point-to-Point Tunneling Protocol) server information</help>
         </properties>
         <children>
           <leafNode name="sessions">

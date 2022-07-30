@@ -4,12 +4,12 @@
     <children>
       <node name="ipoe-server">
         <properties>
-          <help>Clear IPoE server sessions or process</help>
+          <help>IPoE (Internet Protocol over Ethernet) server</help>
         </properties>
         <children>
           <node name="session">
             <properties>
-              <help>Clear IPoE server session</help>
+              <help>Clear IPoE (Internet Protocol over Ethernet) server session</help>
             </properties>
             <children>
               <tagNode name="username">
@@ -49,7 +49,7 @@
     <children>
       <node name="ipoe-server">
         <properties>
-          <help>Show IPoE server status</help>
+          <help>Show IPoE (Internet Protocol over Ethernet) server status</help>
         </properties>
         <children>
           <leafNode name="sessions">
@@ -72,7 +72,7 @@
     <children>
       <leafNode name="ipoe-server">
         <properties>
-          <help>Restart IPoE server process</help>
+          <help>Restart IPoE (Internet Protocol over Ethernet) server process</help>
         </properties>
         <command>${vyos_op_scripts_dir}/ipoe-control.py --action="restart"</command>
       </leafNode>

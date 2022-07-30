@@ -4,7 +4,7 @@
     <children>
       <node name="vrf">
         <properties>
-          <help>Show VRF information</help>
+          <help>Show VRF (Virtual Routing and Forwarding) information</help>
         </properties>
         <command>${vyos_op_scripts_dir}/vrf.py show</command>
       </node>
