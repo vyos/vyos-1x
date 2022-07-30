@@ -224,6 +224,51 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         super().test_vif_8021q_mtu_limits()
 
     def test_bridge_vlan_filter(self):
+        def _verify_members() -> None:
+            # check member interfaces are added on the bridge
+            for interface in self._interfaces:
+                bridge_members = []
+                for tmp in glob(f'/sys/class/net/{interface}/lower_*'):
+                    bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
+
+                # We can not use assertListEqual() b/c the position of the interface
+                # names within the list is not fixed
+                self.assertEqual(len(self._members), len(bridge_members))
+                for member in self._members:
+                    self.assertIn(member, bridge_members)
+
+        def _check_vlan_filter() -> None:
+            for interface in self._interfaces:
+                tmp = cmd(f'bridge -j vlan show dev {interface}')
+                tmp = json.loads(tmp)
+                self.assertIsNotNone(tmp)
+
+                for interface_status in tmp:
+                    ifname = interface_status['ifname']
+                    for interface in self._members:
+                        vlan_success = 0;
+                        if interface == ifname:
+                            vlans_status = interface_status['vlans']
+                            for vlan_status in vlans_status:
+                                vlan_id = vlan_status['vlan']
+                                flag_num = 0
+                                if 'flags' in vlan_status:
+                                    flags = vlan_status['flags']
+                                    for flag in flags:
+                                        flag_num = flag_num +1
+                                if vlan_id == 2:
+                                    if flag_num == 0:
+                                        vlan_success = vlan_success + 1
+                                else:
+                                    for id in range(4,10):
+                                        if vlan_id == id:
+                                            if flag_num == 0:
+                                                vlan_success = vlan_success + 1
+                                    if vlan_id >= 101:
+                                        if flag_num == 2:
+                                            vlan_success = vlan_success + 1
+                            self.assertGreaterEqual(vlan_success, 7)
+
         vif_vlan = 2
         # Add member interface to bridge and set VLAN filter
         for interface in self._interfaces:
@@ -247,61 +292,50 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         # commit config
         self.cli_commit()
 
-        # Detect the vlan filter function
+        # Verify correct setting of VLAN filter function
         for interface in self._interfaces:
             tmp = read_file(f'/sys/class/net/{interface}/bridge/vlan_filtering')
             self.assertEqual(tmp, '1')
 
-        # Execute the program to obtain status information
-        json_data = cmd('bridge -j vlan show', shell=True)
-        vlan_filter_status = None
-        vlan_filter_status = json.loads(json_data)
-
-        if vlan_filter_status is not None:
-            for interface_status in vlan_filter_status:
-                ifname = interface_status['ifname']
-                for interface in self._members:
-                    vlan_success = 0;
-                    if interface == ifname:
-                        vlans_status = interface_status['vlans']
-                        for vlan_status in vlans_status:
-                            vlan_id = vlan_status['vlan']
-                            flag_num = 0
-                            if 'flags' in vlan_status:
-                                flags = vlan_status['flags']
-                                for flag in flags:
-                                    flag_num = flag_num +1
-                            if vlan_id == 2:
-                                if flag_num == 0:
-                                    vlan_success = vlan_success + 1
-                            else:
-                                for id in range(4,10):
-                                    if vlan_id == id:
-                                        if flag_num == 0:
-                                            vlan_success = vlan_success + 1
-                                if vlan_id >= 101:
-                                    if flag_num == 2:
-                                        vlan_success = vlan_success + 1
-                        if vlan_success >= 7:
-                            self.assertTrue(True)
-                        else:
-                            self.assertTrue(False)
-
-        else:
-            self.assertTrue(False)
+        # Execute the program to obtain status information and verify proper
+        # VLAN filter setup
+        _check_vlan_filter()
 
         # check member interfaces are added on the bridge
+        _verify_members()
+
+        # change member interface description to trigger config update,
+        # VLANs must still exist (T4565)
+        for interface in self._interfaces:
+            for member in self._members:
+                self.cli_set(['interfaces', Section.section(member), member, 'description', f'foo {member}'])
+
+        # commit config
+        self.cli_commit()
+
+        # check member interfaces are added on the bridge
+        _verify_members()
+
+        # Execute the program to obtain status information and verify proper
+        # VLAN filter setup
+        _check_vlan_filter()
+
+        # delete all members
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'member'])
+
+        # commit config
+        self.cli_commit()
+
+        # verify member interfaces are no longer assigned on the bridge
         for interface in self._interfaces:
             bridge_members = []
             for tmp in glob(f'/sys/class/net/{interface}/lower_*'):
                 bridge_members.append(os.path.basename(tmp).replace('lower_', ''))
 
+            self.assertNotEqual(len(self._members), len(bridge_members))
             for member in self._members:
-                self.assertIn(member, bridge_members)
-
-        # delete all members
-        for interface in self._interfaces:
-            self.cli_delete(self._base_path + [interface, 'member'])
+                self.assertNotIn(member, bridge_members)
 
 
     def test_bridge_vif_members(self):
