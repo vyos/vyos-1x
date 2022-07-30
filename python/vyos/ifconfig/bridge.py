@@ -183,6 +183,11 @@ class BridgeIf(Interface):
         """
         self.set_interface('vlan_filter', state)
 
+        # VLAN of bridge parent interface is always 1
+        # VLAN 1 is the default VLAN for all unlabeled packets
+        cmd = f'bridge vlan add dev {self.ifname} vid 1 pvid untagged self'
+        self._cmd(cmd)
+
     def set_multicast_querier(self, enable):
         """
         Sets whether the bridge actively runs a multicast querier or not. When a
@@ -271,30 +276,6 @@ class BridgeIf(Interface):
         # enable/disable Vlan Filter
         vlan_filter = '1' if 'enable_vlan' in config else '0'
         self.set_vlan_filter(vlan_filter)
-
-        ifname = config['ifname']
-        if int(vlan_filter):
-            add_vlan = []
-            cur_vlan_ids = get_vlan_ids(ifname)
-
-            tmp = dict_search('vif', config)
-            if tmp:
-                for vif, vif_config in tmp.items():
-                    add_vlan.append(vif)
-
-            # Remove redundant VLANs from the system
-            for vlan in list_diff(cur_vlan_ids, add_vlan):
-                cmd = f'bridge vlan del dev {ifname} vid {vlan} self'
-                self._cmd(cmd)
-
-            for vlan in add_vlan:
-                cmd = f'bridge vlan add dev {ifname} vid {vlan} self'
-                self._cmd(cmd)
-
-            # VLAN of bridge parent interface is always 1
-            # VLAN 1 is the default VLAN for all unlabeled packets
-            cmd = f'bridge vlan add dev {ifname} vid 1 pvid untagged self'
-            self._cmd(cmd)
 
         tmp = dict_search('member.interface', config)
         if tmp:
