@@ -228,24 +228,8 @@ def is_member(conf, interface, intftype=None):
         for intf in conf.list_nodes(base):
             member = base + [intf, 'member', 'interface', interface]
             if conf.exists(member):
-                member_type = Section.section(interface)
-                # Check if it's a VLAN (QinQ) interface
-                interface = interface.split('.')
-                if len(interface) == 3:
-                    if conf.exists(['interfaces', member_type, interface[0], 'vif-s', interface[1], 'vif-c', interface[2]]):
-                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
-                                                   key_mangling=('-', '_'), get_first_key=True)
-                        ret_val.update({intf : tmp})
-                elif len(interface) == 2:
-                    if conf.exists(['interfaces', member_type, interface[0], 'vif', interface[1]]):
-                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
-                                                   key_mangling=('-', '_'), get_first_key=True)
-                        ret_val.update({intf : tmp})
-                else:
-                    if conf.exists(['interfaces', member_type, interface[0]]):
-                        tmp = conf.get_config_dict(['interfaces', member_type, interface[0]],
-                                                   key_mangling=('-', '_'), get_first_key=True)
-                        ret_val.update({intf : tmp})
+                if conf.exists(['interfaces', Section.section(interface), interface]):
+                    ret_val.update({intf : {}})
 
     old_level = conf.set_level(old_level)
     return ret_val
