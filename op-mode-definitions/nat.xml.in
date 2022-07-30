@@ -58,7 +58,7 @@
                 <properties>
                   <help>Show configured destination NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_rules.py --destination</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction destination</command>
               </node>
               <node name="statistics">
                 <properties>

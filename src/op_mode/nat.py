@@ -133,6 +133,16 @@ port {port}'''
 
                         translation = f'''{translation}
 port {port}'''
+                elif 'dnat' in expr:
+                    translation = dict_search('dnat.addr', expr)
+                    if expr['dnat'] and 'port' in expr['dnat']:
+                        if jmespath.search('dnat.port.range', expr):
+                            port = dict_search('dnat.port.range', expr)
+                            port = '-'.join(map(str, port))
+                        else:
+                            port = expr['dnat']['port']
+                        translation = f'''{translation}
+port {port}'''
                 else:
                     translation = 'exclude'
         # Overwrite match loop 'proto' if specified filed 'protocol' exist
