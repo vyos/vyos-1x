@@ -327,15 +327,13 @@ class BridgeIf(Interface):
 
                 # set bridge port path cost
                 if 'cost' in interface_config:
-                    value = interface_config.get('cost')
-                    lower.set_path_cost(value)
+                    lower.set_path_cost(interface_config['cost'])
 
                 # set bridge port path priority
                 if 'priority' in interface_config:
-                    value = interface_config.get('priority')
-                    lower.set_path_priority(value)
+                    lower.set_path_priority(interface_config['priority'])
 
-                if int(vlan_filter):
+                if 'enable_vlan' in config:
                     add_vlan = []
                     native_vlan_id = None
                     allowed_vlan_ids= []
@@ -365,6 +363,7 @@ class BridgeIf(Interface):
                     for vlan in allowed_vlan_ids:
                         cmd = f'bridge vlan add dev {interface} vid {vlan} master'
                         self._cmd(cmd)
+
                     # Setting native VLAN to system
                     if native_vlan_id:
                         cmd = f'bridge vlan add dev {interface} vid {native_vlan_id} pvid untagged master'
