@@ -40,7 +40,7 @@ class Session:
 
         try:
             with open(op_mode_include_file) as f:
-                self._op_mode_list = f.read()
+                self._op_mode_list = json.loads(f.read())
         except Exception:
             self._op_mode_list = None
 
@@ -171,11 +171,11 @@ class Session:
         # handle the case that the op-mode file contains underscores:
         if op_mode_list is None:
             raise FileNotFoundError(f"No op-mode file list at '{op_mode_include_file}'")
-        (func_name, basename) = split_compound_op_mode_name(name, op_mode_list)
-        if basename == '':
-            raise FileNotFoundError(f"No op-mode file basename in string '{name}'")
+        (func_name, scriptname) = split_compound_op_mode_name(name, op_mode_list)
+        if scriptname == '':
+            raise FileNotFoundError(f"No op-mode file named in string '{name}'")
 
-        mod = load_op_mode_as_module(f'{basename}.py')
+        mod = load_op_mode_as_module(f'{scriptname}')
         func = getattr(mod, func_name)
         if len(list(data)) > 0:
             res = func(True, **data)
@@ -193,11 +193,11 @@ class Session:
         # handle the case that the op-mode file name contains underscores:
         if op_mode_list is None:
             raise FileNotFoundError(f"No op-mode file list at '{op_mode_include_file}'")
-        (func_name, basename) = split_compound_op_mode_name(name, op_mode_list)
-        if basename == '':
-            raise FileNotFoundError(f"No op-mode file basename in string '{name}'")
+        (func_name, scriptname) = split_compound_op_mode_name(name, op_mode_list)
+        if scriptname == '':
+            raise FileNotFoundError(f"No op-mode file named in string '{name}'")
 
-        mod = load_op_mode_as_module(f'{basename}.py')
+        mod = load_op_mode_as_module(f'{scriptname}')
         func = getattr(mod, func_name)
         if len(list(data)) > 0:
             res = func(**data)

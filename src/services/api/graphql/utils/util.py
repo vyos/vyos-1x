@@ -27,7 +27,7 @@ def load_as_module(name: str, path: str):
 
 def load_op_mode_as_module(name: str):
     path = os.path.join(directories['op_mode'], name)
-    name = os.path.splitext(name)[0]
+    name = os.path.splitext(name)[0].replace('-', '_')
     return load_as_module(name, path)
 
 def is_op_mode_function_name(name):
@@ -40,16 +40,37 @@ def is_show_function_name(name):
         return True
     return False
 
+def _nth_split(delim: str, n: int, s: str):
+    groups = s.split(delim)
+    l = len(groups)
+    if n > l-1 or n < 1:
+        return (s, '')
+    return (delim.join(groups[:n]), delim.join(groups[n:]))
+
 def _nth_rsplit(delim: str, n: int, s: str):
     groups = s.split(delim)
     l = len(groups)
-    if n > l-1:
-        return ('', s)
+    if n > l-1 or n < 1:
+        return (s, '')
     return (delim.join(groups[:l-n]), delim.join(groups[l-n:]))
 
+# Since we have mangled possible hyphens in the file name while constructing
+# the snake case of the query/mutation name, we will need to recover the
+# file name by searching with mangling:
+def _filter_on_mangled(test):
+    def func(elem):
+        mangle = os.path.splitext(elem)[0].replace('-', '_')
+        return test == mangle
+    return func
+
+# Find longest name in concatenated string that matches the basename of an
+# op-mode script. Should one prefer to concatenate in the reverse order
+# (script_name + '_' + function_name), use _nth_rsplit.
 def split_compound_op_mode_name(name: str, files: list):
     for i in range(1, name.count('_') + 1):
-        pair = _nth_rsplit('_', i, name)
-        if pair[1] in files:
+        pair = _nth_split('_', i, name)
+        f = list(filter(_filter_on_mangled(pair[1]), files))
+        if f:
+            pair = (pair[0], f[0])
             return pair
     return (name, '')

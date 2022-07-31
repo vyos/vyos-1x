@@ -138,7 +138,7 @@ def generate_op_mode_definitions():
         op_mode_files = json.load(f)
 
     for file in op_mode_files:
-        basename = os.path.splitext(file)[0]
+        basename = os.path.splitext(file)[0].replace('-', '_')
         module = load_as_module(basename, os.path.join(OP_MODE_PATH, file))
 
         funcs = getmembers(module, isfunction)
