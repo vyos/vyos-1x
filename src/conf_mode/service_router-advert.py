@@ -92,8 +92,8 @@ def verify(rtradv):
                 if preferred_lifetime == 'infinity':
                     preferred_lifetime = 4294967295
 
-                if not (int(valid_lifetime) > int(preferred_lifetime)):
-                    raise ConfigError('Prefix valid-lifetime must be greater then preferred-lifetime')
+                if not (int(valid_lifetime) >= int(preferred_lifetime)):
+                    raise ConfigError('Prefix valid-lifetime must be greater then or equal to preferred-lifetime')
 
     return None
 
