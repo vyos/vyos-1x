@@ -53,7 +53,7 @@
             <properties>
               <help>Show CPU information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_cpu.py</command>
+            <command>${vyos_op_scripts_dir}/cpu.py show</command>
           </leafNode>
           <leafNode name="kernel-messages">
             <properties>
