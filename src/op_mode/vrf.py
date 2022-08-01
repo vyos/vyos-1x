@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import jmespath
 import sys
 import typing
 
@@ -76,6 +77,8 @@ def _get_formatted_output(raw_data):
 
 def show(raw: bool, name: typing.Optional[str]):
     vrf_data = _get_raw_data(name=name)
+    if not jmespath.search('[*].ifname', vrf_data):
+        return "VRF is not configured"
     if raw:
         return vrf_data
     else:
