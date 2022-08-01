@@ -7,17 +7,37 @@
           <help>Generate MACsec Key</help>
         </properties>
         <children>
-          <node name="mka-cak">
+          <node name="mka">
             <properties>
-              <help>Generate MACsec connectivity association key (CAK)</help>
+              <help>MACsec Key Agreement (MKA) protocol</help>
             </properties>
-            <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
-          </node>
-          <node name="mka-ckn">
-            <properties>
-              <help>Generate MACsec connectivity association name (CKN)</help>
-            </properties>
-            <command>/usr/bin/hexdump -n 32 -e '8/4 "%08x" 1 "\n"' /dev/random</command>
+            <children>
+              <node name="cak">
+                <properties>
+                  <help>Generate MACsec connectivity association key (CAK)</help>
+                </properties>
+                <children>
+                  <leafNode name="gcm-aes-128">
+                    <properties>
+                      <help>Generate random key for GCM-AES-128 encryption - 128bit</help>
+                    </properties>
+                    <command>/usr/bin/hexdump -n 16 -e '4/4 "%08x" 1 "\n"' /dev/random</command>
+                  </leafNode>
+                  <leafNode name="gcm-aes-256">
+                    <properties>
+                      <help>Generate random key for GCM-AES-256 encryption - 256bit</help>
+                    </properties>
+                    <command>/usr/bin/hexdump -n 32 -e '8/4 "%08x" 1 "\n"' /dev/random</command>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="ckn">
+                <properties>
+                  <help>Generate MACsec connectivity association name (CKN) - 256bit</help>
+                </properties>
+                <command>/usr/bin/hexdump -n 32 -e '8/4 "%08x" 1 "\n"' /dev/random</command>
+              </node>
+            </children>
           </node>
         </children>
       </node>
