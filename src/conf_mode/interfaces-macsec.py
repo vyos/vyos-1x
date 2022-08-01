@@ -87,6 +87,16 @@ def verify(macsec):
         if dict_search('security.mka.cak', macsec) == None or dict_search('security.mka.ckn', macsec) == None:
             raise ConfigError('Missing mandatory MACsec security keys as encryption is enabled!')
 
+        cak_len = len(dict_search('security.mka.cak', macsec))
+
+        if dict_search('security.cipher', macsec) == 'gcm-aes-128' and cak_len != 32:
+            # gcm-aes-128 requires a 128bit long key - 32 characters (string) = 16byte = 128bit
+            raise ConfigError('gcm-aes-128 requires a 128bit long key!')
+
+        elif dict_search('security.cipher', macsec) == 'gcm-aes-256' and cak_len != 64:
+            # gcm-aes-128 requires a 128bit long key - 64 characters (string) = 32byte = 256bit
+            raise ConfigError('gcm-aes-128 requires a 256bit long key!')
+
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
         # and 802.1q) - we need to check the underlaying MTU if our configured
