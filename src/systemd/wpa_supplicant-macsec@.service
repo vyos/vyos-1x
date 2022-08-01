@@ -9,7 +9,7 @@ RequiresMountsFor=/run
 Type=simple
 WorkingDirectory=/run/wpa_supplicant
 PIDFile=/run/wpa_supplicant/%I.pid
-ExecStart=/sbin/wpa_supplicant -d -c/run/wpa_supplicant/%I.conf -Dmacsec_linux -P/run/wpa_supplicant/%I.pid -i%I
+ExecStart=/sbin/wpa_supplicant -c/run/wpa_supplicant/%I.conf -Dmacsec_linux -P/run/wpa_supplicant/%I.pid -i%I
 Restart=always
 RestartSec=2
 
