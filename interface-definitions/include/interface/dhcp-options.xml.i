@@ -14,6 +14,12 @@
         <help>Override system host-name sent to DHCP server</help>
       </properties>
     </leafNode>
+    <leafNode name="mtu">
+      <properties>
+        <help>Use MTU value from DHCP server - ignore interface setting</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="vendor-class-id">
       <properties>
         <help>Identify the vendor client type to the DHCP server</help>
