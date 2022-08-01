@@ -243,10 +243,10 @@ def verify_address(config):
     of a bridge or bond.
     """
     if {'is_bridge_member', 'address'} <= set(config):
-        raise ConfigError(
-            'Cannot assign address to interface "{ifname}" as it is a '
-            'member of bridge "{is_bridge_member}"!'.format(**config))
-
+        interface = config['ifname']
+        bridge_name = next(iter(config['is_bridge_member']))
+        raise ConfigError(f'Cannot assign address to interface "{interface}" '
+                          f'as it is a member of bridge "{bridge_name}"!')
 
 def verify_bridge_delete(config):
     """
@@ -256,9 +256,9 @@ def verify_bridge_delete(config):
     """
     if 'is_bridge_member' in config:
         interface = config['ifname']
-        for bridge in config['is_bridge_member']:
-            raise ConfigError(f'Interface "{interface}" cannot be deleted as it '
-                              f'is a member of bridge "{bridge}"!')
+        bridge_name = next(iter(config['is_bridge_member']))
+        raise ConfigError(f'Interface "{interface}" cannot be deleted as it '
+                          f'is a member of bridge "{bridge_name}"!')
 
 def verify_interface_exists(ifname):
     """
