@@ -220,6 +220,23 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
           </leafNode>
+          <node name="macsec">
+            <properties>
+              <help>Show log for MACsec</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit "wpa_supplicant-macsec@*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show MACsec log on specific interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py -t macsec</script>
+                  </completionHelp>
+                </properties>
+                <command>SRC=$(cli-shell-api returnValue interfaces macsec "$5" source-interface); journalctl --no-hostname --boot --unit "wpa_supplicant-macsec@$SRC.service"</command>
+              </tagNode>
+            </children>
+          </node>
           <node name="openvpn">
             <properties>
               <help>Show log for OpenVPN</help>

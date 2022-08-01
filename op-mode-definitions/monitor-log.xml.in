@@ -195,6 +195,23 @@
               </leafNode>
             </children>
           </node>
+          <node name="macsec">
+            <properties>
+              <help>Monitor last lines of MACsec</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of specific MACsec interface</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py -t macsec</script>
+                  </completionHelp>
+                </properties>
+                <command>SRC=$(cli-shell-api returnValue interfaces macsec "$5" source-interface); journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@$SRC.service"</command>
+              </tagNode>
+            </children>
+          </node>
           <leafNode name="snmp">
             <properties>
               <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP)</help>
