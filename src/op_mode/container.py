@@ -64,6 +64,17 @@ def show_network(raw: bool):
         return cmd(command)
 
 
+def restart(name: str):
+    from vyos.util import rc_cmd
+
+    rc, output = rc_cmd(f'sudo podman restart {name}')
+    if rc != 0:
+        print(output)
+        return None
+    print(f'Container name "{name}" restarted!')
+    return output
+
+
 if __name__ == '__main__':
     try:
         res = vyos.opmode.run(sys.modules[__name__])

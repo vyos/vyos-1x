@@ -149,7 +149,7 @@
             <path>container name</path>
           </completionHelp>
         </properties>
-        <command>sudo podman restart "$3"</command>
+        <command>sudo ${vyos_op_scripts_dir}/container.py restart name="$3"</command>
       </tagNode>
     </children>
   </node>
