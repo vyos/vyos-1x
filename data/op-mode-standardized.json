@@ -1,7 +1,12 @@
 [
+"bridge.py",
+"conntrack.py",
+"container.py",
 "cpu.py",
 "memory.py",
+"nat.py",
 "neighbor.py",
 "route.py",
-"version.py"
+"version.py",
+"vrf.py"
 ]
