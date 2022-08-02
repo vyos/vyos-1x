@@ -62,6 +62,12 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security.mka.priority }}
+
+    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
+    # 0 = GCM-AES-128
+    # 1 = GCM-AES-256
+{# security.cipher is a mandatory key #}
+    macsec_csindex={{ '1' if security.cipher is vyos_defined('gcm-aes-256') else '0' }}
 {% endif %}
 
 {% if security.replay_window is vyos_defined %}
@@ -83,5 +89,9 @@ network={
     # 1..2^32-1: number of packets that could be misordered
     macsec_replay_window={{ security.replay_window }}
 {% endif %}
+
+    # macsec_port: IEEE 802.1X/MACsec port - Port component of the SCI
+    # Range: 1-65534 (default: 1)
+    macsec_port=1
 }
 
