@@ -100,13 +100,13 @@
         <properties>
           <help>Show containers</help>
         </properties>
-        <command>sudo podman ps --all</command>
+        <command>sudo ${vyos_op_scripts_dir}/container.py show_container</command>
         <children>
           <leafNode name="image">
             <properties>
               <help>Show container image</help>
             </properties>
-            <command>sudo podman image ls</command>
+            <command>sudo ${vyos_op_scripts_dir}/container.py show_image</command>
           </leafNode>
           <tagNode name="log">
             <properties>
@@ -121,7 +121,7 @@
             <properties>
               <help>Show available container networks</help>
             </properties>
-            <command>sudo podman network ls</command>
+            <command>sudo ${vyos_op_scripts_dir}/container.py show_network</command>
           </leafNode>
         </children>
       </node>
