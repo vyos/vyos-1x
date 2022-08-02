@@ -47,6 +47,12 @@ network={
     # 1: Integrity only
     macsec_integ_only={{ '0' if security is defined and security.encrypt is defined else '1' }}
 
+    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
+    # 0 = GCM-AES-128
+    # 1 = GCM-AES-256
+{# security.cipher is a mandatory key #}
+    macsec_csindex={{ '1' if security.cipher is defined and security.cipher == 'gcm-aes-256' else '0' }}
+
 {% if security is defined %}
 {%   if security.encrypt is defined %}
     # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
@@ -63,7 +69,13 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security.mka.priority }}
-{%   endif %}
+
+    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
+    # 0 = GCM-AES-128
+    # 1 = GCM-AES-256
+{# security.cipher is a mandatory key #}
+    macsec_csindex={{ '1' if security.cipher is vyos_defined('gcm-aes-256') else '0' }}
+{% endif %}
 
 {%   if security.replay_window is defined %}
     # macsec_replay_protect: IEEE 802.1X/MACsec replay protection
@@ -85,5 +97,9 @@ network={
     macsec_replay_window={{ security.replay_window }}
 {%   endif %}
 {% endif %}
+
+    # macsec_port: IEEE 802.1X/MACsec port - Port component of the SCI
+    # Range: 1-65534 (default: 1)
+    macsec_port=1
 }
 
