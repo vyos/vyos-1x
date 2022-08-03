@@ -87,6 +87,8 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         max_obj_size = '8192'
         block_mine = ['application/pdf', 'application/x-sh']
         body_max_size = '4096'
+        safe_port = '88'
+        ssl_safe_port = '8443'
 
         self.cli_set(base_path + ['listen-address', listen_ip])
         self.cli_set(base_path + ['append-domain', domain])
@@ -103,6 +105,9 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['reply-block-mime', mime])
 
         self.cli_set(base_path + ['reply-body-max-size', body_max_size])
+
+        self.cli_set(base_path + ['safe-ports', safe_port])
+        self.cli_set(base_path + ['ssl-safe-ports', ssl_safe_port])
 
         # commit changes
         self.cli_commit()
@@ -121,6 +126,9 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'http_reply_access deny BLOCK_MIME', config)
 
         self.assertIn(f'reply_body_max_size {body_max_size} KB', config)
+
+        self.assertIn(f'acl Safe_ports port {safe_port}', config)
+        self.assertIn(f'acl SSL_ports port {ssl_safe_port}', config)
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))

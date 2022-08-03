@@ -2,6 +2,11 @@
 
 acl net src all
 acl SSL_ports port 443
+{% if ssl_safe_ports is vyos_defined %}
+{%     for port in ssl_safe_ports %}
+acl SSL_ports port {{ port }}
+{%     endfor %}
+{% endif %}
 acl Safe_ports port 80          # http
 acl Safe_ports port 21          # ftp
 acl Safe_ports port 443         # https
@@ -13,6 +18,11 @@ acl Safe_ports port 280         # http-mgmt
 acl Safe_ports port 488         # gss-http
 acl Safe_ports port 591         # filemaker
 acl Safe_ports port 777         # multiling http
+{% if safe_ports is vyos_defined %}
+{%     for port in safe_ports %}
+acl Safe_ports port {{ port }}
+{%     endfor %}
+{% endif %}
 acl CONNECT method CONNECT
 
 {% if authentication is vyos_defined %}
