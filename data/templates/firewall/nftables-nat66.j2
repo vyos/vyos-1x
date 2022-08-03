@@ -3,8 +3,10 @@
 {% macro nptv6_rule(rule,config, chain) %}
 {% set comment  = '' %}
 {% set base_log = '' %}
-{% set src_prefix  = 'ip6 saddr ' ~ config.source.prefix if config.source.prefix is vyos_defined %}
-{% set dest_address  = 'ip6 daddr ' ~ config.destination.address if config.destination.address is vyos_defined %}
+{% set dst_prefix  = 'ip6 daddr ' ~ config.destination.prefix.replace('!','!= ') if config.destination.prefix is vyos_defined %}
+{% set src_prefix  = 'ip6 saddr ' ~ config.source.prefix.replace('!','!= ') if config.source.prefix is vyos_defined %}
+{% set source_address  = 'ip6 saddr ' ~ config.source.address.replace('!','!= ') if config.source.address is vyos_defined %}
+{% set dest_address  = 'ip6 daddr ' ~ config.destination.address.replace('!','!= ') if config.destination.address is vyos_defined %}
 {% if chain is vyos_defined('PREROUTING') %}
 {%     set comment   = 'DST-NAT66-' ~ rule %}
 {%     set base_log  = '[NAT66-DST-' ~ rule %}
@@ -51,6 +53,12 @@
 {% endif %}
 {% if src_prefix is vyos_defined %}
 {%     set output = output ~ ' ' ~ src_prefix %}
+{% endif %}
+{% if dst_prefix is vyos_defined %}
+{%     set output = output ~ ' ' ~ dst_prefix %}
+{% endif %}
+{% if source_address is vyos_defined %}
+{%     set output = output ~ ' ' ~ source_address %}
 {% endif %}
 {% if dest_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ dest_address %}
