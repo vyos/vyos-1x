@@ -22,6 +22,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -65,6 +66,10 @@ def get_config(config=None):
     if is_node_changed(conf, base + [ifname, 'source_interface']):
         macsec.update({'shutdown_required': {}})
 
+    if 'source_interface' in macsec:
+        tmp = is_source_interface(conf, macsec['source_interface'], 'macsec')
+        if tmp and tmp != ifname: macsec.update({'is_source_interface' : tmp})
+
     return macsec
 
 
@@ -95,6 +100,12 @@ def verify(macsec):
         elif dict_search('security.cipher', macsec) == 'gcm-aes-256' and cak_len != 64:
             # gcm-aes-128 requires a 128bit long key - 64 characters (string) = 32byte = 256bit
             raise ConfigError('gcm-aes-128 requires a 256bit long key!')
+
+    if 'is_source_interface' in macsec:
+        tmp = macsec['is_source_interface']
+        src_ifname = macsec['source_interface']
+        raise ConfigError(f'Can not use source-interface "{src_ifname}", it already ' \
+                          f'belongs to interface "{tmp}"!')
 
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
