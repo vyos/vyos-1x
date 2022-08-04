@@ -104,6 +104,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             tmp = get_config_value(src_interface, 'mka_ckn')
             self.assertTrue(mak_ckn in tmp)
 
+            # check that we use the new macsec_csindex option (T4537)
+            tmp = get_config_value(src_interface, 'macsec_csindex')
+            self.assertTrue("1" in tmp)
+
             # check that the default priority of 255 is programmed
             tmp = get_config_value(src_interface, 'mka_priority')
             self.assertTrue("255" in tmp)
