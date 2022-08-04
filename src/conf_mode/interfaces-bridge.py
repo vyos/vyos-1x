@@ -60,7 +60,7 @@ def get_config(config=None):
         else:
             bridge.update({'member': {'interface_remove': tmp }})
 
-    if dict_search('member.interface', bridge):
+    if dict_search('member.interface', bridge) != None:
         # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:
         # RuntimeError: dictionary changed size during iteration
         for interface in list(bridge['member']['interface']):
@@ -101,6 +101,14 @@ def get_config(config=None):
             tmp = has_vlan_subinterface_configured(conf,interface)
             if 'enable_vlan' in bridge and tmp:
                 bridge['member']['interface'][interface].update({'has_vlan' : ''})
+
+    # delete empty dictionary keys - no need to run code paths if nothing is there to do
+    if 'member' in bridge:
+        if 'interface' in bridge['member'] and len(bridge['member']['interface']) == 0:
+            del bridge['member']['interface']
+
+        if len(bridge['member']) == 0:
+            del bridge['member']
 
     return bridge
 
