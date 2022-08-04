@@ -237,15 +237,16 @@ def verify_source_interface(config):
         raise ConfigError('Specified source-interface {source_interface} does '
                           'not exist'.format(**config))
 
+    src_ifname = config['source_interface']
     if 'source_interface_is_bridge_member' in config:
-        raise ConfigError('Invalid source-interface {source_interface}. Interface '
-                          'is already a member of bridge '
-                          '{source_interface_is_bridge_member}'.format(**config))
+        bridge_name = next(iter(config['source_interface_is_bridge_member']))
+        raise ConfigError(f'Invalid source-interface "{src_ifname}". Interface '
+                          f'is already a member of bridge "{bridge_name}"!')
 
     if 'source_interface_is_bond_member' in config:
-        raise ConfigError('Invalid source-interface {source_interface}. Interface '
-                          'is already a member of bond '
-                          '{source_interface_is_bond_member}'.format(**config))
+        bond_name = next(iter(config['source_interface_is_bond_member']))
+        raise ConfigError(f'Invalid source-interface "{src_ifname}". Interface '
+                          f'is already a member of bond "{bond_name}"!')
 
 def verify_dhcpv6(config):
     """
