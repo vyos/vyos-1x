@@ -49,6 +49,30 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              <node name="destination">
+                <properties>
+                  <help>IPv6 destination prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-prefix-exclude"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <node name="source">
                 <properties>
                   <help>IPv6 source prefix options</help>
@@ -61,8 +85,13 @@
                         <format>ipv6net</format>
                         <description>IPv6 prefix</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-prefix-exclude"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -164,9 +193,53 @@
                         <format>ipv6net</format>
                         <description>IPv6 prefix</description>
                       </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6</format>
+                        <description>Match everything except the specified IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
                       <constraint>
                         <validator name="ipv6-address"/>
                         <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-address-exclude"/>
+                        <validator name="ipv6-prefix-exclude"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="source">
+                <properties>
+                  <help>IPv6 source prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="address">
+                    <properties>
+                      <help>IPv6 address or prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6</format>
+                        <description>Match everything except the specified IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>!ipv6net</format>
+                        <description>Match everything except the specified IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                        <validator name="ipv6-prefix"/>
+                        <validator name="ipv6-address-exclude"/>
+                        <validator name="ipv6-prefix-exclude"/>
                       </constraint>
                     </properties>
                   </leafNode>
