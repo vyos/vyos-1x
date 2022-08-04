@@ -231,7 +231,7 @@
 {% endif %}
 {% endmacro %}
 !
-router bgp {{ local_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
+router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.ebgp_requires_policy is vyos_defined %}
  bgp ebgp-requires-policy
 {% else %}

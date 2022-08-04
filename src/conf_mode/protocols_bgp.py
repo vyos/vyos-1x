@@ -121,8 +121,8 @@ def verify(bgp):
                                       'dependent VRF instance(s) exist!')
         return None
 
-    if 'local_as' not in bgp:
-        raise ConfigError('BGP local-as number must be defined!')
+    if 'system_as' not in bgp:
+        raise ConfigError('BGP system-as number must be defined!')
 
     # Common verification for both peer-group and neighbor statements
     for neighbor in ['neighbor', 'peer_group']:
@@ -147,8 +147,8 @@ def verify(bgp):
                 # Neighbor local-as override can not be the same as the local-as
                 # we use for this BGP instane!
                 asn = list(peer_config['local_as'].keys())[0]
-                if asn == bgp['local_as']:
-                    raise ConfigError('Cannot have local-as same as BGP AS number')
+                if asn == bgp['system_as']:
+                    raise ConfigError('Cannot have local-as same as system-as number')
 
                 # Neighbor AS specified for local-as and remote-as can not be the same
                 if dict_search('remote_as', peer_config) == asn:

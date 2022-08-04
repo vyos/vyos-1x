@@ -896,7 +896,7 @@
     </tagNode>
   </children>
 </node>
-<leafNode name="local-as">
+<leafNode name="system-as">
   <properties>
     <help>Autonomous System Number (ASN)</help>
     <valueHelp>
