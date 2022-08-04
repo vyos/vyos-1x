@@ -28,6 +28,8 @@ from vyos.util import read_file
 from vyos.util import get_interface_config
 from vyos.util import process_named_running
 
+PROCESS_NAME = 'wpa_supplicant'
+
 def get_config_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
     tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
@@ -54,6 +56,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         cls._interfaces = list(cls._options)
         # call base-classes classmethod
         super(cls, cls).setUpClass()
+
+    def tearDown(self):
+        super().tearDown()
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_macsec_encryption(self):
         # MACsec can be operating in authentication and encryption mode - both
@@ -96,32 +102,29 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
 
             tmp = get_config_value(src_interface, 'macsec_integ_only')
-            self.assertTrue("0" in tmp)
+            self.assertIn("0", tmp)
 
             tmp = get_config_value(src_interface, 'mka_cak')
-            self.assertTrue(mak_cak in tmp)
+            self.assertIn(mak_cak, tmp)
 
             tmp = get_config_value(src_interface, 'mka_ckn')
-            self.assertTrue(mak_ckn in tmp)
-
-            # check that we use the new macsec_csindex option (T4537)
-            tmp = get_config_value(src_interface, 'macsec_csindex')
-            self.assertTrue("1" in tmp)
+            self.assertIn(mak_ckn, tmp)
 
             # check that the default priority of 255 is programmed
             tmp = get_config_value(src_interface, 'mka_priority')
-            self.assertTrue("255" in tmp)
+            self.assertIn("255", tmp)
 
             tmp = get_config_value(src_interface, 'macsec_replay_window')
-            self.assertTrue(replay_window in tmp)
+            self.assertIn(replay_window, tmp)
 
             tmp = read_file(f'/sys/class/net/{interface}/mtu')
             self.assertEqual(tmp, '1460')
 
-            # Check for running process
-            self.assertTrue(process_named_running('wpa_supplicant'))
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_macsec_gcm_aes_128(self):
+        src_interface = 'eth0'
         interface = 'macsec1'
         cipher = 'gcm-aes-128'
         self.cli_set(self._base_path + [interface])
@@ -129,7 +132,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         # check validate() - source interface is mandatory
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])
+        self.cli_set(self._base_path + [interface, 'source-interface', src_interface])
 
         # check validate() - cipher is mandatory
         with self.assertRaises(ConfigSessionError):
@@ -142,7 +145,15 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertIn(interface, interfaces())
         self.assertEqual(cipher, get_cipher(interface))
 
+        # check that we use the new macsec_csindex option (T4537)
+        tmp = get_config_value(src_interface, 'macsec_csindex')
+        self.assertIn("0", tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
     def test_macsec_gcm_aes_256(self):
+        src_interface = 'eth0'
         interface = 'macsec4'
         cipher = 'gcm-aes-256'
         self.cli_set(self._base_path + [interface])
@@ -150,7 +161,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         # check validate() - source interface is mandatory
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(self._base_path + [interface, 'source-interface', 'eth0'])
+        self.cli_set(self._base_path + [interface, 'source-interface', src_interface])
 
         # check validate() - cipher is mandatory
         with self.assertRaises(ConfigSessionError):
@@ -161,6 +172,13 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         self.cli_commit()
         self.assertIn(interface, interfaces())
         self.assertEqual(cipher, get_cipher(interface))
+
+        # check that we use the new macsec_csindex option (T4537)
+        tmp = get_config_value(src_interface, 'macsec_csindex')
+        self.assertIn("1", tmp)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_macsec_source_interface(self):
         # Ensure source-interface can bot be part of any other bond or bridge
@@ -190,6 +208,9 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
             self.assertIn(interface, interfaces())
 
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
 
