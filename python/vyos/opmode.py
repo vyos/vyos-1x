@@ -18,6 +18,33 @@ import sys
 import typing
 
 
+class Error(Exception):
+    """ Any error that makes requested operation impossible to complete
+        for reasons unrelated to the user input or script logic.
+    """
+    pass
+
+class UnconfiguredSubsystem(Error):
+    """ Requested operation is valid, but cannot be completed
+        because corresponding subsystem is not configured and running.
+    """
+    pass
+
+class DataUnavailable(Error):
+    """ Requested operation is valid, but cannot be completed
+        because data for it is not available.
+        This error MAY be treated as temporary because such issues
+        are often caused by transient events such as service restarts.
+    """
+    pass
+
+class PermissionDenied(Error):
+    """ Requested operation is valid, but the caller has no permission
+        to perform it.
+    """
+    pass
+
+
 def _is_op_mode_function_name(name):
     if re.match(r"^(show|clear|reset|restart)", name):
         return True
