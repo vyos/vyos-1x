@@ -47,6 +47,12 @@ network={
     # 1: Integrity only
     macsec_integ_only={{ '0' if security.encrypt is vyos_defined else '1' }}
 
+    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
+    # 0 = GCM-AES-128
+    # 1 = GCM-AES-256
+{# security.cipher is a mandatory key #}
+    macsec_csindex={{ '1' if security.cipher is vyos_defined('gcm-aes-256') else '0' }}
+
 {% if security.encrypt is vyos_defined %}
     # mka_cak, mka_ckn, and mka_priority: IEEE 802.1X/MACsec pre-shared key mode
     # This allows to configure MACsec with a pre-shared key using a (CAK,CKN) pair.
@@ -62,12 +68,6 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security.mka.priority }}
-
-    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
-    # 0 = GCM-AES-128
-    # 1 = GCM-AES-256
-{# security.cipher is a mandatory key #}
-    macsec_csindex={{ '1' if security.cipher is vyos_defined('gcm-aes-256') else '0' }}
 {% endif %}
 
 {% if security.replay_window is vyos_defined %}
