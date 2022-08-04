@@ -69,12 +69,6 @@ network={
     # mka_priority (Priority of MKA Actor) is in 0..255 range with 255 being
     # default priority
     mka_priority={{ security.mka.priority }}
-
-    # macsec_csindex: IEEE 802.1X/MACsec cipher suite
-    # 0 = GCM-AES-128
-    # 1 = GCM-AES-256
-{# security.cipher is a mandatory key #}
-    macsec_csindex={{ '1' if security.cipher is vyos_defined('gcm-aes-256') else '0' }}
 {% endif %}
 
 {%   if security.replay_window is defined %}
