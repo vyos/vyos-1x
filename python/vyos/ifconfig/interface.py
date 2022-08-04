@@ -1375,7 +1375,7 @@ class Interface(Control):
         # before mangling any IPv6 option. If MTU is less then 1280 IPv6 will be
         # automatically disabled by the kernel. Also MTU must be increased before
         # configuring any IPv6 address on the interface.
-        if 'mtu' in config:
+        if 'mtu' in config and dict_search('dhcp_options.mtu', config) == None:
             self.set_mtu(config.get('mtu'))
 
         # Only change IPv6 parameters if IPv6 was not explicitly disabled
