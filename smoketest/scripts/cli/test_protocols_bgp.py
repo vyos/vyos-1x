@@ -929,7 +929,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         remote_asn = '500'
         local_asn = '400'
 
-        self.cli_set(base_path + ['local-as', ASN])
+        self.cli_set(base_path + ['system-as', ASN])
         self.cli_set(base_path + ['neighbor', neighbor, 'remote-as', ASN])
         self.cli_set(base_path + ['neighbor', neighbor, 'local-as', local_asn])
 
