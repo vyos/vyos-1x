@@ -303,8 +303,8 @@ def is_source_interface(conf, interface, intftype=None):
     for it in intftype:
         base = ['interfaces', it]
         for intf in conf.list_nodes(base):
-            lower_intf = base + [intf, 'source-interface']
-            if conf.exists(lower_intf) and interface in conf.return_values(lower_intf):
+            src_intf = base + [intf, 'source-interface']
+            if conf.exists(src_intf) and interface in conf.return_values(src_intf):
                 ret_val = intf
                 break
 
