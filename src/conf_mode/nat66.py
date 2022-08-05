@@ -125,7 +125,8 @@ def verify(nat):
                 if addr != 'masquerade' and not is_ipv6(addr):
                     raise ConfigError(f'IPv6 address {addr} is not a valid address')
             else:
-                raise ConfigError(f'{err_msg} translation address not specified')
+                if 'exclude' not in config:
+                    raise ConfigError(f'{err_msg} translation address not specified')
 
             prefix = dict_search('source.prefix', config)
             if prefix != None:
