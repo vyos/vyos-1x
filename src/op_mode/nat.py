@@ -196,6 +196,6 @@ if __name__ == '__main__':
         res = vyos.opmode.run(sys.modules[__name__])
         if res:
             print(res)
-    except ValueError as e:
+    except (ValueError, vyos.opmode.Error) as e:
         print(e)
         sys.exit(1)
