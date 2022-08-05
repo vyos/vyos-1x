@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,6 +23,7 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.util import check_port_availability
 from vyos.util import is_systemd_service_running
 from vyos.util import dict_search
 from vyos.xml import defaults
@@ -75,6 +76,10 @@ def get_config():
 def verify(ocserv):
     if ocserv is None:
         return None
+    # Check if listen-ports not binded other services
+    for proto, port in ocserv.get('listen_ports').items():
+        if check_port_availability('0.0.0.0', int(port), proto) is not True:
+            raise ConfigError(f'"{proto}" port "{port}" is used by another service')
     # Check authentication
     if "authentication" in ocserv:
         if "mode" in ocserv["authentication"]:
