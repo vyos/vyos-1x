@@ -6,6 +6,7 @@
 "memory.py",
 "nat.py",
 "neighbor.py",
+"openconnect.py",
 "route.py",
 "version.py",
 "vrf.py"
