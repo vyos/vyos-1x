@@ -63,6 +63,10 @@
 {% if dest_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ dest_address %}
 {% endif %}
+{% if config.exclude is vyos_defined %}
+{#     rule has been marked as 'exclude' thus we simply return here #}
+{%     set trns_address = 'return' %}
+{% endif %}
 {% if trns_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ trns_address %}
 {% endif %}

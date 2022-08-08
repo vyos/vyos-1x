@@ -42,6 +42,17 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
+        nftables_output = cmd(f'sudo nft {args} list table {table}')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(not matched if inverse else matched, msg=search)
+
     def test_source_nat66(self):
         source_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'
@@ -49,29 +60,23 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_prefix])
 
-        # check validate() - outbound-interface must be defined
+        self.cli_set(src_path + ['rule', '2', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '2', 'source', 'prefix', source_prefix])
+        self.cli_set(src_path + ['rule', '2', 'translation', 'address', 'masquerade'])
+
+        self.cli_set(src_path + ['rule', '3', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '3', 'source', 'prefix', source_prefix])
+        self.cli_set(src_path + ['rule', '3', 'exclude'])
+
         self.cli_commit()
 
-        tmp = cmd('sudo nft -j list table ip6 nat')
-        data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
+        nftables_search = [
+            ['oifname "eth1"', 'ip6 saddr fc00::/64', 'snat prefix to fc01::/64'],
+            ['oifname "eth1"', 'ip6 saddr fc00::/64', 'masquerade'],
+            ['oifname "eth1"', 'ip6 saddr fc00::/64', 'return']
+        ]
 
-        for idx in range(0, len(data_json)):
-            data = data_json[idx]
-
-            self.assertEqual(data['chain'], 'POSTROUTING')
-            self.assertEqual(data['family'], 'ip6')
-            self.assertEqual(data['table'], 'nat')
-
-            iface = dict_search('match.right', data['expr'][0])
-            address = dict_search('match.right.prefix.addr', data['expr'][2])
-            mask = dict_search('match.right.prefix.len', data['expr'][2])
-            translation_address = dict_search('snat.addr.prefix.addr', data['expr'][3])
-            translation_mask = dict_search('snat.addr.prefix.len', data['expr'][3])
-
-            self.assertEqual(iface, 'eth1')
-            # check for translation address
-            self.assertEqual(f'{translation_address}/{translation_mask}', translation_prefix)
-            self.assertEqual(f'{address}/{mask}', source_prefix)
+        self.verify_nftables(nftables_search, 'ip6 nat')
 
     def test_source_nat66_address(self):
         source_prefix = 'fc00::/64'
@@ -106,28 +111,25 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
     def test_destination_nat66(self):
         destination_address = 'fc00::1'
         translation_address = 'fc01::1'
+        source_address = 'fc02::1'
         self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'address', destination_address])
         self.cli_set(dst_path + ['rule', '1', 'translation', 'address', translation_address])
 
+        self.cli_set(dst_path + ['rule', '2', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '2', 'destination', 'address', destination_address])
+        self.cli_set(dst_path + ['rule', '2', 'source', 'address', source_address])
+        self.cli_set(dst_path + ['rule', '2', 'exclude'])
+
         # check validate() - outbound-interface must be defined
         self.cli_commit()
 
-        tmp = cmd('sudo nft -j list table ip6 nat')
-        data_json = jmespath.search('nftables[?rule].rule[?chain]', json.loads(tmp))
+        nftables_search = [
+            ['iifname "eth1"', 'ip6 daddr fc00::1', 'dnat to fc01::1'],
+            ['iifname "eth1"', 'ip6 saddr fc02::1', 'ip6 daddr fc00::1', 'return']
+        ]
 
-        for idx in range(0, len(data_json)):
-            data = data_json[idx]
-
-            self.assertEqual(data['chain'], 'PREROUTING')
-            self.assertEqual(data['family'], 'ip6')
-            self.assertEqual(data['table'], 'nat')
-
-            iface = dict_search('match.right', data['expr'][0])
-            dnat_addr = dict_search('dnat.addr', data['expr'][3])
-
-            self.assertEqual(dnat_addr, translation_address)
-            self.assertEqual(iface, 'eth1')
+        self.verify_nftables(nftables_search, 'ip6 nat')
 
     def test_destination_nat66_prefix(self):
         destination_prefix = 'fc00::/64'

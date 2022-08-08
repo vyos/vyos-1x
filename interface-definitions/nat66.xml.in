@@ -35,6 +35,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              #include <include/nat-exclude.xml.i>
               <leafNode name="log">
                 <properties>
                   <help>NAT66 rule logging</help>
@@ -162,6 +163,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              #include <include/nat-exclude.xml.i>
               <leafNode name="log">
                 <properties>
                   <help>NAT66 rule logging</help>
