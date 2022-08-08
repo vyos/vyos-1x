@@ -23,12 +23,7 @@
       </children>
     </node>
     #include <include/generic-disable-node.xml.i>
-    <leafNode name="exclude">
-      <properties>
-        <help>Exclude packets matching this rule from NAT</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/nat-exclude.xml.i>
     <leafNode name="log">
       <properties>
         <help>NAT rule logging</help>
