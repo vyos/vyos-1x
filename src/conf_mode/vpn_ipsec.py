@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,6 +16,7 @@
 
 import ipaddress
 import os
+import re
 
 from sys import exit
 from time import sleep
@@ -348,6 +349,14 @@ def verify(ipsec):
     if 'site_to_site' in ipsec and 'peer' in ipsec['site_to_site']:
         for peer, peer_conf in ipsec['site_to_site']['peer'].items():
             has_default_esp = False
+            # Peer name it is swanctl connection name and shouldn't contain dots or colons, T4118
+            if bool(re.search(':|\.', peer)):
+                raise ConfigError(f'Incorrect peer name "{peer}" '
+                                  f'Peer name can contain alpha-numeric letters, hyphen and underscore')
+
+            if 'remote_address' not in peer_conf:
+                print(f'You should set correct remote-address "peer {peer} remote-address x.x.x.x"\n')
+
             if 'default_esp_group' in peer_conf:
                 has_default_esp = True
                 if 'esp_group' not in ipsec or peer_conf['default_esp_group'] not in ipsec['esp_group']:
