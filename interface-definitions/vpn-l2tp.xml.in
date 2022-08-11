@@ -215,6 +215,7 @@
                         </properties>
                       </leafNode>
                       #include <include/radius-nas-identifier.xml.i>
+                      #include <include/radius-nas-ip-address.xml.i>
                       <node name="dae-server">
                         <properties>
                           <help>IPv4 address and port to bind Dynamic Authorization Extension server (DM/CoA)</help>
