@@ -25,6 +25,7 @@ from vyos.ifconfig import MACsecIf
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
