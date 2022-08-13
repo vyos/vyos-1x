@@ -181,6 +181,26 @@ table ip nat {
     }
 }
 
+table ip vyos_static_nat {
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+        counter jump VYOS_PRE_DNAT_HOOK
+    }
+
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+        counter jump VYOS_PRE_SNAT_HOOK
+    }
+
+    chain VYOS_PRE_DNAT_HOOK {
+        return
+    }
+
+    chain VYOS_PRE_SNAT_HOOK {
+        return
+    }
+}
+
 table ip6 nat {
     chain PREROUTING {
         type nat hook prerouting priority -100; policy accept;
