@@ -9,6 +9,10 @@
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
         rekey_time = {{ ike.lifetime }}s
         keyingtries = 0
+{%         if ike.dead_peer_detection is vyos_defined %}
+        dpd_timeout = {{ ike.dead_peer_detection.timeout }}
+        dpd_delay = {{ ike.dead_peer_detection.interval }}
+{%         endif %}
 {%         if profile_conf.authentication.mode is vyos_defined('pre-shared-secret') %}
         local {
             auth = psk
