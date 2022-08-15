@@ -80,3 +80,8 @@ route = {{ route }}
 {%     endfor %}
 {% endif %}
 
+{% if network_settings.split_dns is vyos_defined %}
+{%     for tmp in network_settings.split_dns %}
+split-dns = {{ tmp }}
+{%     endfor %}
+{% endif %}

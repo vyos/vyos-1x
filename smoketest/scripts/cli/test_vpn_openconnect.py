@@ -98,6 +98,8 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         for ns in name_server:
             self.cli_set(base_path + ['network-settings', 'name-server', ns])
+        for domain in split_dns:
+            self.cli_set(base_path + ['network-settings', 'split-dns', domain])
 
         self.cli_set(base_path + ['ssl', 'ca-certificate', 'openconnect'])
         self.cli_set(base_path + ['ssl', 'certificate', 'openconnect'])
@@ -115,6 +117,8 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         for ns in name_server:
             self.assertIn(f'dns = {ns}', daemon_config)
+        for domain in split_dns:
+            self.assertIn(f'split-dns = {domain}', daemon_config)
 
         auth_config = read_file(auth_file)
         self.assertIn(f'{user}:*:$', auth_config)
