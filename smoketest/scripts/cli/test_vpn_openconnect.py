@@ -63,6 +63,7 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         v6_prefix = '2001:db8:1000::/64'
         v6_len = '126'
         name_server = ['1.2.3.4', '1.2.3.5', '2001:db8::1']
+        split_dns = ['vyos.net', 'vyos.io']
 
         self.cli_set(base_path + ['authentication', 'local-users', 'username', user, 'password', password])
         self.cli_set(base_path + ['authentication', 'mode', "local"])
@@ -73,6 +74,8 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         for ns in name_server:
             self.cli_set(base_path + ['network-settings', 'name-server', ns])
+        for domain in split_dns:
+            self.cli_set(base_path + ['network-settings', 'split-dns', domain])
 
         self.cli_commit()
 
@@ -87,6 +90,8 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         for ns in name_server:
             self.assertIn(f'dns = {ns}', daemon_config)
+        for domain in split_dns:
+            self.assertIn(f'split-dns = {domain}', daemon_config)
 
         auth_config = read_file(auth_file)
         self.assertIn(f'{user}:*:$', auth_config)

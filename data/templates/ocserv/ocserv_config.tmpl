@@ -70,6 +70,11 @@ ipv6-network = {{ network_settings.client_ipv6_pool.prefix }}
 ipv6-subnet-prefix = {{ network_settings.client_ipv6_pool.mask }}
 {%     endif %}
 {%   endif %}
+{%   if network_settings.split_dns is defined %}
+{%     for tmp in network_settings.split_dns %}
+split-dns = {{ tmp }}
+{%     endfor %}
+{%   endif %}
 {% endif %}
 
 {% if network_settings.push_route is string %}
@@ -79,4 +84,3 @@ route = {{ network_settings.push_route }}
 route = {{ route }}
 {%   endfor %}
 {% endif %}
-
