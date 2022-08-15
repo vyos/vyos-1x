@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -61,8 +61,8 @@ def verify(ocserv):
     if "authentication" in ocserv:
         if "mode" in ocserv["authentication"]:
             if "local" in ocserv["authentication"]["mode"]:
-                if not ocserv["authentication"]["local_users"] or not ocserv["authentication"]["local_users"]["username"]:
-                    raise ConfigError('openconnect mode local required at leat one user')
+                if 'local_users' not in ocserv["authentication"] or 'username' not in ocserv["authentication"]["local_users"]:
+                    raise ConfigError('openconnect mode local requires at leat one user')
                 else:
                     for user in ocserv["authentication"]["local_users"]["username"]:
                         if not "password" in ocserv["authentication"]["local_users"]["username"][user]:
