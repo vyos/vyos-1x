@@ -197,10 +197,15 @@
                   <help>The IP to which this rule applies (REQUIRE)</help>
                   <valueHelp>
                     <format>ipv4</format>
+                    <description>The IPv4 address to which this rule applies</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
                     <description>The IPv4 to which this rule applies</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="ipv4-address" />
+                    <validator name="ipv4-address"/>
+                    <validator name="ipv4-host"/>
                   </constraint>
                 </properties>
               </leafNode>

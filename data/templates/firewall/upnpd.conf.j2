@@ -71,7 +71,7 @@ min_lifetime={{ pcp_lifetime.min }}
 
 {% if friendly_name is vyos_defined %}
 # Name of this service, default is "`uname -s` router"
-friendly_name= {{ friendly_name }}
+friendly_name={{ friendly_name }}
 {% endif  %}
 
 # Manufacturer name, default is "`uname -s`"
@@ -117,7 +117,10 @@ clean_ruleset_threshold=10
 clean_ruleset_interval=600
 
 # Anchor name in pf (default is miniupnpd)
-anchor=VyOS
+# Something wrong with this option "anchor", comment it out
+#   vyos@r14# miniupnpd -vv -f /run/upnp/miniupnp.conf
+#   invalid option in file /run/upnp/miniupnp.conf line 74 : anchor=VyOS
+#anchor=VyOS
 
 uuid={{ uuid }}
 
@@ -144,7 +147,7 @@ lease_file=/config/upnp.leases
 # CAUTION: failure to enforce any rules may permit insecure requests to be made!
 {%     for rule, config in rule.items() %}
 {%         if config.disable is not vyos_defined %}
-{{ config.action }} {{ config.external_port_range }} {{ config.ip }} {{ config.internal_port_range }}
+{{ config.action }} {{ config.external_port_range }} {{ config.ip }}{{ '/32' if '/' not in config.ip else '' }} {{ config.internal_port_range }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
