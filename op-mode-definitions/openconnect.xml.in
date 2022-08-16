@@ -11,7 +11,7 @@
             <properties>
               <help>Show active OpenConnect server sessions</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/openconnect-control.py --action="show_sessions"</command>
+            <command>${vyos_op_scripts_dir}/openconnect.py show_sessions</command>
           </leafNode>
           <tagNode name="user">
             <properties>
