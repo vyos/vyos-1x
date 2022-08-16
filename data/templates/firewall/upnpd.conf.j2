@@ -129,7 +129,7 @@ lease_file=/config/upnp.leases
 #serial=12345678
 #model_number=1
 
-{% if rules is vyos_defined %}
+{% if rule is vyos_defined %}
 # UPnP permission rules
 # (allow|deny) (external port range) IP/mask (internal port range)
 # A port range is <min port>-<max port> or <port> if there is only
@@ -142,8 +142,8 @@ lease_file=/config/upnp.leases
 # modify the IP ranges to match their own internal networks, and
 # also consider implementing network-specific restrictions
 # CAUTION: failure to enforce any rules may permit insecure requests to be made!
-{%     for rule, config in rules.items() %}
-{%         if config.disable is vyos_defined %}
+{%     for rule, config in rule.items() %}
+{%         if config.disable is not vyos_defined %}
 {{ config.action }} {{ config.external_port_range }} {{ config.ip }} {{ config.internal_port_range }}
 {%         endif %}
 {%     endfor %}
