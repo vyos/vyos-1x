@@ -103,19 +103,19 @@
               </valueHelp>
               <valueHelp>
                 <format>ipv4</format>
-                <description>IP address to listen for incoming connections</description>
+                <description>IPv4 address to listen for incoming connections</description>
               </valueHelp>
               <valueHelp>
-                <format>ipv4-prefix</format>
-                <description>IP prefix to listen for incoming connections</description>
+                <format>ipv4net</format>
+                <description>IPv4 prefix to listen for incoming connections</description>
               </valueHelp>
               <valueHelp>
                 <format>ipv6</format>
-                <description>IP address to listen for incoming connections</description>
+                <description>IPv6 address to listen for incoming connections</description>
               </valueHelp>
               <valueHelp>
-                <format>ipv6-prefix</format>
-                <description>IP prefix to listen for incoming connections</description>
+                <format>ipv6net</format>
+                <description>IPv6 prefix to listen for incoming connections</description>
               </valueHelp>
               <multi/>
               <constraint>
