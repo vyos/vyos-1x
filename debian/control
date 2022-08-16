@@ -51,7 +51,7 @@ Depends:
   frr,
   frr-pythontools,
   grc,
-  hostapd (>= 0.6.8),
+  hostapd,
   hvinfo,
   igmpproxy,
   ipaddrcheck,
