@@ -43,7 +43,7 @@ if __name__ == '__main__':
             if commit_in_progress():
                 print('Cannot restart DHCP relay while a commit is in progress')
                 exit(1)
-            call('systemctl restart isc-dhcp-server.service')
+            call('systemctl restart isc-dhcp-relay.service')
 
         sys.exit(0)
     elif args.ipv6:
@@ -54,7 +54,7 @@ if __name__ == '__main__':
             if commit_in_progress():
                 print('Cannot restart DHCPv6 relay while commit is in progress')
                 exit(1)
-            call('systemctl restart isc-dhcp-server6.service')
+            call('systemctl restart isc-dhcp-relay6.service')
 
         sys.exit(0)
     else:
