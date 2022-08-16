@@ -61,7 +61,7 @@ def apply(arp):
                 continue
             for address, address_config in interface_config['address'].items():
                 mac = address_config['mac']
-                call(f'ip neigh add {address} lladdr {mac} dev {interface}')
+                call(f'ip neigh replace {address} lladdr {mac} dev {interface}')
 
 if __name__ == '__main__':
     try:
