@@ -57,15 +57,16 @@ def get_config():
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
 
-    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
-    del ocserv['authentication']['local_users']['username']['otp']
-    if not ocserv["authentication"]["local_users"]["username"]:
-        raise ConfigError('openconnect mode local required at least one user')
-    default_ocserv_usr_values = default_values['authentication']['local_users']['username']['otp']
-    for user, params in ocserv['authentication']['local_users']['username'].items():
-        # Not every configuration requires OTP settings
-        if ocserv['authentication']['local_users']['username'][user].get('otp'):
-            ocserv['authentication']['local_users']['username'][user]['otp'] = dict_merge(default_ocserv_usr_values, ocserv['authentication']['local_users']['username'][user]['otp'])
+    if "local" in ocserv["authentication"]["mode"]:
+        # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+        del ocserv['authentication']['local_users']['username']['otp']
+        if not ocserv["authentication"]["local_users"]["username"]:
+            raise ConfigError('openconnect mode local required at least one user')
+        default_ocserv_usr_values = default_values['authentication']['local_users']['username']['otp']
+        for user, params in ocserv['authentication']['local_users']['username'].items():
+            # Not every configuration requires OTP settings
+            if ocserv['authentication']['local_users']['username'][user].get('otp'):
+                ocserv['authentication']['local_users']['username'][user]['otp'] = dict_merge(default_ocserv_usr_values, ocserv['authentication']['local_users']['username'][user]['otp'])
 
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),

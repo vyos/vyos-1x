@@ -144,6 +144,26 @@
                     </properties>
                     <defaultValue>2</defaultValue>
                   </leafNode>
+                  <leafNode name="groupconfig">
+                    <properties>
+                      <help>If the groupconfig option is set to yes, then config-per-user will be overriden, and all configuration will be read from radius.</help>
+                      <completionHelp>
+                        <list>yes no</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>yes</format>
+                        <description>Enable RADIUS acquisition of group properties</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>no</format>
+                        <description>Disable RADIUS acquisition of group properties</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(yes|no)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>no</defaultValue>
+                  </leafNode>
                 </children>
               </node>
             </children>

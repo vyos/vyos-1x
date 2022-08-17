@@ -7,7 +7,11 @@ run-as-user = nobody
 run-as-group = daemon
 
 {% if "radius" in authentication.mode %}
+{%      if "yes" in authentication.radius.groupconfig %}
+auth = "radius [config=/run/ocserv/radiusclient.conf,groupconfig=true]"
+{%      else %}
 auth = "radius [config=/run/ocserv/radiusclient.conf]"
+{%      endif %}
 {% elif "local" in authentication.mode %}
 {%     if authentication.mode.local == "password-otp" %}
 auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
