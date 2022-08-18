@@ -297,6 +297,11 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if tcp_flags:
         output.append(parse_tcp_flags(tcp_flags))
 
+    # TCP MSS
+    tcp_mss = dict_search_args(rule_conf, 'tcp', 'mss')
+    if tcp_mss:
+        output.append(f'tcp option maxseg size {tcp_mss}')
+
     output.append('counter')
 
     if 'set' in rule_conf:
