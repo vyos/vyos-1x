@@ -7,11 +7,11 @@ run-as-user = nobody
 run-as-group = daemon
 
 {% if "radius" in authentication.mode %}
-{%      if "yes" in authentication.radius.groupconfig %}
+{%     if "yes" in authentication.radius.groupconfig %}
 auth = "radius [config=/run/ocserv/radiusclient.conf,groupconfig=true]"
-{%      else %}
+{%     else %}
 auth = "radius [config=/run/ocserv/radiusclient.conf]"
-{%      endif %}
+{%     endif %}
 {% elif "local" in authentication.mode %}
 {%     if authentication.mode.local == "password-otp" %}
 auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
@@ -66,6 +66,13 @@ device = sslvpn
 dns = {{ dns }}
 {%     endfor %}
 {% endif %}
+{% if network_settings.tunnel_all_dns is vyos_defined %}
+{%     if "yes" in network_settings.tunnel_all_dns %}
+tunnel-all-dns = true
+{%     else %}
+tunnel-all-dns = false
+{%     endif %}
+{% endif %}
 
 # IPv4 network pool
 {% if network_settings.client_ip_settings.subnet is vyos_defined %}
@@ -87,5 +94,12 @@ route = {{ route }}
 {% if network_settings.split_dns is vyos_defined %}
 {%     for tmp in network_settings.split_dns %}
 split-dns = {{ tmp }}
+{%     endfor %}
+{% endif %}
+
+{% if authentication.groups is vyos_defined %}
+# Group settings
+{%     for grp in authentication.groups %}
+select-group = {{ grp }}
 {%     endfor %}
 {% endif %}

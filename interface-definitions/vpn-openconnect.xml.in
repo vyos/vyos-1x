@@ -50,6 +50,16 @@
                   </leafNode>
                 </children>
               </node>
+              <leafNode name="groups">
+                <properties>
+                  <help>Groups that a client is allowed to select from. Maps to RADIUS Class attribute.</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Group string. The group may be followed by a user-friendly name in brackets: group1[First Group]</description>
+                  </valueHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
               #include <include/auth-local-users.xml.i>
               <node name="local-users">
                 <children>
@@ -297,6 +307,26 @@
                   </constraint>
                   <multi/>
                 </properties>
+              </leafNode>
+              <leafNode name="tunnel-all-dns">
+                <properties>
+                  <help>If the tunnel-all-dns option is set to yes, tunnel all DNS queries via the VPN. This is the default when a default route is set.</help>
+                  <completionHelp>
+                    <list>yes no</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>yes</format>
+                    <description>Enable tunneling of all DNS traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>no</format>
+                    <description>Disable tunneling of all DNS traffic</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(yes|no)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>no</defaultValue>
               </leafNode>
             </children>
           </node>
