@@ -471,6 +471,29 @@ def process_named_running(name):
             return p.pid
     return None
 
+def is_listen_port_bind_service(port: int, service: str) -> bool:
+    """Check if listen port bound to expected program name
+    :param port: Bind port
+    :param service: Program name
+    :return: bool
+
+    Example:
+        % is_listen_port_bind_service(443, 'nginx')
+        True
+        % is_listen_port_bind_service(443, 'ocservr-main')
+        False
+    """
+    from psutil import net_connections as connections
+    from psutil import Process as process
+    for connection in connections():
+        addr = connection.laddr
+        pid = connection.pid
+        pid_name = process(pid).name()
+        pid_port = addr.port
+        if service == pid_name and port == pid_port:
+            return True
+    return False
+
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
     interval such as 1w4d18h35m59s
