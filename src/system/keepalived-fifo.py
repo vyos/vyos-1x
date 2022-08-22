@@ -30,6 +30,7 @@ from vyos.ifconfig.vrrp import VRRP
 from vyos.configquery import ConfigTreeQuery
 from vyos.util import cmd
 from vyos.util import dict_search
+from vyos.util import commit_in_progress
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -63,6 +64,17 @@ class KeepalivedFifo:
 
     # load configuration
     def _config_load(self):
+        # For VRRP configuration to be read, the commit must be finished
+        count = 1
+        while commit_in_progress():
+            if ( count <= 40 ):
+                logger.debug(f'commit in progress try: {count}')
+            else:
+                logger.error(f'commit still in progress after {count} continuing anyway')
+                break
+            count += 1
+            time.sleep(0.5)
+
         try:
             base = ['high-availability', 'vrrp']
             conf = ConfigTreeQuery()
