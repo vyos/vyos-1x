@@ -149,7 +149,7 @@ class Session:
         return res
 
     def system_status(self):
-        import api.graphql.recipes.queries.system_status as system_status
+        import api.graphql.session.composite.system_status as system_status
 
         session = self._session
         data = self._data

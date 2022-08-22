@@ -21,7 +21,7 @@ from makefun import with_signature
 
 from .. import state
 from .. import key_auth
-from api.graphql.recipes.session import Session
+from api.graphql.session.session import Session
 
 query = ObjectType("Query")
 
@@ -71,7 +71,7 @@ def make_query_resolver(query_name, class_name, session_func):
 
             # one may override the session functions with a local subclass
             try:
-                mod = import_module(f'api.graphql.recipes.{func_base_name}')
+                mod = import_module(f'api.graphql.session.override.{func_base_name}')
                 klass = getattr(mod, class_name)
             except ImportError:
                 # otherwise, dynamically generate subclass to invoke subclass
