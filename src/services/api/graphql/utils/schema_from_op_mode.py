@@ -25,7 +25,10 @@ from inspect import signature, getmembers, isfunction
 from jinja2 import Template
 
 from vyos.defaults import directories
-from . util import load_as_module, is_op_mode_function_name, is_show_function_name
+if __package__ is None or __package__ == '':
+    from util import load_as_module, is_op_mode_function_name, is_show_function_name
+else:
+    from . util import load_as_module, is_op_mode_function_name, is_show_function_name
 
 OP_MODE_PATH = directories['op_mode']
 SCHEMA_PATH = directories['api_schema']
