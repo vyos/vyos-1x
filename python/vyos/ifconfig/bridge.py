@@ -274,8 +274,24 @@ class BridgeIf(Interface):
                 self.del_port(member)
 
         # enable/disable Vlan Filter
-        vlan_filter = '1' if 'enable_vlan' in config else '0'
-        self.set_vlan_filter(vlan_filter)
+        tmp = '1' if 'enable_vlan' in config else '0'
+        self.set_vlan_filter(tmp)
+
+        # add VLAN interfaces to local 'parent' bridge to allow forwarding
+        if 'enable_vlan' in config:
+            for vlan in config.get('vif_remove', {}):
+                # Remove old VLANs from the bridge
+                cmd = f'bridge vlan del dev {self.ifname} vid {vlan} self'
+                self._cmd(cmd)
+
+            for vlan in config.get('vif', {}):
+                cmd = f'bridge vlan add dev {self.ifname} vid {vlan} self'
+                self._cmd(cmd)
+
+            # VLAN of bridge parent interface is always 1. VLAN 1 is the default
+            # VLAN for all unlabeled packets
+            cmd = f'bridge vlan add dev {self.ifname} vid 1 pvid untagged self'
+            self._cmd(cmd)
 
         tmp = dict_search('member.interface', config)
         if tmp:
