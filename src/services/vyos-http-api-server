@@ -678,6 +678,7 @@ if __name__ == '__main__':
         server_config = load_server_config()
     except Exception as err:
         logger.critical(f"Failed to load the HTTP API server config: {err}")
+        sys.exit(1)
 
     config_session = ConfigSession(os.getpid())
 
