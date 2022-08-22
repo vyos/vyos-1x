@@ -153,9 +153,9 @@ def apply(ethernet):
     else:
         e.update(ethernet)
         if 'eapol' in ethernet:
-            eapol_action='restart'
+            eapol_action='reload-or-restart'
 
-    call(f'systemctl {eapol_action} wpa_supplicant-macsec@{ifname}')
+    call(f'systemctl {eapol_action} wpa_supplicant-wired@{ifname}')
 
 if __name__ == '__main__':
     try:
