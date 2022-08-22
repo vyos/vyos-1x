@@ -63,20 +63,27 @@ class KeepalivedFifo:
 
     # load configuration
     def _config_load(self):
-        try:
-            base = ['high-availability', 'vrrp']
-            conf = ConfigTreeQuery()
-            if not conf.exists(base):
-                raise ValueError()
+        tries = 9
+        for i in range(tries):
+            try:
+                base = ['high-availability', 'vrrp']
+                conf = ConfigTreeQuery()
+                if not conf.exists(base):
+                    raise ValueError()
 
-            # Read VRRP configuration directly from CLI
-            self.vrrp_config_dict = conf.get_config_dict(base,
-                                     key_mangling=('-', '_'), get_first_key=True,
-                                     no_tag_node_value_mangle=True)
+                # Read VRRP configuration directly from CLI
+                self.vrrp_config_dict = conf.get_config_dict(base,
+                                         key_mangling=('-', '_'), get_first_key=True,
+                                         no_tag_node_value_mangle=True)
 
-            logger.debug(f'Loaded configuration: {self.vrrp_config_dict}')
-        except Exception as err:
-            logger.error(f'Unable to load configuration: {err}')
+                logger.debug(f'Loaded configuration: {self.vrrp_config_dict}')
+            except Exception as err:
+                if i < tries:
+                    time.sleep(0.5)
+                    continue
+                else:
+                    logger.error(f'Unable to load configuration: {err}')
+            break
 
     # run command
     def _run_command(self, command):
