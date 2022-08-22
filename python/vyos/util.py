@@ -694,6 +694,41 @@ def dict_search(path, dict_object):
         c = c.get(p, {})
     return c.get(parts[-1], None)
 
+def dict_search_args(dict_object, *path):
+    # Traverse dictionary using variable arguments
+    # Added due to above function not allowing for '.' in the key names
+    # Example: dict_search_args(some_dict, 'key', 'subkey', 'subsubkey', ...)
+    if not isinstance(dict_object, dict) or not path:
+        return None
+
+    for item in path:
+        if item not in dict_object:
+            return None
+        dict_object = dict_object[item]
+    return dict_object
+
+def dict_search_recursive(dict_object, key, path=[]):
+    """ Traverse a dictionary recurisvely and return the value of the key
+    we are looking for.
+
+    Thankfully copied from https://stackoverflow.com/a/19871956
+
+    Modified to yield optional path to found keys
+    """
+    if isinstance(dict_object, list):
+        for i in dict_object:
+            new_path = path + [i]
+            for x in dict_search_recursive(i, key, new_path):
+                yield x
+    elif isinstance(dict_object, dict):
+        if key in dict_object:
+            new_path = path + [key]
+            yield dict_object[key], new_path
+        for k, j in dict_object.items():
+            new_path = path + [k]
+            for x in dict_search_recursive(j, key, new_path):
+                yield x
+
 def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """
     if not os.path.exists(f'/sys/class/net/{interface}'):
