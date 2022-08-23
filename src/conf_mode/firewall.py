@@ -44,6 +44,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+conntrack_conf_script = '/usr/libexec/vyos/conf_mode/conntrack.py'
 policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
@@ -209,7 +210,7 @@ def get_config(config=None):
     default_values = defaults(base)
     firewall = dict_merge(default_values, firewall)
 
-    firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+    firewall['groups_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     firewall['interfaces'] = get_firewall_interfaces(conf)
     firewall['zone_policy'] = get_firewall_zones(conf)
 
@@ -504,6 +505,12 @@ def state_policy_rule_exists():
     search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
     return 'VYOS_STATE_POLICY' in search_str
 
+def resync_conntrack():
+    # Update conntrack as firewall groups were updated
+    tmp = run(conntrack_conf_script)
+    if tmp > 0:
+        Warning('Failed to re-apply conntrack configuration!')
+
 def resync_policy_route():
     # Update policy route as firewall groups were updated
     tmp = run(policy_route_conf_script)
@@ -550,7 +557,8 @@ def apply(firewall):
 
     apply_sysfs(firewall)
 
-    if firewall['policy_resync']:
+    if firewall['groups_resync']:
+        resync_conntrack()
         resync_policy_route()
 
     if firewall['geoip_updated']:

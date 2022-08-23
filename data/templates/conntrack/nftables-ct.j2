@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
 
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
 {% set nft_ct_ignore_name = 'VYOS_CT_IGNORE' %}
 {% set nft_ct_timeout_name = 'VYOS_CT_TIMEOUT' %}
 
@@ -7,8 +9,22 @@
 # any delta check obsolete
 flush chain raw {{ nft_ct_ignore_name }}
 flush chain raw {{ nft_ct_timeout_name }}
-
+{% if firewall_group is vyos_defined %}
+{%     if firewall_group.network_group is vyos_defined %}
+{%         for network_group, config in firewall_group.network_group.items() %}
+flush set raw N_{{ network_group }}
+{%         endfor %}
+{%     endif %}
+{%     if firewall_group.address_group is vyos_defined %}
+{%         for address_group, config in firewall_group.address_group.items() %}
+flush set raw A_{{ address_group }}
+{%         endfor %}
+{%     endif %}
+{% endif %}
 table raw {
+{% if firewall_group is vyos_defined and firewall_group.network_group is vyos_defined or firewall_group.address_group is vyos_defined %}
+{{ group_tmpl.groups(firewall_group, False) }}
+{% endif %}
     chain {{ nft_ct_ignore_name }} {
 {% if ignore.rule is vyos_defined %}
 {%     for rule, rule_config in ignore.rule.items() %}
@@ -23,11 +39,27 @@ table raw {
 {%         if rule_config.destination.address is vyos_defined %}
 {%             set nft_command = nft_command ~ ' ip daddr ' ~ rule_config.destination.address %}
 {%         endif %}
+{%         if rule_config.destination.group is vyos_defined %}
+{%             if rule_config.destination.group.network_group is vyos_defined %}
+{%                 set nft_command = nft_command ~ ' ip daddr ' ~ '@N_' ~ rule_config.destination.group.network_group %}
+{%             endif %}
+{%             if rule_config.destination.group.address_group is vyos_defined %}
+{%                 set nft_command = nft_command ~ ' ip daddr ' ~ '@A_' ~ rule_config.destination.group.address_group %}
+{%             endif %}
+{%         endif %}
 {%         if rule_config.destination.port is vyos_defined %}
 {%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' dport { ' ~ rule_config.destination.port ~ ' }' %}
 {%         endif %}
 {%         if rule_config.source.address is vyos_defined %}
 {%             set nft_command = nft_command ~ ' ip saddr ' ~ rule_config.source.address %}
+{%         endif %}
+{%         if rule_config.source.group is vyos_defined %}
+{%             if rule_config.source.group.network_group is vyos_defined %}
+{%                 set nft_command = nft_command ~ ' ip saddr ' ~ '@N_' ~ rule_config.source.group.network_group %}
+{%             endif %}
+{%             if rule_config.source.group.address_group is vyos_defined %}
+{%                 set nft_command = nft_command ~ ' ip saddr ' ~ '@A_' ~ rule_config.source.group.address_group %}
+{%             endif %}
 {%         endif %}
 {%         if rule_config.source.port is vyos_defined %}
 {%             set nft_command = nft_command ~ ' ' ~ rule_config.protocol ~ ' sport { ' ~ rule_config.source.port ~ ' }' %}

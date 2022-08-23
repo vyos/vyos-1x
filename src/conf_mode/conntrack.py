@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.firewall import find_nftables_rule
+from vyos.firewall import nft_init_set
 from vyos.firewall import remove_nftables_rule
 from vyos.util import cmd
 from vyos.util import run
@@ -88,6 +89,11 @@ def get_config(config=None):
         del default_values['timeout']['custom']
     conntrack = dict_merge(default_values, conntrack)
 
+    # Get firewall groups
+    firewall_group = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    if firewall_group:
+        conntrack['firewall_group'] = firewall_group
+
     return conntrack
 
 def verify(conntrack):
@@ -101,6 +107,17 @@ def verify(conntrack):
     return None
 
 def generate(conntrack):
+    # First init set, as we cannot flush in the template
+    # if set is not declared "flush set raw N_{{ network_group }}"
+    if 'firewall_group' in conntrack:
+        for group, group_config in conntrack['firewall_group'].items():
+            if group == 'address_group':
+                prefix = "A_"
+            else:
+                prefix = "N_"
+            for group_name, _ in group_config.items():
+                nft_init_set(group_name=prefix+group_name, table='raw', family='ip')
+
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
     render(nftables_ct_file, 'conntrack/nftables-ct.j2', conntrack)
