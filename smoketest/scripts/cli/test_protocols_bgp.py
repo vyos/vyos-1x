@@ -105,7 +105,8 @@ neighbor_config = {
         'pfx_list_out'     : prefix_list_out6,
         'no_send_comm_ext' : '',
         'peer_group'       : 'foo-bar_baz',
-        'graceful_rst_hlp' : ''
+        'graceful_rst_hlp' : '',
+        'disable_conn_chk' : '',
         },
 }
 
@@ -120,6 +121,7 @@ peer_group_config = {
         'shutdown'         : '',
         'cap_over'         : '',
         'ttl_security'     : '5',
+        'disable_conn_chk' : '',
         },
     'bar' : {
         'remote_as'        : '111',
@@ -251,6 +253,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} graceful-restart-disable', frrconfig)
         if 'graceful_rst_hlp' in peer_config:
             self.assertIn(f' neighbor {peer} graceful-restart-helper', frrconfig)
+        if 'disable_conn_chk' in peer_config:
+            self.assertIn(f' neighbor {peer} disable-connected-check', frrconfig)
+
 
     def test_bgp_01_simple(self):
         router_id = '127.0.0.1'
@@ -400,6 +405,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'disable'])
             if 'graceful_rst_hlp' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'graceful-restart', 'restart-helper'])
+            if 'disable_conn_chk' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'disable-connected-check'])
 
             # Conditional advertisement
             if 'advertise_map' in peer_config:
@@ -488,6 +495,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'disable'])
             if 'graceful_rst_hlp' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'restart-helper'])
+            if 'disable_conn_chk' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'disable-connected-check'])
 
             # Conditional advertisement
             if 'advertise_map' in config:
