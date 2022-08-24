@@ -7,6 +7,12 @@
           <help>Show conntrack tables entries</help>
         </properties>
         <children>
+          <node name="statistics">
+            <properties>
+              <help>Show conntrack statistics</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/conntrack.py show_statistics</command>
+          </node>
           <node name="table">
             <properties>
               <help>Show conntrack entries for table</help>
