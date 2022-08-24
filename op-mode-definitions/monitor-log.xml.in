@@ -224,6 +224,19 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
+          <node name="vpn">
+            <properties>
+              <help>Show log for Virtual Private Network (VPN)</help>
+            </properties>
+            <children>
+              <leafNode name="ipsec">
+                <properties>
+                  <help>Monitor last lines of IPSec</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

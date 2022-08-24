@@ -386,7 +386,7 @@
                 <properties>
                   <help>Show log for IPSec</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e charon</command>
+                <command>journalctl --no-hostname --boot --unit strongswan-starter.service</command>
               </leafNode>
               <leafNode name="l2tp">
                 <properties>
