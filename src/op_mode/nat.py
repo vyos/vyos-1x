@@ -27,7 +27,7 @@ from vyos.util import dict_search
 import vyos.opmode
 
 
-def _get_json_data(direction):
+def _get_json_data(direction, family):
     """
     Get NAT format JSON
     """
@@ -35,14 +35,15 @@ def _get_json_data(direction):
         chain = 'POSTROUTING'
     if direction == 'destination':
         chain = 'PREROUTING'
-    return cmd(f'sudo nft --json list chain ip nat {chain}')
+    family = 'ip6' if family == 'inet6' else 'ip'
+    return cmd(f'sudo nft --json list chain {family} nat {chain}')
 
 
-def _get_raw_data_rules(direction):
+def _get_raw_data_rules(direction, family):
     """Get interested rules
     :returns dict
     """
-    data = _get_json_data(direction)
+    data = _get_json_data(direction, family)
     data_dict = json.loads(data)
     rules = []
     for rule in data_dict['nftables']:
@@ -51,10 +52,12 @@ def _get_raw_data_rules(direction):
     return rules
 
 
-def _get_formatted_output_rules(data, direction):
+def _get_formatted_output_rules(data, direction, family):
     # Add default values before loop
     sport, dport, proto = 'any', 'any', 'any'
-    saddr, daddr = '0.0.0.0/0', '0.0.0.0/0'
+    saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+    daddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+
     data_entries = []
     for rule in data:
         if 'comment' in rule['rule']:
@@ -69,11 +72,13 @@ def _get_formatted_output_rules(data, direction):
                 if 'prefix' in match['right'] or 'set' in match['right']:
                     # Merge dict src/dst l3_l4 parameters
                     my_dict = {**match['left']['payload'], **match['right']}
+                    my_dict['op'] = match['op']
+                    op = '!' if my_dict.get('op') == '!=' else ''
                     proto = my_dict.get('protocol').upper()
                     if my_dict['field'] == 'saddr':
-                        saddr = f'{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
+                        saddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'daddr':
-                        daddr = f'{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
+                        daddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'sport':
                         # Port range or single port
                         if jmespath.search('set[*].range', my_dict):
@@ -96,8 +101,8 @@ def _get_formatted_output_rules(data, direction):
                     if jmespath.search('left.payload.field', match) == 'daddr':
                         daddr = match.get('right')
             else:
-                saddr = '0.0.0.0/0'
-                daddr = '0.0.0.0/0'
+                saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+                daddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
                 sport = 'any'
                 dport = 'any'
                 proto = 'any'
@@ -175,12 +180,12 @@ def _get_formatted_output_statistics(data, direction):
     return output
 
 
-def show_rules(raw: bool, direction: str):
-    nat_rules = _get_raw_data_rules(direction)
+def show_rules(raw: bool, direction: str, family: str):
+    nat_rules = _get_raw_data_rules(direction, family)
     if raw:
         return nat_rules
     else:
-        return _get_formatted_output_rules(nat_rules, direction)
+        return _get_formatted_output_rules(nat_rules, direction, family)
 
 
 def show_statistics(raw: bool, direction: str):

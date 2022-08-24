@@ -16,7 +16,7 @@
                 <properties>
                   <help>Show configured source NAT66 rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat66_rules.py --source</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet6</command>
               </node>
               <node name="statistics">
                 <properties>
@@ -58,7 +58,7 @@
                 <properties>
                   <help>Show configured destination NAT66 rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat66_rules.py --destination</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet6</command>
               </node>
               <node name="statistics">
                 <properties>
