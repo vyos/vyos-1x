@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,6 +29,8 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.util import check_port_availability
+from vyos.util import is_listen_port_bind_service
 from vyos.util import write_file
 
 from vyos import airbag
@@ -106,6 +108,31 @@ def verify(https):
             if not domains_found:
                 raise ConfigError("At least one 'virtual-host <id> server-name' "
                               "matching the 'certbot domain-name' is required.")
+
+    server_block_list = []
+
+    # organize by vhosts
+    vhost_dict = https.get('virtual-host', {})
+
+    if not vhost_dict:
+        # no specified virtual hosts (server blocks); use default
+        server_block_list.append(default_server_block)
+    else:
+        for vhost in list(vhost_dict):
+            server_block = deepcopy(default_server_block)
+            data = vhost_dict.get(vhost, {})
+            server_block['address'] = data.get('listen-address', '*')
+            server_block['port'] = data.get('listen-port', '443')
+            server_block_list.append(server_block)
+
+    for entry in server_block_list:
+        _address = entry.get('address')
+        _address = '0.0.0.0' if _address == '*' else _address
+        _port = entry.get('port')
+        proto = 'tcp'
+        if check_port_availability(_address, int(_port), proto) is not True and \
+                not is_listen_port_bind_service(int(_port), 'nginx'):
+            raise ConfigError(f'"{proto}" port "{_port}" is used by another service')
 
     verify_vrf(https)
     return None
