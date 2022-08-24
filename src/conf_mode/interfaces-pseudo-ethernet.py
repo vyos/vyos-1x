@@ -19,6 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -49,6 +50,10 @@ def get_config(config=None):
     if 'source_interface' in peth:
         peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
                                             peth['source_interface'])
+        # test if source-interface is maybe already used by another interface
+        tmp = is_source_interface(conf, peth['source_interface'], ['macsec'])
+        if tmp and tmp != peth['ifname']: peth.update({'is_source_interface' : tmp})
+
     return peth
 
 def verify(peth):
