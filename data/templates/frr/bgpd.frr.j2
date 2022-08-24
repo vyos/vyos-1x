@@ -38,6 +38,9 @@
 {% if config.disable_capability_negotiation is vyos_defined %}
  neighbor {{ neighbor }} dont-capability-negotiate
 {% endif %}
+{% if config.disable_connected_check is vyos_defined %}
+ neighbor {{ neighbor }} disable-connected-check
+{% endif %}
 {% if config.ebgp_multihop is vyos_defined %}
  neighbor {{ neighbor }} ebgp-multihop {{ config.ebgp_multihop }}
 {% endif %}
