@@ -88,7 +88,7 @@ class Section:
         raise ValueError(f'No type found for interface name: {name}')
 
     @classmethod
-    def _intf_under_section (cls,section=''):
+    def _intf_under_section (cls,section='',vlan=True):
         """
         return a generator with the name of the configured interface
         which are under a section
@@ -101,6 +101,9 @@ class Section:
                 continue
 
             if section and ifsection != section:
+                continue
+
+            if vlan == False and '.' in ifname:
                 continue
 
             yield ifname
@@ -135,13 +138,14 @@ class Section:
         return l
 
     @classmethod
-    def interfaces(cls, section=''):
+    def interfaces(cls, section='', vlan=True):
         """
         return a list of the name of the configured interface which are under a section
-        if no section is provided, then it returns all configured interfaces
+        if no section is provided, then it returns all configured interfaces.
+        If vlan is True, also Vlan subinterfaces will be returned
         """
 
-        return cls._sort_interfaces(cls._intf_under_section(section))
+        return cls._sort_interfaces(cls._intf_under_section(section, vlan))
 
     @classmethod
     def _intf_with_feature(cls, feature=''):
