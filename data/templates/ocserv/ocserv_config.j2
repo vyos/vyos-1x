@@ -93,9 +93,9 @@ split-dns = {{ tmp }}
 {%     endfor %}
 {% endif %}
 
-{% if authentication.groups is vyos_defined %}
+{% if authentication.group is vyos_defined %}
 # Group settings
-{%     for grp in authentication.groups %}
+{%     for grp in authentication.group %}
 select-group = {{ grp }}
 {%     endfor %}
 {% endif %}

@@ -50,9 +50,9 @@
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="groups">
+              <leafNode name="group">
                 <properties>
-                  <help>Groups that a client is allowed to select from. Maps to RADIUS Class attribute.</help>
+                  <help>Group that a client is allowed to select (from a list). Maps to RADIUS Class attribute.</help>
                   <valueHelp>
                     <format>txt</format>
                     <description>Group string. The group may be followed by a user-friendly name in brackets: group1[First Group]</description>
