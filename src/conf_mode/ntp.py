@@ -17,6 +17,7 @@
 import os
 
 from vyos.config import Config
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
@@ -40,6 +41,10 @@ def get_config(config=None):
 
     ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     ntp['config_file'] = config_file
+
+    tmp = is_node_changed(conf, base + ['vrf'])
+    if tmp: ntp.update({'restart_required': {}})
+
     return ntp
 
 def verify(ntp):
@@ -78,19 +83,25 @@ def generate(ntp):
     return None
 
 def apply(ntp):
+    systemd_service = 'ntp.service'
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     if not ntp:
         # NTP support is removed in the commit
-        call('systemctl stop ntp.service')
+        call(f'systemctl stop {systemd_service}')
         if os.path.exists(config_file):
             os.unlink(config_file)
         if os.path.isfile(systemd_override):
             os.unlink(systemd_override)
+        return
 
-    # Reload systemd manager configuration
-    call('systemctl daemon-reload')
-    if ntp:
-        call('systemctl restart ntp.service')
+    # we need to restart the service if e.g. the VRF name changed
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in ntp:
+        systemd_action = 'restart'
 
+    call(f'systemctl {systemd_action} {systemd_service}')
     return None
 
 if __name__ == '__main__':
