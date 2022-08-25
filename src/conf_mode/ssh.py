@@ -22,6 +22,7 @@ from syslog import LOG_INFO
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.util import call
 from vyos.template import render
@@ -50,6 +51,10 @@ def get_config(config=None):
         return None
 
     ssh = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+
+    tmp = is_node_changed(conf, base + ['vrf'])
+    if tmp: ssh.update({'restart_required': {}})
+
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
@@ -104,17 +109,25 @@ def generate(ssh):
     return None
 
 def apply(ssh):
+    systemd_service_ssh = 'ssh.service'
+    systemd_service_sshguard = 'sshguard.service'
     if not ssh:
         # SSH access is removed in the commit
-        call('systemctl stop ssh.service')
-        call('systemctl stop sshguard.service')
+        call(f'systemctl stop {systemd_service_ssh}')
+        call(f'systemctl stop {systemd_service_sshguard}')
         return None
-    if 'dynamic_protection' not in ssh:
-        call('systemctl stop sshguard.service')
-    else:
-        call('systemctl restart sshguard.service')
 
-    call('systemctl restart ssh.service')
+    if 'dynamic_protection' not in ssh:
+        call(f'systemctl stop {systemd_service_sshguard}')
+    else:
+        call(f'systemctl reload-or-restart {systemd_service_sshguard}')
+
+    # we need to restart the service if e.g. the VRF name changed
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in ssh:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {systemd_service_ssh}')
     return None
 
 if __name__ == '__main__':
