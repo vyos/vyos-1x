@@ -188,8 +188,8 @@ def show_rules(raw: bool, direction: str, family: str):
         return _get_formatted_output_rules(nat_rules, direction, family)
 
 
-def show_statistics(raw: bool, direction: str):
-    nat_statistics = _get_raw_data_rules(direction)
+def show_statistics(raw: bool, direction: str, family: str):
+    nat_statistics = _get_raw_data_rules(direction, family)
     if raw:
         return nat_statistics
     else:
