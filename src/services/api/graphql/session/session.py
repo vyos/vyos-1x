@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
 from vyos.template import render
+from vyos.opmode import Error as OpModeError
 
 from api.graphql.utils.util import load_op_mode_as_module, split_compound_op_mode_name
 
@@ -177,10 +178,10 @@ class Session:
 
         mod = load_op_mode_as_module(f'{scriptname}')
         func = getattr(mod, func_name)
-        if len(list(data)) > 0:
+        try:
             res = func(True, **data)
-        else:
-            res = func(True)
+        except OpModeError as e:
+            raise e
 
         return res
 
@@ -199,9 +200,9 @@ class Session:
 
         mod = load_op_mode_as_module(f'{scriptname}')
         func = getattr(mod, func_name)
-        if len(list(data)) > 0:
+        try:
             res = func(**data)
-        else:
-            res = func()
+        except OpModeError as e:
+            raise e
 
         return res
