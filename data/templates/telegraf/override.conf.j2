@@ -1,0 +1,15 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+[Unit]
+After=
+After=vyos-router.service
+ConditionPathExists=/run/telegraf/telegraf.conf
+
+[Service]
+ExecStart=
+ExecStart={{ vrf_command }}/usr/bin/telegraf --config /run/telegraf/telegraf.conf --config-directory /etc/telegraf/telegraf.d --pidfile /run/telegraf/telegraf.pid
+PIDFile=/run/telegraf/telegraf.pid
+EnvironmentFile=
+Environment=INFLUX_TOKEN={{ influxdb.authentication.token }}
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_SYS_ADMIN CAP_BPF CAP_DAC_OVERRIDE
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+
