@@ -59,6 +59,10 @@ vpn {
             }
             mode local
         }
+        listen-ports {
+            tcp 4443
+            udp 4443
+        }
         network-settings {
             client-ip-settings {
                 subnet 192.168.160.0/24
