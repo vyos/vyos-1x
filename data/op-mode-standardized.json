@@ -8,6 +8,7 @@
 "neighbor.py",
 "openconnect.py",
 "route.py",
+"ipsec.py",
 "version.py",
 "vrf.py"
 ]
