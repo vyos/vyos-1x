@@ -10,7 +10,7 @@
         <children>
           <node name="telegraf" owner="${vyos_conf_scripts_dir}/service_monitoring_telegraf.py">
             <properties>
-              <help>Telegraf monitoring</help>
+              <help>Telegraf metric collector</help>
             </properties>
             <children>
               <node name="influxdb">
@@ -228,27 +228,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="listen-address">
-                    <properties>
-                      <help>Local IP addresses to listen on</help>
-                      <completionHelp>
-                        <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>ipv4</format>
-                        <description>IPv4 address to listen for incoming connections</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>ipv6</format>
-                        <description>IPv6 address to listen for incoming connections</description>
-                      </valueHelp>
-                      <constraint>
-                        <validator name="ipv4-address"/>
-                        <validator name="ipv6-address"/>
-                        <validator name="ipv6-link-local"/>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/listen-address.xml.i>
                   <leafNode name="metric-version">
                     <properties>
                       <help>Metric version control mapping from Telegraf to Prometheus format</help>
@@ -291,19 +271,7 @@
                       </leafNode>
                     </children>
                   </node>
-                  <leafNode name="url">
-                    <properties>
-                      <help>Remote URL</help>
-                      <valueHelp>
-                        <format>url</format>
-                        <description>Remote URL to Splunk collector</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>^(http(s?):\/\/.*):(\d*)\/?(.*)</regex>
-                      </constraint>
-                      <constraintErrorMessage>Incorrect URL format</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
+                  #include <include/monitoring/url.xml.i>
                 </children>
               </node>
               #include <include/interface/vrf.xml.i>
