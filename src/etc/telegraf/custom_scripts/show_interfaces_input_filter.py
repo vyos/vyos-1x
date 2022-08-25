@@ -5,20 +5,6 @@ from vyos.ifconfig import Interface
 
 import time
 
-def get_interfaces(type='', vlan=True):
-    """
-    Get interfaces:
-    ['dum0', 'eth0', 'eth1', 'eth1.5', 'lo', 'tun0']
-    """
-    interfaces = []
-    ifaces = Section.interfaces(type)
-    for iface in ifaces:
-        if vlan == False and '.' in iface:
-            continue
-        interfaces.append(iface)
-
-    return interfaces
-
 def get_interface_addresses(iface, link_local_v6=False):
     """
     Get IP and IPv6 addresses from interface in one string
@@ -77,7 +63,7 @@ def get_interface_oper_state(iface):
 
     return oper_state
 
-interfaces = get_interfaces()
+interfaces = Section.interfaces('')
 
 for iface in interfaces:
     print(f'show_interfaces,interface={iface} '

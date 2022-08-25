@@ -40,23 +40,6 @@ custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
 systemd_override = '/etc/systemd/system/telegraf.service.d/10-override.conf'
 
-def get_interfaces(type='', vlan=True):
-    """
-    get_interfaces()
-    ['dum0', 'eth0', 'eth1', 'eth1.5', 'lo', 'tun0']
-
-    get_interfaces("dummy")
-    ['dum0']
-    """
-    interfaces = []
-    ifaces = Section.interfaces(type)
-    for iface in ifaces:
-        if vlan == False and '.' in iface:
-            continue
-        interfaces.append(iface)
-
-    return interfaces
-
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
     nft = cmd('nft --json list table ip filter')
@@ -69,7 +52,6 @@ def get_nft_filter_chains():
             chain_list.append(chain)
 
     return chain_list
-
 
 def get_config(config=None):
     if config:
@@ -93,7 +75,7 @@ def get_config(config=None):
     monitoring = dict_merge(default_values, monitoring)
 
     monitoring['custom_scripts_dir'] = custom_scripts_dir
-    monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
+    monitoring['interfaces_ethernet'] = Section.interfaces('ethernet', vlan=False)
     monitoring['nft_chains'] = get_nft_filter_chains()
 
     # Redefine azure group-metrics 'single-table' and 'table-per-metric'
