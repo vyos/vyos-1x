@@ -7,6 +7,17 @@
 {% set src_prefix  = 'ip6 saddr ' ~ config.source.prefix.replace('!','!= ') if config.source.prefix is vyos_defined %}
 {% set source_address  = 'ip6 saddr ' ~ config.source.address.replace('!','!= ') if config.source.address is vyos_defined %}
 {% set dest_address  = 'ip6 daddr ' ~ config.destination.address.replace('!','!= ') if config.destination.address is vyos_defined %}
+{# Port #}
+{% if config.source.port is vyos_defined and config.source.port.startswith('!') %}
+{%     set src_port  = 'sport != { ' ~ config.source.port.replace('!','') ~ ' }' %}
+{% else %}
+{%     set src_port  = 'sport { ' ~ config.source.port ~ ' }' if config.source.port is vyos_defined %}
+{% endif %}
+{% if config.destination.port is vyos_defined and config.destination.port.startswith('!') %}
+{%     set dst_port  = 'dport != { ' ~ config.destination.port.replace('!','') ~ ' }' %}
+{% else %}
+{%     set dst_port  = 'dport { ' ~ config.destination.port ~ ' }' if config.destination.port is vyos_defined %}
+{% endif %}
 {% if chain is vyos_defined('PREROUTING') %}
 {%     set comment   = 'DST-NAT66-' ~ rule %}
 {%     set base_log  = '[NAT66-DST-' ~ rule %}
@@ -36,12 +47,25 @@
 {%     endif   %}
 {%     set interface = ' oifname "' ~ config.outbound_interface ~ '"' if config.outbound_interface is vyos_defined else '' %}
 {% endif %}
+{% set trns_port = ':' ~ config.translation.port if config.translation.port is vyos_defined %}
+{# protocol has a default value thus it is always present #}
+{% if config.protocol is vyos_defined('tcp_udp') %}
+{%     set protocol  = 'tcp' %}
+{%     set comment   = comment ~ ' tcp_udp' %}
+{% else %}
+{%     set protocol  = config.protocol %}
+{% endif %}
 {% if config.log is vyos_defined %}
 {%     if config.translation.address is vyos_defined('masquerade') %}
 {%         set log = base_log ~ '-MASQ]' %}
 {%     else %}
 {%         set log = base_log ~ ']' %}
 {%     endif %}
+{% endif %}
+{% if config.exclude is vyos_defined %}
+{#     rule has been marked as 'exclude' thus we simply return here #}
+{%     set trns_addr = 'return' %}
+{%     set trns_port = '' %}
 {% endif %}
 {% set output = 'add rule ip6 nat ' ~ chain ~ interface %}
 {# Count packets #}
@@ -54,11 +78,17 @@
 {% if src_prefix is vyos_defined %}
 {%     set output = output ~ ' ' ~ src_prefix %}
 {% endif %}
+{% if dst_port is vyos_defined %}
+{%     set output = output ~ ' ' ~ protocol ~ ' ' ~ dst_port %}
+{% endif %}
 {% if dst_prefix is vyos_defined %}
 {%     set output = output ~ ' ' ~ dst_prefix %}
 {% endif %}
 {% if source_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ source_address %}
+{% endif %}
+{% if src_port is vyos_defined %}
+{%     set output = output ~ ' ' ~ protocol ~ ' ' ~ src_port %}
 {% endif %}
 {% if dest_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ dest_address %}
@@ -70,11 +100,22 @@
 {% if trns_address is vyos_defined %}
 {%     set output = output ~ ' ' ~ trns_address %}
 {% endif %}
+{% if trns_port is vyos_defined %}
+{#     Do not add a whitespace here, translation port must be directly added after IP address #}
+{#     e.g. 2001:db8::1:3389                                                                   #}
+{%     set output = output ~ trns_port %}
+{% endif %}
 {% if comment is vyos_defined %}
 {%     set output = output ~ ' comment "' ~ comment ~ '"' %}
 {% endif %}
 {{ log_output if log_output is vyos_defined }}
 {{ output }}
+{# Special handling if protocol is tcp_udp, we must repeat the entire rule with udp as protocol #}
+{% if config.protocol is vyos_defined('tcp_udp') %}
+{#     Beware of trailing whitespace, without it the comment tcp_udp will be changed to udp_udp #}
+{{ log_output | replace('tcp ', 'udp ') if log_output is vyos_defined }}
+{{ output | replace('tcp ', 'udp ') }}
+{% endif %}
 {% endmacro %}
 
 # Start with clean NAT table
