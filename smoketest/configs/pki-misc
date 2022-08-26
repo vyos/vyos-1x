@@ -74,26 +74,6 @@ vpn {
             key-file /config/auth/ovpn_test_server.key
         }
     }
-    sstp {
-        authentication {
-            local-users {
-                username test {
-                    password test
-                }
-            }
-            mode local
-            protocols mschap-v2
-        }
-        client-ip-pool {
-            subnet 192.168.170.0/24
-        }
-        gateway-address 192.168.150.1
-        ssl {
-            ca-cert-file /config/auth/ovpn_test_ca.pem
-            cert-file /config/auth/ovpn_test_server.pem
-            key-file /config/auth/ovpn_test_server.key
-        }
-    }
 }
 
 
