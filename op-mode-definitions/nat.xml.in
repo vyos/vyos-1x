@@ -45,7 +45,7 @@
                     <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=source</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet</command>
               </node>
             </children>
           </node>
@@ -87,7 +87,7 @@
                     <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination --verbose</command>
                   </node>
                 </children>
-                <command>${vyos_op_scripts_dir}/show_nat_translations.py --type=destination</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet</command>
               </node>
             </children>
           </node>
