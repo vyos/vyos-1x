@@ -81,7 +81,13 @@ def vici_ike_terminate(list_ikeid: list[str]) -> bool:
         session = vici.Session()
         for ikeid in list_ikeid:
             logger.info(f'Terminating IKE SA with id {ikeid}')
-            session.terminate({'ike-id': ikeid, 'timeout': '-1'})
+            session_generator = session.terminate(
+                {'ike-id': ikeid, 'timeout': '-1'})
+            # a dummy `for` loop is required because of requirements
+            # from vici. Without a full iteration on the output, the
+            # command to vici may not be executed completely
+            for _ in session_generator:
+                pass
         return True
     except Exception as err:
         logger.error(f'Failed to terminate SA for IKE ids {list_ikeid}: {err}')
@@ -175,13 +181,18 @@ def vici_initiate(conn: str, child_sa: str, src_addr: str,
         f'src_addr: {src_addr}, dst_addr: {dest_addr}')
     try:
         session = vici.Session()
-        session.initiate({
+        session_generator = session.initiate({
             'ike': conn,
             'child': child_sa,
             'timeout': '-1',
             'my-host': src_addr,
             'other-host': dest_addr
         })
+        # a dummy `for` loop is required because of requirements
+        # from vici. Without a full iteration on the output, the
+        # command to vici may not be executed completely
+        for _ in session_generator:
+            pass
         return True
     except Exception as err:
         logger.error(f'Unable to initiate connection {err}')
