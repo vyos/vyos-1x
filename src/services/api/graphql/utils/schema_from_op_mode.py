@@ -21,7 +21,7 @@
 import os
 import json
 import typing
-from inspect import signature, getmembers, isfunction
+from inspect import signature, getmembers, isfunction, isclass, getmro
 from jinja2 import Template
 
 from vyos.defaults import directories
@@ -35,6 +35,7 @@ SCHEMA_PATH = directories['api_schema']
 DATA_DIR = directories['data']
 
 op_mode_include_file = os.path.join(DATA_DIR, 'op-mode-standardized.json')
+op_mode_error_schema = 'op_mode_error.graphql'
 
 schema_data: dict = {'schema_name': '',
                      'schema_fields': []}
@@ -53,6 +54,7 @@ type {{ schema_name }} {
 
 type {{ schema_name }}Result {
     data: {{ schema_name }}
+    op_mode_error: OpModeError
     success: Boolean!
     errors: [String]
 }
@@ -76,6 +78,7 @@ type {{ schema_name }} {
 
 type {{ schema_name }}Result {
     data: {{ schema_name }}
+    op_mode_error: OpModeError
     success: Boolean!
     errors: [String]
 }
@@ -83,6 +86,21 @@ type {{ schema_name }}Result {
 extend type Mutation {
     {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @genopmutation
 }
+"""
+
+error_template = """
+interface OpModeError {
+    name: String!
+    message: String!
+    vyos_code: Int!
+}
+{% for name in error_names %}
+type {{ name }} implements OpModeError {
+    name: String!
+    message: String!
+    vyos_code: Int!
+}
+{%- endfor %}
 """
 
 def _snake_to_pascal_case(name: str) -> str:
@@ -136,7 +154,30 @@ def create_schema(func_name: str, base_name: str, func: callable) -> str:
 
     return res
 
+def create_error_schema():
+    from vyos import opmode
+
+    e = Exception
+    err_types = getmembers(opmode, isclass)
+    err_types = [k for k in err_types if issubclass(k[1], e)]
+    # drop base class, to be replaced by interface type. Find the class
+    # programmatically, in case the base class name changes.
+    for i in range(len(err_types)):
+        if err_types[i][1] in getmro(err_types[i-1][1]):
+            del err_types[i]
+            break
+    err_names = [k[0] for k in err_types]
+    error_data = {'error_names': err_names}
+    j2_template = Template(error_template)
+    res = j2_template.render(error_data)
+
+    return res
+
 def generate_op_mode_definitions():
+    out = create_error_schema()
+    with open(f'{SCHEMA_PATH}/{op_mode_error_schema}', 'w') as f:
+        f.write(out)
+
     with open(op_mode_include_file) as f:
         op_mode_files = json.load(f)
 
