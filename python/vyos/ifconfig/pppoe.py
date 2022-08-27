@@ -1,4 +1,4 @@
-# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
+from vyos.validate import assert_range
 from vyos.util import get_interface_config
 
 @Interface.register
@@ -26,6 +27,21 @@ class PPPoEIf(Interface):
             'prefixes': ['pppoe', ],
         },
     }
+
+    _sysfs_get = {
+        **Interface._sysfs_get,**{
+            'accept_ra_defrtr': {
+                'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra_defrtr',
+            }
+        }
+    }
+
+    _sysfs_set = {**Interface._sysfs_set, **{
+        'accept_ra_defrtr': {
+            'validate': lambda value: assert_range(value, 0, 2),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra_defrtr',
+        },
+    }}
 
     def _remove_routes(self, vrf=None):
         # Always delete default routes when interface is removed
@@ -70,6 +86,21 @@ class PPPoEIf(Interface):
         """ Get a synthetic MAC address. """
         return self.get_mac_synthetic()
 
+    def set_accept_ra_defrtr(self, enable):
+        """
+        Learn default router in Router Advertisement.
+        1: enabled
+        0: disable
+
+        Example:
+        >>> from vyos.ifconfig import PPPoEIf
+        >>> PPPoEIf('pppoe1').set_accept_ra_defrtr(0)
+        """
+        tmp = self.get_interface('accept_ra_defrtr')
+        if tmp == enable:
+            return None
+        self.set_interface('accept_ra_defrtr', enable)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -106,6 +137,10 @@ class PPPoEIf(Interface):
         if 'vrf' in config:
             tmp = config['vrf']
             vrf = f'-c "vrf {tmp}"'
+
+        # learn default router in Router Advertisement.
+        tmp = '0' if 'no_default_route' in config else '1'
+        self.set_accept_ra_defrtr(tmp)
 
         if 'no_default_route' not in config:
             # Set default route(s) pointing to PPPoE interface
