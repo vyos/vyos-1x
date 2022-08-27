@@ -1,0 +1,29 @@
+#!/usr/bin/python3
+
+from sys import argv
+from sys import exit
+import re
+
+if __name__ == '__main__':
+    if len(argv)>1:
+        lengths = argv[1].split(",")
+
+        for length in lengths:
+            if length and length[0] == '!':
+                length = length[1:]
+            if re.match('^[0-9]{1,5}-[0-9]{1,5}$', length):
+                length_1, length_2 = length.split('-')
+                if int(length_1) not in range(0, 65536) or int(length_2) not in range(0, 65536):
+                    print(f'Error: {length} is not a valid length range')
+                    exit(1)
+                if int(length_1) > int(length_2):
+                    print(f'Error: {length} is not a valid length range')
+                    exit(1)
+            elif length.isnumeric():
+                if int(length) not in range(0, 65536):
+                    print(f'Error: {length} is not a valid length value')
+                    exit(1)
+    else:
+        exit(2)
+
+    exit(0)
