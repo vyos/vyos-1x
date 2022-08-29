@@ -236,7 +236,7 @@ class EthernetIf(Interface):
         enabled, fixed = self.ethtool.get_large_receive_offload()
         if enabled != state:
             if not fixed:
-                return self.set_interface('gro', 'on' if state else 'off')
+                return self.set_interface('lro', 'on' if state else 'off')
             else:
                 print('Adapter does not support changing large-receive-offload settings!')
         return False
@@ -273,7 +273,7 @@ class EthernetIf(Interface):
         enabled, fixed = self.ethtool.get_scatter_gather()
         if enabled != state:
             if not fixed:
-                return self.set_interface('gro', 'on' if state else 'off')
+                return self.set_interface('sg', 'on' if state else 'off')
             else:
                 print('Adapter does not support changing scatter-gather settings!')
         return False
@@ -293,7 +293,7 @@ class EthernetIf(Interface):
         enabled, fixed = self.ethtool.get_tcp_segmentation_offload()
         if enabled != state:
             if not fixed:
-                return self.set_interface('gro', 'on' if state else 'off')
+                return self.set_interface('tso', 'on' if state else 'off')
             else:
                 print('Adapter does not support changing tcp-segmentation-offload settings!')
         return False
@@ -359,5 +359,5 @@ class EthernetIf(Interface):
             for rx_tx, size in config['ring_buffer'].items():
                 self.set_ring_buffer(rx_tx, size)
 
-        # call base class first
+        # call base class last
         super().update(config)
