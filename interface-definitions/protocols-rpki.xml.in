@@ -12,15 +12,15 @@
               <help>RPKI cache server address</help>
               <valueHelp>
                 <format>ipv4</format>
-                <description>IP address of NTP server</description>
+                <description>IP address of RPKI server</description>
               </valueHelp>
               <valueHelp>
                 <format>ipv6</format>
-                <description>IPv6 address of NTP server</description>
+                <description>IPv6 address of RPKI server</description>
               </valueHelp>
               <valueHelp>
                 <format>hostname</format>
-                <description>Fully qualified domain name of NTP server</description>
+                <description>Fully qualified domain name of RPKI server</description>
               </valueHelp>
               <constraint>
                 <validator name="ipv4-address"/>
