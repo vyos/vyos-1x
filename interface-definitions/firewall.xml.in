@@ -342,8 +342,8 @@
           </constraint>
         </properties>
         <children>
-          #include <include/firewall/name-default-action.xml.i>
-          #include <include/firewall/name-default-log.xml.i>
+          #include <include/firewall/default-action.xml.i>
+          #include <include/firewall/enable-default-log.xml.i>
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
@@ -530,8 +530,8 @@
           </constraint>
         </properties>
         <children>
-          #include <include/firewall/name-default-action.xml.i>
-          #include <include/firewall/name-default-log.xml.i>
+          #include <include/firewall/default-action.xml.i>
+          #include <include/firewall/enable-default-log.xml.i>
           #include <include/generic-description.xml.i>
           <tagNode name="rule">
             <properties>
