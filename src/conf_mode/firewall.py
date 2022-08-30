@@ -417,11 +417,6 @@ def resync_policy_route():
         Warning(f'Failed to re-apply policy route configuration! {out}')
 
 def apply(firewall):
-    if 'first_install' in firewall:
-        run('nfct helper add rpc inet tcp')
-        run('nfct helper add rpc inet udp')
-        run('nfct helper add tns inet tcp')
-    
     install_result, output = rc_cmd(f'nft -f {nftables_conf}')
     if install_result == 1:
         raise ConfigError(f'Failed to apply firewall: {output}')
