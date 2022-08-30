@@ -21,6 +21,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdiff import get_config_diff
 from vyos.template import render
 from vyos.util import cmd
 from vyos.util import dict_search_args
@@ -30,7 +31,9 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+firewall_conf_script = '/usr/libexec/vyos/conf_mode/firewall.py'
 nftables_conf = '/run/nftables_zone.conf'
+nftables6_conf = '/run/nftables_zone6.conf'
 
 def get_config(config=None):
     if config:
@@ -46,6 +49,9 @@ def get_config(config=None):
                                                    key_mangling=('-', '_'),
                                                    get_first_key=True,
                                                    no_tag_node_value_mangle=True)
+
+    diff = get_config_diff(conf)
+    zone_policy['firewall_changed'] = diff.is_node_changed(['firewall'])
 
     if 'zone' in zone_policy:
         # We have gathered the dict representation of the CLI, but there are default
@@ -111,20 +117,12 @@ def verify(zone_policy):
                         raise ConfigError(f'Zone "{zone}" refers to a non-existent or deleted zone "{from_zone}"')
 
                     v4_name = dict_search_args(from_conf, 'firewall', 'name')
-                    if v4_name:
-                        if 'name' not in zone_policy['firewall']:
-                            raise ConfigError(f'Firewall name "{v4_name}" does not exist')
-
-                        if not dict_search_args(zone_policy, 'firewall', 'name', v4_name):
-                            raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+                    if v4_name and not dict_search_args(zone_policy, 'firewall', 'name', v4_name):
+                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
 
                     v6_name = dict_search_args(from_conf, 'firewall', 'v6_name')
-                    if v6_name:
-                        if 'ipv6_name' not in zone_policy['firewall']:
-                            raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
-
-                        if not dict_search_args(zone_policy, 'firewall', 'ipv6_name', v6_name):
-                            raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+                    if v6_name and not dict_search_args(zone_policy, 'firewall', 'ipv6_name', v6_name):
+                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
 
     return None
 
@@ -152,37 +150,11 @@ def get_local_from(zone_policy, local_zone_name):
             out[zone] = zone_conf['from'][local_zone_name]
     return out
 
-def cleanup_commands():
-    commands = []
-    for table in ['ip filter', 'ip6 filter']:
-        json_str = cmd(f'nft -t -j list table {table}')
-        obj = loads(json_str)
-        if 'nftables' not in obj:
-            continue
-        for item in obj['nftables']:
-            if 'rule' in item:
-                chain = item['rule']['chain']
-                handle = item['rule']['handle']
-                if 'expr' not in item['rule']:
-                    continue
-                for expr in item['rule']['expr']:
-                    target = dict_search_args(expr, 'jump', 'target')
-                    if not target:
-                        continue
-                    if target.startswith("VZONE") or target.startswith("VYOS_STATE_POLICY"):
-                        commands.append(f'delete rule {table} {chain} handle {handle}')
-        for item in obj['nftables']:
-            if 'chain' in item:
-                if item['chain']['name'].startswith("VZONE"):
-                    chain = item['chain']['name']
-                    commands.append(f'delete chain {table} {chain}')
-    return commands
-
 def generate(zone_policy):
     data = zone_policy or {}
 
-    if os.path.exists(nftables_conf): # Check to see if we've run before
-        data['cleanup_commands'] = cleanup_commands()
+    if not os.path.exists(nftables_conf):
+        data['first_install'] = True
 
     if 'zone' in data:
         for zone, zone_conf in data['zone'].items():
@@ -193,12 +165,19 @@ def generate(zone_policy):
                 zone_conf['from_local'] = get_local_from(data, zone)
 
     render(nftables_conf, 'zone_policy/nftables.j2', data)
+    render(nftables6_conf, 'zone_policy/nftables6.j2', data)
     return None
 
+def update_firewall():
+    # Update firewall to refresh nftables
+    tmp = run(firewall_conf_script)
+    if tmp > 0:
+        Warning('Failed to update firewall configuration!')
+
 def apply(zone_policy):
-    install_result = run(f'nft -f {nftables_conf}')
-    if install_result != 0:
-        raise ConfigError('Failed to apply zone-policy')
+    # If firewall will not update in this commit, we need to call the conf script
+    if not zone_policy['firewall_changed']:
+        update_firewall()
 
     return None
 

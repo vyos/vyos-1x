@@ -3,7 +3,7 @@
   <node name="zone-policy" owner="${vyos_conf_scripts_dir}/zone_policy.py">
     <properties>
       <help>Configure zone-policy</help>
-      <priority>250</priority>
+      <priority>198</priority>
     </properties>
     <children>
       <tagNode name="zone">

@@ -314,6 +314,40 @@
           </tagNode>
         </children>
       </node>
+      <tagNode name="interface">
+        <properties>
+          <help>Interface name</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <node name="in">
+            <properties>
+              <help>Forwarded packets on inbound interface</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+          <node name="out">
+            <properties>
+              <help>Forwarded packets on outbound interface</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+          <node name="local">
+            <properties>
+              <help>Packets destined for this router</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+        </children>
+      </tagNode>
       <leafNode name="ip-src-route">
         <properties>
           <help>Policy for handling IPv4 packets with source route option</help>

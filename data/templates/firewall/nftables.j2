@@ -2,24 +2,46 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-{% if cleanup_commands is vyos_defined %}
-{%     for command in cleanup_commands %}
-{{ command }}
-{%     endfor %}
+{% if first_install is not vyos_defined %}
+delete table ip vyos_filter
 {% endif %}
-
 table ip filter {
-{% if first_install is vyos_defined %}
     chain VYOS_FW_FORWARD {
         type filter hook forward priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.in is vyos_defined and ifconf.in.name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME_{{ ifconf.in.name }}
+{%         endif %}
+{%         if ifconf.out is vyos_defined and ifconf.out.name is vyos_defined %}
+        oifname {{ ifname }} counter jump NAME_{{ ifconf.out.name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_FW_LOCAL {
         type filter hook input priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.local is vyos_defined and ifconf.local.name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME_{{ ifconf.local.name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_FW_OUTPUT {
         type filter hook output priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_POST_FW {
@@ -29,7 +51,6 @@ table ip filter {
         type filter hook prerouting priority -450; policy accept;
         ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
     }
-{% endif %}
 {% if name is vyos_defined %}
 {%     set ns = namespace(sets=[]) %}
 {%     for name_text, conf in name.items() %}
@@ -86,20 +107,51 @@ table ip filter {
         return
     }
 {% endif %}
+{% if zone_conf is vyos_defined %}
+    include "{{ zone_conf }}"
+{% endif %}
 }
 
+{% if first_install is not vyos_defined %}
+delete table ip6 vyos_filter
+{% endif %}
 table ip6 filter {
-{% if first_install is vyos_defined %}
     chain VYOS_FW6_FORWARD {
         type filter hook forward priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.in is vyos_defined and ifconf.in.ipv6_name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME6_{{ ifconf.in.ipv6_name }}
+{%         endif %}
+{%         if ifconf.out is vyos_defined and ifconf.out.ipv6_name is vyos_defined %}
+        oifname {{ ifname }} counter jump NAME6_{{ ifconf.out.ipv6_name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_FW6_LOCAL {
         type filter hook input priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.local is vyos_defined and ifconf.local.ipv6_name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME6_{{ ifconf.local.ipv6_name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_FW6_OUTPUT {
         type filter hook output priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_POST_FW6 {
@@ -109,7 +161,6 @@ table ip6 filter {
         type filter hook prerouting priority -450; policy accept;
         exthdr frag exists meta mark set 0xffff1 return
     }
-{% endif %}
 {% if ipv6_name is vyos_defined %}
 {%     set ns = namespace(sets=[]) %}
 {%     for name_text, conf in ipv6_name.items() %}
@@ -157,6 +208,9 @@ table ip6 filter {
 {%     endif %}
         return
     }
+{% endif %}
+{% if zone6_conf is vyos_defined %}
+    include "{{ zone6_conf }}"
 {% endif %}
 }
 

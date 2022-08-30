@@ -26,6 +26,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
+# from vyos.configverify import verify_interface_exists
 from vyos.firewall import geoip_update
 from vyos.firewall import get_ips_domains_dict
 from vyos.firewall import nft_add_set_elements
@@ -38,7 +39,7 @@ from vyos.util import cmd
 from vyos.util import dict_search_args
 from vyos.util import dict_search_recursive
 from vyos.util import process_named_running
-from vyos.util import run
+from vyos.util import rc_cmd
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -47,7 +48,9 @@ airbag.enable()
 policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
-nftables_defines_conf = '/run/nftables_defines.conf'
+
+nftables_zone_conf = '/run/nftables_zone.conf'
+nftables6_zone_conf = '/run/nftables_zone6.conf'
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
@@ -63,28 +66,6 @@ sysfs_config = {
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
 }
 
-NAME_PREFIX = 'NAME_'
-NAME6_PREFIX = 'NAME6_'
-
-preserve_chains = [
-    'INPUT',
-    'FORWARD',
-    'OUTPUT',
-    'VYOS_FW_FORWARD',
-    'VYOS_FW_LOCAL',
-    'VYOS_FW_OUTPUT',
-    'VYOS_POST_FW',
-    'VYOS_FRAG_MARK',
-    'VYOS_FW6_FORWARD',
-    'VYOS_FW6_LOCAL',
-    'VYOS_FW6_OUTPUT',
-    'VYOS_POST_FW6',
-    'VYOS_FRAG6_MARK'
-]
-
-nft_iface_chains = ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']
-nft6_iface_chains = ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']
-
 valid_groups = [
     'address_group',
     'domain_group',
@@ -97,16 +78,6 @@ nested_group_types = [
     'port_group', 'ipv6_address_group', 'ipv6_network_group'
 ]
 
-group_set_prefix = {
-    'A_': 'address_group',
-    'A6_': 'ipv6_address_group',
-    'D_': 'domain_group',
-    'M_': 'mac_group',
-    'N_': 'network_group',
-    'N6_': 'ipv6_network_group',
-    'P_': 'port_group'
-}
-
 snmp_change_type = {
     'unknown': 0,
     'add': 1,
@@ -116,22 +87,6 @@ snmp_change_type = {
 snmp_event_source = 1
 snmp_trap_mib = 'VYATTA-TRAP-MIB'
 snmp_trap_name = 'mgmtEventTrap'
-
-def get_firewall_interfaces(conf):
-    out = {}
-    interfaces = conf.get_config_dict(['interfaces'], key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
-    def find_interfaces(iftype_conf, output={}, prefix=''):
-        for ifname, if_conf in iftype_conf.items():
-            if 'firewall' in if_conf:
-                output[prefix + ifname] = if_conf['firewall']
-            for vif in ['vif', 'vif_s', 'vif_c']:
-                if vif in if_conf:
-                    output.update(find_interfaces(if_conf[vif], output, f'{prefix}{ifname}.'))
-        return output
-    for iftype, iftype_conf in interfaces.items():
-        out.update(find_interfaces(iftype_conf))
-    return out
 
 def get_firewall_zones(conf):
     used_v4 = []
@@ -159,6 +114,8 @@ def get_firewall_zones(conf):
                 ipv6_name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'ipv6_name')
                 if ipv6_name:
                     used_v6.append(ipv6_name)
+    else:
+        return None
 
     return {'name': used_v4, 'ipv6_name': used_v6}
 
@@ -232,7 +189,6 @@ def get_config(config=None):
                                                           firewall['ipv6_name'][ipv6_name])
 
     firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
-    firewall['interfaces'] = get_firewall_interfaces(conf)
     firewall['zone_policy'] = get_firewall_zones(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
@@ -358,109 +314,42 @@ def verify(firewall):
     for name in ['name', 'ipv6_name']:
         if name in firewall:
             for name_id, name_conf in firewall[name].items():
-                if name_id in preserve_chains:
-                    raise ConfigError(f'Firewall name "{name_id}" is reserved for VyOS')
-
-                if name_id.startswith("VZONE"):
-                    raise ConfigError(f'Firewall name "{name_id}" uses reserved prefix')
-
                 if 'rule' in name_conf:
                     for rule_id, rule_conf in name_conf['rule'].items():
                         verify_rule(firewall, rule_conf, name == 'ipv6_name')
 
-    for ifname, if_firewall in firewall['interfaces'].items():
-        for direction in ['in', 'out', 'local']:
-            name = dict_search_args(if_firewall, direction, 'name')
-            ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
+    if 'interface' in firewall:
+        for ifname, if_firewall in firewall['interface'].items():
+            # verify ifname needs to be disabled, dynamic devices come up later
+            # verify_interface_exists(ifname)
 
-            if name and dict_search_args(firewall, 'name', name) == None:
-                raise ConfigError(f'Firewall name "{name}" is still referenced on interface {ifname}')
+            for direction in ['in', 'out', 'local']:
+                name = dict_search_args(if_firewall, direction, 'name')
+                ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
 
-            if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
-                raise ConfigError(f'Firewall ipv6-name "{ipv6_name}" is still referenced on interface {ifname}')
+                if name and dict_search_args(firewall, 'name', name) == None:
+                    raise ConfigError(f'Invalid firewall name "{name}" referenced on interface {ifname}')
 
-    for fw_name, used_names in firewall['zone_policy'].items():
-        for name in used_names:
-            if dict_search_args(firewall, fw_name, name) == None:
-                raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
+                if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
+                    raise ConfigError(f'Invalid firewall ipv6-name "{ipv6_name}" referenced on interface {ifname}')
+
+    if firewall['zone_policy']:
+        for fw_name, used_names in firewall['zone_policy'].items():
+            for name in used_names:
+                if dict_search_args(firewall, fw_name, name) == None:
+                    raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
 
     return None
-
-def cleanup_commands(firewall):
-    commands = []
-    commands_chains = []
-    commands_sets = []
-    for table in ['ip filter', 'ip6 filter']:
-        name_node = 'name' if table == 'ip filter' else 'ipv6_name'
-        chain_prefix = NAME_PREFIX if table == 'ip filter' else NAME6_PREFIX
-        state_chain = 'VYOS_STATE_POLICY' if table == 'ip filter' else 'VYOS_STATE_POLICY6'
-        iface_chains = nft_iface_chains if table == 'ip filter' else nft6_iface_chains
-
-        geoip_list = []
-        if firewall['geoip_updated']:
-            geoip_key = 'deleted_ipv6_name' if table == 'ip6 filter' else 'deleted_name'
-            geoip_list = dict_search_args(firewall, 'geoip_updated', geoip_key) or []
-
-        json_str = cmd(f'nft -t -j list table {table}')
-        obj = loads(json_str)
-
-        if 'nftables' not in obj:
-            continue
-
-        for item in obj['nftables']:
-            if 'chain' in item:
-                chain = item['chain']['name']
-                if chain in preserve_chains or chain.startswith("VZONE"):
-                    continue
-
-                if chain == state_chain:
-                    command = 'delete' if 'state_policy' not in firewall else 'flush'
-                    commands_chains.append(f'{command} chain {table} {chain}')
-                elif dict_search_args(firewall, name_node, chain.replace(chain_prefix, "", 1)) != None:
-                    commands.append(f'flush chain {table} {chain}')
-                else:
-                    commands_chains.append(f'delete chain {table} {chain}')
-
-            if 'rule' in item:
-                rule = item['rule']
-                chain = rule['chain']
-                handle = rule['handle']
-
-                if chain in iface_chains:
-                    target, _ = next(dict_search_recursive(rule['expr'], 'target'))
-
-                    if target == state_chain and 'state_policy' not in firewall:
-                        commands.append(f'delete rule {table} {chain} handle {handle}')
-
-                    if target.startswith(chain_prefix):
-                        if dict_search_args(firewall, name_node, target.replace(chain_prefix, "", 1)) == None:
-                            commands.append(f'delete rule {table} {chain} handle {handle}')
-
-            if 'set' in item:
-                set_name = item['set']['name']
-
-                if set_name.startswith('GEOIP_CC_') and set_name in geoip_list:
-                    commands_sets.append(f'delete set {table} {set_name}')
-                    continue
-
-                if set_name.startswith("RECENT_"):
-                    commands_sets.append(f'delete set {table} {set_name}')
-                    continue
-
-                for prefix, group_type in group_set_prefix.items():
-                    if set_name.startswith(prefix):
-                        group_name = set_name.replace(prefix, "", 1)
-                        if dict_search_args(firewall, 'group', group_type, group_name) != None:
-                            commands_sets.append(f'flush set {table} {set_name}')
-                        else:
-                            commands_sets.append(f'delete set {table} {set_name}')
-    return commands + commands_chains + commands_sets
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
-    else:
-        firewall['cleanup_commands'] = cleanup_commands(firewall)
+
+    if os.path.exists(nftables_zone_conf):
+        firewall['zone_conf'] = nftables_zone_conf
+
+    if os.path.exists(nftables6_zone_conf):
+        firewall['zone6_conf'] = nftables6_zone_conf
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
@@ -521,26 +410,21 @@ def post_apply_trap(firewall):
 
                 cmd(base_cmd + ' '.join(objects))
 
-def state_policy_rule_exists():
-    # Determine if state policy rules already exist in nft
-    search_str = cmd(f'nft list chain ip filter VYOS_FW_FORWARD')
-    return 'VYOS_STATE_POLICY' in search_str
-
 def resync_policy_route():
     # Update policy route as firewall groups were updated
-    tmp = run(policy_route_conf_script)
+    tmp, out = rc_cmd(policy_route_conf_script)
     if tmp > 0:
-        Warning('Failed to re-apply policy route configuration!')
+        Warning(f'Failed to re-apply policy route configuration! {out}')
 
 def apply(firewall):
     if 'first_install' in firewall:
         run('nfct helper add rpc inet tcp')
         run('nfct helper add rpc inet udp')
         run('nfct helper add tns inet tcp')
-
-    install_result = run(f'nft -f {nftables_conf}')
+    
+    install_result, output = rc_cmd(f'nft -f {nftables_conf}')
     if install_result == 1:
-        raise ConfigError('Failed to apply firewall')
+        raise ConfigError(f'Failed to apply firewall: {output}')
 
     # set firewall group domain-group xxx
     if 'group' in firewall:
@@ -562,13 +446,6 @@ def apply(firewall):
                 nft_add_set_elements(f'D_{group}', elements)
         else:
             call('systemctl stop vyos-domain-group-resolve.service')
-
-    if 'state_policy' in firewall and not state_policy_rule_exists():
-        for chain in ['VYOS_FW_FORWARD', 'VYOS_FW_OUTPUT', 'VYOS_FW_LOCAL']:
-            cmd(f'nft insert rule ip filter {chain} jump VYOS_STATE_POLICY')
-
-        for chain in ['VYOS_FW6_FORWARD', 'VYOS_FW6_OUTPUT', 'VYOS_FW6_LOCAL']:
-            cmd(f'nft insert rule ip6 filter {chain} jump VYOS_STATE_POLICY6')
 
     apply_sysfs(firewall)
 

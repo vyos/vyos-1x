@@ -36,8 +36,6 @@ sysfs_config = {
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337', 'default': '0', 'test_value': 'enable'}
 }
 
-eth0_addr = '172.16.10.1/24'
-
 class TestFirewall(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -47,15 +45,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, ['firewall'])
 
-        cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
-
     @classmethod
     def tearDownClass(cls):
-        cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
         super(TestFirewall, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'firewall'])
         self.cli_delete(['firewall'])
         self.cli_commit()
 
@@ -128,7 +122,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'source', 'group', 'domain-group', 'smoketest_domain'])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'interface', 'eth0', 'in', 'name', 'smoketest'])
 
         self.cli_commit()
         nftables_search = [
@@ -160,7 +154,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'group', 'port-group', 'smoketest_port1'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'protocol', 'tcp_udp'])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'interface', 'eth0', 'in', 'name', 'smoketest'])
 
         self.cli_commit()
 
@@ -216,7 +210,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'mss', mss_range])
 
-        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
+        self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
 
@@ -252,7 +246,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp', '3-11'])
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp-exclude', '21-25'])
 
-        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
+        self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
 
@@ -282,7 +276,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'destination', 'port', '8888'])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'ipv6-name', name])
+        self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
 
         self.cli_commit()
 
@@ -315,7 +309,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp', '4-14'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp-exclude', '31-35'])
 
-        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'ipv6-name', name])
+        self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
 
         self.cli_commit()
 
@@ -364,7 +358,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '4', 'state', 'established', 'enable'])
         self.cli_set(['firewall', 'name', name, 'rule', '4', 'connection-status', 'nat', 'source'])
 
-        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
+        self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
 
