@@ -550,7 +550,7 @@ def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
 @register_filter('nft_default_rule')
 def nft_default_rule(fw_conf, fw_name):
     output = ['counter']
-    default_action = fw_conf.get('default_action', 'drop')
+    default_action = fw_conf['default_action']
 
     if 'enable_default_log' in fw_conf:
         action_suffix = default_action[:1].upper()

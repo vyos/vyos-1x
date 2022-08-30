@@ -21,5 +21,6 @@
       <regex>(drop|reject|accept)</regex>
     </constraint>
   </properties>
+  <defaultValue>drop</defaultValue>
 </leafNode>
 <!-- include end -->
