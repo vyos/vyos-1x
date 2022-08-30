@@ -433,7 +433,7 @@
                 <children>
                   <leafNode name="code">
                     <properties>
-                      <help>ICMPv6 code (0-255)</help>
+                      <help>ICMPv6 code</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>ICMPv6 code (0-255)</description>
@@ -445,7 +445,7 @@
                   </leafNode>
                   <leafNode name="type">
                     <properties>
-                      <help>ICMPv6 type (0-255)</help>
+                      <help>ICMPv6 type</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>ICMPv6 type (0-255)</description>
@@ -578,7 +578,7 @@
                 <children>
                   <leafNode name="code">
                     <properties>
-                      <help>ICMP code (0-255)</help>
+                      <help>ICMP code</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>ICMP code (0-255)</description>
@@ -590,7 +590,7 @@
                   </leafNode>
                   <leafNode name="type">
                     <properties>
-                      <help>ICMP type (0-255)</help>
+                      <help>ICMP type</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>ICMP type (0-255)</description>
