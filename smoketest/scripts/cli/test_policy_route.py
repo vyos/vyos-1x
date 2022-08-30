@@ -53,7 +53,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_PBR_smoketest']
         ]
 
-        self.verify_nftables(nftables_search, 'ip filter', inverse=True)
+        self.verify_nftables(nftables_search, 'ip mangle', inverse=True)
 
     def verify_nftables(self, nftables_search, table, inverse=False):
         nftables_output = cmd(f'sudo nft list table {table}')
