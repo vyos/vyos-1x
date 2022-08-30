@@ -54,7 +54,7 @@ class TestZonePolicy(VyOSUnitTestSHIM.TestCase):
             ['oifname { "eth0" }', 'jump NAME_smoketest']
         ]
 
-        nftables_output = cmd('sudo nft list table ip filter')
+        nftables_output = cmd('sudo nft list table ip vyos_filter')
 
         for search in nftables_search:
             matched = False

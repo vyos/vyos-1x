@@ -48,7 +48,6 @@ airbag.enable()
 policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
-
 nftables_zone_conf = '/run/nftables_zone.conf'
 nftables6_zone_conf = '/run/nftables_zone6.conf'
 

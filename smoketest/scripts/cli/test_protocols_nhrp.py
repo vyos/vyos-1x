@@ -99,7 +99,7 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
             'comment "VYOS_NHRP_tun100"'
         ]
 
-        self.assertTrue(find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', firewall_matches) is not None)
+        self.assertTrue(find_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', firewall_matches) is not None)
         self.assertTrue(process_named_running('opennhrp'))
 
 if __name__ == '__main__':

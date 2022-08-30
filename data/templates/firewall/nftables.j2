@@ -5,7 +5,7 @@
 {% if first_install is not vyos_defined %}
 delete table ip vyos_filter
 {% endif %}
-table ip filter {
+table ip vyos_filter {
     chain VYOS_FW_FORWARD {
         type filter hook forward priority 0; policy accept;
 {% if state_policy is vyos_defined %}
@@ -115,7 +115,7 @@ table ip filter {
 {% if first_install is not vyos_defined %}
 delete table ip6 vyos_filter
 {% endif %}
-table ip6 filter {
+table ip6 vyos_filter {
     chain VYOS_FW6_FORWARD {
         type filter hook forward priority 0; policy accept;
 {% if state_policy is vyos_defined %}

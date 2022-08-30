@@ -11,7 +11,7 @@ def get_nft_filter_chains():
     """
     Get list of nft chains for table filter
     """
-    nft = cmd('/usr/sbin/nft --json list table ip filter')
+    nft = cmd('/usr/sbin/nft --json list table ip vyos_filter')
     nft = json.loads(nft)
     chain_list = []
 
@@ -27,7 +27,7 @@ def get_nftables_details(name):
     """
     Get dict, counters packets and bytes for chain
     """
-    command = f'/usr/sbin/nft list chain ip filter {name}'
+    command = f'/usr/sbin/nft list chain ip vyos_filter {name}'
     try:
         results = cmd(command)
     except:
@@ -60,7 +60,7 @@ def get_nft_telegraf(name):
     Get data for telegraf in influxDB format
     """
     for rule, rule_config in get_nftables_details(name).items():
-        print(f'nftables,table=filter,chain={name},'
+        print(f'nftables,table=vyos_filter,chain={name},'
               f'ruleid={rule} '
               f'pkts={rule_config["packets"]}i,'
               f'bytes={rule_config["bytes"]}i '
