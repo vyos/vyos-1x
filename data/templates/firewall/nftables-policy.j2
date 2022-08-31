@@ -25,7 +25,6 @@ table ip mangle {
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
 {%             endfor %}
 {%         endif %}
-        {{ conf | nft_default_rule(route_text) }}
     }
 {%     endfor %}
 {% endif %}
@@ -50,7 +49,6 @@ table ip6 mangle {
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
 {%             endfor %}
 {%         endif %}
-        {{ conf | nft_default_rule(route_text) }}
     }
 {%     endfor %}
 {% endif %}
