@@ -153,11 +153,20 @@ def verify(ethernet):
     return None
 
 def generate(ethernet):
-    if 'eapol' in ethernet:
-        render(wpa_suppl_conf.format(**ethernet),
-               'ethernet/wpa_supplicant.conf.j2', ethernet)
+    # render real configuration file once
+    wpa_supplicant_conf = wpa_suppl_conf.format(**ethernet)
 
+    if 'deleted' in ethernet:
+        # delete configuration on interface removal
+        if os.path.isfile(wpa_supplicant_conf):
+            os.unlink(wpa_supplicant_conf)
+        return None
+
+    if 'eapol' in ethernet:
         ifname = ethernet['ifname']
+
+        render(wpa_supplicant_conf, 'ethernet/wpa_supplicant.conf.j2', ethernet)
+
         cert_file_path = os.path.join(cfg_dir, f'{ifname}_cert.pem')
         cert_key_path = os.path.join(cfg_dir, f'{ifname}_cert.key')
 
@@ -184,10 +193,6 @@ def generate(ethernet):
 
             write_file(ca_cert_file_path,
                        '\n'.join(encode_certificate(c) for c in ca_full_chain))
-    else:
-        # delete configuration on interface removal
-        if os.path.isfile(wpa_suppl_conf.format(**ethernet)):
-            os.unlink(wpa_suppl_conf.format(**ethernet))
 
     return None
 
@@ -203,9 +208,9 @@ def apply(ethernet):
     else:
         e.update(ethernet)
         if 'eapol' in ethernet:
-            eapol_action='restart'
+            eapol_action='reload-or-restart'
 
-    call(f'systemctl {eapol_action} wpa_supplicant-macsec@{ifname}')
+    call(f'systemctl {eapol_action} wpa_supplicant-wired@{ifname}')
 
 if __name__ == '__main__':
     try:

@@ -21,7 +21,9 @@ from makefun import with_signature
 
 from .. import state
 from .. import key_auth
-from api.graphql.recipes.session import Session
+from api.graphql.session.session import Session
+from api.graphql.session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
+from vyos.opmode import Error as OpModeError
 
 mutation = ObjectType("Mutation")
 
@@ -71,7 +73,7 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
             # one may override the session functions with a local subclass
             try:
-                mod = import_module(f'api.graphql.recipes.{func_base_name}')
+                mod = import_module(f'api.graphql.session.override.{func_base_name}')
                 klass = getattr(mod, class_name)
             except ImportError:
                 # otherwise, dynamically generate subclass to invoke subclass
@@ -86,10 +88,19 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                 "success": True,
                 "data": data
             }
+        except OpModeError as e:
+            typename = type(e).__name__
+            return {
+                "success": False,
+                "errore": ['op_mode_error'],
+                "op_mode_error": {"name": f"{typename}",
+                                 "message": op_mode_err_msg.get(typename, "Unknown"),
+                                 "vyos_code": op_mode_err_code.get(typename, 9999)}
+            }
         except Exception as error:
             return {
                 "success": False,
-                "errors": [str(error)]
+                "errors": [repr(error)]
             }
 
     return func_impl

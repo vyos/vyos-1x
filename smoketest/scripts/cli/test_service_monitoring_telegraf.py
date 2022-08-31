@@ -24,7 +24,7 @@ from vyos.util import process_named_running
 from vyos.util import read_file
 
 PROCESS_NAME = 'telegraf'
-TELEGRAF_CONF = '/run/telegraf/vyos-telegraf.conf'
+TELEGRAF_CONF = '/run/telegraf/telegraf.conf'
 base_path = ['service', 'monitoring', 'telegraf']
 org = 'log@in.local'
 token = 'GuRJc12tIzfjnYdKRAIYbxdWd2aTpOT9PVYNddzDnFV4HkAcD7u7-kndTFXjGuXzJN6TTxmrvPODB4mnFcseDV=='

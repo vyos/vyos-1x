@@ -56,36 +56,32 @@ ban-reset-time = 300
 # The name to use for the tun device
 device = sslvpn
 
-# An alternative way of specifying the network:
-{% if network_settings %}
 # DNS settings
-{%     if network_settings.name_server is string %}
-dns = {{ network_settings.name_server }}
-{%     else %}
-{%         for dns in network_settings.name_server %}
+{% if network_settings.name_server is vyos_defined %}
+{%     for dns in network_settings.name_server %}
 dns = {{ dns }}
-{%         endfor %}
-{%     endif %}
-# IPv4 network pool
-{%     if network_settings.client_ip_settings %}
-{%         if network_settings.client_ip_settings.subnet %}
-ipv4-network = {{ network_settings.client_ip_settings.subnet }}
-{%         endif %}
-{%     endif %}
-# IPv6 network pool
-{%     if network_settings.client_ipv6_pool %}
-{%         if network_settings.client_ipv6_pool.prefix %}
-ipv6-network = {{ network_settings.client_ipv6_pool.prefix }}
-ipv6-subnet-prefix = {{ network_settings.client_ipv6_pool.mask }}
-{%         endif %}
-{%     endif %}
+{%     endfor %}
 {% endif %}
 
-{% if network_settings.push_route is string %}
-route = {{ network_settings.push_route }}
-{% else %}
+# IPv4 network pool
+{% if network_settings.client_ip_settings.subnet is vyos_defined %}
+ipv4-network = {{ network_settings.client_ip_settings.subnet }}
+{% endif %}
+
+# IPv6 network pool
+{% if network_settings.client_ipv6_pool.prefix is vyos_defined %}
+ipv6-network = {{ network_settings.client_ipv6_pool.prefix }}
+ipv6-subnet-prefix = {{ network_settings.client_ipv6_pool.mask }}
+{% endif %}
+
+{% if network_settings.push_route is vyos_defined %}
 {%     for route in network_settings.push_route %}
 route = {{ route }}
 {%     endfor %}
 {% endif %}
 
+{% if network_settings.split_dns is vyos_defined %}
+{%     for tmp in network_settings.split_dns %}
+split-dns = {{ tmp }}
+{%     endfor %}
+{% endif %}

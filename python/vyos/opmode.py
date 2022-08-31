@@ -105,6 +105,8 @@ def run(module):
         subparser = subparsers.add_parser(function_name, help=functions[function_name].__doc__)
 
         type_hints = typing.get_type_hints(functions[function_name])
+        if 'return' in type_hints:
+            del type_hints['return']
         for opt in type_hints:
             th = type_hints[opt]
 

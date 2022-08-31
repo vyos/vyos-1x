@@ -25,6 +25,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import check_port_availability
 from vyos.util import is_systemd_service_running
+from vyos.util import is_listen_port_bind_service
 from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -77,8 +78,10 @@ def verify(ocserv):
     if ocserv is None:
         return None
     # Check if listen-ports not binded other services
+    # It can be only listen by 'ocserv-main'
     for proto, port in ocserv.get('listen_ports').items():
-        if check_port_availability('0.0.0.0', int(port), proto) is not True:
+        if check_port_availability('0.0.0.0', int(port), proto) is not True and \
+                not is_listen_port_bind_service(int(port), 'ocserv-main'):
             raise ConfigError(f'"{proto}" port "{port}" is used by another service')
     # Check authentication
     if "authentication" in ocserv:

@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -550,7 +550,7 @@ def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
 @register_filter('nft_default_rule')
 def nft_default_rule(fw_conf, fw_name):
     output = ['counter']
-    default_action = fw_conf.get('default_action', 'accept')
+    default_action = fw_conf['default_action']
 
     if 'enable_default_log' in fw_conf:
         action_suffix = default_action[:1].upper()

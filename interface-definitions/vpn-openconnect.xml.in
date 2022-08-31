@@ -265,6 +265,19 @@
                 </children>
               </node>
               #include <include/name-server-ipv4-ipv6.xml.i>
+              <leafNode name="split-dns">
+                <properties>
+                  <help>Domains over which the provided DNS should be used</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Client prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
             </children>
           </node>
       </children>

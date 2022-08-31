@@ -295,6 +295,12 @@ def verify_source_interface(config):
         raise ConfigError(f'Invalid source-interface "{src_ifname}". Interface '
                           f'is already a member of bond "{bond_name}"!')
 
+    if 'is_source_interface' in config:
+        tmp = config['is_source_interface']
+        src_ifname = config['source_interface']
+        raise ConfigError(f'Can not use source-interface "{src_ifname}", it already ' \
+                          f'belongs to interface "{tmp}"!')
+
 def verify_dhcpv6(config):
     """
     Common helper function used by interface implementations to perform

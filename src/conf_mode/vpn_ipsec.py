@@ -595,13 +595,11 @@ def wait_for_vici_socket(timeout=5, sleep_interval=0.1):
         sleep(sleep_interval)
 
 def apply(ipsec):
+    systemd_service = 'strongswan-starter.service'
     if not ipsec:
-        call('sudo ipsec stop')
+        call(f'systemctl stop {systemd_service}')
     else:
-        call('sudo ipsec restart')
-        call('sudo ipsec rereadall')
-        call('sudo ipsec reload')
-
+        call(f'systemctl reload-or-restart {systemd_service}')
         if wait_for_vici_socket():
             call('sudo swanctl -q')
 

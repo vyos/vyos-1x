@@ -59,7 +59,7 @@ Depends:
   frr-rpki-rtrlib,
   frr-snmp,
   grc,
-  hostapd (>= 0.6.8),
+  hostapd,
   hvinfo,
   igmpproxy,
   ipaddrcheck,

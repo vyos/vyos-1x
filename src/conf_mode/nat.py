@@ -44,8 +44,8 @@ if LooseVersion(kernel_version()) > LooseVersion('5.1'):
 else:
     k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
-nftables_nat_config = '/tmp/vyos-nat-rules.nft'
-nftables_static_nat_conf = '/tmp/vyos-static-nat-rules.nft'
+nftables_nat_config = '/run/nftables_nat.conf'
+nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -199,8 +199,6 @@ def generate(nat):
     # dry-run newly generated configuration
     tmp = run(f'nft -c -f {nftables_nat_config}')
     if tmp > 0:
-        if os.path.exists(nftables_nat_config):
-            os.unlink(nftables_nat_config)
         raise ConfigError('Configuration file errors encountered!')
 
     tmp = run(f'nft -c -f {nftables_nat_config}')
@@ -210,8 +208,6 @@ def generate(nat):
 def apply(nat):
     cmd(f'nft -f {nftables_nat_config}')
     cmd(f'nft -f {nftables_static_nat_conf}')
-    if os.path.isfile(nftables_nat_config):
-        os.unlink(nftables_nat_config)
 
     return None
 

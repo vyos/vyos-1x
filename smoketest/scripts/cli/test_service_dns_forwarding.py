@@ -26,7 +26,7 @@ from vyos.util import process_named_running
 CONFIG_FILE = '/run/powerdns/recursor.conf'
 FORWARD_FILE = '/run/powerdns/recursor.forward-zones.conf'
 HOSTSD_FILE = '/run/powerdns/recursor.vyos-hostsd.conf.lua'
-PROCESS_NAME= 'pdns-r/worker'
+PROCESS_NAME= 'pdns_recursor'
 
 base_path = ['service', 'dns', 'forwarding']
 

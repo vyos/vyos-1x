@@ -51,6 +51,21 @@ def _get_raw_data(family):
     return _xml_to_dict(xml)
 
 
+def _get_raw_statistics():
+    entries = []
+    data = cmd('sudo conntrack -S')
+    data = data.replace('  \t', '').split('\n')
+    for entry in data:
+        entries.append(entry.split())
+    return entries
+
+
+def get_formatted_statistics(entries):
+    headers = ["CPU", "Found", "Invalid", "Insert", "Insert fail", "Drop", "Early drop", "Errors", "Search restart"]
+    output = tabulate(entries, headers, numalign="left")
+    return output
+
+
 def get_formatted_output(dict_data):
     """
     :param xml:
@@ -109,6 +124,14 @@ def show(raw: bool, family: str):
         return conntrack_data
     else:
         return get_formatted_output(conntrack_data)
+
+
+def show_statistics(raw: bool):
+    conntrack_statistics = _get_raw_statistics()
+    if raw:
+        return conntrack_statistics
+    else:
+        return get_formatted_statistics(conntrack_statistics)
 
 
 if __name__ == '__main__':

@@ -131,6 +131,30 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 nat')
 
+    def test_destination_nat66_protocol(self):
+        translation_address = '2001:db8:1111::1'
+        source_prefix = '2001:db8:2222::/64'
+        dport = '4545'
+        sport = '8080'
+        tport = '5555'
+        proto = 'tcp'
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'port', dport])
+        self.cli_set(dst_path + ['rule', '1', 'source', 'address', source_prefix])
+        self.cli_set(dst_path + ['rule', '1', 'source', 'port', sport])
+        self.cli_set(dst_path + ['rule', '1', 'protocol', proto])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'address', translation_address])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'port', tport])
+
+        # check validate() - outbound-interface must be defined
+        self.cli_commit()
+
+        nftables_search = [
+            ['iifname "eth1"', 'tcp dport { 4545 } ip6 saddr 2001:db8:2222::/64 tcp sport { 8080 } dnat to 2001:db8:1111::1:5555']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 nat')
+
     def test_destination_nat66_prefix(self):
         destination_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'
@@ -175,6 +199,30 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
         self.cli_commit()
+
+    def test_source_nat66_protocol(self):
+        translation_address = '2001:db8:1111::1'
+        source_prefix = '2001:db8:2222::/64'
+        dport = '9999'
+        sport = '8080'
+        tport = '80'
+        proto = 'tcp'
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '1', 'destination', 'port', dport])
+        self.cli_set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
+        self.cli_set(src_path + ['rule', '1', 'source', 'port', sport])
+        self.cli_set(src_path + ['rule', '1', 'protocol', proto])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_address])
+        self.cli_set(src_path + ['rule', '1', 'translation', 'port', tport])
+
+        # check validate() - outbound-interface must be defined
+        self.cli_commit()
+
+        nftables_search = [
+            ['oifname "eth1"', 'ip6 saddr 2001:db8:2222::/64 tcp dport { 9999 } tcp sport { 8080 } snat to 2001:db8:1111::1:80']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 nat')
 
     def test_nat66_no_rules(self):
         # T3206: deleting all rules but keep the direction 'destination' or

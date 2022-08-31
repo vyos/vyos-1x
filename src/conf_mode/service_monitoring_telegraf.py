@@ -22,6 +22,8 @@ from shutil import rmtree
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import is_node_changed
+from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.util import call
@@ -32,39 +34,14 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-
-base_dir = '/run/telegraf'
 cache_dir = f'/etc/telegraf/.cache'
-config_telegraf = f'{base_dir}/vyos-telegraf.conf'
+config_telegraf = f'/run/telegraf/telegraf.conf'
 custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
-systemd_telegraf_service = '/etc/systemd/system/vyos-telegraf.service'
-systemd_telegraf_override_dir = '/etc/systemd/system/vyos-telegraf.service.d'
-systemd_override = f'{systemd_telegraf_override_dir}/10-override.conf'
-
-
-def get_interfaces(type='', vlan=True):
-    """
-    Get interfaces
-    get_interfaces()
-    ['dum0', 'eth0', 'eth1', 'eth1.5', 'lo', 'tun0']
-
-    get_interfaces("dummy")
-    ['dum0']
-    """
-    interfaces = []
-    ifaces = Section.interfaces(type)
-    for iface in ifaces:
-        if vlan == False and '.' in iface:
-            continue
-        interfaces.append(iface)
-
-    return interfaces
+systemd_override = '/etc/systemd/system/telegraf.service.d/10-override.conf'
 
 def get_nft_filter_chains():
-    """
-    Get nft chains for table filter
-    """
+    """ Get nft chains for table filter """
     nft = cmd('nft --json list table ip filter')
     nft = json.loads(nft)
     chain_list = []
@@ -76,9 +53,7 @@ def get_nft_filter_chains():
 
     return chain_list
 
-
 def get_config(config=None):
-
     if config:
         conf = config
     else:
@@ -87,8 +62,12 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    monitoring = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
+    monitoring = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                      get_first_key=True,
+                                      no_tag_node_value_mangle=True)
+
+    tmp = is_node_changed(conf, base + ['vrf'])
+    if tmp: monitoring.update({'restart_required': {}})
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
@@ -96,7 +75,7 @@ def get_config(config=None):
     monitoring = dict_merge(default_values, monitoring)
 
     monitoring['custom_scripts_dir'] = custom_scripts_dir
-    monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
+    monitoring['interfaces_ethernet'] = Section.interfaces('ethernet', vlan=False)
     monitoring['nft_chains'] = get_nft_filter_chains()
 
     # Redefine azure group-metrics 'single-table' and 'table-per-metric'
@@ -130,6 +109,8 @@ def verify(monitoring):
     # bail out early - looks like removal from running config
     if not monitoring:
         return None
+
+    verify_vrf(monitoring)
 
     # Verify influxdb
     if 'influxdb' in monitoring:
@@ -173,7 +154,7 @@ def verify(monitoring):
 def generate(monitoring):
     if not monitoring:
         # Delete config and systemd files
-        config_files = [config_telegraf, systemd_telegraf_service, systemd_override, syslog_telegraf]
+        config_files = [config_telegraf, systemd_override, syslog_telegraf]
         for file in config_files:
             if os.path.isfile(file):
                 os.unlink(file)
@@ -190,33 +171,34 @@ def generate(monitoring):
 
     chown(cache_dir, 'telegraf', 'telegraf')
 
-    # Create systemd override dir
-    if not os.path.exists(systemd_telegraf_override_dir):
-        os.mkdir(systemd_telegraf_override_dir)
-
     # Create custome scripts dir
     if not os.path.exists(custom_scripts_dir):
         os.mkdir(custom_scripts_dir)
 
     # Render telegraf configuration and systemd override
-    render(config_telegraf, 'monitoring/telegraf.j2', monitoring)
-    render(systemd_telegraf_service, 'monitoring/systemd_vyos_telegraf_service.j2', monitoring)
-    render(systemd_override, 'monitoring/override.conf.j2', monitoring, permission=0o640)
-    render(syslog_telegraf, 'monitoring/syslog_telegraf.j2', monitoring)
-
-    chown(base_dir, 'telegraf', 'telegraf')
+    render(config_telegraf, 'telegraf/telegraf.j2', monitoring, user='telegraf', group='telegraf')
+    render(systemd_override, 'telegraf/override.conf.j2', monitoring)
+    render(syslog_telegraf, 'telegraf/syslog_telegraf.j2', monitoring)
 
     return None
 
 def apply(monitoring):
     # Reload systemd manager configuration
+    systemd_service = 'telegraf.service'
     call('systemctl daemon-reload')
-    if monitoring:
-        call('systemctl restart vyos-telegraf.service')
-    else:
-        call('systemctl stop vyos-telegraf.service')
+    if not monitoring:
+        call(f'systemctl stop {systemd_service}')
+        return
+
+    # we need to restart the service if e.g. the VRF name changed
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in monitoring:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {systemd_service}')
+
     # Telegraf include custom rsyslog config changes
-    call('systemctl restart rsyslog')
+    call('systemctl reload-or-restart rsyslog')
 
 if __name__ == '__main__':
     try:

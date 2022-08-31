@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
+from vyos.configdict import is_source_interface
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -51,6 +52,10 @@ def get_config(config=None):
     if 'source_interface' in peth:
         _, peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
                                                peth['source_interface'])
+        # test if source-interface is maybe already used by another interface
+        tmp = is_source_interface(conf, peth['source_interface'], ['macsec'])
+        if tmp and tmp != ifname: peth.update({'is_source_interface' : tmp})
+
     return peth
 
 def verify(peth):

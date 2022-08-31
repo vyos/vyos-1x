@@ -24,8 +24,6 @@ from ipaddress import IPv6Network
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configdict import get_interface_dict
-from vyos.configverify import verify_vrf
 from vyos.util import call
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -113,19 +111,28 @@ def verify(upnpd):
     listen_dev = []
     system_addrs_cidr = get_all_interface_addr(True, [], [netifaces.AF_INET, netifaces.AF_INET6])
     system_addrs = get_all_interface_addr(False, [], [netifaces.AF_INET, netifaces.AF_INET6])
+    if 'listen' not in upnpd:
+        raise ConfigError(f'Listen address or interface is required!')
     for listen_if_or_addr in upnpd['listen']:
         if listen_if_or_addr not in netifaces.interfaces():
             listen_dev.append(listen_if_or_addr)
-        if (listen_if_or_addr not in system_addrs) and (listen_if_or_addr not in system_addrs_cidr) and (listen_if_or_addr not in netifaces.interfaces()):
+        if (listen_if_or_addr not in system_addrs) and (listen_if_or_addr not in system_addrs_cidr) and \
+                (listen_if_or_addr not in netifaces.interfaces()):
             if is_ipv4(listen_if_or_addr) and IPv4Network(listen_if_or_addr).is_multicast:
-                raise ConfigError(f'The address "{listen_if_or_addr}" is an address that is not allowed to listen on. It is not an interface address nor a multicast address!')
+                raise ConfigError(f'The address "{listen_if_or_addr}" is an address that is not allowed'
+                                  f'to listen on. It is not an interface address nor a multicast address!')
             if is_ipv6(listen_if_or_addr) and IPv6Network(listen_if_or_addr).is_multicast:
-                raise ConfigError(f'The address "{listen_if_or_addr}" is an address that is not allowed to listen on. It is not an interface address nor a multicast address!')
+                raise ConfigError(f'The address "{listen_if_or_addr}" is an address that is not allowed'
+                                  f'to listen on. It is not an interface address nor a multicast address!')
 
     system_listening_dev_addrs_cidr = get_all_interface_addr(True, listen_dev, [netifaces.AF_INET6])
     system_listening_dev_addrs = get_all_interface_addr(False, listen_dev, [netifaces.AF_INET6])
     for listen_if_or_addr in upnpd['listen']:
-        if listen_if_or_addr not in netifaces.interfaces() and (listen_if_or_addr not in system_listening_dev_addrs_cidr) and (listen_if_or_addr not in system_listening_dev_addrs) and is_ipv6(listen_if_or_addr) and (not IPv6Network(listen_if_or_addr).is_multicast):
+        if listen_if_or_addr not in netifaces.interfaces() and \
+                (listen_if_or_addr not in system_listening_dev_addrs_cidr) and \
+                (listen_if_or_addr not in system_listening_dev_addrs) and \
+                is_ipv6(listen_if_or_addr) and \
+                (not IPv6Network(listen_if_or_addr).is_multicast):
             raise ConfigError(f'{listen_if_or_addr} must listen on the interface of the network card')
 
 def generate(upnpd):

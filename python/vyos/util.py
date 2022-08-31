@@ -471,6 +471,29 @@ def process_named_running(name):
             return p.pid
     return None
 
+def is_listen_port_bind_service(port: int, service: str) -> bool:
+    """Check if listen port bound to expected program name
+    :param port: Bind port
+    :param service: Program name
+    :return: bool
+
+    Example:
+        % is_listen_port_bind_service(443, 'nginx')
+        True
+        % is_listen_port_bind_service(443, 'ocservr-main')
+        False
+    """
+    from psutil import net_connections as connections
+    from psutil import Process as process
+    for connection in connections():
+        addr = connection.laddr
+        pid = connection.pid
+        pid_name = process(pid).name()
+        pid_port = addr.port
+        if service == pid_name and port == pid_port:
+            return True
+    return False
+
 def seconds_to_human(s, separator=""):
     """ Converts number of seconds passed to a human-readable
     interval such as 1w4d18h35m59s
@@ -799,6 +822,32 @@ def dict_search_recursive(dict_object, key, path=[]):
             new_path = path + [k]
             for x in dict_search_recursive(j, key, new_path):
                 yield x
+
+def convert_data(data):
+    """Convert multiple types of data to types usable in CLI
+
+    Args:
+        data (str | bytes | list | OrderedDict): input data
+
+    Returns:
+        str | list | dict: converted data
+    """
+    from collections import OrderedDict
+
+    if isinstance(data, str):
+        return data
+    if isinstance(data, bytes):
+        return data.decode()
+    if isinstance(data, list):
+        list_tmp = []
+        for item in data:
+            list_tmp.append(convert_data(item))
+        return list_tmp
+    if isinstance(data, OrderedDict):
+        dict_tmp = {}
+        for key, value in data.items():
+            dict_tmp[key] = convert_data(value)
+        return dict_tmp
 
 def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """

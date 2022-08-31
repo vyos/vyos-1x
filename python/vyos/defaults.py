@@ -26,7 +26,7 @@ directories = {
   "templates": "/usr/share/vyos/templates/",
   "certbot": "/config/auth/letsencrypt",
   "api_schema": "/usr/libexec/vyos/services/api/graphql/graphql/schema/",
-  "api_templates": "/usr/libexec/vyos/services/api/graphql/recipes/templates/",
+  "api_templates": "/usr/libexec/vyos/services/api/graphql/session/templates/",
   "vyos_udev_dir": "/run/udev/vyos"
 }
 

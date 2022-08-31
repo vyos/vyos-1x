@@ -177,6 +177,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip filter')
 
     def test_basic_rules(self):
+        mss_range = '501-1460'
         self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
         self.cli_set(['firewall', 'name', 'smoketest', 'enable-default-log'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
@@ -203,6 +204,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'destination', 'port', '22'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'count', '10'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'time', 'minute'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'flags', 'syn'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'mss', mss_range])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -214,7 +219,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
-            ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop']
+            ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
+            [f'tcp flags & syn == syn tcp option maxseg size {mss_range}']
         ]
 
         self.verify_nftables(nftables_search, 'ip filter')

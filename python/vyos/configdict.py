@@ -295,11 +295,18 @@ def is_source_interface(conf, interface, intftype=None):
     """
     ret_val = None
     intftypes = ['macsec', 'pppoe', 'pseudo-ethernet', 'tunnel', 'vxlan']
-    if intftype not in intftypes + [None]:
+    if not intftype:
+        intftype = intftypes
+
+    if isinstance(intftype, str):
+        intftype = [intftype]
+    elif not isinstance(intftype, list):
+        raise ValueError(f'Interface type "{type(intftype)}" must be either str or list!')
+
+    if not all(x in intftypes for x in intftype):
         raise ValueError(f'unknown interface type "{intftype}" or it can not '
             'have a source-interface')
 
-    intftype = intftypes if intftype == None else [intftype]
     for it in intftype:
         base = ['interfaces', it]
         for intf in conf.list_nodes(base):

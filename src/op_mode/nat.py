@@ -17,6 +17,7 @@
 import jmespath
 import json
 import sys
+import xmltodict
 
 from sys import exit
 from tabulate import tabulate
@@ -27,7 +28,30 @@ from vyos.util import dict_search
 import vyos.opmode
 
 
-def _get_json_data(direction):
+def _get_xml_translation(direction, family):
+    """
+    Get conntrack XML output --src-nat|--dst-nat
+    """
+    if direction == 'source':
+        opt = '--src-nat'
+    if direction == 'destination':
+        opt = '--dst-nat'
+    return cmd(f'sudo conntrack --dump --family {family} {opt} --output xml')
+
+
+def _xml_to_dict(xml):
+    """
+    Convert XML to dictionary
+    Return: dictionary
+    """
+    parse = xmltodict.parse(xml, attr_prefix='')
+    # If only one conntrack entry we must change dict
+    if 'meta' in parse['conntrack']['flow']:
+        return dict(conntrack={'flow': [parse['conntrack']['flow']]})
+    return parse
+
+
+def _get_json_data(direction, family):
     """
     Get NAT format JSON
     """
@@ -35,14 +59,15 @@ def _get_json_data(direction):
         chain = 'POSTROUTING'
     if direction == 'destination':
         chain = 'PREROUTING'
-    return cmd(f'sudo nft --json list chain ip nat {chain}')
+    family = 'ip6' if family == 'inet6' else 'ip'
+    return cmd(f'sudo nft --json list chain {family} nat {chain}')
 
 
-def _get_raw_data_rules(direction):
+def _get_raw_data_rules(direction, family):
     """Get interested rules
     :returns dict
     """
-    data = _get_json_data(direction)
+    data = _get_json_data(direction, family)
     data_dict = json.loads(data)
     rules = []
     for rule in data_dict['nftables']:
@@ -51,10 +76,28 @@ def _get_raw_data_rules(direction):
     return rules
 
 
-def _get_formatted_output_rules(data, direction):
+def _get_raw_translation(direction, family):
+    """
+    Return: dictionary
+    """
+    xml = _get_xml_translation(direction, family)
+    if len(xml) == 0:
+        output = {'conntrack':
+            {
+                'error': True,
+                'reason': 'entries not found'
+            }
+        }
+        return output
+    return _xml_to_dict(xml)
+
+
+def _get_formatted_output_rules(data, direction, family):
     # Add default values before loop
     sport, dport, proto = 'any', 'any', 'any'
-    saddr, daddr = '0.0.0.0/0', '0.0.0.0/0'
+    saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+    daddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+
     data_entries = []
     for rule in data:
         if 'comment' in rule['rule']:
@@ -69,11 +112,13 @@ def _get_formatted_output_rules(data, direction):
                 if 'prefix' in match['right'] or 'set' in match['right']:
                     # Merge dict src/dst l3_l4 parameters
                     my_dict = {**match['left']['payload'], **match['right']}
+                    my_dict['op'] = match['op']
+                    op = '!' if my_dict.get('op') == '!=' else ''
                     proto = my_dict.get('protocol').upper()
                     if my_dict['field'] == 'saddr':
-                        saddr = f'{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
+                        saddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'daddr':
-                        daddr = f'{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
+                        daddr = f'{op}{my_dict["prefix"]["addr"]}/{my_dict["prefix"]["len"]}'
                     elif my_dict['field'] == 'sport':
                         # Port range or single port
                         if jmespath.search('set[*].range', my_dict):
@@ -96,8 +141,8 @@ def _get_formatted_output_rules(data, direction):
                     if jmespath.search('left.payload.field', match) == 'daddr':
                         daddr = match.get('right')
             else:
-                saddr = '0.0.0.0/0'
-                daddr = '0.0.0.0/0'
+                saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
+                daddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
                 sport = 'any'
                 dport = 'any'
                 proto = 'any'
@@ -175,20 +220,81 @@ def _get_formatted_output_statistics(data, direction):
     return output
 
 
-def show_rules(raw: bool, direction: str):
-    nat_rules = _get_raw_data_rules(direction)
+def _get_formatted_translation(dict_data, nat_direction, family):
+    data_entries = []
+    if 'error' in dict_data['conntrack']:
+        return 'Entries not found'
+    for entry in dict_data['conntrack']['flow']:
+        orig_src, orig_dst, orig_sport, orig_dport = {}, {}, {}, {}
+        reply_src, reply_dst, reply_sport, reply_dport = {}, {}, {}, {}
+        proto = {}
+        for meta in entry['meta']:
+            direction = meta['direction']
+            if direction in ['original']:
+                if 'layer3' in meta:
+                    orig_src = meta['layer3']['src']
+                    orig_dst = meta['layer3']['dst']
+                if 'layer4' in meta:
+                    if meta.get('layer4').get('sport'):
+                        orig_sport = meta['layer4']['sport']
+                    if meta.get('layer4').get('dport'):
+                        orig_dport = meta['layer4']['dport']
+                    proto = meta['layer4']['protoname']
+            if direction in ['reply']:
+                if 'layer3' in meta:
+                    reply_src = meta['layer3']['src']
+                    reply_dst = meta['layer3']['dst']
+                if 'layer4' in meta:
+                    if meta.get('layer4').get('sport'):
+                        reply_sport = meta['layer4']['sport']
+                    if meta.get('layer4').get('dport'):
+                        reply_dport = meta['layer4']['dport']
+                    proto = meta['layer4']['protoname']
+            if direction == 'independent':
+                conn_id = meta['id']
+                timeout = meta['timeout']
+                orig_src = f'{orig_src}:{orig_sport}' if orig_sport else orig_src
+                orig_dst = f'{orig_dst}:{orig_dport}' if orig_dport else orig_dst
+                reply_src = f'{reply_src}:{reply_sport}' if reply_sport else reply_src
+                reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
+                state = meta['state'] if 'state' in meta else ''
+                mark = meta['mark']
+                zone = meta['zone'] if 'zone' in meta else ''
+                if nat_direction == 'source':
+                    data_entries.append(
+                        [orig_src, reply_dst, proto, timeout, mark, zone])
+                elif nat_direction == 'destination':
+                    data_entries.append(
+                        [orig_dst, reply_src, proto, timeout, mark, zone])
+
+    headers = ["Pre-NAT", "Post-NAT", "Proto", "Timeout", "Mark", "Zone"]
+    output = tabulate(data_entries, headers, numalign="left")
+    return output
+
+
+def show_rules(raw: bool, direction: str, family: str):
+    nat_rules = _get_raw_data_rules(direction, family)
     if raw:
         return nat_rules
     else:
-        return _get_formatted_output_rules(nat_rules, direction)
+        return _get_formatted_output_rules(nat_rules, direction, family)
 
 
-def show_statistics(raw: bool, direction: str):
-    nat_statistics = _get_raw_data_rules(direction)
+def show_statistics(raw: bool, direction: str, family: str):
+    nat_statistics = _get_raw_data_rules(direction, family)
     if raw:
         return nat_statistics
     else:
         return _get_formatted_output_statistics(nat_statistics, direction)
+
+
+def show_translations(raw: bool, direction: str, family: str):
+    family = 'ipv6' if family == 'inet6' else 'ipv4'
+    nat_translation = _get_raw_translation(direction, family)
+    if raw:
+        return nat_translation
+    else:
+        return _get_formatted_translation(nat_translation, direction, family)
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@
 
 import os
 import re
+from pathlib import Path
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -68,18 +69,15 @@ def verify(console):
             # amount of connected devices. We will resolve the fixed device name
             # to its dynamic device file - and create a new dict entry for it.
             by_bus_device = f'{by_bus_dir}/{device}'
-            if os.path.isdir(by_bus_dir) and os.path.exists(by_bus_device):
-                device = os.path.basename(os.readlink(by_bus_device))
-
-        # If the device name still starts with usbXXX no matching tty was found
-        # and it can not be used as a serial interface
-        if device.startswith('usb'):
-            raise ConfigError(f'Device {device} does not support beeing used as tty')
+            # If the device name still starts with usbXXX no matching tty was found
+            # and it can not be used as a serial interface
+            if not os.path.isdir(by_bus_dir) or not os.path.exists(by_bus_device):
+                raise ConfigError(f'Device {device} does not support beeing used as tty')
 
     return None
 
 def generate(console):
-    base_dir = '/etc/systemd/system'
+    base_dir = '/run/systemd/system'
     # Remove all serial-getty configuration files in advance
     for root, dirs, files in os.walk(base_dir):
         for basename in files:
@@ -90,7 +88,8 @@ def generate(console):
     if not console or 'device' not in console:
         return None
 
-    for device, device_config in console['device'].items():
+    # replace keys in the config for ttyUSB items to use them in `apply()` later
+    for device in console['device'].copy():
         if device.startswith('usb'):
             # It is much easiert to work with the native ttyUSBn name when using
             # getty, but that name may change across reboots - depending on the
@@ -98,9 +97,17 @@ def generate(console):
             # to its dynamic device file - and create a new dict entry for it.
             by_bus_device = f'{by_bus_dir}/{device}'
             if os.path.isdir(by_bus_dir) and os.path.exists(by_bus_device):
-                device = os.path.basename(os.readlink(by_bus_device))
+                device_updated = os.path.basename(os.readlink(by_bus_device))
 
+                # replace keys in the config to use them in `apply()` later
+                console['device'][device_updated] = console['device'][device]
+                del console['device'][device]
+            else:
+                raise ConfigError(f'Device {device} does not support beeing used as tty')
+
+    for device, device_config in console['device'].items():
         config_file = base_dir + f'/serial-getty@{device}.service'
+        Path(f'{base_dir}/getty.target.wants').mkdir(exist_ok=True)
         getty_wants_symlink = base_dir + f'/getty.target.wants/serial-getty@{device}.service'
 
         render(config_file, 'getty/serial-getty.service.j2', device_config)
