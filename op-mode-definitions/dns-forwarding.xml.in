@@ -19,26 +19,6 @@
           </node>
         </children>
       </node>
-      <node name="dns">
-        <properties>
-          <help>Show DNS information</help>
-        </properties>
-        <children>
-          <node name="forwarding">
-            <properties>
-              <help>Show DNS forwarding information</help>
-            </properties>
-            <children>
-              <leafNode name="statistics">
-                <properties>
-                  <help>Show DNS forwarding statistics</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dns_forwarding_statistics.py</command>
-              </leafNode>
-            </children>
-          </node>
-        </children>
-      </node>
     </children>
   </node>
   <node name="show">

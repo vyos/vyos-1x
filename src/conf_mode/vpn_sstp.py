@@ -26,7 +26,9 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.util import call
+from vyos.util import check_port_availability
 from vyos.util import dict_search
+from vyos.util import is_listen_port_bind_service
 from vyos.util import write_file
 from vyos import ConfigError
 from vyos import airbag
@@ -61,6 +63,12 @@ def get_config(config=None):
 def verify(sstp):
     if not sstp:
         return None
+
+    port = sstp.get('port')
+    proto = 'tcp'
+    if check_port_availability('0.0.0.0', int(port), proto) is not True and \
+            not is_listen_port_bind_service(int(port), 'accel-pppd'):
+        raise ConfigError(f'"{proto}" port "{port}" is used by another service')
 
     verify_accel_ppp_base_service(sstp)
 

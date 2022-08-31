@@ -823,6 +823,32 @@ def dict_search_recursive(dict_object, key, path=[]):
             for x in dict_search_recursive(j, key, new_path):
                 yield x
 
+def convert_data(data):
+    """Convert multiple types of data to types usable in CLI
+
+    Args:
+        data (str | bytes | list | OrderedDict): input data
+
+    Returns:
+        str | list | dict: converted data
+    """
+    from collections import OrderedDict
+
+    if isinstance(data, str):
+        return data
+    if isinstance(data, bytes):
+        return data.decode()
+    if isinstance(data, list):
+        list_tmp = []
+        for item in data:
+            list_tmp.append(convert_data(item))
+        return list_tmp
+    if isinstance(data, OrderedDict):
+        dict_tmp = {}
+        for key, value in data.items():
+            dict_tmp[key] = convert_data(value)
+        return dict_tmp
+
 def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """
     if not os.path.exists(f'/sys/class/net/{interface}'):

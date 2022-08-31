@@ -50,6 +50,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              #include <include/nat/protocol.xml.i>
               <node name="destination">
                 <properties>
                   <help>IPv6 destination prefix options</help>
@@ -72,6 +73,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/nat-port.xml.i>
                 </children>
               </node>
               <node name="source">
@@ -96,6 +98,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/nat-port.xml.i>
                 </children>
               </node>
               <node name="translation">
@@ -128,6 +131,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/nat-translation-port.xml.i>
                 </children>
               </node>
             </children>
@@ -179,6 +183,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              #include <include/nat/protocol.xml.i>
               <node name="destination">
                 <properties>
                   <help>IPv6 destination prefix options</help>
@@ -211,6 +216,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/nat-port.xml.i>
                 </children>
               </node>
               <node name="source">
@@ -245,6 +251,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                #include <include/nat-port.xml.i>
                 </children>
               </node>
               <node name="translation">
@@ -269,6 +276,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/nat-translation-port.xml.i>
                 </children>
               </node>
             </children>

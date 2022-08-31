@@ -17,6 +17,7 @@ import vyos.defaults
 from . graphql.queries import query
 from . graphql.mutations import mutation
 from . graphql.directives import directives_dict
+from . graphql.errors import op_mode_error
 from . utils.schema_from_op_mode import generate_op_mode_definitions
 from ariadne import make_executable_schema, load_schema_from_path, snake_case_fallback_resolvers
 
@@ -27,6 +28,6 @@ def generate_schema():
 
     type_defs = load_schema_from_path(api_schema_dir)
 
-    schema = make_executable_schema(type_defs, query, mutation, snake_case_fallback_resolvers, directives=directives_dict)
+    schema = make_executable_schema(type_defs, query, op_mode_error, mutation, snake_case_fallback_resolvers, directives=directives_dict)
 
     return schema

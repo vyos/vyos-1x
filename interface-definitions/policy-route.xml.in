@@ -12,7 +12,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
-          #include <include/firewall/name-default-log.xml.i>
+          #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Policy rule number</help>
@@ -61,7 +61,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
-          #include <include/firewall/name-default-log.xml.i>
+          #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Policy rule number</help>

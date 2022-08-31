@@ -207,10 +207,33 @@ def get_config(config=None):
     firewall = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
+    # We have gathered the dict representation of the CLI, but there are
+    # default options which we need to update into the dictionary retrived.
+    # XXX: T2665: we currently have no nice way for defaults under tag
+    # nodes, thus we load the defaults "by hand"
     default_values = defaults(base)
+    for tmp in ['name', 'ipv6_name']:
+        if tmp in default_values:
+            del default_values[tmp]
+
     firewall = dict_merge(default_values, firewall)
 
     firewall['groups_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+
+    # Merge in defaults for IPv4 ruleset
+    if 'name' in firewall:
+        default_values = defaults(base + ['name'])
+        for name in firewall['name']:
+            firewall['name'][name] = dict_merge(default_values,
+                                                firewall['name'][name])
+
+    # Merge in defaults for IPv6 ruleset
+    if 'ipv6_name' in firewall:
+        default_values = defaults(base + ['ipv6-name'])
+        for ipv6_name in firewall['ipv6_name']:
+            firewall['ipv6_name'][ipv6_name] = dict_merge(default_values,
+                                                          firewall['ipv6_name'][ipv6_name])
+
     firewall['interfaces'] = get_firewall_interfaces(conf)
     firewall['zone_policy'] = get_firewall_zones(conf)
 
@@ -316,7 +339,7 @@ def verify_nested_group(group_name, group, groups, seen):
 
         if g in seen:
             raise ConfigError(f'Group "{group_name}" has a circular reference')
-            
+
         seen.append(g)
 
         if 'include' in groups[g]:
@@ -379,7 +402,7 @@ def cleanup_commands(firewall):
         if firewall['geoip_updated']:
             geoip_key = 'deleted_ipv6_name' if table == 'ip6 filter' else 'deleted_name'
             geoip_list = dict_search_args(firewall, 'geoip_updated', geoip_key) or []
- 
+
         json_str = cmd(f'nft -t -j list table {table}')
         obj = loads(json_str)
 
@@ -421,7 +444,7 @@ def cleanup_commands(firewall):
                 if set_name.startswith('GEOIP_CC_') and set_name in geoip_list:
                     commands_sets.append(f'delete set {table} {set_name}')
                     continue
-                
+
                 if set_name.startswith("RECENT_"):
                     commands_sets.append(f'delete set {table} {set_name}')
                     continue
@@ -527,7 +550,7 @@ def apply(firewall):
     if install_result == 1:
         raise ConfigError('Failed to apply firewall')
 
-    # set fireall group domain-group xxx
+    # set firewall group domain-group xxx
     if 'group' in firewall:
         if 'domain_group' in firewall['group']:
             # T970 Enable a resolver (systemd daemon) that checks

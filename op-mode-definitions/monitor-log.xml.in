@@ -224,6 +224,43 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
+          <node name="vpn">
+            <properties>
+              <help>Show log for Virtual Private Network (VPN)</help>
+            </properties>
+            <children>
+              <leafNode name="all">
+                <properties>
+                  <help>Monitor last lines of ALL VPNs</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service --unit accel-ppp@*.service</command>
+              </leafNode>
+              <leafNode name="ipsec">
+                <properties>
+                  <help>Monitor last lines of IPSec</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service</command>
+              </leafNode>
+              <leafNode name="l2tp">
+                <properties>
+                  <help>Monitor last lines of L2TP</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
+              </leafNode>
+              <leafNode name="pptp">
+                <properties>
+                  <help>Monitor last lines of PPTP</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pptp.service</command>
+              </leafNode>
+              <leafNode name="sstp">
+                <properties>
+                  <help>Monitor last lines of SSTP</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@sstp.service</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>
