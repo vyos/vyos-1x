@@ -274,11 +274,17 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.set.atomic_aggregate is vyos_defined %}
  set atomic-aggregate
 {%                     endif %}
-{%                     if rule_config.set.comm_list.comm_list is vyos_defined %}
- set comm-list {{ rule_config.set.comm_list.comm_list }} {{ 'delete' if rule_config.set.comm_list.delete is vyos_defined }}
+{%                     if rule_config.set.community.delete is vyos_defined %}
+ set comm-list {{ rule_config.set.community.delete }} delete
 {%                     endif %}
-{%                     if rule_config.set.community is vyos_defined %}
- set community {{ rule_config.set.community }}
+{%                     if rule_config.set.community.replace is vyos_defined %}
+ set community {{ rule_config.set.community.replace | join(' ') | replace("local-as" , "local-AS") }}
+{%                     endif %}
+{%                     if rule_config.set.community.add is vyos_defined %}
+ set community {{ rule_config.set.community.add | join(' ') | replace("local-as" , "local-AS") }} additive
+{%                     endif %}
+{%                     if rule_config.set.community.none is vyos_defined %}
+ set community none
 {%                     endif %}
 {%                     if rule_config.set.distance is vyos_defined %}
  set distance {{ rule_config.set.distance }}
@@ -290,13 +296,16 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
  set evpn gateway-ip ipv6 {{ rule_config.set.evpn.gateway.ipv6 }}
 {%                     endif %}
 {%                     if rule_config.set.extcommunity.bandwidth is vyos_defined %}
- set extcommunity bandwidth {{ rule_config.set.extcommunity.bandwidth }}
+ set extcommunity bandwidth {{ rule_config.set.extcommunity.bandwidth }} {{ 'non-transitive' if rule_config.set.extcommunity.bandwidth_non_transitive is vyos_defined }}
 {%                     endif %}
 {%                     if rule_config.set.extcommunity.rt is vyos_defined %}
- set extcommunity rt {{ rule_config.set.extcommunity.rt }}
+ set extcommunity rt {{ rule_config.set.extcommunity.rt | join(' ') }}
 {%                     endif %}
 {%                     if rule_config.set.extcommunity.soo is vyos_defined %}
- set extcommunity soo {{ rule_config.set.extcommunity.soo }}
+ set extcommunity soo {{ rule_config.set.extcommunity.soo | join(' ') }}
+{%                     endif %}
+{%                     if rule_config.set.extcommunity.none is vyos_defined %}
+ set extcommunity none
 {%                     endif %}
 {%                     if rule_config.set.ip_next_hop is vyos_defined %}
  set ip next-hop {{ rule_config.set.ip_next_hop }}
@@ -313,11 +322,17 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.set.ipv6_next_hop.prefer_global is vyos_defined %}
  set ipv6 next-hop prefer-global
 {%                     endif %}
-{%                     if rule_config.set.large_community is vyos_defined %}
- set large-community {{ rule_config.set.large_community }}
+{%                     if rule_config.set.large_community.replace is vyos_defined %}
+ set large-community {{ rule_config.set.large_community.replace | join(' ') }}
 {%                     endif %}
-{%                     if rule_config.set.large_comm_list_delete is vyos_defined %}
- set large-comm-list {{ rule_config.set.large_comm_list_delete }} delete
+{%                     if rule_config.set.large_community.add is vyos_defined %}
+ set large-community {{ rule_config.set.large_community.add | join(' ') }} additive
+{%                     endif %}
+{%                     if rule_config.set.large_community.none is vyos_defined %}
+ set large-community none
+{%                     endif %}
+{%                     if rule_config.set.large_community.delete is vyos_defined %}
+ set large-comm-list {{ rule_config.set.large_community.delete }} delete
 {%                     endif %}
 {%                     if rule_config.set.local_preference is vyos_defined %}
  set local-preference {{ rule_config.set.local_preference }}
