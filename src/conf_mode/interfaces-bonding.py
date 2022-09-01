@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -72,63 +72,62 @@ def get_config(config=None):
 
     # To make our own life easier transfor the list of member interfaces
     # into a dictionary - we will use this to add additional information
-    # later on for wach member
+    # later on for each member
     if 'member' in bond and 'interface' in bond['member']:
-        # convert list if member interfaces to a dictionary
-        bond['member']['interface'] = dict.fromkeys(
-            bond['member']['interface'], {})
+        # convert list of member interfaces to a dictionary
+        bond['member']['interface'] = {k: {} for k in bond['member']['interface']}
 
     if 'mode' in bond:
         bond['mode'] = get_bond_mode(bond['mode'])
 
     tmp = leaf_node_changed(conf, ['mode'])
-    if tmp: bond.update({'shutdown_required': {}})
+    if tmp: bond['shutdown_required'] = {}
 
     tmp = leaf_node_changed(conf, ['lacp-rate'])
-    if tmp: bond.update({'shutdown_required': {}})
+    if tmp: bond['shutdown_required'] = {}
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, ['member', 'interface'])
     if interfaces_removed:
-        bond.update({'shutdown_required': {}})
+        bond['shutdown_required'] = {}
         if 'member' not in bond:
-            bond.update({'member': {}})
+            bond['member'] = {}
 
         tmp = {}
         for interface in interfaces_removed:
             section = Section.section(interface) # this will be 'ethernet' for 'eth0'
             if conf.exists(['insterfaces', section, interface, 'disable']):
-                tmp.update({interface : {'disable': ''}})
+                tmp[interface] = {'disable': ''}
             else:
-                tmp.update({interface : {}})
+                tmp[interface] = {}
 
         # also present the interfaces to be removed from the bond as dictionary
-        bond['member'].update({'interface_remove': tmp})
+        bond['member']['interface_remove'] = tmp
 
     if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
-            if tmp: bond['member']['interface'][interface].update({'is_bridge_member' : tmp})
+            if tmp: interface_config['is_bridge_member'] = tmp
 
             # Check if member interface is already member of a bond
             tmp = is_member(conf, interface, 'bonding')
             for tmp in is_member(conf, interface, 'bonding'):
                 if bond['ifname'] == tmp:
                     continue
-                bond['member']['interface'][interface].update({'is_bond_member' : tmp})
+                interface_config['is_bond_member'] = tmp
 
             # Check if member interface is used as source-interface on another interface
             tmp = is_source_interface(conf, interface)
-            if tmp: bond['member']['interface'][interface].update({'is_source_interface' : tmp})
+            if tmp: interface_config['is_source_interface'] = tmp
 
             # bond members must not have an assigned address
             tmp = has_address_configured(conf, interface)
-            if tmp: bond['member']['interface'][interface].update({'has_address' : {}})
+            if tmp: interface_config['has_address'] = {}
 
             # bond members must not have a VRF attached
             tmp = has_vrf_configured(conf, interface)
-            if tmp: bond['member']['interface'][interface].update({'has_vrf' : {}})
+            if tmp: interface_config['has_vrf'] = {}
 
     return bond
 
