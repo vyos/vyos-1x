@@ -45,6 +45,7 @@ else:
     k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
 
 nftables_nat_config = '/run/nftables_nat.conf'
+nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
 
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
@@ -88,7 +89,7 @@ def get_config(config=None):
 
     # T2665: we must add the tagNode defaults individually until this is
     # moved to the base class
-    for direction in ['source', 'destination']:
+    for direction in ['source', 'destination', 'static']:
         if direction in nat:
             default_values = defaults(base + [direction, 'rule'])
             for rule in dict_search(f'{direction}.rule', nat) or []:
@@ -178,20 +179,35 @@ def verify(nat):
             # common rule verification
             verify_rule(config, err_msg)
 
+    if dict_search('static.rule', nat):
+        for rule, config in dict_search('static.rule', nat).items():
+            err_msg = f'Static NAT configuration error in rule {rule}:'
+
+            if 'inbound_interface' not in config:
+                raise ConfigError(f'{err_msg}\n' \
+                                  'inbound-interface not specified')
+
+            # common rule verification
+            verify_rule(config, err_msg)
+
     return None
 
 def generate(nat):
     render(nftables_nat_config, 'firewall/nftables-nat.j2', nat)
+    render(nftables_static_nat_conf, 'firewall/nftables-static-nat.j2', nat)
 
     # dry-run newly generated configuration
     tmp = run(f'nft -c -f {nftables_nat_config}')
     if tmp > 0:
         raise ConfigError('Configuration file errors encountered!')
 
+    tmp = run(f'nft -c -f {nftables_nat_config}')
+
     return None
 
 def apply(nat):
     cmd(f'nft -f {nftables_nat_config}')
+    cmd(f'nft -f {nftables_static_nat_conf}')
 
     return None
 
