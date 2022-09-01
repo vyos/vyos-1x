@@ -210,11 +210,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'mss', mss_range])
 
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'ip-length', '64,512,1024'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'packet-length', '64,512,1024'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'ip-length', '0-30000'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'packet-length', '0-30000'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'ip-length', '!60000-65535'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'packet-length', '!60000-65535'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
@@ -250,11 +250,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'destination', 'port', '8888'])
 
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'ip-length', '64,512,1024'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'packet-length', '64,512,1024'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'ip-length', '0-30000'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'packet-length', '0-30000'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'ip-length', '!60000-65535'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'packet-length', '!60000-65535'])
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'ipv6-name', 'v6-smoketest'])
 

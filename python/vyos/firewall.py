@@ -266,9 +266,9 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     output.append(icmp + ' type ' + rule_conf[icmp]['type'])
 
 
-    if 'ip_length' in rule_conf:
+    if 'packet_length' in rule_conf:
         #proto = rule_conf['protocol']
-        length = rule_conf['ip_length'].split(',')
+        length = rule_conf['packet_length'].split(',')
 
         lengths = []
         negated_lengths = []
@@ -278,9 +278,6 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 negated_lengths.append(p[1:])
             else:
                 lengths.append(p)
-
-                #if proto == 'tcp_udp':
-                #    proto = 'th'
 
         if lengths:
             lengths_str = ','.join(lengths)

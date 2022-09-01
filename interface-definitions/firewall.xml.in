@@ -383,26 +383,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
-              <leafNode name="ip-length">
-                <properties>
-                  <help>Payload size in bytes, including any extension header</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>Numbered packet length</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>&lt;start-end&gt;</format>
-                    <description>Packet length range (e.g. 1001-1005)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format> </format>
-                    <description>\n\n  Multiple values can be specified as a comma-separated list.\n  For example: '64, 512,1001-1005'</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ip-length"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/firewall/packet-length.xml.i>
               <node name="hop-limit">
                 <properties>
                   <help>Hop Limit</help>
@@ -591,26 +572,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
-              <leafNode name="ip-length">
-                <properties>
-                  <help>Packet size in bytes, including header and data</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>Numbered packet length</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>&lt;start-end&gt;</format>
-                    <description>Packet length range (e.g. 1001-1005)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format> </format>
-                    <description>\n\n  Multiple values can be specified as a comma-separated list.\n  For example: '64, 512,1001-1005'</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ip-length"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/firewall/packet-length.xml.i>
               <node name="icmp">
                 <properties>
                   <help>ICMP type and code information</help>
