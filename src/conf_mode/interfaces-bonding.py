@@ -89,6 +89,11 @@ def get_config(config=None):
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
+
+    # Reset config level to interfaces
+    old_level = conf.get_level()
+    conf.set_level(['interfaces'])
+
     if interfaces_removed:
         bond['shutdown_required'] = {}
         if 'member' not in bond:
@@ -97,7 +102,7 @@ def get_config(config=None):
         tmp = {}
         for interface in interfaces_removed:
             section = Section.section(interface) # this will be 'ethernet' for 'eth0'
-            if conf.exists(['insterfaces', section, interface, 'disable']):
+            if conf.exists([section, interface, 'disable']):
                 tmp[interface] = {'disable': ''}
             else:
                 tmp[interface] = {}
@@ -105,8 +110,24 @@ def get_config(config=None):
         # also present the interfaces to be removed from the bond as dictionary
         bond['member']['interface_remove'] = tmp
 
+    # Restore existing config level
+    conf.set_level(old_level)
+
     if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
+            # Check if member interface is a new member
+            if not conf.exists_effective(['member', 'interface', interface]):
+                bond['shutdown_required'] = {}
+
+            # Check if member interface is disabled
+            conf.set_level(['interfaces'])
+
+            section = Section.section(interface) # this will be 'ethernet' for 'eth0'
+            if conf.exists([section, interface, 'disable']):
+                interface_config['disable'] = ''
+
+            conf.set_level(old_level)
+
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
             if tmp: interface_config['is_bridge_member'] = tmp
