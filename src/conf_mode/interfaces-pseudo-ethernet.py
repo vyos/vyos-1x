@@ -15,11 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
+from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import is_source_interface
+from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -49,6 +51,9 @@ def get_config(config=None):
     mode = is_node_changed(conf, ['mode'])
     if mode: peth.update({'shutdown_required' : {}})
 
+    if leaf_node_changed(conf, base + [ifname, 'mode']):
+        peth.update({'rebuild_required': {}})
+
     if 'source_interface' in peth:
         _, peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
                                                peth['source_interface'])
@@ -77,21 +82,18 @@ def generate(peth):
     return None
 
 def apply(peth):
-    if 'deleted' in peth:
-        # delete interface
-        MACVLANIf(peth['ifname']).remove()
-        return None
+    # Check if the MACVLAN interface already exists
+    if 'rebuild_required' in peth or 'deleted' in peth:
+        if peth['ifname'] in interfaces():
+            p = MACVLANIf(peth['ifname'])
+            # MACVLAN is always needs to be recreated,
+            # thus we can simply always delete it first.
+            p.remove()
 
-    # Check if MACVLAN interface already exists. Parameters like the underlaying
-    # source-interface device or mode can not be changed on the fly and the
-    # interface needs to be recreated from the bottom.
-    if 'mode_old' in peth:
-        MACVLANIf(peth['ifname']).remove()
+    if 'deleted' not in peth:
+        p = MACVLANIf(**peth)
+        p.update(peth)
 
-    # It is safe to "re-create" the interface always, there is a sanity check
-    # that the interface will only be create if its non existent
-    p = MACVLANIf(**peth)
-    p.update(peth)
     return None
 
 if __name__ == '__main__':
