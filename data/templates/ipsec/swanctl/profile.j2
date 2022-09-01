@@ -29,6 +29,7 @@
                 local_ts = dynamic[gre]
                 remote_ts = dynamic[gre]
                 mode = {{ esp.mode }}
+                start_action = trap
 {%         if ike.dead_peer_detection.action is vyos_defined %}
                 dpd_action = {{ ike.dead_peer_detection.action }}
 {%         endif %}
