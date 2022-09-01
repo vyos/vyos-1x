@@ -88,15 +88,12 @@ def verify(ha):
                 if not {'password', 'type'} <= set(group_config['authentication']):
                     raise ConfigError(f'Authentication requires both type and passwortd to be set in VRRP group "{group}"')
 
-            # We can not use a VRID once per interface
+            # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
+            # We also need to make sure VRID is not used twice on the same interface with the
+            # same address family.
+
             interface = group_config['interface']
             vrid = group_config['vrid']
-            tmp = {'interface': interface, 'vrid': vrid}
-            if tmp in used_vrid_if:
-                raise ConfigError(f'VRID "{vrid}" can only be used once on interface "{interface}"!')
-            used_vrid_if.append(tmp)
-
-            # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
 
             # XXX: filter on map object is destructive, so we force it to list.
             # Additionally, filter objects always evaluate to True, empty or not,
@@ -109,6 +106,11 @@ def verify(ha):
                 raise ConfigError(f'VRRP group "{group}" mixes IPv4 and IPv6 virtual addresses, this is not allowed.\n' \
                                   'Create individual groups for IPv4 and IPv6!')
             if vaddrs4:
+                tmp = {'interface': interface, 'vrid': vrid, 'ipver': 'IPv4'}
+                if tmp in used_vrid_if:
+                    raise ConfigError(f'VRID "{vrid}" can only be used once on interface "{interface} with address family IPv4"!')
+                used_vrid_if.append(tmp)
+
                 if 'hello_source_address' in group_config:
                     if is_ipv6(group_config['hello_source_address']):
                         raise ConfigError(f'VRRP group "{group}" uses IPv4 but hello-source-address is IPv6!')
@@ -118,6 +120,11 @@ def verify(ha):
                         raise ConfigError(f'VRRP group "{group}" uses IPv4 but peer-address is IPv6!')
 
             if vaddrs6:
+                tmp = {'interface': interface, 'vrid': vrid, 'ipver': 'IPv6'}
+                if tmp in used_vrid_if:
+                    raise ConfigError(f'VRID "{vrid}" can only be used once on interface "{interface} with address family IPv6"!')
+                used_vrid_if.append(tmp)
+
                 if 'hello_source_address' in group_config:
                     if is_ipv4(group_config['hello_source_address']):
                         raise ConfigError(f'VRRP group "{group}" uses IPv6 but hello-source-address is IPv4!')
