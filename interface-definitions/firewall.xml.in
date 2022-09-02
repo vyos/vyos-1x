@@ -383,6 +383,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
+              #include <include/firewall/packet-length.xml.i>
               <node name="hop-limit">
                 <properties>
                   <help>Hop Limit</help>
@@ -571,6 +572,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
+              #include <include/firewall/packet-length.xml.i>
               <node name="icmp">
                 <properties>
                   <help>ICMP type and code information</help>

@@ -209,6 +209,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'mss', mss_range])
 
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'packet-length', '64,512,1024'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'packet-length', '0-30000'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'packet-length', '!60000-65535'])
+
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
 
         self.cli_commit()
@@ -220,7 +227,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
-            [f'tcp flags & syn == syn tcp option maxseg size {mss_range}']
+            [f'tcp flags & syn == syn tcp option maxseg size {mss_range}'],
+            ['ip length { 64, 512, 1024 }', 'return'],
+            ['ip length { 0-30000 }', 'return'],
+            ['ip length != { 60000-65535 }', 'return']
         ]
 
         self.verify_nftables(nftables_search, 'ip filter')
@@ -239,6 +249,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'destination', 'port', '8888'])
 
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'packet-length', '64,512,1024'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'packet-length', '0-30000'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'packet-length', '!60000-65535'])
+
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'ipv6-name', 'v6-smoketest'])
 
         self.cli_commit()
@@ -247,6 +264,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['iifname "eth0"', 'jump NAME6_v6-smoketest'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
+            ['ip6 length { 64, 512, 1024 }', 'return'],
+            ['ip6 length { 0-30000 }', 'return'],
+            ['ip6 length != { 60000-65535 }', 'return'],
             ['smoketest default-action', 'log prefix "[v6-smoketest-default-D]"', 'drop']
         ]
 

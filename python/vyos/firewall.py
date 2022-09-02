@@ -265,6 +265,29 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 if 'type' in rule_conf[icmp]:
                     output.append(icmp + ' type ' + rule_conf[icmp]['type'])
 
+
+    if 'packet_length' in rule_conf:
+        #proto = rule_conf['protocol']
+        length = rule_conf['packet_length'].split(',')
+
+        lengths = []
+        negated_lengths = []
+
+        for p in length:
+            if p[0] == '!':
+                negated_lengths.append(p[1:])
+            else:
+                lengths.append(p)
+
+        if lengths:
+            lengths_str = ','.join(lengths)
+            output.append(f'ip{def_suffix} length {{{lengths_str}}}')
+
+        if negated_lengths:
+            negated_lengths_str = ','.join(negated_lengths)
+            output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
+
+
     if 'ipsec' in rule_conf:
         if 'match_ipsec' in rule_conf['ipsec']:
             output.append('meta ipsec == 1')
