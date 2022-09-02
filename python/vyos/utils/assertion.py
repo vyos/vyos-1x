@@ -79,3 +79,7 @@ def assert_mac(m):
 
     if octets[:5] == (0, 0, 94, 0, 1):
         raise ValueError(f'{m} is a VRRP MAC address')
+
+def assert_ip(addr):
+    if is_ip(addr):
+        raise ValueError(f'Address {addr} is invalid')

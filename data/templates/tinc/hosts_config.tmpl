@@ -1,0 +1,7 @@
+{% for prefix in subnets %}
+Subnet = {{ prefix }}
+{% endfor %}
+{% for addr in local_address %}
+Address = {{ addr }}
+{% endfor %}
+Port = {{ port }}

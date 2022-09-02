@@ -1,0 +1,111 @@
+Name = {{ node_name }}
+Interface = {{ ifname }}
+{% if bridge %}
+Mode = {{ bridge }}
+{% else %}
+Mode = router
+{% endif %}
+Compression = {{ compression_level }}
+Cipher  = {{ encryption.cipher }}
+Digest  = {{ encryption.digset }}
+{% if resolve_hostname %}
+Hostnames = yes
+{% else %}
+Hostnames = no
+{% endif %}
+PrivateKeyFile = {{ private_keyfile }}
+Broadcast = {{ broadcast_type }}
+{% if disable_resolve_hostname %}
+DecrementTTL = no
+{% else %}
+DecrementTTL = yes
+{% endif %}
+{% if direct_only %}
+DirectOnly = yes
+{% else %}
+DirectOnly = no
+{% endif %}
+Forwarding = {{ forwarding_option }}
+{% if iff_One_Queue %}
+IffOneQueue = yes
+{% else %}
+IffOneQueue = no
+{% endif %}
+KeyExpire = {{ key_expire }}
+{% if local_discovery %}
+LocalDiscovery = yes
+{% else %}
+LocalDiscovery = no
+{% endif %}
+MACExpire = {{ mac_expire}}
+MaxTimeout = {{ max_timeout }}
+PingInterval = {{ ping_interval }}
+PingTimeout = {{ ping_timeout }}
+{% if priority_inheritance %}
+PriorityInheritance = yes
+{% else %}
+PriorityInheritance = no
+{% endif %}
+ProcessPriority = {{ priority }}
+ReplayWindow = {{ replay_window }}
+{% if strict_subnets %}
+StrictSubnets = yes
+{% else %}
+StrictSubnets = no
+{% endif %}
+{% if tunnel_server %}
+TunnelServer = yes
+{% else %}
+TunnelServer = no
+{% endif %}
+{% if clamp_mss %}
+ClampMSS = yes
+{% else %}
+ClampMSS = no
+{% endif %}
+{% if indirect_data %}
+IndirectData = yes
+{% else %}
+IndirectData = no
+{% endif %}
+MACLength = {{ mac_length }}
+PMTU = {{ mtu }}
+{% if disable_PMTU_Discovery %}
+PMTUDiscovery = no
+{% else %}
+PMTUDiscovery = yes
+{% endif %}
+{% if TCP_Only %}
+TCPonly = yes
+{% else %}
+TCPonly = no
+{% endif %}
+{% if udp_rcv_buf %}
+UDPRcvBuf = {{ udp_rcv_buf }}
+{% endif %}
+{% if udp_snd_buf %}
+UDPSndBuf = {{ udp_snd_buf }}
+{% endif %}
+{% if proxy and proxy.type %}
+{% if proxy.type == 'socks5' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }} {{ proxy.username }} { proxy.password }}
+{% elif proxy.type == 'socks4' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }}{{ proxy.username }}
+{% elif proxy.type == 'http' %}
+Proxy = {{ proxy.type }} {{ proxy.address }} {{ proxy.port }}
+{% elif proxy.type == 'exec' %}
+Proxy = {{ proxy.type }} {{ proxy.exec }}
+{% endif %}
+{% endif %}
+{% for conn in connect %}
+ConnectTo = {{ conn }}
+{% endfor %}
+{% if bind_address %}
+BindToAddress = {{ bind_address }}
+{% endif %}
+{% if bind_interface %}
+BindToInterface = {{ bind_interface }}
+{% endif %}
+{% if graph_dump_file %}
+GraphDumpFile = {{ graph_dump_file }}
+{% endif %}

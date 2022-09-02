@@ -1,0 +1,451 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="interfaces">
+    <children>
+      <tagNode name="tinc" owner="${vyos_conf_scripts_dir}/interfaces-tinc.py">
+        <properties>
+          <help>Tinc VPN Tunnel Interface</help>
+          <priority>460</priority>
+          <constraint>
+            <regex>^tinc[0-9]+$</regex>
+          </constraint>
+          <constraintErrorMessage>Tinc VPN tunnel interface must be named vtincN</constraintErrorMessage>
+          <valueHelp>
+            <format>tincN</format>
+            <description>Tinc VPN interface name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          <leafNode name="node-name">
+            <properties>
+              <help>Local Node Name options(require)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="subnets">
+            <properties>
+              <help>Declare network segment</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="bind-address">
+            <properties>
+              <help>Bind To Address</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 address and prefix length</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 address and prefix length</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-address"/>
+                <validator name="ipv6-address"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="local-address">
+            <properties>
+              <help>IP address</help>
+              <valueHelp>
+                <format>ipv4</format>
+                <description>IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>IPv6 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>host</format>
+                <description>Host</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ip-host"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="port">
+            <properties>
+              <help>Port Option</help>
+              <constraint>
+                <validator name="numeric" argument="--range 1-65535"/>
+              </constraint>
+            </properties>
+            <defaultValue>655</defaultValue>
+          </leafNode>
+          <leafNode name="bind-interface">
+            <properties>
+              <help>Bind To Interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+              </completionHelp>
+            </properties>
+          </leafNode>
+          <tagNode name="connect">
+            <properties>
+              <help>Connect To Peer Node Name</help>
+            </properties>
+            <children>
+              <leafNode name="conf-path">
+                <properties>
+                  <help>The host public key configuration file to be connected</help>
+                  <valueHelp>
+                    <format>user@ip:path</format>
+                    <description>SCP Protocol Copy</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>path</format>
+                    <description>Local Protocol Copy</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          #include <include/address-ipv4-ipv6-dhcp.xml.i>
+          #include <include/interface-description.xml.i>
+          #include <include/dhcp-options.xml.i>
+          #include <include/dhcpv6-options.xml.i>
+          #include <include/interface-disable-link-detect.xml.i>
+          #include <include/interface-disable.xml.i>
+          #include <include/interface-vrf.xml.i>
+          <node name="encryption">
+            <properties>
+              <help>Data Encryption settings</help>
+            </properties>
+            <children>
+              <leafNode name="cipher">
+                <properties>
+                  <help>Standard Data Encryption Algorithm(default:aes-256-cbc)</help>
+                </properties>
+                <defaultValue>aes-256-cbc</defaultValue>
+              </leafNode>
+              <leafNode name="digset">
+                <properties>
+                  <help>UDP Digest settings(default:sha256)</help>
+                </properties>
+                <defaultValue>sha256</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="bridge">
+            <properties>
+              <help>Tinc VPN interface device Bridge Mode(If this option is not specified, tinc will run in routing mode)</help>
+              <completionHelp>
+                <list>switch hub</list>
+              </completionHelp>
+              <valueHelp>
+                <format>switch</format>
+                <description>switch device</description>
+              </valueHelp>
+              <valueHelp>
+                <format>hub</format>
+                <description>hub device</description>
+              </valueHelp>
+              <constraint>
+                <regex>(switch|hub)</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          #include <include/interface-ipv4.xml.i>
+          #include <include/interface-ipv6.xml.i>
+          #include <include/interface-disable.xml.i>
+          #include <include/interface-mac.xml.i>
+          <leafNode name="broadcast-type">
+            <properties>
+              <help>This option selects the way broadcast packets are sent to other daemons. NOTE: all nodes in a VPN must use the same Broadcast mode, otherwise routing loops can form(defult: direct)</help>
+              <completionHelp>
+                <list>no mst</list>
+              </completionHelp>
+              <valueHelp>
+                <format>no</format>
+                <description>Broadcast packets are never sent to other nodes</description>
+              </valueHelp>
+              <valueHelp>
+                <format>mst</format>
+                <description>Broadcast packets are sent and forwarded via the VPN’s Minimum Spanning Tree. This ensures broadcast packets reach all nodes</description>
+              </valueHelp>
+              <constraint>
+                <regex>(no|mst)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>direct</defaultValue>
+          </leafNode>
+          <leafNode name="disable-decrement-ttl">
+            <properties>
+              <help>Disable Decrement TTL</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="direct-only">
+            <properties>
+              <help>Only carry out peer-to-peer direct communication, discard data packets that need to be forwarded</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="forwarding-option">
+            <properties>
+              <help>This option selects the way indirect packets are forwarded(default: internal)</help>
+              <completionHelp>
+                <list>off kernel</list>
+              </completionHelp>
+              <valueHelp>
+                <format>off</format>
+                <description>Incoming packets that are not meant for the local node, but which should be forwarded to another node, are dropped</description>
+              </valueHelp>
+              <valueHelp>
+                <format>kernel</format>
+                <description>Incoming packets are always sent to the TUN/TAP device, even if the packets are not for the local node. This is less efficient, but allows the kernel to apply its routing and firewall rules on them, and can also help debugging</description>
+              </valueHelp>
+              <constraint>
+                <regex>(off|kernel)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>internal</defaultValue>
+          </leafNode>
+          <leafNode name="graph-dump-file">
+            <properties>
+              <help>Dump network graph files, which can be read with graphviz</help>
+            </properties>
+          </leafNode>
+          <leafNode name="resolve-hostname">
+            <properties>
+              <help>Resolve IP addresses (real and VPN)</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="iff-One-Queue">
+            <properties>
+              <help>Set IFF_ONE_QUEUE flag on TUN/TAP devices</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="key-expire">
+            <properties>
+              <help>Key expiration time(seconds,default:3600)</help>
+            </properties>
+            <defaultValue>3600</defaultValue>
+          </leafNode>
+          <leafNode name="local-discovery">
+            <properties>
+              <help>Enable Local Discovery</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="mac-expire">
+            <properties>
+              <help>MAC expiration time(seconds,default:600)</help>
+            </properties>
+            <defaultValue>600</defaultValue>
+          </leafNode>
+          <leafNode name="max-timeout">
+            <properties>
+              <help>Max Timeout(seconds,default:900)</help>
+            </properties>
+            <defaultValue>900</defaultValue>
+          </leafNode>
+          <leafNode name="ping-interval">
+            <properties>
+              <help>Ping Interval(seconds,default:60)</help>
+            </properties>
+            <defaultValue>60</defaultValue>
+          </leafNode>
+          <leafNode name="ping-timeout">
+            <properties>
+              <help>Ping Timeout(seconds,default:5)</help>
+            </properties>
+            <defaultValue>5</defaultValue>
+          </leafNode>
+          <leafNode name="priority-inheritance">
+            <properties>
+              <help>Enable Priority Inheritance</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="private-keyfile">
+            <properties>
+              <help>Private Key File,This is the full path name of the RSA private key file that was generated by ‘tincd --generate-keys’. It must be a full path, not a relative directory(require)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="hosts-dir">
+            <properties>
+              <help>The directory where the network interface stores host certificates(require)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="priority">
+            <properties>
+              <help>Priority Option</help>
+              <completionHelp>
+                <list>low normal high</list>
+              </completionHelp>
+              <valueHelp>
+                <format>low</format>
+                <description>Low Priority</description>
+              </valueHelp>
+              <valueHelp>
+                <format>normal</format>
+                <description>normal Priority(default)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>high</format>
+                <description>high Priority</description>
+              </valueHelp>
+              <constraint>
+                <regex>(low|normal|high)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>normal</defaultValue>
+          </leafNode>
+          <node name="proxy">
+            <properties>
+              <help>Proxy settings</help>
+            </properties>
+            <children>
+              <leafNode name="type">
+                <properties>
+                  <help>Proxy Type</help>
+                  <completionHelp>
+                    <list>socks4 socks5 http exec</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>socks4</format>
+                    <description>socks4 Proxy</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>socks5</format>
+                    <description>socks4 Proxy</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>http</format>
+                    <description>http Proxy</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>exec</format>
+                    <description>Executes the given command which should set up the outgoing connection. The environment variables NAME, NODE, REMOTEADDRES and REMOTEPORT are available</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(socks4|socks5|http|exec)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="address">
+                <properties>
+                  <help>Proxy Address</help>
+                  <constraint>
+                    <validator name="ip-host"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="port">
+                <properties>
+                  <help>Proxy Port</help>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="username">
+                <properties>
+                  <help>Proxy Username</help>
+                </properties>
+              </leafNode>
+              <leafNode name="password">
+                <properties>
+                  <help>Proxy Password</help>
+                </properties>
+              </leafNode>
+              <leafNode name="exec">
+                <properties>
+                  <help>Executes the given command which should set up the outgoing connection. The environment variables NAME, NODE, REMOTEADDRES and REMOTEPORT are available</help>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <leafNode name="replay-window">
+            <properties>
+              <help>ReplayWindow(Bytes,default:16)</help>
+            </properties>
+            <defaultValue>16</defaultValue>
+          </leafNode>
+          <leafNode name="strict-subnets">
+            <properties>
+              <help>When this option is enabled tinc will only use Subnet statements which are present in the host config files in the local /etc/tinc/netname/hosts/ directory. Subnets learned via connections to other nodes and which are not present in the local host config files are ignored</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="tunnel-server">
+            <properties>
+              <help>When this option is enabled tinc will no longer forward information between other tinc daemons, and will only allow connections with nodes for which host config files are present in the local /etc/tinc/netname/hosts/ directory, Setting this options also implicitly sets StrictSubnets</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="udp-rcv-buf">
+            <properties>
+              <help>Sets the socket receive buffer size for the UDP socket, in bytes. If unset, the default buffer size will be used by the operating system(Bytes)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="udp-snd-buf">
+            <properties>
+              <help>Sets the socket send buffer size for the UDP socket, in bytes. If unset, the default buffer size will be used by the operating system(Bytes)</help>
+            </properties>
+          </leafNode>
+          <leafNode name="clamp-mss">
+            <properties>
+              <help>Enable Clamp MSS</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="indirect-data">
+            <properties>
+              <help>The tinc daemons other than those specified by ConnectTo can directly establish a connection with you</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="disable-PMTU-Discovery">
+            <properties>
+              <help>Disable PMTU Discovery Option</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="TCP-Only">
+            <properties>
+              <help>Only use TCP connection</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="compression-level">
+            <properties>
+              <help>Compression Level Option(default:9)</help>
+            </properties>
+            <defaultValue>9</defaultValue>
+          </leafNode>
+          <leafNode name="mac-length">
+            <properties>
+              <help>MAC Length(Bytes,default:4)</help>
+            </properties>
+            <defaultValue>4</defaultValue>
+          </leafNode>
+          <leafNode name="mtu">
+            <properties>
+              <help>MTU(Bytes,default:1514)</help>
+            </properties>
+            <defaultValue>1514</defaultValue>
+          </leafNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
