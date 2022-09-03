@@ -150,7 +150,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 if suffix[0] == '!':
                     suffix = f'!= {suffix[1:]}'
                 output.append(f'{ip_name} {prefix}addr {suffix}')
-            
+
             if dict_search_args(side_conf, 'geoip', 'country_code'):
                 operator = ''
                 if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
@@ -267,25 +267,12 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
 
     if 'packet_length' in rule_conf:
-        #proto = rule_conf['protocol']
-        length = rule_conf['packet_length'].split(',')
+        lengths_str = ','.join(rule_conf['packet_length'])
+        output.append(f'ip{def_suffix} length {{{lengths_str}}}')
 
-        lengths = []
-        negated_lengths = []
-
-        for p in length:
-            if p[0] == '!':
-                negated_lengths.append(p[1:])
-            else:
-                lengths.append(p)
-
-        if lengths:
-            lengths_str = ','.join(lengths)
-            output.append(f'ip{def_suffix} length {{{lengths_str}}}')
-
-        if negated_lengths:
-            negated_lengths_str = ','.join(negated_lengths)
-            output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
+    if 'packet_length_exclude' in rule_conf:
+        negated_lengths_str = ','.join(rule_conf['packet_length_exclude'])
+        output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
 
     if 'ipsec' in rule_conf:

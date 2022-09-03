@@ -48,7 +48,6 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, ['firewall'])
 
         cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
-        cls.debug=True
 
     @classmethod
     def tearDownClass(cls):
@@ -233,6 +232,35 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip filter')
 
+    def test_ipv4_packet_length(self):
+        name = 'smoketest-plen'
+        interface = 'eth0'
+
+        self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'enable-default-log'])
+
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '64'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '512'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '1024'])
+
+        self.cli_set(['firewall', 'name', name, 'rule', '7', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '7', 'packet-length', '1-30000'])
+        self.cli_set(['firewall', 'name', name, 'rule', '7', 'packet-length-exclude', '60000-65535'])
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'iifname "{interface}"', f'jump NAME_{name}'],
+            ['ip length { 64, 512, 1024 }', 'return'],
+            ['ip length { 1-30000 }', 'ip length != { 60000-65535 }', 'return'],
+            [f'log prefix "[{name}-default-D]" drop']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip filter')
+
     def test_ipv6_basic_rules(self):
         name = 'v6-smoketest'
         interface = 'eth0'
@@ -259,6 +287,35 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
             ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 filter')
+
+    def test_ipv6_packet_length(self):
+        name = 'v6-smoketest-plen'
+        interface = 'eth0'
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'enable-default-log'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '65'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '513'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '1025'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'packet-length', '1-1999'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'packet-length-exclude', '60000-65535'])
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'ipv6-name', name])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'iifname "{interface}"', f'jump NAME6_{name}'],
+            ['ip6 length { 65, 513, 1025 }', 'return'],
+            ['ip6 length { 1-1999 }', 'ip6 length != { 60000-65535 }', 'return'],
+            [f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 filter')
