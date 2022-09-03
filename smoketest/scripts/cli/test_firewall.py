@@ -36,6 +36,8 @@ sysfs_config = {
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337', 'default': '0', 'test_value': 'enable'}
 }
 
+eth0_addr = '172.16.10.1/24'
+
 class TestFirewall(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -45,11 +47,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, ['firewall'])
 
-        cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
+        cls.cli_set(cls, ['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
+        cls.debug=True
 
     @classmethod
     def tearDownClass(cls):
-        cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'address', '172.16.10.1/24'])
+        cls.cli_delete(cls, ['interfaces', 'ethernet', 'eth0', 'address', eth0_addr])
         super(TestFirewall, cls).tearDownClass()
 
     def tearDown(self):
@@ -95,6 +98,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip saddr @GEOIP_CC_smoketest_1', 'drop'],
             ['ip saddr != @GEOIP_CC_smoketest_2', 'return']
         ]
+
         # -t prevents 1000+ GeoIP elements being returned
         self.verify_nftables(nftables_search, 'ip filter', args='-t')
 
@@ -114,6 +118,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '123'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.com'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.org'])
+
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'group', 'network-group', 'smoketest_network'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
@@ -176,98 +181,84 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip filter')
 
-    def test_basic_rules(self):
+    def test_ipv4_basic_rules(self):
+        name = 'smoketest'
+        interface = 'eth0'
         mss_range = '501-1460'
-        self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'enable-default-log'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'address', '172.16.20.10'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'log-level', 'debug'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'ttl', 'eq', '15'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'destination', 'port', '8888'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'log', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'log-level', 'err'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'ttl', 'gt', '102'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'limit', 'rate', '5/minute'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'log', 'disable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'drop'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'protocol', 'tcp'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'destination', 'port', '22'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'count', '10'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'recent', 'time', 'minute'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'protocol', 'tcp'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'flags', 'syn'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '5', 'tcp', 'mss', mss_range])
 
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '6', 'packet-length', '64,512,1024'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '7', 'packet-length', '0-30000'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '8', 'packet-length', '!60000-65535'])
+        self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'source', 'address', '172.16.20.10'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'destination', 'address', '172.16.10.10'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'log-level', 'debug'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'ttl', 'eq', '15'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'destination', 'port', '8888'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'log', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'log-level', 'err'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'tcp', 'flags', 'syn'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'ttl', 'gt', '102'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'destination', 'port', '22'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'limit', 'rate', '5/minute'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'log', 'disable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'destination', 'port', '22'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'recent', 'count', '10'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'recent', 'time', 'minute'])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'flags', 'syn'])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'mss', mss_range])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
 
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump NAME_smoketest'],
+            [f'iifname "{interface}"', f'jump NAME_{name}'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15','return'],
             ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
             ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
             [f'tcp flags & syn == syn tcp option maxseg size {mss_range}'],
-            ['ip length { 64, 512, 1024 }', 'return'],
-            ['ip length { 0-30000 }', 'return'],
-            ['ip length != { 60000-65535 }', 'return']
         ]
 
         self.verify_nftables(nftables_search, 'ip filter')
 
-    def test_basic_rules_ipv6(self):
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'enable-default-log'])
+    def test_ipv6_basic_rules(self):
+        name = 'v6-smoketest'
+        interface = 'eth0'
 
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'source', 'address', '2002::1'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'destination', 'address', '2002::1:1'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'log', 'enable'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '1', 'log-level', 'crit'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'enable-default-log'])
 
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'action', 'reject'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'protocol', 'tcp_udp'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '2', 'destination', 'port', '8888'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'source', 'address', '2002::1'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'log-level', 'crit'])
 
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '3', 'packet-length', '64,512,1024'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '4', 'packet-length', '0-30000'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6-name', 'v6-smoketest', 'rule', '5', 'packet-length', '!60000-65535'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'destination', 'port', '8888'])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'ipv6-name', 'v6-smoketest'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'ipv6-name', name])
 
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump NAME6_v6-smoketest'],
+            [f'iifname "{interface}"', f'jump NAME6_{name}'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
-            ['ip6 length { 64, 512, 1024 }', 'return'],
-            ['ip6 length { 0-30000 }', 'return'],
-            ['ip6 length != { 60000-65535 }', 'return'],
-            ['smoketest default-action', 'log prefix "[v6-smoketest-default-D]"', 'drop']
+            ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 filter')
@@ -289,33 +280,36 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 nftables_output = cmd(f'sudo nft list chain {table} {chain}')
                 self.assertTrue('jump VYOS_STATE_POLICY' in nftables_output)
 
-    def test_state_and_status_rules(self):
-        self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'state', 'established', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'state', 'related', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'action', 'reject'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'state', 'invalid', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'state', 'new', 'enable'])
+    def test_ipv4_state_and_status_rules(self):
+        name = 'smoketest-state'
+        interface = 'eth0'
 
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'connection-status', 'nat', 'destination'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'new', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'state', 'established', 'enable'])
-        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'connection-status', 'nat', 'source'])
+        self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'state', 'related', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'action', 'reject'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'state', 'invalid', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'state', 'new', 'enable'])
 
-        self.cli_set(['interfaces', 'ethernet', 'eth0', 'firewall', 'in', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'connection-status', 'nat', 'destination'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'state', 'new', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'connection-status', 'nat', 'source'])
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
 
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth0"', 'jump NAME_smoketest'],
+            [f'iifname "{interface}"', f'jump NAME_{name}'],
             ['ct state { established, related }', 'return'],
             ['ct state { invalid }', 'reject'],
             ['ct state { new }', 'ct status { dnat }', 'return'],
             ['ct state { established, new }', 'ct status { snat }', 'return'],
-            ['smoketest default-action', 'drop']
+            ['drop', f'comment "{name} default-action drop"']
         ]
 
         self.verify_nftables(nftables_search, 'ip filter')
