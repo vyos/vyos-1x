@@ -150,7 +150,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 if suffix[0] == '!':
                     suffix = f'!= {suffix[1:]}'
                 output.append(f'{ip_name} {prefix}addr {suffix}')
-            
+
             if dict_search_args(side_conf, 'geoip', 'country_code'):
                 operator = ''
                 if dict_search_args(side_conf, 'geoip', 'inverse_match') != None:
@@ -264,6 +264,16 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                     output.append(icmp + ' code ' + rule_conf[icmp]['code'])
                 if 'type' in rule_conf[icmp]:
                     output.append(icmp + ' type ' + rule_conf[icmp]['type'])
+
+
+    if 'packet_length' in rule_conf:
+        lengths_str = ','.join(rule_conf['packet_length'])
+        output.append(f'ip{def_suffix} length {{{lengths_str}}}')
+
+    if 'packet_length_exclude' in rule_conf:
+        negated_lengths_str = ','.join(rule_conf['packet_length_exclude'])
+        output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
+
 
     if 'ipsec' in rule_conf:
         if 'match_ipsec' in rule_conf['ipsec']:
