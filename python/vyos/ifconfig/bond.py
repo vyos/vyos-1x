@@ -1,4 +1,4 @@
-# Copyright 2019-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -389,10 +389,12 @@ class BondIf(Interface):
             # Remove ALL bond member interfaces
             for interface in self.get_slaves():
                 self.del_port(interface)
-                # Removing an interface from a bond will always place the underlaying
-                # physical interface in admin-down state! If physical interface is
-                # not disabled, re-enable it.
-                if not dict_search(f'member.interface_remove.{interface}.disable', config):
+
+                # Restore correct interface status based on config
+                if dict_search(f'member.interface.{interface}.disable', config) is not None or \
+                   dict_search(f'member.interface_remove.{interface}.disable', config) is not None:
+                    Interface(interface).set_admin_state('down')
+                else:
                     Interface(interface).set_admin_state('up')
 
             # Bonding policy/mode - default value, always present
