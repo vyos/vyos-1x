@@ -36,6 +36,14 @@ echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/forwarding
 #
 echo 2 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra
 
+{% if default_route == 'none' %}
+# Prevent learning of default router from router advertisements
+echo 0 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra_defrtr
+{% else %}
+# Enable learning of default router from router advertisements
+echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/accept_ra_defrtr
+{% endif %}
+
 # Autoconfigure addresses using Prefix Information in Router Advertisements.
 echo 1 > /proc/sys/net/ipv6/conf/{{ ifname }}/autoconf
 {% endif %}
