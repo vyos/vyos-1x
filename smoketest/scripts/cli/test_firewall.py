@@ -390,5 +390,35 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 with open(path, 'r') as f:
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
 
+    def test_zone_basic(self):
+        self.cli_set(['firewall', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'from', 'smoketest-eth0', 'firewall', 'name', 'smoketest'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VZONE_smoketest-eth0'],
+            ['chain VZONE_smoketest-local_IN'],
+            ['chain VZONE_smoketest-local_OUT'],
+            ['oifname { "eth0" }', 'jump VZONE_smoketest-eth0'],
+            ['jump VZONE_smoketest-local_IN'],
+            ['jump VZONE_smoketest-local_OUT'],
+            ['iifname { "eth0" }', 'jump NAME_smoketest'],
+            ['oifname { "eth0" }', 'jump NAME_smoketest']
+        ]
+
+        nftables_output = cmd('sudo nft list table ip vyos_filter')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(matched)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

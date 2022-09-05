@@ -1,6 +1,7 @@
 #!/usr/sbin/nft -f
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
+{% import 'firewall/nftables-zone.j2' as zone_tmpl %}
 
 {% if first_install is not vyos_defined %}
 delete table ip vyos_filter
@@ -93,6 +94,10 @@ table ip vyos_filter {
 
 {{ group_tmpl.groups(group, False) }}
 
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, False) }}
+{% endif %}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
 {%     if state_policy.established is vyos_defined %}
@@ -106,9 +111,6 @@ table ip vyos_filter {
 {%     endif %}
         return
     }
-{% endif %}
-{% if zone_conf is vyos_defined %}
-    include "{{ zone_conf }}"
 {% endif %}
 }
 
@@ -195,6 +197,10 @@ table ip6 vyos_filter {
 
 {{ group_tmpl.groups(group, True) }}
 
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, True) }}
+{% endif %}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
 {%     if state_policy.established is vyos_defined %}
@@ -208,8 +214,5 @@ table ip6 vyos_filter {
 {%     endif %}
         return
     }
-{% endif %}
-{% if zone6_conf is vyos_defined %}
-    include "{{ zone6_conf }}"
 {% endif %}
 }

@@ -48,8 +48,6 @@ airbag.enable()
 policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
-nftables_zone_conf = '/run/nftables_zone.conf'
-nftables6_zone_conf = '/run/nftables_zone6.conf'
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'enable': '0', 'disable': '1'},
@@ -86,37 +84,6 @@ snmp_change_type = {
 snmp_event_source = 1
 snmp_trap_mib = 'VYATTA-TRAP-MIB'
 snmp_trap_name = 'mgmtEventTrap'
-
-def get_firewall_zones(conf):
-    used_v4 = []
-    used_v6 = []
-    zone_policy = conf.get_config_dict(['zone-policy'], key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
-
-    if 'zone' in zone_policy:
-        for zone, zone_conf in zone_policy['zone'].items():
-            if 'from' in zone_conf:
-                for from_zone, from_conf in zone_conf['from'].items():
-                    name = dict_search_args(from_conf, 'firewall', 'name')
-                    if name:
-                        used_v4.append(name)
-
-                    ipv6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
-                    if ipv6_name:
-                        used_v6.append(ipv6_name)
-
-            if 'intra_zone_filtering' in zone_conf:
-                name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'name')
-                if name:
-                    used_v4.append(name)
-
-                ipv6_name = dict_search_args(zone_conf, 'intra_zone_filtering', 'firewall', 'ipv6_name')
-                if ipv6_name:
-                    used_v6.append(ipv6_name)
-    else:
-        return None
-
-    return {'name': used_v4, 'ipv6_name': used_v6}
 
 def geoip_updated(conf, firewall):
     diff = get_config_diff(conf)
@@ -171,6 +138,9 @@ def get_config(config=None):
         if tmp in default_values:
             del default_values[tmp]
 
+    if 'zone' in default_values:
+        del default_values['zone']
+
     firewall = dict_merge(default_values, firewall)
 
     # Merge in defaults for IPv4 ruleset
@@ -187,8 +157,12 @@ def get_config(config=None):
             firewall['ipv6_name'][ipv6_name] = dict_merge(default_values,
                                                           firewall['ipv6_name'][ipv6_name])
 
+    if 'zone' in firewall:
+        default_values = defaults(base + ['zone'])
+        for zone in firewall['zone']:
+            firewall['zone'][zone] = dict_merge(default_values, firewall['zone'][zone])
+
     firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
-    firewall['zone_policy'] = get_firewall_zones(conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)
@@ -332,11 +306,61 @@ def verify(firewall):
                 if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
                     raise ConfigError(f'Invalid firewall ipv6-name "{ipv6_name}" referenced on interface {ifname}')
 
-    if firewall['zone_policy']:
-        for fw_name, used_names in firewall['zone_policy'].items():
-            for name in used_names:
-                if dict_search_args(firewall, fw_name, name) == None:
-                    raise ConfigError(f'Firewall {fw_name.replace("_", "-")} "{name}" is still referenced in zone-policy')
+    local_zone = False
+    zone_interfaces = []
+
+    if 'zone' in firewall:
+        for zone, zone_conf in firewall['zone'].items():
+            if 'local_zone' not in zone_conf and 'interface' not in zone_conf:
+                raise ConfigError(f'Zone "{zone}" has no interfaces and is not the local zone')
+
+            if 'local_zone' in zone_conf:
+                if local_zone:
+                    raise ConfigError('There cannot be multiple local zones')
+                if 'interface' in zone_conf:
+                    raise ConfigError('Local zone cannot have interfaces assigned')
+                if 'intra_zone_filtering' in zone_conf:
+                    raise ConfigError('Local zone cannot use intra-zone-filtering')
+                local_zone = True
+
+            if 'interface' in zone_conf:
+                found_duplicates = [intf for intf in zone_conf['interface'] if intf in zone_interfaces]
+
+                if found_duplicates:
+                    raise ConfigError(f'Interfaces cannot be assigned to multiple zones')
+
+                zone_interfaces += zone_conf['interface']
+
+            if 'intra_zone_filtering' in zone_conf:
+                intra_zone = zone_conf['intra_zone_filtering']
+
+                if len(intra_zone) > 1:
+                    raise ConfigError('Only one intra-zone-filtering action must be specified')
+
+                if 'firewall' in intra_zone:
+                    v4_name = dict_search_args(intra_zone, 'firewall', 'name')
+                    if v4_name and not dict_search_args(firewall, 'name', v4_name):
+                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+
+                    v6_name = dict_search_args(intra_zone, 'firewall', 'ipv6_name')
+                    if v6_name and not dict_search_args(firewall, 'ipv6_name', v6_name):
+                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+
+                    if not v4_name and not v6_name:
+                        raise ConfigError('No firewall names specified for intra-zone-filtering')
+
+            if 'from' in zone_conf:
+                for from_zone, from_conf in zone_conf['from'].items():
+                    if from_zone not in firewall['zone']:
+                        raise ConfigError(f'Zone "{zone}" refers to a non-existent or deleted zone "{from_zone}"')
+
+                    v4_name = dict_search_args(from_conf, 'firewall', 'name')
+                    if v4_name and not dict_search_args(firewall, 'name', v4_name):
+                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+
+                    v6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
+                    if v6_name and not dict_search_args(firewall, 'ipv6_name', v6_name):
+                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
 
     return None
 
@@ -344,11 +368,18 @@ def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
 
-    if os.path.exists(nftables_zone_conf):
-        firewall['zone_conf'] = nftables_zone_conf
+    if 'zone' in firewall:
+        for local_zone, local_zone_conf in firewall['zone'].items():
+            if 'local_zone' not in local_zone_conf:
+                continue
 
-    if os.path.exists(nftables6_zone_conf):
-        firewall['zone6_conf'] = nftables6_zone_conf
+            local_zone_conf['from_local'] = {}
+
+            for zone, zone_conf in firewall['zone'].items():
+                if zone == local_zone or 'from' not in zone_conf:
+                    continue
+                if local_zone in zone_conf['from']:
+                    local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None

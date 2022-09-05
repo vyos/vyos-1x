@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T2199: Migrate interface firewall nodes to firewall interfaces <ifname> <direction> name/ipv6-name <name>
+# T2199: Migrate zone-policy to firewall node
 
 import re
 
@@ -34,9 +35,10 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 base = ['firewall']
+zone_base = ['zone-policy']
 config = ConfigTree(config_file)
 
-if not config.exists(base):
+if not config.exists(base) and not config.exists(zone_base):
     # Nothing to do
     exit(0)
 
@@ -79,6 +81,14 @@ for iftype in config.list_nodes(['interfaces']):
                 if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
                     for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
                         migrate_interface(config, iftype, ifname, vifs=vifs, vifc=vifc)
+
+if config.exists(zone_base + ['zone']):
+    config.set(['firewall', 'zone'])
+    config.set_tag(['firewall', 'zone'])
+
+    for zone in config.list_nodes(zone_base + ['zone']):
+        config.copy(zone_base + ['zone', zone], ['firewall', 'zone', zone])
+    config.delete(zone_base)
 
 try:
     with open(file_name, 'w') as f:
