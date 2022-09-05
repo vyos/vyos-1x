@@ -31,6 +31,7 @@ Example of the version data dict::
 
 import os
 import json
+import requests
 import vyos.defaults
 
 from vyos.util import read_file
@@ -105,3 +106,41 @@ def get_full_version_data(fname=version_file):
     version_data['hardware_uuid'] = read_file(subsystem + '/product_uuid', 'Unknown')
 
     return version_data
+
+def get_remote_version(url):
+    """
+    Get remote available JSON file from remote URL
+    An example of the image-version.json
+
+    [
+       {
+          "arch":"amd64",
+          "flavors":[
+           "generic"
+        ],
+        "image":"vyos-rolling-latest.iso",
+        "latest":true,
+        "lts":false,
+        "release_date":"2022-09-06",
+        "release_train":"sagitta",
+        "url":"http://xxx/rolling/current/vyos-rolling-latest.iso",
+        "version":"vyos-1.4-rolling-202209060217"
+      }
+    ]
+    """
+    headers = {}
+    try:
+        remote_data = requests.get(url=url, headers=headers)
+        remote_data.raise_for_status()
+        if remote_data.status_code != 200:
+            return False
+        return remote_data.json()
+    except requests.exceptions.HTTPError as errh:
+        print ("HTTP Error:", errh)
+    except requests.exceptions.ConnectionError as errc:
+        print ("Connecting error:", errc)
+    except requests.exceptions.Timeout as errt:
+        print ("Timeout error:", errt)
+    except requests.exceptions.RequestException as err:
+        print ("Unable to get remote data", err)
+    return False
