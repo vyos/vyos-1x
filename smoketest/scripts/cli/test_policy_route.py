@@ -158,5 +158,73 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(matched)
 
 
+    def test_pbr_matching_criteria(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'udp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'set', 'table', table_id])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'source', 'address', '198.51.100.0/24'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'state', 'new', 'enable'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'ttl', 'gt', '2'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'set', 'table', table_id])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'protocol', 'icmp'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'icmp', 'type-name', 'echo-request'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'packet-length', '128'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'packet-length', '1024-2048'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'log', 'enable'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'set', 'table', table_id])
+
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'udp'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'tcp', 'flags', 'syn'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '2', 'set', 'table', table_id])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'source', 'address', '2001:db8::0/64'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'protocol', 'tcp'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'destination', 'port', '22'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'state', 'new', 'enable'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'hop-limit', 'gt', '2'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '3', 'set', 'table', table_id])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'protocol', 'icmpv6'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'icmpv6', 'type', 'echo-request'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'packet-length-exclude', '128'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'packet-length-exclude', '1024-2048'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'log', 'enable'])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '4', 'set', 'table', table_id])
+
+        self.cli_set(['interfaces', 'ethernet', interface, 'policy', 'route', 'smoketest'])
+        self.cli_set(['interfaces', 'ethernet', interface, 'policy', 'route6', 'smoketest6'])
+
+        self.cli_commit()
+
+        mark_hex = "{0:#010x}".format(table_mark_offset - int(table_id))
+
+        # IPv4
+        nftables_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
+            ['meta l4proto udp', 'drop'],
+            ['tcp flags & (syn | ack) == syn', 'meta mark set ' + mark_hex],
+            ['ct state { new }', 'tcp dport { 22 }', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
+            ['meta l4proto icmp', 'log prefix "[smoketest-4-A]"', 'icmp type echo-request', 'ip length { 128, 1024-2048 }', 'meta mark set ' + mark_hex]
+        ]
+
+        self.verify_nftables(nftables_search, 'ip mangle')
+
+        # IPv6
+        nftables6_search = [
+            [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
+            ['meta l4proto udp', 'drop'],
+            ['tcp flags & (syn | ack) == syn', 'meta mark set ' + mark_hex],
+            ['ct state { new }', 'tcp dport { 22 }', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],
+            ['meta l4proto ipv6-icmp', 'log prefix "[smoketest6-4-A]"', 'icmpv6 type echo-request', 'ip6 length != { 128, 1024-2048 }', 'meta mark set ' + mark_hex]
+        ]
+
+        self.verify_nftables(nftables6_search, 'ip6 mangle')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

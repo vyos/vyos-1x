@@ -47,6 +47,8 @@
                 </children>
               </node>
               #include <include/policy/route-common-rule-ipv6.xml.i>
+              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/hop-limit.xml.i>
             </children>
           </tagNode>
         </children>
@@ -96,6 +98,8 @@
                 </children>
               </node>
               #include <include/policy/route-common-rule.xml.i>
+              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/ttl.xml.i>
             </children>
           </tagNode>
         </children>

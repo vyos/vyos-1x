@@ -384,16 +384,7 @@
               </node>
               #include <include/firewall/common-rule.xml.i>
               #include <include/firewall/packet-length.xml.i>
-              <node name="hop-limit">
-                <properties>
-                  <help>Hop Limit</help>
-                </properties>
-                <children>
-                  #include <include/firewall/eq.xml.i>
-                  #include <include/firewall/gt.xml.i>
-                  #include <include/firewall/lt.xml.i>
-                </children>
-              </node>
+              #include <include/firewall/hop-limit.xml.i>
               <node name="icmpv6">
                 <properties>
                   <help>ICMPv6 type and code information</help>
@@ -572,16 +563,7 @@
                   #include <include/firewall/icmp-type-name.xml.i>
                 </children>
               </node>
-              <node name="ttl">
-                <properties>
-                  <help>Time to live limit</help>
-                </properties>
-                <children>
-                  #include <include/firewall/eq.xml.i>
-                  #include <include/firewall/gt.xml.i>
-                  #include <include/firewall/lt.xml.i>
-                </children>
-              </node>
+              #include <include/firewall/ttl.xml.i>
             </children>
           </tagNode>
         </children>
