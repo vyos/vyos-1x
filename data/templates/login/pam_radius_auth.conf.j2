@@ -16,7 +16,7 @@
 {%     if radius.server is vyos_defined %}
 # server[:port]        shared_secret             timeout    source_ip
 {# .items() returns a tuple of two elements: key and value. 1 relates to the 2nd element i.e. the value and .priority relates to the key from the internal dict #}
-{%         for server, options in radius.server.items() | sort(attribute='1.priority') if not options.disabled %}
+{%         for server, options in radius.server.items() | sort(attribute='1.priority') if not 'disable' in options %}
 {#         RADIUS IPv6 servers must be specified in [] notation #}
 {%             if server | is_ipv4 %}
 {{ server }}:{{ options.port }} {{ "%-25s" | format(options.key) }} {{ "%-10s" | format(options.timeout) }} {{ source_address.ipv4 if source_address.ipv4 is vyos_defined }}
@@ -33,4 +33,3 @@ mapped_priv_user radius_priv_user
 vrf-name {{ radius.vrf }}
 {%     endif %}
 {% endif %}
-
