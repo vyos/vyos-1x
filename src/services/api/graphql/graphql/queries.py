@@ -90,11 +90,12 @@ def make_query_resolver(query_name, class_name, session_func):
             }
         except OpModeError as e:
             typename = type(e).__name__
+            msg = str(e)
             return {
                 "success": False,
                 "errors": ['op_mode_error'],
                 "op_mode_error": {"name": f"{typename}",
-                                 "message": op_mode_err_msg.get(typename, "Unknown"),
+                                 "message": msg if msg else op_mode_err_msg.get(typename, "Unknown"),
                                  "vyos_code": op_mode_err_code.get(typename, 9999)}
             }
         except Exception as error:
