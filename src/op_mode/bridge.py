@@ -22,7 +22,7 @@ import typing
 from sys import exit
 from tabulate import tabulate
 
-from vyos.util import cmd
+from vyos.util import cmd, rc_cmd
 from vyos.util import dict_search
 
 import vyos.opmode
@@ -57,7 +57,11 @@ def _get_raw_data_fdb(bridge):
     """Get MAC-address for the bridge brX
     :returns list
     """
-    json_data = cmd(f'sudo bridge --json fdb show br {bridge}')
+    code, json_data = rc_cmd(f'sudo bridge --json fdb show br {bridge}')
+    # From iproute2 fdb.c, fdb_show() will only exit(-1) in case of
+    # non-existent bridge device; raise error.
+    if code == 255:
+        raise vyos.opmode.UnconfiguredSubsystem(f"no such bridge device {bridge}")
     data_dict = json.loads(json_data)
     return data_dict
 
