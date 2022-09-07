@@ -383,6 +383,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
+              #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/hop-limit.xml.i>
               <node name="icmpv6">
@@ -530,6 +531,7 @@
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
+              #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               <node name="icmp">
                 <properties>
