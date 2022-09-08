@@ -47,10 +47,10 @@ vrrp_instance {{ name }} {
 {%             endif %}
 {%         endif %}
 {%         if group_config.rfc3768_compatibility is vyos_defined and group_config.peer_address is vyos_defined %}
-    use_vmac {{ group_config.interface }}v{{ group_config.vrid }}
+    use_vmac {{ group_config.interface }}v{{ group_config.vrid }}v{{ '4' if group_config['address'] | first | is_ipv4 else '6' }}
     vmac_xmit_base
 {%         elif group_config.rfc3768_compatibility is vyos_defined %}
-    use_vmac {{ group_config.interface }}v{{ group_config.vrid }}
+    use_vmac {{ group_config.interface }}v{{ group_config.vrid }}v{{ '4' if group_config['address'] | first | is_ipv4 else '6' }}
 {%         endif %}
 {%         if group_config.authentication is vyos_defined %}
     authentication {
