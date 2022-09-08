@@ -162,7 +162,7 @@
             <properties>
               <help>Show filesystem usage</help>
             </properties>
-            <command>df -h -x squashfs</command>
+            <command>${vyos_op_scripts_dir}/storage.py show</command>
           </leafNode>
           <leafNode name="uptime">
             <properties>
