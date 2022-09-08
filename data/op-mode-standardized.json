@@ -9,6 +9,7 @@
 "openconnect.py",
 "route.py",
 "ipsec.py",
+"uptime.py",
 "version.py",
 "vrf.py"
 ]
