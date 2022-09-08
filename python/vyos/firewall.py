@@ -274,6 +274,13 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         negated_lengths_str = ','.join(rule_conf['packet_length_exclude'])
         output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
+    if 'dscp' in rule_conf:
+        dscp_str = ','.join(rule_conf['dscp'])
+        output.append(f'ip{def_suffix} dscp {{{dscp_str}}}')
+
+    if 'dscp_exclude' in rule_conf:
+        negated_dscp_str = ','.join(rule_conf['dscp_exclude'])
+        output.append(f'ip{def_suffix} dscp != {{{negated_dscp_str}}}')
 
     if 'ipsec' in rule_conf:
         if 'match_ipsec' in rule_conf['ipsec']:

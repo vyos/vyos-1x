@@ -232,8 +232,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip filter')
 
-    def test_ipv4_packet_length(self):
-        name = 'smoketest-plen'
+    def test_ipv4_advanced(self):
+        name = 'smoketest-adv'
         interface = 'eth0'
 
         self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
@@ -243,10 +243,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '64'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '512'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '1024'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'dscp', '17'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'dscp', '52'])
 
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'action', 'accept'])
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'packet-length', '1-30000'])
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'packet-length-exclude', '60000-65535'])
+        self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp', '3-11'])
+        self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp-exclude', '21-25'])
 
         self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'name', name])
 
@@ -254,8 +258,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
-            ['ip length { 64, 512, 1024 }', 'return'],
-            ['ip length { 1-30000 }', 'ip length != { 60000-65535 }', 'return'],
+            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', 'return'],
+            ['ip length { 1-30000 }', 'ip length != { 60000-65535 }', 'ip dscp { 0x03-0x0b }', 'ip dscp != { 0x15-0x19 }', 'return'],
             [f'log prefix "[{name}-default-D]" drop']
         ]
 
@@ -291,8 +295,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 filter')
 
-    def test_ipv6_packet_length(self):
-        name = 'v6-smoketest-plen'
+    def test_ipv6_advanced(self):
+        name = 'v6-smoketest-adv'
         interface = 'eth0'
 
         self.cli_set(['firewall', 'ipv6-name', name, 'default-action', 'drop'])
@@ -302,10 +306,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '65'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '513'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'packet-length', '1025'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'dscp', '18'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'dscp', '53'])
 
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'packet-length', '1-1999'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'packet-length-exclude', '60000-65535'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp', '4-14'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp-exclude', '31-35'])
 
         self.cli_set(['interfaces', 'ethernet', interface, 'firewall', 'in', 'ipv6-name', name])
 
@@ -313,8 +321,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
-            ['ip6 length { 65, 513, 1025 }', 'return'],
-            ['ip6 length { 1-1999 }', 'ip6 length != { 60000-65535 }', 'return'],
+            ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'return'],
+            ['ip6 length { 1-1999 }', 'ip6 length != { 60000-65535 }', 'ip6 dscp { 0x04-0x0e }', 'ip6 dscp != { 0x1f-0x23 }', 'return'],
             [f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
