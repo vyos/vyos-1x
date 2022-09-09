@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-def get_uptime_seconds():
+import sys
+
+import vyos.opmode
+
+def _get_uptime_seconds():
   from re import search
   from vyos.util import read_file
 
@@ -23,7 +27,7 @@ def get_uptime_seconds():
 
   return int(float(seconds))
 
-def get_load_averages():
+def _get_load_averages():
     from re import search
     from vyos.util import cmd
     from vyos.cpu import get_core_count
@@ -40,19 +44,17 @@ def get_load_averages():
 
     return res
 
-def get_raw_data():
+def _get_raw_data():
     from vyos.util import seconds_to_human
 
     res = {}
-    res["uptime_seconds"] = get_uptime_seconds()
-    res["uptime"] = seconds_to_human(get_uptime_seconds())
-    res["load_average"] = get_load_averages()
+    res["uptime_seconds"] = _get_uptime_seconds()
+    res["uptime"] = seconds_to_human(_get_uptime_seconds())
+    res["load_average"] = _get_load_averages()
 
     return res
 
-def get_formatted_output():
-    data = get_raw_data()
-
+def _get_formatted_output(data):
     out = "Uptime: {}\n\n".format(data["uptime"])
     avgs = data["load_average"]
     out += "Load averages:\n"
@@ -62,5 +64,19 @@ def get_formatted_output():
 
     return out
 
+def show(raw: bool):
+    uptime_data = _get_raw_data()
+
+    if raw:
+        return uptime_data
+    else:
+        return _get_formatted_output(uptime_data)
+
 if __name__ == '__main__':
-    print(get_formatted_output())
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except (ValueError, vyos.opmode.Error) as e:
+        print(e)
+        sys.exit(1)
