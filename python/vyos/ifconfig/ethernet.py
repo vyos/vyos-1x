@@ -16,6 +16,7 @@
 import os
 import re
 
+from glob import glob
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
@@ -258,6 +259,21 @@ class EthernetIf(Interface):
         # send bitmask representation as hex string without leading '0x'
         return self.set_interface('rps', rps_cpus)
 
+    def set_rfs(self, state):
+        rfs_flow = 0
+        global_rfs_flow = 0
+        queues = glob(f'/sys/class/net/{ifname}/queues/rx-*')
+        if state:
+            global_rfs_flow = 32768
+            rfs_flow = global_rfs_flow/queues
+
+        call(f'echo {global_rfs_flow} > /proc/sys/net/core/rps_sock_flow_entries')
+
+        for i in range(0,queues):
+            call(f'echo {rfs_flow} > /sys/class/net/{ifname}/queues/rx-{i}/rps_flow_cnt')
+
+        return True
+
     def set_sg(self, state):
         """
         Enable Scatter-Gather support. State can be either True or False.
@@ -341,6 +357,9 @@ class EthernetIf(Interface):
 
         # RPS - Receive Packet Steering
         self.set_rps(dict_search('offload.rps', config) != None)
+
+        # RFS - Receive Flow Steering
+        self.set_rfs(dict_search('offload.rfs', config) != None)
 
         # scatter-gather option
         self.set_sg(dict_search('offload.sg', config) != None)
