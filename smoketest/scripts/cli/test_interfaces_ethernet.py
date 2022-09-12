@@ -18,6 +18,7 @@ import os
 import re
 import unittest
 
+from glob import glob
 from netifaces import AF_INET
 from netifaces import AF_INET6
 from netifaces import ifaddresses
@@ -184,6 +185,24 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             cpus = int(cpus, 16)
 
             self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
+
+    def test_offloading_rfs(self):
+        global_rfs_flow = 32768
+        rfs_flow = global_rfs_flow
+
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'offload', 'rfs'])
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            queues = glob(f'/sys/class/net/{interface}/queues/rx-*')
+            rfs_flow = global_rfs_flow/queues
+            for i in range(0,queues):
+                flows = read_file(f'/sys/class/net/{interface}/queues/rx-{i}/rps_cpus')
+                self.assertEqual(int(flows), rfs_flow)
+
+        global_flows = read_file(f'/proc/sys/net/core/rps_sock_flow_entries')
+        self.assertEqual(int(global_flows), global_rfs_flow)
 
     def test_non_existing_interface(self):
         unknonw_interface = self._base_path + ['eth667']

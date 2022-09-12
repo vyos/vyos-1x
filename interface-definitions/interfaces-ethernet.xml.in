@@ -94,6 +94,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="rfs">
+                <properties>
+                  <help>Enable Receive Flow Steering</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="sg">
                 <properties>
                   <help>Enable Scatter-Gather</help>
