@@ -12,4 +12,5 @@ EnvironmentFile=
 Environment=INFLUX_TOKEN={{ influxdb.authentication.token }}
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN CAP_SYS_ADMIN CAP_BPF CAP_DAC_OVERRIDE
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
-
+Restart=always
+RestartSec=10
