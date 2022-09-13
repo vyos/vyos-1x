@@ -30,8 +30,8 @@ def get_system_version() -> dict:
     return show_version.show(raw=True, funny=False)
 
 def get_system_uptime() -> dict:
-    show_uptime = load_op_mode_as_module('show_uptime.py')
-    return show_uptime.get_raw_data()
+    show_uptime = load_op_mode_as_module('uptime.py')
+    return show_uptime._get_raw_data()
 
 def get_system_ram_usage() -> dict:
     show_ram = load_op_mode_as_module('memory.py')

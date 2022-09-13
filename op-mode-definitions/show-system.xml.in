@@ -142,7 +142,7 @@
                 <properties>
                   <help>Show summary of system processes</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_uptime.py</command>
+                <command>${vyos_op_scripts_dir}/uptime.py show</command>
               </leafNode>
               <leafNode name="tree">
                 <properties>
@@ -162,13 +162,13 @@
             <properties>
               <help>Show filesystem usage</help>
             </properties>
-            <command>df -h -x squashfs</command>
+            <command>${vyos_op_scripts_dir}/storage.py show</command>
           </leafNode>
           <leafNode name="uptime">
             <properties>
               <help>Show system uptime and load averages</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_uptime.py</command>
+            <command>${vyos_op_scripts_dir}/uptime.py show</command>
           </leafNode>
         </children>
       </node>
