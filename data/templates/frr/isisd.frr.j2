@@ -124,23 +124,23 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
 {%         for prefix, prefix_config in segment_routing.prefix.items() %}
 {%             if prefix_config.absolute is vyos_defined %}
 {%                 if prefix_config.absolute.value is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }}
+ segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }}
 {%                     if prefix_config.absolute.explicit_null is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }} explicit-null
+ segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }} explicit-null
 {%                     endif %}
 {%                     if prefix_config.absolute.no_php_flag is vyos_defined %}
- segment-routing prefix {{ prefixes }} absolute {{ prefix_config.absolute.value }} no-php-flag
+ segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }} no-php-flag
 {%                     endif %}
 {%                 endif %}
-{%                 if prefix_config.index is vyos_defined %}
-{%                     if prefix_config.index.value is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }}
-{%                         if prefix_config.index.explicit_null is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }} explicit-null
-{%                         endif %}
-{%                         if prefix_config.index.no_php_flag is vyos_defined %}
- segment-routing prefix {{ prefixes }} index {{ prefix_config.index.value }} no-php-flag
-{%                         endif %}
+{%             endif %}
+{%             if prefix_config.index is vyos_defined %}
+{%                 if prefix_config.index.value is vyos_defined %}
+ segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }}
+{%                     if prefix_config.index.explicit_null is vyos_defined %}
+ segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }} explicit-null
+{%                     endif %}
+{%                     if prefix_config.index.no_php_flag is vyos_defined %}
+ segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }} no-php-flag
 {%                     endif %}
 {%                 endif %}
 {%             endif %}
