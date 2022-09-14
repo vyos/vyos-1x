@@ -216,12 +216,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15','return'],
-            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
-            ['tcp dport { 22 }', 'limit rate 5/minute', 'return'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15', 'return'],
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
+            ['tcp dport 22', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
-            ['tcp dport { 22 }', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
-            [f'tcp flags & syn == syn tcp option maxseg size {mss_range}'],
+            ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
+            ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}'],
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -253,8 +253,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
             ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', 'return'],
-            ['ip length { 1-30000 }', 'ip length != { 60000-65535 }', 'ip dscp { 0x03-0x0b }', 'ip dscp != { 0x15-0x19 }', 'return'],
-            [f'log prefix "[{name}-default-D]" drop']
+            ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'return'],
+            [f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -283,7 +283,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
-            ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'reject'],
+            ['meta l4proto { tcp, udp }', 'th dport 8888', 'reject'],
             ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
@@ -316,7 +316,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'return'],
-            ['ip6 length { 1-1999 }', 'ip6 length != { 60000-65535 }', 'ip6 dscp { 0x04-0x0e }', 'ip6 dscp != { 0x1f-0x23 }', 'return'],
+            ['ip6 length 1-1999', 'ip6 length != 60000-65535', 'ip6 dscp 0x04-0x0e', 'ip6 dscp != 0x1f-0x23', 'return'],
             [f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
@@ -365,9 +365,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
             ['ct state { established, related }', 'return'],
-            ['ct state { invalid }', 'reject'],
-            ['ct state { new }', 'ct status { dnat }', 'return'],
-            ['ct state { established, new }', 'ct status { snat }', 'return'],
+            ['ct state invalid', 'reject'],
+            ['ct state new', 'ct status dnat', 'return'],
+            ['ct state { established, new }', 'ct status snat', 'return'],
             ['drop', f'comment "{name} default-action drop"']
         ]
 
@@ -403,11 +403,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VZONE_smoketest-eth0'],
             ['chain VZONE_smoketest-local_IN'],
             ['chain VZONE_smoketest-local_OUT'],
-            ['oifname { "eth0" }', 'jump VZONE_smoketest-eth0'],
+            ['oifname "eth0"', 'jump VZONE_smoketest-eth0'],
             ['jump VZONE_smoketest-local_IN'],
             ['jump VZONE_smoketest-local_OUT'],
-            ['iifname { "eth0" }', 'jump NAME_smoketest'],
-            ['oifname { "eth0" }', 'jump NAME_smoketest']
+            ['iifname "eth0"', 'jump NAME_smoketest'],
+            ['oifname "eth0"', 'jump NAME_smoketest']
         ]
 
         nftables_output = cmd('sudo nft list table ip vyos_filter')
