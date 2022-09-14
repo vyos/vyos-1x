@@ -1,0 +1,17 @@
+#!/usr/sbin/nft -f
+
+{% if first_install is not vyos_defined %}
+delete table ip vyos_nhrp_filter
+{% endif %}
+table ip vyos_nhrp_filter {
+    chain VYOS_NHRP_OUTPUT {
+        type filter hook output priority 10; policy accept;
+{% if tunnel is vyos_defined %}
+{%     for tun, tunnel_conf in tunnel.items() %}
+{%         if if_tunnel[tun].source_address is vyos_defined %}
+        ip protocol gre ip saddr {{ if_tunnel[tun].source_address }} ip daddr 224.0.0.0/4 counter drop comment "VYOS_NHRP_{{ tun }}"
+{%         endif %}
+{%     endfor %}
+{% endif %}
+    }
+}

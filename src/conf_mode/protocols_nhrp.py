@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from vyos.config import Config
 from vyos.configdict import node_changed
-from vyos.firewall import find_nftables_rule
-from vyos.firewall import remove_nftables_rule
 from vyos.template import render
 from vyos.util import process_named_running
 from vyos.util import run
@@ -26,6 +26,7 @@ from vyos import airbag
 airbag.enable()
 
 opennhrp_conf = '/run/opennhrp/opennhrp.conf'
+nhrp_nftables_conf = '/run/nftables_nhrp.conf'
 
 def get_config(config=None):
     if config:
@@ -84,28 +85,23 @@ def verify(nhrp):
     return None
 
 def generate(nhrp):
+    if not os.path.exists(nhrp_nftables_conf):
+        nhrp['first_install'] = True
+
     render(opennhrp_conf, 'nhrp/opennhrp.conf.j2', nhrp)
+    render(nhrp_nftables_conf, 'nhrp/nftables.conf.j2', nhrp)
     return None
 
 def apply(nhrp):
-    if 'tunnel' in nhrp:
-        for tunnel, tunnel_conf in nhrp['tunnel'].items():
-            if 'source_address' in nhrp['if_tunnel'][tunnel]:
-                comment = f'VYOS_NHRP_{tunnel}'
-                source_address = nhrp['if_tunnel'][tunnel]['source_address']
-
-                rule_handle = find_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', ['ip protocol gre', f'ip saddr {source_address}', 'ip daddr 224.0.0.0/4'])
-                if not rule_handle:
-                    run(f'sudo nft insert rule ip vyos_filter VYOS_FW_OUTPUT ip protocol gre ip saddr {source_address} ip daddr 224.0.0.0/4 counter drop comment "{comment}"')
-
-    for tunnel in nhrp['del_tunnels']:
-        comment = f'VYOS_NHRP_{tunnel}'
-        rule_handle = find_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', [f'comment "{comment}"'])
-        if rule_handle:
-            remove_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', rule_handle)
+    nft_rc = run(f'nft -f {nhrp_nftables_conf}')
+    if nft_rc != 0:
+        raise ConfigError('Failed to apply NHRP tunnel firewall rules')
 
     action = 'restart' if nhrp and 'tunnel' in nhrp else 'stop'
-    run(f'systemctl {action} opennhrp.service')
+    service_rc = run(f'systemctl {action} opennhrp.service')
+    if service_rc != 0:
+        raise ConfigError(f'Failed to {action} the NHRP service')
+
     return None
 
 if __name__ == '__main__':
