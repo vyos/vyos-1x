@@ -314,6 +314,40 @@
           </tagNode>
         </children>
       </node>
+      <tagNode name="interface">
+        <properties>
+          <help>Interface name</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <node name="in">
+            <properties>
+              <help>Forwarded packets on inbound interface</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+          <node name="out">
+            <properties>
+              <help>Forwarded packets on outbound interface</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+          <node name="local">
+            <properties>
+              <help>Packets destined for this router</help>
+            </properties>
+            <children>
+              #include <include/firewall/name.xml.i>
+            </children>
+          </node>
+        </children>
+      </tagNode>
       <leafNode name="ip-src-route">
         <properties>
           <help>Policy for handling IPv4 packets with source route option</help>
@@ -708,6 +742,143 @@
         </properties>
         <defaultValue>disable</defaultValue>
       </leafNode>
+      <tagNode name="zone">
+        <properties>
+          <help>Zone-policy</help>
+          <valueHelp>
+            <format>txt</format>
+            <description>Zone name</description>
+          </valueHelp>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/firewall/enable-default-log.xml.i>
+          <leafNode name="default-action">
+            <properties>
+              <help>Default-action for traffic coming into this zone</help>
+              <completionHelp>
+                <list>drop reject</list>
+              </completionHelp>
+              <valueHelp>
+                <format>drop</format>
+                <description>Drop silently</description>
+              </valueHelp>
+              <valueHelp>
+                <format>reject</format>
+                <description>Drop and notify source</description>
+              </valueHelp>
+              <constraint>
+                <regex>(drop|reject)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>drop</defaultValue>
+          </leafNode>
+          <tagNode name="from">
+            <properties>
+              <help>Zone from which to filter traffic</help>
+              <completionHelp>
+                <path>zone-policy zone</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="firewall">
+                <properties>
+                  <help>Firewall options</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          <leafNode name="interface">
+            <properties>
+              <help>Interface associated with zone</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface associated with zone</description>
+              </valueHelp>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <node name="intra-zone-filtering">
+            <properties>
+              <help>Intra-zone filtering</help>
+            </properties>
+            <children>
+              <leafNode name="action">
+                <properties>
+                  <help>Action for intra-zone traffic</help>
+                  <completionHelp>
+                    <list>accept drop</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>accept</format>
+                    <description>Accept traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>drop</format>
+                    <description>Drop silently</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(accept|drop)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="firewall">
+                <properties>
+                  <help>Use the specified firewall chain</help>
+                </properties>
+                <children>
+                  <leafNode name="ipv6-name">
+                    <properties>
+                      <help>IPv6 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall ipv6-name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="name">
+                    <properties>
+                      <help>IPv4 firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall name</path>
+                      </completionHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="local-zone">
+            <properties>
+              <help>Zone to be local-zone</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

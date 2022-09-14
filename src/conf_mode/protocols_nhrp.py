@@ -94,15 +94,15 @@ def apply(nhrp):
                 comment = f'VYOS_NHRP_{tunnel}'
                 source_address = nhrp['if_tunnel'][tunnel]['source_address']
 
-                rule_handle = find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', ['ip protocol gre', f'ip saddr {source_address}', 'ip daddr 224.0.0.0/4'])
+                rule_handle = find_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', ['ip protocol gre', f'ip saddr {source_address}', 'ip daddr 224.0.0.0/4'])
                 if not rule_handle:
-                    run(f'sudo nft insert rule ip filter VYOS_FW_OUTPUT ip protocol gre ip saddr {source_address} ip daddr 224.0.0.0/4 counter drop comment "{comment}"')
+                    run(f'sudo nft insert rule ip vyos_filter VYOS_FW_OUTPUT ip protocol gre ip saddr {source_address} ip daddr 224.0.0.0/4 counter drop comment "{comment}"')
 
     for tunnel in nhrp['del_tunnels']:
         comment = f'VYOS_NHRP_{tunnel}'
-        rule_handle = find_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', [f'comment "{comment}"'])
+        rule_handle = find_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', [f'comment "{comment}"'])
         if rule_handle:
-            remove_nftables_rule('ip filter', 'VYOS_FW_OUTPUT', rule_handle)
+            remove_nftables_rule('ip vyos_filter', 'VYOS_FW_OUTPUT', rule_handle)
 
     action = 'restart' if nhrp and 'tunnel' in nhrp else 'stop'
     run(f'systemctl {action} opennhrp.service')

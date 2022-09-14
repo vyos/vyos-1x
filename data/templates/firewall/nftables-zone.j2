@@ -1,0 +1,72 @@
+
+{% macro zone_chains(zone, state_policy=False, ipv6=False) %}
+{% set fw_name = 'ipv6_name' if ipv6 else 'name' %}
+{% set suffix = '6' if ipv6 else '' %}
+    chain VYOS_ZONE_FORWARD {
+        type filter hook forward priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
+{% for zone_name, zone_conf in zone.items() %}
+{%     if 'local_zone' not in zone_conf %}
+        oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE_{{ zone_name }}
+{%     endif %}
+{% endfor %}
+    }
+    chain VYOS_ZONE_LOCAL {
+        type filter hook input priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
+{% for zone_name, zone_conf in zone.items() %}
+{%     if 'local_zone' in zone_conf %}
+        counter jump VZONE_{{ zone_name }}_IN
+{%     endif %}
+{% endfor %}
+    }
+    chain VYOS_ZONE_OUTPUT {
+        type filter hook output priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
+{% for zone_name, zone_conf in zone.items() %}
+{%     if 'local_zone' in zone_conf %}
+        counter jump VZONE_{{ zone_name }}_OUT
+{%     endif %}
+{% endfor %}
+    }
+{% for zone_name, zone_conf in zone.items() %}
+{%     if zone_conf.local_zone is vyos_defined %}
+    chain VZONE_{{ zone_name }}_IN {
+        iifname lo counter return
+{%         for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endfor %}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+    }
+    chain VZONE_{{ zone_name }}_OUT {
+        oifname lo counter return
+{%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall[fw_name] is vyos_defined %}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
+        oifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%         endfor %}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+    }
+{%     else %}
+    chain VZONE_{{ zone_name }} {
+        iifname { {{ zone_conf.interface | join(",") }} } counter {{ zone_conf | nft_intra_zone_action(ipv6) }}
+{%         if zone_conf.intra_zone_filtering is vyos_defined %}
+        iifname { {{ zone_conf.interface | join(",") }} } counter return
+{%         endif %}
+{%         for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
+{%             if zone[from_zone].local_zone is not defined %}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
+        iifname { {{ zone[from_zone].interface | join(",") }} } counter return
+{%             endif %}
+{%         endfor %}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+    }
+{%     endif %}
+{% endfor %}
+{% endmacro %}

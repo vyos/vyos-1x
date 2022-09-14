@@ -2,10 +2,10 @@
 
 {% if ipv4_sets is vyos_defined %}
 {%     for setname, ip_list in ipv4_sets.items() %}
-flush set ip filter {{ setname }}
+flush set ip vyos_filter {{ setname }}
 {%     endfor %}
 
-table ip filter {
+table ip vyos_filter {
 {%     for setname, ip_list in ipv4_sets.items() %}
     set {{ setname }} {
         type ipv4_addr
@@ -18,10 +18,10 @@ table ip filter {
 
 {% if ipv6_sets is vyos_defined %}
 {%     for setname, ip_list in ipv6_sets.items() %}
-flush set ip6 filter {{ setname }}
+flush set ip6 vyos_filter {{ setname }}
 {%     endfor %}
 
-table ip6 filter {
+table ip6 vyos_filter {
 {%     for setname, ip_list in ipv6_sets.items() %}
     set {{ setname }} {
         type ipv6_addr
