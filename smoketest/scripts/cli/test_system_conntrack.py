@@ -59,7 +59,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             },
             'net.netfilter.nf_conntrack_tcp_max_retrans' :{
                 'cli'           : ['tcp', 'max-retrans'],
-                'test_value'    : '1024',
+                'test_value'    : '128',
                 'default_value' : '3',
             },
             'net.netfilter.nf_conntrack_icmp_timeout' :{
