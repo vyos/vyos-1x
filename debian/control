@@ -58,6 +58,7 @@ Depends:
   frr-pythontools,
   frr-rpki-rtrlib,
   frr-snmp,
+  libpam-google-authenticator,
   grc,
   hostapd,
   hvinfo,
