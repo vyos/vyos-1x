@@ -287,6 +287,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'bestpath', 'as-path', 'multipath-relax'])
         self.cli_set(base_path + ['parameters', 'bestpath', 'bandwidth', 'default-weight-for-missing'])
         self.cli_set(base_path + ['parameters', 'bestpath', 'compare-routerid'])
+        self.cli_set(base_path + ['parameters', 'bestpath', 'peer-type', 'multipath-relax'])
 
         self.cli_set(base_path + ['parameters', 'conditional-advertisement', 'timer', cond_adv_timer])
         self.cli_set(base_path + ['parameters', 'fast-convergence'])
@@ -318,6 +319,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp bestpath as-path multipath-relax', frrconfig)
         self.assertIn(f' bgp bestpath bandwidth default-weight-for-missing', frrconfig)
         self.assertIn(f' bgp bestpath compare-routerid', frrconfig)
+        self.assertIn(f' bgp bestpath peer-type multipath-relax', frrconfig)
         self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
         self.assertIn(f' bgp reject-as-sets', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
