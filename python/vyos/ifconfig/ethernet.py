@@ -266,18 +266,16 @@ class EthernetIf(Interface):
     def set_rfs(self, state):
         rfs_flow = 0
         global_rfs_flow = 0
-        ifname = self.config['ifname']
-        queues = glob(f'/sys/class/net/{ifname}/queues/rx-*')
+        queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
             global_rfs_flow = 32768
-            rfs_flow = global_rfs_flow/len(queues)
+            rfs_flow = int(global_rfs_flow/queues)
 
-        self.set_interface('rfs', str(int(global_rfs_flow)))
+        self.set_interface('rfs', global_rfs_flow)
+        for i in range(0, queues):
+            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_flow_cnt', rfs_flow)
 
-        for i in range(0,len(queues)):
-            self._write_sysfs(f'/sys/class/net/{ifname}/queues/rx-{i}/rps_flow_cnt',str(int(rfs_flow)))
-
-        return state
+        return True
 
     def set_sg(self, state):
         """
