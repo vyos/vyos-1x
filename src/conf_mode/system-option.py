@@ -132,6 +132,11 @@ def apply(options):
     else:
       cmd('systemctl disable root-partition-auto-resize.service')
 
+    if 'enable_rfs_option' in options:
+        cmd('echo 32768 > /proc/sys/net/core/rps_sock_flow_entries')
+    else:
+        cmd('echo 0 > /proc/sys/net/core/rps_sock_flow_entries')
+
 if __name__ == '__main__':
     try:
         c = get_config()

@@ -42,6 +42,7 @@ from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.util import write_file
+from vyos.util import read_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -87,6 +88,15 @@ def verify(ethernet):
     verify_bond_bridge_member(ethernet)
     verify_eapol(ethernet)
     verify_mirror_redirect(ethernet)
+
+    # Check RFS Global Status
+    if dict_search('offload.rfs',ethernet) != None:
+        if dict_search('offload.lro',ethernet) != None:
+            raise ConfigError('When LRO offload starts. Unable to start Receive Flow Steering (RFS)')
+        else:
+            tmp = int(read_file('/proc/sys/net/core/rps_sock_flow_entries'))
+            if tmp == 0:
+                Warning('To use Receive Flow Steering (RFS), you must first enable the \'set system option enable-rfs-option\' configuration')
 
     ethtool = Ethtool(ifname)
     # No need to check speed and duplex keys as both have default values.

@@ -190,6 +190,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         global_rfs_flow = 32768
         rfs_flow = global_rfs_flow
 
+        self.cli_set(['system', 'option', 'enable-rfs-option'])
         for interface in self._interfaces:
             self.cli_set(self._base_path + [interface, 'offload', 'rfs'])
 
@@ -207,6 +208,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
 
 
         # delete configuration of RFS and check all values returned to default "0"
+        self.cli_delete(['system', 'option', 'enable-rfs-option'])
         for interface in self._interfaces:
             self.cli_delete(self._base_path + [interface, 'offload', 'rfs'])
 
@@ -222,6 +224,13 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         tmp = read_file(f'/proc/sys/net/core/rps_sock_flow_entries')
         self.assertEqual(int(tmp), 0)
 
+        # When LRO offload starts. Unable to start Receive Flow Steering (RFS)
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'offload', 'lro'])
+            self.cli_set(self._base_path + [interface, 'offload', 'rfs'])
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
     def test_non_existing_interface(self):
         unknonw_interface = self._base_path + ['eth667']
