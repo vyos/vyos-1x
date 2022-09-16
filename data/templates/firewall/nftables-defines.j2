@@ -7,6 +7,7 @@
     set A_{{ group_name }} {
         type {{ ip_type }}
         flags interval
+        auto-merge
 {%             if group_conf.address is vyos_defined or includes %}
         elements = { {{ group_conf.address | nft_nested_group(includes, group.address_group, 'address') | join(",") }} }
 {%             endif %}
@@ -19,6 +20,7 @@
     set A6_{{ group_name }} {
         type {{ ip_type }}
         flags interval
+        auto-merge
 {%             if group_conf.address is vyos_defined or includes %}
         elements = { {{ group_conf.address | nft_nested_group(includes, group.ipv6_address_group, 'address') | join(",") }} }
 {%             endif %}
@@ -42,6 +44,7 @@
     set N_{{ group_name }} {
         type {{ ip_type }}
         flags interval
+        auto-merge
 {%             if group_conf.network is vyos_defined or includes %}
         elements = { {{ group_conf.network | nft_nested_group(includes, group.network_group, 'network') | join(",") }} }
 {%             endif %}
@@ -54,6 +57,7 @@
     set N6_{{ group_name }} {
         type {{ ip_type }}
         flags interval
+        auto-merge
 {%             if group_conf.network is vyos_defined or includes %}
         elements = { {{ group_conf.network | nft_nested_group(includes, group.ipv6_network_group, 'network') | join(",") }} }
 {%             endif %}
@@ -66,6 +70,7 @@
     set P_{{ group_name }} {
         type inet_service
         flags interval
+        auto-merge
 {%             if group_conf.port is vyos_defined or includes %}
         elements = { {{ group_conf.port | nft_nested_group(includes, group.port_group, 'port') | join(",") }} }
 {%             endif %}
