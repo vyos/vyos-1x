@@ -105,20 +105,13 @@ ac-name={{ access_concentrator }}
 
 {% if interface is vyos_defined %}
 {%     for iface, iface_config in interface.items() %}
-{%         if iface_config.vlan_id is not vyos_defined and iface_config.vlan_range is not vyos_defined %}
+{%         if iface_config.vlan is not vyos_defined %}
 interface={{ iface }}
-{%         endif %}
-{%         if iface_config.vlan_range is vyos_defined %}
-{%             for regex in iface_config.regex %}
-interface=re:^{{ iface | replace('.', '\\.') }}\.({{ regex }})$
+{%         else %}
+{%             for vlan in iface_config.vlan %}
+interface=re:^{{ iface }}\.{{ vlan | range_to_regex }}$
 {%             endfor %}
-vlan-mon={{ iface }},{{ iface_config.vlan_range | join(',') }}
-{%         endif %}
-{%         if iface_config.vlan_id is vyos_defined %}
-{%             for vlan in iface_config.vlan_id %}
-vlan-mon={{ iface }},{{ vlan }}
-interface=re:^{{ iface | replace('.', '\\.') }}\.{{ vlan }}$
-{%             endfor %}
+vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {%         endif %}
 {%     endfor %}
 {% endif %}

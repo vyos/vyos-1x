@@ -611,6 +611,15 @@ def nft_nested_group(out_list, includes, groups, key):
         add_includes(name)
     return out_list
 
+@register_filter('range_to_regex')
+def range_to_regex(num_range):
+    from vyos.range_regex import range_to_regex
+    if '-' not in num_range:
+        return num_range
+
+    regex = range_to_regex(num_range)
+    return f'({regex})'
+
 @register_test('vyos_defined')
 def vyos_defined(value, test_value=None, var_type=None):
     """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,13 +21,12 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_accel_ppp_base_service
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.util import call
 from vyos.util import dict_search
-from vyos.util import get_interface_config
 from vyos import ConfigError
 from vyos import airbag
-from vyos.range_regex import range_to_regex
 
 airbag.enable()
 
@@ -54,15 +53,14 @@ def verify(pppoe):
     verify_accel_ppp_base_service(pppoe)
 
     if 'wins_server' in pppoe and len(pppoe['wins_server']) > 2:
-        raise ConfigError('Not more then two IPv4 WINS name-servers can be configured')
+        raise ConfigError('Not more then two WINS name-servers can be configured')
 
     if 'interface' not in pppoe:
         raise ConfigError('At least one listen interface must be defined!')
 
     # Check is interface exists in the system
-    for iface in pppoe['interface']:
-        if not get_interface_config(iface):
-            raise ConfigError(f'Interface {iface} does not exist!')
+    for interface in pppoe['interface']:
+        verify_interface_exists(interface)
 
     # local ippool and gateway settings config checks
     if not (dict_search('client_ip_pool.subnet', pppoe) or
@@ -81,13 +79,6 @@ def generate(pppoe):
     if not pppoe:
         return None
 
-    # Generate special regex for dynamic interfaces
-    for iface in pppoe['interface']:
-        if 'vlan_range' in pppoe['interface'][iface]:
-            pppoe['interface'][iface]['regex'] = []
-            for vlan_range in pppoe['interface'][iface]['vlan_range']:
-                pppoe['interface'][iface]['regex'].append(range_to_regex(vlan_range))
-
     render(pppoe_conf, 'accel-ppp/pppoe.config.j2', pppoe)
 
     if dict_search('authentication.mode', pppoe) == 'local':
@@ -101,15 +92,15 @@ def generate(pppoe):
 
 
 def apply(pppoe):
+    systemd_service = 'accel-ppp@pppoe.service'
     if not pppoe:
-        call('systemctl stop accel-ppp@pppoe.service')
+        call(f'systemctl stop {systemd_service}')
         for file in [pppoe_conf, pppoe_chap_secrets]:
             if os.path.exists(file):
                 os.unlink(file)
-
         return None
 
-    call('systemctl restart accel-ppp@pppoe.service')
+    call(f'systemctl reload-or-restart {systemd_service}')
 
 if __name__ == '__main__':
     try:

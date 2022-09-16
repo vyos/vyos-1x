@@ -43,7 +43,13 @@ service {
             stop 192.168.0.200
         }
         gateway-address 192.168.0.2
+        interface eth1 {
+        }
         interface eth2 {
+            vlan-id 10
+            vlan-id 20
+            vlan-range 30-40
+            vlan-range 50-60
         }
         name-server 192.168.0.1
     }
