@@ -80,8 +80,9 @@ def verify(ocserv):
         return None
     # Check if listen-ports not binded other services
     # It can be only listen by 'ocserv-main'
+    listen_address = ocserv["listen_address"] if "listen_address" in ocserv else '0.0.0.0'
     for proto, port in ocserv.get('listen_ports').items():
-        if check_port_availability('0.0.0.0', int(port), proto) is not True and \
+        if check_port_availability(listen_address, int(port), proto) is not True and \
                 not is_listen_port_bind_service(int(port), 'ocserv-main'):
             raise ConfigError(f'"{proto}" port "{port}" is used by another service')
     # Check authentication
