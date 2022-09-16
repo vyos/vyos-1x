@@ -92,7 +92,7 @@ def get_config(config=None):
 
     return policy
 
-def verify_rule(policy, name, rule_conf, ipv6):
+def verify_rule(policy, name, rule_conf, ipv6, rule_id):
     icmp = 'icmp' if not ipv6 else 'icmpv6'
     if icmp in rule_conf:
         icmp_defined = False
@@ -166,7 +166,7 @@ def verify(policy):
             for name, pol_conf in policy[route].items():
                 if 'rule' in pol_conf:
                     for rule_id, rule_conf in pol_conf['rule'].items():
-                        verify_rule(policy, name, rule_conf, ipv6)
+                        verify_rule(policy, name, rule_conf, ipv6, rule_id)
 
     for ifname, if_policy in policy['interfaces'].items():
         name = dict_search_args(if_policy, 'route')
