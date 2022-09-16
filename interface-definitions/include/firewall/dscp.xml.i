@@ -12,7 +12,6 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-63"/>
-      <validator name="range" argument="--min=0 --max=63"/>
     </constraint>
     <multi/>
   </properties>
@@ -30,7 +29,6 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-63"/>
-      <validator name="range" argument="--min=0 --max=63"/>
     </constraint>
     <multi/>
   </properties>

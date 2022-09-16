@@ -90,7 +90,7 @@
                     <description>VLAN monitor range for the automatic creation of vlans (e.g. 1-4094)</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="range" argument="--min=1 --max=4094"/>
+                    <validator name="numeric" argument="--range 1-4094"/>
                   </constraint>
                   <multi/>
                 </properties>
