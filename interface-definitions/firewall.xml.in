@@ -379,6 +379,14 @@
           #include <include/firewall/default-action.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           #include <include/generic-description.xml.i>
+          <leafNode name="default-jump-target">
+            <properties>
+              <help>Set jump target. Action jump must be defined in default-action to use this setting</help>
+              <completionHelp>
+                <path>firewall ipv6-name</path>
+              </completionHelp>
+            </properties>
+          </leafNode>
           <tagNode name="rule">
             <properties>
               <help>Firewall rule number (IPv6)</help>
@@ -452,6 +460,14 @@
                   #include <include/firewall/icmpv6-type-name.xml.i>
                 </children>
               </node>
+              <leafNode name="jump-target">
+                <properties>
+                  <help>Set jump target. Action jump must be defined to use this setting</help>
+                  <completionHelp>
+                    <path>firewall ipv6-name</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
         </children>
@@ -527,6 +543,14 @@
           #include <include/firewall/default-action.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           #include <include/generic-description.xml.i>
+          <leafNode name="default-jump-target">
+            <properties>
+              <help>Set jump target. Action jump must be defined in default-action to use this setting</help>
+              <completionHelp>
+                <path>firewall name</path>
+              </completionHelp>
+            </properties>
+          </leafNode>
           <tagNode name="rule">
             <properties>
               <help>Firewall rule number (IPv4)</help>
@@ -599,6 +623,14 @@
                   #include <include/firewall/icmp-type-name.xml.i>
                 </children>
               </node>
+              <leafNode name="jump-target">
+                <properties>
+                  <help>Set jump target. Action jump must be defined to use this setting</help>
+                  <completionHelp>
+                    <path>firewall name</path>
+                  </completionHelp>
+                </properties>
+              </leafNode>
               #include <include/firewall/ttl.xml.i>
             </children>
           </tagNode>

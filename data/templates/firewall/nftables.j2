@@ -175,7 +175,7 @@ table ip6 vyos_filter {
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-        {{ conf | nft_default_rule(name_text) }}
+        {{ conf | nft_default_rule(name_text, ipv6=True) }}
     }
 {%     endfor %}
 {%     for set_name in ns.sets %}
