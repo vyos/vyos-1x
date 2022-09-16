@@ -203,6 +203,28 @@ def verify(isis):
         if list(set(global_range) & set(local_range)):
             raise ConfigError(f'Segment-Routing Global Block ({g_low_label_value}/{g_high_label_value}) '\
                               f'conflicts with Local Block ({l_low_label_value}/{l_high_label_value})!')
+        
+    # Check for a blank or invalid value per prefix
+    if dict_search('segment_routing.prefix', isis):
+        for prefix, prefix_config in isis['segment_routing']['prefix'].items():
+            if 'absolute' in prefix_config:
+                if prefix_config['absolute'].get('value') is None:
+                    raise ConfigError(f'Segment routing prefix {prefix} absolute value cannot be blank.')
+            elif 'index' in prefix_config:
+                if prefix_config['index'].get('value') is None:
+                    raise ConfigError(f'Segment routing prefix {prefix} index value cannot be blank.')
+
+    # Check for explicit-null and no-php-flag configured at the same time per prefix
+    if dict_search('segment_routing.prefix', isis):
+        for prefix, prefix_config in isis['segment_routing']['prefix'].items():
+            if 'absolute' in prefix_config:
+                if ("explicit_null" in prefix_config['absolute']) and ("no_php_flag" in prefix_config['absolute']): 
+                    raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
+                                      f'and no-php-flag configured at the same time.')
+            elif 'index' in prefix_config:
+                if ("explicit_null" in prefix_config['index']) and ("no_php_flag" in prefix_config['index']):
+                    raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
+                                      f'and no-php-flag configured at the same time.')
 
     return None
 

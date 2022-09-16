@@ -127,8 +127,7 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }}
 {%                     if prefix_config.absolute.explicit_null is vyos_defined %}
  segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }} explicit-null
-{%                     endif %}
-{%                     if prefix_config.absolute.no_php_flag is vyos_defined %}
+{%                     elif prefix_config.absolute.no_php_flag is vyos_defined %}
  segment-routing prefix {{ prefix }} absolute {{ prefix_config.absolute.value }} no-php-flag
 {%                     endif %}
 {%                 endif %}
@@ -138,8 +137,7 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }}
 {%                     if prefix_config.index.explicit_null is vyos_defined %}
  segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }} explicit-null
-{%                     endif %}
-{%                     if prefix_config.index.no_php_flag is vyos_defined %}
+{%                     elif prefix_config.index.no_php_flag is vyos_defined %}
  segment-routing prefix {{ prefix }} index {{ prefix_config.index.value }} no-php-flag
 {%                     endif %}
 {%                 endif %}
