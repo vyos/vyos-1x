@@ -1,0 +1,118 @@
+interfaces {
+    ethernet eth0 {
+        address dhcp
+    }
+    ethernet eth1 {
+        address 192.168.0.1/24
+    }
+    ethernet eth2 {
+    }
+    loopback lo {
+    }
+}
+nat {
+    source {
+        rule 100 {
+            outbound-interface eth0
+            source {
+                address 192.168.0.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+    }
+}
+service {
+    ipoe-server {
+        authentication {
+            interface eth1 {
+                mac-address 08:00:27:2f:d8:06 {
+                    rate-limit {
+                        download 1000
+                        upload 500
+                    }
+                }
+            }
+            interface eth2 {
+                mac-address 08:00:27:2f:d8:06 {
+                }
+            }
+            mode local
+        }
+        client-ip-pool {
+            name POOL1 {
+                gateway-address 192.0.2.1
+                subnet 192.0.2.0/24
+            }
+        }
+        client-ipv6-pool {
+            delegate 2001:db8:1::/48 {
+                delegation-prefix 56
+            }
+            prefix 2001:db8::/48 {
+                mask 64
+            }
+        }
+        interface eth1 {
+            client-subnet 192.168.0.0/24
+            network vlan
+            network-mode L3
+            vlan-id 100
+            vlan-id 200
+            vlan-range 1000-2000
+            vlan-range 2500-2700
+        }
+        interface eth2 {
+            client-subnet 192.168.1.0/24
+        }
+        name-server 10.10.1.1
+        name-server 10.10.1.2
+        name-server 2001:db8:aaa::
+        name-server 2001:db8:bbb::
+    }
+    ssh {
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    ntp {
+        server 0.pool.ntp.org {
+        }
+        server 1.pool.ntp.org {
+        }
+        server 2.pool.ntp.org {
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@1:conntrack-sync@1:dhcp-relay@2:dhcp-server@5:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@13:ipoe-server@1:ipsec@5:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@6:salt@1:snmp@2:ssh@2:sstp@3:system@19:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webgui@1:webproxy@2:zone-policy@1"
+// Release version: 1.3.1

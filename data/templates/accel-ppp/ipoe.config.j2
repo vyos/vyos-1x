@@ -4,18 +4,15 @@
 log_syslog
 ipoe
 shaper
+{# Common authentication backend definitions #}
+{% include 'accel-ppp/config_modules_auth_mode.j2' %}
 ipv6pool
 ipv6_nd
 ipv6_dhcp
 ippool
-{% if auth_mode == 'radius' %}
-radius
-{% elif auth_mode == 'local' %}
-chap-secrets
-{% endif %}
 
 [core]
-thread-count={{ thread_cnt }}
+thread-count={{ thread_count }}
 
 [log]
 syslog=accel-ipoe,daemon
@@ -24,28 +21,34 @@ level=5
 
 [ipoe]
 verbose=1
-{% for interface in interfaces %}
-{%     set tmp = 'interface=' %}
-{%     if interface.vlan_mon %}
-{%         set tmp = tmp ~ 're:' ~ interface.name ~ '\.\d+' %}
-{%     else %}
-{%         set tmp = tmp ~ interface.name %}
-{%     endif %}
-{{ tmp }},shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }}{{ ',range=' ~ interface.range if interface.range is defined and interface.range is not none }},start={{ interface.sess_start }},ipv6=1
-{% endfor %}
-{% if auth_mode == 'noauth' %}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+{%         set tmp = 'interface=' %}
+{%         if iface_config.vlan is vyos_defined %}
+{%             set tmp = tmp ~ 're:' ~ iface ~ '\.\d+' %}
+{%         else %}
+{%             set tmp = tmp ~ iface %}
+{%         endif %}
+{%         set shared = '' %}
+{%         if iface_config.network is vyos_defined('shared') %}
+{%             set shared = 'shared=1,' %}
+{%         elif iface_config.network is vyos_defined('vlan') %}
+{%             set shared = 'shared=0,' %}
+{%         endif %}
+{{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,range={{ iface_config.client_subnet }},start=dhcpv4,ipv6=1
+{%     endfor %}
+{% endif %}
+{% if authentication.mode is vyos_defined('noauth') %}
 noauth=1
-{%     if client_named_ip_pool %}
-{%         for pool in client_named_ip_pool %}
-{%             if pool.subnet is defined  %}
-ip-pool={{ pool.name }}
-{%             endif %}
-{%             if pool.gateway_address is defined %}
-gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
+{%     if client_ip_pool.name is vyos_defined %}
+{%         for pool, pool_options in client_ip_pool.name.items() %}
+{%             if pool_options.subnet is vyos_defined and pool_options.gateway_address is vyos_defined %}
+ip-pool={{ pool }}
+gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
 {%             endif %}
 {%         endfor %}
 {%     endif %}
-{% elif auth_mode == 'local' %}
+{% elif authentication.mode is vyos_defined('local') %}
 username=ifname
 password=csid
 {% endif %}
@@ -57,92 +60,27 @@ vlan-mon={{ interface.name }},{{ interface.vlan_mon | join(',') }}
 {%     endif %}
 {% endfor %}
 
-{% if dnsv4 %}
-[dns]
-{%     for dns in dnsv4 %}
-dns{{ loop.index }}={{ dns }}
-{%     endfor %}
-{% endif %}
-
-{% if dnsv6 %}
-[ipv6-dns]
-{%     for dns in dnsv6 %}
-{{ dns }}
-{%     endfor %}
-{% endif %}
-
-[ipv6-nd]
-verbose=1
-
-[ipv6-dhcp]
-verbose=1
-
-{% if client_named_ip_pool %}
+{% if client_ip_pool.name is vyos_defined %}
 [ip-pool]
-{%     for pool in client_named_ip_pool %}
-{%         if pool.subnet is defined  %}
-{{ pool.subnet }},name={{ pool.name }}
-{%         endif %}
-{%         if pool.gateway_address is defined %}
-gw-ip-address={{ pool.gateway_address }}/{{ pool.subnet.split('/')[1] }}
+{%     for pool, pool_options in client_ip_pool.name.items() %}
+{%         if pool_options.subnet is vyos_defined and pool_options.gateway_address is vyos_defined %}
+{{ pool_options.subnet }},name={{ pool }}
+gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
 {%         endif %}
 {%     endfor %}
 {% endif %}
 
-{% if client_ipv6_pool %}
-[ipv6-pool]
-{%     for p in client_ipv6_pool %}
-{{ p.prefix }},{{ p.mask }}
-{%     endfor %}
-{%     for p in client_ipv6_delegate_prefix %}
-delegate={{ p.prefix }},{{ p.mask }}
-{%     endfor %}
-{% endif %}
+{# Common IPv6 pool definitions #}
+{% include 'accel-ppp/config_ipv6_pool.j2' %}
 
-{% if auth_mode == 'local' %}
-[chap-secrets]
-chap-secrets={{ chap_secrets_file }}
-{% elif auth_mode == 'radius' %}
-[radius]
-verbose=1
-{%     for r in radius_server %}
-server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
-{%     endfor %}
+{# Common DNS name-server definition #}
+{% include 'accel-ppp/config_name_server.j2' %}
 
-{%     if radius_acct_inter_jitter %}
-acct-interim-jitter={{ radius_acct_inter_jitter }}
-{%     endif %}
+{# Common chap-secrets and RADIUS server/option definitions #}
+{% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
-acct-timeout={{ radius_acct_tmo }}
-timeout={{ radius_timeout }}
-max-try={{ radius_max_try }}
-{%     if radius_nas_id %}
-nas-identifier={{ radius_nas_id }}
-{%     endif %}
-{%     if radius_nas_ip %}
-nas-ip-address={{ radius_nas_ip }}
-{%     endif %}
-{%     if radius_source_address %}
-bind={{ radius_source_address }}
-{%     endif %}
-{%     if radius_dynamic_author %}
-dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
-{%     endif %}
-
-{%     if radius_shaper_enable %}
-[shaper]
-verbose=1
-{%         if radius_shaper_attr %}
-attr={{ radius_shaper_attr }}
-{%         endif %}
-{%         if radius_shaper_multiplier %}
-rate-multiplier={{ radius_shaper_multiplier }}
-{%         endif %}
-{%         if radius_shaper_vendor %}
-vendor={{ radius_shaper_vendor }}
-{%         endif %}
-{%     endif %}
-{% endif %}
+{# Common RADIUS shaper configuration #}
+{% include 'accel-ppp/config_shaper_radius.j2' %}
 
 [cli]
 tcp=127.0.0.1:2002

@@ -1,6 +1,7 @@
 {% if client_ipv6_pool is vyos_defined %}
 [ipv6-nd]
 AdvAutonomousFlag=1
+verbose=1
 
 {%     if client_ipv6_pool.prefix is vyos_defined %}
 [ipv6-pool]
@@ -13,6 +14,7 @@ delegate={{ prefix }},{{ options.delegation_prefix }}
 {%             endfor %}
 {%         endif %}
 {%     endif %}
+
 {%     if client_ipv6_pool.delegate is vyos_defined %}
 [ipv6-dhcp]
 verbose=1

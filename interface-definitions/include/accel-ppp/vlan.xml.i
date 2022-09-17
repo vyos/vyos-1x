@@ -4,7 +4,7 @@
     <help>VLAN monitor for automatic creation of VLAN interfaces</help>
     <valueHelp>
       <format>u32:1-4094</format>
-      <description>VLAN for automatic creation </description>
+      <description>VLAN for automatic creation</description>
     </valueHelp>
     <valueHelp>
       <format>start-end</format>

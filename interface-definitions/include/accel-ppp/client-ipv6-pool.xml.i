@@ -16,19 +16,19 @@
         </constraint>
       </properties>
       <children>
-          <leafNode name="mask">
-            <properties>
-              <help>Prefix length used for individual client</help>
-              <valueHelp>
-                <format>u32:48-128</format>
-                <description>Client prefix length</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 48-128"/>
-              </constraint>
-            </properties>
-            <defaultValue>64</defaultValue>
-          </leafNode>
+        <leafNode name="mask">
+          <properties>
+            <help>Prefix length used for individual client</help>
+            <valueHelp>
+              <format>u32:48-128</format>
+              <description>Client prefix length</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 48-128"/>
+            </constraint>
+          </properties>
+          <defaultValue>64</defaultValue>
+        </leafNode>
       </children>
     </tagNode>
     <tagNode name="delegate">

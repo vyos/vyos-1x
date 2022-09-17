@@ -19,7 +19,6 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 
 from configparser import ConfigParser
-from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 from vyos.template import range_to_regex
 

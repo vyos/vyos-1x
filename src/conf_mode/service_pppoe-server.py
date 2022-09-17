@@ -27,7 +27,6 @@ from vyos.util import call
 from vyos.util import dict_search
 from vyos import ConfigError
 from vyos import airbag
-
 airbag.enable()
 
 pppoe_conf = r'/run/accel-pppd/pppoe.conf'
@@ -84,10 +83,6 @@ def generate(pppoe):
     if dict_search('authentication.mode', pppoe) == 'local':
         render(pppoe_chap_secrets, 'accel-ppp/chap-secrets.config_dict.j2',
                pppoe, permission=0o640)
-    else:
-        if os.path.exists(pppoe_chap_secrets):
-            os.unlink(pppoe_chap_secrets)
-
     return None
 
 

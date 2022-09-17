@@ -10,30 +10,31 @@
         <children>
           <tagNode name="interface">
             <properties>
-              <help>Network interface to server IPoE</help>
+              <help>Interface to listen dhcp or unclassified packets</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces.py</script>
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="network-mode">
+              <leafNode name="mode">
                 <properties>
-                  <help>Network Layer IPoE serves on</help>
+                  <help>Client connectivity mode</help>
                   <completionHelp>
-                    <list>L2 L3</list>
+                    <list>l2 l3</list>
                   </completionHelp>
+                  <valueHelp>
+                    <format>l2</format>
+                    <description>Client located on same interface as server</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>l3</format>
+                    <description>Client located behind a router</description>
+                  </valueHelp>
                   <constraint>
-                    <regex>(L2|L3)</regex>
+                    <regex>(l2|l3)</regex>
                   </constraint>
-                  <valueHelp>
-                    <format>L2</format>
-                    <description>client share the same subnet</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>L3</format>
-                    <description>clients are behind this router</description>
-                  </valueHelp>
                 </properties>
+                <defaultValue>l2</defaultValue>
               </leafNode>
               <leafNode name="network">
                 <properties>
@@ -53,6 +54,7 @@
                     <description>One VLAN per client</description>
                   </valueHelp>
                 </properties>
+                <defaultValue>shared</defaultValue>
               </leafNode>
               <leafNode name="client-subnet">
                 <properties>
@@ -85,30 +87,19 @@
                   </leafNode>
                   <leafNode name="giaddr">
                     <properties>
-                      <help>address of the relay agent (Relay Agent IP Address)</help>
+                      <help>Relay Agent IPv4 Address</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>Gateway IP address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                      </constraint>
                     </properties>
                   </leafNode>
                 </children>
               </node>
-              <leafNode name="vlan-id">
-                <properties>
-                  <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-4096"/>
-                  </constraint>
-                  <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
-                  <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="vlan-range">
-                <properties>
-                  <help>VLAN monitor for the automatic creation of vlans (user per vlan)</help>
-                  <constraint>
-                    <regex>(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})-(409[0-6]|40[0-8][0-9]|[1-3][0-9]{3}|[1-9][0-9]{0,2})</regex>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
           #include <include/name-server-ipv4-ipv6.xml.i>
@@ -120,6 +111,13 @@
               <tagNode name="name">
                 <properties>
                   <help>Pool name</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Name of IP pool</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[-_a-zA-Z0-9.]+</regex>
+                  </constraint>
                 </properties>
                 <children>
                   #include <include/accel-ppp/gateway-address.xml.i>
@@ -159,15 +157,15 @@
               </leafNode>
               <tagNode name="interface">
                 <properties>
-                  <help>Network interface the client mac will appear on</help>
+                  <help>Network interface for client MAC addresses</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces.py</script>
                   </completionHelp>
                 </properties>
                 <children>
-                  <tagNode name="mac-address">
+                  <tagNode name="mac">
                     <properties>
-                      <help>Client mac address allowed to receive an IP address</help>
+                      <help>Media Access Control (MAC) address</help>
                       <valueHelp>
                         <format>macaddr</format>
                         <description>Hardware (MAC) address</description>
@@ -200,13 +198,17 @@
                           </leafNode>
                         </children>
                       </node>
-                      <leafNode name="vlan-id">
+                      <leafNode name="vlan">
                         <properties>
-                          <help>VLAN-ID of the client network</help>
+                          <help>VLAN monitor for automatic creation of VLAN interfaces</help>
+                          <valueHelp>
+                            <format>u32:1-4094</format>
+                            <description>Client VLAN id</description>
+                          </valueHelp>
                           <constraint>
-                            <validator name="numeric" argument="--range 1-4096"/>
+                            <validator name="numeric" argument="--range 1-4094"/>
                           </constraint>
-                          <constraintErrorMessage>VLAN ID needs to be between 1 and 4096</constraintErrorMessage>
+                          <constraintErrorMessage>VLAN IDs need to be in range 1-4094</constraintErrorMessage>
                         </properties>
                       </leafNode>
                     </children>
