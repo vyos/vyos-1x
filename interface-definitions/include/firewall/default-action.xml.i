@@ -3,11 +3,15 @@
   <properties>
     <help>Default-action for rule-set</help>
     <completionHelp>
-      <list>drop reject accept</list>
+      <list>drop jump reject accept</list>
     </completionHelp>
     <valueHelp>
       <format>drop</format>
       <description>Drop if no prior rules are hit</description>
+    </valueHelp>
+    <valueHelp>
+      <format>jump</format>
+      <description>Jump to another chain if no prior rules are hit</description>
     </valueHelp>
     <valueHelp>
       <format>reject</format>
@@ -18,7 +22,7 @@
       <description>Accept if no prior rules are hit</description>
     </valueHelp>
     <constraint>
-      <regex>(drop|reject|accept)</regex>
+      <regex>(drop|jump|reject|accept)</regex>
     </constraint>
   </properties>
   <defaultValue>drop</defaultValue>

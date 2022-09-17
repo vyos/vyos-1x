@@ -228,6 +228,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_ipv4_advanced(self):
         name = 'smoketest-adv'
+        name2 = 'smoketest-adv2'
         interface = 'eth0'
 
         self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
@@ -246,6 +247,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp', '3-11'])
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'dscp-exclude', '21-25'])
 
+        self.cli_set(['firewall', 'name', name2, 'default-action', 'jump'])
+        self.cli_set(['firewall', 'name', name2, 'default-jump-target', name])
+        self.cli_set(['firewall', 'name', name2, 'enable-default-log'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '1', 'source', 'address', '198.51.100.1'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '1', 'jump-target', name])
+
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
@@ -254,7 +262,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'iifname "{interface}"', f'jump NAME_{name}'],
             ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', 'return'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'return'],
-            [f'log prefix "[{name}-default-D]"', 'drop']
+            [f'log prefix "[{name}-default-D]"', 'drop'],
+            ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
+            [f'log prefix "[{name2}-default-J]"', f'jump NAME_{name}']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -291,6 +301,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
     def test_ipv6_advanced(self):
         name = 'v6-smoketest-adv'
+        name2 = 'v6-smoketest-adv2'
         interface = 'eth0'
 
         self.cli_set(['firewall', 'ipv6-name', name, 'default-action', 'drop'])
@@ -309,6 +320,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp', '4-14'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '4', 'dscp-exclude', '31-35'])
 
+        self.cli_set(['firewall', 'ipv6-name', name2, 'default-action', 'jump'])
+        self.cli_set(['firewall', 'ipv6-name', name2, 'default-jump-target', name])
+        self.cli_set(['firewall', 'ipv6-name', name2, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6-name', name2, 'rule', '1', 'source', 'address', '2001:db8::/64'])
+        self.cli_set(['firewall', 'ipv6-name', name2, 'rule', '1', 'action', 'jump'])
+        self.cli_set(['firewall', 'ipv6-name', name2, 'rule', '1', 'jump-target', name])
+
         self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
 
         self.cli_commit()
@@ -317,7 +335,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'return'],
             ['ip6 length 1-1999', 'ip6 length != 60000-65535', 'ip6 dscp 0x04-0x0e', 'ip6 dscp != 0x1f-0x23', 'return'],
-            [f'log prefix "[{name}-default-D]"', 'drop']
+            [f'log prefix "[{name}-default-D]"', 'drop'],
+            ['ip6 saddr 2001:db8::/64', f'jump NAME6_{name}'],
+            [f'log prefix "[{name2}-default-J]"', f'jump NAME6_{name}']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')

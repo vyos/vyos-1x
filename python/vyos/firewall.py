@@ -326,6 +326,10 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
     if 'action' in rule_conf:
         output.append(nft_action(rule_conf['action']))
+        if 'jump' in rule_conf['action']:
+            target = rule_conf['jump_target']
+            output.append(f'NAME{def_suffix}_{target}')
+
     else:
         output.append('return')
 

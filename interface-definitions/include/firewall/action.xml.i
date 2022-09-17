@@ -3,11 +3,15 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept reject drop</list>
+      <list>accept jump reject drop</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
       <description>Accept matching entries</description>
+    </valueHelp>
+    <valueHelp>
+      <format>jump</format>
+      <description>Jump to another chain</description>
     </valueHelp>
     <valueHelp>
       <format>reject</format>
@@ -18,7 +22,7 @@
       <description>Drop matching entries</description>
     </valueHelp>
     <constraint>
-      <regex>(accept|reject|drop)</regex>
+      <regex>(accept|jump|reject|drop)</regex>
     </constraint>
   </properties>
 </leafNode>
