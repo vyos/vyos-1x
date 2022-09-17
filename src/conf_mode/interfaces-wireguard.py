@@ -14,16 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from copy import deepcopy
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
-from vyos.configdict import node_changed
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -50,17 +46,20 @@ def get_config(config=None):
     ifname, wireguard = get_interface_dict(conf, base)
 
     # Check if a port was changed
-    wireguard['port_changed'] = leaf_node_changed(conf, base + [ifname, 'port'])
+    tmp = is_node_changed(conf, base + [ifname, 'port'])
+    if tmp: wireguard['port_changed'] = {}
 
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
-    dict = {}
-    tmp = node_changed(conf, base + [ifname, 'peer'], key_mangling=('-', '_'))
-    for peer in (tmp or []):
-        public_key = leaf_node_changed(conf, base + [ifname, 'peer', peer, 'public_key'])
-        if public_key:
-            dict = dict_merge({'peer_remove' : {peer : {'public_key' : public_key[0]}}}, dict)
-            wireguard.update(dict)
+    if 'peer' in wireguard:
+        peer_remove = {}
+        for peer, peer_config in wireguard['peer'].items():
+            # T4702: If anything on a peer changes we remove the peer first and re-add it
+            if is_node_changed(conf, base + [ifname, 'peer', peer]):
+                if 'public_key' in peer_config:
+                    peer_remove = dict_merge({'peer_remove' : {peer : peer_config['public_key']}}, peer_remove)
+        if peer_remove:
+           wireguard.update(peer_remove)
 
     return wireguard
 
@@ -81,12 +80,11 @@ def verify(wireguard):
     if 'peer' not in wireguard:
         raise ConfigError('At least one Wireguard peer is required!')
 
-    if 'port' in wireguard and wireguard['port_changed']:
+    if 'port' in wireguard and 'port_changed' in wireguard:
         listen_port = int(wireguard['port'])
         if check_port_availability('0.0.0.0', listen_port, 'udp') is not True:
-            raise ConfigError(
-                f'The UDP port {listen_port} is busy or unavailable and cannot be used for the interface'
-            )
+            raise ConfigError(f'UDP port {listen_port} is busy or unavailable and '
+                               'cannot be used for the interface!')
 
     # run checks on individual configured WireGuard peer
     for tmp in wireguard['peer']:
