@@ -17,13 +17,11 @@
 import os
 
 from sys import exit
-from copy import deepcopy
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import get_interface_dict
-from vyos.configdict import node_changed
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -52,13 +50,16 @@ def get_config(config=None):
 
     # Determine which Wireguard peer has been removed.
     # Peers can only be removed with their public key!
-    dict = {}
-    tmp = node_changed(conf, ['peer'], key_mangling=('-', '_'))
-    for peer in (tmp or []):
-        pubkey = leaf_node_changed(conf, ['peer', peer, 'pubkey'])
-        if pubkey:
-            dict = dict_merge({'peer_remove' : {peer : {'pubkey' : pubkey[0]}}}, dict)
-            wireguard.update(dict)
+    if 'peer' in wireguard:
+        ifname = wireguard['ifname']
+        peer_remove = {}
+        for peer, peer_config in wireguard['peer'].items():
+            # T4702: If anything on a peer changes we remove the peer first and re-add it
+            if is_node_changed(conf, ['peer', peer]):
+                if 'pubkey' in peer_config:
+                    peer_remove = dict_merge({'peer_remove' : {peer : peer_config['pubkey']}}, peer_remove)
+        if peer_remove:
+            wireguard.update(peer_remove)
 
     return wireguard
 
