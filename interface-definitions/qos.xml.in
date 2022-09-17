@@ -188,6 +188,7 @@
                   #include <include/qos/burst.xml.i>
                   #include <include/generic-description.xml.i>
                   #include <include/qos/match.xml.i>
+                  #include <include/qos/limiter-actions.xml.i>
                   <leafNode name="priority">
                     <properties>
                       <help>Priority for rule evaluation</help>
@@ -211,6 +212,7 @@
                 <children>
                   #include <include/qos/bandwidth.xml.i>
                   #include <include/qos/burst.xml.i>
+                  #include <include/qos/limiter-actions.xml.i>
                 </children>
               </node>
               #include <include/generic-description.xml.i>
