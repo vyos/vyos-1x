@@ -19,29 +19,49 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.util import read_file
 
-
 pki_path = ['pki']
-cert_data = 'MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIwWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIxMDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu+JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3LftzngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93+dm/LDnp7C0='
-key_data = 'MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww'
+
+cert_data = """
+MIICFDCCAbugAwIBAgIUfMbIsB/ozMXijYgUYG80T1ry+mcwCgYIKoZIzj0EAwIw
+WTELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzESMBAGA1UEAwwJVnlPUyBUZXN0MB4XDTIx
+MDcyMDEyNDUxMloXDTI2MDcxOTEyNDUxMlowWTELMAkGA1UEBhMCR0IxEzARBgNV
+BAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNvbWUtQ2l0eTENMAsGA1UECgwEVnlP
+UzESMBAGA1UEAwwJVnlPUyBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+01HrLcNttqq4/PtoMua8rMWEkOdBu7vP94xzDO7A8C92ls1v86eePy4QllKCzIw3
+QxBIoCuH2peGRfWgPRdFsKNhMF8wDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8E
+BAMCAYYwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMBMB0GA1UdDgQWBBSu
++JnU5ZC4mkuEpqg2+Mk4K79oeDAKBggqhkjOPQQDAgNHADBEAiBEFdzQ/Bc3Lftz
+ngrY605UhA6UprHhAogKgROv7iR4QgIgEFUxTtW3xXJcnUPWhhUFhyZoqfn8dE93
++dm/LDnp7C0="""
+
+key_data = """
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
+2KMIuze7ucKUt/lBEB2wc03IxXyhRANCAATTUestw222qrj8+2gy5rysxYSQ50G7
+u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
+"""
 
 class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
-    def setUp(self):
-        self._base_path = ['vpn', 'sstp']
-        self._process_name = 'accel-pppd'
-        self._config_file = '/run/accel-pppd/sstp.conf'
-        self._chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
-        super().setUp()
+    @classmethod
+    def setUpClass(cls):
+        cls._base_path = ['vpn', 'sstp']
+        cls._config_file = '/run/accel-pppd/sstp.conf'
+        cls._chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
 
-    def tearDown(self):
-        self.cli_delete(pki_path)
-        super().tearDown()
+        # call base-classes classmethod
+        super(TestVPNSSTPServer, cls).setUpClass()
+
+        cls.cli_set(cls, pki_path + ['ca', 'sstp', 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', 'sstp', 'certificate', cert_data.replace('\n','')])
+        cls.cli_set(cls, pki_path + ['certificate', 'sstp', 'private', 'key', key_data.replace('\n','')])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, pki_path)
+
+        super(TestVPNSSTPServer, cls).tearDownClass()
 
     def basic_config(self):
-        self.cli_delete(pki_path)
-        self.cli_set(pki_path + ['ca', 'sstp', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'sstp', 'certificate', cert_data])
-        self.cli_set(pki_path + ['certificate', 'sstp', 'private', 'key', key_data])
-
         # SSL is mandatory
         self.set(['ssl', 'ca-certificate', 'sstp'])
         self.set(['ssl', 'certificate', 'sstp'])
