@@ -34,6 +34,3 @@ class NAT64If(Interface):
     def _create(self):
         config_file = f'/run/tayga/{self.ifname}.conf'
         call(f"tayga -c {config_file} --mktun")
-
-    def update(self, config):
-        super().update(config)

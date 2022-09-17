@@ -92,17 +92,8 @@
                   </constraint>
                 </properties>
                 <children>
-                  <leafNode name="description">
-                    <properties>
-                      <help>Description</help>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="disable">
-                    <properties>
-                      <help>Disable this NAT64 mapping</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-description.xml.i>
+                  #include <include/generic-disable-node.xml.i>
                   <leafNode name="ipv4">
                     <properties>
                       <help>IPv4 address</help>
@@ -137,9 +128,6 @@
             </children>
           </node>
           #include <include/interface/mtu-68-16000.xml.i>
-          #include <include/interface/mirror.xml.i>
-          #include <include/interface/redirect.xml.i>
-          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
     </children>

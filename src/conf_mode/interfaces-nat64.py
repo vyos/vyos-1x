@@ -60,8 +60,6 @@ def verify(nat64):
             error_msg = f'IPv6 forwarding will be configured on interface "{ifname}",\n' \
                         f'the required minimum MTU is {min_mtu}!'
             raise ConfigError(error_msg)
-    verify_vrf(nat64)
-    verify_mirror_redirect(nat64)
 
     if "ipv4_address" not in nat64:
         raise ConfigError('ipv4-address is required for NAT64 translator.')
@@ -118,7 +116,7 @@ def apply(nat64):
             shutil.rmtree(configd, ignore_errors=True)
         return None
 
-    call(f'systemctl restart tayga@{ifname}.service')
+    call(f'systemctl reload-or-restart tayga@{ifname}.service')
     d.update(nat64)
     return None
 

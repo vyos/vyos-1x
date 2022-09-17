@@ -1,6 +1,7 @@
 [Unit]
 Description=Managing TAYGA interface %I
 After=vyos-router.service
+ConditionPathExists=/run/tayga/%i.conf
 
 [Service]
 Type=exec
