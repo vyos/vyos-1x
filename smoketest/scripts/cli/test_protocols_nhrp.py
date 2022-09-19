@@ -65,7 +65,6 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(nhrp_path + ["tunnel", tunnel_if, "shortcut"])
 
         # IKE/ESP Groups
-        self.cli_set(vpn_path + ["esp-group", esp_group, "compression", "disable"])
         self.cli_set(vpn_path + ["esp-group", esp_group, "lifetime", "1800"])
         self.cli_set(vpn_path + ["esp-group", esp_group, "mode", "transport"])
         self.cli_set(vpn_path + ["esp-group", esp_group, "pfs", "dh-group2"])
@@ -74,7 +73,6 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(vpn_path + ["esp-group", esp_group, "proposal", "2", "encryption", "3des"])
         self.cli_set(vpn_path + ["esp-group", esp_group, "proposal", "2", "hash", "md5"])
 
-        self.cli_set(vpn_path + ["ike-group", ike_group, "ikev2-reauth", "no"])
         self.cli_set(vpn_path + ["ike-group", ike_group, "key-exchange", "ikev1"])
         self.cli_set(vpn_path + ["ike-group", ike_group, "lifetime", "3600"])
         self.cli_set(vpn_path + ["ike-group", ike_group, "proposal", "1", "dh-group", "2"])
