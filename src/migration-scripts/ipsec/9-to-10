@@ -102,7 +102,7 @@ if config.exists(base + ['site-to-site', 'peer']):
         remote_address = peer
         if peer.startswith('@'):
             remote_address = 'any'
-        config.set(base + ['site-to-site', 'peer', peer, 'remote-address', remote_address])
+        config.set(base + ['site-to-site', 'peer', peer, 'remote-address'], value=remote_address)
         # Peer name it is swanctl connection name and shouldn't contain dots or colons
         # rename peer:
         #   peer 192.0.2.1   => peer peer_192-0-2-1
