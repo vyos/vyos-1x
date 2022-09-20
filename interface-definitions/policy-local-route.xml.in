@@ -146,11 +146,11 @@
                 <properties>
                   <help>Source address or prefix</help>
                   <valueHelp>
-                    <format>ipv4</format>
+                    <format>ipv6</format>
                     <description>Address to match against</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>ipv4net</format>
+                    <format>ipv6net</format>
                     <description>Prefix to match against</description>
                   </valueHelp>
                   <constraint>
