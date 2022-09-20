@@ -316,7 +316,7 @@
       </node>
       <tagNode name="interface">
         <properties>
-          <help>Interface name</help>
+          <help>Interface name to apply firewall configuration</help>
           <completionHelp>
             <script>${vyos_completion_dir}/list_interfaces.py</script>
           </completionHelp>
