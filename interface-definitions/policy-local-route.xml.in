@@ -6,6 +6,7 @@
       <node name="local-route" owner="${vyos_conf_scripts_dir}/policy-local-route.py">
         <properties>
           <help>IPv4 policy route of local traffic</help>
+          <priority>500</priority>
         </properties>
         <children>
           <tagNode name="rule">
@@ -96,6 +97,7 @@
       <node name="local-route6" owner="${vyos_conf_scripts_dir}/policy-local-route.py">
         <properties>
           <help>IPv6 policy route of local traffic</help>
+          <priority>500</priority>
         </properties>
         <children>
           <tagNode name="rule">
