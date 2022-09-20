@@ -17,9 +17,9 @@
         pools = {{ rw_conf.pool | join(',') }}
 {% endif %}
         local {
-{% if rw_conf.authentication.id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
+{% if rw_conf.authentication.local_id is vyos_defined and rw_conf.authentication.use_x509_id is not vyos_defined %}
 {#          please use " quotes - else Apple iOS goes crazy #}
-            id = "{{ rw_conf.authentication.id }}"
+            id = "{{ rw_conf.authentication.local_id }}"
 {% endif %}
 {% if rw_conf.authentication.server_mode == 'x509' %}
             auth = pubkey

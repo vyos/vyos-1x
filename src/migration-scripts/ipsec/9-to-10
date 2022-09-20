@@ -77,24 +77,26 @@ if config.exists(base + ['esp-group']):
 # PEER changes
 if config.exists(base + ['site-to-site', 'peer']):
     for peer in config.list_nodes(base + ['site-to-site', 'peer']):
+        peer_base = base + ['site-to-site', 'peer', peer]
+
         # replace: 'peer <tag> id x'
         #       => 'peer <tag> local-id x'
-        if config.exists(base + ['site-to-site', 'peer', peer, 'authentication', 'id']):
-            config.rename(base + ['site-to-site', 'peer', peer, 'authentication', 'id'], 'local-id')
+        if config.exists(peer_base + ['authentication', 'id']):
+            config.rename(peer_base + ['authentication', 'id'], 'local-id')
 
         # For the peer '@foo' set remote-id 'foo' if remote-id is not defined
         if peer.startswith('@'):
-            if not config.exists(base + ['site-to-site', 'peer', peer, 'authentication', 'remote-id']):
+            if not config.exists(peer_base + ['authentication', 'remote-id']):
                 tmp = peer.replace('@', '')
-                config.set(base + ['site-to-site', 'peer', peer, 'authentication', 'remote-id'], value=tmp)
+                config.set(peer_base + ['authentication', 'remote-id'], value=tmp)
 
         # replace: 'peer <tag> force-encapsulation enable'
         #       => 'peer <tag> force-udp-encapsulation'
-        force_enc = base + ['site-to-site', 'peer', peer, 'force-encapsulation']
+        force_enc = peer_base + ['force-encapsulation']
         if config.exists(force_enc):
             if config.return_value(force_enc) == 'enable':
                 config.delete(force_enc)
-                config.set(base + ['site-to-site', 'peer', peer, 'force-udp-encapsulation'])
+                config.set(peer_base + ['force-udp-encapsulation'])
             else:
                 config.delete(force_enc)
 
@@ -102,7 +104,7 @@ if config.exists(base + ['site-to-site', 'peer']):
         remote_address = peer
         if peer.startswith('@'):
             remote_address = 'any'
-        config.set(base + ['site-to-site', 'peer', peer, 'remote-address'], value=remote_address)
+        config.set(peer_base + ['remote-address'], value=remote_address)
         # Peer name it is swanctl connection name and shouldn't contain dots or colons
         # rename peer:
         #   peer 192.0.2.1   => peer peer_192-0-2-1
@@ -113,7 +115,16 @@ if config.exists(base + ['site-to-site', 'peer']):
             re_peer_name = re.sub('@', '', re_peer_name)
         new_peer_name = f'peer_{re_peer_name}'
 
-        config.rename(base + ['site-to-site', 'peer', peer], new_peer_name)
+        config.rename(peer_base, new_peer_name)
+
+# remote-access/road-warrior changes
+if config.exists(base + ['remote-access', 'connection']):
+    for connection in config.list_nodes(base + ['remote-access', 'connection']):
+        ra_base = base + ['remote-access', 'connection', connection]
+        # replace: 'remote-access connection <tag> authentication id x'
+        #       => 'remote-access connection <tag> authentication local-id x'
+        if config.exists(ra_base + ['authentication', 'id']):
+            config.rename(ra_base + ['authentication', 'id'], 'local-id')
 
 try:
     with open(file_name, 'w') as f:
