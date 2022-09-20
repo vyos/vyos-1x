@@ -126,6 +126,13 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
         self.cli_commit()
 
+    def test_dnat_nat66_without_translation_address(self):
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '443'])
+        self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'port', '443'])
+        self.cli_commit()
+
     def test_dnat_negated_addresses(self):
         # T3186: negated addresses are not accepted by nftables
         rule = '1000'

@@ -141,6 +141,13 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
+    def test_destination_nat66_without_translation_address(self):
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '443'])
+        self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
+        self.cli_set(dst_path + ['rule', '1', 'translation', 'port', '443'])
+        self.cli_commit()
+
     def test_destination_nat66_prefix(self):
         destination_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'
