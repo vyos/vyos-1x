@@ -44,7 +44,7 @@ group.add_argument("--destination", help="Show statistics for configured destina
 args = parser.parse_args()
 
 if args.source or args.destination:
-    tmp = cmd('sudo nft -j list table ip6 nat')
+    tmp = cmd('sudo nft -j list table ip6 vyos_nat')
     tmp = json.loads(tmp)
 
     source = r"nftables[?rule.chain=='POSTROUTING'].rule.{chain: chain, handle: handle, comment: comment, counter: expr[].counter | [0], interface: expr[].match.right | [0] }"

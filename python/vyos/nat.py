@@ -17,10 +17,14 @@
 from vyos.template import is_ip_network
 from vyos.util import dict_search_args
 
-def parse_nat_rule(rule_conf, rule_id, nat_type):
+def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     output = []
+    ip_prefix = 'ip6' if ipv6 else 'ip'
     log_prefix = ('DST' if nat_type == 'destination' else 'SRC') + f'-NAT-{rule_id}'
     log_suffix = ''
+
+    if ipv6:
+        log_prefix = log_prefix.replace("NAT-", "NAT66-")
 
     ignore_type_addr = False
     translation_str = ''
@@ -39,7 +43,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type):
         protocol = rule_conf['protocol']
         if protocol == 'tcp_udp':
             protocol = '{ tcp, udp }'
-        output.append(f'ip protocol {protocol}')
+        output.append(f'meta l4proto {protocol}')
 
     if 'exclude' in rule_conf:
         translation_str = 'return'
@@ -51,9 +55,12 @@ def parse_nat_rule(rule_conf, rule_id, nat_type):
         port = dict_search_args(rule_conf, 'translation', 'port')
 
         if addr and is_ip_network(addr):
-            map_addr =  dict_search_args(rule_conf, nat_type, 'address')
-            translation_output.append(f'ip prefix to ip {translation_prefix}addr map {{ {map_addr} : {addr} }}')
-            ignore_type_addr = True
+            if not ipv6:
+                map_addr =  dict_search_args(rule_conf, nat_type, 'address')
+                translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
+                ignore_type_addr = True
+            else:
+                translation_output.append(f'prefix to {addr}')
         elif addr == 'masquerade':
             if port:
                 addr = f'{addr} to '
@@ -85,7 +92,15 @@ def parse_nat_rule(rule_conf, rule_id, nat_type):
             if addr[:1] == '!':
                 operator = '!='
                 addr = addr[1:]
-            output.append(f'ip {prefix}addr {operator} {addr}')
+            output.append(f'{ip_prefix} {prefix}addr {operator} {addr}')
+
+        addr_prefix = dict_search_args(rule_conf, target, 'prefix')
+        if addr_prefix and ipv6:
+            operator = ''
+            if addr_prefix[:1] == '!':
+                operator = '!='
+                addr_prefix = addr[1:]
+            output.append(f'ip6 {prefix}addr {operator} {addr_prefix}')
 
         port = dict_search_args(rule_conf, target, 'port')
         if port:
