@@ -686,6 +686,14 @@
               <tagNode name="connection">
                 <properties>
                   <help>IKEv2 VPN connection name</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Connection name</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[a-zA-Z][0-9a-zA-Z_-]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Profile name must be alphanumeric and can contain hyphen(s) and underscore(s)</constraintErrorMessage>
                 </properties>
                 <children>
                   <node name="authentication">
