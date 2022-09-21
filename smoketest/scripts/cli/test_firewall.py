@@ -209,6 +209,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'mss', mss_range])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'action', 'return'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'protocol', 'gre'])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
@@ -222,6 +224,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
             ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}'],
+            ['meta l4proto gre', 'return']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -286,6 +289,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'destination', 'port', '8888'])
 
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'action', 'return'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'protocol', 'gre'])
+
         self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
 
         self.cli_commit()
@@ -294,7 +300,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', 'reject'],
-            ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']
+            ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop'],
+            ['meta l4proto gre', 'return']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
