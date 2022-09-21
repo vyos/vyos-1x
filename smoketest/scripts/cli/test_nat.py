@@ -184,10 +184,10 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
             [f'iifname "{ifname}"', f'ip daddr {dst_addr_1}', f'dnat to {translate_addr_1}'],
             [f'oifname "{ifname}"', f'ip saddr {translate_addr_1}', f'snat to {dst_addr_1}'],
             [f'iifname "{ifname}"', f'dnat ip prefix to ip daddr map {{ {dst_addr_2} : {translate_addr_2} }}'],
-            [f'oifname "{ifname}"', f'snat ip prefix to ip daddr map {{ {translate_addr_2} : {dst_addr_2} }}']
+            [f'oifname "{ifname}"', f'snat ip prefix to ip saddr map {{ {translate_addr_2} : {dst_addr_2} }}']
         ]
 
-        self.verify_nftables(nftables_search, 'ip vyos_nat')
+        self.verify_nftables(nftables_search, 'ip vyos_static_nat')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

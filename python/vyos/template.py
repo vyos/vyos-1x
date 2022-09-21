@@ -621,6 +621,11 @@ def nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     from vyos.nat import parse_nat_rule
     return parse_nat_rule(rule_conf, rule_id, nat_type, ipv6)
 
+@register_filter('nat_static_rule')
+def nat_static_rule(rule_conf, rule_id, nat_type):
+    from vyos.nat import parse_nat_static_rule
+    return parse_nat_static_rule(rule_conf, rule_id, nat_type)
+
 @register_filter('range_to_regex')
 def range_to_regex(num_range):
     from vyos.range_regex import range_to_regex

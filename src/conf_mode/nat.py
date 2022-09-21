@@ -194,7 +194,9 @@ def generate(nat):
     if tmp > 0:
         raise ConfigError('Configuration file errors encountered!')
 
-    tmp = run(f'nft -c -f {nftables_nat_config}')
+    tmp = run(f'nft -c -f {nftables_static_nat_conf}')
+    if tmp > 0:
+        raise ConfigError('Configuration file errors encountered!')
 
     return None
 
