@@ -60,7 +60,7 @@ def _get_json_data(direction, family):
     if direction == 'destination':
         chain = 'PREROUTING'
     family = 'ip6' if family == 'inet6' else 'ip'
-    return cmd(f'sudo nft --json list chain {family} nat {chain}')
+    return cmd(f'sudo nft --json list chain {family} vyos_nat {chain}')
 
 
 def _get_raw_data_rules(direction, family):
