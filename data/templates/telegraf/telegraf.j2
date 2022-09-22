@@ -45,7 +45,7 @@
 ### Prometheus ###
 [[outputs.prometheus_client]]
   ## Address to listen on
-  listen = "{{ prometheus_client.listen_address if prometheus_client.listen_address is vyos_defined else '' }}:{{ prometheus_client.port }}"
+  listen = "{{ prometheus_client.listen_address | bracketize_ipv6 if prometheus_client.listen_address is vyos_defined else '' }}:{{ prometheus_client.port }}"
   metric_version = {{ prometheus_client.metric_version }}
 {%     if prometheus_client.authentication.username is vyos_defined and prometheus_client.authentication.password is vyos_defined  %}
   ## Use HTTP Basic Authentication

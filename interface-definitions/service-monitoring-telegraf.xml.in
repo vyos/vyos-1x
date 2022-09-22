@@ -228,7 +228,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  #include <include/listen-address.xml.i>
+                  #include <include/listen-address-single.xml.i>
                   <leafNode name="metric-version">
                     <properties>
                       <help>Metric version control mapping from Telegraf to Prometheus format</help>
