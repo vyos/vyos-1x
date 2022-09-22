@@ -8,6 +8,62 @@
           <priority>400</priority>
         </properties>
         <children>
+          <node name="authentication">
+            <properties>
+              <help>Global authentication settings</help>
+            </properties>
+            <children>
+              <node name="otp">
+                <properties>
+                  <help>2FA OTP authentication parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="rate-limit">
+                    <properties>
+                      <help>Number of attempts. Limit logins to N per every M seconds</help>
+                      <valueHelp>
+                        <format>u32:1-10</format>
+                        <description>Number of attempts. Limit logins to N per every M seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-10"/>
+                      </constraint>
+                      <constraintErrorMessage>Number of login attempts must me between 1 and 10</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>3</defaultValue>
+                  </leafNode>
+                  <leafNode name="rate-time">
+                    <properties>
+                      <help>Time interval. Limit logins to N per every M seconds</help>
+                      <valueHelp>
+                        <format>u32:15-600</format>
+                        <description>Time interval. Limit logins to N per every M seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 15-600"/>
+                      </constraint>
+                      <constraintErrorMessage>Rate limit time interval must be between 15 and 600 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>30</defaultValue>
+                  </leafNode>
+                  <leafNode name="window-size">
+                    <properties>
+                      <help>Set window of concurrently valid codes</help>
+                      <valueHelp>
+                        <format>u32:1-21</format>
+                        <description>Set window of concurrently valid codes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-21"/>
+                      </constraint>
+                      <constraintErrorMessage>Window of concurrently valid codes must be between 1 and 21</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>3</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           <tagNode name="user">
             <properties>
               <help>Local user account information</help>
@@ -36,6 +92,26 @@
                     </properties>
                     <defaultValue>!</defaultValue>
                   </leafNode>
+                  <node name="otp">
+                    <properties>
+                      <help>2FA OTP authentication parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="key">
+                        <properties>
+                          <help>Token Key Secret key for the token algorithm (see RFC 4226)</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>OTP key (base32 encoded secret)</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>[a-zA-Z2-7]{20,10000}</regex>
+                          </constraint>
+                          <constraintErrorMessage>Key must only include base32 characters and be at least 26 characters long</constraintErrorMessage>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
                   <leafNode name="plaintext-password">
                     <properties>
                       <help>Plaintext password used for encryption</help>

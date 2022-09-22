@@ -97,6 +97,22 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
             # b'Linux LR1.wue3 5.10.61-amd64-vyos #1 SMP Fri Aug 27 08:55:46 UTC 2021 x86_64 GNU/Linux\n'
             self.assertTrue(len(stdout) > 40)
 
+    def test_system_login_otp(self):
+        otp_user = 'otp-test_user'
+        otp_password = 'SuperTestPassword'
+        otp_key = '76A3ZS6HFHBTOK2H4NDHTIVFPQ'
+
+        self.cli_set(base_path + ['user', otp_user, 'authentication', 'plaintext-password', otp_password])
+        self.cli_set(base_path + ['user', otp_user, 'authentication', 'otp', 'key', otp_key])
+
+        self.cli_commit()
+
+        # Check if OTP key was written properly
+        tmp = cmd(f'sudo head -1 /home/{otp_user}/.google_authenticator')
+        self.assertIn(otp_key, tmp)
+
+        self.cli_delete(base_path + ['user', otp_user])
+
     def test_system_user_ssh_key(self):
         ssh_user = 'ssh-test_user'
         public_keys = 'vyos_test@domain-foo.com'

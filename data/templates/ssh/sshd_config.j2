@@ -17,7 +17,6 @@ PubkeyAuthentication yes
 IgnoreRhosts yes
 HostbasedAuthentication no
 PermitEmptyPasswords no
-ChallengeResponseAuthentication no
 X11Forwarding yes
 X11DisplayOffset 10
 PrintMotd no
@@ -30,6 +29,7 @@ PermitRootLogin no
 PidFile /run/sshd/sshd.pid
 AddressFamily any
 DebianBanner no
+PasswordAuthentication no
 
 #
 # User configurable section
@@ -48,7 +48,7 @@ Port {{ value }}
 LogLevel {{ loglevel | upper }}
 
 # Specifies whether password authentication is allowed
-PasswordAuthentication {{ "no" if disable_password_authentication is vyos_defined else "yes" }}
+ChallengeResponseAuthentication {{ "no" if disable_password_authentication is vyos_defined else "yes" }}
 
 {% if listen_address is vyos_defined %}
 # Specifies the local addresses sshd should listen on
