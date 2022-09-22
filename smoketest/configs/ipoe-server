@@ -32,6 +32,7 @@ service {
                         download 1000
                         upload 500
                     }
+                    vlan-id 100
                 }
             }
             interface eth2 {

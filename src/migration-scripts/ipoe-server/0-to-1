@@ -45,6 +45,12 @@ if config.exists(base + ['authentication', 'interface']):
     for interface in config.list_nodes(base + ['authentication', 'interface']):
         config.rename(base + ['authentication', 'interface', interface, 'mac-address'], 'mac')
 
+        mac_base = base + ['authentication', 'interface', interface, 'mac']
+        for mac in config.list_nodes(mac_base):
+            vlan_config = mac_base + [mac, 'vlan-id']
+            if config.exists(vlan_config):
+                config.rename(vlan_config, 'vlan')
+
 for interface in config.list_nodes(base + ['interface']):
     base_path = base + ['interface', interface]
     for vlan in ['vlan-id', 'vlan-range']:
