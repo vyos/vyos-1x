@@ -1,0 +1,11 @@
+[Unit]
+Description=VyOS system udpate-check service
+After=network.target vyos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/system/vyos-system-update-check.py --config /run/vyos-system-update.conf
+
+[Install]
+WantedBy=multi-user.target

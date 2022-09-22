@@ -8,6 +8,7 @@
 "neighbor.py",
 "openconnect.py",
 "route.py",
+"system.py",
 "ipsec.py",
 "storage.py",
 "uptime.py",

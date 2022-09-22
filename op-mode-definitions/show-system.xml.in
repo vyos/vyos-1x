@@ -164,6 +164,12 @@
             </properties>
             <command>${vyos_op_scripts_dir}/storage.py show</command>
           </leafNode>
+          <leafNode name="updates">
+            <properties>
+              <help>Show system available updates</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/system.py show_update</command>
+          </leafNode>
           <leafNode name="uptime">
             <properties>
               <help>Show system uptime and load averages</help>
