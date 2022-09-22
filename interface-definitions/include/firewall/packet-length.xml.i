@@ -11,7 +11,7 @@
       <description>Packet length range to match</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 1-65535"/>
+      <validator name="numeric" argument="--allow-range --range 1-65535"/>
     </constraint>
     <multi/>
   </properties>
@@ -28,7 +28,7 @@
       <description>Packet length range not to match</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 1-65535"/>
+      <validator name="numeric" argument="--allow-range --range 1-65535"/>
     </constraint>
     <multi/>
   </properties>

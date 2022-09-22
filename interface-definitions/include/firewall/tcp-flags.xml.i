@@ -126,7 +126,7 @@
           <description>TCP MSS range (use '-' as delimiter)</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 1-16384"/>
+          <validator name="numeric" argument="--allow-range --range 1-16384"/>
         </constraint>
       </properties>
     </leafNode>

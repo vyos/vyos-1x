@@ -11,7 +11,7 @@
       <description>VLAN range for automatic creation (e.g. 1-4094)</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 1-4094"/>
+      <validator name="numeric" argument="--allow-range --range 1-4094"/>
     </constraint>
     <constraintErrorMessage>VLAN IDs need to be in range 1-4094</constraintErrorMessage>
     <multi/>

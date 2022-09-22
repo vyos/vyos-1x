@@ -11,7 +11,7 @@
       <description>DSCP range to match</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 0-63"/>
+      <validator name="numeric" argument="--allow-range --range 0-63"/>
     </constraint>
     <multi/>
   </properties>
@@ -28,7 +28,7 @@
       <description>DSCP range not to match</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 0-63"/>
+      <validator name="numeric" argument="--allow-range --range 0-63"/>
     </constraint>
     <multi/>
   </properties>
