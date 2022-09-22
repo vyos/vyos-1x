@@ -177,6 +177,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
 }"""
         nat_vyos_pre_snat_hook = """table ip nat {
 	chain VYOS_PRE_SNAT_HOOK {
+		type nat hook postrouting priority srcnat - 1; policy accept;
 		counter jump WANLOADBALANCE
 		return
 	}

@@ -1,146 +1,5 @@
 #!/usr/sbin/nft -f
 
-{% macro nat_rule(rule, config, chain) %}
-{% set comment  = '' %}
-{% set base_log = '' %}
-{% set src_addr  = 'ip saddr ' ~ config.source.address.replace('!','!= ') if config.source.address is vyos_defined %}
-{% set dst_addr  = 'ip daddr ' ~ config.destination.address.replace('!','!= ') if config.destination.address is vyos_defined %}
-{# negated port groups need special treatment, move != in front of { } group #}
-{% if config.source.port is vyos_defined and config.source.port.startswith('!') %}
-{%     set src_port  = 'sport != { ' ~ config.source.port.replace('!','') ~ ' }' %}
-{% else %}
-{%     set src_port  = 'sport { ' ~ config.source.port ~ ' }' if config.source.port is vyos_defined %}
-{% endif %}
-{# negated port groups need special treatment, move != in front of { } group #}
-{% if config.destination.port is vyos_defined and config.destination.port.startswith('!') %}
-{%     set dst_port  = 'dport != { ' ~ config.destination.port.replace('!','') ~ ' }' %}
-{% else %}
-{%     set dst_port  = 'dport { ' ~ config.destination.port ~ ' }' if config.destination.port is vyos_defined %}
-{% endif %}
-{% if chain is vyos_defined('PREROUTING') %}
-{%     set comment   = 'DST-NAT-' ~ rule %}
-{%     set base_log  = '[NAT-DST-' ~ rule %}
-{%     set interface = ' iifname "' ~ config.inbound_interface ~ '"' if config.inbound_interface is vyos_defined and config.inbound_interface is not vyos_defined('any') else '' %}
-{%     if config.translation.address is vyos_defined %}
-{#         support 1:1 network translation #}
-{%         if config.translation.address | is_ip_network %}
-{%             set trns_addr = 'dnat ip prefix to ip daddr map { ' ~ config.destination.address ~ ' : ' ~ config.translation.address ~ ' }' %}
-{#             we can now clear out the dst_addr part as it's already covered in aboves map #}
-{%             set dst_addr  = '' %}
-{%         else %}
-{%             set trns_addr = 'dnat to ' ~ config.translation.address %}
-{%         endif %}
-{%     endif %}
-{% elif chain is vyos_defined('POSTROUTING') %}
-{%     set comment   = 'SRC-NAT-' ~ rule %}
-{%     set base_log  = '[NAT-SRC-' ~ rule %}
-{%     set interface = ' oifname "' ~ config.outbound_interface ~ '"' if config.outbound_interface is vyos_defined and config.outbound_interface is not vyos_defined('any') else '' %}
-{%     if config.translation.address is vyos_defined %}
-{%         if config.translation.address is vyos_defined('masquerade') %}
-{%             set trns_addr = config.translation.address %}
-{%             if config.translation.port is vyos_defined %}
-{%                 set trns_addr = trns_addr ~ ' to ' %}
-{%             endif %}
-{#         support 1:1 network translation #}
-{%         elif config.translation.address | is_ip_network %}
-{%             set trns_addr = 'snat ip prefix to ip saddr map { ' ~ config.source.address ~ ' : ' ~ config.translation.address ~ ' }' %}
-{#             we can now clear out the src_addr part as it's already covered in aboves map #}
-{%             set src_addr  = '' %}
-{%         else %}
-{%             set trns_addr = 'snat to ' ~ config.translation.address %}
-{%         endif %}
-{%     endif %}
-{% endif %}
-{% set trns_port = ':' ~ config.translation.port if config.translation.port is vyos_defined %}
-{# protocol has a default value thus it is always present #}
-{% if config.protocol is vyos_defined('tcp_udp') %}
-{%     set protocol  = 'tcp' %}
-{%     set comment   = comment ~ ' tcp_udp' %}
-{% else %}
-{%     set protocol  = config.protocol %}
-{% endif %}
-{% if config.log is vyos_defined %}
-{%     if config.exclude is vyos_defined %}
-{%         set log = base_log ~ '-EXCL]' %}
-{%     elif config.translation.address is vyos_defined('masquerade') %}
-{%         set log = base_log ~ '-MASQ]' %}
-{%     else %}
-{%         set log = base_log ~ ']' %}
-{%     endif %}
-{% endif %}
-{% if config.exclude is vyos_defined %}
-{#     rule has been marked as 'exclude' thus we simply return here #}
-{%     set trns_addr = 'return' %}
-{%     set trns_port = '' %}
-{% endif %}
-{# T1083: NAT address and port translation options #}
-{% if config.translation.options is vyos_defined %}
-{%     if config.translation.options.address_mapping is vyos_defined('persistent') %}
-{%         set trns_opts_addr  = 'persistent' %}
-{%     endif %}
-{%     if config.translation.options.port_mapping is vyos_defined('random') %}
-{%         set trns_opts_port  = 'random' %}
-{%     elif config.translation.options.port_mapping is vyos_defined('fully-random') %}
-{%         set trns_opts_port  = 'fully-random' %}
-{%     endif %}
-{% endif %}
-{% if trns_opts_addr is vyos_defined and trns_opts_port is vyos_defined %}
-{%     set trns_opts  = trns_opts_addr ~ ',' ~ trns_opts_port %}
-{% elif trns_opts_addr is vyos_defined %}
-{%     set trns_opts  = trns_opts_addr %}
-{% elif trns_opts_port is vyos_defined %}
-{%     set trns_opts  = trns_opts_port %}
-{% endif %}
-{% set output = 'add rule ip nat ' ~ chain ~ interface %}
-{% if protocol is not vyos_defined('all') %}
-{%     set output = output ~ ' ip protocol ' ~ protocol %}
-{% endif %}
-{% if src_addr is vyos_defined %}
-{%     set output = output ~ ' ' ~ src_addr %}
-{% endif %}
-{% if src_port is vyos_defined %}
-{%     set output = output ~ ' ' ~ protocol ~ ' ' ~ src_port %}
-{% endif %}
-{% if dst_addr is vyos_defined %}
-{%     set output = output ~ ' ' ~ dst_addr %}
-{% endif %}
-{% if dst_port is vyos_defined %}
-{%     set output = output ~ ' ' ~ protocol ~ ' ' ~ dst_port %}
-{% endif %}
-{# Count packets #}
-{% set output = output ~ ' counter' %}
-{# Special handling of log option, we must repeat the entire rule before the #}
-{# NAT translation options are added, this is essential                      #}
-{% if log is vyos_defined %}
-{%     set log_output = output ~ ' log prefix "' ~ log ~ '" comment "' ~ comment ~ '"' %}
-{% endif %}
-{% if trns_addr is vyos_defined %}
-{%     set output = output ~ ' ' ~ trns_addr %}
-{% endif %}
-{% if trns_port is vyos_defined %}
-{#     Do not add a whitespace here, translation port must be directly added after IP address #}
-{#     e.g. 192.0.2.10:3389                                                                   #}
-{%     set output = output ~ trns_port %}
-{% endif %}
-{% if trns_opts is vyos_defined %}
-{%     set output = output ~ ' ' ~ trns_opts %}
-{% endif %}
-{% if comment is vyos_defined %}
-{%     set output = output ~ ' comment "' ~ comment ~ '"' %}
-{% endif %}
-{{ log_output if log_output is vyos_defined }}
-{{ output }}
-{# Special handling if protocol is tcp_udp, we must repeat the entire rule with udp as protocol #}
-{% if config.protocol is vyos_defined('tcp_udp') %}
-{#     Beware of trailing whitespace, without it the comment tcp_udp will be changed to udp_udp #}
-{{ log_output | replace('tcp ', 'udp ') if log_output is vyos_defined }}
-{{ output | replace('tcp ', 'udp ') }}
-{% endif %}
-{% endmacro %}
-
-# Start with clean SNAT and DNAT chains
-flush chain ip nat PREROUTING
-flush chain ip nat POSTROUTING
 {% if helper_functions is vyos_defined('remove') %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
 {%     set base_command = 'delete rule ip raw' %}
@@ -162,21 +21,41 @@ add rule ip raw NAT_CONNTRACK counter accept
 {{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
 {% endif %}
 
-#
-# Destination NAT rules build up here
-#
-add rule ip nat PREROUTING counter jump VYOS_PRE_DNAT_HOOK
+{% if first_install is not vyos_defined %}
+delete table ip vyos_nat
+{% endif %}
+table ip vyos_nat {
+    #
+    # Destination NAT rules build up here
+    #
+    chain PREROUTING {
+        type nat hook prerouting priority -100; policy accept;
+        counter jump VYOS_PRE_DNAT_HOOK
 {% if destination.rule is vyos_defined %}
 {%     for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
-{{ nat_rule(rule, config, 'PREROUTING') }}
+        {{ config | nat_rule(rule, 'destination') }}
 {%     endfor %}
 {% endif %}
-#
-# Source NAT rules build up here
-#
-add rule ip nat POSTROUTING counter jump VYOS_PRE_SNAT_HOOK
+    }
+
+    #
+    # Source NAT rules build up here
+    #
+    chain POSTROUTING {
+        type nat hook postrouting priority 100; policy accept;
+        counter jump VYOS_PRE_SNAT_HOOK
 {% if source.rule is vyos_defined %}
 {%     for rule, config in source.rule.items() if config.disable is not vyos_defined %}
-{{ nat_rule(rule, config, 'POSTROUTING') }}
+        {{ config | nat_rule(rule, 'source') }}
 {%     endfor %}
 {% endif %}
+    }
+
+    chain VYOS_PRE_DNAT_HOOK {
+        return
+    }
+
+    chain VYOS_PRE_SNAT_HOOK {
+        return
+    }
+}

@@ -147,14 +147,10 @@ def verify(nat):
                 Warning(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
             addr = dict_search('translation.address', config)
-            if addr != None:
-                if addr != 'masquerade' and not is_ip_network(addr):
-                    for ip in addr.split('-'):
-                        if not is_addr_assigned(ip):
-                            Warning(f'IP address {ip} does not exist on the system!')
-            elif 'exclude' not in config:
-                raise ConfigError(f'{err_msg}\n' \
-                                  'translation address not specified')
+            if addr != None and addr != 'masquerade' and not is_ip_network(addr):
+                for ip in addr.split('-'):
+                    if not is_addr_assigned(ip):
+                        Warning(f'IP address {ip} does not exist on the system!')
 
             # common rule verification
             verify_rule(config, err_msg)
@@ -167,14 +163,8 @@ def verify(nat):
             if 'inbound_interface' not in config:
                 raise ConfigError(f'{err_msg}\n' \
                                   'inbound-interface not specified')
-            else:
-                if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
-                    Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
-
-
-            if dict_search('translation.address', config) == None and 'exclude' not in config:
-                raise ConfigError(f'{err_msg}\n' \
-                                  'translation address not specified')
+            elif config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
+                Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
             # common rule verification
             verify_rule(config, err_msg)
@@ -193,6 +183,9 @@ def verify(nat):
     return None
 
 def generate(nat):
+    if not os.path.exists(nftables_nat_config):
+        nat['first_install'] = True
+
     render(nftables_nat_config, 'firewall/nftables-nat.j2', nat)
     render(nftables_static_nat_conf, 'firewall/nftables-static-nat.j2', nat)
 
@@ -201,7 +194,9 @@ def generate(nat):
     if tmp > 0:
         raise ConfigError('Configuration file errors encountered!')
 
-    tmp = run(f'nft -c -f {nftables_nat_config}')
+    tmp = run(f'nft -c -f {nftables_static_nat_conf}')
+    if tmp > 0:
+        raise ConfigError('Configuration file errors encountered!')
 
     return None
 
