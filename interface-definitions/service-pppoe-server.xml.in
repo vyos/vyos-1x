@@ -68,33 +68,7 @@
               </completionHelp>
             </properties>
             <children>
-              <leafNode name="vlan-id">
-                <properties>
-                  <help>VLAN monitor for the automatic creation of single vlan</help>
-                  <valueHelp>
-                    <format>u32:1-4094</format>
-                    <description>VLAN monitor for the automatic creation of single vlan</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-4094"/>
-                  </constraint>
-                  <constraintErrorMessage>VLAN ID needs to be between 1 and 4094</constraintErrorMessage>
-                  <multi/>
-                </properties>
-              </leafNode>
-              <leafNode name="vlan-range">
-                <properties>
-                  <help>VLAN monitor for the automatic creation of vlans range</help>
-                  <valueHelp>
-                    <format>start-end</format>
-                    <description>VLAN monitor range for the automatic creation of vlans (e.g. 1-4094)</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="range" argument="--min=1 --max=4094"/>
-                  </constraint>
-                  <multi/>
-                </properties>
-              </leafNode>
+              #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
           #include <include/accel-ppp/gateway-address.xml.i>

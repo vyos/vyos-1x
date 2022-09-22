@@ -17,6 +17,7 @@
 import os
 import re
 import unittest
+from glob import glob
 
 from netifaces import AF_INET
 from netifaces import AF_INET6
@@ -184,6 +185,43 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             cpus = int(cpus, 16)
 
             self.assertEqual(f'{cpus:x}', f'{rps_cpus:x}')
+
+    def test_offloading_rfs(self):
+        global_rfs_flow = 32768
+        rfs_flow = global_rfs_flow
+
+        for interface in self._interfaces:
+            self.cli_set(self._base_path + [interface, 'offload', 'rfs'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            queues = len(glob(f'/sys/class/net/{interface}/queues/rx-*'))
+            rfs_flow = int(global_rfs_flow/queues)
+            for i in range(0, queues):
+                tmp = read_file(f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt')
+                self.assertEqual(int(tmp), rfs_flow)
+
+        tmp = read_file(f'/proc/sys/net/core/rps_sock_flow_entries')
+        self.assertEqual(int(tmp), global_rfs_flow)
+
+
+        # delete configuration of RFS and check all values returned to default "0"
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'offload', 'rfs'])
+
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            queues = len(glob(f'/sys/class/net/{interface}/queues/rx-*'))
+            rfs_flow = int(global_rfs_flow/queues)
+            for i in range(0, queues):
+                tmp = read_file(f'/sys/class/net/{interface}/queues/rx-{i}/rps_flow_cnt')
+                self.assertEqual(int(tmp), 0)
+
+        tmp = read_file(f'/proc/sys/net/core/rps_sock_flow_entries')
+        self.assertEqual(int(tmp), 0)
+
 
     def test_non_existing_interface(self):
         unknonw_interface = self._base_path + ['eth667']

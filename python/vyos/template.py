@@ -548,7 +548,7 @@ def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
     return parse_rule(rule_conf, fw_name, rule_id, ip_name)
 
 @register_filter('nft_default_rule')
-def nft_default_rule(fw_conf, fw_name):
+def nft_default_rule(fw_conf, fw_name, ipv6=False):
     output = ['counter']
     default_action = fw_conf['default_action']
 
@@ -557,6 +557,11 @@ def nft_default_rule(fw_conf, fw_name):
         output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}]"')
 
     output.append(nft_action(default_action))
+    if 'default_jump_target' in fw_conf:
+        target = fw_conf['default_jump_target']
+        def_suffix = '6' if ipv6 else ''
+        output.append(f'NAME{def_suffix}_{target}')
+
     output.append(f'comment "{fw_name} default-action {default_action}"')
     return " ".join(output)
 
@@ -610,6 +615,15 @@ def nft_nested_group(out_list, includes, groups, key):
     for name in includes:
         add_includes(name)
     return out_list
+
+@register_filter('range_to_regex')
+def range_to_regex(num_range):
+    from vyos.range_regex import range_to_regex
+    if '-' not in num_range:
+        return num_range
+
+    regex = range_to_regex(num_range)
+    return f'({regex})'
 
 @register_test('vyos_defined')
 def vyos_defined(value, test_value=None, var_type=None):

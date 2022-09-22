@@ -63,9 +63,11 @@ secrets {
 {%             if peer_conf.local_address is vyos_defined %}
         id-local = {{ peer_conf.local_address }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
 {%             endif %}
-        id-remote = {{ peer }}
-{%             if peer_conf.authentication.id is vyos_defined %}
-        id-localid = {{ peer_conf.authentication.id }}
+{%             for address in peer_conf.remote_address %}
+        id-remote_{{ address | dot_colon_to_dash }} = {{ address }}
+{%             endfor %}
+{%             if peer_conf.authentication.local_id is vyos_defined %}
+        id-localid = {{ peer_conf.authentication.local_id }}
 {%             endif %}
 {%             if peer_conf.authentication.remote_id is vyos_defined %}
         id-remoteid = {{ peer_conf.authentication.remote_id }}
@@ -93,8 +95,8 @@ secrets {
 {%     for ra, ra_conf in remote_access.connection.items() if ra_conf.disable is not vyos_defined %}
 {%         if ra_conf.authentication.server_mode is vyos_defined('pre-shared-secret') %}
     ike_{{ ra }} {
-{%             if ra_conf.authentication.id is vyos_defined %}
-        id = "{{ ra_conf.authentication.id }}"
+{%             if ra_conf.authentication.local_id is vyos_defined %}
+        id = "{{ ra_conf.authentication.local_id }}"
 {%             elif ra_conf.local_address is vyos_defined %}
         id = "{{ ra_conf.local_address }}"
 {%             endif %}

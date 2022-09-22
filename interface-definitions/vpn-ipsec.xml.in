@@ -24,23 +24,9 @@
             <children>
               <leafNode name="compression">
                 <properties>
-                  <help>ESP compression</help>
-                  <completionHelp>
-                    <list>disable enable</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>disable</format>
-                    <description>Disable ESP compression</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>enable</format>
-                    <description>Enable ESP compression</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(disable|enable)</regex>
-                  </constraint>
+                  <help>Enable ESP compression</help>
+                  <valueless/>
                 </properties>
-                <defaultValue>disable</defaultValue>
               </leafNode>
               <leafNode name="lifetime">
                 <properties>
@@ -309,20 +295,7 @@
               <leafNode name="ikev2-reauth">
                 <properties>
                   <help>Re-authentication of the remote peer during an IKE re-key (IKEv2 only)</help>
-                  <completionHelp>
-                    <list>yes no</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>yes</format>
-                    <description>Enable remote host re-authentication during an IKE rekey (currently broken due to a strongswan bug)</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>no</format>
-                    <description>Disable remote host re-authenticaton during an IKE rekey</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(yes|no)</regex>
-                  </constraint>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="key-exchange">
@@ -357,25 +330,11 @@
                 </properties>
                 <defaultValue>28800</defaultValue>
               </leafNode>
-              <leafNode name="mobike">
+              <leafNode name="disable-mobike">
                 <properties>
-                  <help>Enable MOBIKE Support (IKEv2 only)</help>
-                  <completionHelp>
-                    <list>enable disable</list>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>enable</format>
-                    <description>Enable MOBIKE</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>disable</format>
-                    <description>Disable MOBIKE</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(enable|disable)</regex>
-                  </constraint>
+                  <help>Disable MOBIKE Support (IKEv2 only)</help>
+                  <valueless/>
                 </properties>
-                <defaultValue>enable</defaultValue>
               </leafNode>
               <leafNode name="mode">
                 <properties>
@@ -664,6 +623,14 @@
           <tagNode name="profile">
             <properties>
               <help>VPN IPsec profile</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Profile name</description>
+              </valueHelp>
+              <constraint>
+                <regex>[a-zA-Z][0-9a-zA-Z_-]+</regex>
+              </constraint>
+              <constraintErrorMessage>Profile name must be alphanumeric and can contain hyphen(s) and underscore(s)</constraintErrorMessage>
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
@@ -719,6 +686,14 @@
               <tagNode name="connection">
                 <properties>
                   <help>IKEv2 VPN connection name</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Connection name</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[a-zA-Z][0-9a-zA-Z_-]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Profile name must be alphanumeric and can contain hyphen(s) and underscore(s)</constraintErrorMessage>
                 </properties>
                 <children>
                   <node name="authentication">
@@ -929,23 +904,15 @@
             <children>
               <tagNode name="peer">
                 <properties>
-                  <help>VPN peer</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 address of the peer</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address of the peer</description>
-                  </valueHelp>
+                  <help>Connection name of the peer</help>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Hostname of the peer</description>
+                    <description>Connection name of the peer</description>
                   </valueHelp>
-                  <valueHelp>
-                    <format>&lt;@text&gt;</format>
-                    <description>ID of the peer</description>
-                  </valueHelp>
+                  <constraint>
+                    <regex>[-_a-zA-Z0-9|@]+</regex>
+                  </constraint>
+                  <constraintErrorMessage>Peer connection name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
                 </properties>
                 <children>
                   #include <include/generic-disable-node.xml.i>
@@ -1031,23 +998,10 @@
                   </leafNode>
                   #include <include/generic-description.xml.i>
                   #include <include/dhcp-interface.xml.i>
-                  <leafNode name="force-encapsulation">
+                  <leafNode name="force-udp-encapsulation">
                     <properties>
-                      <help>Force UDP Encapsulation for ESP payloads</help>
-                      <completionHelp>
-                        <list>enable disable</list>
-                      </completionHelp>
-                      <valueHelp>
-                        <format>enable</format>
-                        <description>Force UDP encapsulation</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>disable</format>
-                        <description>Do not force UDP encapsulation</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(enable|disable)</regex>
-                      </constraint>
+                      <help>Force UDP encapsulation</help>
+                      <valueless/>
                     </properties>
                   </leafNode>
                   #include <include/ipsec/ike-group.xml.i>
@@ -1075,6 +1029,7 @@
                     </properties>
                   </leafNode>
                   #include <include/ipsec/local-address.xml.i>
+                  #include <include/ipsec/remote-address.xml.i>
                   <tagNode name="tunnel">
                     <properties>
                       <help>Peer tunnel</help>

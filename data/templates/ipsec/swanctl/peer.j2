@@ -2,14 +2,14 @@
 {% set name = peer.replace("@", "") | dot_colon_to_dash %}
 {# peer needs to reference the global IKE configuration for certain values #}
 {% set ike = ike_group[peer_conf.ike_group] %}
-    peer_{{ name }} {
+    {{ name }} {
         proposals = {{ ike | get_esp_ike_cipher | join(',') }}
         version = {{ ike.key_exchange[4:] if ike.key_exchange is vyos_defined else "0" }}
 {% if peer_conf.virtual_address is vyos_defined %}
         vips = {{ peer_conf.virtual_address | join(', ') }}
 {% endif %}
-        local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '0.0.0.0/0' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
-        remote_addrs = {{ peer if peer not in ['any', '0.0.0.0'] and peer[0:1] != '@' else '0.0.0.0/0' }}
+        local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%any' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
+        remote_addrs = {{ peer_conf.remote_address | join(",") if peer_conf.remote_address is vyos_defined and 'any' not in peer_conf.remote_address else '%any' }}
 {% if peer_conf.authentication.mode is vyos_defined('x509') %}
         send_cert = always
 {% endif %}
@@ -21,7 +21,7 @@
         aggressive = yes
 {% endif %}
         rekey_time = {{ ike.lifetime }}s
-        mobike = {{ "yes" if ike.mobike is not defined or ike.mobike == "enable" else "no" }}
+        mobike = {{ "no" if ike.disable_mobike is defined else "yes" }}
 {% if peer[0:1] == '@' %}
         keyingtries = 0
         reauth_time = 0
@@ -30,12 +30,12 @@
 {% elif peer_conf.connection_type is vyos_defined('respond') %}
         keyingtries = 1
 {% endif %}
-{% if peer_conf.force_encapsulation is vyos_defined('enable') %}
+{% if peer_conf.force_udp_encapsulation is vyos_defined %}
         encap = yes
 {% endif %}
         local {
-{% if peer_conf.authentication.id is vyos_defined %}
-            id = "{{ peer_conf.authentication.id }}"
+{% if peer_conf.authentication.local_id is vyos_defined %}
+            id = "{{ peer_conf.authentication.local_id }}"
 {% endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
 {% if peer_conf.authentication.mode == 'x509' %}
@@ -58,7 +58,7 @@
         children {
 {% if peer_conf.vti.bind is vyos_defined and peer_conf.tunnel is not vyos_defined %}
 {%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is vyos_defined else esp_group[ peer_conf.default_esp_group ] %}
-            peer_{{ name }}_vti {
+            {{ name }}-vti {
                 esp_proposals = {{ vti_esp | get_esp_ike_cipher(ike) | join(',') }}
 {%     if vti_esp.life_bytes is vyos_defined %}
                 life_bytes = {{ vti_esp.life_bytes }}
@@ -75,7 +75,7 @@
 {%     set if_id = peer_conf.vti.bind | replace('vti', '') | int + 1 %}
                 if_id_in = {{ if_id }}
                 if_id_out = {{ if_id }}
-                ipcomp = {{ 'yes' if vti_esp.compression is vyos_defined('enable') else 'no' }}
+                ipcomp = {{ 'yes' if vti_esp.compression is vyos_defined else 'no' }}
                 mode = {{ vti_esp.mode }}
 {%     if peer[0:1] == '@' %}
                 start_action = none
@@ -101,7 +101,7 @@
 {%         set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
 {%         set remote_port = tunnel_conf.remote.port if tunnel_conf.remote.port is vyos_defined else '' %}
 {%         set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
-            peer_{{ name }}_tunnel_{{ tunnel_id }} {
+            {{ name }}-tunnel-{{ tunnel_id }} {
                 esp_proposals = {{ tunnel_esp | get_esp_ike_cipher(ike) | join(',') }}
 {%         if tunnel_esp.life_bytes is vyos_defined %}
                 life_bytes = {{ tunnel_esp.life_bytes }}
@@ -126,7 +126,7 @@
                 local_ts = {{ peer_conf.local_address }}{{ local_suffix }}
                 remote_ts = {{ peer }}{{ remote_suffix }}
 {%         endif %}
-                ipcomp = {{ 'yes' if tunnel_esp.compression is vyos_defined('enable') else 'no' }}
+                ipcomp = {{ 'yes' if tunnel_esp.compression is vyos_defined else 'no' }}
                 mode = {{ tunnel_esp.mode }}
 {%         if peer[0:1] == '@' %}
                 start_action = none
@@ -152,7 +152,7 @@
 {%         endif %}
             }
 {%         if tunnel_conf.passthrough is vyos_defined %}
-            peer_{{ name }}_tunnel_{{ tunnel_id }}_passthrough {
+            {{ name }}-tunnel-{{ tunnel_id }}-passthrough {
                 local_ts = {{ tunnel_conf.passthrough | join(",") }}
                 remote_ts = {{ tunnel_conf.passthrough | join(",") }}
                 start_action = trap

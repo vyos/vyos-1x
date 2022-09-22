@@ -31,7 +31,6 @@
           </leafNode>
           #include <include/interface/disable-link-detect.xml.i>
           #include <include/interface/disable.xml.i>
-          #include <include/interface/interface-firewall.xml.i>
           #include <include/interface/interface-policy.xml.i>
           <leafNode name="duplex">
             <properties>
@@ -91,6 +90,12 @@
               <leafNode name="rps">
                 <properties>
                   <help>Enable Receive Packet Steering</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="rfs">
+                <properties>
+                  <help>Enable Receive Flow Steering</help>
                   <valueless/>
                 </properties>
               </leafNode>

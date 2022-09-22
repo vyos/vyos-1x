@@ -643,7 +643,9 @@ def get_accel_dict(config, base, chap_secrets):
     from vyos.util import get_half_cpus
     from vyos.template import is_ipv4
 
-    dict = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
+    dict = config.get_config_dict(base, key_mangling=('-', '_'),
+                                  get_first_key=True,
+                                  no_tag_node_value_mangle=True)
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
@@ -663,6 +665,18 @@ def get_accel_dict(config, base, chap_secrets):
     # added to individual local users instead - so we can simply delete them
     if dict_search('client_ipv6_pool.prefix.mask', default_values):
         del default_values['client_ipv6_pool']['prefix']['mask']
+        # delete empty dicts
+        if len (default_values['client_ipv6_pool']['prefix']) == 0:
+            del default_values['client_ipv6_pool']['prefix']
+        if len (default_values['client_ipv6_pool']) == 0:
+            del default_values['client_ipv6_pool']
+
+    # T2665: IPoE only - it has an interface tag node
+    # added to individual local users instead - so we can simply delete them
+    if dict_search('authentication.interface', default_values):
+        del default_values['authentication']['interface']
+    if dict_search('interface', default_values):
+        del default_values['interface']
 
     dict = dict_merge(default_values, dict)
 
@@ -684,11 +698,9 @@ def get_accel_dict(config, base, chap_secrets):
         dict.update({'name_server_ipv4' : ns_v4, 'name_server_ipv6' : ns_v6})
         del dict['name_server']
 
-    # Add individual RADIUS server default values
+    # T2665: Add individual RADIUS server default values
     if dict_search('authentication.radius.server', dict):
-        # T2665
         default_values = defaults(base + ['authentication', 'radius', 'server'])
-
         for server in dict_search('authentication.radius.server', dict):
             dict['authentication']['radius']['server'][server] = dict_merge(
                 default_values, dict['authentication']['radius']['server'][server])
@@ -698,22 +710,31 @@ def get_accel_dict(config, base, chap_secrets):
             if 'disable_accounting' in dict['authentication']['radius']['server'][server]:
                 dict['authentication']['radius']['server'][server]['acct_port'] = '0'
 
-    # Add individual local-user default values
+    # T2665: Add individual local-user default values
     if dict_search('authentication.local_users.username', dict):
-        # T2665
         default_values = defaults(base + ['authentication', 'local-users', 'username'])
-
         for username in dict_search('authentication.local_users.username', dict):
             dict['authentication']['local_users']['username'][username] = dict_merge(
                 default_values, dict['authentication']['local_users']['username'][username])
 
-    # Add individual IPv6 client-pool default mask if required
+    # T2665: Add individual IPv6 client-pool default mask if required
     if dict_search('client_ipv6_pool.prefix', dict):
-        # T2665
         default_values = defaults(base + ['client-ipv6-pool', 'prefix'])
-
         for prefix in dict_search('client_ipv6_pool.prefix', dict):
             dict['client_ipv6_pool']['prefix'][prefix] = dict_merge(
                 default_values, dict['client_ipv6_pool']['prefix'][prefix])
+
+    # T2665: IPoE only - add individual local-user default values
+    if dict_search('authentication.interface', dict):
+        default_values = defaults(base + ['authentication', 'interface'])
+        for interface in dict_search('authentication.interface', dict):
+            dict['authentication']['interface'][interface] = dict_merge(
+                default_values, dict['authentication']['interface'][interface])
+
+    if dict_search('interface', dict):
+        default_values = defaults(base + ['interface'])
+        for interface in dict_search('interface', dict):
+            dict['interface'][interface] = dict_merge(default_values,
+                                                      dict['interface'][interface])
 
     return dict

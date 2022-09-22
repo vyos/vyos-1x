@@ -127,7 +127,6 @@
         </valueHelp>
         <constraint>
           <validator name="numeric" argument="--range 1-16384"/>
-          <validator name="range" argument="--min=1 --max=16384"/>
         </constraint>
       </properties>
     </leafNode>

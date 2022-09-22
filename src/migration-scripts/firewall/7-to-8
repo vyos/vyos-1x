@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T2199: Migrate interface firewall nodes to firewall interfaces <ifname> <direction> name/ipv6-name <name>
+# T2199: Migrate zone-policy to firewall node
+
+import re
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+from vyos.ifconfig import Section
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['firewall']
+zone_base = ['zone-policy']
+config = ConfigTree(config_file)
+
+if not config.exists(base) and not config.exists(zone_base):
+    # Nothing to do
+    exit(0)
+
+def migrate_interface(config, iftype, ifname, vif=None, vifs=None, vifc=None):
+    if_path = ['interfaces', iftype, ifname]
+    ifname_full = ifname
+
+    if vif:
+        if_path += ['vif', vif]
+        ifname_full = f'{ifname}.{vif}'
+    elif vifs:
+        if_path += ['vif-s', vifs]
+        ifname_full = f'{ifname}.{vifs}'
+        if vifc:
+            if_path += ['vif-c', vifc]
+            ifname_full = f'{ifname}.{vifs}.{vifc}'
+
+    if not config.exists(if_path + ['firewall']):
+        return
+
+    if not config.exists(['firewall', 'interface']):
+        config.set(['firewall', 'interface'])
+        config.set_tag(['firewall', 'interface'])
+
+    config.copy(if_path + ['firewall'], ['firewall', 'interface', ifname_full])
+    config.delete(if_path + ['firewall'])
+
+for iftype in config.list_nodes(['interfaces']):
+    for ifname in config.list_nodes(['interfaces', iftype]):
+        migrate_interface(config, iftype, ifname)
+
+        if config.exists(['interfaces', iftype, ifname, 'vif']):
+            for vif in config.list_nodes(['interfaces', iftype, ifname, 'vif']):
+                migrate_interface(config, iftype, ifname, vif=vif)
+
+        if config.exists(['interfaces', iftype, ifname, 'vif-s']):
+            for vifs in config.list_nodes(['interfaces', iftype, ifname, 'vif-s']):
+                migrate_interface(config, iftype, ifname, vifs=vifs)
+
+                if config.exists(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                    for vifc in config.list_nodes(['interfaces', iftype, ifname, 'vif-s', vifs, 'vif-c']):
+                        migrate_interface(config, iftype, ifname, vifs=vifs, vifc=vifc)
+
+if config.exists(zone_base + ['zone']):
+    config.set(['firewall', 'zone'])
+    config.set_tag(['firewall', 'zone'])
+
+    for zone in config.list_nodes(zone_base + ['zone']):
+        config.copy(zone_base + ['zone', zone], ['firewall', 'zone', zone])
+    config.delete(zone_base)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

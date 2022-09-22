@@ -262,5 +262,52 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' isis bfd', tmp)
             self.assertIn(f' isis bfd profile {bfd_profile}', tmp)
 
+    def test_isis_07_segment_routing_configuration(self):
+        global_block_low = "1000"
+        global_block_high = "1999"
+        local_block_low = "2000"
+        local_block_high = "2999"
+        interface = 'lo'
+        maximum_stack_size = '5'
+        prefix_one = '192.168.0.1/32'
+        prefix_two = '192.168.0.2/32'
+        prefix_three = '192.168.0.3/32'
+        prefix_four = '192.168.0.4/32'
+        prefix_one_value = '1'
+        prefix_two_value = '2'
+        prefix_three_value = '60000'
+        prefix_four_value = '65000'
+
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['segment-routing', 'enable'])
+        self.cli_set(base_path + ['segment-routing', 'maximum-label-depth', maximum_stack_size])
+        self.cli_set(base_path + ['segment-routing', 'global-block', 'low-label-value', global_block_low])
+        self.cli_set(base_path + ['segment-routing', 'global-block', 'high-label-value', global_block_high])
+        self.cli_set(base_path + ['segment-routing', 'local-block', 'low-label-value', local_block_low])
+        self.cli_set(base_path + ['segment-routing', 'local-block', 'high-label-value', local_block_high])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_one, 'index', 'value', prefix_one_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_one, 'index', 'explicit-null'])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_two, 'index', 'value', prefix_two_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_two, 'index', 'no-php-flag'])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_three, 'absolute', 'value',  prefix_three_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_three, 'absolute', 'explicit-null'])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_four, 'absolute', 'value', prefix_four_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_four, 'absolute', 'no-php-flag'])
+        
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' segment-routing on', tmp)
+        self.assertIn(f' segment-routing global-block {global_block_low} {global_block_high} local-block {local_block_low} {local_block_high}', tmp)
+        self.assertIn(f' segment-routing node-msd {maximum_stack_size}', tmp)
+        self.assertIn(f' segment-routing prefix {prefix_one} index {prefix_one_value} explicit-null', tmp)
+        self.assertIn(f' segment-routing prefix {prefix_two} index {prefix_two_value} no-php-flag', tmp)
+        self.assertIn(f' segment-routing prefix {prefix_three} absolute {prefix_three_value} explicit-null', tmp)
+        self.assertIn(f' segment-routing prefix {prefix_four} absolute {prefix_four_value} no-php-flag', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

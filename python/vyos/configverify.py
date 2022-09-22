@@ -381,14 +381,14 @@ def verify_vlan_config(config):
             verify_mtu_parent(c_vlan, config)
             verify_mtu_parent(c_vlan, s_vlan)
 
-def verify_accel_ppp_base_service(config):
+def verify_accel_ppp_base_service(config, local_users=True):
     """
     Common helper function which must be used by all Accel-PPP services based
     on get_config_dict()
     """
     # vertify auth settings
-    if dict_search('authentication.mode', config) == 'local':
-        if not dict_search('authentication.local_users', config):
+    if local_users and dict_search('authentication.mode', config) == 'local':
+        if dict_search(f'authentication.local_users', config) == None:
             raise ConfigError('Authentication mode local requires local users to be configured!')
 
         for user in dict_search('authentication.local_users.username', config):

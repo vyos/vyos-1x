@@ -461,6 +461,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.bestpath.med is vyos_defined %}
  bgp bestpath med {{ 'confed' if parameters.bestpath.med.confed is vyos_defined }} {{ 'missing-as-worst' if parameters.bestpath.med.missing_as_worst is vyos_defined }}
 {% endif %}
+{% if parameters.bestpath.peer_type is vyos_defined %}
+ bgp bestpath peer-type {{ 'multipath-relax' if parameters.bestpath.peer_type.multipath_relax is vyos_defined }}
+{% endif %}
 {% if parameters.cluster_id is vyos_defined %}
  bgp cluster-id {{ parameters.cluster_id }}
 {% endif %}

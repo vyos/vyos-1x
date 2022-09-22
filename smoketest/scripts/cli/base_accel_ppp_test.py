@@ -1,4 +1,4 @@
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,6 +27,17 @@ from vyos.util import process_named_running
 
 class BasicAccelPPPTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):
+
+        @classmethod
+        def setUpClass(cls):
+            cls._process_name = 'accel-pppd'
+
+            super(BasicAccelPPPTest.TestCase, cls).setUpClass()
+
+            # ensure we can also run this test on a live system - so lets clean
+            # out the current configuration :)
+            cls.cli_delete(cls, cls._base_path)
+
         def setUp(self):
             self._gateway = '192.0.2.1'
             # ensure we can also run this test on a live system - so lets clean
@@ -34,8 +45,14 @@ class BasicAccelPPPTest:
             self.cli_delete(self._base_path)
 
         def tearDown(self):
+            # Check for running process
+            self.assertTrue(process_named_running(self._process_name))
+
             self.cli_delete(self._base_path)
             self.cli_commit()
+
+            # Check for running process
+            self.assertFalse(process_named_running(self._process_name))
 
         def set(self, path):
             self.cli_set(self._base_path + path)
@@ -113,9 +130,6 @@ class BasicAccelPPPTest:
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)
 
-            # Check for running process
-            self.assertTrue(process_named_running(self._process_name))
-
             # Check local-users default value(s)
             self.delete(['authentication', 'local-users', 'username', user, 'static-ip'])
             # commit changes
@@ -126,9 +140,6 @@ class BasicAccelPPPTest:
             regex = f'{user}\s+\*\s+{password}\s+\*\s+{download}/{upload}'
             tmp = re.findall(regex, tmp)
             self.assertTrue(tmp)
-
-            # Check for running process
-            self.assertTrue(process_named_running(self._process_name))
 
         def test_accel_radius_authentication(self):
             # Test configuration of RADIUS authentication for PPPoE server
@@ -185,9 +196,6 @@ class BasicAccelPPPTest:
             self.assertEqual(f'acct-port={radius_port_acc}', server[3])
             self.assertEqual(f'req-limit=0', server[4])
             self.assertEqual(f'fail-time=0', server[5])
-
-            # Check for running process
-            self.assertTrue(process_named_running(self._process_name))
 
             #
             # Disable Radius Accounting

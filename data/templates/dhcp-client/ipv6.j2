@@ -40,20 +40,22 @@ id-assoc pd {{ pd }} {
     prefix ::/{{ pd_config.length }} infinity;
 {%         set sla_len = 64 - pd_config.length | int %}
 {%         set count = namespace(value=0) %}
-{%         for interface, interface_config in pd_config.interface.items() if pd_config.interface is vyos_defined %}
+{%         if pd_config.interface is vyos_defined %}
+{%             for interface, interface_config in pd_config.interface.items() if pd_config.interface is vyos_defined %}
     prefix-interface {{ interface }} {
         sla-len {{ sla_len }};
-{%             if interface_config.sla_id is vyos_defined %}
+{%                 if interface_config.sla_id is vyos_defined %}
         sla-id {{ interface_config.sla_id }};
-{%             else %}
+{%                 else %}
         sla-id {{ count.value }};
-{%             endif %}
-{%             if interface_config.address is vyos_defined %}
+{%                 endif %}
+{%                 if interface_config.address is vyos_defined %}
         ifid {{ interface_config.address }};
-{%             endif %}
+{%                 endif %}
     };
-{%             set count.value = count.value + 1 %}
-{%         endfor %}
+{%                 set count.value = count.value + 1 %}
+{%             endfor %}
+{%         endif %}
 };
 {%     endfor %}
 {% endif %}

@@ -53,7 +53,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_PBR_smoketest']
         ]
 
-        self.verify_nftables(nftables_search, 'ip filter', inverse=True)
+        self.verify_nftables(nftables_search, 'ip mangle', inverse=True)
 
     def verify_nftables(self, nftables_search, table, inverse=False):
         nftables_output = cmd(f'sudo nft list table {table}')
@@ -127,7 +127,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
-            ['tcp flags & (syn | ack) == syn', 'tcp dport { 8888 }', 'meta mark set ' + mark_hex]
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'meta mark set ' + mark_hex]
         ]
 
         self.verify_nftables(nftables_search, 'ip mangle')
@@ -136,7 +136,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         nftables6_search = [
             [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
-            ['meta l4proto { tcp, udp }', 'th dport { 8888 }', 'meta mark set ' + mark_hex]
+            ['meta l4proto { tcp, udp }', 'th dport 8888', 'meta mark set ' + mark_hex]
         ]
 
         self.verify_nftables(nftables6_search, 'ip6 mangle')
@@ -214,8 +214,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
             ['meta l4proto udp', 'drop'],
-            ['tcp flags & (syn | ack) == syn', 'meta mark set ' + mark_hex],
-            ['ct state { new }', 'tcp dport { 22 }', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
+            ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
+            ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
             ['meta l4proto icmp', 'log prefix "[smoketest-4-A]"', 'icmp type echo-request', 'ip length { 128, 1024-2048 }', 'meta mark set ' + mark_hex],
             ['ip dscp { 0x29, 0x39-0x3b }', 'meta mark set ' + mark_hex]
         ]
@@ -226,8 +226,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         nftables6_search = [
             [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
             ['meta l4proto udp', 'drop'],
-            ['tcp flags & (syn | ack) == syn', 'meta mark set ' + mark_hex],
-            ['ct state { new }', 'tcp dport { 22 }', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],
+            ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
+            ['ct state new', 'tcp dport 22', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],
             ['meta l4proto ipv6-icmp', 'log prefix "[smoketest6-4-A]"', 'icmpv6 type echo-request', 'ip6 length != { 128, 1024-2048 }', 'meta mark set ' + mark_hex],
             ['ip6 dscp != { 0x0e-0x13, 0x3d }', 'meta mark set ' + mark_hex]
         ]

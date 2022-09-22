@@ -55,6 +55,7 @@ from vyos.util import chown
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import dict_search_args
+from vyos.util import is_list_equal
 from vyos.util import makedir
 from vyos.util import read_file
 from vyos.util import write_file
@@ -274,7 +275,7 @@ def verify(openvpn):
             elif v6remAddr and not v6loAddr:
                 raise ConfigError('IPv6 "remote-address" requires IPv6 "local-address"')
 
-            if (v4loAddr == v4remAddr) or (v6remAddr == v4remAddr):
+            if is_list_equal(v4loAddr, v4remAddr) or is_list_equal(v6loAddr, v6remAddr):
                 raise ConfigError('"local-address" and "remote-address" cannot be the same')
 
             if dict_search('local_host', openvpn) in dict_search('local_address', openvpn):

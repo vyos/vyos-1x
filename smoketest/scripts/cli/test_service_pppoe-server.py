@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 020 VyOS maintainers and contributors
+# Copyright (C) 2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,27 +14,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
 
 from configparser import ConfigParser
-from vyos.configsession import ConfigSessionError
-from vyos.util import process_named_running
+from vyos.util import read_file
+from vyos.template import range_to_regex
 
 local_if = ['interfaces', 'dummy', 'dum667']
 ac_name = 'ACN'
 interface = 'eth0'
 
 class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
-    def setUp(self):
-        self._base_path = ['service', 'pppoe-server']
-        self._process_name = 'accel-pppd'
-        self._config_file = '/run/accel-pppd/pppoe.conf'
-        self._chap_secrets = '/run/accel-pppd/pppoe.chap-secrets'
+    @classmethod
+    def setUpClass(cls):
+        cls._base_path = ['service', 'pppoe-server']
+        cls._config_file = '/run/accel-pppd/pppoe.conf'
+        cls._chap_secrets = '/run/accel-pppd/pppoe.chap-secrets'
 
-        super().setUp()
+        # call base-classes classmethod
+        super(TestServicePPPoEServer, cls).setUpClass()
 
     def tearDown(self):
         self.cli_delete(local_if)
@@ -120,8 +120,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         # check interface-cache
         self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
 
-        # Check for running process
-        self.assertTrue(process_named_running(self._process_name))
 
     def test_pppoe_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server
@@ -139,8 +137,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
-        # Check for running process
-        self.assertTrue(process_named_running(self._process_name))
 
     def test_pppoe_server_client_ip_pool(self):
         # Test configuration of IPv6 client pools
@@ -167,9 +163,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ip-pool'][subnet], None)
         self.assertEqual(conf['ip-pool'][start_stop], None)
         self.assertEqual(conf['ip-pool']['gw-ip-address'], self._gateway)
-
-        # Check for running process
-        self.assertTrue(process_named_running(self._process_name))
 
 
     def test_pppoe_server_client_ipv6_pool(self):
@@ -211,9 +204,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ipv6-pool'][client_prefix], None)
         self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
-        # Check for running process
-        self.assertTrue(process_named_running(self._process_name))
-
 
     def test_accel_radius_authentication(self):
         radius_called_sid = 'ifname:mac'
@@ -233,6 +223,28 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['pppoe']['called-sid'], radius_called_sid)
         self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
 
+
+    def test_pppoe_server_vlan(self):
+
+        vlans = ['100', '200', '300-310']
+
+        # Test configuration of local authentication for PPPoE server
+        self.basic_config()
+
+        for vlan in vlans:
+            self.set(['interface', interface, 'vlan', vlan])
+
+        # commit changes
+        self.cli_commit()
+
+        # Validate configuration values
+        config = read_file(self._config_file)
+        for vlan in vlans:
+            tmp = range_to_regex(vlan)
+            self.assertIn(f'interface=re:^{interface}\.{tmp}$', config)
+
+        tmp = ','.join(vlans)
+        self.assertIn(f'vlan-mon={interface},{tmp}', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

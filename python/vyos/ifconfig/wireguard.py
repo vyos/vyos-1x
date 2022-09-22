@@ -167,12 +167,8 @@ class WireGuardIf(Interface):
 
         # remove no longer associated peers first
         if 'peer_remove' in config:
-            for tmp in config['peer_remove']:
-                peer = config['peer_remove'][tmp]
-                peer['ifname'] = config['ifname']
-
-                cmd = 'wg set {ifname} peer {public_key} remove'
-                self._cmd(cmd.format(**peer))
+            for peer, public_key in config['peer_remove'].items():
+                self._cmd(f'wg set {self.ifname} peer {public_key} remove')
 
         config['private_key_file'] = '/tmp/tmp.wireguard.key'
         with open(config['private_key_file'], 'w') as f:
@@ -187,44 +183,49 @@ class WireGuardIf(Interface):
 
         base_cmd = base_cmd.format(**config)
 
-        for tmp in config['peer']:
-            peer = config['peer'][tmp]
+        if 'peer' in config:
+            for peer, peer_config in config['peer'].items():
+                # T4702: No need to configure this peer when it was explicitly
+                # marked as disabled - also active sessions are terminated as
+                # the public key was already removed when entering this method!
+                if 'disable' in peer_config:
+                    continue
 
-            # start of with a fresh 'wg' command
-            cmd = base_cmd + ' peer {public_key}'
+                # start of with a fresh 'wg' command
+                cmd = base_cmd + ' peer {public_key}'
 
-            # If no PSK is given remove it by using /dev/null - passing keys via
-            # the shell (usually bash) is considered insecure, thus we use a file
-            no_psk_file = '/dev/null'
-            psk_file = no_psk_file
-            if 'preshared_key' in peer:
-                psk_file = '/tmp/tmp.wireguard.psk'
-                with open(psk_file, 'w') as f:
-                    f.write(peer['preshared_key'])
-            cmd += f' preshared-key {psk_file}'
+                # If no PSK is given remove it by using /dev/null - passing keys via
+                # the shell (usually bash) is considered insecure, thus we use a file
+                no_psk_file = '/dev/null'
+                psk_file = no_psk_file
+                if 'preshared_key' in peer_config:
+                    psk_file = '/tmp/tmp.wireguard.psk'
+                    with open(psk_file, 'w') as f:
+                        f.write(peer_config['preshared_key'])
+                cmd += f' preshared-key {psk_file}'
 
-            # Persistent keepalive is optional
-            if 'persistent_keepalive'in peer:
-                cmd += ' persistent-keepalive {persistent_keepalive}'
+                # Persistent keepalive is optional
+                if 'persistent_keepalive'in peer_config:
+                    cmd += ' persistent-keepalive {persistent_keepalive}'
 
-            # Multiple allowed-ip ranges can be defined - ensure we are always
-            # dealing with a list
-            if isinstance(peer['allowed_ips'], str):
-                peer['allowed_ips'] = [peer['allowed_ips']]
-            cmd += ' allowed-ips ' + ','.join(peer['allowed_ips'])
+                # Multiple allowed-ip ranges can be defined - ensure we are always
+                # dealing with a list
+                if isinstance(peer_config['allowed_ips'], str):
+                    peer_config['allowed_ips'] = [peer_config['allowed_ips']]
+                cmd += ' allowed-ips ' + ','.join(peer_config['allowed_ips'])
 
-            # Endpoint configuration is optional
-            if {'address', 'port'} <= set(peer):
-                if is_ipv6(peer['address']):
-                    cmd += ' endpoint [{address}]:{port}'
-                else:
-                    cmd += ' endpoint {address}:{port}'
+                # Endpoint configuration is optional
+                if {'address', 'port'} <= set(peer_config):
+                    if is_ipv6(peer_config['address']):
+                        cmd += ' endpoint [{address}]:{port}'
+                    else:
+                        cmd += ' endpoint {address}:{port}'
 
-            self._cmd(cmd.format(**peer))
+                self._cmd(cmd.format(**peer_config))
 
-            # PSK key file is not required to be stored persistently as its backed by CLI
-            if psk_file != no_psk_file and os.path.exists(psk_file):
-                os.remove(psk_file)
+                # PSK key file is not required to be stored persistently as its backed by CLI
+                if psk_file != no_psk_file and os.path.exists(psk_file):
+                    os.remove(psk_file)
 
         # call base class
         super().update(config)

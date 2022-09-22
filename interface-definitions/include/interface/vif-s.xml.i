@@ -18,7 +18,6 @@
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
     #include <include/interface/disable.xml.i>
-    #include <include/interface/interface-firewall-vif.xml.i>
     #include <include/interface/interface-policy-vif.xml.i>
     <leafNode name="protocol">
       <properties>
@@ -68,7 +67,6 @@
         #include <include/interface/mtu-68-16000.xml.i>
         #include <include/interface/redirect.xml.i>
         #include <include/interface/vrf.xml.i>
-        #include <include/interface/interface-firewall-vif-c.xml.i>
         #include <include/interface/interface-policy-vif-c.xml.i>
       </children>
     </tagNode>

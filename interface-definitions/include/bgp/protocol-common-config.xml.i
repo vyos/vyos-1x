@@ -1135,6 +1135,19 @@
             </leafNode>
           </children>
         </node>
+        <node name="peer-type">
+          <properties>
+            <help>Peer type</help>
+          </properties>
+          <children>
+            <leafNode name="multipath-relax">
+              <properties>
+                <help>Allow load sharing across routes learned from different peer types</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
       </children>
     </node>
     <leafNode name="cluster-id">

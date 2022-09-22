@@ -16,6 +16,7 @@
 import os
 import re
 
+from glob import glob
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
@@ -73,6 +74,10 @@ class EthernetIf(Interface):
         'rps': {
             'convert': lambda cpus: cpus if cpus else '0',
             'location': '/sys/class/net/{ifname}/queues/rx-0/rps_cpus',
+        },
+        'rfs': {
+            'convert': lambda num: num if num else '0',
+            'location': '/proc/sys/net/core/rps_sock_flow_entries',
         },
     }}
 
@@ -258,6 +263,20 @@ class EthernetIf(Interface):
         # send bitmask representation as hex string without leading '0x'
         return self.set_interface('rps', rps_cpus)
 
+    def set_rfs(self, state):
+        rfs_flow = 0
+        global_rfs_flow = 0
+        queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
+        if state:
+            global_rfs_flow = 32768
+            rfs_flow = int(global_rfs_flow/queues)
+
+        self.set_interface('rfs', global_rfs_flow)
+        for i in range(0, queues):
+            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_flow_cnt', rfs_flow)
+
+        return True
+
     def set_sg(self, state):
         """
         Enable Scatter-Gather support. State can be either True or False.
@@ -341,6 +360,9 @@ class EthernetIf(Interface):
 
         # RPS - Receive Packet Steering
         self.set_rps(dict_search('offload.rps', config) != None)
+
+        # RFS - Receive Flow Steering
+        self.set_rfs(dict_search('offload.rfs', config) != None)
 
         # scatter-gather option
         self.set_sg(dict_search('offload.sg', config) != None)

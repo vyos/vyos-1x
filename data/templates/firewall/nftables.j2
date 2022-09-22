@@ -1,25 +1,48 @@
 #!/usr/sbin/nft -f
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
+{% import 'firewall/nftables-zone.j2' as zone_tmpl %}
 
-{% if cleanup_commands is vyos_defined %}
-{%     for command in cleanup_commands %}
-{{ command }}
-{%     endfor %}
+{% if first_install is not vyos_defined %}
+delete table ip vyos_filter
 {% endif %}
-
-table ip filter {
-{% if first_install is vyos_defined %}
+table ip vyos_filter {
     chain VYOS_FW_FORWARD {
         type filter hook forward priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.in is vyos_defined and ifconf.in.name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME_{{ ifconf.in.name }}
+{%         endif %}
+{%         if ifconf.out is vyos_defined and ifconf.out.name is vyos_defined %}
+        oifname {{ ifname }} counter jump NAME_{{ ifconf.out.name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_FW_LOCAL {
         type filter hook input priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.local is vyos_defined and ifconf.local.name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME_{{ ifconf.local.name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_FW_OUTPUT {
         type filter hook output priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY
+{% endif %}
         jump VYOS_POST_FW
     }
     chain VYOS_POST_FW {
@@ -29,7 +52,6 @@ table ip filter {
         type filter hook prerouting priority -450; policy accept;
         ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
     }
-{% endif %}
 {% if name is vyos_defined %}
 {%     set ns = namespace(sets=[]) %}
 {%     for name_text, conf in name.items() %}
@@ -72,6 +94,10 @@ table ip filter {
 
 {{ group_tmpl.groups(group, False) }}
 
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, False) }}
+{% endif %}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY {
 {%     if state_policy.established is vyos_defined %}
@@ -88,18 +114,46 @@ table ip filter {
 {% endif %}
 }
 
-table ip6 filter {
-{% if first_install is vyos_defined %}
+{% if first_install is not vyos_defined %}
+delete table ip6 vyos_filter
+{% endif %}
+table ip6 vyos_filter {
     chain VYOS_FW6_FORWARD {
         type filter hook forward priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.in is vyos_defined and ifconf.in.ipv6_name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME6_{{ ifconf.in.ipv6_name }}
+{%         endif %}
+{%         if ifconf.out is vyos_defined and ifconf.out.ipv6_name is vyos_defined %}
+        oifname {{ ifname }} counter jump NAME6_{{ ifconf.out.ipv6_name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_FW6_LOCAL {
         type filter hook input priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for ifname, ifconf in interface.items() %}
+{%         if ifconf.local is vyos_defined and ifconf.local.ipv6_name is vyos_defined %}
+        iifname {{ ifname }} counter jump NAME6_{{ ifconf.local.ipv6_name }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_FW6_OUTPUT {
         type filter hook output priority 0; policy accept;
+{% if state_policy is vyos_defined %}
+        jump VYOS_STATE_POLICY6
+{% endif %}
         jump VYOS_POST_FW6
     }
     chain VYOS_POST_FW6 {
@@ -109,7 +163,6 @@ table ip6 filter {
         type filter hook prerouting priority -450; policy accept;
         exthdr frag exists meta mark set 0xffff1 return
     }
-{% endif %}
 {% if ipv6_name is vyos_defined %}
 {%     set ns = namespace(sets=[]) %}
 {%     for name_text, conf in ipv6_name.items() %}
@@ -122,7 +175,7 @@ table ip6 filter {
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-        {{ conf | nft_default_rule(name_text) }}
+        {{ conf | nft_default_rule(name_text, ipv6=True) }}
     }
 {%     endfor %}
 {%     for set_name in ns.sets %}
@@ -144,6 +197,10 @@ table ip6 filter {
 
 {{ group_tmpl.groups(group, True) }}
 
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, True) }}
+{% endif %}
+
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
 {%     if state_policy.established is vyos_defined %}
@@ -159,166 +216,3 @@ table ip6 filter {
     }
 {% endif %}
 }
-
-{% if first_install is vyos_defined %}
-table ip nat {
-    chain PREROUTING {
-        type nat hook prerouting priority -100; policy accept;
-        counter jump VYOS_PRE_DNAT_HOOK
-    }
-
-    chain POSTROUTING {
-        type nat hook postrouting priority 100; policy accept;
-        counter jump VYOS_PRE_SNAT_HOOK
-    }
-
-    chain VYOS_PRE_DNAT_HOOK {
-        return
-    }
-
-    chain VYOS_PRE_SNAT_HOOK {
-        return
-    }
-}
-
-table ip vyos_static_nat {
-    chain PREROUTING {
-        type nat hook prerouting priority -100; policy accept;
-        counter jump VYOS_PRE_DNAT_HOOK
-    }
-
-    chain POSTROUTING {
-        type nat hook postrouting priority 100; policy accept;
-        counter jump VYOS_PRE_SNAT_HOOK
-    }
-
-    chain VYOS_PRE_DNAT_HOOK {
-        return
-    }
-
-    chain VYOS_PRE_SNAT_HOOK {
-        return
-    }
-}
-
-table ip6 nat {
-    chain PREROUTING {
-        type nat hook prerouting priority -100; policy accept;
-        counter jump VYOS_DNPT_HOOK
-    }
-
-    chain POSTROUTING {
-        type nat hook postrouting priority 100; policy accept;
-        counter jump VYOS_SNPT_HOOK
-    }
-
-    chain VYOS_DNPT_HOOK {
-        return
-    }
-
-    chain VYOS_SNPT_HOOK {
-        return
-    }
-}
-
-table inet mangle {
-    chain FORWARD {
-        type filter hook forward priority -150; policy accept;
-    }
-}
-
-table raw {
-    chain VYOS_TCP_MSS {
-        type filter hook forward priority -300; policy accept;
-    }
-
-    chain PREROUTING {
-        type filter hook prerouting priority -200; policy accept;
-        counter jump VYOS_CT_IGNORE
-        counter jump VYOS_CT_TIMEOUT
-        counter jump VYOS_CT_PREROUTING_HOOK
-        counter jump FW_CONNTRACK
-        notrack
-    }
-
-    chain OUTPUT {
-        type filter hook output priority -200; policy accept;
-        counter jump VYOS_CT_IGNORE
-        counter jump VYOS_CT_TIMEOUT
-        counter jump VYOS_CT_OUTPUT_HOOK
-        counter jump FW_CONNTRACK
-        notrack
-    }
-
-    ct helper rpc_tcp {
-        type "rpc" protocol tcp;
-    }
-
-    ct helper rpc_udp {
-        type "rpc" protocol udp;
-    }
-
-    ct helper tns_tcp {
-        type "tns" protocol tcp;
-    }
-
-    chain VYOS_CT_HELPER {
-        ct helper set "rpc_tcp" tcp dport {111} return
-        ct helper set "rpc_udp" udp dport {111} return
-        ct helper set "tns_tcp" tcp dport {1521,1525,1536} return
-        return
-    }
-
-    chain VYOS_CT_IGNORE {
-        return
-    }
-
-    chain VYOS_CT_TIMEOUT {
-        return
-    }
-
-    chain VYOS_CT_PREROUTING_HOOK {
-        return
-    }
-
-    chain VYOS_CT_OUTPUT_HOOK {
-        return
-    }
-
-    chain FW_CONNTRACK {
-        accept
-    }
-}
-
-table ip6 raw {
-    chain VYOS_TCP_MSS {
-        type filter hook forward priority -300; policy accept;
-    }
-
-    chain PREROUTING {
-        type filter hook prerouting priority -300; policy accept;
-        counter jump VYOS_CT_PREROUTING_HOOK
-        counter jump FW_CONNTRACK
-        notrack
-    }
-
-    chain OUTPUT {
-        type filter hook output priority -300; policy accept;
-        counter jump VYOS_CT_OUTPUT_HOOK
-        counter jump FW_CONNTRACK
-        notrack
-    }
-
-    chain VYOS_CT_PREROUTING_HOOK {
-        return
-    }
-
-    chain VYOS_CT_OUTPUT_HOOK {
-        return
-    }
-
-    chain FW_CONNTRACK {
-        accept
-    }
-}
-{% endif %}

@@ -16,15 +16,9 @@
 
 # - T4703: merge vlan-id and vlan-range to vlan CLI node
 
-# L2|L3 -> l2|l3
-# mac-address -> mac
-# network-mode -> mode
-
-import os
-import sys
-
-from sys import argv, exit
 from vyos.configtree import ConfigTree
+from sys import argv
+from sys import exit
 
 if (len(argv) < 1):
     print("Must specify file name!")
@@ -36,33 +30,23 @@ with open(file_name, 'r') as f:
     config_file = f.read()
 
 config = ConfigTree(config_file)
-base = ['service', 'ipoe-server']
-if not config.exists(base):
+base_path = ['service', 'pppoe-server', 'interface']
+if not config.exists(base_path):
     # Nothing to do
     exit(0)
 
-if config.exists(base + ['authentication', 'interface']):
-    for interface in config.list_nodes(base + ['authentication', 'interface']):
-        config.rename(base + ['authentication', 'interface', interface, 'mac-address'], 'mac')
-
-for interface in config.list_nodes(base + ['interface']):
-    base_path = base + ['interface', interface]
+for interface in config.list_nodes(base_path):
     for vlan in ['vlan-id', 'vlan-range']:
-        if config.exists(base_path + [vlan]):
+        if config.exists(base_path + [interface, vlan]):
             print(interface, vlan)
-            for tmp in config.return_values(base_path + [vlan]):
-                config.set(base_path + ['vlan'], value=tmp, replace=False)
-            config.delete(base_path + [vlan])
-
-    if config.exists(base_path + ['network-mode']):
-        tmp = config.return_value(base_path + ['network-mode'])
-        config.delete(base_path + ['network-mode'])
-        # Change L2|L3 to lower case l2|l3
-        config.set(base_path + ['mode'], value=tmp.lower())
+            for tmp in config.return_values(base_path + [interface, vlan]):
+                config.set(base_path + [interface, 'vlan'], value=tmp, replace=False)
+            config.delete(base_path + [interface, vlan])
 
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
 except OSError as e:
-    print("Failed to save the modified config: {}".format(e))
+    print(f'Failed to save the modified config: {e}')
     exit(1)
+

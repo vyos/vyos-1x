@@ -3,22 +3,30 @@
   <properties>
     <help>Default-action for rule-set</help>
     <completionHelp>
-      <list>drop reject accept</list>
+      <list>drop jump reject return accept</list>
     </completionHelp>
     <valueHelp>
       <format>drop</format>
       <description>Drop if no prior rules are hit</description>
     </valueHelp>
     <valueHelp>
+      <format>jump</format>
+      <description>Jump to another chain if no prior rules are hit</description>
+    </valueHelp>
+    <valueHelp>
       <format>reject</format>
       <description>Drop and notify source if no prior rules are hit</description>
+    </valueHelp>
+    <valueHelp>
+      <format>return</format>
+      <description>Return from the current chain and continue at the next rule of the last chain</description>
     </valueHelp>
     <valueHelp>
       <format>accept</format>
       <description>Accept if no prior rules are hit</description>
     </valueHelp>
     <constraint>
-      <regex>(drop|reject|accept)</regex>
+      <regex>(drop|jump|reject|return|accept)</regex>
     </constraint>
   </properties>
   <defaultValue>drop</defaultValue>
