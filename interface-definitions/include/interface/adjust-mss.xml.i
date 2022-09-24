@@ -11,11 +11,11 @@
       <description>Automatically sets the MSS to the proper value</description>
     </valueHelp>
     <valueHelp>
-      <format>u32:500-65535</format>
+      <format>u32:536-65535</format>
       <description>TCP Maximum segment size in bytes</description>
     </valueHelp>
     <constraint>
-      <validator name="numeric" argument="--range 500-65535"/>
+      <validator name="numeric" argument="--range 536-65535"/>
       <regex>(clamp-mss-to-pmtu)</regex>
     </constraint>
   </properties>
