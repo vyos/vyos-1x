@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,6 +17,7 @@ import os
 import time
 
 from datetime import timedelta
+from tempfile import NamedTemporaryFile
 
 from hurry.filesize import size
 from hurry.filesize import alternative
@@ -170,17 +171,18 @@ class WireGuardIf(Interface):
             for peer, public_key in config['peer_remove'].items():
                 self._cmd(f'wg set {self.ifname} peer {public_key} remove')
 
-        config['private_key_file'] = '/tmp/tmp.wireguard.key'
-        with open(config['private_key_file'], 'w') as f:
-            f.write(config['private_key'])
+        tmp_file = NamedTemporaryFile('w')
+        tmp_file.write(config['private_key'])
+        tmp_file.flush()
 
         # Wireguard base command is identical for every peer
-        base_cmd  = 'wg set {ifname} private-key {private_key_file}'
+        base_cmd  = 'wg set {ifname}'
         if 'port' in config:
             base_cmd += ' listen-port {port}'
         if 'fwmark' in config:
             base_cmd += ' fwmark {fwmark}'
 
+        base_cmd += f' private-key {tmp_file.name}'
         base_cmd = base_cmd.format(**config)
 
         if 'peer' in config:
