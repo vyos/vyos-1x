@@ -22,7 +22,6 @@ from tempfile import NamedTemporaryFile
 from hurry.filesize import size
 from hurry.filesize import alternative
 
-from vyos.config import Config
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
@@ -72,9 +71,10 @@ class WireGuardOperational(Operational):
         return output
 
     def show_interface(self):
-        wgdump = self._dump().get(self.config['ifname'], None)
-
+        from vyos.config import Config
         c = Config()
+
+        wgdump = self._dump().get(self.config['ifname'], None)
 
         c.set_level(["interfaces", "wireguard", self.config['ifname']])
         description = c.return_effective_value(["description"])
