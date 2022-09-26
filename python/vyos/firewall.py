@@ -248,6 +248,14 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 value = rule_conf['hop_limit'][op]
                 output.append(f'ip6 hoplimit {operator} {value}')
 
+    if 'inbound_interface' in rule_conf:
+        iiface = rule_conf['inbound_interface']
+        output.append(f'iifname {iiface}')
+
+    if 'outbound_interface' in rule_conf:
+        oiface = rule_conf['outbound_interface']
+        output.append(f'oifname {oiface}')
+
     if 'ttl' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
         for op, operator in operators.items():
