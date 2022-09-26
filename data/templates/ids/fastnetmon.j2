@@ -37,18 +37,70 @@ process_incoming_traffic = {{ 'on' if direction is vyos_defined and 'in' in dire
 process_outgoing_traffic = {{ 'on' if direction is vyos_defined and 'out' in direction else 'off' }}
 
 {% if threshold is vyos_defined %}
-{%     for thr, thr_value in threshold.items() %}
-{%         if thr is vyos_defined('fps') %}
+{%     if threshold.general is vyos_defined %}
+# General threshold
+{%         for thr, thr_value in threshold.general.items() %}
+{%             if thr is vyos_defined('fps') %}
 ban_for_flows = on
 threshold_flows = {{ thr_value }}
-{%         elif thr is vyos_defined('mbps') %}
+{%             elif thr is vyos_defined('mbps') %}
 ban_for_bandwidth = on
 threshold_mbps = {{ thr_value }}
-{%         elif thr is vyos_defined('pps') %}
+{%             elif thr is vyos_defined('pps') %}
 ban_for_pps = on
 threshold_pps = {{ thr_value }}
-{%         endif %}
-{%     endfor %}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+{%     if threshold.tcp is vyos_defined %}
+# TCP threshold
+{%         for thr, thr_value in threshold.tcp.items() %}
+{%             if thr is vyos_defined('fps') %}
+ban_for_tcp_flows = on
+threshold_tcp_flows = {{ thr_value }}
+{%             elif thr is vyos_defined('mbps') %}
+ban_for_tcp_bandwidth = on
+threshold_tcp_mbps = {{ thr_value }}
+{%             elif thr is vyos_defined('pps') %}
+ban_for_tcp_pps = on
+threshold_tcp_pps = {{ thr_value }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+{%     if threshold.udp is vyos_defined %}
+# UDP threshold
+{%         for thr, thr_value in threshold.udp.items() %}
+{%             if thr is vyos_defined('fps') %}
+ban_for_udp_flows = on
+threshold_udp_flows = {{ thr_value }}
+{%             elif thr is vyos_defined('mbps') %}
+ban_for_udp_bandwidth = on
+threshold_udp_mbps = {{ thr_value }}
+{%             elif thr is vyos_defined('pps') %}
+ban_for_udp_pps = on
+threshold_udp_pps = {{ thr_value }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+{%     if threshold.icmp is vyos_defined %}
+# ICMP threshold
+{%         for thr, thr_value in threshold.icmp.items() %}
+{%             if thr is vyos_defined('fps') %}
+ban_for_icmp_flows = on
+threshold_icmp_flows = {{ thr_value }}
+{%             elif thr is vyos_defined('mbps') %}
+ban_for_icmp_bandwidth = on
+threshold_icmp_mbps = {{ thr_value }}
+{%             elif thr is vyos_defined('pps') %}
+ban_for_icmp_pps = on
+threshold_icmp_pps = {{ thr_value }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
 {% endif %}
 
 {% if listen_interface is vyos_defined %}

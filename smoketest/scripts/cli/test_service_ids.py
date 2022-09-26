@@ -77,9 +77,9 @@ class TestServiceIDS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['listen-interface', tmp])
 
         self.cli_set(base_path + ['direction', 'in'])
-        self.cli_set(base_path + ['threshold', 'fps', fps])
-        self.cli_set(base_path + ['threshold', 'pps', pps])
-        self.cli_set(base_path + ['threshold', 'mbps', mbps])
+        self.cli_set(base_path + ['threshold', 'general', 'fps', fps])
+        self.cli_set(base_path + ['threshold', 'general', 'pps', pps])
+        self.cli_set(base_path + ['threshold', 'general', 'mbps', mbps])
 
         # commit changes
         self.cli_commit()
