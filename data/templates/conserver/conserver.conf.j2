@@ -25,6 +25,9 @@ console {{ key }} {
     baud {{ value.speed }};
     parity {{ value.parity }};
     options {{ "!" if value.stop_bits == "1" }}cstopb;
+{%     if value.alias is vyos_defined %}
+    aliases "{{ value.alias }}";
+{%     endif %}
 }
 {% endfor %}
 

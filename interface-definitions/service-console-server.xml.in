@@ -28,6 +28,14 @@
             </properties>
             <children>
               #include <include/interface/description.xml.i>
+              <leafNode name="alias">
+                <properties>
+                  <help>Human-readable name for this console</help>
+                  <constraint>
+                    <regex>[-_a-zA-Z0-9.]{1,128}</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
               <leafNode name="speed">
                 <properties>
                   <help>Serial port baud rate</help>

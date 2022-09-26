@@ -61,6 +61,7 @@ def verify(proxy):
     if not proxy:
         return None
 
+    aliases = []
     processes = process_iter(['name', 'cmdline'])
     if 'device' in proxy:
         for device, device_config in proxy['device'].items():
@@ -74,6 +75,12 @@ def verify(proxy):
 
             if 'ssh' in device_config and 'port' not in device_config['ssh']:
                 raise ConfigError(f'Port "{device}" requires SSH port to be set!')
+
+            if 'alias' in device_config:
+                if device_config['alias'] in aliases:
+                    raise ConfigError("Console aliases must be unique")
+                else:
+                    aliases.append(device_config['alias'])
 
     return None
 
