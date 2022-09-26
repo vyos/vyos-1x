@@ -70,13 +70,6 @@ class EthernetIf(Interface):
         },
     }}
 
-    _sysfs_set = {**Interface._sysfs_set, **{
-        'rfs': {
-            'convert': lambda num: num if num else '0',
-            'location': '/proc/sys/net/core/rps_sock_flow_entries',
-        },
-    }}
-
     def __init__(self, ifname, **kargs):
         super().__init__(ifname, **kargs)
         self.ethtool = Ethtool(ifname)
@@ -265,13 +258,11 @@ class EthernetIf(Interface):
 
     def set_rfs(self, state):
         rfs_flow = 0
-        global_rfs_flow = 0
         queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
             global_rfs_flow = 32768
             rfs_flow = int(global_rfs_flow/queues)
 
-        self.set_interface('rfs', global_rfs_flow)
         for i in range(0, queues):
             self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_flow_cnt', rfs_flow)
 
