@@ -115,9 +115,12 @@ def apply(tcp):
                 continue
 
             # adjust TCP MSS per interface
-            if mss:
+            if mss == 'clamp-mss-to-pmtu':
                 call('iptables --table mangle --append {} --out-interface {} --protocol tcp '
-                          '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
+                     '--tcp-flags SYN,RST SYN --jump TCPMSS --clamp-mss-to-pmtu >&/dev/null'.format(target, intf))
+            elif mss:
+                call('iptables --table mangle --append {} --out-interface {} --protocol tcp '
+                     '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
 
     # Setup new ip6tables rules
     if tcp['new_chain6']:
@@ -133,9 +136,12 @@ def apply(tcp):
                 continue
 
             # adjust TCP MSS per interface
-            if mss:
+            if mss == 'clamp-mss-to-pmtu':
                 call('ip6tables --table mangle --append {} --out-interface {} --protocol tcp '
-                    '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
+                     '--tcp-flags SYN,RST SYN --jump TCPMSS --clamp-mss-to-pmtu >&/dev/null'.format(target, intf))
+            elif mss:
+                call('ip6tables --table mangle --append {} --out-interface {} --protocol tcp '
+                     '--tcp-flags SYN,RST SYN --jump TCPMSS --set-mss {} >&/dev/null'.format(target, intf, mss))
 
     return None
 
