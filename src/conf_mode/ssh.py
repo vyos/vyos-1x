@@ -73,6 +73,9 @@ def verify(ssh):
     if not ssh:
         return None
 
+    if 'rekey' in ssh and 'data' not in ssh['rekey']:
+        raise ConfigError(f'Rekey data is required!')
+
     verify_vrf(ssh)
     return None
 

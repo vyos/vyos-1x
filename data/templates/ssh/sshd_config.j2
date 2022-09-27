@@ -96,3 +96,7 @@ DenyGroups {{ access_control.deny.group | join(' ') }}
 # sshd(8) will send a message through the encrypted channel to request a response from the client
 ClientAliveInterval {{ client_keepalive_interval }}
 {% endif %}
+
+{% if rekey.data is vyos_defined  %}
+RekeyLimit {{ rekey.data }}M {{ rekey.time + 'M' if rekey.time is vyos_defined }}
+{% endif %}
