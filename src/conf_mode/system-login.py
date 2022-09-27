@@ -40,6 +40,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+autologout_file = "/etc/profile.d/autologout.sh"
 radius_config_file = "/etc/pam_radius_auth.conf"
 
 def get_local_users():
@@ -202,6 +203,13 @@ def generate(login):
     else:
         if os.path.isfile(radius_config_file):
             os.unlink(radius_config_file)
+
+    if 'timeout' in login:
+        render(autologout_file, 'login/autologout.j2', login,
+                   permission=0o755, user='root', group='root')
+    else:
+        if os.path.isfile(autologout_file):
+            os.unlink(autologout_file)
 
     return None
 
