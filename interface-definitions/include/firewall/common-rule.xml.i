@@ -26,6 +26,14 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="inbound-interface">
+  <properties>
+    <help>Match inbound-interface</help>
+    <completionHelp>
+      <script>${vyos_completion_dir}/list_interfaces.py</script>
+    </completionHelp>
+  </properties>
+</leafNode>
 <node name="ipsec">
   <properties>
     <help>Inbound IPsec packets</help>
@@ -122,6 +130,14 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="outbound-interface">
+  <properties>
+    <help>Match outbound-interface</help>
+    <completionHelp>
+      <script>${vyos_completion_dir}/list_interfaces.py</script>
+    </completionHelp>
+  </properties>
+</leafNode>
 <leafNode name="protocol">
   <properties>
     <help>Protocol to match (protocol name, number, or "all")</help>
