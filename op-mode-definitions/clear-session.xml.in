@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <tagNode name="session">
+        <properties>
+          <help>Terminate TTY or PTS user session</help>
+          <completionHelp>
+            <script>who | awk '{print $2}'</script>
+          </completionHelp>
+        </properties>
+        <command>sudo pkill -9 -t $3</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
