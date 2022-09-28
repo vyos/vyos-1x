@@ -109,7 +109,7 @@ def _get_formatted_output_rules(data, direction, family):
                 if jmespath.search('rule.expr[*].match.left.meta', rule) else 'any'
         for index, match in enumerate(jmespath.search('rule.expr[*].match', rule)):
             if 'payload' in match['left']:
-                if 'prefix' in match['right'] or 'set' in match['right']:
+                if isinstance(match['right'], dict) and ('prefix' in match['right'] or 'set' in match['right']):
                     # Merge dict src/dst l3_l4 parameters
                     my_dict = {**match['left']['payload'], **match['right']}
                     my_dict['op'] = match['op']
@@ -136,10 +136,15 @@ def _get_formatted_output_rules(data, direction, family):
                             dport = my_dict.get('set')
                             dport = ','.join(map(str, dport))
                 else:
-                    if jmespath.search('left.payload.field', match) == 'saddr':
+                    field = jmespath.search('left.payload.field', match)
+                    if field == 'saddr':
                         saddr = match.get('right')
-                    if jmespath.search('left.payload.field', match) == 'daddr':
+                    elif field == 'daddr':
                         daddr = match.get('right')
+                    elif field == 'sport':
+                        sport = match.get('right')
+                    elif field == 'dport':
+                        dport = match.get('right')
             else:
                 saddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
                 daddr = '::/0' if family == 'inet6' else '0.0.0.0/0'
