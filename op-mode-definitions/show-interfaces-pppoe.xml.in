@@ -17,7 +17,7 @@
                 <properties>
                   <help>Show specified PPPoE interface log</help>
                 </properties>
-                <command>/usr/bin/journalctl --unit "ppp@$4".service</command>
+                <command>journalctl --no-hostname --boot --follow --unit "ppp@$4".service</command>
               </leafNode>
               <leafNode name="statistics">
                 <properties>
