@@ -8,7 +8,7 @@
             <properties>
               <help>Show log for serial console server</help>
             </properties>
-            <command>/usr/bin/journalctl --unit conserver-server.service</command>
+            <command>journalctl --no-hostname --boot --follow --unit conserver-server.service</command>
           </leafNode>
         </children>
       </node>
