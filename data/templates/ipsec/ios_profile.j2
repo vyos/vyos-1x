@@ -41,7 +41,7 @@
                 <!-- Remote identity, can be a FQDN, a userFQDN, an IP or (theoretically) a certificate's subject DN. Can't be empty.
                      IMPORTANT: DNs are currently not handled correctly, they are always sent as identities of type FQDN -->
                 <key>RemoteIdentifier</key>
-                <string>{{ authentication.id if authentication.id is vyos_defined else 'VyOS' }}</string>
+                <string>{{ authentication.local_id if authentication.local_id is vyos_defined else 'VyOS' }}</string>
                 <!-- Local IKE identity, same restrictions as above. If it is empty the client's IP address will be used -->
                 <key>LocalIdentifier</key>
                 <string></string>
