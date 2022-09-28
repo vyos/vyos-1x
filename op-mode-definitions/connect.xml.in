@@ -10,6 +10,7 @@
           <help>Connect to device attached to serial console server</help>
           <completionHelp>
             <path>service console-server device</path>
+            <script>${vyos_completion_dir}/list_consoles.sh</script>
           </completionHelp>
         </properties>
         <command>/usr/bin/console "$3"</command>
