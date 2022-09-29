@@ -511,6 +511,27 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_source_validation(self):
+        # Strict
+        self.cli_set(['firewall', 'global-options', 'source-validation', 'strict'])
+        self.cli_commit()
+
+        nftables_strict_search = [
+            ['fib saddr . iif oif 0', 'drop']
+        ]
+
+        self.verify_nftables(nftables_strict_search, 'inet vyos_global_rpfilter')
+
+        # Loose
+        self.cli_set(['firewall', 'global-options', 'source-validation', 'loose'])
+        self.cli_commit()
+
+        nftables_loose_search = [
+            ['fib saddr oif 0', 'drop']
+        ]
+
+        self.verify_nftables(nftables_loose_search, 'inet vyos_global_rpfilter')
+
     def test_sysfs(self):
         for name, conf in sysfs_config.items():
             paths = glob(conf['sysfs'])
