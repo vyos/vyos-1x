@@ -24,43 +24,33 @@ from vyos.config import Config
 from vyos.util import cmd
 from vyos.util import dict_search_args
 
-def get_firewall_interfaces(conf, firewall, name=None, ipv6=False):
-    interfaces = conf.get_config_dict(['interfaces'], key_mangling=('-', '_'),
-                                      get_first_key=True, no_tag_node_value_mangle=True)
-
+def get_firewall_interfaces(firewall, name=None, ipv6=False):
     directions = ['in', 'out', 'local']
 
-    def parse_if(ifname, if_conf):
-        if 'firewall' in if_conf:
+    if 'interface' in firewall:
+        for ifname, if_conf in firewall['interface'].items():
             for direction in directions:
-                if direction in if_conf['firewall']:
-                    fw_conf = if_conf['firewall'][direction]
-                    name_str = f'({ifname},{direction})'
+                if direction not in if_conf:
+                    continue
 
-                    if 'name' in fw_conf:
-                        fw_name = fw_conf['name']
+                fw_conf = if_conf[direction]
+                name_str = f'({ifname},{direction})'
 
-                        if not name:
-                            firewall['name'][fw_name]['interface'].append(name_str)
-                        elif not ipv6 and name == fw_name:
-                            firewall['interface'].append(name_str)
+                if 'name' in fw_conf:
+                    fw_name = fw_conf['name']
 
-                    if 'ipv6_name' in fw_conf:
-                        fw_name = fw_conf['ipv6_name']
+                    if not name:
+                        firewall['name'][fw_name]['interface'].append(name_str)
+                    elif not ipv6 and name == fw_name:
+                        firewall['interface'].append(name_str)
 
-                        if not name:
-                            firewall['ipv6_name'][fw_name]['interface'].append(name_str)
-                        elif ipv6 and name == fw_name:
-                            firewall['interface'].append(name_str)
+                if 'ipv6_name' in fw_conf:
+                    fw_name = fw_conf['ipv6_name']
 
-        for iftype in ['vif', 'vif_s', 'vif_c']:
-            if iftype in if_conf:
-                for vifname, vif_conf in if_conf[iftype].items():
-                    parse_if(f'{ifname}.{vifname}', vif_conf)
-
-    for iftype, iftype_conf in interfaces.items():
-        for ifname, if_conf in iftype_conf.items():
-            parse_if(ifname, if_conf)
+                    if not name:
+                        firewall['ipv6_name'][fw_name]['interface'].append(name_str)
+                    elif ipv6 and name == fw_name:
+                        firewall['interface'].append(name_str)
 
     return firewall
 
@@ -83,13 +73,13 @@ def get_config_firewall(conf, name=None, ipv6=False, interfaces=True):
                 for fw_name, name_conf in firewall['ipv6_name'].items():
                     name_conf['interface'] = []
 
-        get_firewall_interfaces(conf, firewall, name, ipv6)
+        get_firewall_interfaces(firewall, name, ipv6)
     return firewall
 
 def get_nftables_details(name, ipv6=False):
     suffix = '6' if ipv6 else ''
     name_prefix = 'NAME6_' if ipv6 else 'NAME_'
-    command = f'sudo nft list chain ip{suffix} filter {name_prefix}{name}'
+    command = f'sudo nft list chain ip{suffix} vyos_filter {name_prefix}{name}'
     try:
         results = cmd(command)
     except:
