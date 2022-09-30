@@ -378,14 +378,19 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%             endif %}
 {%         endif %}
 {%         if afi_config.route_target.both is vyos_defined %}
-  route-target both {{ afi_config.route_target.both }}
-{%         else %}
-{%             if afi_config.route_target.export is vyos_defined %}
-  route-target export {{ afi_config.route_target.export }}
-{%             endif %}
-{%             if afi_config.route_target.import is vyos_defined %}
-  route-target import {{ afi_config.route_target.import }}
-{%             endif %}
+{%             for route_target in afi_config.route_target.both %}
+  route-target both {{ route_target }}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.route_target.export is vyos_defined %}
+{%             for route_target in afi_config.route_target.export %}
+  route-target export {{ route_target }}
+{%             endfor %}
+{%         endif %}
+{%         if afi_config.route_target.import is vyos_defined %}
+{%             for route_target in afi_config.route_target.import %}
+  route-target import {{ route_target }}
+{%             endfor %}
 {%         endif %}
 {%         if afi_config.route_map.vpn.export is vyos_defined %}
   route-map vpn export {{ afi_config.route_map.vpn.export }}
