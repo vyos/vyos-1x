@@ -156,7 +156,7 @@
                   </leafNode>
                   <leafNode name="groupconfig">
                     <properties>
-                      <help>If the groupconfig option is set, then config-per-user will be overriden, and all configuration will be read from radius.</help>
+                      <help>If the groupconfig option is set, then config-per-user will be overriden, and all configuration will be read from RADIUS.</help>
                     </properties>
                   </leafNode>
                 </children>

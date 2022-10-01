@@ -384,7 +384,7 @@
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
-                  <help>Show log for IPSec</help>
+                  <help>Show log for IPsec</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --unit strongswan-starter.service</command>
               </leafNode>

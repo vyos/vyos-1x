@@ -55,9 +55,9 @@
     <children>
       <node name="vpn">
         <properties>
-          <help>Restart IPSec VPN</help>
+          <help>Restart the IPsec VPN process</help>
         </properties>
-        <command>if pgrep charon >/dev/null ; then sudo ipsec restart ; sleep 3 ; sudo swanctl -q ; else echo "IPSec process not running" ; fi</command>
+        <command>if pgrep charon >/dev/null ; then sudo ipsec restart ; sleep 3 ; sudo swanctl -q ; else echo "IPsec process not running" ; fi</command>
       </node>
     </children>
   </node>
@@ -134,7 +134,7 @@
           </node>
           <node name="ipsec">
             <properties>
-              <help>Show Internet Protocol Security (IPSec) information</help>
+              <help>Show Internet Protocol Security (IPsec) information</help>
             </properties>
             <children>
               <node name="policy">
@@ -151,19 +151,19 @@
               </leafNode>
               <node name="sa">
                 <properties>
-                  <help>Show all active IPSec Security Associations (SA)</help>
+                  <help>Show all active IPsec Security Associations (SA)</help>
                 </properties>
                 <children>
                   <!--
                   <node name="detail">
                     <properties>
-                      <help>Show Detail on all active IPSec Security Associations (SA)</help>
+                      <help>Show Detail on all active IPsec Security Associations (SA)</help>
                     </properties>
                     <command></command>
                   </node>
                   <tagNode name="stats">
                     <properties>
-                      <help>Show statistics for all currently active IPSec Security Associations (SA)</help>
+                      <help>Show statistics for all currently active IPsec Security Associations (SA)</help>
                       <valueHelp>
                         <format>txt</format>
                         <description>Show Statistics for SAs associated with a specific peer</description>
@@ -182,12 +182,12 @@
                   -->
                   <node name="verbose">
                     <properties>
-                      <help>Show Verbose Detail on all active IPSec Security Associations (SA)</help>
+                      <help>Show Verbose Detail on all active IPsec Security Associations (SA)</help>
                     </properties>
-                    <command>if pgrep charon >/dev/null ; then sudo /usr/sbin/ipsec statusall ; else echo "IPSec process not running" ; fi</command>
+                    <command>if pgrep charon >/dev/null ; then sudo /usr/sbin/ipsec statusall ; else echo "IPsec process not running" ; fi</command>
                   </node>
                 </children>
-                <command>if pgrep charon >/dev/null ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPSec process not running" ; fi</command>
+                <command>if pgrep charon >/dev/null ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
               </node>
               <node name="state">
                 <properties>
@@ -197,9 +197,9 @@
               </node>
               <node name="status">
                 <properties>
-                  <help>Show status of IPSec process</help>
+                  <help>Show status of IPsec process</help>
                 </properties>
-                <command>if pgrep charon >/dev/null ; then echo -e "IPSec Process Running: $(pgrep charon)\n$(sudo /usr/sbin/ipsec status)" ; else echo "IPSec process not running" ; fi</command>
+                <command>if pgrep charon >/dev/null ; then echo -e "IPsec Process Running: $(pgrep charon)\n$(sudo /usr/sbin/ipsec status)" ; else echo "IPsec process not running" ; fi</command>
               </node>
             </children>
           </node>

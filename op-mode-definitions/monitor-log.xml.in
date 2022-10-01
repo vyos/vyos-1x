@@ -237,7 +237,7 @@
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
-                  <help>Monitor last lines of IPSec</help>
+                  <help>Monitor last lines of IPsec</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service</command>
               </leafNode>

@@ -265,7 +265,7 @@ def verify(ipsec):
 
                     ike = ra_conf['ike_group']
                     if dict_search(f'ike_group.{ike}.key_exchange', ipsec) != 'ikev2':
-                        raise ConfigError('IPSec remote-access connections requires IKEv2!')
+                        raise ConfigError('IPsec remote-access connections requires IKEv2!')
 
                 else:
                     raise ConfigError(f"Missing ike-group on {name} remote-access config")
@@ -308,10 +308,10 @@ def verify(ipsec):
                     for pool in ra_conf['pool']:
                         if pool == 'dhcp':
                             if dict_search('remote_access.dhcp.server', ipsec) == None:
-                                raise ConfigError('IPSec DHCP server is not configured!')
+                                raise ConfigError('IPsec DHCP server is not configured!')
                         elif pool == 'radius':
                             if dict_search('remote_access.radius.server', ipsec) == None:
-                                raise ConfigError('IPSec RADIUS server is not configured!')
+                                raise ConfigError('IPsec RADIUS server is not configured!')
 
                             if dict_search('authentication.client_mode', ra_conf) != 'eap-radius':
                                 raise ConfigError('RADIUS IP pool requires eap-radius client authentication!')

@@ -71,7 +71,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not process_named_running('charon'):
-        print("IPSec Process NOT Running")
+        print("IPsec Process NOT Running")
         sys.exit(0)
 
     ike_sa(args.peer, args.nat)
