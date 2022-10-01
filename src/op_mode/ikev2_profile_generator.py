@@ -119,7 +119,7 @@ config_base = ipsec_base +  ['remote-access', 'connection']
 pki_base = ['pki']
 conf = ConfigTreeQuery()
 if not conf.exists(config_base):
-    exit('IPSec remote-access is not configured!')
+    exit('IPsec remote-access is not configured!')
 
 profile_name = 'VyOS IKEv2 Profile'
 if args.profile:
@@ -131,7 +131,7 @@ if args.name:
 
 conn_base = config_base + [args.connection]
 if not conf.exists(conn_base):
-     exit(f'IPSec remote-access connection "{args.connection}" does not exist!')
+     exit(f'IPsec remote-access connection "{args.connection}" does not exist!')
 
 data = conf.get_config_dict(conn_base, key_mangling=('-', '_'),
                             get_first_key=True, no_tag_node_value_mangle=True)
@@ -178,7 +178,7 @@ for _, proposal in ike_proposal.items():
             proposal['hash'] in set(vyos2client_integrity) and
             proposal['dh_group'] in set(supported_dh_groups)):
 
-            # We 're-code' from the VyOS IPSec proposals to the Apple naming scheme
+            # We 're-code' from the VyOS IPsec proposals to the Apple naming scheme
             proposal['encryption'] = vyos2client_cipher[ proposal['encryption'] ]
             proposal['hash'] = vyos2client_integrity[ proposal['hash'] ]
 
@@ -191,7 +191,7 @@ count = 1
 for _, proposal in esp_proposals.items():
     if {'encryption', 'hash'} <= set(proposal):
         if proposal['encryption'] in set(vyos2client_cipher) and proposal['hash'] in set(vyos2client_integrity):
-            # We 're-code' from the VyOS IPSec proposals to the Apple naming scheme
+            # We 're-code' from the VyOS IPsec proposals to the Apple naming scheme
             proposal['encryption'] = vyos2client_cipher[ proposal['encryption'] ]
             proposal['hash'] = vyos2client_integrity[ proposal['hash'] ]
 
