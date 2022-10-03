@@ -116,7 +116,7 @@ def generate(wwan):
     # disconnect - e.g. happens during RF signal loss. The script watches every
     # WWAN interface - so there is only one instance.
     if not os.path.exists(cron_script):
-        write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py')
+        write_file(cron_script, '*/5 * * * * root /usr/libexec/vyos/vyos-check-wwan.py\n')
 
     return None
 
