@@ -1,0 +1,13 @@
+#!/bin/sh
+
+DICT_PATH=/usr/share/accel-ppp/radius
+NAME=$1
+
+if [ -n "$NAME" -a -e $DICT_PATH/dictionary.$NAME ]; then
+    exit 0
+else
+    echo "$NAME is not a valid RADIUS dictionary name"
+    echo "Please make sure that $DICT_PATH/dictionary.$NAME file exists"
+    exit 1
+fi
+

@@ -6,18 +6,24 @@
   <children>
     <leafNode name="attribute">
       <properties>
-        <help>Specifies which RADIUS attribute contains rate information. (default is Filter-Id)</help>
+        <help>RADIUS attribute that contains rate information. (default: Filter-Id)</help>
       </properties>
       <defaultValue>Filter-Id</defaultValue>
     </leafNode>
     <leafNode name="vendor">
       <properties>
-        <help>Specifies the vendor dictionary. (dictionary needs to be in /usr/share/accel-ppp/radius)</help>
+        <help>Vendor dictionary</help>
+        <completionHelp>
+          <list>alcatel cisco microsoft mikrotik</list>
+        </completionHelp>
+        <constraint>
+          <validator name="accel-radius-dictionary" />
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="enable">
       <properties>
-        <help>Enables Bandwidth shaping via RADIUS</help>
+        <help>Enable bandwidth shaping via RADIUS</help>
         <valueless />
       </properties>
     </leafNode>
