@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,6 +15,8 @@
 
 import os
 import re
+
+from glob import glob
 
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
@@ -67,13 +69,6 @@ class EthernetIf(Interface):
         'tso': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'tso', v),
-        },
-    }}
-
-    _sysfs_set = {**Interface._sysfs_set, **{
-        'rps': {
-            'convert': lambda cpus: cpus if cpus else '0',
-            'location': '/sys/class/net/{ifname}/queues/rx-0/rps_cpus',
         },
     }}
 
@@ -240,6 +235,7 @@ class EthernetIf(Interface):
             raise ValueError('Value out of range')
 
         rps_cpus = '0'
+        queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
             # Enable RPS on all available CPUs except CPU0 which we will not
             # utilize so the system has one spare core when it's under high
@@ -249,8 +245,11 @@ class EthernetIf(Interface):
             # Linux will clip that internally!
             rps_cpus = 'ffffffff,ffffffff,ffffffff,fffffffe'
 
+        for i in range(0, queues):
+            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', rps_cpus)
+
         # send bitmask representation as hex string without leading '0x'
-        return self.set_interface('rps', rps_cpus)
+        return True
 
     def set_sg(self, state):
         """
