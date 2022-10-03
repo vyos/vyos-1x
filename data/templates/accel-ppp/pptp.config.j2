@@ -93,6 +93,15 @@ bind={{ radius_source_address }}
 gw-ip-address={{ gw_ip }}
 {% endif %}
 
+{% if radius_shaper_attr %}
+[shaper]
+verbose=1
+attr={{ radius_shaper_attr }}
+{%     if radius_shaper_vendor %}
+vendor={{ radius_shaper_vendor }}
+{%     endif %}
+{% endif %}
+
 [cli]
 tcp=127.0.0.1:2003
 
