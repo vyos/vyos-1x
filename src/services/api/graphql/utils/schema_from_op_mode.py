@@ -20,15 +20,16 @@
 
 import os
 import json
-import typing
 from inspect import signature, getmembers, isfunction, isclass, getmro
 from jinja2 import Template
 
 from vyos.defaults import directories
 if __package__ is None or __package__ == '':
     from util import load_as_module, is_op_mode_function_name, is_show_function_name
+    from util import snake_to_pascal_case, map_type_name
 else:
     from . util import load_as_module, is_op_mode_function_name, is_show_function_name
+    from . util import snake_to_pascal_case, map_type_name
 
 OP_MODE_PATH = directories['op_mode']
 SCHEMA_PATH = directories['api_schema']
@@ -103,35 +104,12 @@ type {{ name }} implements OpModeError {
 {%- endfor %}
 """
 
-def _snake_to_pascal_case(name: str) -> str:
-    res = ''.join(map(str.title, name.split('_')))
-    return res
-
-def _map_type_name(type_name: type, optional: bool = False) -> str:
-    if type_name == str:
-        return 'String!' if not optional else 'String = null'
-    if type_name == int:
-        return 'Int!' if not optional else 'Int = null'
-    if type_name == bool:
-        return 'Boolean!' if not optional else 'Boolean = false'
-    if typing.get_origin(type_name) == list:
-        if not optional:
-            return f'[{_map_type_name(typing.get_args(type_name)[0])}]!'
-        return f'[{_map_type_name(typing.get_args(type_name)[0])}]'
-    # typing.Optional is typing.Union[_, NoneType]
-    if (typing.get_origin(type_name) is typing.Union and
-            typing.get_args(type_name)[1] == type(None)):
-        return f'{_map_type_name(typing.get_args(type_name)[0], optional=True)}'
-
-    # scalar 'Generic' is defined in schema.graphql
-    return 'Generic'
-
 def create_schema(func_name: str, base_name: str, func: callable) -> str:
     sig = signature(func)
 
     field_dict = {}
     for k in sig.parameters:
-        field_dict[sig.parameters[k].name] = _map_type_name(sig.parameters[k].annotation)
+        field_dict[sig.parameters[k].name] = map_type_name(sig.parameters[k].annotation)
 
     # It is assumed that if one is generating a schema for a 'show_*'
     # function, that 'get_raw_data' is present and 'raw' is desired.
@@ -142,7 +120,7 @@ def create_schema(func_name: str, base_name: str, func: callable) -> str:
     for k,v in field_dict.items():
         schema_fields.append(k+': '+v)
 
-    schema_data['schema_name'] = _snake_to_pascal_case(func_name + '_' + base_name)
+    schema_data['schema_name'] = snake_to_pascal_case(func_name + '_' + base_name)
     schema_data['schema_fields'] = schema_fields
 
     if is_show_function_name(func_name):

@@ -15,6 +15,7 @@
 
 import os
 import re
+import typing
 import importlib.util
 
 from vyos.defaults import directories
@@ -74,3 +75,26 @@ def split_compound_op_mode_name(name: str, files: list):
             pair = (pair[0], f[0])
             return pair
     return (name, '')
+
+def snake_to_pascal_case(name: str) -> str:
+    res = ''.join(map(str.title, name.split('_')))
+    return res
+
+def map_type_name(type_name: type, optional: bool = False) -> str:
+    if type_name == str:
+        return 'String!' if not optional else 'String = null'
+    if type_name == int:
+        return 'Int!' if not optional else 'Int = null'
+    if type_name == bool:
+        return 'Boolean!' if not optional else 'Boolean = false'
+    if typing.get_origin(type_name) == list:
+        if not optional:
+            return f'[{map_type_name(typing.get_args(type_name)[0])}]!'
+        return f'[{map_type_name(typing.get_args(type_name)[0])}]'
+    # typing.Optional is typing.Union[_, NoneType]
+    if (typing.get_origin(type_name) is typing.Union and
+            typing.get_args(type_name)[1] == type(None)):
+        return f'{map_type_name(typing.get_args(type_name)[0], optional=True)}'
+
+    # scalar 'Generic' is defined in schema.graphql
+    return 'Generic'

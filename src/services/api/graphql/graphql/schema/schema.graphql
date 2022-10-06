@@ -4,19 +4,15 @@ schema {
 }
 
 directive @configure on FIELD_DEFINITION
-directive @configfile on FIELD_DEFINITION
-directive @show on FIELD_DEFINITION
-directive @showconfig on FIELD_DEFINITION
 directive @systemstatus on FIELD_DEFINITION
-directive @image on FIELD_DEFINITION
+directive @configsessionquery on FIELD_DEFINITION
+directive @configsessionmutation on FIELD_DEFINITION
 directive @genopquery on FIELD_DEFINITION
 directive @genopmutation on FIELD_DEFINITION
 
 scalar Generic
 
 type Query {
-    Show(data: ShowInput) : ShowResult @show
-    ShowConfig(data: ShowConfigInput) : ShowConfigResult @showconfig
     SystemStatus(data: SystemStatusInput) : SystemStatusResult @systemstatus
 }
 
@@ -29,8 +25,4 @@ type Mutation {
     CreateFirewallAddressIpv6Group(data: CreateFirewallAddressIpv6GroupInput) : CreateFirewallAddressIpv6GroupResult @configure
     UpdateFirewallAddressIpv6GroupMembers(data: UpdateFirewallAddressIpv6GroupMembersInput) : UpdateFirewallAddressIpv6GroupMembersResult @configure
     RemoveFirewallAddressIpv6GroupMembers(data: RemoveFirewallAddressIpv6GroupMembersInput) : RemoveFirewallAddressIpv6GroupMembersResult @configure
-    SaveConfigFile(data: SaveConfigFileInput) : SaveConfigFileResult @configfile
-    LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configfile
-    AddSystemImage(data: AddSystemImageInput) : AddSystemImageResult @image
-    DeleteSystemImage(data: DeleteSystemImageInput) : DeleteSystemImageResult @image
 }

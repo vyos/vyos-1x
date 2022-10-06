@@ -94,7 +94,7 @@ class Session:
 
         return out
 
-    def save(self):
+    def save_config_file(self):
         session = self._session
         data = self._data
         if 'file_name' not in data or not data['file_name']:
@@ -105,7 +105,7 @@ class Session:
         except Exception as error:
             raise error
 
-    def load(self):
+    def load_config_file(self):
         session = self._session
         data = self._data
 
@@ -127,7 +127,7 @@ class Session:
 
         return out
 
-    def add(self):
+    def add_system_image(self):
         session = self._session
         data = self._data
 
@@ -138,7 +138,7 @@ class Session:
 
         return res
 
-    def delete(self):
+    def delete_system_image(self):
         session = self._session
         data = self._data
 
