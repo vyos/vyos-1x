@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+from argparse import ArgumentParser
+from sys import exit
+
+from vyos.template import is_ipv4
+
+COMM_MAX_4_OCTET: int = 4294967295
+
+if __name__ == '__main__':
+    # add an argument with community
+    parser: ArgumentParser = ArgumentParser()
+    parser.add_argument('community', type=str)
+    args = parser.parse_args()
+    community: str = args.community
+    if community.count(':') != 2:
+        print("Invalid community format")
+        exit(1)
+    try:
+        # try to extract community parts from an argument
+        comm_part1: int = int(community.split(':')[0])
+        comm_part2: int = int(community.split(':')[1])
+        comm_part3: int = int(community.split(':')[2])
+
+        # check compatibilities of left and right parts
+        if 0 <= comm_part1 <= COMM_MAX_4_OCTET \
+                and 0 <= comm_part2 <= COMM_MAX_4_OCTET \
+                and 0 <= comm_part3 <= COMM_MAX_4_OCTET:
+            exit(0)
+
+    except Exception:
+        # fail if something was wrong
+        print("Invalid community format")
+        exit(1)
+
+    # fail if none of validators catched the value
+    print("Invalid community format")
+    exit(1)

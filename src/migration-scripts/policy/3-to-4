@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4660: change cli
+#     from: set policy route-map FOO rule 10 set community 'TEXT'
+#     Multiple value
+#     to: set policy route-map FOO rule 10 set community replace <community>
+#     Multiple value
+#     to: set policy route-map FOO rule 10 set community add <community>
+#     to: set policy route-map FOO rule 10 set community none
+#
+#     from: set policy route-map FOO rule 10 set large-community 'TEXT'
+#     Multiple value
+#     to: set policy route-map FOO rule 10 set large-community replace <community>
+#     Multiple value
+#     to: set policy route-map FOO rule 10 set large-community add <community>
+#     to: set policy route-map FOO rule 10 set large-community none
+#
+#     from: set policy route-map FOO rule 10 set extecommunity [rt|soo] 'TEXT'
+#     Multiple value
+#     to: set policy route-map FOO rule 10 set extcommunity [rt|soo] <community>
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+
+
+# Migration function for large and regular communities
+def community_migrate(config: ConfigTree, rule: list[str]) -> bool:
+    """
+
+    :param config: configuration object
+    :type config: ConfigTree
+    :param rule: Path to variable
+    :type rule: list[str]
+    :return: True if additive presents in community string
+    :rtype: bool
+    """
+    community_list = list((config.return_value(rule)).split(" "))
+    config.delete(rule)
+    if 'none' in community_list:
+        config.set(rule + ['none'])
+        return False
+    else:
+        community_action: str = 'replace'
+        if 'additive' in community_list:
+            community_action = 'add'
+            community_list.remove('additive')
+        for community in community_list:
+            config.set(rule + [community_action], value=community,
+                       replace=False)
+        if community_action == 'replace':
+            return False
+        else:
+            return True
+
+
+# Migration function for extcommunities
+def extcommunity_migrate(config: ConfigTree, rule: list[str]) -> None:
+    """
+
+    :param config: configuration object
+    :type config: ConfigTree
+    :param rule: Path to variable
+    :type rule: list[str]
+    """
+    # if config.exists(rule + ['bandwidth']):
+    #     bandwidth: str = config.return_value(rule + ['bandwidth'])
+    #     config.delete(rule + ['bandwidth'])
+    #     config.set(rule + ['bandwidth'], value=bandwidth)
+
+    if config.exists(rule + ['rt']):
+        community_list = list((config.return_value(rule + ['rt'])).split(" "))
+        config.delete(rule + ['rt'])
+        for community in community_list:
+            config.set(rule + ['rt'], value=community, replace=False)
+
+    if config.exists(rule + ['soo']):
+        community_list = list((config.return_value(rule + ['soo'])).split(" "))
+        config.delete(rule + ['soo'])
+        for community in community_list:
+            config.set(rule + ['soo'], value=community, replace=False)
+
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name: str = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base: list[str] = ['policy', 'route-map']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+for route_map in config.list_nodes(base):
+    if not config.exists(base + [route_map, 'rule']):
+        continue
+    for rule in config.list_nodes(base + [route_map, 'rule']):
+        base_rule: list[str] = base + [route_map, 'rule', rule, 'set']
+
+        # IF additive presents in coummunity then comm-list is redundant
+        isAdditive: bool = True
+        #### Change Set community ########
+        if config.exists(base_rule + ['community']):
+            isAdditive = community_migrate(config,
+                                           base_rule + ['community'])
+
+        #### Change Set community-list delete migrate ########
+        if config.exists(base_rule + ['comm-list', 'comm-list']):
+            if isAdditive:
+                tmp = config.return_value(
+                    base_rule + ['comm-list', 'comm-list'])
+                config.delete(base_rule + ['comm-list'])
+                config.set(base_rule + ['community', 'delete'], value=tmp)
+            else:
+                config.delete(base_rule + ['comm-list'])
+
+        isAdditive = False
+        #### Change Set large-community ########
+        if config.exists(base_rule + ['large-community']):
+            isAdditive = community_migrate(config,
+                                           base_rule + ['large-community'])
+
+        #### Change Set large-community delete by List ########
+        if config.exists(base_rule + ['large-comm-list-delete']):
+            if isAdditive:
+                tmp = config.return_value(
+                    base_rule + ['large-comm-list-delete'])
+                config.delete(base_rule + ['large-comm-list-delete'])
+                config.set(base_rule + ['large-community', 'delete'],
+                           value=tmp)
+            else:
+                config.delete(base_rule + ['large-comm-list-delete'])
+
+        #### Change Set extcommunity ########
+        extcommunity_migrate(config, base_rule + ['extcommunity'])
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)
