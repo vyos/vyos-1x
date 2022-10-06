@@ -6,7 +6,7 @@
   <children>
     <leafNode name="attribute">
       <properties>
-        <help>Specifies which RADIUS attribute contains rate information. (default is Filter-Id)</help>
+        <help>Specifies which RADIUS attribute contains rate information</help>
       </properties>
       <defaultValue>Filter-Id</defaultValue>
     </leafNode>
