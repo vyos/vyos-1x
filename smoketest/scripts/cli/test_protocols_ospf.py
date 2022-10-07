@@ -395,6 +395,42 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # default
         self.assertIn(f' network {network} area {area}', frrconfig)
         self.assertIn(f' area {area} export-list {acl}', frrconfig)
+        
+        
+    def test_ospf_14_segment_routing_configuration(self):
+        global_block_low = "100"
+        global_block_high = "199"
+        local_block_low = "200"
+        local_block_high = "299"
+        interface = 'lo'
+        maximum_stack_size = '5'
+        prefix_one = '192.168.0.1/32'
+        prefix_two = '192.168.0.2/32'
+        prefix_one_value = '1'
+        prefix_two_value = '2'
+
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['segment-routing', 'maximum-label-depth', maximum_stack_size])
+        self.cli_set(base_path + ['segment-routing', 'global-block', 'low-label-value', global_block_low])
+        self.cli_set(base_path + ['segment-routing', 'global-block', 'high-label-value', global_block_high])
+        self.cli_set(base_path + ['segment-routing', 'local-block', 'low-label-value', local_block_low])
+        self.cli_set(base_path + ['segment-routing', 'local-block', 'high-label-value', local_block_high])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_one, 'index', 'value', prefix_one_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_one, 'index', 'explicit-null'])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_two, 'index', 'value', prefix_two_value])
+        self.cli_set(base_path + ['segment-routing', 'prefix', prefix_two, 'index', 'no-php-flag'])
+
+        # Commit all changes
+        self.cli_commit()
+
+        # Verify all changes
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f' segment-routing on', frrconfig)
+        self.assertIn(f' segment-routing global-block {global_block_low} {global_block_high} local-block {local_block_low} {local_block_high}', frrconfig)
+        self.assertIn(f' segment-routing node-msd {maximum_stack_size}', frrconfig)
+        self.assertIn(f' segment-routing prefix {prefix_one} index {prefix_one_value} explicit-null', frrconfig)
+        self.assertIn(f' segment-routing prefix {prefix_two} index {prefix_two_value} no-php-flag', frrconfig)
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)

@@ -198,6 +198,58 @@ def verify(ospf):
                 if 'master' not in tmp or tmp['master'] != vrf:
                     raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
 
+    # Segment routing checks
+    if dict_search('segment_routing.global_block', ospf):
+        g_high_label_value = dict_search('segment_routing.global_block.high_label_value', ospf)
+        g_low_label_value = dict_search('segment_routing.global_block.low_label_value', ospf)
+
+        # If segment routing global block high or low value is blank, throw error
+        if not (g_low_label_value or g_high_label_value):
+            raise ConfigError('Segment routing global-block requires both low and high value!')
+
+        # If segment routing global block low value is higher than the high value, throw error
+        if int(g_low_label_value) > int(g_high_label_value):
+            raise ConfigError('Segment routing global-block low value must be lower than high value')
+
+    if dict_search('segment_routing.local_block', ospf):
+        if dict_search('segment_routing.global_block', ospf) == None:
+            raise ConfigError('Segment routing local-block requires global-block to be configured!')
+
+        l_high_label_value = dict_search('segment_routing.local_block.high_label_value', ospf)
+        l_low_label_value = dict_search('segment_routing.local_block.low_label_value', ospf)
+
+        # If segment routing local-block high or low value is blank, throw error
+        if not (l_low_label_value or l_high_label_value):
+            raise ConfigError('Segment routing local-block requires both high and low value!')
+
+        # If segment routing local-block low value is higher than the high value, throw error
+        if int(l_low_label_value) > int(l_high_label_value):
+            raise ConfigError('Segment routing local-block low value must be lower than high value')
+
+        # local-block most live outside global block
+        global_range = range(int(g_low_label_value), int(g_high_label_value) +1)
+        local_range  = range(int(l_low_label_value), int(l_high_label_value) +1)
+
+        # Check for overlapping ranges
+        if list(set(global_range) & set(local_range)):
+            raise ConfigError(f'Segment-Routing Global Block ({g_low_label_value}/{g_high_label_value}) '\
+                              f'conflicts with Local Block ({l_low_label_value}/{l_high_label_value})!')
+        
+    # Check for a blank or invalid value per prefix
+    if dict_search('segment_routing.prefix', ospf):
+        for prefix, prefix_config in ospf['segment_routing']['prefix'].items():
+            if 'index' in prefix_config:
+                if prefix_config['index'].get('value') is None:
+                    raise ConfigError(f'Segment routing prefix {prefix} index value cannot be blank.')
+
+    # Check for explicit-null and no-php-flag configured at the same time per prefix
+    if dict_search('segment_routing.prefix', ospf):
+        for prefix, prefix_config in ospf['segment_routing']['prefix'].items():
+            if 'index' in prefix_config:
+                if ("explicit_null" in prefix_config['index']) and ("no_php_flag" in prefix_config['index']):
+                    raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
+                                      f'and no-php-flag configured at the same time.')
+
     return None
 
 def generate(ospf):
