@@ -182,7 +182,6 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
  refresh timer {{ refresh.timers }}
 {% endif %}
 {% if segment_routing is vyos_defined %}
- segment-routing on
 {%     if segment_routing.maximum_label_depth is vyos_defined %}
  segment-routing node-msd {{ segment_routing.maximum_label_depth }}
 {%     endif %}
@@ -207,6 +206,7 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%             endif %}
 {%         endfor %}
 {%     endif %}
+ segment-routing on
 {% endif %}
 {% if timers.throttle.spf.delay is vyos_defined and timers.throttle.spf.initial_holdtime is vyos_defined and timers.throttle.spf.max_holdtime is vyos_defined %}
 {#   Timer values have default values #}
