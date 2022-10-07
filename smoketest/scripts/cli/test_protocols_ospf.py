@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
-import sys
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -23,14 +21,11 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.util import process_named_running
-from vyos.util import cmd
 
 PROCESS_NAME = 'ospfd'
 base_path = ['protocols', 'ospf']
 
 route_map = 'foo-bar-baz10'
-
-log = logging.getLogger('TestProtocolsOSPF')
 
 class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -210,25 +205,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['redistribute', protocol, 'route-map', route_map])
             self.cli_set(base_path + ['redistribute', protocol, 'metric-type', metric_type])
 
-        # enable FRR debugging to find the root cause of failing testcases
-        cmd('touch /tmp/vyos.frr.debug')
-
         # commit changes
         self.cli_commit()
 
-        # disable FRR debugging
-        cmd('rm -f /tmp/vyos.frr.debug')
-
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
-        try:
-            self.assertIn(f'router ospf', frrconfig)
-            for protocol in redistribute:
-                self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
-        except:
-            log.debug(frrconfig)
-            log.debug(cmd('sudo cat /tmp/vyos-configd-script-stdout'))
-            self.fail('Now we can hopefully see why OSPF fails!')
+        self.assertIn(f'router ospf', frrconfig)
+        for protocol in redistribute:
+            self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
     def test_ospf_08_virtual_link(self):
         networks = ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
@@ -395,8 +379,8 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # default
         self.assertIn(f' network {network} area {area}', frrconfig)
         self.assertIn(f' area {area} export-list {acl}', frrconfig)
-        
-        
+
+
     def test_ospf_14_segment_routing_configuration(self):
         global_block_low = "100"
         global_block_high = "199"
@@ -433,5 +417,4 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     unittest.main(verbosity=2)
