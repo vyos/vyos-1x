@@ -120,15 +120,13 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         cls._base_path = ['interfaces', 'ethernet']
         cls._mirror_interfaces = ['dum21354']
 
-        # we need to filter out VLAN interfaces identified by a dot (.)
-        # in their name - just in case!
+        # We only test on physical interfaces and not VLAN (sub-)interfaces
         if 'TEST_ETH' in os.environ:
             tmp = os.environ['TEST_ETH'].split()
             cls._interfaces = tmp
         else:
-            for tmp in Section.interfaces('ethernet'):
-                if not '.' in tmp:
-                    cls._interfaces.append(tmp)
+            for tmp in Section.interfaces('ethernet', vlan=False):
+                cls._interfaces.append(tmp)
 
         cls._macs = {}
         for interface in cls._interfaces:

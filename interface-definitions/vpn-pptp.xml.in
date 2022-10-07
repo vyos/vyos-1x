@@ -110,6 +110,7 @@
                   </node>
                   #include <include/radius-server-ipv4.xml.i>
                   #include <include/accel-ppp/radius-additions.xml.i>
+                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
                 </children>
               </node>
             </children>

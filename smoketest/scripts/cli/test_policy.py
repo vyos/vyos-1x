@@ -698,6 +698,184 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for rule in test_range:
             tmp = f'ip prefix-list {prefix_list} seq {rule} permit {prefix} le {rule}'
             self.assertIn(tmp, config)
+    def test_route_map_community_set(self):
+        test_data = {
+            "community-configuration": {
+                "rule": {
+                    "10": {
+                        "action": "permit",
+                        "set": {
+                            "community": {
+                                "replace": [
+                                    "65000:10",
+                                    "65001:11"
+                                ]
+                            },
+                            "extcommunity": {
+                                "bandwidth": "200",
+                                "rt": [
+                                    "65000:10",
+                                    "192.168.0.1:11"
+                                ],
+                                "soo": [
+                                    "192.168.0.1:11",
+                                    "65000:10"
+                                ]
+                            },
+                            "large-community": {
+                                "replace": [
+                                    "65000:65000:10",
+                                    "65000:65000:11"
+                                ]
+                            }
+                        }
+                    },
+                    "20": {
+                        "action": "permit",
+                        "set": {
+                            "community": {
+                                "add": [
+                                    "65000:10",
+                                    "65001:11"
+                                ]
+                            },
+                            "extcommunity": {
+                                "bandwidth": "200",
+                                "bandwidth-non-transitive": {}
+                            },
+                            "large-community": {
+                                "add": [
+                                    "65000:65000:10",
+                                    "65000:65000:11"
+                                ]
+                            }
+                        }
+                    },
+                    "30": {
+                        "action": "permit",
+                        "set": {
+                            "community": {
+                                "none": {}
+                            },
+                            "extcommunity": {
+                                "none": {}
+                            },
+                            "large-community": {
+                                "none": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for route_map, route_map_config in test_data.items():
+            path = base_path + ['route-map', route_map]
+            self.cli_set(path + ['description', f'VyOS ROUTE-MAP {route_map}'])
+            if 'rule' not in route_map_config:
+                continue
+
+            for rule, rule_config in route_map_config['rule'].items():
+                if 'action' in rule_config:
+                    self.cli_set(path + ['rule', rule, 'action', rule_config['action']])
+                if 'set' in rule_config:
+
+                    #Add community in configuration
+                    if 'community' in rule_config['set']:
+                        if 'none' in rule_config['set']['community']:
+                            self.cli_set(path + ['rule', rule, 'set', 'community', 'none'])
+                        else:
+                            community_path = path + ['rule', rule, 'set', 'community']
+                            if 'add' in rule_config['set']['community']:
+                                for community_unit in rule_config['set']['community']['add']:
+                                    self.cli_set(community_path + ['add', community_unit])
+                            if 'replace' in rule_config['set']['community']:
+                                for community_unit in rule_config['set']['community']['replace']:
+                                    self.cli_set(community_path + ['replace', community_unit])
+
+                    #Add large-community in configuration
+                    if 'large-community' in rule_config['set']:
+                        if 'none' in rule_config['set']['large-community']:
+                            self.cli_set(path + ['rule', rule, 'set', 'large-community', 'none'])
+                        else:
+                            community_path = path + ['rule', rule, 'set', 'large-community']
+                            if 'add' in rule_config['set']['large-community']:
+                                for community_unit in rule_config['set']['large-community']['add']:
+                                    self.cli_set(community_path + ['add', community_unit])
+                            if 'replace' in rule_config['set']['large-community']:
+                                for community_unit in rule_config['set']['large-community']['replace']:
+                                    self.cli_set(community_path + ['replace', community_unit])
+
+                    #Add extcommunity in configuration
+                    if 'extcommunity' in rule_config['set']:
+                        if 'none' in rule_config['set']['extcommunity']:
+                            self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'none'])
+                        else:
+                            if 'bandwidth' in rule_config['set']['extcommunity']:
+                                self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'bandwidth', rule_config['set']['extcommunity']['bandwidth']])
+                            if 'bandwidth-non-transitive' in rule_config['set']['extcommunity']:
+                                self.cli_set(path + ['rule', rule, 'set','extcommunity', 'bandwidth-non-transitive'])
+                            if 'rt' in rule_config['set']['extcommunity']:
+                                for community_unit in rule_config['set']['extcommunity']['rt']:
+                                    self.cli_set(path + ['rule', rule, 'set', 'extcommunity','rt',community_unit])
+                            if 'soo' in rule_config['set']['extcommunity']:
+                                for community_unit in rule_config['set']['extcommunity']['soo']:
+                                    self.cli_set(path + ['rule', rule, 'set', 'extcommunity','soo',community_unit])
+        self.cli_commit()
+
+        for route_map, route_map_config in test_data.items():
+            if 'rule' not in route_map_config:
+                continue
+            for rule, rule_config in route_map_config['rule'].items():
+                name = f'route-map {route_map} {rule_config["action"]} {rule}'
+                config = self.getFRRconfig(name)
+                self.assertIn(name, config)
+
+                if 'set' in rule_config:
+                    #Check community
+                    if 'community' in rule_config['set']:
+                        if 'none' in rule_config['set']['community']:
+                            tmp = f'set community none'
+                            self.assertIn(tmp, config)
+                        if 'replace' in rule_config['set']['community']:
+                            values = ' '.join(rule_config['set']['community']['replace'])
+                            tmp = f'set community {values}'
+                            self.assertIn(tmp, config)
+                        if 'add' in rule_config['set']['community']:
+                            values = ' '.join(rule_config['set']['community']['add'])
+                            tmp = f'set community {values} additive'
+                            self.assertIn(tmp, config)
+                    #Check large-community
+                    if 'large-community' in rule_config['set']:
+                        if 'none' in rule_config['set']['large-community']:
+                            tmp = f'set large-community none'
+                            self.assertIn(tmp, config)
+                        if 'replace' in rule_config['set']['large-community']:
+                            values = ' '.join(rule_config['set']['large-community']['replace'])
+                            tmp = f'set large-community {values}'
+                            self.assertIn(tmp, config)
+                        if 'add' in rule_config['set']['large-community']:
+                            values = ' '.join(rule_config['set']['large-community']['add'])
+                            tmp = f'set large-community {values} additive'
+                            self.assertIn(tmp, config)
+                    #Check extcommunity
+                    if 'extcommunity' in rule_config['set']:
+                        if 'none' in rule_config['set']['extcommunity']:
+                            tmp = 'set extcommunity none'
+                            self.assertIn(tmp, config)
+                        if 'bandwidth' in rule_config['set']['extcommunity']:
+                            values = rule_config['set']['extcommunity']['bandwidth']
+                            tmp = f'set extcommunity bandwidth {values}'
+                            if 'bandwidth-non-transitive' in rule_config['set']['extcommunity']:
+                                tmp = tmp + ' non-transitive'
+                            self.assertIn(tmp, config)
+                        if 'rt' in rule_config['set']['extcommunity']:
+                            values = ' '.join(rule_config['set']['extcommunity']['rt'])
+                            tmp = f'set extcommunity rt {values}'
+                            self.assertIn(tmp, config)
+                        if 'soo' in rule_config['set']['extcommunity']:
+                            values = ' '.join(rule_config['set']['extcommunity']['soo'])
+                            tmp = f'set extcommunity soo {values}'
+                            self.assertIn(tmp, config)
 
     def test_route_map(self):
         access_list = '50'
@@ -845,13 +1023,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'as-path-prepend-last-as' : '5',
                             'atomic-aggregate'        : '',
                             'distance'                : '110',
-                            'extcommunity-bw'         : '20000',
-                            'extcommunity-rt'         : '123:456',
-                            'extcommunity-soo'        : '456:789',
                             'ipv6-next-hop-global'    : '2001::1',
                             'ipv6-next-hop-local'     : 'fe80::1',
                             'ip-next-hop'             : '192.168.1.1',
-                            'large-community'         : '100:200:300',
                             'local-preference'        : '500',
                             'metric'                  : '150',
                             'metric-type'             : 'type-1',
@@ -1049,20 +1223,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'set', 'atomic-aggregate'])
                     if 'distance' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'distance', rule_config['set']['distance']])
-                    if 'extcommunity-bw' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'bandwidth', rule_config['set']['extcommunity-bw']])
-                    if 'extcommunity-rt' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'rt', rule_config['set']['extcommunity-rt']])
-                    if 'extcommunity-soo' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'extcommunity', 'soo', rule_config['set']['extcommunity-soo']])
                     if 'ipv6-next-hop-global' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'ipv6-next-hop', 'global', rule_config['set']['ipv6-next-hop-global']])
                     if 'ipv6-next-hop-local' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'ipv6-next-hop', 'local', rule_config['set']['ipv6-next-hop-local']])
                     if 'ip-next-hop' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'ip-next-hop', rule_config['set']['ip-next-hop']])
-                    if 'large-community' in rule_config['set']:
-                        self.cli_set(path + ['rule', rule, 'set', 'large-community', rule_config['set']['large-community']])
                     if 'local-preference' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'local-preference', rule_config['set']['local-preference']])
                     if 'metric' in rule_config['set']:
@@ -1236,20 +1402,12 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'atomic-aggregate'
                     elif 'distance' in rule_config['set']:
                         tmp += 'distance ' + rule_config['set']['distance']
-                    elif 'extcommunity-bw' in rule_config['set']:
-                        tmp += 'extcommunity bandwidth' + rule_config['set']['extcommunity-bw']
-                    elif 'extcommunity-rt' in rule_config['set']:
-                        tmp += 'extcommunity rt' + rule_config['set']['extcommunity-rt']
-                    elif 'extcommunity-soo' in rule_config['set']:
-                        tmp += 'extcommunity rt' + rule_config['set']['extcommunity-soo']
                     elif 'ip-next-hop' in rule_config['set']:
                         tmp += 'ip next-hop ' + rule_config['set']['ip-next-hop']
                     elif 'ipv6-next-hop-global' in rule_config['set']:
                         tmp += 'ipv6 next-hop global ' + rule_config['set']['ipv6-next-hop-global']
                     elif 'ipv6-next-hop-local' in rule_config['set']:
                         tmp += 'ipv6 next-hop local ' + rule_config['set']['ipv6-next-hop-local']
-                    elif 'large-community' in rule_config['set']:
-                        tmp += 'large-community ' + rule_config['set']['large-community']
                     elif 'local-preference' in rule_config['set']:
                         tmp += 'local-preference ' + rule_config['set']['local-preference']
                     elif 'metric' in rule_config['set']:
