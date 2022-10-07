@@ -45,40 +45,6 @@ class Session:
         except Exception:
             self._op_mode_list = None
 
-    def configure(self):
-        session = self._session
-        data = self._data
-        func_base_name = self._name
-
-        tmpl_file = f'{func_base_name}.tmpl'
-        cmd_file = f'/tmp/{func_base_name}.cmds'
-        tmpl_dir = directories['api_templates']
-
-        try:
-            render(cmd_file, tmpl_file, data, location=tmpl_dir)
-            commands = []
-            with open(cmd_file) as f:
-                lines = f.readlines()
-            for line in lines:
-                commands.append(line.split())
-            for cmd in commands:
-                if cmd[0] == 'set':
-                    session.set(cmd[1:])
-                elif cmd[0] == 'delete':
-                    session.delete(cmd[1:])
-                else:
-                    raise ValueError('Operation must be "set" or "delete"')
-            session.commit()
-        except Exception as error:
-            raise error
-
-    def delete_path_if_childless(self, path):
-        session = self._session
-        config = Config(session.get_session_env())
-        if not config.list_nodes(path):
-            session.delete(path)
-            session.commit()
-
     def show_config(self):
         session = self._session
         data = self._data

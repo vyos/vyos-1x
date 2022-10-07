@@ -3,7 +3,6 @@ schema {
     mutation: Mutation
 }
 
-directive @configure on FIELD_DEFINITION
 directive @systemstatus on FIELD_DEFINITION
 directive @configsessionquery on FIELD_DEFINITION
 directive @configsessionmutation on FIELD_DEFINITION
@@ -16,13 +15,4 @@ type Query {
     SystemStatus(data: SystemStatusInput) : SystemStatusResult @systemstatus
 }
 
-type Mutation {
-    CreateDhcpServer(data: DhcpServerConfigInput) : CreateDhcpServerResult @configure
-    CreateInterfaceEthernet(data: InterfaceEthernetConfigInput) : CreateInterfaceEthernetResult @configure
-    CreateFirewallAddressGroup(data: CreateFirewallAddressGroupInput) : CreateFirewallAddressGroupResult @configure
-    UpdateFirewallAddressGroupMembers(data: UpdateFirewallAddressGroupMembersInput) : UpdateFirewallAddressGroupMembersResult @configure
-    RemoveFirewallAddressGroupMembers(data: RemoveFirewallAddressGroupMembersInput) : RemoveFirewallAddressGroupMembersResult @configure
-    CreateFirewallAddressIpv6Group(data: CreateFirewallAddressIpv6GroupInput) : CreateFirewallAddressIpv6GroupResult @configure
-    UpdateFirewallAddressIpv6GroupMembers(data: UpdateFirewallAddressIpv6GroupMembersInput) : UpdateFirewallAddressIpv6GroupMembersResult @configure
-    RemoveFirewallAddressIpv6GroupMembers(data: RemoveFirewallAddressIpv6GroupMembersInput) : RemoveFirewallAddressIpv6GroupMembersResult @configure
-}
+type Mutation

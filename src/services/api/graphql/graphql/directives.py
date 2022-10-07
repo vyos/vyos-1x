@@ -31,55 +31,6 @@ class VyosDirective(SchemaDirectiveVisitor):
         field.resolve = func
         return field
 
-
-class ConfigureDirective(VyosDirective):
-    """
-    Class providing implementation of 'configure' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_configure_resolver)
-
-class ShowConfigDirective(VyosDirective):
-    """
-    Class providing implementation of 'show' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_show_config_resolver)
-
-class SystemStatusDirective(VyosDirective):
-    """
-    Class providing implementation of 'system_status' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_system_status_resolver)
-
-class ConfigFileDirective(VyosDirective):
-    """
-    Class providing implementation of 'configfile' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_config_file_resolver)
-
-class ShowDirective(VyosDirective):
-    """
-    Class providing implementation of 'show' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_show_resolver)
-
-class ImageDirective(VyosDirective):
-    """
-    Class providing implementation of 'image' directive in schema.
-    """
-    def visit_field_definition(self, field, object_type):
-        super().visit_field_definition(field, object_type,
-                                       make_resolver=make_image_resolver)
-
 class ConfigSessionQueryDirective(VyosDirective):
     """
     Class providing implementation of 'configsessionquery' directive in schema.
@@ -112,9 +63,16 @@ class GenOpMutationDirective(VyosDirective):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_gen_op_mutation_resolver)
 
-directives_dict = {"configure": ConfigureDirective,
-                   "systemstatus": SystemStatusDirective,
-                   "configsessionquery": ConfigSessionQueryDirective,
+class SystemStatusDirective(VyosDirective):
+    """
+    Class providing implementation of 'system_status' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_system_status_resolver)
+
+directives_dict = {"configsessionquery": ConfigSessionQueryDirective,
                    "configsessionmutation": ConfigSessionMutationDirective,
                    "genopquery": GenOpQueryDirective,
-                   "genopmutation": GenOpMutationDirective}
+                   "genopmutation": GenOpMutationDirective,
+                   "systemstatus": SystemStatusDirective}

@@ -106,21 +106,12 @@ def make_query_resolver(query_name, class_name, session_func):
 
     return func_impl
 
-def make_show_config_resolver(query_name):
-    class_name = query_name
-    return make_query_resolver(query_name, class_name, 'show_config')
-
-def make_system_status_resolver(query_name):
-    class_name = query_name
-    return make_query_resolver(query_name, class_name, 'system_status')
-
-def make_show_resolver(query_name):
-    class_name = query_name
-    return make_query_resolver(query_name, class_name, 'show')
-
 def make_config_session_query_resolver(query_name):
     return make_query_resolver(query_name, query_name,
                                convert_camel_case_to_snake(query_name))
 
 def make_gen_op_query_resolver(query_name):
     return make_query_resolver(query_name, query_name, 'gen_op_query')
+
+def make_system_status_resolver(query_name):
+    return make_query_resolver(query_name, query_name, 'system_status')

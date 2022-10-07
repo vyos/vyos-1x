@@ -106,28 +106,9 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
     return func_impl
 
-def make_prefix_resolver(mutation_name, prefix=[]):
-    for pre in prefix:
-        Pre = pre.capitalize()
-        if Pre in mutation_name:
-            class_name = mutation_name.replace(Pre, '', 1)
-            return make_mutation_resolver(mutation_name, class_name, pre)
-    raise Exception
-
-def make_configure_resolver(mutation_name):
-    class_name = mutation_name
-    return make_mutation_resolver(mutation_name, class_name, 'configure')
-
-def make_config_file_resolver(mutation_name):
-    return make_prefix_resolver(mutation_name, prefix=['save', 'load'])
-
-def make_image_resolver(mutation_name):
-    return make_prefix_resolver(mutation_name, prefix=['add', 'delete'])
-
 def make_config_session_mutation_resolver(mutation_name):
     return make_mutation_resolver(mutation_name, mutation_name,
                                   convert_camel_case_to_snake(mutation_name))
 
 def make_gen_op_mutation_resolver(mutation_name):
-    class_name = mutation_name
-    return make_mutation_resolver(mutation_name, class_name, 'gen_op_mutation')
+    return make_mutation_resolver(mutation_name, mutation_name, 'gen_op_mutation')
