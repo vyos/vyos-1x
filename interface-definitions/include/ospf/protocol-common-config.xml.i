@@ -621,6 +621,86 @@
     </constraint>
   </properties>
 </leafNode>
+<node name="segment-routing">
+  <properties>
+    <help>Segment-Routing (SPRING) settings</help>
+  </properties>
+  <children>
+    <node name="global-block">
+      <properties>
+        <help>Segment Routing Global Block label range</help>
+      </properties>
+      <children>
+        #include <include/ospf/high-low-label-value.xml.i>
+      </children>
+    </node>
+    <node name="local-block">
+      <properties>
+        <help>Segment Routing Local Block label range</help>
+      </properties>
+      <children>
+        #include <include/ospf/high-low-label-value.xml.i>
+      </children>
+    </node>
+    <leafNode name="maximum-label-depth">
+      <properties>
+        <help>Maximum MPLS labels allowed for this router</help>
+        <valueHelp>
+          <format>u32:1-16</format>
+            <description>MPLS label depth</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-16"/>
+        </constraint>
+      </properties>
+    </leafNode>
+    <tagNode name="prefix">
+      <properties>
+        <help>Static IPv4 prefix segment/label mapping</help>
+        <valueHelp>
+          <format>ipv4net</format>
+          <description>IPv4 prefix segment</description>
+        </valueHelp>
+        <constraint>
+          <validator name="ipv4-prefix"/>
+        </constraint>
+      </properties>
+      <children>
+        <node name="index">
+          <properties>
+            <help>Specify the index value of prefix segment/label ID</help>
+          </properties>
+          <children>
+            <leafNode name="value">
+              <properties>
+                <help>Specify the index value of prefix segment/label ID</help>
+                <valueHelp>
+                  <format>u32:0-65535</format>
+                    <description>The index segment/label ID value</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 0-65535"/>
+                </constraint>
+              </properties>
+            </leafNode>
+            <leafNode name="explicit-null">
+              <properties>
+                <help>Request upstream neighbor to replace segment/label with explicit null label</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            <leafNode name="no-php-flag">
+              <properties>
+                <help>Do not request penultimate hop popping for segment/label</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+      </children>
+    </tagNode>
+  </children>
+</node>
 <node name="redistribute">
   <properties>
     <help>Redistribute information from another routing protocol</help>
