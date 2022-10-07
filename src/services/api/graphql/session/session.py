@@ -87,7 +87,7 @@ class Session:
         try:
             out = session.show_config(data['path'])
             if data.get('config_format', '') == 'json':
-                config_tree = vyos.configtree.ConfigTree(out)
+                config_tree = ConfigTree(out)
                 out = json.loads(config_tree.to_json())
         except Exception as error:
             raise error
