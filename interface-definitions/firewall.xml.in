@@ -711,6 +711,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
               #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>
@@ -720,6 +721,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
               #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>
@@ -729,6 +731,7 @@
             </properties>
             <children>
               #include <include/firewall/action-accept-drop-reject.xml.i>
+              #include <include/firewall/log.xml.i>
               #include <include/firewall/rule-log-level.xml.i>
             </children>
           </node>

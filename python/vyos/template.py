@@ -566,12 +566,17 @@ def nft_default_rule(fw_conf, fw_name, ipv6=False):
     return " ".join(output)
 
 @register_filter('nft_state_policy')
-def nft_state_policy(conf, state, ipv6=False):
+def nft_state_policy(conf, state):
     out = [f'ct state {state}']
 
-    if 'log' in conf:
-        log_level = conf['log']
-        out.append(f'log level {log_level}')
+    if 'log' in conf and 'enable' in conf['log']:
+        log_state = state[:3].upper()
+        log_action = (conf['action'] if 'action' in conf else 'accept')[:1].upper()
+        out.append(f'log prefix "[STATE-POLICY-{log_state}-{log_action}]"')
+
+        if 'log_level' in conf:
+            log_level = conf['log_level']
+            out.append(f'level {log_level}')
 
     out.append('counter')
 

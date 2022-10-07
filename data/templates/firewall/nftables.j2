@@ -204,13 +204,13 @@ table ip6 vyos_filter {
 {% if state_policy is vyos_defined %}
     chain VYOS_STATE_POLICY6 {
 {%     if state_policy.established is vyos_defined %}
-        {{ state_policy.established | nft_state_policy('established', ipv6=True) }}
+        {{ state_policy.established | nft_state_policy('established') }}
 {%     endif %}
 {%     if state_policy.invalid is vyos_defined %}
-        {{ state_policy.invalid | nft_state_policy('invalid', ipv6=True) }}
+        {{ state_policy.invalid | nft_state_policy('invalid') }}
 {%     endif %}
 {%     if state_policy.related is vyos_defined %}
-        {{ state_policy.related | nft_state_policy('related', ipv6=True) }}
+        {{ state_policy.related | nft_state_policy('related') }}
 {%     endif %}
         return
     }
