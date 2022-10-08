@@ -411,6 +411,7 @@
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
+                  #include <include/firewall/address-mask-ipv6.xml.i>
                 </children>
               </node>
               <node name="source">
@@ -422,6 +423,7 @@
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
+                  #include <include/firewall/address-mask-ipv6.xml.i>
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
@@ -575,6 +577,7 @@
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
+                  #include <include/firewall/address-mask.xml.i>
                 </children>
               </node>
               <node name="source">
@@ -586,6 +589,7 @@
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
+                  #include <include/firewall/address-mask.xml.i>
                 </children>
               </node>
               #include <include/firewall/common-rule.xml.i>
