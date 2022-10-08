@@ -263,10 +263,10 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' isis bfd profile {bfd_profile}', tmp)
 
     def test_isis_07_segment_routing_configuration(self):
-        global_block_low = "1000"
-        global_block_high = "1999"
-        local_block_low = "2000"
-        local_block_high = "2999"
+        global_block_low = "100"
+        global_block_high = "199"
+        local_block_low = "200"
+        local_block_high = "299"
         interface = 'lo'
         maximum_stack_size = '5'
         prefix_one = '192.168.0.1/32'
@@ -280,7 +280,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['net', net])
         self.cli_set(base_path + ['interface', interface])
-        self.cli_set(base_path + ['segment-routing', 'enable'])
         self.cli_set(base_path + ['segment-routing', 'maximum-label-depth', maximum_stack_size])
         self.cli_set(base_path + ['segment-routing', 'global-block', 'low-label-value', global_block_low])
         self.cli_set(base_path + ['segment-routing', 'global-block', 'high-label-value', global_block_high])

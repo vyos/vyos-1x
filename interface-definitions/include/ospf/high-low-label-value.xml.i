@@ -3,8 +3,8 @@
   <properties>
     <help>MPLS label lower bound</help>
     <valueHelp>
-      <format>u32:100-1048575</format>
-      <description>Label value</description>
+      <format>u32:16-1048575</format>
+      <description>Label value - Suggested minimum value: 100</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 16-1048575"/>
@@ -15,7 +15,7 @@
   <properties>
     <help>MPLS label upper bound</help>
     <valueHelp>
-      <format>u32:100-1048575</format>
+      <format>u32:16-1048575</format>
       <description>Label value</description>
     </valueHelp>
     <constraint>
