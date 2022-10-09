@@ -153,7 +153,7 @@
   <properties>
     <help>Show BGP information for specified neighbor</help>
     <completionHelp>
-      <script>vtysh -c 'show bgp summary' | awk '{print $1'} | grep -e '^[0-9a-f]'</script>
+      <script>vtysh -c "$(IFS=$' '; echo "${COMP_WORDS[@]:0:${#COMP_WORDS[@]}-2} summary")" |  awk '/^[0-9a-f]/ {print $1}'</script>
     </completionHelp>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
