@@ -1,0 +1,115 @@
+
+input ShowConfigInput {
+    key: String!
+    path: [String!]!
+    configFormat: String = null
+}
+
+type ShowConfig {
+    result: Generic
+}
+
+type ShowConfigResult {
+    data: ShowConfig
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Query {
+    ShowConfig(data: ShowConfigInput) : ShowConfigResult @configsessionquery
+}
+
+input ShowInput {
+    key: String!
+    path: [String!]!
+}
+
+type Show {
+    result: Generic
+}
+
+type ShowResult {
+    data: Show
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Query {
+    Show(data: ShowInput) : ShowResult @configsessionquery
+}
+
+input SaveConfigFileInput {
+    key: String!
+    fileName: String = null
+}
+
+type SaveConfigFile {
+    result: Generic
+}
+
+type SaveConfigFileResult {
+    data: SaveConfigFile
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Mutation {
+    SaveConfigFile(data: SaveConfigFileInput) : SaveConfigFileResult @configsessionmutation
+}
+
+input LoadConfigFileInput {
+    key: String!
+    fileName: String!
+}
+
+type LoadConfigFile {
+    result: Generic
+}
+
+type LoadConfigFileResult {
+    data: LoadConfigFile
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Mutation {
+    LoadConfigFile(data: LoadConfigFileInput) : LoadConfigFileResult @configsessionmutation
+}
+
+input AddSystemImageInput {
+    key: String!
+    location: String!
+}
+
+type AddSystemImage {
+    result: Generic
+}
+
+type AddSystemImageResult {
+    data: AddSystemImage
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Mutation {
+    AddSystemImage(data: AddSystemImageInput) : AddSystemImageResult @configsessionmutation
+}
+
+input DeleteSystemImageInput {
+    key: String!
+    name: String!
+}
+
+type DeleteSystemImage {
+    result: Generic
+}
+
+type DeleteSystemImageResult {
+    data: DeleteSystemImage
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Mutation {
+    DeleteSystemImage(data: DeleteSystemImageInput) : DeleteSystemImageResult @configsessionmutation
+}
