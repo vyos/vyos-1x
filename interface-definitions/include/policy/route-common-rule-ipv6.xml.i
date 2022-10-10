@@ -198,6 +198,10 @@
           <validator name="numeric" argument="--range 1-200"/>
           <regex>(main)</regex>
         </constraint>
+        <completionHelp>
+          <list>main</list>
+          <path>protocols static table</path>
+        </completionHelp>
       </properties>
     </leafNode>
     <leafNode name="tcp-mss">
