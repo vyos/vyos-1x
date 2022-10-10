@@ -2,3 +2,4 @@ dpkg-divert --package vyos-1x --add --rename /etc/securetty
 dpkg-divert --package vyos-1x --add --rename /etc/security/capability.conf
 dpkg-divert --package vyos-1x --add --rename /lib/systemd/system/lcdproc.service
 dpkg-divert --package vyos-1x --add --rename /etc/logrotate.d/conntrackd
+dpkg-divert --package vyos-1x --add --rename /usr/share/pam-configs/radius
