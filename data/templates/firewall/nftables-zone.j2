@@ -39,18 +39,22 @@
 {%     if zone_conf.local_zone is vyos_defined %}
     chain VZONE_{{ zone_name }}_IN {
         iifname lo counter return
-{%         for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
+{%         if zone_conf.from is vyos_defined %}
+{%             for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
-{%         endfor %}
+{%             endfor %}
+{%         endif %}
         {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
-{%         for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall[fw_name] is vyos_defined %}
+{%         if zone_conf.from_local is vyos_defined %}
+{%             for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall[fw_name] is vyos_defined %}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
-{%         endfor %}
+{%             endfor %}
+{%         endif %}
         {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
 {%     else %}
@@ -59,12 +63,14 @@
 {%         if zone_conf.intra_zone_filtering is vyos_defined %}
         iifname { {{ zone_conf.interface | join(",") }} } counter return
 {%         endif %}
-{%         for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
-{%             if zone[from_zone].local_zone is not defined %}
+{%         if zone_conf.from is vyos_defined %}
+{%             for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
+{%                 if zone[from_zone].local_zone is not defined %}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
-{%             endif %}
-{%         endfor %}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
         {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
     }
 {%     endif %}
