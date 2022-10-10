@@ -9,7 +9,9 @@ Sync {
 {%     if iface_config.peer is vyos_defined %}
     UDP {
 {%         if listen_address is vyos_defined %}
-        IPv4_address {{ listen_address }}
+{%             for address in listen_address %}
+        IPv4_address {{ address }}
+{%             endfor %}
 {%         endif %}
         IPv4_Destination_Address {{ iface_config.peer }}
         Port {{ iface_config.port if iface_config.port is vyos_defined else '3780' }}
