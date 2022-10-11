@@ -408,12 +408,15 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
+
         frrconfig = self.getFRRconfig('router ospf')
-        self.assertIn(f' segment-routing on', frrconfig)
         self.assertIn(f' segment-routing global-block {global_block_low} {global_block_high} local-block {local_block_low} {local_block_high}', frrconfig)
         self.assertIn(f' segment-routing node-msd {maximum_stack_size}', frrconfig)
         self.assertIn(f' segment-routing prefix {prefix_one} index {prefix_one_value} explicit-null', frrconfig)
         self.assertIn(f' segment-routing prefix {prefix_two} index {prefix_two_value} no-php-flag', frrconfig)
+
+        self.skipTest('https://github.com/FRRouting/frr/issues/12007')
+        self.assertIn(f' segment-routing on', frrconfig)
 
 
 if __name__ == '__main__':
