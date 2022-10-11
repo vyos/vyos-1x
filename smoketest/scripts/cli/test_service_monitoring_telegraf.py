@@ -60,6 +60,7 @@ class TestMonitoringTelegraf(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  token = "$INFLUX_TOKEN"', config)
         self.assertIn(f'urls = ["{url}:{port}"]', config)
         self.assertIn(f'bucket = "{bucket}"', config)
+        self.assertIn(f'[[inputs.exec]]', config)
 
         for input in inputs:
             self.assertIn(input, config)
