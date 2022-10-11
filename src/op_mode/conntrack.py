@@ -48,6 +48,14 @@ def _get_raw_data(family):
     Return: dictionary
     """
     xml = _get_xml_data(family)
+    if len(xml) == 0:
+        output = {'conntrack':
+            {
+                'error': True,
+                'reason': 'entries not found'
+            }
+        }
+        return output
     return _xml_to_dict(xml)
 
 
@@ -72,7 +80,8 @@ def get_formatted_output(dict_data):
     :return: formatted output
     """
     data_entries = []
-    #dict_data = _get_raw_data(family)
+    if 'error' in dict_data['conntrack']:
+        return 'Entries not found'
     for entry in dict_data['conntrack']['flow']:
         orig_src, orig_dst, orig_sport, orig_dport = {}, {}, {}, {}
         reply_src, reply_dst, reply_sport, reply_dport = {}, {}, {}, {}
