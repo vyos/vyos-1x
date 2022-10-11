@@ -110,7 +110,7 @@
   server = "unixgram:///run/telegraf/telegraf_syslog.sock"
   best_effort = true
   syslog_standard = "RFC3164"
-{% if influxdb_configured is vyos_defined %}
+{% if influxdb is vyos_defined %}
 [[inputs.exec]]
   commands = [
     "{{ custom_scripts_dir }}/show_firewall_input_filter.py",
