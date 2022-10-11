@@ -233,12 +233,6 @@
     <help>Segment-Routing (SPRING) settings</help>
   </properties>
   <children>
-    <leafNode name="enable">
-      <properties>
-        <help>Enable segment-routing functionality</help>
-        <valueless/>
-      </properties>
-    </leafNode>
     <node name="global-block">
       <properties>
         <help>Segment Routing Global Block label range</help>

@@ -107,9 +107,6 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  mpls-te inter-as{{ level }}
 {% endif %}
 {% if segment_routing is vyos_defined %}
-{%     if segment_routing.enable is vyos_defined %}
- segment-routing on
-{%     endif %}
 {%     if segment_routing.maximum_label_depth is vyos_defined %}
  segment-routing node-msd {{ segment_routing.maximum_label_depth }}
 {%     endif %}
@@ -144,6 +141,7 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
 {%             endif %}
 {%         endfor %}
 {%     endif %}
+ segment-routing on
 {% endif %}
 {% if spf_delay_ietf.init_delay is vyos_defined %}
  spf-delay-ietf init-delay {{ spf_delay_ietf.init_delay }} short-delay {{ spf_delay_ietf.short_delay }} long-delay {{ spf_delay_ietf.long_delay }} holddown {{ spf_delay_ietf.holddown }} time-to-learn {{ spf_delay_ietf.time_to_learn }}
