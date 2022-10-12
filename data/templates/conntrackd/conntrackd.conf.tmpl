@@ -10,7 +10,9 @@ Sync {
 {%     if iface_config.peer is defined and iface_config.peer is not none %}
     UDP {
 {%       if listen_address is defined and listen_address is not none %}
-        IPv4_address {{ listen_address }}
+{%           for address in listen_address %}
+        IPv4_address {{ address }}
+{%           endfor %}
 {%       endif %}
         IPv4_Destination_Address {{ iface_config.peer }}
         Port {{ iface_config.port if iface_config.port is defined else '3780' }}
