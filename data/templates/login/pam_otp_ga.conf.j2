@@ -1,0 +1,7 @@
+{% if authentication.otp.key is vyos_defined %}
+{{ authentication.otp.key }}
+" RATE_LIMIT {{ authentication.otp.rate_limit }} {{ authentication.otp.rate_time }}
+" WINDOW_SIZE {{ authentication.otp.window_size }}
+" DISALLOW_REUSE
+" TOTP_AUTH
+{% endif %}

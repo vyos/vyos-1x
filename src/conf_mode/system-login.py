@@ -253,7 +253,20 @@ def apply(login):
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
-
+                #OTP 2FA key file generation
+                if dict_search('authentication.otp.key', user_config):
+                    user_config['authentication']['otp']['key'] = user_config['authentication']['otp']['key'].upper()
+                    user_config['authentication']['otp']['rate_limit'] = login['authentication']['otp']['rate_limit']
+                    user_config['authentication']['otp']['rate_time'] = login['authentication']['otp']['rate_time']
+                    user_config['authentication']['otp']['window_size'] = login['authentication']['otp']['window_size']
+                    render(f'{home_dir}/.google_authenticator', 'login/pam_otp_ga.conf.j2',
+                           user_config, permission=0o600,
+                           formater=lambda _: _.replace("&quot;", '"'),
+                           user=user, group='users')
+                #OTP 2FA key file deletion
+                elif os.path.exists(f'{home_dir}/.google_authenticator'):
+                    os.remove(f'{home_dir}/.google_authenticator')
+		
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
 
