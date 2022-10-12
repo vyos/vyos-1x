@@ -205,9 +205,6 @@ Depends:
 # For "load-balancing haproxy"
   haproxy,
 # End "load-balancing haproxy"
-# For "load-balancing wan"
-  vyatta-wanloadbalance,
-# End "load-balancing wan"
 # For "service dhcp-relay"
   isc-dhcp-relay,
 # For "service dhcp-server"
