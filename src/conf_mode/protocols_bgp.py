@@ -159,6 +159,11 @@ def verify(bgp):
             if 'ebgp_multihop' in peer_config and 'ttl_security' in peer_config:
                 raise ConfigError('You can not set both ebgp-multihop and ttl-security hops')
 
+            # interface and ebgp-multihop can't be used in the same configration
+            if 'ebgp_multihop' in peer_config and 'interface' in peer_config:
+                raise ConfigError(f'Ebgp-multihop can not be used with directly connected '\
+                                  f'neighbor "{peer}"')
+
             # Check if neighbor has both override capability and strict capability match
             # configured at the same time.
             if 'override_capability' in peer_config and 'strict_capability_match' in peer_config:
