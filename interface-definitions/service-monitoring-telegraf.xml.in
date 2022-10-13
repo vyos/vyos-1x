@@ -53,7 +53,7 @@
                     </properties>
                     <defaultValue>main</defaultValue>
                   </leafNode>
-                  #include <include/monitoring/url.xml.i>
+                  #include <include/url.xml.i>
                   #include <include/port-number.xml.i>
                   <leafNode name="port">
                     <defaultValue>8086</defaultValue>
@@ -145,7 +145,7 @@
                       <constraintErrorMessage>Table is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                     </properties>
                   </leafNode>
-                  #include <include/monitoring/url.xml.i>
+                  #include <include/url.xml.i>
                 </children>
               </node>
               <leafNode name="source">
@@ -271,7 +271,7 @@
                       </leafNode>
                     </children>
                   </node>
-                  #include <include/monitoring/url.xml.i>
+                  #include <include/url.xml.i>
                 </children>
               </node>
               #include <include/interface/vrf.xml.i>
