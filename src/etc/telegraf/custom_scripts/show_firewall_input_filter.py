@@ -11,7 +11,10 @@ def get_nft_filter_chains():
     """
     Get list of nft chains for table filter
     """
-    nft = cmd('/usr/sbin/nft --json list table ip vyos_filter')
+    try:
+        nft = cmd('/usr/sbin/nft --json list table ip vyos_filter')
+    except Exception:
+        return []
     nft = json.loads(nft)
     chain_list = []
 
