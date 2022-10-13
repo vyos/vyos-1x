@@ -64,6 +64,13 @@ def get_config(config=None):
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  no_tag_node_value_mangle=True, get_first_key=True)
 
+    # Get global OTP parameters
+    default_values = defaults(base + ['authentication'])
+    if 'authentication' in login:
+        login['authentication'] = dict_merge(default_values, login['authentication'])
+    else:
+        login['authentication'] = default_values
+
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
     cli_users = []
