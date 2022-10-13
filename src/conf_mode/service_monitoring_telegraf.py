@@ -42,7 +42,11 @@ systemd_override = '/etc/systemd/system/telegraf.service.d/10-override.conf'
 
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
-    nft = cmd('nft --json list table ip vyos_filter')
+    try:
+        nft = cmd('nft --json list table ip vyos_filter')
+    except Exception:
+        print('nft table ip vyos_filter not found')
+        return []
     nft = json.loads(nft)
     chain_list = []
 
