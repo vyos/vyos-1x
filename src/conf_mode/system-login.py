@@ -64,6 +64,18 @@ def get_config(config=None):
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  no_tag_node_value_mangle=True, get_first_key=True)
 
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    # defaults for RADIUS and USER will be added later down this function
+    if 'radius' in default_values:
+        del default_values['radius']
+    if 'user' in default_values:
+        del default_values['user']
+    login = dict_merge(default_values, login)
+
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
     cli_users = []
@@ -253,22 +265,18 @@ def apply(login):
                        user_config, permission=0o600,
                        formater=lambda _: _.replace("&quot;", '"'),
                        user=user, group='users')
-                #OTP 2FA key file generation
-                if dict_search('authentication.otp.key', user_config):
-                    user_config['authentication']['otp']['key'] = user_config['authentication']['otp']['key'].upper()
-                    user_config['authentication']['otp']['rate_limit'] = login['authentication']['otp']['rate_limit']
-                    user_config['authentication']['otp']['rate_time'] = login['authentication']['otp']['rate_time']
-                    user_config['authentication']['otp']['window_size'] = login['authentication']['otp']['window_size']
-                    render(f'{home_dir}/.google_authenticator', 'login/pam_otp_ga.conf.j2',
-                           user_config, permission=0o600,
-                           formater=lambda _: _.replace("&quot;", '"'),
-                           user=user, group='users')
-                #OTP 2FA key file deletion
-                elif os.path.exists(f'{home_dir}/.google_authenticator'):
-                    os.remove(f'{home_dir}/.google_authenticator')
-		
+
             except Exception as e:
                 raise ConfigError(f'Adding user "{user}" raised exception: "{e}"')
+
+            # Generate 2FA/MFA One-Time-Pad configuration
+            if dict_search('authentication.otp.key', user_config):
+                render(f'{home_dir}/.google_authenticator', 'login/pam_otp_ga.conf.j2',
+                       user_config, permission=0o400, user=user, group='users')
+            else:
+                # delete configuration as it's not enabled for the user
+                if os.path.exists(f'{home_dir}/.google_authenticator'):
+                    os.remove(f'{home_dir}/.google_authenticator')
 
     if 'rm_users' in login:
         for user in login['rm_users']:

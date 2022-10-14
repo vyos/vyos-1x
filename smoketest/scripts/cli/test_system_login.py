@@ -46,6 +46,14 @@ TTSb0X1zPGxPIRFy5GoGtO9Mm5h4OZk=
 """
 
 class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestSystemLogin, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration which will break this test
+        cls.cli_delete(cls, base_path + ['radius'])
+
     def tearDown(self):
         # Delete individual users from configuration
         for user in users:
