@@ -64,18 +64,6 @@ def get_config(config=None):
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
                                  no_tag_node_value_mangle=True, get_first_key=True)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    # defaults for RADIUS and USER will be added later down this function
-    if 'radius' in default_values:
-        del default_values['radius']
-    if 'user' in default_values:
-        del default_values['user']
-    login = dict_merge(default_values, login)
-
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
     cli_users = []
