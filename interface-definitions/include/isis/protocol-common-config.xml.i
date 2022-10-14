@@ -238,7 +238,7 @@
         <help>Segment Routing Global Block label range</help>
       </properties>
       <children>
-        #include <include/isis/high-low-label-value.xml.i>
+        #include <include/segment-routing-label-value.xml.i>
       </children>
     </node>
     <node name="local-block">
@@ -246,7 +246,7 @@
         <help>Segment Routing Local Block label range</help>
       </properties>
       <children>
-        #include <include/isis/high-low-label-value.xml.i>
+        #include <include/segment-routing-label-value.xml.i>
       </children>
     </node>
     <leafNode name="maximum-label-depth">

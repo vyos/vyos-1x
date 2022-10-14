@@ -1,10 +1,10 @@
-<!-- include start from isis/high-low-label-value.xml.i -->
+<!-- include start from segment-routing-label-value.xml.i -->
 <leafNode name="low-label-value">
   <properties>
     <help>MPLS label lower bound</help>
     <valueHelp>
       <format>u32:16-1048575</format>
-      <description>Label value (recommended minimum value: 100)</description>
+      <description>Label value (recommended minimum value: 300)</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 16-1048575"/>
