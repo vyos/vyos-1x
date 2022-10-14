@@ -382,10 +382,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
 
     def test_ospf_14_segment_routing_configuration(self):
-        global_block_low = "100"
-        global_block_high = "199"
-        local_block_low = "200"
-        local_block_high = "299"
+        global_block_low = "300"
+        global_block_high = "399"
+        local_block_low = "400"
+        local_block_high = "499"
         interface = 'lo'
         maximum_stack_size = '5'
         prefix_one = '192.168.0.1/32'
@@ -408,15 +408,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-
         frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f' segment-routing on', frrconfig)
         self.assertIn(f' segment-routing global-block {global_block_low} {global_block_high} local-block {local_block_low} {local_block_high}', frrconfig)
         self.assertIn(f' segment-routing node-msd {maximum_stack_size}', frrconfig)
         self.assertIn(f' segment-routing prefix {prefix_one} index {prefix_one_value} explicit-null', frrconfig)
         self.assertIn(f' segment-routing prefix {prefix_two} index {prefix_two_value} no-php-flag', frrconfig)
-
-        self.skipTest('https://github.com/FRRouting/frr/issues/12007')
-        self.assertIn(f' segment-routing on', frrconfig)
 
 
 if __name__ == '__main__':
