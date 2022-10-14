@@ -133,14 +133,13 @@ def _get_formatted_output_sas(sas):
 
 
 def get_peer_connections(peer, tunnel, return_all = False):
-    peer = peer.replace(':', '-')
-    search = rf'^[\s]*(peer_{peer}_(tunnel_[\d]+|vti)).*'
+    search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti)).*'
     matches = []
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
-                suffix = f'tunnel_{tunnel}' if tunnel.isnumeric() else tunnel
+                suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
                 if return_all or (result[2] == suffix):
                     matches.append(result[1])
     return matches
