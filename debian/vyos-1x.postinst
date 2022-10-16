@@ -21,13 +21,13 @@ if ! grep -q '^openvpn' /etc/passwd; then
     adduser --quiet --firstuid 100 --system --group --shell /usr/sbin/nologin openvpn
 fi
 
-# Add 2FA support for SSH
-sudo grep -qF -- "auth required pam_google_authenticator.so nullok" "/etc/pam.d/sshd" || \
-sudo sed -i '/^@include common-auth/a # Check OTP 2FA, if configured for the user\nauth       required     pam_google_authenticator.so nullok' /etc/pam.d/sshd
-
-# Add 2FA support for local authentication
-sudo grep -qF -- "auth required pam_google_authenticator.so nullok" "/etc/pam.d/login" || \
-sudo sed -i '/^@include common-auth/a # Check OTP 2FA, if configured for the user\nauth       required     pam_google_authenticator.so nullok' /etc/pam.d/login
+# Enable 2FA/MFA support for SSH and local logins
+for file in /etc/pam.d/sshd /etc/pam.d/login
+do
+    PAM_CONFIG="auth       required     pam_google_authenticator.so nullok"
+    grep -qF -- "$PAM_CONFIG" $file || \
+    sed -i '/^@include common-auth/a \\n# Check 2FA/MFA authentication token if enabled (per user)\n$PAM_CONFIG' $file
+done
 
 # Add RADIUS operator user for RADIUS authenticated users to map to
 if ! grep -q '^radius_user' /etc/passwd; then
