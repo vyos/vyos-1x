@@ -3,7 +3,8 @@ schema {
     mutation: Mutation
 }
 
-directive @systemstatus on FIELD_DEFINITION
+directive @compositequery on FIELD_DEFINITION
+directive @compositemutation on FIELD_DEFINITION
 directive @configsessionquery on FIELD_DEFINITION
 directive @configsessionmutation on FIELD_DEFINITION
 directive @genopquery on FIELD_DEFINITION
@@ -11,8 +12,5 @@ directive @genopmutation on FIELD_DEFINITION
 
 scalar Generic
 
-type Query {
-    SystemStatus(data: SystemStatusInput) : SystemStatusResult @systemstatus
-}
-
+type Query
 type Mutation

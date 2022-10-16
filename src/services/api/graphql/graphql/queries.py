@@ -113,5 +113,6 @@ def make_config_session_query_resolver(query_name):
 def make_gen_op_query_resolver(query_name):
     return make_query_resolver(query_name, query_name, 'gen_op_query')
 
-def make_system_status_resolver(query_name):
-    return make_query_resolver(query_name, query_name, 'system_status')
+def make_composite_query_resolver(query_name):
+    return make_query_resolver(query_name, query_name,
+                               convert_camel_case_to_snake(query_name))
