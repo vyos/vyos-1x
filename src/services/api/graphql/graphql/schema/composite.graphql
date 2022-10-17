@@ -1,7 +1,3 @@
-"""
-Use 'scalar Generic' for system status output, to avoid attempts to
-JSON-serialize in case of JSON output.
-"""
 
 input SystemStatusInput {
     key: String!
@@ -15,4 +11,8 @@ type SystemStatusResult {
     data: SystemStatus
     success: Boolean!
     errors: [String]
+}
+
+extend type Query {
+    SystemStatus(data: SystemStatusInput) : SystemStatusResult @compositequery
 }

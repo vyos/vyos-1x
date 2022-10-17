@@ -112,3 +112,7 @@ def make_config_session_mutation_resolver(mutation_name):
 
 def make_gen_op_mutation_resolver(mutation_name):
     return make_mutation_resolver(mutation_name, mutation_name, 'gen_op_mutation')
+
+def make_composite_mutation_resolver(mutation_name):
+    return make_mutation_resolver(mutation_name, mutation_name,
+                                  convert_camel_case_to_snake(mutation_name))
