@@ -9,7 +9,54 @@
           <priority>910</priority>
         </properties>
         <children>
-          #include <include/generic-interface-multi-broadcast.xml.i>
+          <leafNode name="interface">
+            <properties>
+              <help>Interface Name to use [To be deprecated]. Only for backward compatibility. Use listen-interface and upstream-interface instead of this option </help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                <validator name="interface-name"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="listen-interface">
+            <properties>
+              <help>Interface for DHCP Relay Agent to listen for requests</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                <validator name="interface-name"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="upstream-interface">
+            <properties>
+              <help>Interface for DHCP Relay Agent forward requests out</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+              <valueHelp>
+                <format>txt</format>
+                <description>Interface name</description>
+              </valueHelp>
+              <constraint>
+                <validator name="interface-name"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
           <node name="relay-options">
             <properties>
               <help>Relay options</help>
