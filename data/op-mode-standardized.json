@@ -7,6 +7,7 @@
 "nat.py",
 "neighbor.py",
 "openconnect.py",
+"otp.py",
 "route.py",
 "system.py",
 "ipsec.py",

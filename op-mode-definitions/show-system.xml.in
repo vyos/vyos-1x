@@ -66,6 +66,55 @@
               <help>Show user accounts</help>
             </properties>
             <children>
+              <node name="authentication">
+                <properties>
+                  <help>Show user account authentication information</help>
+                </properties>
+                <children>
+                  <tagNode name="user">
+                    <properties>
+                      <help>Show configured user</help>
+                      <completionHelp>
+                        <path>system login user</path>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <node name="otp">
+                        <properties>
+                          <help>Show OTP key information</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/otp.py show_login --username="$6" --info="full"</command>
+                        <children>
+                          <leafNode name="full">
+                            <properties>
+                              <help>Show full settings, including QR code and commands for VyOS</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/otp.py show_login --username="$6" --info="full"</command>
+                          </leafNode>
+                          <leafNode name="key-b32">
+                            <properties>
+                              <help>Show OTP authentication secret in Base32 (used in mobile apps)</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/otp.py show_login --username="$6" --info="key-b32"</command>
+                          </leafNode>
+                          <leafNode name="qrcode">
+                            <properties>
+                              <help>Show OTP authentication QR code</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/otp.py show_login --username="$6" --info="qrcode"</command>
+                          </leafNode>
+                          <leafNode name="uri">
+                            <properties>
+                              <help>Show OTP authentication otpauth URI</help>
+                            </properties>
+                            <command>${vyos_op_scripts_dir}/otp.py show_login --username="$6" --info="uri"</command>
+                          </leafNode>
+                        </children>
+                      </node>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>              
               <node name="users">
                 <properties>
                   <help>Show user account information</help>
