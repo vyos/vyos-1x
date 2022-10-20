@@ -185,10 +185,12 @@ def run(module):
         # they may return human-formatted output
         # or a raw dict that we need to serialize in JSON for printing
         res = func(**args)
-        res = _normalize_field_names(res)
         if not args["raw"]:
             return res
         else:
+            if not isinstance(res, dict):
+                raise InternalError("'raw' output of 'show_*' command must be a dict")
+            res = _normalize_field_names(res)
             from json import dumps
             return dumps(res, indent=4)
     else:
