@@ -44,6 +44,13 @@ class PermissionDenied(Error):
     """
     pass
 
+class InternalError(Error):
+    """ Any situation when VyOS detects that it could not perform
+        an operation correctly due to logic errors in its own code
+        or errors in underlying software.
+    """
+    pass
+
 
 def _is_op_mode_function_name(name):
     if re.match(r"^(show|clear|reset|restart)", name):
@@ -92,6 +99,39 @@ def _get_arg_type(t):
         return t.__args__[0]
     else:
         return t
+
+def _normalize_field_name(name):
+    # Replace all separators with underscores
+    name = re.sub(r'(\s|[\(\)\[\]\{\}\-\.\,:\"\'\`])+', '_', name)
+
+    # Replace specific characters with textual descriptions
+    name = re.sub(r'@', '_at_', name)
+    name = re.sub(r'%', '_percentage_', name)
+    name = re.sub(r'~', '_tilde_', name)
+
+    # Force all letters to lowercase
+    name = name.lower()
+
+    # Remove leading and trailing underscores, if any
+    name = re.sub(r'(^(_+)(?=[^_])|_+$)', '', name)
+
+    # Ensure there are only single underscores
+    name = re.sub(r'_+', '_', name)
+
+    return name
+
+def _normalize_field_names(old_dict):
+    new_dict = {}
+
+    for key in old_dict:
+        new_key = _normalize_field_name(key)
+        new_dict[new_key] = old_dict[key]
+
+    # Sanity check
+    if len(old_dict) != len(new_dict):
+        raise InternalError("Dictionary fields do not allow unique normalization")
+    else:
+        return new_dict
 
 def run(module):
     from argparse import ArgumentParser
@@ -145,6 +185,7 @@ def run(module):
         # they may return human-formatted output
         # or a raw dict that we need to serialize in JSON for printing
         res = func(**args)
+        res = _normalize_field_names(res)
         if not args["raw"]:
             return res
         else:
