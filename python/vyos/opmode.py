@@ -120,18 +120,26 @@ def _normalize_field_name(name):
 
     return name
 
-def _normalize_field_names(old_dict):
+def _normalize_dict_field_names(old_dict):
     new_dict = {}
 
     for key in old_dict:
         new_key = _normalize_field_name(key)
-        new_dict[new_key] = old_dict[key]
+        new_dict[new_key] = _normalize_field_names(old_dict[key])
 
     # Sanity check
     if len(old_dict) != len(new_dict):
         raise InternalError("Dictionary fields do not allow unique normalization")
     else:
         return new_dict
+
+def _normalize_field_names(value):
+    if isinstance(value, dict):
+        return _normalize_dict_field_names(value)
+    elif isinstance(value, list):
+        return list(map(lambda v: _normalize_field_names(v), value))
+    else:
+        return value
 
 def run(module):
     from argparse import ArgumentParser
@@ -188,8 +196,6 @@ def run(module):
         if not args["raw"]:
             return res
         else:
-            if not isinstance(res, dict):
-                raise InternalError("'raw' output of 'show_*' command must be a dict")
             res = _normalize_field_names(res)
             from json import dumps
             return dumps(res, indent=4)

@@ -37,8 +37,29 @@ class TestVyOSOpMode(TestCase):
         with self.assertRaises(vyos.opmode.InternalError):
             _normalize_field_names(data)
 
-    def test_dict_fields_normalization(self):
+    def test_dict_fields_normalization_simple_dict(self):
         from vyos.opmode import _normalize_field_names
 
-        data = {"foo bar": True, "bar-baz": False}
+        data = {"foo bar": True, "Bar-Baz": False}
         self.assertEqual(_normalize_field_names(data), {"foo_bar": True, "bar_baz": False})
+
+    def test_dict_fields_normalization_nested_dict(self):
+        from vyos.opmode import _normalize_field_names
+
+        data = {"foo bar": True, "bar-baz": {"baz-quux": {"quux-xyzzy": False}}}
+        self.assertEqual(_normalize_field_names(data),
+          {"foo_bar": True, "bar_baz": {"baz_quux": {"quux_xyzzy": False}}})
+
+    def test_dict_fields_normalization_mixed(self):
+        from vyos.opmode import _normalize_field_names
+
+        data = [{"foo bar": True, "bar-baz": [{"baz-quux": {"quux-xyzzy": [False]}}]}]
+        self.assertEqual(_normalize_field_names(data),
+          [{"foo_bar": True, "bar_baz": [{"baz_quux": {"quux_xyzzy": [False]}}]}])
+
+    def test_dict_fields_normalization_primitive(self):
+        from vyos.opmode import _normalize_field_names
+
+        data = [1, False, "foo"]
+        self.assertEqual(_normalize_field_names(data), [1, False, "foo"])
+
