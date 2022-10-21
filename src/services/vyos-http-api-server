@@ -688,16 +688,16 @@ if __name__ == '__main__':
     app.state.vyos_debug = server_config['debug']
     app.state.vyos_strict = server_config['strict']
     app.state.vyos_origins = server_config.get('cors', {}).get('allow_origin', [])
-    if 'gql' in server_config:
-        app.state.vyos_gql = True
-        if isinstance(server_config['gql'], dict) and 'introspection' in server_config['gql']:
+    if 'graphql' in server_config:
+        app.state.vyos_graphql = True
+        if isinstance(server_config['graphql'], dict) and 'introspection' in server_config['graphql']:
             app.state.vyos_introspection = True
         else:
             app.state.vyos_introspection = False
     else:
-        app.state.vyos_gql = False
+        app.state.vyos_graphql = False
 
-    if app.state.vyos_gql:
+    if app.state.vyos_graphql:
         graphql_init(app)
 
     try:

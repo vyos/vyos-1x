@@ -86,7 +86,7 @@ def get_config(config=None):
     if 'api_keys' in api_dict:
         keys_added = True
 
-    if 'gql' in api_dict:
+    if 'graphql' in api_dict:
         api_dict = dict_merge(defaults(base), api_dict)
 
     http_api.update(api_dict)
