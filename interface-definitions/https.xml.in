@@ -107,7 +107,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <node name="gql">
+              <node name="graphql">
                 <properties>
                   <help>GraphQL support</help>
                 </properties>
