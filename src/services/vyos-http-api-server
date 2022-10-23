@@ -647,6 +647,7 @@ def reset_op(data: ResetModel):
 ###
 
 def graphql_init(fast_api_app):
+    from api.graphql.libs.token_auth import get_user_context
     api.graphql.state.init()
     api.graphql.state.settings['app'] = app
 
@@ -658,9 +659,9 @@ def graphql_init(fast_api_app):
 
     if app.state.vyos_origins:
         origins = app.state.vyos_origins
-        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, debug=True, introspection=in_spec), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
+        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
     else:
-        app.add_route('/graphql', GraphQL(schema, debug=True, introspection=in_spec))
+        app.add_route('/graphql', GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec))
 
 ###
 

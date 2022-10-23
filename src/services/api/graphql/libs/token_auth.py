@@ -36,3 +36,32 @@ def generate_token(user: str, passwd: str, secret: str) -> dict:
 
         users |= {user_id: user}
         return {'token': token}
+
+def get_user_context(request):
+    context = {}
+    context['request'] = request
+    context['user'] = None
+    if 'Authorization' in request.headers:
+        auth = request.headers['Authorization']
+        scheme, token = auth.split()
+        if scheme.lower() != 'bearer':
+            return context
+
+        try:
+            secret = state.settings.get('secret')
+            payload = jwt.decode(token, secret, algorithms=["HS256"])
+            user_id: str = payload.get('sub')
+            if user_id is None:
+                return context
+        except jwt.PyJWTError:
+            return context
+        try:
+            users = state.settings['app'].state.vyos_token_users
+        except AttributeError:
+            return context
+
+        user = users.get(user_id)
+        if user is not None:
+            context['user'] = user
+
+    return context
