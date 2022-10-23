@@ -647,11 +647,11 @@ def reset_op(data: ResetModel):
 ###
 
 def graphql_init(fast_api_app):
-    from api.graphql.bindings import generate_schema
-
     api.graphql.state.init()
     api.graphql.state.settings['app'] = app
 
+    # import after initializaion of state
+    from api.graphql.bindings import generate_schema
     schema = generate_schema()
 
     in_spec = app.state.vyos_introspection
@@ -690,10 +690,13 @@ if __name__ == '__main__':
     app.state.vyos_origins = server_config.get('cors', {}).get('allow_origin', [])
     if 'graphql' in server_config:
         app.state.vyos_graphql = True
-        if isinstance(server_config['graphql'], dict) and 'introspection' in server_config['graphql']:
-            app.state.vyos_introspection = True
-        else:
-            app.state.vyos_introspection = False
+        if isinstance(server_config['graphql'], dict):
+            if 'introspection' in server_config['graphql']:
+                app.state.vyos_introspection = True
+            else:
+                app.state.vyos_introspection = False
+            # default value is merged in conf_mode http-api.py, if not set
+            app.state.vyos_auth_type = server_config['graphql']['authentication']['type']
     else:
         app.state.vyos_graphql = False
 
