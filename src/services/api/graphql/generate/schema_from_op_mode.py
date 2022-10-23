@@ -19,17 +19,19 @@
 # scripts.
 
 import os
+import sys
 import json
 from inspect import signature, getmembers, isfunction, isclass, getmro
 from jinja2 import Template
 
 from vyos.defaults import directories
 if __package__ is None or __package__ == '':
-    from util import load_as_module, is_op_mode_function_name, is_show_function_name
-    from util import snake_to_pascal_case, map_type_name
+    sys.path.append("/usr/libexec/vyos/services/api")
+    from graphql.libs.op_mode import load_as_module, is_op_mode_function_name, is_show_function_name
+    from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
 else:
-    from . util import load_as_module, is_op_mode_function_name, is_show_function_name
-    from . util import snake_to_pascal_case, map_type_name
+    from .. libs.op_mode import load_as_module, is_op_mode_function_name, is_show_function_name
+    from .. libs.op_mode import snake_to_pascal_case, map_type_name
 
 OP_MODE_PATH = directories['op_mode']
 SCHEMA_PATH = directories['api_schema']

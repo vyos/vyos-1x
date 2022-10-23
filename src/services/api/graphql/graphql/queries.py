@@ -20,7 +20,7 @@ from graphql import GraphQLResolveInfo
 from makefun import with_signature
 
 from .. import state
-from .. import key_auth
+from .. libs import key_auth
 from api.graphql.session.session import Session
 from api.graphql.session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
 from vyos.opmode import Error as OpModeError

@@ -16,20 +16,22 @@
 #
 #
 # A utility to generate GraphQL schema defintions from typing information of
-# composite functions comprising several requests.
+# (wrappers of) native configsession functions.
 
 import os
+import sys
 import json
 from inspect import signature, getmembers, isfunction, isclass, getmro
 from jinja2 import Template
 
 from vyos.defaults import directories
 if __package__ is None or __package__ == '':
-    from util import snake_to_pascal_case, map_type_name
-    from composite_function import queries, mutations
+    sys.path.append("/usr/libexec/vyos/services/api")
+    from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
+    from config_session_function import queries, mutations
 else:
-    from . util import snake_to_pascal_case, map_type_name
-    from . composite_function import queries, mutations
+    from .. libs.op_mode import snake_to_pascal_case, map_type_name
+    from . config_session_function import queries, mutations
 
 SCHEMA_PATH = directories['api_schema']
 
@@ -55,7 +57,7 @@ type {{ schema_name }}Result {
 }
 
 extend type Query {
-    {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @compositequery
+    {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @configsessionquery
 }
 """
 
@@ -78,7 +80,7 @@ type {{ schema_name }}Result {
 }
 
 extend type Mutation {
-    {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @compositemutation
+    {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @configsessionmutation
 }
 """
 
@@ -101,7 +103,7 @@ def create_schema(func_name: str, func: callable, template: str) -> str:
 
     return res
 
-def generate_composite_definitions():
+def generate_config_session_definitions():
     results = []
     for name,func in queries.items():
         res = create_schema(name, func, query_template)
@@ -112,8 +114,8 @@ def generate_composite_definitions():
         results.append(res)
 
     out = '\n'.join(results)
-    with open(f'{SCHEMA_PATH}/composite.graphql', 'w') as f:
+    with open(f'{SCHEMA_PATH}/configsession.graphql', 'w') as f:
         f.write(out)
 
 if __name__ == '__main__':
-    generate_composite_definitions()
+    generate_config_session_definitions()
