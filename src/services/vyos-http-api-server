@@ -698,6 +698,7 @@ if __name__ == '__main__':
                 app.state.vyos_introspection = False
             # default value is merged in conf_mode http-api.py, if not set
             app.state.vyos_auth_type = server_config['graphql']['authentication']['type']
+            app.state.vyos_token_exp = server_config['graphql']['authentication']['expiration']
     else:
         app.state.vyos_graphql = False
 

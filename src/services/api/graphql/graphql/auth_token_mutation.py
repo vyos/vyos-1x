@@ -14,6 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import jwt
+import datetime
 from typing import Any, Dict
 from ariadne import ObjectType, UnionType
 from graphql import GraphQLResolveInfo
@@ -30,7 +31,11 @@ def auth_token_resolver(obj: Any, info: GraphQLResolveInfo, data: Dict):
     passwd = data['password']
 
     secret = state.settings['secret']
-    res = generate_token(user, passwd, secret)
+    exp_interval = int(state.settings['app'].state.vyos_token_exp)
+    expiration = (datetime.datetime.now(tz=datetime.timezone.utc) +
+                  datetime.timedelta(seconds=exp_interval))
+
+    res = generate_token(user, passwd, secret, expiration)
     if res:
         data['result'] = res
         return {

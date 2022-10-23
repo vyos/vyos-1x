@@ -14,7 +14,7 @@ def init_secret():
     secret = token_hex(16)
     state.settings['secret'] = secret
 
-def generate_token(user: str, passwd: str, secret: str) -> dict:
+def generate_token(user: str, passwd: str, secret: str, exp: int) -> dict:
     if user is None or passwd is None:
         return {}
     if _check_passwd_pam(user, passwd):
@@ -25,7 +25,7 @@ def generate_token(user: str, passwd: str, secret: str) -> dict:
             app.state.vyos_token_users = {}
             users = app.state.vyos_token_users
         user_id = uuid.uuid1().hex
-        payload_data = {'iss': user, 'sub': user_id}
+        payload_data = {'iss': user, 'sub': user_id, 'exp': exp}
         secret = state.settings.get('secret')
         if secret is None:
             return {
