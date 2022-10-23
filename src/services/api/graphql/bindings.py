@@ -19,12 +19,16 @@ from . graphql.mutations import mutation
 from . graphql.directives import directives_dict
 from . graphql.errors import op_mode_error
 from . utils.schema_from_op_mode import generate_op_mode_definitions
+from . utils.schema_from_config_session import generate_config_session_definitions
+from . utils.schema_from_composite import generate_composite_definitions
 from ariadne import make_executable_schema, load_schema_from_path, snake_case_fallback_resolvers
 
 def generate_schema():
     api_schema_dir = vyos.defaults.directories['api_schema']
 
     generate_op_mode_definitions()
+    generate_config_session_definitions()
+    generate_composite_definitions()
 
     type_defs = load_schema_from_path(api_schema_dir)
 
