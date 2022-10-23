@@ -1,0 +1,38 @@
+import jwt
+import uuid
+import pam
+from secrets import token_hex
+
+from .. import state
+
+def _check_passwd_pam(username: str, passwd: str) -> bool:
+    if pam.authenticate(username, passwd):
+        return True
+    return False
+
+def init_secret():
+    secret = token_hex(16)
+    state.settings['secret'] = secret
+
+def generate_token(user: str, passwd: str, secret: str) -> dict:
+    if user is None or passwd is None:
+        return {}
+    if _check_passwd_pam(user, passwd):
+        app = state.settings['app']
+        try:
+            users = app.state.vyos_token_users
+        except AttributeError:
+            app.state.vyos_token_users = {}
+            users = app.state.vyos_token_users
+        user_id = uuid.uuid1().hex
+        payload_data = {'iss': user, 'sub': user_id}
+        secret = state.settings.get('secret')
+        if secret is None:
+            return {
+                    "success": False,
+                    "errors": ['failed secret generation']
+                   }
+        token = jwt.encode(payload=payload_data, key=secret, algorithm="HS256")
+
+        users |= {user_id: user}
+        return {'token': token}
