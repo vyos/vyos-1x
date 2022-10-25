@@ -11,7 +11,8 @@ def _check_passwd_pam(username: str, passwd: str) -> bool:
     return False
 
 def init_secret():
-    secret = token_hex(16)
+    length = int(state.settings['app'].state.vyos_secret_len)
+    secret = token_hex(length)
     state.settings['secret'] = secret
 
 def generate_token(user: str, passwd: str, secret: str, exp: int) -> dict:
