@@ -204,6 +204,10 @@ def apply(nat):
     cmd(f'nft -f {nftables_nat_config}')
     cmd(f'nft -f {nftables_static_nat_conf}')
 
+    if not nat or 'deleted' in nat:
+        os.unlink(nftables_nat_config)
+        os.unlink(nftables_static_nat_conf)
+
     return None
 
 if __name__ == '__main__':

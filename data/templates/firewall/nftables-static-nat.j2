@@ -3,6 +3,7 @@
 {% if first_install is not vyos_defined %}
 delete table ip vyos_static_nat
 {% endif %}
+{% if deleted is not vyos_defined %}
 table ip vyos_static_nat {
     #
     # Destination NAT rules build up here
@@ -10,11 +11,11 @@ table ip vyos_static_nat {
 
     chain PREROUTING {
         type nat hook prerouting priority -100; policy accept;
-{% if static.rule is vyos_defined %}
-{%     for rule, config in static.rule.items() if config.disable is not vyos_defined %}
+{%     if static.rule is vyos_defined %}
+{%         for rule, config in static.rule.items() if config.disable is not vyos_defined %}
     {{ config | nat_static_rule(rule, 'destination') }}
-{%     endfor %}
-{% endif %}
+{%         endfor %}
+{%     endif %}
     }
 
     #
@@ -22,10 +23,11 @@ table ip vyos_static_nat {
     #
     chain POSTROUTING {
         type nat hook postrouting priority 100; policy accept;
-{% if static.rule is vyos_defined %}
-{%     for rule, config in static.rule.items() if config.disable is not vyos_defined %}
+{%     if static.rule is vyos_defined %}
+{%         for rule, config in static.rule.items() if config.disable is not vyos_defined %}
     {{ config | nat_static_rule(rule, 'source') }}
-{%     endfor %}
-{% endif %}
+{%         endfor %}
+{%     endif %}
     }
 }
+{% endif %}
