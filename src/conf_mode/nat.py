@@ -146,6 +146,10 @@ def verify(nat):
             if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
                 Warning(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
+            if not dict_search('translation.address', config) and not dict_search('translation.port', config):
+                if 'exclude' not in config:
+                    raise ConfigError(f'{err_msg} translation requires address and/or port')
+
             addr = dict_search('translation.address', config)
             if addr != None and addr != 'masquerade' and not is_ip_network(addr):
                 for ip in addr.split('-'):
@@ -165,6 +169,10 @@ def verify(nat):
                                   'inbound-interface not specified')
             elif config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
                 Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
+
+            if not dict_search('translation.address', config) and not dict_search('translation.port', config):
+                if 'exclude' not in config:
+                    raise ConfigError(f'{err_msg} translation requires address and/or port')
 
             # common rule verification
             verify_rule(config, err_msg)
