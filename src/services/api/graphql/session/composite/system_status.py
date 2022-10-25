@@ -23,7 +23,7 @@ import importlib.util
 
 from vyos.defaults import directories
 
-from api.graphql.utils.util import load_op_mode_as_module
+from api.graphql.libs.op_mode import load_op_mode_as_module
 
 def get_system_version() -> dict:
     show_version = load_op_mode_as_module('version.py')
