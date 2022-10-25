@@ -26,3 +26,17 @@ class TestVyOSUtil(TestCase):
 
     def test_sysctl_read(self):
         self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
+
+    def test_camel_to_snake_case(self):
+        self.assertEqual(camel_to_snake_case('ConnectionTimeout'),
+                                             'connection_timeout')
+        self.assertEqual(camel_to_snake_case('connectionTimeout'),
+                                             'connection_timeout')
+        self.assertEqual(camel_to_snake_case('TCPConnectionTimeout'),
+                                             'tcp_connection_timeout')
+        self.assertEqual(camel_to_snake_case('TCPPort'),
+                                             'tcp_port')
+        self.assertEqual(camel_to_snake_case('UseHTTPProxy'),
+                                             'use_http_proxy')
+        self.assertEqual(camel_to_snake_case('CustomerID'),
+                                             'customer_id')
