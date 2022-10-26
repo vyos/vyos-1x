@@ -1105,3 +1105,10 @@ def sysctl_write(name, value):
         call(f'sysctl -wq {name}={value}')
         return True
     return False
+
+# approach follows a discussion in:
+# https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
+def camel_to_snake_case(name: str) -> str:
+    pattern = r'\d+|[A-Z]?[a-z]+|\W|[A-Z]{2,}(?=[A-Z][a-z]|\d|\W|$)'
+    words = re.findall(pattern, name)
+    return '_'.join(map(str.lower, words))
