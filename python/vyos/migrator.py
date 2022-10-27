@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,10 +17,8 @@ import sys
 import os
 import json
 import subprocess
-import vyos.version
 import vyos.defaults
-import vyos.systemversions as systemversions
-import vyos.formatversions as formatversions
+import vyos.component_version as component_version
 
 class MigratorError(Exception):
     pass
@@ -42,13 +40,13 @@ class Migrator(object):
         cfg_file = self._config_file
         component_versions = {}
 
-        cfg_versions = formatversions.read_vyatta_versions(cfg_file)
+        cfg_versions = component_version.from_file(cfg_file, vintage='vyatta')
 
         if cfg_versions:
             self._config_file_vintage = 'vyatta'
             component_versions = cfg_versions
 
-        cfg_versions = formatversions.read_vyos_versions(cfg_file)
+        cfg_versions = component_version.from_file(cfg_file, vintage='vyos')
 
         if cfg_versions:
             self._config_file_vintage = 'vyos'
@@ -157,19 +155,15 @@ class Migrator(object):
         """
         Write new versions string.
         """
-        versions_string = formatversions.format_versions_string(cfg_versions)
-
-        os_version_string = vyos.version.get_version()
-
         if self._config_file_vintage == 'vyatta':
-            formatversions.write_vyatta_versions_foot(self._config_file,
-                                                      versions_string,
-                                                      os_version_string)
+            component_version.write_version_footer(cfg_versions,
+                                                   self._config_file,
+                                                   vintage='vyatta')
 
         if self._config_file_vintage == 'vyos':
-            formatversions.write_vyos_versions_foot(self._config_file,
-                                                    versions_string,
-                                                    os_version_string)
+            component_version.write_version_footer(cfg_versions,
+                                                   self._config_file,
+                                                   vintage='vyos')
 
     def save_json_record(self, component_versions: dict):
         """
@@ -200,7 +194,7 @@ class Migrator(object):
             # This will force calling all migration scripts:
             cfg_versions = {}
 
-        sys_versions = systemversions.get_system_component_version()
+        sys_versions = component_version.from_system()
 
         # save system component versions in json file for easy reference
         self.save_json_record(sys_versions)
@@ -216,7 +210,7 @@ class Migrator(object):
         if not self._changed:
             return
 
-        formatversions.remove_versions(cfg_file)
+        component_version.remove_footer(cfg_file)
 
         self.write_config_file_versions(rev_versions)
 
@@ -237,7 +231,7 @@ class VirtualMigrator(Migrator):
         if not self._changed:
             return
 
-        formatversions.remove_versions(cfg_file)
+        component_version.remove_footer(cfg_file)
 
         self.write_config_file_versions(cfg_versions)
 
