@@ -574,6 +574,37 @@ def bytes_to_human(bytes, initial_exponent=0):
     size_string = "{0:.2f} {1}".format(value, suffix)
     return size_string
 
+def human_to_bytes(value):
+    """ Converts a data amount with a unit suffix to bytes, like 2K to 2048 """
+
+    from re import match as re_match
+
+    res = re_match(r'^\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*$', value)
+
+    if not res:
+        raise ValueError(f"'{value}' is not a valid data amount")
+    else:
+        amount = float(res.group(1))
+        unit = res.group(2).lower()
+
+        if unit == 'b':
+            res = amount
+        elif (unit == 'k') or (unit == 'kb'):
+            res = amount * 1024
+        elif (unit == 'm') or (unit == 'mb'):
+            res = amount * 1024**2
+        elif (unit == 'g') or (unit == 'gb'):
+            res = amount * 1024**3
+        elif (unit == 't') or (unit == 'tb'):
+            res = amount * 1024**4
+        else:
+            raise ValueError(f"Unsupported data unit '{unit}'")
+
+    # There cannot be fractional bytes, so we convert them to integer.
+    # However, truncating causes problems with conversion back to human unit,
+    # so we round instead -- that seems to work well enough.
+    return round(res)
+
 def get_cfg_group_id():
     from grp import getgrnam
     from vyos.defaults import cfg_group
