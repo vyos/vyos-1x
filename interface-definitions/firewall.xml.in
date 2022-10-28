@@ -134,6 +134,35 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+          <tagNode name="interface-group">
+            <properties>
+              <help>Firewall interface-group</help>
+              <constraint>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="interface">
+                <properties>
+                  <help>Interface-group member</help>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another interface-group</help>
+                  <completionHelp>
+                    <path>firewall group interface-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
           <tagNode name="ipv6-address-group">
             <properties>
               <help>Firewall ipv6-address-group</help>

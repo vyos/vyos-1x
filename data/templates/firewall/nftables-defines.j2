@@ -77,5 +77,18 @@
     }
 {%         endfor %}
 {%     endif %}
+{%     if group.interface_group is vyos_defined %}
+{%         for group_name, group_conf in group.interface_group.items() %}
+{%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
+    set I_{{ group_name }} {
+        type ifname
+        flags interval
+        auto-merge
+{%             if group_conf.interface is vyos_defined or includes %}
+        elements = { {{ group_conf.interface | nft_nested_group(includes, group.interface_group, 'interface') | join(",") }} }
+{%             endif %}
+    }
+{%         endfor %}
+{%     endif %}
 {% endif %}
 {% endmacro %}

@@ -111,6 +111,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'port-group', 'smoketest_port', 'port', '123'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.com'])
         self.cli_set(['firewall', 'group', 'domain-group', 'smoketest_domain', 'address', 'example.org'])
+        self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'group', 'interface-group', 'smoketest_interface', 'interface', 'vtun0'])
 
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'group', 'network-group', 'smoketest_network'])
@@ -121,6 +123,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '2', 'source', 'group', 'mac-group', 'smoketest_mac'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '3', 'source', 'group', 'domain-group', 'smoketest_domain'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', 'smoketest', 'rule', '4', 'outbound-interface', 'interface-group', 'smoketest_interface'])
 
         self.cli_set(['firewall', 'interface', 'eth0', 'in', 'name', 'smoketest'])
 
@@ -135,7 +139,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['set D_smoketest_domain'],
             ['elements = { 192.0.2.5, 192.0.2.8,'],
             ['192.0.2.10, 192.0.2.11 }'],
-            ['ip saddr @D_smoketest_domain', 'return']
+            ['ip saddr @D_smoketest_domain', 'return'],
+            ['oifname @I_smoketest_interface', 'return']
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
@@ -209,10 +214,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'mss', mss_range])
-        self.cli_set(['firewall', 'name', name, 'rule', '5', 'inbound-interface', interface])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'inbound-interface', 'interface-name', interface])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'action', 'return'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'protocol', 'gre'])
-        self.cli_set(['firewall', 'name', name, 'rule', '6', 'outbound-interface', interface])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'outbound-interface', 'interface-name', interface])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
@@ -290,11 +295,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'destination', 'port', '8888'])
-        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'inbound-interface', interface])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'inbound-interface', 'interface-name', interface])
 
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'action', 'return'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'protocol', 'gre'])
-        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'outbound-interface', interface])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'outbound-interface', 'interface-name', interface])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
 
