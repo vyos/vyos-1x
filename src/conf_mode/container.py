@@ -40,20 +40,7 @@ airbag.enable()
 
 config_containers_registry = '/etc/containers/registries.conf'
 config_containers_storage = '/etc/containers/storage.conf'
-
-def _run_rerun(container_cmd):
-    counter = 0
-    while True:
-        if counter >= 10:
-            break
-        try:
-            _cmd(container_cmd)
-            break
-        except:
-            counter = counter +1
-            sleep(0.5)
-
-    return None
+systemd_unit_path = '/run/systemd/system'
 
 def _cmd(command):
     if os.path.exists('/tmp/vyos.container.debug'):
@@ -122,7 +109,7 @@ def verify(container):
             # of image upgrade and deletion.
             image = container_config['image']
             if run(f'podman image exists {image}') != 0:
-                Warning(f'Image "{image}" used in contianer "{name}" does not exist '\
+                Warning(f'Image "{image}" used in container "{name}" does not exist '\
                         f'locally. Please use "add container image {image}" to add it '\
                         f'to the system! Container "{name}" will not be started!')
 
@@ -136,9 +123,6 @@ def verify(container):
                     raise ConfigError(f'Container network "{network_name}" does not exist!')
 
                 if 'address' in container_config['network'][network_name]:
-                    if 'network' not in container_config:
-                        raise ConfigError(f'Can not use "address" without "network" for container "{name}"!')
-
                     address = container_config['network'][network_name]['address']
                     network = None
                     if is_ipv4(address):
@@ -220,6 +204,71 @@ def verify(container):
 
     return None
 
+def generate_run_arguments(name, container_config):
+    image = container_config['image']
+    memory = container_config['memory']
+    restart = container_config['restart']
+
+    # Add capability options. Should be in uppercase
+    cap_add = ''
+    if 'cap_add' in container_config:
+        for c in container_config['cap_add']:
+            c = c.upper()
+            c = c.replace('-', '_')
+            cap_add += f' --cap-add={c}'
+
+    # Add a host device to the container /dev/x:/dev/x
+    device = ''
+    if 'device' in container_config:
+        for dev, dev_config in container_config['device'].items():
+            source_dev = dev_config['source']
+            dest_dev = dev_config['destination']
+            device += f' --device={source_dev}:{dest_dev}'
+
+    # Check/set environment options "-e foo=bar"
+    env_opt = ''
+    if 'environment' in container_config:
+        for k, v in container_config['environment'].items():
+            env_opt += f" -e \"{k}={v['value']}\""
+
+    # Publish ports
+    port = ''
+    if 'port' in container_config:
+        protocol = ''
+        for portmap in container_config['port']:
+            if 'protocol' in container_config['port'][portmap]:
+                protocol = container_config['port'][portmap]['protocol']
+                protocol = f'/{protocol}'
+            else:
+                protocol = '/tcp'
+            sport = container_config['port'][portmap]['source']
+            dport = container_config['port'][portmap]['destination']
+            port += f' -p {sport}:{dport}{protocol}'
+
+    # Bind volume
+    volume = ''
+    if 'volume' in container_config:
+        for vol, vol_config in container_config['volume'].items():
+            svol = vol_config['source']
+            dvol = vol_config['destination']
+            volume += f' -v {svol}:{dvol}'
+
+    container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
+                         f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
+                         f'--name {name} {device} {port} {volume} {env_opt}'
+    
+    if 'allow_host_networks' in container_config:
+        return f'{container_base_cmd} --net host {image}'
+
+    ip_param = ''
+    networks = ",".join(container_config['network'])
+    for network in container_config['network']:
+        if 'address' in container_config['network'][network]:
+            address = container_config['network'][network]['address']
+            ip_param = f'--ip {address}'
+
+    return f'{container_base_cmd} --net {networks} {ip_param} {image}'
+
 def generate(container):
     # bail out early - looks like removal from running config
     if not container:
@@ -263,6 +312,15 @@ def generate(container):
     render(config_containers_registry, 'container/registries.conf.j2', container)
     render(config_containers_storage, 'container/storage.conf.j2', container)
 
+    if 'name' in container:
+        for name, container_config in container['name'].items():
+            if 'disable' in container_config:
+                continue
+
+            file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
+            run_args = generate_run_arguments(name, container_config)
+            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args})
+
     return None
 
 def apply(container):
@@ -270,8 +328,12 @@ def apply(container):
     # Option "--force" allows to delete containers with any status
     if 'container_remove' in container:
         for name in container['container_remove']:
-            call(f'podman stop --time 3 {name}')
-            call(f'podman rm --force {name}')
+            file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
+            call(f'systemctl stop vyos-container-{name}.service')
+            if os.path.exists(file_path):
+                os.unlink(file_path)
+
+    call('systemctl daemon-reload')
 
     # Delete old networks if needed
     if 'network_remove' in container:
@@ -282,6 +344,7 @@ def apply(container):
                 os.unlink(tmp)
 
     # Add container
+    disabled_new = False
     if 'name' in container:
         for name, container_config in container['name'].items():
             image = container_config['image']
@@ -295,70 +358,17 @@ def apply(container):
                 # check if there is a container by that name running
                 tmp = _cmd('podman ps -a --format "{{.Names}}"')
                 if name in tmp:
-                    _cmd(f'podman stop --time 3 {name}')
-                    _cmd(f'podman rm --force {name}')
+                    file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
+                    call(f'systemctl stop vyos-container-{name}.service')
+                    if os.path.exists(file_path):
+                        disabled_new = True
+                        os.unlink(file_path)
                 continue
 
-            memory = container_config['memory']
-            restart = container_config['restart']
+            cmd(f'systemctl restart vyos-container-{name}.service')
 
-            # Add capability options. Should be in uppercase
-            cap_add = ''
-            if 'cap_add' in container_config:
-                for c in container_config['cap_add']:
-                    c = c.upper()
-                    c = c.replace('-', '_')
-                    cap_add += f' --cap-add={c}'
-
-            # Add a host device to the container /dev/x:/dev/x
-            device = ''
-            if 'device' in container_config:
-                for dev, dev_config in container_config['device'].items():
-                    source_dev = dev_config['source']
-                    dest_dev = dev_config['destination']
-                    device += f' --device={source_dev}:{dest_dev}'
-
-            # Check/set environment options "-e foo=bar"
-            env_opt = ''
-            if 'environment' in container_config:
-                for k, v in container_config['environment'].items():
-                    env_opt += f" -e \"{k}={v['value']}\""
-
-            # Publish ports
-            port = ''
-            if 'port' in container_config:
-                protocol = ''
-                for portmap in container_config['port']:
-                    if 'protocol' in container_config['port'][portmap]:
-                        protocol = container_config['port'][portmap]['protocol']
-                        protocol = f'/{protocol}'
-                    else:
-                        protocol = '/tcp'
-                    sport = container_config['port'][portmap]['source']
-                    dport = container_config['port'][portmap]['destination']
-                    port += f' -p {sport}:{dport}{protocol}'
-
-            # Bind volume
-            volume = ''
-            if 'volume' in container_config:
-                for vol, vol_config in container_config['volume'].items():
-                    svol = vol_config['source']
-                    dvol = vol_config['destination']
-                    volume += f' -v {svol}:{dvol}'
-
-            container_base_cmd = f'podman run --detach --interactive --tty --replace {cap_add} ' \
-                                 f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
-                                 f'--name {name} {device} {port} {volume} {env_opt}'
-            if 'allow_host_networks' in container_config:
-                _run_rerun(f'{container_base_cmd} --net host {image}')
-            else:
-                for network in container_config['network']:
-                    ipparam = ''
-                    if 'address' in container_config['network'][network]:
-                        address = container_config['network'][network]['address']
-                        ipparam = f'--ip {address}'
-
-                    _run_rerun(f'{container_base_cmd} --net {network} {ipparam} {image}')
+    if disabled_new:
+        call('systemctl daemon-reload')
 
     return None
 
