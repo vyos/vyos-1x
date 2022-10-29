@@ -154,6 +154,7 @@ Depends:
   ssl-cert,
   strongswan (>= 5.9),
   strongswan-swanctl (>= 5.9),
+  stunnel4,
   sudo,
   systemd,
   telegraf (>= 1.20),
