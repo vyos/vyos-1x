@@ -67,14 +67,12 @@ table ip vyos_filter {
         {{ conf | nft_default_rule(name_text) }}
     }
 {%     endfor %}
-{%     if group is vyos_defined and group.domain_group is vyos_defined %}
-{%         for name, name_config in group.domain_group.items() %}
-    set D_{{ name }} {
+{%     for set_name in ip_fqdn %}
+    set FQDN_{{ set_name }} {
         type ipv4_addr
         flags interval
     }
-{%         endfor %}
-{%     endif %}
+{%     endfor %}
 {%     for set_name in ns.sets %}
     set RECENT_{{ set_name }} {
         type ipv4_addr
@@ -176,6 +174,12 @@ table ip6 vyos_filter {
 {%             endfor %}
 {%         endif %}
         {{ conf | nft_default_rule(name_text, ipv6=True) }}
+    }
+{%     endfor %}
+{%     for set_name in ip6_fqdn %}
+    set FQDN_{{ set_name }} {
+        type ipv6_addr
+        flags interval
     }
 {%     endfor %}
 {%     for set_name in ns.sets %}

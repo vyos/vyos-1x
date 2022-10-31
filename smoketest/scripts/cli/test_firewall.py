@@ -17,11 +17,13 @@
 import unittest
 
 from glob import glob
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
+from vyos.util import run
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'default': '0', 'test_value': 'disable'},
@@ -76,6 +78,17 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
 
+    def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
+        # Resolver no longer blocks commit, need to wait for daemon to populate set
+        count = 0
+        while count < max_wait:
+            code = run(f'sudo nft get element {table} {set_name} {{ {element} }}')
+            if code == 0:
+                return True
+            count += 1
+            sleep(1)
+        return False
+
     def test_geoip(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'drop'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'se'])
@@ -125,6 +138,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'interface', 'eth0', 'in', 'name', 'smoketest'])
 
         self.cli_commit()
+
+        self.wait_for_domain_resolver('ip vyos_filter', 'D_smoketest_domain', '192.0.2.5')
+
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
             ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'return'],

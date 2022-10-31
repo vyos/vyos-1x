@@ -126,7 +126,7 @@
                     <description>Domain address to match</description>
                   </valueHelp>
                   <constraint>
-                    <regex>[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,99}?(\/.*)?</regex>
+                    <validator name="fqdn"/>
                   </constraint>
                   <multi/>
                 </properties>
@@ -408,6 +408,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/fqdn.xml.i>
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
@@ -419,6 +420,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address-ipv6.xml.i>
+                  #include <include/firewall/fqdn.xml.i>
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group-ipv6.xml.i>
                   #include <include/firewall/port.xml.i>
@@ -572,6 +574,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address.xml.i>
+                  #include <include/firewall/fqdn.xml.i>
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
@@ -583,6 +586,7 @@
                 </properties>
                 <children>
                   #include <include/firewall/address.xml.i>
+                  #include <include/firewall/fqdn.xml.i>
                   #include <include/firewall/geoip.xml.i>
                   #include <include/firewall/source-destination-group.xml.i>
                   #include <include/firewall/port.xml.i>
@@ -655,6 +659,25 @@
           </constraint>
         </properties>
         <defaultValue>disable</defaultValue>
+      </leafNode>
+      <leafNode name="resolver-cache">
+        <properties>
+          <help>Retains last successful value if domain resolution fails</help>
+          <valueless/>
+        </properties>
+      </leafNode>
+      <leafNode name="resolver-interval">
+        <properties>
+          <help>Domain resolver update interval</help>
+          <valueHelp>
+            <format>u32:10-3600</format>
+            <description>Interval (seconds)</description>
+          </valueHelp>
+          <constraint>
+            <validator name="numeric" argument="--range 10-3600"/>
+          </constraint>
+        </properties>
+        <defaultValue>300</defaultValue>
       </leafNode>
       <leafNode name="send-redirects">
         <properties>
