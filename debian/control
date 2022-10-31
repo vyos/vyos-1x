@@ -131,6 +131,7 @@ Depends:
   python3-netifaces,
   python3-paramiko,
   python3-psutil,
+  python3-pyhumps,
   python3-pystache,
   python3-pyudev,
   python3-six,
