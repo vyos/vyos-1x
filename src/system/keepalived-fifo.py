@@ -67,13 +67,13 @@ class KeepalivedFifo:
         # For VRRP configuration to be read, the commit must be finished
         count = 1
         while commit_in_progress():
-            if ( count <= 40 ):
-                logger.debug(f'commit in progress try: {count}')
+            if ( count <= 20 ):
+                logger.debug(f'Attempt to load keepalived configuration aborted due to a commit in progress (attempt {count}/20)')
             else:
-                logger.error(f'commit still in progress after {count} continuing anyway')
+                logger.error(f'Forced keepalived configuration loading despite a commit in progress ({count} wait time expired, not waiting further)')
                 break
             count += 1
-            time.sleep(0.5)
+            time.sleep(1)
 
         try:
             base = ['high-availability', 'vrrp']
