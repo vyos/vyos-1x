@@ -117,13 +117,26 @@ def get_config(config=None):
                     ipsec['ike_group'][group]['proposal'][proposal] = dict_merge(default_values,
                         ipsec['ike_group'][group]['proposal'][proposal])
 
-    if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if dict_search('remote_access.connection', ipsec):
         default_values = defaults(base + ['remote-access', 'connection'])
         for rw in ipsec['remote_access']['connection']:
             ipsec['remote_access']['connection'][rw] = dict_merge(default_values,
               ipsec['remote_access']['connection'][rw])
 
-    if 'remote_access' in ipsec and 'radius' in ipsec['remote_access'] and 'server' in ipsec['remote_access']['radius']:
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if dict_search('remote_access.radius.server', ipsec):
+        # Fist handle the "base" stuff like RADIUS timeout
+        default_values = defaults(base + ['remote-access', 'radius'])
+        if 'server' in default_values:
+            del default_values['server']
+        ipsec['remote_access']['radius'] = dict_merge(default_values,
+                                                      ipsec['remote_access']['radius'])
+
+        # Take care about individual RADIUS servers implemented as tagNodes - this
+        # requires special treatment
         default_values = defaults(base + ['remote-access', 'radius', 'server'])
         for server in ipsec['remote_access']['radius']['server']:
             ipsec['remote_access']['radius']['server'][server] = dict_merge(default_values,

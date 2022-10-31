@@ -49,8 +49,10 @@ eap-radius {
     # Base to use for calculating exponential back off.
     # retransmit_base = 1.4
 
+{% if remote_access.radius.timeout is vyos_defined %}
     # Timeout in seconds before sending first retransmit.
-    # retransmit_timeout = 2.0
+    retransmit_timeout = {{ remote_access.radius.timeout | float }}
+{% endif %}
 
     # Number of times to retransmit a packet before giving up.
     # retransmit_tries = 4
