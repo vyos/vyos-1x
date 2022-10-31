@@ -37,6 +37,7 @@ domain_state = {}
 ipv4_tables = {
     'ip mangle',
     'ip vyos_filter',
+    'ip vyos_nat'
 }
 
 ipv6_tables = {

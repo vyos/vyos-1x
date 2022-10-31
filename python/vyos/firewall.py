@@ -34,6 +34,8 @@ from vyos.util import dict_search_args
 from vyos.util import dict_search_recursive
 from vyos.util import run
 
+# Domain Resolver
+
 def fqdn_config_parse(firewall):
     firewall['ip_fqdn'] = {}
     firewall['ip6_fqdn'] = {}

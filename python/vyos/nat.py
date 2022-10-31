@@ -85,8 +85,13 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             translation_str += f' {",".join(options)}'
 
     for target in ['source', 'destination']:
+        if target not in rule_conf:
+            continue
+
+        side_conf = rule_conf[target]
         prefix = target[:1]
-        addr = dict_search_args(rule_conf, target, 'address')
+
+        addr = dict_search_args(side_conf, 'address')
         if addr and not (ignore_type_addr and target == nat_type):
             operator = ''
             if addr[:1] == '!':
@@ -94,7 +99,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 addr = addr[1:]
             output.append(f'{ip_prefix} {prefix}addr {operator} {addr}')
 
-        addr_prefix = dict_search_args(rule_conf, target, 'prefix')
+        addr_prefix = dict_search_args(side_conf, 'prefix')
         if addr_prefix and ipv6:
             operator = ''
             if addr_prefix[:1] == '!':
@@ -102,7 +107,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 addr_prefix = addr[1:]
             output.append(f'ip6 {prefix}addr {operator} {addr_prefix}')
 
-        port = dict_search_args(rule_conf, target, 'port')
+        port = dict_search_args(side_conf, 'port')
         if port:
             protocol = rule_conf['protocol']
             if protocol == 'tcp_udp':
@@ -112,6 +117,51 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
                 operator = '!='
                 port = port[1:]
             output.append(f'{protocol} {prefix}port {operator} {{ {port} }}')
+
+        if 'group' in side_conf:
+            group = side_conf['group']
+            if 'address_group' in group and not (ignore_type_addr and target == nat_type):
+                group_name = group['address_group']
+                operator = ''
+                if group_name[0] == '!':
+                    operator = '!='
+                    group_name = group_name[1:]
+                output.append(f'{ip_prefix} {prefix}addr {operator} @A_{group_name}')
+            # Generate firewall group domain-group
+            elif 'domain_group' in group and not (ignore_type_addr and target == nat_type):
+                group_name = group['domain_group']
+                operator = ''
+                if group_name[0] == '!':
+                    operator = '!='
+                    group_name = group_name[1:]
+                output.append(f'{ip_prefix} {prefix}addr {operator} @D_{group_name}')
+            elif 'network_group' in group and not (ignore_type_addr and target == nat_type):
+                group_name = group['network_group']
+                operator = ''
+                if group_name[0] == '!':
+                    operator = '!='
+                    group_name = group_name[1:]
+                output.append(f'{ip_prefix} {prefix}addr {operator} @N_{group_name}')
+            if 'mac_group' in group:
+                group_name = group['mac_group']
+                operator = ''
+                if group_name[0] == '!':
+                    operator = '!='
+                    group_name = group_name[1:]
+                output.append(f'ether {prefix}addr {operator} @M_{group_name}')
+            if 'port_group' in group:
+                proto = rule_conf['protocol']
+                group_name = group['port_group']
+
+                if proto == 'tcp_udp':
+                    proto = 'th'
+
+                operator = ''
+                if group_name[0] == '!':
+                    operator = '!='
+                    group_name = group_name[1:]
+
+                output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
     output.append('counter')
 
