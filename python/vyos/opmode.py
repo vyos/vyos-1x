@@ -101,6 +101,10 @@ def _get_arg_type(t):
         return t
 
 def _normalize_field_name(name):
+    # Convert the name to string if it is not
+    # (in some cases they may be numbers)
+    name = str(name)
+
     # Replace all separators with underscores
     name = re.sub(r'(\s|[\(\)\[\]\{\}\-\.\,:\"\'\`])+', '_', name)
 

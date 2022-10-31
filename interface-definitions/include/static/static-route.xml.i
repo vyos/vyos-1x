@@ -14,6 +14,7 @@
     #include <include/static/static-route-blackhole.xml.i>
     #include <include/static/static-route-reject.xml.i>
     #include <include/dhcp-interface.xml.i>
+    #include <include/generic-description.xml.i>
     <tagNode name="interface">
       <properties>
         <help>Next-hop IPv4 router interface</help>
