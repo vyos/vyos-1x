@@ -71,7 +71,7 @@ topology {{ server.topology }}
 {%             endif %}
 {%             for subnet in server.subnet %}
 {%                 if subnet | is_ipv4 %}
-server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} nopool
+server {{ subnet | address_from_cidr }} {{ subnet | netmask_from_cidr }} {{ 'nopool' if server.client_ip_pool is vyos_defined and server.client_ip_pool.disable is not vyos_defined else '' }}
 {# First ip address is used as gateway. It's allows to use metrics #}
 {%                     if server.push_route is vyos_defined %}
 {%                         for route, route_config in server.push_route.items() %}
@@ -81,15 +81,6 @@ push "route {{ route | address_from_cidr }} {{ route | netmask_from_cidr }} {{ s
 push "route-ipv6 {{ route }}"
 {%                             endif %}
 {%                         endfor %}
-{%                     endif %}
-{# OpenVPN assigns the first IP address to its local interface so the pool used #}
-{# in net30 topology - where each client receives a /30 must start from the second subnet #}
-{%                     if server.topology is vyos_defined('net30') %}
-ifconfig-pool {{ subnet | inc_ip('4') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tap' else '' }}
-{%                     else %}
-{# OpenVPN assigns the first IP address to its local interface so the pool must #}
-{# start from the second address and end on the last address #}
-ifconfig-pool {{ subnet | first_host_address | inc_ip('1') }} {{ subnet | last_host_address | dec_ip('1') }} {{ subnet | netmask_from_cidr if device_type == 'tun' else '' }}
 {%                     endif %}
 {%                 elif subnet | is_ipv6 %}
 server-ipv6 {{ subnet }}
