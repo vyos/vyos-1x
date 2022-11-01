@@ -329,9 +329,6 @@ def verify(openvpn):
             if v6_subnets > 1:
                 raise ConfigError('Cannot specify more than 1 IPv6 server subnet')
 
-            if v6_subnets > 0 and v4_subnets == 0:
-                raise ConfigError('IPv6 server requires an IPv4 server subnet')
-
             for subnet in tmp:
                 if is_ipv4(subnet):
                     subnet = IPv4Network(subnet)
