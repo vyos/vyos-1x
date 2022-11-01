@@ -17,8 +17,11 @@ import os
 import re
 import typing
 import importlib.util
+from typing import Union
+from humps import decamelize
 
 from vyos.defaults import directories
+from vyos.opmode import _normalize_field_names
 
 def load_as_module(name: str, path: str):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -98,3 +101,6 @@ def map_type_name(type_name: type, optional: bool = False) -> str:
 
     # scalar 'Generic' is defined in schema.graphql
     return 'Generic'
+
+def normalize_output(result: Union[dict, list]) -> Union[dict, list]:
+    return _normalize_field_names(decamelize(result))
