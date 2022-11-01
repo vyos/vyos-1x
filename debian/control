@@ -25,6 +25,7 @@ Build-Depends:
   python3-setuptools,
   python3-sphinx,
   python3-xmltodict,
+  python3-pyhumps,
   quilt,
   whois
 Standards-Version: 3.9.6
