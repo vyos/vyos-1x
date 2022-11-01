@@ -370,6 +370,10 @@ def verify(openvpn):
                         for v4PoolNet in v4PoolNets:
                             if IPv4Address(client['ip'][0]) in v4PoolNet:
                                 print(f'Warning: Client "{client["name"]}" IP {client["ip"][0]} is in server IP pool, it is not reserved for this client.')
+            # configuring a client_ip_pool will set 'server ... nopool' which is currently incompatible with 'server-ipv6' (probably to be fixed upstream)
+            for subnet in (dict_search('server.subnet', openvpn) or []):
+                if is_ipv6(subnet):
+                    raise ConfigError(f'Setting client-ip-pool is incompatible having an IPv6 server subnet.')
 
         for subnet in (dict_search('server.subnet', openvpn) or []):
             if is_ipv6(subnet):
