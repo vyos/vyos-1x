@@ -3,6 +3,7 @@
 "conntrack.py",
 "container.py",
 "cpu.py",
+"log.py",
 "memory.py",
 "nat.py",
 "neighbor.py",
