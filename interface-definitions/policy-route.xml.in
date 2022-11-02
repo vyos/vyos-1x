@@ -12,6 +12,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
+          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>
@@ -65,6 +66,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
+          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>

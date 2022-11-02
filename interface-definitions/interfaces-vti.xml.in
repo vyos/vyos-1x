@@ -25,7 +25,6 @@
           #include <include/interface/mirror.xml.i>
           #include <include/interface/redirect.xml.i>
           #include <include/interface/vrf.xml.i>
-          #include <include/interface/interface-policy.xml.i>
         </children>
       </tagNode>
     </children>

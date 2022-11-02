@@ -35,13 +35,13 @@ cache = False
 domain_state = {}
 
 ipv4_tables = {
-    'ip mangle',
+    'ip vyos_mangle',
     'ip vyos_filter',
     'ip vyos_nat'
 }
 
 ipv6_tables = {
-    'ip6 mangle',
+    'ip6 vyos_mangle',
     'ip6 vyos_filter'
 }
 

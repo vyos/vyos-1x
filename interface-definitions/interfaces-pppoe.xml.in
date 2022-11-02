@@ -19,7 +19,6 @@
           #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/dial-on-demand.xml.i>
-          #include <include/interface/interface-policy.xml.i>
           #include <include/interface/no-default-route.xml.i>
           #include <include/interface/default-route-distance.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
