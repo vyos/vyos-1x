@@ -43,7 +43,10 @@ def _alphanum_key(key):
 def _get_vici_sas():
     from vici import Session as vici_session
 
-    session = vici_session()
+    try:
+        session = vici_session()
+    except Exception:
+        raise vyos.opmode.UnconfiguredSubsystem("IPsec not initialized")
     sas = list(session.list_sas())
     return sas
 

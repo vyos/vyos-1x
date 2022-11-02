@@ -127,32 +127,44 @@
                       </leafNode>
                       <leafNode name="type">
                         <properties>
-                          <help>Public key type</help>
+                          <help>SSH public key type</help>
                           <completionHelp>
-                            <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519</list>
+                            <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519 ecdsa-sk ed25519-sk</list>
                           </completionHelp>
                           <valueHelp>
                             <format>ssh-dss</format>
-                            <description/>
+                            <description>Digital Signature Algorithm (DSA) key support</description>
                           </valueHelp>
                           <valueHelp>
                             <format>ssh-rsa</format>
-                            <description/>
+                            <description>Key pair based on RSA algorithm</description>
                           </valueHelp>
                           <valueHelp>
                             <format>ecdsa-sha2-nistp256</format>
-                            <description/>
+                            <description>Elliptic Curve DSA with NIST P-256 curve</description>
                           </valueHelp>
                           <valueHelp>
                             <format>ecdsa-sha2-nistp384</format>
-                            <description/>
+                            <description>Elliptic Curve DSA with NIST P-384 curve</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ecdsa-sha2-nistp521</format>
+                            <description>Elliptic Curve DSA with NIST P-521 curve</description>
                           </valueHelp>
                           <valueHelp>
                             <format>ssh-ed25519</format>
-                            <description/>
+                            <description>Edwards-curve DSA with elliptic curve 25519</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ecdsa-sk</format>
+                            <description>Elliptic Curve DSA security key</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ed25519-sk</format>
+                            <description>Elliptic curve 25519 security key</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519)</regex>
+                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519|ecdsa-sk|ed25519-sk)</regex>
                           </constraint>
                         </properties>
                       </leafNode>

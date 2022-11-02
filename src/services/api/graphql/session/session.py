@@ -24,7 +24,7 @@ from vyos.defaults import directories
 from vyos.template import render
 from vyos.opmode import Error as OpModeError
 
-from api.graphql.utils.util import load_op_mode_as_module, split_compound_op_mode_name
+from api.graphql.libs.op_mode import load_op_mode_as_module, split_compound_op_mode_name
 
 op_mode_include_file = os.path.join(directories['data'], 'op-mode-standardized.json')
 

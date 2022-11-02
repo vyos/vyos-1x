@@ -107,7 +107,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <node name="gql">
+              <node name="graphql">
                 <properties>
                   <help>GraphQL support</help>
                 </properties>
@@ -118,6 +118,59 @@
                       <valueless/>
                     </properties>
                   </leafNode>
+                  <node name="authentication">
+                    <properties>
+                      <help>GraphQL authentication</help>
+                    </properties>
+                    <children>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Authentication type</help>
+                          <completionHelp>
+                            <list>key token</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>key</format>
+                            <description>Use API keys</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>token</format>
+                            <description>Use JWT token</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(key|token)</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>key</defaultValue>
+                      </leafNode>
+                      <leafNode name="expiration">
+                        <properties>
+                          <help>Token time to expire in seconds</help>
+                          <valueHelp>
+                            <format>u32:60-31536000</format>
+                            <description>Token lifetime in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 60-31536000"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>3600</defaultValue>
+                      </leafNode>
+                      <leafNode name="secret-length">
+                        <properties>
+                          <help>Length of shared secret in bytes</help>
+                          <valueHelp>
+                            <format>u32:16-65535</format>
+                            <description>Byte length of generated shared secret</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 16-65535"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>32</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </node>
               <node name="cors">

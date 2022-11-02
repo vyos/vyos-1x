@@ -16,6 +16,7 @@
 
 import jmespath
 import json
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -27,6 +28,9 @@ base_path = ['nat']
 src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 static_path = base_path + ['static']
+
+nftables_nat_config = '/run/nftables_nat.conf'
+nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
 
 class TestNAT(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -40,6 +44,8 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        self.assertFalse(os.path.exists(nftables_nat_config))
+        self.assertFalse(os.path.exists(nftables_static_nat_conf))
 
     def verify_nftables(self, nftables_search, table, inverse=False, args=''):
         nftables_output = cmd(f'sudo nft {args} list table {table}')

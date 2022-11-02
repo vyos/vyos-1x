@@ -1,5 +1,5 @@
 
-from . import state
+from .. import state
 
 def check_auth(key_list, key):
     if not key_list:

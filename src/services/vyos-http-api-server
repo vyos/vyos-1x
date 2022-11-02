@@ -647,20 +647,21 @@ def reset_op(data: ResetModel):
 ###
 
 def graphql_init(fast_api_app):
-    from api.graphql.bindings import generate_schema
-
+    from api.graphql.libs.token_auth import get_user_context
     api.graphql.state.init()
     api.graphql.state.settings['app'] = app
 
+    # import after initializaion of state
+    from api.graphql.bindings import generate_schema
     schema = generate_schema()
 
     in_spec = app.state.vyos_introspection
 
     if app.state.vyos_origins:
         origins = app.state.vyos_origins
-        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, debug=True, introspection=in_spec), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
+        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
     else:
-        app.add_route('/graphql', GraphQL(schema, debug=True, introspection=in_spec))
+        app.add_route('/graphql', GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec))
 
 ###
 
@@ -688,16 +689,21 @@ if __name__ == '__main__':
     app.state.vyos_debug = server_config['debug']
     app.state.vyos_strict = server_config['strict']
     app.state.vyos_origins = server_config.get('cors', {}).get('allow_origin', [])
-    if 'gql' in server_config:
-        app.state.vyos_gql = True
-        if isinstance(server_config['gql'], dict) and 'introspection' in server_config['gql']:
-            app.state.vyos_introspection = True
-        else:
-            app.state.vyos_introspection = False
+    if 'graphql' in server_config:
+        app.state.vyos_graphql = True
+        if isinstance(server_config['graphql'], dict):
+            if 'introspection' in server_config['graphql']:
+                app.state.vyos_introspection = True
+            else:
+                app.state.vyos_introspection = False
+            # default value is merged in conf_mode http-api.py, if not set
+            app.state.vyos_auth_type = server_config['graphql']['authentication']['type']
+            app.state.vyos_token_exp = server_config['graphql']['authentication']['expiration']
+            app.state.vyos_secret_len = server_config['graphql']['authentication']['secret_length']
     else:
-        app.state.vyos_gql = False
+        app.state.vyos_graphql = False
 
-    if app.state.vyos_gql:
+    if app.state.vyos_graphql:
         graphql_init(app)
 
     try:

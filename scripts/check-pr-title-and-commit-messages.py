@@ -7,7 +7,7 @@ import requests
 from pprint import pprint
 
 # Use the same regex for PR title and commit messages for now
-title_regex = r'^(([a-zA-Z]+:\s)?)T\d+:\s+[^\s]+.*'
+title_regex = r'^(([a-zA-Z.]+:\s)?)T\d+:\s+[^\s]+.*'
 commit_regex = title_regex
 
 def check_pr_title(title):

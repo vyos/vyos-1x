@@ -24,6 +24,7 @@ add rule ip raw NAT_CONNTRACK counter accept
 {% if first_install is not vyos_defined %}
 delete table ip vyos_nat
 {% endif %}
+{% if deleted is not vyos_defined %}
 table ip vyos_nat {
     #
     # Destination NAT rules build up here
@@ -31,11 +32,11 @@ table ip vyos_nat {
     chain PREROUTING {
         type nat hook prerouting priority -100; policy accept;
         counter jump VYOS_PRE_DNAT_HOOK
-{% if destination.rule is vyos_defined %}
-{%     for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
+{%     if destination.rule is vyos_defined %}
+{%         for rule, config in destination.rule.items() if config.disable is not vyos_defined %}
         {{ config | nat_rule(rule, 'destination') }}
-{%     endfor %}
-{% endif %}
+{%         endfor %}
+{%     endif %}
     }
 
     #
@@ -44,11 +45,11 @@ table ip vyos_nat {
     chain POSTROUTING {
         type nat hook postrouting priority 100; policy accept;
         counter jump VYOS_PRE_SNAT_HOOK
-{% if source.rule is vyos_defined %}
-{%     for rule, config in source.rule.items() if config.disable is not vyos_defined %}
+{%     if source.rule is vyos_defined %}
+{%         for rule, config in source.rule.items() if config.disable is not vyos_defined %}
         {{ config | nat_rule(rule, 'source') }}
-{%     endfor %}
-{% endif %}
+{%         endfor %}
+{%     endif %}
     }
 
     chain VYOS_PRE_DNAT_HOOK {
@@ -59,3 +60,4 @@ table ip vyos_nat {
         return
     }
 }
+{% endif %}

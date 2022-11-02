@@ -20,6 +20,16 @@ import sys
 import vyos.opmode
 from vyos.util import cmd
 
+# FIY: As of coreutils from Debian Buster and Bullseye,
+# the outpt looks like this:
+#
+# $ df -h -t ext4 --output=source,size,used,avail,pcent
+# Filesystem      Size  Used Avail Use%
+# /dev/sda1        16G  7.6G  7.3G  51%
+#
+# Those field names are automatically normalized by vyos.opmode.run,
+# so we don't touch them here,
+# and only normalize values.
 
 def _get_system_storage(only_persistent=False):
     if not only_persistent:
@@ -32,10 +42,18 @@ def _get_system_storage(only_persistent=False):
     return res
 
 def _get_raw_data():
+    from re import sub as re_sub
+    from vyos.util import human_to_bytes
+
     out =  _get_system_storage(only_persistent=True)
     lines = out.splitlines()
     lists = [l.split() for l in lines]
     res = {lists[0][i]: lists[1][i] for i in range(len(lists[0]))}
+
+    res["Size"] = human_to_bytes(res["Size"])
+    res["Used"] = human_to_bytes(res["Used"])
+    res["Avail"] = human_to_bytes(res["Avail"])
+    res["Use%"] = re_sub(r'%', '', res["Use%"])
 
     return res
 
