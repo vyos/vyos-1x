@@ -1,4 +1,5 @@
 [
+"bgp.py",
 "bridge.py",
 "conntrack.py",
 "container.py",
