@@ -218,7 +218,7 @@
                 <properties>
                   <help>Mac-group member</help>
                   <valueHelp>
-                    <format>&lt;MAC address&gt;</format>
+                    <format>macaddr</format>
                     <description>MAC address to match</description>
                   </valueHelp>
                   <constraint>
