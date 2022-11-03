@@ -151,7 +151,7 @@
                         <description>VLAN id range allowed on this interface (use '-' as delimiter)</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="allowed-vlan"/>
+                        <validator name="numeric" argument="--allow-range --range 1-4094"/>
                       </constraint>
                       <constraintErrorMessage>not a valid VLAN ID value or range</constraintErrorMessage>
                       <multi/>
