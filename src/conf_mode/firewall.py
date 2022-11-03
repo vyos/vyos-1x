@@ -27,12 +27,8 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 # from vyos.configverify import verify_interface_exists
+from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
-from vyos.firewall import get_ips_domains_dict
-from vyos.firewall import nft_add_set_elements
-from vyos.firewall import nft_flush_set
-from vyos.firewall import nft_init_set
-from vyos.firewall import nft_update_set_elements
 from vyos.template import render
 from vyos.util import call
 from vyos.util import cmd
@@ -45,6 +41,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+nat_conf_script = '/usr/libexec/vyos/conf_mode/nat.py'
 policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
@@ -162,7 +159,7 @@ def get_config(config=None):
         for zone in firewall['zone']:
             firewall['zone'][zone] = dict_merge(default_values, firewall['zone'][zone])
 
-    firewall['policy_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+    firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)
@@ -172,6 +169,8 @@ def get_config(config=None):
                                         no_tag_node_value_mangle=True)
 
     firewall['geoip_updated'] = geoip_updated(conf, firewall)
+
+    fqdn_config_parse(firewall)
 
     return firewall
 
@@ -232,29 +231,28 @@ def verify_rule(firewall, rule_conf, ipv6):
         if side in rule_conf:
             side_conf = rule_conf[side]
 
-            if dict_search_args(side_conf, 'geoip', 'country_code'):
-                if 'address' in side_conf:
-                    raise ConfigError('Address and GeoIP cannot both be defined')
-
-                if dict_search_args(side_conf, 'group', 'address_group'):
-                    raise ConfigError('Address-group and GeoIP cannot both be defined')
-
-                if dict_search_args(side_conf, 'group', 'network_group'):
-                    raise ConfigError('Network-group and GeoIP cannot both be defined')
+            if len({'address', 'fqdn', 'geoip'} & set(side_conf)) > 1:
+                raise ConfigError('Only one of address, fqdn or geoip can be specified')
 
             if 'group' in side_conf:
-                if {'address_group', 'network_group'} <= set(side_conf['group']):
-                    raise ConfigError('Only one address-group or network-group can be specified')
+                if len({'address_group', 'network_group', 'domain_group'} & set(side_conf['group'])) > 1:
+                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
 
                 for group in valid_groups:
                     if group in side_conf['group']:
                         group_name = side_conf['group'][group]
 
+                        fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
+                        error_group = fw_group.replace("_", "-")
+
+                        if group in ['address_group', 'network_group', 'domain_group']:
+                            types = [t for t in ['address', 'fqdn', 'geoip'] if t in side_conf]
+                            if types:
+                                raise ConfigError(f'{error_group} and {types[0]} cannot both be defined')
+
                         if group_name and group_name[0] == '!':
                             group_name = group_name[1:]
 
-                        fw_group = f'ipv6_{group}' if ipv6 and group in ['address_group', 'network_group'] else group
-                        error_group = fw_group.replace("_", "-")
                         group_obj = dict_search_args(firewall, 'group', fw_group, group_name)
 
                         if group_obj is None:
@@ -466,6 +464,12 @@ def post_apply_trap(firewall):
 
                 cmd(base_cmd + ' '.join(objects))
 
+def resync_nat():
+    # Update nat as firewall groups were updated
+    tmp, out = rc_cmd(nat_conf_script)
+    if tmp > 0:
+        Warning(f'Failed to re-apply nat configuration! {out}')
+
 def resync_policy_route():
     # Update policy route as firewall groups were updated
     tmp, out = rc_cmd(policy_route_conf_script)
@@ -477,31 +481,19 @@ def apply(firewall):
     if install_result == 1:
         raise ConfigError(f'Failed to apply firewall: {output}')
 
-    # set firewall group domain-group xxx
-    if 'group' in firewall:
-        if 'domain_group' in firewall['group']:
-            # T970 Enable a resolver (systemd daemon) that checks
-            # domain-group addresses and update entries for domains by timeout
-            # If router loaded without internet connection or for synchronization
-            call('systemctl restart vyos-domain-group-resolve.service')
-            for group, group_config in firewall['group']['domain_group'].items():
-                domains = []
-                if group_config.get('address') is not None:
-                    for address in group_config.get('address'):
-                        domains.append(address)
-                # Add elements to domain-group, try to resolve domain => ip
-                # and add elements to nft set
-                ip_dict = get_ips_domains_dict(domains)
-                elements = sum(ip_dict.values(), [])
-                nft_init_set(f'D_{group}')
-                nft_add_set_elements(f'D_{group}', elements)
-        else:
-            call('systemctl stop vyos-domain-group-resolve.service')
-
     apply_sysfs(firewall)
 
-    if firewall['policy_resync']:
+    if firewall['group_resync']:
+        resync_nat()
         resync_policy_route()
+
+    # T970 Enable a resolver (systemd daemon) that checks
+    # domain-group/fqdn addresses and update entries for domains by timeout
+    # If router loaded without internet connection or for synchronization
+    domain_action = 'stop'
+    if dict_search_args(firewall, 'group', 'domain_group') or firewall['ip_fqdn'] or firewall['ip6_fqdn']:
+        domain_action = 'restart'
+    call(f'systemctl {domain_action} vyos-domain-resolver.service')
 
     if firewall['geoip_updated']:
         # Call helper script to Update set contents

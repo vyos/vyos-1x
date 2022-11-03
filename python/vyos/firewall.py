@@ -20,6 +20,9 @@ import os
 import re
 
 from pathlib import Path
+from socket import AF_INET
+from socket import AF_INET6
+from socket import getaddrinfo
 from time import strftime
 
 from vyos.remote import download
@@ -31,65 +34,31 @@ from vyos.util import dict_search_args
 from vyos.util import dict_search_recursive
 from vyos.util import run
 
+# Domain Resolver
 
-# Functions for firewall group domain-groups
-def get_ips_domains_dict(list_domains):
-    """
-    Get list of IPv4 addresses by list of domains
-    Ex: get_ips_domains_dict(['ex1.com', 'ex2.com'])
-        {'ex1.com': ['192.0.2.1'], 'ex2.com': ['192.0.2.2', '192.0.2.3']}
-    """
-    from socket import gethostbyname_ex
-    from socket import gaierror
+def fqdn_config_parse(firewall):
+    firewall['ip_fqdn'] = {}
+    firewall['ip6_fqdn'] = {}
 
-    ip_dict = {}
-    for domain in list_domains:
-        try:
-            _, _, ips = gethostbyname_ex(domain)
-            ip_dict[domain] = ips
-        except gaierror:
-            pass
+    for domain, path in dict_search_recursive(firewall, 'fqdn'):
+        fw_name = path[1] # name/ipv6-name
+        rule = path[3] # rule id
+        suffix = path[4][0] # source/destination (1 char)
+        set_name = f'{fw_name}_{rule}_{suffix}'
+            
+        if path[0] == 'name':
+            firewall['ip_fqdn'][set_name] = domain
+        elif path[0] == 'ipv6_name':
+            firewall['ip6_fqdn'][set_name] = domain
 
-    return ip_dict
+def fqdn_resolve(fqdn, ipv6=False):
+    try:
+        res = getaddrinfo(fqdn, None, AF_INET6 if ipv6 else AF_INET)
+        return set(item[4][0] for item in res)
+    except:
+        return None
 
-def nft_init_set(group_name, table="vyos_filter", family="ip"):
-    """
-    table ip vyos_filter {
-        set GROUP_NAME
-            type ipv4_addr
-           flags interval
-        }
-    """
-    return call(f'nft add set ip {table} {group_name} {{ type ipv4_addr\\; flags interval\\; }}')
-
-
-def nft_add_set_elements(group_name, elements, table="vyos_filter", family="ip"):
-    """
-    table ip vyos_filter {
-        set GROUP_NAME {
-            type ipv4_addr
-            flags interval
-            elements = { 192.0.2.1, 192.0.2.2 }
-        }
-    """
-    elements = ", ".join(elements)
-    return call(f'nft add element {family} {table} {group_name} {{ {elements} }} ')
-
-def nft_flush_set(group_name, table="vyos_filter", family="ip"):
-    """
-    Flush elements of nft set
-    """
-    return call(f'nft flush set {family} {table} {group_name}')
-
-def nft_update_set_elements(group_name, elements, table="vyos_filter", family="ip"):
-    """
-    Update elements of nft set
-    """
-    flush_set = nft_flush_set(group_name, table="vyos_filter", family="ip")
-    nft_add_set = nft_add_set_elements(group_name, elements, table="vyos_filter", family="ip")
-    return flush_set, nft_add_set
-
-# END firewall group domain-group (sets)
+# End Domain Resolver
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle
@@ -150,6 +119,13 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 if suffix[0] == '!':
                     suffix = f'!= {suffix[1:]}'
                 output.append(f'{ip_name} {prefix}addr {suffix}')
+
+            if 'fqdn' in side_conf:
+                fqdn = side_conf['fqdn']
+                operator = ''
+                if fqdn[0] == '!':
+                    operator = '!='
+                output.append(f'{ip_name} {prefix}addr {operator} @FQDN_{fw_name}_{rule_id}_{prefix}')
 
             if dict_search_args(side_conf, 'geoip', 'country_code'):
                 operator = ''

@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
 
+{% import 'firewall/nftables-defines.j2' as group_tmpl %}
+
 {% if helper_functions is vyos_defined('remove') %}
 {# NAT if going to be disabled - remove rules and targets from nftables #}
 {%     set base_command = 'delete rule ip raw' %}
@@ -59,5 +61,7 @@ table ip vyos_nat {
     chain VYOS_PRE_SNAT_HOOK {
         return
     }
+
+{{ group_tmpl.groups(firewall_group, False) }}
 }
 {% endif %}
