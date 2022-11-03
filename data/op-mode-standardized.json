@@ -4,6 +4,7 @@
 "conntrack.py",
 "container.py",
 "cpu.py",
+"dhcp.py",
 "log.py",
 "memory.py",
 "nat.py",

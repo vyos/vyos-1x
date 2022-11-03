@@ -16,7 +16,7 @@
                 <properties>
                   <help>Show DHCP server leases</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases</command>
+                <command>sudo ${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -82,7 +82,7 @@
                 <properties>
                   <help>Show DHCPv6 server leases</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases</command>
+                <command>sudo ${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
