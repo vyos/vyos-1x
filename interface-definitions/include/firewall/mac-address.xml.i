@@ -3,7 +3,7 @@
   <properties>
     <help>MAC address</help>
     <valueHelp>
-      <format>macaddr;</format>
+      <format>macaddr</format>
       <description>MAC address to match</description>
     </valueHelp>
     <valueHelp>
@@ -11,7 +11,8 @@
       <description>Match everything except the specified MAC address</description>
     </valueHelp>
     <constraint>
-      <validator name="mac-address-firewall"/>
+      <validator name="mac-address"/>
+      <validator name="mac-address-exclude"/>
     </constraint>
   </properties>
 </leafNode>
