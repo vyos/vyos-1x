@@ -47,7 +47,10 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         super(TestContainer, cls).setUpClass()
 
         # Load image for smoketest provided in vyos-build
-        cmd(f'cat {busybox_image_path} | sudo podman load')
+        try:
+            cmd(f'cat {busybox_image_path} | sudo podman load')
+        except:
+            cls.skipTest(cls, reason='busybox image not available')
 
     @classmethod
     def tearDownClass(cls):
