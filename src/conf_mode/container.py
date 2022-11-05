@@ -207,6 +207,7 @@ def verify(container):
 def generate_run_arguments(name, container_config):
     image = container_config['image']
     memory = container_config['memory']
+    shared_memory = container_config['shared_memory']
     restart = container_config['restart']
 
     # Add capability options. Should be in uppercase
@@ -254,9 +255,9 @@ def generate_run_arguments(name, container_config):
             volume += f' -v {svol}:{dvol}'
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
-                         f'--memory {memory}m --memory-swap 0 --restart {restart} ' \
+                         f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
                          f'--name {name} {device} {port} {volume} {env_opt}'
-    
+
     if 'allow_host_networks' in container_config:
         return f'{container_base_cmd} --net host {image}'
 
