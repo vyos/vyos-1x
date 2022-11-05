@@ -32,6 +32,7 @@ from vyos.util import cmd
 from vyos.util import run
 from vyos.util import check_kmod
 from vyos.util import dict_search
+from vyos.util import dict_search_args
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -47,6 +48,13 @@ else:
 nftables_nat_config = '/run/nftables_nat.conf'
 nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
 
+valid_groups = [
+    'address_group',
+    'domain_group',
+    'network_group',
+    'port_group'
+]
+
 def get_handler(json, chain, target):
     """ Get nftable rule handler number of given chain/target combination.
     Handler is required when adding NAT/Conntrack helper targets """
@@ -60,7 +68,7 @@ def get_handler(json, chain, target):
     return None
 
 
-def verify_rule(config, err_msg):
+def verify_rule(config, err_msg, groups_dict):
     """ Common verify steps used for both source and destination NAT """
 
     if (dict_search('translation.port', config) != None or
@@ -77,6 +85,45 @@ def verify_rule(config, err_msg):
                              'Cannot use ports with an IPv4 network as translation address as it\n' \
                              'statically maps a whole network of addresses onto another\n' \
                              'network of addresses')
+
+    for side in ['destination', 'source']:
+        if side in config:
+            side_conf = config[side]
+
+            if len({'address', 'fqdn'} & set(side_conf)) > 1:
+                raise ConfigError('Only one of address, fqdn or geoip can be specified')
+
+            if 'group' in side_conf:
+                if len({'address_group', 'network_group', 'domain_group'} & set(side_conf['group'])) > 1:
+                    raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+
+                for group in valid_groups:
+                    if group in side_conf['group']:
+                        group_name = side_conf['group'][group]
+                        error_group = group.replace("_", "-")
+
+                        if group in ['address_group', 'network_group', 'domain_group']:
+                            types = [t for t in ['address', 'fqdn'] if t in side_conf]
+                            if types:
+                                raise ConfigError(f'{error_group} and {types[0]} cannot both be defined')
+
+                        if group_name and group_name[0] == '!':
+                            group_name = group_name[1:]
+
+                        group_obj = dict_search_args(groups_dict, group, group_name)
+
+                        if group_obj is None:
+                            raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+
+                        if not group_obj:
+                            Warning(f'{error_group} "{group_name}" has no members!')
+
+            if dict_search_args(side_conf, 'group', 'port_group'):
+                if 'protocol' not in config:
+                    raise ConfigError('Protocol must be defined if specifying a port-group')
+
+                if config['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
+                    raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port-group')
 
 def get_config(config=None):
     if config:
@@ -105,15 +152,19 @@ def get_config(config=None):
     condensed_json = jmespath.search(pattern, nftable_json)
 
     if not conf.exists(base):
-        nat['helper_functions'] = 'remove'
+        if get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER'):
+            nat['helper_functions'] = 'remove'
 
-        # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
+            # Retrieve current table handler positions
+            nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
+            nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
+            nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
+            nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
         nat['deleted'] = ''
         return nat
+
+    nat['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
 
     # check if NAT connection tracking helpers need to be set up - this has to
     # be done only once
@@ -157,7 +208,7 @@ def verify(nat):
                         Warning(f'IP address {ip} does not exist on the system!')
 
             # common rule verification
-            verify_rule(config, err_msg)
+            verify_rule(config, err_msg, nat['firewall_group'])
 
 
     if dict_search('destination.rule', nat):
@@ -175,7 +226,7 @@ def verify(nat):
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
 
             # common rule verification
-            verify_rule(config, err_msg)
+            verify_rule(config, err_msg, nat['firewall_group'])
 
     if dict_search('static.rule', nat):
         for rule, config in dict_search('static.rule', nat).items():
@@ -186,7 +237,7 @@ def verify(nat):
                                   'inbound-interface not specified')
 
             # common rule verification
-            verify_rule(config, err_msg)
+            verify_rule(config, err_msg, nat['firewall_group'])
 
     return None
 

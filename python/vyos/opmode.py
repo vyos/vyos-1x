@@ -16,6 +16,7 @@
 import re
 import sys
 import typing
+from humps import decamelize
 
 
 class Error(Exception):
@@ -200,6 +201,7 @@ def run(module):
         if not args["raw"]:
             return res
         else:
+            res = decamelize(res)
             res = _normalize_field_names(res)
             from json import dumps
             return dumps(res, indent=4)

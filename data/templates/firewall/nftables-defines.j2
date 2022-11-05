@@ -27,6 +27,14 @@
     }
 {%         endfor %}
 {%     endif %}
+{%     if group.domain_group is vyos_defined %}
+{%         for name, name_config in group.domain_group.items() %}
+    set D_{{ name }} {
+        type {{ ip_type }}
+        flags interval
+    }
+{%         endfor %}
+{%     endif %}
 {%     if group.mac_group is vyos_defined %}
 {%         for group_name, group_conf in group.mac_group.items() %}
 {%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}

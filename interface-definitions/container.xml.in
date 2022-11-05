@@ -111,7 +111,7 @@
           </leafNode>
           <leafNode name="memory">
             <properties>
-              <help>Constrain the memory available to a container</help>
+              <help>Memory (RAM) available to this container</help>
               <valueHelp>
                 <format>u32:0</format>
                 <description>Unlimited</description>
@@ -126,6 +126,24 @@
               <constraintErrorMessage>Container memory must be in range 0 to 16384 MB</constraintErrorMessage>
             </properties>
             <defaultValue>512</defaultValue>
+          </leafNode>
+          <leafNode name="shared-memory">
+            <properties>
+              <help>Shared memory available to this container</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>u32:1-8192</format>
+                <description>Container memory in megabytes (MB)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-8192"/>
+              </constraint>
+              <constraintErrorMessage>Container memory must be in range 0 to 8192 MB</constraintErrorMessage>
+            </properties>
+            <defaultValue>64</defaultValue>
           </leafNode>
           <tagNode name="network">
             <properties>

@@ -58,6 +58,17 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
 
+    def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
+        # Resolver no longer blocks commit, need to wait for daemon to populate set
+        count = 0
+        while count < max_wait:
+            code = run(f'sudo nft get element {table} {set_name} {{ {element} }}')
+            if code == 0:
+                return True
+            count += 1
+            sleep(1)
+        return False
+
     def test_snat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
         outbound_iface_100 = 'eth0'
@@ -83,6 +94,30 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
+
+    def test_snat_groups(self):
+        address_group = 'smoketest_addr'
+        address_group_member = '192.0.2.1'
+        rule = '100'
+        outbound_iface = 'eth0'
+
+        self.cli_set(['firewall', 'group', 'address-group', address_group, 'address', address_group_member])
+
+        self.cli_set(src_path + ['rule', rule, 'source', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface])
+        self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'set A_{address_group}'],
+            [f'elements = {{ {address_group_member} }}'],
+            [f'ip saddr @A_{address_group}', f'oifname "{outbound_iface}"', 'masquerade']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
+        self.cli_delete(['firewall'])
 
     def test_dnat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']

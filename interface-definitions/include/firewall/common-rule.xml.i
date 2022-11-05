@@ -219,22 +219,7 @@
   <children>
     #include <include/firewall/address.xml.i>
     #include <include/firewall/source-destination-group.xml.i>
-    <leafNode name="mac-address">
-      <properties>
-        <help>Source MAC address</help>
-        <valueHelp>
-          <format>&lt;MAC address&gt;</format>
-          <description>MAC address to match</description>
-        </valueHelp>
-        <valueHelp>
-          <format>!&lt;MAC address&gt;</format>
-          <description>Match everything except the specified MAC address</description>
-        </valueHelp>
-        <constraint>
-          <validator name="mac-address-firewall"/>
-        </constraint>
-      </properties>
-    </leafNode>
+    #include <include/firewall/mac-address.xml.i>
     #include <include/firewall/port.xml.i>
   </children>
 </node>

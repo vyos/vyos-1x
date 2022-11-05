@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+${vyos_libexec_dir}/validate-value --regex "!([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})" --value "$1"
