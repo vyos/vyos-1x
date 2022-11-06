@@ -659,10 +659,18 @@ def graphql_init(fast_api_app):
 
     if app.state.vyos_origins:
         origins = app.state.vyos_origins
-        app.add_route('/graphql', CORSMiddleware(GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec), allow_origins=origins, allow_methods=("GET", "POST", "OPTIONS")))
+        app.add_route('/graphql', CORSMiddleware(GraphQL(schema,
+                                                         context_value=get_user_context,
+                                                         debug=True,
+                                                         introspection=in_spec),
+                                                 allow_origins=origins,
+                                                 allow_methods=("GET", "POST", "OPTIONS"),
+                                                 allow_headers=("Authorization",)))
     else:
-        app.add_route('/graphql', GraphQL(schema, context_value=get_user_context, debug=True, introspection=in_spec))
-
+        app.add_route('/graphql', GraphQL(schema,
+                                          context_value=get_user_context,
+                                          debug=True,
+                                          introspection=in_spec))
 ###
 
 if __name__ == '__main__':
