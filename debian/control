@@ -196,6 +196,7 @@ Description: VyOS configuration scripts and data for VMware
 Package: vyos-1x-smoketest
 Architecture: all
 Depends:
+ skopeo,
  snmp,
  vyos-1x
 Description: VyOS build sanity checking toolkit
