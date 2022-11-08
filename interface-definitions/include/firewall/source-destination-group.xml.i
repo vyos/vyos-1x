@@ -20,6 +20,14 @@
         </completionHelp>
       </properties>
     </leafNode>
+    <leafNode name="external-list">
+      <properties>
+        <help>External List</help>
+        <completionHelp>
+          <path>firewall group external-list</path>
+        </completionHelp>
+      </properties>
+    </leafNode>
     #include <include/firewall/mac-group.xml.i>
     <leafNode name="network-group">
       <properties>

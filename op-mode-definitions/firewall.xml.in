@@ -121,6 +121,7 @@
                 <path>firewall group port-group</path>
                 <path>firewall group ipv6-address-group</path>
                 <path>firewall group ipv6-network-group</path>
+                <path>firewall group external-list</path>
               </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group --name $4</command>

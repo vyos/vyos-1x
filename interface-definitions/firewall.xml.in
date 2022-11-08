@@ -205,6 +205,63 @@
               </leafNode>
             </children>
           </tagNode>
+          <tagNode name="external-list">
+            <properties>
+              <help>Firewall external lists</help>
+              <constraint>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="url">
+                <properties>
+                  <help>URL to fetch the populated list (one address/network per line)</help>
+                  <valueHelp>
+                    <format>url</format>
+                    <description>Remote URL to the list text file</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>path</format>
+                    <description>Local path to the list text file</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(https?|ftps?|scp|sftp|tftp):\/\/?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\:[0-9]+)*(\/.*)?</regex>
+                    <validator name="file-exists"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="crontab-spec">
+                <properties>
+                  <help>UNIX crontab time specification string</help>
+                </properties>
+              </leafNode>
+              <leafNode name="interval">
+                <properties>
+                  <help>Execution interval</help>
+                  <valueHelp>
+                    <format>&lt;minutes&gt;</format>
+                    <description>Execution interval in minutes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;minutes&gt;m</format>
+                    <description>Execution interval in minutes</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;hours&gt;h</format>
+                    <description>Execution interval in hours</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;days&gt;d</format>
+                    <description>Execution interval in days</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>[1-9]([0-9]*)([mhd]{0,1})</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
           <tagNode name="mac-group">
             <properties>
               <help>Firewall mac-group</help>

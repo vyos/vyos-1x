@@ -18,6 +18,8 @@ import csv
 import gzip
 import os
 import re
+import errno
+import shutil
 
 from pathlib import Path
 from socket import AF_INET
@@ -26,7 +28,11 @@ from socket import getaddrinfo
 from time import strftime
 
 from vyos.remote import download
+from vyos.task_scheduler import task_scheduler_apply
+from vyos.task_scheduler import task_scheduler_generate
+from vyos.task_scheduler import task_scheduler_verify
 from vyos.template import is_ipv4
+from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.util import call
 from vyos.util import cmd
@@ -180,6 +186,13 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                         operator = '!='
                         group_name = group_name[1:]
                     output.append(f'{ip_name} {prefix}addr {operator} @D_{group_name}')
+                elif 'external_list' in group:
+                    group_name = group['external_list']
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} @L{def_suffix}_{group_name}')
                 elif 'network_group' in group:
                     group_name = group['network_group']
                     operator = ''
@@ -365,6 +378,154 @@ def parse_policy_set(set_conf, def_suffix):
         mss = set_conf['tcp_mss']
         out.append(f'tcp option maxseg size set {mss}')
     return " ".join(out)
+
+# Lists
+
+nftables_external_list_conf = '/run/nftables-external-list.conf'
+external_list_file_dir = '/usr/share/vyos-external-list'
+external_list_lock_file = '/run/vyos-external-list.lock'
+external_list_crontab_file = '/etc/cron.d/vyos-external-list'
+
+def external_list_load_data(lists=[]):
+    if not lists:
+        return []
+
+    out = []
+
+    for list in lists:
+        list_file = os.path.join(external_list_file_dir, list + '.csv')
+        if not os.path.exists(list_file):
+            return []
+
+        try:
+            with open(list_file, mode='rt') as csv_fh:
+                reader = csv.reader(csv_fh)
+                for entry in reader:
+                    out.append([list, entry[0]])
+        except Exception as e:
+            print(f'Error: Failed to open {list} list database.\n{e}')
+            return []
+    return out
+
+def external_list_download(list=None, url=None):
+    if not list or not url:
+        return False
+
+    try:
+        if not os.path.exists(external_list_file_dir):
+            os.mkdir(external_list_file_dir)
+
+        list_file = os.path.join(external_list_file_dir, list + '.csv')
+        if url.startswith(os.sep):
+            if not os.path.exists(url):
+                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), url)
+            shutil.copyfile(url, list_file)
+        else:
+          download(list_file, url)
+        print(f'Downloaded {list} external list')
+        return True
+    except Exception as e:
+        print(f'Error: Failed to download {list} external list.\n{e}')
+    return False
+
+class ExternalListLock(object):
+    def __init__(self, file):
+        self.file = file
+
+    def __enter__(self):
+        if os.path.exists(self.file):
+            return False
+
+        Path(self.file).touch()
+        return True
+
+    def __exit__(self, exc_type, exc_value, tb):
+        os.unlink(self.file)
+
+def external_list_update(firewall, name=None, force=False):
+    with ExternalListLock(external_list_lock_file) as lock:
+        if not lock:
+            print('Script is already running')
+            return False
+
+        if not firewall:
+            if os.path.exists(external_list_crontab_file):
+                os.remove(external_list_crontab_file)
+            print('Firewall is not configured')
+            return True
+
+        if 'group' not in firewall or 'external_list' not in firewall['group']:
+            if os.path.exists(external_list_crontab_file):
+                os.remove(external_list_crontab_file)
+            print('No external list(s) are configured')
+            return True
+
+        names = []
+        tasks = []
+        for key in firewall['group']['external_list']:
+            interval = dict_search_args(firewall, 'group', 'external_list', key, 'interval')
+            spec = dict_search_args(firewall, 'group', 'external_list', key, 'crontab-spec')
+            if interval or spec:
+                task = {
+                        "name": key,
+                        "interval": interval,
+                        "spec": spec,
+                        "executable": '/usr/libexec/vyos/external-list-update.py',
+                        "args": f'--force --name {key}'
+                       }
+                tasks.append(task)
+            if not name or name == key:
+                list_file = os.path.join(external_list_file_dir, key + '.csv')
+                if not os.path.exists(list_file) or force:
+                    url = dict_search_args(firewall, 'group', 'external_list', key, 'url')
+                    if not url:
+                        continue
+                    if not external_list_download(key, url):
+                        continue
+                names.append(key)
+
+        if tasks:
+            try:
+                task_scheduler_verify(tasks)
+                task_scheduler_generate(tasks, external_list_crontab_file)
+                task_scheduler_apply(tasks)
+            except ConfigError as e:
+                print(e)
+        elif os.path.exists(external_list_crontab_file):
+            os.remove(external_list_crontab_file)
+
+        if not names:
+            print('No lists available to update')
+            return True
+
+        lists_data = external_list_load_data(names)
+
+        ipv4_sets = {}
+        ipv6_sets = {}
+
+        # Iterate IP blocks to assign to sets
+        for setname, entry in lists_data:
+            # clean entry (remove spaces and comments)
+            entry = re.sub('[#;].*$', '', entry).strip()
+            if not entry:
+                continue
+            if is_ipv4(entry):
+                ipv4_sets.setdefault(setname, []).append(entry)
+            elif is_ipv6(entry):
+                ipv6_sets.setdefault(setname, []).append(entry)
+
+        render(nftables_external_list_conf, 'firewall/nftables-external-list-update.j2', {
+            'ipv4_sets': ipv4_sets,
+            'ipv6_sets': ipv6_sets
+        })
+
+        # need full path, /usr/sbin isn't in the cron PATH
+        result = run(f'/usr/sbin/nft -f {nftables_external_list_conf}')
+        if result != 0:
+            print('Error: External list(s) failed to update firewall')
+            return False
+
+        return True
 
 # GeoIP
 

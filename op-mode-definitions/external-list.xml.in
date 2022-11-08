@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="update">
+    <children>
+      <tagNode name="external-list">
+        <properties>
+          <help>Update lists database and firewall sets</help>
+          <completionHelp>
+            <path>firewall group external-list</path>
+          </completionHelp>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/external-list-update.py --force --name $3</command>
+      </tagNode>
+      <leafNode name="external-list">
+        <properties>
+          <help>Update lists database and firewall sets</help>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/external-list-update.py --force</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
