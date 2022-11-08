@@ -43,6 +43,13 @@ interface {{ iface }} {
     };
 {%             endfor %}
 {%         endif %}
+{%         if iface_config.source_address is vyos_defined %}
+    AdvRASrcAddress {
+{%             for source_address in iface_config.source_address %}
+            {{ source_address }}
+{%             endfor %}
+    };
+{%         endif %}
 {%         if iface_config.prefix is vyos_defined %}
 {%             for prefix, prefix_options in iface_config.prefix.items() %}
     prefix {{ prefix }} {

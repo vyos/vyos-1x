@@ -305,6 +305,19 @@
                   </leafNode>
                 </children>
               </tagNode>
+              <leafNode name="source-address">
+                <properties>
+                  <help>Use IPv6 address as source address. Useful with VRRP.</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to be advertized (must be configured on interface)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+		  <multi/>
+                </properties>
+              </leafNode>
               <leafNode name="reachable-time">
                 <properties>
                   <help>Time, in milliseconds, that a node assumes a neighbor is reachable after having received a reachability confirmation</help>
