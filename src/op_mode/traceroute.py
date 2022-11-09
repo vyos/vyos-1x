@@ -18,6 +18,25 @@ import os
 import sys
 import socket
 import ipaddress
+from vyos.util import get_all_vrfs
+from vyos.ifconfig import Section
+
+
+def interface_list() -> list:
+    """
+    Get list of interfaces in system
+    :rtype: list
+    """
+    return Section.interfaces()
+
+
+def vrf_list() -> list:
+    """
+    Get list of VRFs in system
+    :rtype: list
+    """
+    return list(get_all_vrfs().keys())
+
 
 options = {
     'backward-hops': {
@@ -48,6 +67,7 @@ options = {
     'interface': {
         'traceroute': '{command} -i {value}',
         'type': '<interface>',
+        'helpfunction': interface_list,
         'help': 'Source interface'
     },
     'lookup-as': {
@@ -99,6 +119,7 @@ options = {
         'traceroute': 'sudo ip vrf exec {value} {command}',
         'type': '<vrf>',
         'help': 'Use specified VRF table',
+        'helpfunction': vrf_list,
         'dflt': 'default'}
 }
 
@@ -108,20 +129,33 @@ traceroute = {
 }
 
 
-class List (list):
-    def first (self):
+class List(list):
+    def first(self):
         return self.pop(0) if self else ''
 
     def last(self):
         return self.pop() if self else ''
 
-    def prepend(self,value):
-        self.insert(0,value)
+    def prepend(self, value):
+        self.insert(0, value)
+
+
+def completion_failure(option: str) -> None:
+    """
+    Shows failure message after TAB when option is wrong
+    :param option: failure option
+    :type str:
+    """
+    sys.stderr.write('\n\n Invalid option: {}\n\n'.format(option))
+    sys.stdout.write('<nocomps>')
+    sys.exit(1)
 
 
 def expension_failure(option, completions):
     reason = 'Ambiguous' if completions else 'Invalid'
-    sys.stderr.write('\n\n  {} command: {} [{}]\n\n'.format(reason,' '.join(sys.argv), option))
+    sys.stderr.write(
+        '\n\n  {} command: {} [{}]\n\n'.format(reason, ' '.join(sys.argv),
+                                               option))
     if completions:
         sys.stderr.write('  Possible completions:\n   ')
         sys.stderr.write('\n   '.join(completions))
@@ -160,30 +194,46 @@ if __name__ == '__main__':
         sys.exit("traceroute: Missing host")
 
     if host == '--get-options':
-        args.first()  # pop traceroute
+        args.first()  # pop ping
         args.first()  # pop IP
+        usedoptionslist = []
         while args:
-            option = args.first()
-
-            matched = complete(option)
+            option = args.first()  # pop option
+            matched = complete(option)  # get option parameters
+            usedoptionslist.append(option)  # list of used options
+            # Select options
             if not args:
+                # remove from Possible completions used options
+                for o in usedoptionslist:
+                    if o in matched:
+                        matched.remove(o)
                 sys.stdout.write(' '.join(matched))
                 sys.exit(0)
 
-            if len(matched) > 1 :
+            if len(matched) > 1:
                 sys.stdout.write(' '.join(matched))
                 sys.exit(0)
+            # If option doesn't have value
+            if matched:
+                if options[matched[0]]['type'] == 'noarg':
+                    continue
+            else:
+                # Unexpected option
+                completion_failure(option)
 
-            if options[matched[0]]['type'] == 'noarg':
-                continue
-
-            value = args.first()
+            value = args.first()  # pop option's value
             if not args:
                 matched = complete(option)
-                sys.stdout.write(options[matched[0]]['type'])
+                helplines = options[matched[0]]['type']
+                # Run helpfunction to get list of possible values
+                if 'helpfunction' in options[matched[0]]:
+                    result = options[matched[0]]['helpfunction']()
+                    if result:
+                        helplines = '\n' + ' '.join(result)
+                sys.stdout.write(helplines)
                 sys.exit(0)
 
-    for name,option in options.items():
+    for name, option in options.items():
         if 'dflt' in option and name not in args:
             args.append(name)
             args.append(option['dflt'])
@@ -200,8 +250,7 @@ if __name__ == '__main__':
     except ValueError:
         sys.exit(f'traceroute: Unknown host: {host}')
 
-    command = convert(traceroute[version],args)
+    command = convert(traceroute[version], args)
 
     # print(f'{command} {host}')
     os.system(f'{command} {host}')
-
