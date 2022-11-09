@@ -406,7 +406,8 @@ def validate_schema(data):
 
 
 def pdns_rec_control(command):
-    if not process_named_running('pdns_recursor'):
+    # pdns-r process name is NOT equal to the name shown in ps
+    if not process_named_running('pdns-r/worker'):
         logger.info(f'pdns_recursor not running, not sending "{command}"')
         return
 
