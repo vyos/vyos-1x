@@ -29,6 +29,9 @@ export-etc-hosts={{ 'no' if ignore_hosts_file is vyos_defined else 'yes' }}
 # listen-address
 local-address={{ listen_address | join(',') }}
 
+# listen-port
+local-port={{ port }}
+
 # dnssec
 dnssec={{ dnssec }}
 

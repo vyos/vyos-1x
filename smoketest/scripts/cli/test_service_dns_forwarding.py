@@ -32,6 +32,7 @@ base_path = ['service', 'dns', 'forwarding']
 
 allow_from = ['192.0.2.0/24', '2001:db8::/32']
 listen_adress = ['127.0.0.1', '::1']
+listen_ports = ['53', '5353']
 
 def get_config_value(key, file=CONFIG_FILE):
     tmp = read_file(file)
@@ -223,6 +224,26 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # verify dns64-prefix configuration
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
+
+    def test_listening_port(self):
+        # only one port can be listen
+        for port in listen_ports:
+            self.cli_set(base_path + ['port', port])
+            for network in allow_from:
+                self.cli_set(base_path + ['allow-from', network])
+            for address in listen_adress:
+                self.cli_set(base_path + ['listen-address', address])
+
+            # commit changes
+            self.cli_commit()
+
+            # verify local-port configuration
+            tmp = get_config_value('local-port')
+            self.assertEqual(tmp, port)
+
+            # reset to test differnt port
+            self.cli_delete(base_path)
+            self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
