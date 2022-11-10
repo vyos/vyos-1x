@@ -18,8 +18,7 @@ import os
 import sys
 import socket
 import ipaddress
-import json
-from vyos.util import cmd, rc_cmd
+from vyos.util import get_all_vrfs
 from vyos.ifconfig import Section
 
 
@@ -36,13 +35,7 @@ def vrf_list() -> list:
     Get list of VRFs in system
     :rtype: list
     """
-    result = cmd(f'sudo ip --json --brief link show type vrf')
-    data = json.loads(result)
-    vrflist: list = []
-    for o in data:
-        if 'ifname' in o:
-            vrflist.append(o['ifname'])
-    return vrflist
+    return list(get_all_vrfs().keys())
 
 
 options = {
