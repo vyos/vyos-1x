@@ -137,6 +137,7 @@ class Migrator(object):
                 cfg_ver = next_ver
             rev_versions[key] = cfg_ver
 
+        del os.environ['VYOS_MIGRATION']
         return rev_versions
 
     def write_config_file_versions(self, cfg_versions):
