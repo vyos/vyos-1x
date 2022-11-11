@@ -32,7 +32,6 @@ base_path = ['service', 'dns', 'forwarding']
 
 allow_from = ['192.0.2.0/24', '2001:db8::/32']
 listen_adress = ['127.0.0.1', '::1']
-listen_ports = ['53', '5353']
 
 def get_config_value(key, file=CONFIG_FILE):
     tmp = read_file(file)
@@ -111,6 +110,10 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         # RFC1918 addresses are looked up by default
         tmp = get_config_value('serve-rfc1918')
         self.assertEqual(tmp, 'yes')
+
+        # verify default port configuration
+        tmp = get_config_value('local-port')
+        self.assertEqual(tmp, '53')
 
     def test_dnssec(self):
         # DNSSEC option testing
@@ -226,8 +229,8 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, dns_prefix)
 
     def test_listening_port(self):
-        # only one port can be listen
-        for port in listen_ports:
+        # We can listen on a different port compared to '53' but only one at a time
+        for port in ['1053', '5353']:
             self.cli_set(base_path + ['port', port])
             for network in allow_from:
                 self.cli_set(base_path + ['allow-from', network])
@@ -241,9 +244,5 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value('local-port')
             self.assertEqual(tmp, port)
 
-            # reset to test differnt port
-            self.cli_delete(base_path)
-            self.cli_commit()
-
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
