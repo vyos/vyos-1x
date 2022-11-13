@@ -73,7 +73,7 @@ def _find_physical_cpus():
             # On other architectures, e.g. on ARM, there's no such field.
             # We just assume they are different CPUs,
             # whether single core ones or cores of physical CPUs.
-            phys_cpus[num] = cpu[num]
+            phys_cpus[num] = cpus[num]
 
     return phys_cpus
 
