@@ -1341,7 +1341,7 @@
                             <validator name="ipv6-address"/>
                           </constraint>
                         </properties>
-                      </leafNode>    
+                      </leafNode>
                       <leafNode name="peer-address">
                         <properties>
                           <help>Use peer address (for BGP only)</help>
