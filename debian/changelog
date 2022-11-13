@@ -1,8 +1,8 @@
-vyos-1x (1.2.9-beta) unstable; urgency=medium
+vyos-1x (1.2.9) unstable; urgency=medium
 
   * Version update.
 
- -- create with ansible <maintainers@vyos.io>  Thu, 08 Jul 2021 12:03:27 -0500
+ -- VyOS maintainers <maintainers@vyos.io>  Thu, 13 Nov 2022 12:03:27 +0100
 
 vyos-1x (1.2.6) unstable; urgency=low
 
