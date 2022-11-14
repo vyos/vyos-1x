@@ -103,7 +103,8 @@ DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/
         /etc/default/pmacctd /etc/pmacct
         /etc/networks_list /etc/networks_whitelist /etc/fastnetmon.conf
         /etc/ntp.conf /etc/default/ssh
-        /etc/powerdns /etc/default/pdns-recursor"
+        /etc/powerdns /etc/default/pdns-recursor
+        /etc/ppp/ip-up.d/0000usepeerdns /etc/ppp/ip-down.d/0000usepeerdns"
 for tmp in $DELETE; do
     if [ -e ${tmp} ]; then
         rm -rf ${tmp}

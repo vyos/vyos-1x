@@ -8,7 +8,7 @@ hostsd_changes=
 /usr/bin/systemctl -q is-active vyos-hostsd
 hostsd_status=$?
 
-if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
+if [[ $reason =~ ^(EXPIRE|FAIL|RELEASE|STOP)$ ]]; then
     if [[ $hostsd_status -eq 0 ]]; then
         # delete search domains and nameservers via vyos-hostsd
         logmsg info "Deleting search domains with tag \"dhcp-$interface\" via vyos-hostsd-client"
@@ -96,7 +96,7 @@ if [[ $reason =~ (EXPIRE|FAIL|RELEASE|STOP) ]]; then
     fi
 fi
 
-if [[ $reason =~ (EXPIRE6|RELEASE6|STOP6) ]]; then
+if [[ $reason =~ ^(EXPIRE6|RELEASE6|STOP6)$ ]]; then
     if [[ $hostsd_status -eq 0 ]]; then
         # delete search domains and nameservers via vyos-hostsd
         logmsg info "Deleting search domains with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
