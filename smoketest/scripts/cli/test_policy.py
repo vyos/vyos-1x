@@ -1030,6 +1030,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'metric'                  : '150',
                             'metric-type'             : 'type-1',
                             'origin'                  : 'incomplete',
+                            'l3vpn'                   : '',
                             'originator-id'           : '172.16.10.1',
                             'src'                     : '100.0.0.1',
                             'tag'                     : '65530',
@@ -1229,6 +1230,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'set', 'ipv6-next-hop', 'local', rule_config['set']['ipv6-next-hop-local']])
                     if 'ip-next-hop' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'ip-next-hop', rule_config['set']['ip-next-hop']])
+                    if 'l3vpn' in rule_config['set']:
+                        self.cli_set(path + ['rule', rule, 'set', 'l3vpn-nexthop', 'encapsulation', 'gre'])
                     if 'local-preference' in rule_config['set']:
                         self.cli_set(path + ['rule', rule, 'set', 'local-preference', rule_config['set']['local-preference']])
                     if 'metric' in rule_config['set']:
@@ -1408,6 +1411,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         tmp += 'ipv6 next-hop global ' + rule_config['set']['ipv6-next-hop-global']
                     elif 'ipv6-next-hop-local' in rule_config['set']:
                         tmp += 'ipv6 next-hop local ' + rule_config['set']['ipv6-next-hop-local']
+                    elif 'l3vpn' in rule_config['set']:
+                        tmp += 'l3vpn next-hop encapsulation gre'
                     elif 'local-preference' in rule_config['set']:
                         tmp += 'local-preference ' + rule_config['set']['local-preference']
                     elif 'metric' in rule_config['set']:
