@@ -36,7 +36,7 @@ chsh -s /bin/sh proxy
 
 # Remove unwanted daemon files from /etc
 # conntackd
-DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd"
+DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd /etc/ppp/ip-up.d/0000usepeerdns /etc/ppp/ip-down.d/0000usepeerdns"
 for file in $DELETE; do
     if [ -f ${file} ]; then
         rm -f ${file}
