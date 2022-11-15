@@ -33,6 +33,6 @@ vtysh -c "conf t" ${VRF_NAME} -c "no ipv6 route ::/0 {{ ifname }} ${VRF_NAME}"
 {% endif %}
 
 {% if dhcpv6_options is defined and dhcpv6_options.pd is defined %}
-# Stop wide dhcpv6 client
-systemctl stop dhcp6c@{{ ifname }}.service
+# Stop wide dhcpv6 client without blocking (by default the ip-down script can only run up to 5 seconds)
+systemctl stop --no-block dhcp6c@{{ ifname }}.service
 {% endif %}

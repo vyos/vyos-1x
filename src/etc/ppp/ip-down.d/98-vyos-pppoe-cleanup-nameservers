@@ -1,0 +1,14 @@
+#!/bin/bash
+
+interface=$6
+if [ -z "$interface" ]; then
+    exit
+fi
+
+if ! /usr/bin/systemctl -q is-active vyos-hostsd; then
+    exit  # vyos-hostsd is not running
+fi
+
+hostsd_client="/usr/bin/vyos-hostsd-client"
+$hostsd_client --delete-name-servers --tag "dhcp-$interface"
+$hostsd_client --apply
