@@ -26,6 +26,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
+from vyos.configdep import set_dependent, call_dependents
 # from vyos.configverify import verify_interface_exists
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
@@ -41,8 +42,8 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-nat_conf_script = '/usr/libexec/vyos/conf_mode/nat.py'
-policy_route_conf_script = '/usr/libexec/vyos/conf_mode/policy-route.py'
+nat_conf_script = 'nat.py'
+policy_route_conf_script = 'policy-route.py'
 
 nftables_conf = '/run/nftables.conf'
 
@@ -160,6 +161,12 @@ def get_config(config=None):
             firewall['zone'][zone] = dict_merge(default_values, firewall['zone'][zone])
 
     firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+    if firewall['group_resync']:
+        # Update nat as firewall groups were updated
+        set_dependent(nat_conf_script, conf)
+        # Update policy route as firewall groups were updated
+        set_dependent(policy_route_conf_script, conf)
+
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)
@@ -464,18 +471,6 @@ def post_apply_trap(firewall):
 
                 cmd(base_cmd + ' '.join(objects))
 
-def resync_nat():
-    # Update nat as firewall groups were updated
-    tmp, out = rc_cmd(nat_conf_script)
-    if tmp > 0:
-        Warning(f'Failed to re-apply nat configuration! {out}')
-
-def resync_policy_route():
-    # Update policy route as firewall groups were updated
-    tmp, out = rc_cmd(policy_route_conf_script)
-    if tmp > 0:
-        Warning(f'Failed to re-apply policy route configuration! {out}')
-
 def apply(firewall):
     install_result, output = rc_cmd(f'nft -f {nftables_conf}')
     if install_result == 1:
@@ -484,8 +479,7 @@ def apply(firewall):
     apply_sysfs(firewall)
 
     if firewall['group_resync']:
-        resync_nat()
-        resync_policy_route()
+        call_dependents()
 
     # T970 Enable a resolver (systemd daemon) that checks
     # domain-group/fqdn addresses and update entries for domains by timeout
