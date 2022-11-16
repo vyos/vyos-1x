@@ -63,7 +63,7 @@ def get_config_firewall(conf, name=None, ipv6=False, interfaces=True):
                                 get_first_key=True, no_tag_node_value_mangle=True)
     if firewall and interfaces:
         if name:
-            firewall['interface'] = []
+            firewall['interface'] = {}
         else:
             if 'name' in firewall:
                 for fw_name, name_conf in firewall['name'].items():
