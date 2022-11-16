@@ -32,7 +32,7 @@ def _get_json_data():
     """
     Get bridge data format JSON
     """
-    return cmd(f'sudo bridge --json link show')
+    return cmd(f'bridge --json link show')
 
 
 def _get_raw_data_summary():
@@ -48,7 +48,7 @@ def _get_raw_data_vlan():
     """
     :returns dict
     """
-    json_data = cmd('sudo bridge --json --compressvlans vlan show')
+    json_data = cmd('bridge --json --compressvlans vlan show')
     data_dict = json.loads(json_data)
     return data_dict
 
@@ -57,7 +57,7 @@ def _get_raw_data_fdb(bridge):
     """Get MAC-address for the bridge brX
     :returns list
     """
-    code, json_data = rc_cmd(f'sudo bridge --json fdb show br {bridge}')
+    code, json_data = rc_cmd(f'bridge --json fdb show br {bridge}')
     # From iproute2 fdb.c, fdb_show() will only exit(-1) in case of
     # non-existent bridge device; raise error.
     if code == 255:
