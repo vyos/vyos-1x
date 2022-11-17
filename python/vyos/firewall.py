@@ -18,8 +18,6 @@ import csv
 import gzip
 import os
 import re
-import errno
-import shutil
 
 from pathlib import Path
 from socket import AF_INET
@@ -416,12 +414,7 @@ def external_list_download(list=None, url=None):
             os.mkdir(external_list_file_dir)
 
         list_file = os.path.join(external_list_file_dir, list + '.csv')
-        if url.startswith(os.sep):
-            if not os.path.exists(url):
-                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), url)
-            shutil.copyfile(url, list_file)
-        else:
-          download(list_file, url)
+        download(list_file, url)
         print(f'Downloaded {list} external list')
         return True
     except Exception as e:

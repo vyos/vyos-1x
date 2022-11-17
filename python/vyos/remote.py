@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import errno
 import shutil
 import socket
 import ssl
@@ -274,12 +275,33 @@ class TftpC:
             cmd(f'{self.command} -T - "{self.urlstring}"', input=f.read())
 
 
+class FileC:
+    # We simply use system commands to copy via os module because
+    # 1. It's local and rather simple.
+    # 2. Since there's no concept authentication, we don't need to deal with keys/passwords.
+    def __init__(self, url, progressbar=False, check_space=False, source_host=None, source_port=0):
+        self.urlstring = urllib.parse.urlunsplit(url._replace(scheme=""))
+
+    def download(self, location: str):
+        locdir = os.path.dirname(location)
+        if not os.path.exists(locdir):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), locdir)
+        if not os.path.exists(self.urlstring):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), self.urlstring)
+        shutil.copyfile(self.urlstring, location)
+
+    # upload is really the same as download when copying
+    def upload(self, location: str):
+        self.download(location)
+
+
 def urlc(urlstring, *args, **kwargs):
     """
     Dynamically dispatch the appropriate protocol class.
     """
     url_classes = {'http': HttpC, 'https': HttpC, 'ftp': FtpC, 'ftps': FtpC, \
-                   'sftp': SshC, 'ssh': SshC, 'scp': SshC, 'tftp': TftpC}
+                   'sftp': SshC, 'ssh': SshC, 'scp': SshC, 'tftp': TftpC, \
+                   'file': FileC }
     url = urllib.parse.urlsplit(urlstring)
     try:
         return url_classes[url.scheme](url, *args, **kwargs)
