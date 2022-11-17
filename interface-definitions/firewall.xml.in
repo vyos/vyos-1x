@@ -213,23 +213,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="url">
-                <properties>
-                  <help>URL to fetch the populated list (one address/network per line)</help>
-                  <valueHelp>
-                    <format>url</format>
-                    <description>Remote URL to the list text file</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>path</format>
-                    <description>Local path to the list text file</description>
-                  </valueHelp>
-                  <constraint>
-                    <regex>(https?|ftps?|scp|sftp|tftp):\/\/?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\:[0-9]+)*(\/.*)?</regex>
-                    <validator name="file-exists"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/url.xml.i>
               <leafNode name="crontab-spec">
                 <properties>
                   <help>UNIX crontab time specification string</help>

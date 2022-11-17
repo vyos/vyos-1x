@@ -7,7 +7,7 @@
       <description>Remote URL</description>
     </valueHelp>
     <constraint>
-      <regex>^https?:\/\/?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\:[0-9]+)*(\/.*)?</regex>
+      <regex>^((https?|s?ftp|ftps|tftp|scp):\/\/?|file:\/\/\/?)[a-z0-9]+([\-\.]{1}[a-z0-9]+)*(\:[0-9]+)*(\/.*)?</regex>
     </constraint>
     <constraintErrorMessage>Incorrect URL format</constraintErrorMessage>
   </properties>
