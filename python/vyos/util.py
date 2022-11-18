@@ -1143,3 +1143,11 @@ def camel_to_snake_case(name: str) -> str:
     pattern = r'\d+|[A-Z]?[a-z]+|\W|[A-Z]{2,}(?=[A-Z][a-z]|\d|\W|$)'
     words = re.findall(pattern, name)
     return '_'.join(map(str.lower, words))
+
+def load_as_module(name: str, path: str):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
