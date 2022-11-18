@@ -129,7 +129,7 @@
                         <properties>
                           <help>SSH public key type</help>
                           <completionHelp>
-                            <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519 ecdsa-sk ed25519-sk</list>
+                            <list>ssh-dss ssh-rsa ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521 ssh-ed25519 sk-ecdsa-sha2-nistp256@openssh.com sk-ssh-ed25519@openssh.com</list>
                           </completionHelp>
                           <valueHelp>
                             <format>ssh-dss</format>
@@ -156,15 +156,15 @@
                             <description>Edwards-curve DSA with elliptic curve 25519</description>
                           </valueHelp>
                           <valueHelp>
-                            <format>ecdsa-sk</format>
+                            <format>sk-ecdsa-sha2-nistp256@openssh.com</format>
                             <description>Elliptic Curve DSA security key</description>
                           </valueHelp>
                           <valueHelp>
-                            <format>ed25519-sk</format>
+                            <format>sk-ssh-ed25519@openssh.com</format>
                             <description>Elliptic curve 25519 security key</description>
                           </valueHelp>
                           <constraint>
-                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519|ecdsa-sk|ed25519-sk)</regex>
+                            <regex>(ssh-dss|ssh-rsa|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521|ssh-ed25519|sk-ecdsa-sha2-nistp256@openssh.com|sk-ssh-ed25519@openssh.com)</regex>
                           </constraint>
                         </properties>
                       </leafNode>
