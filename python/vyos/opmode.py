@@ -45,6 +45,12 @@ class PermissionDenied(Error):
     """
     pass
 
+class IncorrectValue(Error):
+    """ Requested operation is valid, but an argument provided has an
+        incorrect value, preventing successful completion.
+    """
+    pass
+
 class InternalError(Error):
     """ Any situation when VyOS detects that it could not perform
         an operation correctly due to logic errors in its own code

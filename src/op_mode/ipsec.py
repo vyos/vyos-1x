@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import re
 import sys
 
@@ -138,6 +139,8 @@ def _get_formatted_output_sas(sas):
 def get_peer_connections(peer, tunnel, return_all = False):
     search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti)).*'
     matches = []
+    if not os.path.exists(SWANCTL_CONF):
+        raise vyos.opmode.UnconfiguredSubsystem("IPsec not initialized")
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
@@ -149,27 +152,19 @@ def get_peer_connections(peer, tunnel, return_all = False):
 
 
 def reset_peer(peer: str, tunnel:str):
-    if not peer:
-        print('Invalid peer, aborting')
-        return
-
     conns = get_peer_connections(peer, tunnel, return_all = (not tunnel or tunnel == 'all'))
 
     if not conns:
-        print('Tunnel(s) not found, aborting')
-        return
+        raise vyos.opmode.IncorrectValue('Peer or tunnel(s) not found, aborting')
 
-    result = True
     for conn in conns:
         try:
             call(f'sudo /usr/sbin/ipsec down {conn}{{*}}', timeout = 10)
             call(f'sudo /usr/sbin/ipsec up {conn}', timeout = 10)
         except TimeoutExpired as e:
-            print(f'Timed out while resetting {conn}')
-            result = False
+            raise vyos.opmode.InternalError(f'Timed out while resetting {conn}')
 
-
-    print('Peer reset result: ' + ('success' if result else 'failed'))
+    print('Peer reset result: success')
 
 
 def show_sa(raw: bool):
