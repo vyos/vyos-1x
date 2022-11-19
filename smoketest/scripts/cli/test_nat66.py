@@ -136,7 +136,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth1"', 'tcp dport 4545', 'ip6 saddr 2001:db8:2222::/64', 'tcp sport 8080', 'dnat to 2001:db8:1111::1:5555']
+            ['iifname "eth1"', 'tcp dport 4545', 'ip6 saddr 2001:db8:2222::/64', 'tcp sport 8080', 'dnat to [2001:db8:1111::1]:5555']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
@@ -208,7 +208,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['oifname "eth1"', 'ip6 saddr 2001:db8:2222::/64', 'tcp dport 9999', 'tcp sport 8080', 'snat to 2001:db8:1111::1:80']
+            ['oifname "eth1"', 'ip6 saddr 2001:db8:2222::/64', 'tcp dport 9999', 'tcp sport 8080', 'snat to [2001:db8:1111::1]:80']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
