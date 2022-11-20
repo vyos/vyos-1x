@@ -71,8 +71,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         else:
             translation_output.append('to')
             if addr:
-                if ipv6:
-                    addr = bracketize_ipv6(addr)
+                addr = bracketize_ipv6(addr)
                 translation_output.append(addr)
 
         options = []
