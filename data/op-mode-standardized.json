@@ -6,6 +6,7 @@
 "container.py",
 "cpu.py",
 "dhcp.py",
+"dns.py",
 "log.py",
 "memory.py",
 "nat.py",

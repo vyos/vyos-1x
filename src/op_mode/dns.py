@@ -54,10 +54,10 @@ def _data_to_dict(data, sep="\t") -> dict:
 
 
 def _get_raw_forwarding_statistics() -> dict:
-    command = cmd('sudo /usr/bin/rec_control --socket-dir=/run/powerdns get-all')
+    command = cmd('rec_control --socket-dir=/run/powerdns get-all')
     data = _data_to_dict(command)
     data['cache-size'] = "{0:.2f}".format( int(
-        cmd('sudo /usr/bin/rec_control --socket-dir=/run/powerdns get cache-bytes')) / 1024 )
+        cmd('rec_control --socket-dir=/run/powerdns get cache-bytes')) / 1024 )
     return data
 
 
