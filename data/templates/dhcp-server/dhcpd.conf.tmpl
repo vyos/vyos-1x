@@ -22,6 +22,7 @@ ddns-update-style {{ 'interim' if dynamic_dns_update is defined else 'none' }};
 option rfc3442-static-route code 121 = array of integer 8;
 option windows-static-route code 249 = array of integer 8;
 option wpad-url code 252 = text;
+option rfc8925-ipv6-only-preferred code 108 = unsigned integer 32;
 
 {% if global_parameters is defined and global_parameters is not none %}
 # The following {{ global_parameters | length }} line(s) have been added as
@@ -78,6 +79,9 @@ shared-network {{ network }} {
 {%     if network_config.ntp_server is defined and network_config.ntp_server is not none %}
     option ntp-servers {{ network_config.ntp_server | join(', ') }};
 {%     endif %}
+{%     if network_config.ntp_server is defined and network_config.ntp_server is not none %}
+    option ntp-servers {{ network_config.ntp_server | join(', ') }};
+{%     endif %}
 {%     if network_config.ping_check is defined %}
     ping-check true;
 {%     endif %}
@@ -117,6 +121,9 @@ shared-network {{ network }} {
 {%         endif %}
 {%         if subnet_config.wins_server is defined and subnet_config.wins_server is not none %}
         option netbios-name-servers {{ subnet_config.wins_server | join(', ') }};
+{%         endif %}
+{%         if subnet_config.ipv6_only_preferred is defined and subnet_config.ipv6_only_preferred is not none %}
+        option rfc8925-ipv6-only-preferred {{ subnet_config.ipv6_only_preferred }};
 {%         endif %}
 {%         if subnet_config.static_route is defined and subnet_config.static_route is not none %}
 {%           set static_default_route = '' %}
