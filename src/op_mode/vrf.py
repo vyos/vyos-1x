@@ -31,14 +31,14 @@ def _get_raw_data(name=None):
     If vrf name is set - get only this name data
     If vrf name set and not found - return []
     """
-    output = cmd('sudo ip --json --brief link show type vrf')
+    output = cmd('ip --json --brief link show type vrf')
     data = json.loads(output)
     if not data:
         return []
     if name:
         is_vrf_exists = True if [vrf for vrf in data if vrf.get('ifname') == name] else False
         if is_vrf_exists:
-            output = cmd(f'sudo ip --json --brief link show dev {name}')
+            output = cmd(f'ip --json --brief link show dev {name}')
             data = json.loads(output)
             return data
         return []
@@ -51,7 +51,7 @@ def _get_vrf_members(vrf: str) -> list:
     :param vrf: str
     :return: list
     """
-    output = cmd(f'sudo ip --json --brief link show master {vrf}')
+    output = cmd(f'ip --json --brief link show master {vrf}')
     answer = json.loads(output)
     interfaces = []
     for data in answer:
