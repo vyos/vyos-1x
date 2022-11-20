@@ -17,6 +17,7 @@
 import os
 import re
 import sys
+import typing
 
 from collections import OrderedDict
 from hurry import filesize
@@ -403,23 +404,27 @@ def _get_formatted_output_conections(data):
 # Connections block end
 
 
-def get_peer_connections(peer, tunnel, return_all = False):
+def get_peer_connections(peer, tunnel):
     search = rf'^[\s]*({peer}-(tunnel-[\d]+|vti)).*'
     matches = []
     if not os.path.exists(SWANCTL_CONF):
         raise vyos.opmode.UnconfiguredSubsystem("IPsec not initialized")
+    suffix = None if tunnel is None else (f'tunnel-{tunnel}' if
+                                          tunnel.isnumeric() else tunnel)
     with open(SWANCTL_CONF, 'r') as f:
         for line in f.readlines():
             result = re.match(search, line)
             if result:
-                suffix = f'tunnel-{tunnel}' if tunnel.isnumeric() else tunnel
-                if return_all or (result[2] == suffix):
+                if tunnel is None:
                     matches.append(result[1])
+                else:
+                    if result[2] == suffix:
+                        matches.append(result[1])
     return matches
 
 
-def reset_peer(peer: str, tunnel:str):
-    conns = get_peer_connections(peer, tunnel, return_all = (not tunnel or tunnel == 'all'))
+def reset_peer(peer: str, tunnel:typing.Optional[str]):
+    conns = get_peer_connections(peer, tunnel)
 
     if not conns:
         raise vyos.opmode.IncorrectValue('Peer or tunnel(s) not found, aborting')
