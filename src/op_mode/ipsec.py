@@ -22,6 +22,7 @@ from collections import OrderedDict
 from hurry import filesize
 from re import split as re_split
 from tabulate import tabulate
+from subprocess import TimeoutExpired
 
 from vyos.util import call
 from vyos.util import convert_data
