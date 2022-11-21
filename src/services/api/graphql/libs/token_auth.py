@@ -54,6 +54,9 @@ def get_user_context(request):
             user_id: str = payload.get('sub')
             if user_id is None:
                 return context
+        except jwt.exceptions.ExpiredSignatureError:
+            context['error'] = 'expired token'
+            return context
         except jwt.PyJWTError:
             return context
         try:

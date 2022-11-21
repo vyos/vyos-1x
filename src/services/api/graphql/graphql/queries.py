@@ -73,6 +73,12 @@ def make_query_resolver(query_name, class_name, session_func):
                 info = kwargs['info']
                 user = info.context.get('user')
                 if user is None:
+                    error = info.context.get('error')
+                    if error is not None:
+                        return {
+                            "success": False,
+                            "errors": [error]
+                        }
                     return {
                         "success": False,
                         "errors": ['not authenticated']
