@@ -14,7 +14,7 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from importlib import import_module
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from ariadne import ObjectType, convert_kwargs_to_snake_case, convert_camel_case_to_snake
 from graphql import GraphQLResolveInfo
 from makefun import with_signature
@@ -42,7 +42,7 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
     func_base_name = convert_camel_case_to_snake(class_name)
     resolver_name = f'resolve_{func_base_name}'
-    func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Dict = {})'
+    func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Optional[Dict]=None)'
 
     @mutation.field(mutation_name)
     @convert_kwargs_to_snake_case
@@ -67,17 +67,9 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
                 del data['key']
 
             elif auth_type == 'token':
-                # there is a subtlety here: with the removal of the key entry,
-                # some requests will now have empty input, hence no data arg, so
-                # make it optional in the func_sig. However, it can not be None,
-                # as the makefun package provides accurate TypeError exceptions;
-                # hence set it to {}, but now it is a mutable default argument,
-                # so clear the key 'result', which is added at the end of
-                # this function.
                 data = kwargs['data']
-                if 'result' in data:
-                    del data['result']
-
+                if data is None:
+                    data = {}
                 info = kwargs['info']
                 user = info.context.get('user')
                 if user is None:
