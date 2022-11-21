@@ -21,13 +21,8 @@ from typing import Union
 from humps import decamelize
 
 from vyos.defaults import directories
+from vyos.util import load_as_module
 from vyos.opmode import _normalize_field_names
-
-def load_as_module(name: str, path: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
 
 def load_op_mode_as_module(name: str):
     path = os.path.join(directories['op_mode'], name)

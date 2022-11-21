@@ -25,15 +25,16 @@ from inspect import signature, getmembers, isfunction, isclass, getmro
 from jinja2 import Template
 
 from vyos.defaults import directories
+from vyos.util import load_as_module
 if __package__ is None or __package__ == '':
     sys.path.append("/usr/libexec/vyos/services/api")
-    from graphql.libs.op_mode import load_as_module, is_op_mode_function_name, is_show_function_name
+    from graphql.libs.op_mode import is_op_mode_function_name, is_show_function_name
     from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
     from vyos.config import Config
     from vyos.configdict import dict_merge
     from vyos.xml import defaults
 else:
-    from .. libs.op_mode import load_as_module, is_op_mode_function_name, is_show_function_name
+    from .. libs.op_mode import is_op_mode_function_name, is_show_function_name
     from .. libs.op_mode import snake_to_pascal_case, map_type_name
     from .. import state
 
