@@ -272,6 +272,10 @@
       <tagNode name="network">
         <properties>
           <help>Network name</help>
+          <constraint>
+            <regex>[-_a-zA-Z0-9]{1,11}</regex>
+          </constraint>
+          <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
         </properties>
         <children>
           <leafNode name="description">
