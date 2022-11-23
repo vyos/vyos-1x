@@ -69,7 +69,7 @@ agentaddress unix:/run/snmpd.socket{{ ',' ~ options | join(',') if options is vy
 {%             for network in comm_config.network %}
 {%                 if network | is_ipv4 %}
 {{ comm_config.authorization }}community {{ comm }} {{ network }}
-{%                 elif client | is_ipv6 %}
+{%                 elif network | is_ipv6 %}
 {{ comm_config.authorization }}community6 {{ comm }} {{ network }}
 {%                 endif %}
 {%             endfor %}
