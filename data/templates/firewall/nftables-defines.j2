@@ -87,3 +87,34 @@
 {%     endif %}
 {% endif %}
 {% endmacro %}
+
+{% macro dynamic_groups(dynamic_group, is_ipv6) %}
+{% if dynamic_group is vyos_defined %}
+{%     set ip_type = 'ipv6_addr' if is_ipv6 else 'ipv4_addr' %}
+{%     if dynamic_group.address_group is vyos_defined and not is_ipv6 %}
+{%         for group_name, group_conf in dynamic_group.address_group.items() %}
+{%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
+    set DA_{{ group_name }} {
+        type {{ ip_type }}
+        flags dynamic, timeout
+{%             if group_conf.address is vyos_defined or includes %}
+        elements = { {{ group_conf.address | nft_nested_group(includes, dynamic_group.address_group, 'address') | join(",") }} }
+{%             endif %}
+    }
+{%         endfor %}
+{%     endif %}
+
+{%     if dynamic_group.ipv6_address_group is vyos_defined and is_ipv6 %}
+{%         for group_name, group_conf in dynamic_group.ipv6_address_group.items() %}
+{%             set includes = group_conf.include if group_conf.include is vyos_defined else [] %}
+    set DA6_{{ group_name }} {
+        type {{ ip_type }}
+        flags dynamic, timeout
+{%             if group_conf.address is vyos_defined or includes %}
+        elements = { {{ group_conf.address | nft_nested_group(includes, dynamic_group.ipv6_address_group, 'address') | join(",") }} }
+{%             endif %}
+    }
+{%         endfor %}
+{%     endif %}
+{% endif %}
+{% endmacro %}

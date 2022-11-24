@@ -296,6 +296,13 @@ def verify(firewall):
                 for group_name, group in groups.items():
                     verify_nested_group(group_name, group, groups, [])
 
+    if 'dynamic_group' in firewall:
+        for group_type in nested_group_types:
+            if group_type in firewall['dynamic_group']:
+                groups = firewall['dynamic_group'][group_type]
+                for group_name, group in groups.items():
+                    verify_nested_group(group_name, group, groups, [])
+
     for name in ['name', 'ipv6_name']:
         if name in firewall:
             for name_id, name_conf in firewall[name].items():

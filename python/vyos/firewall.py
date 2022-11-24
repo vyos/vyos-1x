@@ -208,6 +208,16 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
+            if 'dynamic_group' in side_conf:
+                group = side_conf['dynamic_group']
+                if 'address_group' in group:
+                    group_name = group['address_group']
+                    operator = ''
+                    if group_name[0] == '!':
+                        operator = '!='
+                        group_name = group_name[1:]
+                    output.append(f'{ip_name} {prefix}addr {operator} @DA{def_suffix}_{group_name}')
+
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
         output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
@@ -304,6 +314,22 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         output.append(f'tcp option maxseg size {tcp_mss}')
 
     output.append('counter')
+
+####  set add ip daddr timeout 2m @DA_dag01 counter drop
+    if 'add_address_to_group' in rule_conf:
+        for side in ['destination_address', 'source_address']:
+            if side in rule_conf['add_address_to_group']:
+                prefix = side[0]
+                side_conf = rule_conf['add_address_to_group'][side]
+
+                dyn_group = side_conf['address_group']
+
+                if 'timeout_value' in side_conf:
+                    time_value = side_conf['timeout_value']
+                    time_unit = side_conf['timeout_unit'][0]
+                    output.append(f'set update ip{def_suffix} {prefix}addr timeout {time_value}{time_unit} @DA{def_suffix}_{dyn_group}')
+                else:
+                    output.append(f'set update ip{def_suffix} saddr @DA{def_suffix}_{dyn_group}')
 
     if 'set' in rule_conf:
         output.append(parse_policy_set(rule_conf['set'], def_suffix))

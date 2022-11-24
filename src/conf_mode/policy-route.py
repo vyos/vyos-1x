@@ -46,12 +46,14 @@ preserve_chains = [
 
 valid_groups = [
     'address_group',
+    'dynamic_address_group',
     'network_group',
     'port_group'
 ]
 
 group_set_prefix = {
     'A_': 'address_group',
+    'DA_': 'address_group',
     'A6_': 'ipv6_address_group',
 #    'D_': 'domain_group',
     'M_': 'mac_group',

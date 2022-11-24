@@ -39,4 +39,19 @@
     </leafNode>
   </children>
 </node>
+<node name="dynamic-group">
+  <properties>
+    <help>Dynamic Group</help>
+  </properties>
+  <children>
+    <leafNode name="address-group">
+      <properties>
+        <help>Group of dynamic ipv6 addresses</help>
+        <completionHelp>
+          <path>firewall dynamic-group ipv6-address-group</path>
+        </completionHelp>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 <!-- include end -->

@@ -91,6 +91,7 @@ table ip vyos_filter {
 {% endif %}
 
 {{ group_tmpl.groups(group, False) }}
+{{ group_tmpl.dynamic_groups(dynamic_group, False) }}
 
 {% if zone is vyos_defined %}
 {{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, False) }}
@@ -200,6 +201,7 @@ table ip6 vyos_filter {
 {% endif %}
 
 {{ group_tmpl.groups(group, True) }}
+{{ group_tmpl.dynamic_groups(dynamic_group, True) }}
 
 {% if zone is vyos_defined %}
 {{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, True) }}

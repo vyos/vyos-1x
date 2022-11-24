@@ -134,6 +134,7 @@
               #include <include/generic-description.xml.i>
             </children>
           </tagNode>
+
           <tagNode name="ipv6-address-group">
             <properties>
               <help>Firewall ipv6-address-group</help>
@@ -314,6 +315,79 @@
           </tagNode>
         </children>
       </node>
+      <node name="dynamic-group">
+        <properties>
+          <help>Firewall dynamic group</help>
+        </properties>
+        <children>
+          <tagNode name="address-group">
+            <properties>
+              <help>Firewall dynamic address-group</help>
+              <constraint>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address to match. Range is not supported.</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another dynamic-address-group</help>
+                  <completionHelp>
+                    <path>firewall dynamic-group address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="ipv6-address-group">
+            <properties>
+              <help>Firewall dynamic ipv6-address-group</help>
+              <constraint>
+                <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+              </constraint>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <help>Address-group member</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to match. Range is not supported.</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="include">
+                <properties>
+                  <help>Include another dynamic-address-group</help>
+                  <completionHelp>
+                    <path>firewall dynamic-group ipv6-address-group</path>
+                  </completionHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              #include <include/generic-description.xml.i>
+            </children>
+          </tagNode>
+        </children>
+      </node>
       <tagNode name="interface">
         <properties>
           <help>Interface name to apply firewall configuration</help>
@@ -400,6 +474,29 @@
               <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
+            <node name="add-address-to-group">
+                <properties>
+                  <help>Add ipv6 address to dynamic ipv6-address-group</help>
+                </properties>
+                <children>
+                  <node name="source-address">
+                    <properties>
+                      <help>Add source ipv6 addresses to dynamic ipv6-address-group</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/add-dynamic-ipv6-address-groups.xml.i>
+                    </children>
+                  </node>
+                  <node name="destination-address">
+                    <properties>
+                      <help>Add destination ipv6 addresses to dynamic ipv6-address-group</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/add-dynamic-ipv6-address-groups.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
               #include <include/firewall/action.xml.i>
               #include <include/generic-description.xml.i>
               <node name="destination">
@@ -566,6 +663,29 @@
               <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
+              <node name="add-address-to-group">
+                <properties>
+                  <help>Add ip address to dynamic address-group</help>
+                </properties>
+                <children>
+                  <node name="source-address">
+                    <properties>
+                      <help>Add source ip addresses to dynamic address-group</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/add-dynamic-address-groups.xml.i>
+                    </children>
+                  </node>
+                  <node name="destination-address">
+                    <properties>
+                      <help>Add destination ip addresses to dynamic address-group</help>
+                    </properties>
+                    <children>
+                      #include <include/firewall/add-dynamic-address-groups.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
               #include <include/firewall/action.xml.i>
               #include <include/generic-description.xml.i>
               <node name="destination">
