@@ -113,12 +113,19 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         if side in rule_conf:
             prefix = side[0]
             side_conf = rule_conf[side]
+            address_mask = side_conf.get('address_mask', None)
 
             if 'address' in side_conf:
                 suffix = side_conf['address']
-                if suffix[0] == '!':
-                    suffix = f'!= {suffix[1:]}'
-                output.append(f'{ip_name} {prefix}addr {suffix}')
+                operator = ''
+                exclude = suffix[0] == '!'
+                if exclude:
+                    operator = '!= '
+                    suffix = suffix[1:]
+                if address_mask:
+                    operator = '!=' if exclude else '=='
+                    operator = f'& {address_mask} {operator} '
+                output.append(f'{ip_name} {prefix}addr {operator}{suffix}')
 
             if 'fqdn' in side_conf:
                 fqdn = side_conf['fqdn']
@@ -168,9 +175,13 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
                 if 'address_group' in group:
                     group_name = group['address_group']
                     operator = ''
-                    if group_name[0] == '!':
+                    exclude = group_name[0] == "!"
+                    if exclude:
                         operator = '!='
                         group_name = group_name[1:]
+                    if address_mask:
+                        operator = '!=' if exclude else '=='
+                        operator = f'& {address_mask} {operator}'
                     output.append(f'{ip_name} {prefix}addr {operator} @A{def_suffix}_{group_name}')
                 # Generate firewall group domain-group
                 elif 'domain_group' in group:
