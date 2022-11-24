@@ -28,7 +28,6 @@ from vyos.ifconfig import VethIf
 
 airbag.enable()
 
-
 def get_config(config=None):
     """
     Retrive CLI config as dictionary. Dictionary can never be empty, as at
@@ -41,10 +40,12 @@ def get_config(config=None):
     base = ['interfaces', 'virtual-ethernet']
     ifname, veth = get_interface_dict(conf, base)
 
-    veth_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True,
-                                     no_tag_node_value_mangle=True)
-    veth['config_dict'] = veth_dict
+    # We need to know all other veth related interfaces as veth requires a 1:1
+    # mapping for the peer-names. The Linux kernel automatically creates both
+    # interfaces, the local one and the peer-name, but VyOS also needs a peer
+    # interfaces configrued on the CLI so we can assign proper IP addresses etc.
+    veth['other_interfaces'] = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                     get_first_key=True, no_tag_node_value_mangle=True)
 
     return veth
 
@@ -58,19 +59,19 @@ def verify(veth):
     verify_address(veth)
 
     if 'peer_name' not in veth:
-        raise ConfigError(
-            f'Remote peer name must be set for \"{veth["ifname"]}\"!')
+        raise ConfigError(f'Remote peer name must be set for "{veth["ifname"]}"!')
 
-    if veth['peer_name'] not in veth['config_dict'].keys():
-        raise ConfigError(
-            f'Interface \"{veth["peer_name"]}\" is not configured!')
+    if veth['peer_name'] not in veth['other_interfaces']:
+        peer_name = veth['peer_name']
+        ifname = veth['ifname']
+        raise ConfigError(f'Used peer-name "{peer_name}" on interface "{ifname}" ' \
+                          'is not configured!')
 
     return None
 
 
 def generate(peth):
     return None
-
 
 def apply(veth):
     # Check if the Veth interface already exists
