@@ -53,6 +53,13 @@ def get_config(config=None):
 def verify(veth):
     if 'deleted' in veth:
         verify_bridge_delete(veth)
+        # Prevent to delete veth interface which used for another "vethX peer-name"
+        for iface, iface_config in veth['other_interfaces'].items():
+            if veth['ifname'] in iface_config['peer_name']:
+                ifname = veth['ifname']
+                raise ConfigError(
+                    f'Cannot delete "{ifname}" used for "interface {iface} peer-name"'
+                )
         return None
 
     verify_vrf(veth)
