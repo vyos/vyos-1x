@@ -70,6 +70,8 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['auto-cost', 'reference-bandwidth', bandwidth])
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'abr-type', abr_type])
+        self.cli_set(base_path + ['parameters', 'opaque-lsa'])
+        self.cli_set(base_path + ['parameters', 'rfc1583-compatibility'])
         self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
         self.cli_set(base_path + ['default-metric', metric])
 
@@ -79,10 +81,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' compatible rfc1583', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth {bandwidth}', frrconfig)
         self.assertIn(f' ospf router-id {router_id}', frrconfig)
         self.assertIn(f' ospf abr-type {abr_type}', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
+        self.assertIn(f' capability opaque', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)
 
 
