@@ -1,4 +1,4 @@
-# vyos-1x: VyOS 1.2.0+ Configuration Scripts and Data
+# vyos-1x: VyOS command definitions, configuration scripts, and data
 
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=vyos%3Avyos-1x&metric=coverage)](https://sonarcloud.io/component_measures?id=vyos%3Avyos-1x&metric=coverage)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x?ref=badge_shield)
