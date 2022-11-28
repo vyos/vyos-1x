@@ -26,7 +26,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
-from vyos.configdep import set_dependent, call_dependents
+from vyos.configdep import set_dependents, call_dependents
 # from vyos.configverify import verify_interface_exists
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
@@ -162,11 +162,8 @@ def get_config(config=None):
 
     firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     if firewall['group_resync']:
-        # Update nat as firewall groups were updated
-        set_dependent(nat_conf_script, conf)
-        # Update policy route as firewall groups were updated
-        set_dependent(policy_route_conf_script, conf)
-
+        # Update nat and policy-route as firewall groups were updated
+        set_dependents('group_resync', conf)
 
     if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
         diff = get_config_diff(conf)

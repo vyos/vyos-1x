@@ -14,11 +14,15 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import json
 from inspect import stack
 
 from vyos.util import load_as_module
+from vyos.defaults import directories
+from vyos.configsource import VyOSError
+from vyos import ConfigError
 
-dependents = {}
+dependent_func = {}
 
 def canon_name(name: str) -> str:
     return os.path.splitext(name)[0].replace('-', '_')
@@ -30,9 +34,22 @@ def canon_name_of_path(path: str) -> str:
 def caller_name() -> str:
     return stack()[-1].filename
 
-def run_config_mode_script(script: str, config):
-    from vyos.defaults import directories
+def read_dependency_dict():
+    path = os.path.join(directories['data'],
+                        'config-mode-dependencies.json')
+    with open(path) as f:
+        d = json.load(f)
+    return d
 
+def get_dependency_dict(config):
+    if hasattr(config, 'cached_dependency_dict'):
+        d = getattr(config, 'cached_dependency_dict')
+    else:
+        d = read_dependency_dict()
+        setattr(config, 'cached_dependency_dict', d)
+    return d
+
+def run_config_mode_script(script: str, config):
     path = os.path.join(directories['conf_mode'], script)
     name = canon_name(script)
     mod = load_as_module(name, path)
@@ -46,20 +63,23 @@ def run_config_mode_script(script: str, config):
     except (VyOSError, ConfigError) as e:
         raise ConfigError(repr(e))
 
-def def_closure(script: str, config):
+def def_closure(target: str, config):
+    script = target + '.py'
     def func_impl():
         run_config_mode_script(script, config)
     return func_impl
 
-def set_dependent(target: str, config):
+def set_dependents(case, config):
+    d = get_dependency_dict(config)
     k = canon_name_of_path(caller_name())
-    l = dependents.setdefault(k, [])
-    func = def_closure(target, config)
-    l.append(func)
+    l = dependent_func.setdefault(k, [])
+    for target in d[k][case]:
+        func = def_closure(target, config)
+        l.append(func)
 
 def call_dependents():
     k = canon_name_of_path(caller_name())
-    l = dependents.get(k, [])
+    l = dependent_func.get(k, [])
     while l:
         f = l.pop(0)
         f()

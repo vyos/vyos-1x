@@ -1,0 +1,1 @@
+{"firewall": {"group_resync": ["nat", "policy-route"]}}
