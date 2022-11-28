@@ -88,7 +88,7 @@ if [[ -n $update ]] && [[ $update -eq "yes" ]]; then
 
     # fix permissions
     chown -R proxy:proxy ${db_dir}
-    chmod 2770 ${db_dir}
+    chmod 755 ${db_dir}
 
     logger --priority WARNING "webproxy blacklist entries updated (${count_before}/${count_after})"
 
