@@ -281,12 +281,13 @@ def apply(pki):
 
                         for found_name, found_path in dict_search_recursive(search_dict, key):
                             if found_name == item_name:
-                                path_str = ' '.join(search['path'] + found_path)
+                                path = search['path']
+                                path_str = ' '.join(path + found_path)
                                 print(f'pki: Updating config: {path_str} {found_name}')
 
                                 script = search['script']
-                                if found_path[0] == 'interfaces':
-                                    ifname = found_path[2]
+                                if path[0] == 'interfaces':
+                                    ifname = found_path[0]
                                     call(f'VYOS_TAGNODE_VALUE={ifname} {script}')
                                 else:
                                     call(script)

@@ -175,7 +175,7 @@ def generate(ethernet):
 
         loaded_pki_cert = load_certificate(pki_cert['certificate'])
         loaded_ca_certs = {load_certificate(c['certificate'])
-            for c in ethernet['pki']['ca'].values()}
+            for c in ethernet['pki']['ca'].values()} if 'ca' in ethernet['pki'] else {}
 
         cert_full_chain = find_chain(loaded_pki_cert, loaded_ca_certs)
 
