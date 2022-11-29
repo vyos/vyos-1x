@@ -69,18 +69,22 @@ def run_config_mode_script(script: str, config: 'Config'):
     except (VyOSError, ConfigError) as e:
         raise ConfigError(repr(e))
 
-def def_closure(target: str, config: 'Config') -> typing.Callable:
+def def_closure(target: str, config: 'Config',
+                tagnode: typing.Optional[str] = None) -> typing.Callable:
     script = target + '.py'
     def func_impl():
+        if tagnode:
+            os.environ['VYOS_TAGNODE_VALUE'] = tagnode
         run_config_mode_script(script, config)
     return func_impl
 
-def set_dependents(case: str, config: 'Config'):
+def set_dependents(case: str, config: 'Config',
+                   tagnode: typing.Optional[str] = None):
     d = get_dependency_dict(config)
     k = canon_name_of_path(caller_name())
     l = dependent_func.setdefault(k, [])
     for target in d[k][case]:
-        func = def_closure(target, config)
+        func = def_closure(target, config, tagnode)
         l.append(func)
 
 def call_dependents():
