@@ -246,5 +246,27 @@ class TestPKI(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['service', 'https', 'certificates', 'certificate'])
 
+    def test_certificate_eapol_update(self):
+        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_ca_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_ca_private_key.replace('\n','')])
+        self.cli_commit()
+
+        self.cli_set(['interfaces', 'ethernet', 'eth1', 'eapol', 'certificate', 'smoketest'])
+        self.cli_commit()
+
+        cert_data = None
+
+        with open('/run/wpa_supplicant/eth1_cert.pem') as f:
+            cert_data = f.read()
+
+        self.cli_set(base_path + ['certificate', 'smoketest', 'certificate', valid_update_cert.replace('\n','')])
+        self.cli_set(base_path + ['certificate', 'smoketest', 'private', 'key', valid_update_private_key.replace('\n','')])
+        self.cli_commit()
+
+        with open('/run/wpa_supplicant/eth1_cert.pem') as f:
+            self.assertNotEqual(cert_data, f.read())
+
+        self.cli_delete(['interfaces', 'ethernet', 'eth1', 'eapol'])
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
