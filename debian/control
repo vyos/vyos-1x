@@ -304,6 +304,10 @@ Depends:
 # For "run monitor bandwidth"
   bmon,
 # End Operational mode
+## TPM tools
+  cryptsetup,
+  tpm2-tools,
+## End TPM tools
 ## Optional utilities
   easy-rsa,
   tcptraceroute,

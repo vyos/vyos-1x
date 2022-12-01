@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="encryption">
+    <properties>
+      <help>Manage config encryption</help>
+    </properties>
+    <children>
+      <node name="disable">
+        <properties>
+          <help>Disable config encryption using TPM or recovery key</help>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/vyos-config-encrypt.py --disable</command>
+      </node>
+      <node name="enable">
+        <properties>
+          <help>Enable config encryption using TPM</help>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/vyos-config-encrypt.py --enable</command>
+      </node>
+      <node name="load">
+        <properties>
+          <help>Load encrypted config volume using TPM or recovery key</help>
+        </properties>
+        <command>sudo ${vyos_libexec_dir}/vyos-config-encrypt.py --load</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
