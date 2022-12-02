@@ -25,6 +25,7 @@ import vyos.defaults
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.util import cmd
 from vyos.util import call
@@ -60,6 +61,11 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
+    # reset on creation/deletion of 'api' node
+    https_base = ['service', 'https']
+    if conf.exists(https_base):
+        set_dependents("https", conf)
 
     base = ['service', 'https', 'api']
     if not conf.exists(base):
@@ -132,7 +138,7 @@ def apply(http_api):
     # Let uvicorn settle before restarting Nginx
     sleep(1)
 
-    cmd(f'{vyos_conf_scripts_dir}/https.py', raising=ConfigError)
+    call_dependents()
 
 if __name__ == '__main__':
     try:
