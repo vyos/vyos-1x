@@ -24,20 +24,19 @@ from vyos.util import rc_cmd
 
 # define a list of commands that needs to be executed
 CMD_LIST: list[str] = [
-    'sudo ipsec status',
-    'sudo swanctl -L',
-    'sudo swanctl -l',
-    'sudo swanctl -P',
-    'sudo ip x sa show',
-    'sudo ip x policy show',
-    'sudo ip tunnel show',
-    'sudo ip address',
-    'sudo ip rule show',
-    'sudo ip route | head -100',
-    'sudo ip route show table 220'
+    'ipsec status',
+    'swanctl -L',
+    'swanctl -l',
+    'swanctl -P',
+    'ip x sa show',
+    'ip x policy show',
+    'ip tunnel show',
+    'ip address',
+    'ip rule show',
+    'ip route | head -100',
+    'ip route show table 220'
 ]
-JOURNALCTL_CMD: str = 'sudo journalctl -b -n 10000 /usr/lib/ipsec/charon'
-
+JOURNALCTL_CMD: str = 'journalctl -b -n 10000 /usr/lib/ipsec/charon'
 
 # execute a command and save the output to a file
 def save_stdout(command: str, file: Path) -> None:
