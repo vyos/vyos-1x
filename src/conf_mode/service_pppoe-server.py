@@ -20,6 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import get_accel_dict
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_accel_ppp_base_service
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
@@ -43,6 +44,13 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     pppoe = get_accel_dict(conf, base, pppoe_chap_secrets)
+
+    # reload-or-restart does not implemented in accel-ppp
+    # use this workaround until it will be implemented
+    # https://phabricator.accel-ppp.org/T3
+    if is_node_changed(conf, base + ['client-ip-pool']) or is_node_changed(
+            conf, base + ['client-ipv6-pool']):
+        pppoe.update({'restart_required': {}})
     return pppoe
 
 def verify(pppoe):
@@ -95,7 +103,10 @@ def apply(pppoe):
                 os.unlink(file)
         return None
 
-    call(f'systemctl reload-or-restart {systemd_service}')
+    if 'restart_required' in pppoe:
+        call(f'systemctl restart {systemd_service}')
+    else:
+        call(f'systemctl reload-or-restart {systemd_service}')
 
 if __name__ == '__main__':
     try:
