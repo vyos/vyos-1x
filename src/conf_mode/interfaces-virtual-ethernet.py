@@ -68,11 +68,20 @@ def verify(veth):
     if 'peer_name' not in veth:
         raise ConfigError(f'Remote peer name must be set for "{veth["ifname"]}"!')
 
+    peer_name = veth['peer_name']
+    ifname = veth['ifname']
+
     if veth['peer_name'] not in veth['other_interfaces']:
-        peer_name = veth['peer_name']
-        ifname = veth['ifname']
         raise ConfigError(f'Used peer-name "{peer_name}" on interface "{ifname}" ' \
                           'is not configured!')
+
+    if veth['other_interfaces'][peer_name]['peer_name'] != ifname:
+        raise ConfigError(
+            f'Configuration mismatch between "{ifname}" and "{peer_name}"!')
+
+    if peer_name == ifname:
+        raise ConfigError(
+            f'Peer-name "{peer_name}" cannot be the same as interface "{ifname}"!')
 
     return None
 
