@@ -1431,6 +1431,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="route-reflector-allow-outbound-policy">
+      <properties>
+        <help>Route reflector client allow policy outbound</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="no-client-to-client-reflection">
       <properties>
         <help>Disable client to client route reflection</help>
