@@ -279,14 +279,14 @@ def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
         return
 
+    seen.append(group_name)
+
     for g in group['include']:
         if g not in groups:
             raise ConfigError(f'Nested group "{g}" does not exist')
 
         if g in seen:
             raise ConfigError(f'Group "{group_name}" has a circular reference')
-
-        seen.append(g)
 
         if 'include' in groups[g]:
             verify_nested_group(g, groups[g], groups, seen)
