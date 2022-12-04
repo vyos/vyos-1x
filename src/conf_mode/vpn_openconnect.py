@@ -58,7 +58,7 @@ def get_config():
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
 
-    if "local" in ocserv["authentication"]["mode"]:
+    if 'mode' in ocserv["authentication"] and "local" in ocserv["authentication"]["mode"]:
         # workaround a "know limitation" - https://phabricator.vyos.net/T2665
         del ocserv['authentication']['local_users']['username']['otp']
         if not ocserv["authentication"]["local_users"]["username"]:
