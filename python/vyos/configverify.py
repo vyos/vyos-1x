@@ -388,8 +388,10 @@ def verify_accel_ppp_base_service(config, local_users=True):
     """
     # vertify auth settings
     if local_users and dict_search('authentication.mode', config) == 'local':
-        if dict_search(f'authentication.local_users', config) == None:
-            raise ConfigError('Authentication mode local requires local users to be configured!')
+        if (dict_search(f'authentication.local_users', config) is None or
+                dict_search(f'authentication.local_users', config) == {}):
+            raise ConfigError(
+                'Authentication mode local requires local users to be configured!')
 
         for user in dict_search('authentication.local_users.username', config):
             user_config = config['authentication']['local_users']['username'][user]
