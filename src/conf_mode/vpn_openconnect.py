@@ -157,7 +157,7 @@ def verify(ocserv):
                 ocserv["network_settings"]["push_route"].remove("0.0.0.0/0")
                 ocserv["network_settings"]["push_route"].append("default")
         else:
-            ocserv["network_settings"]["push_route"] = "default"
+            ocserv["network_settings"]["push_route"] = ["default"]
     else:
         raise ConfigError('openconnect network settings required')
 
