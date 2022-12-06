@@ -24,7 +24,12 @@ acl Safe_ports port {{ port }}
 {%     endfor %}
 {% endif %}
 acl CONNECT method CONNECT
-
+{% if domain_block is vyos_defined %}
+{%     for domain in domain_block %}
+acl BLOCKDOMAIN dstdomain {{ domain }}
+{%     endfor %}
+http_access deny BLOCKDOMAIN
+{% endif %}
 {% if authentication is vyos_defined %}
 {%     if authentication.children is vyos_defined %}
 auth_param basic children {{ authentication.children }}
