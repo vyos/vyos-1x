@@ -22,6 +22,8 @@ from tabulate import tabulate
 
 import vyos.opmode
 from vyos.util import bytes_to_human
+from vyos.util import commit_in_progress
+from vyos.util import call
 from vyos.config import Config
 
 def _get_tunnel_address(peer_host, peer_port, status_file):
@@ -199,6 +201,14 @@ def show(raw: bool, mode: str) -> str:
         return openvpn_data
 
     return _format_openvpn(openvpn_data)
+
+def reset(interface: str):
+    if os.path.isfile(f'/run/openvpn/{interface}.conf'):
+        if commit_in_progress():
+            raise vyos.opmode.CommitInProgress('Retry OpenVPN reset: commit in progress.')
+        call(f'systemctl restart openvpn@{interface}.service')
+    else:
+        raise vyos.opmode.IncorrectValue(f'OpenVPN interface "{interface}" does not exist!')
 
 if __name__ == '__main__':
     try:
