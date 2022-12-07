@@ -163,10 +163,24 @@ def apply(ocserv):
             if os.path.exists(file):
                 os.unlink(file)
     else:
+<<<<<<< HEAD
         call('systemctl restart ocserv.service')
         sleep(1)
         if not is_systemd_service_running("ocserv.service"):
             raise ConfigError('openconnect failed to start, check the logs for details')
+=======
+        call('systemctl reload-or-restart ocserv.service')
+        counter = 0
+        while True:
+            # exit early when service runs
+            if is_systemd_service_running("ocserv.service"):
+                break
+            sleep(0.250)
+            if counter > 5:
+                raise ConfigError('openconnect failed to start, check the logs for details')
+                break
+            counter += 1
+>>>>>>> ecb245f13 (T4861: Openconnect replace restart to reload-or-restart)
 
 
 if __name__ == '__main__':
