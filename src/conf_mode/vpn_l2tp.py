@@ -26,7 +26,10 @@ from ipaddress import ip_network
 from vyos.config import Config
 from vyos.template import is_ipv4
 from vyos.template import render
-from vyos.util import call, get_half_cpus
+from vyos.util import call
+from vyos.util import get_half_cpus
+from vyos.util import check_port_availability
+from vyos.util import is_listen_port_bind_service
 from vyos import ConfigError
 
 from vyos import airbag
@@ -64,7 +67,7 @@ default_config_data = {
     'radius_source_address': '',
     'radius_shaper_attr': '',
     'radius_shaper_vendor': '',
-    'radius_dynamic_author': '',
+    'radius_dynamic_author': {},
     'wins': [],
     'ip6_column': [],
     'thread_cnt': get_half_cpus()
@@ -205,21 +208,21 @@ def get_config(config=None):
             l2tp['radius_source_address'] = conf.return_value(['source-address'])
 
         # Dynamic Authorization Extensions (DOA)/Change Of Authentication (COA)
-        if conf.exists(['dynamic-author']):
+        if conf.exists(['dae-server']):
             dae = {
                 'port' : '',
                 'server' : '',
                 'key' : ''
             }
 
-            if conf.exists(['dynamic-author', 'server']):
-                dae['server'] = conf.return_value(['dynamic-author', 'server'])
+            if conf.exists(['dae-server', 'ip-address']):
+                dae['server'] = conf.return_value(['dae-server', 'ip-address'])
 
-            if conf.exists(['dynamic-author', 'port']):
-                dae['port'] = conf.return_value(['dynamic-author', 'port'])
+            if conf.exists(['dae-server', 'port']):
+                dae['port'] = conf.return_value(['dae-server', 'port'])
 
-            if conf.exists(['dynamic-author', 'key']):
-                dae['key'] = conf.return_value(['dynamic-author', 'key'])
+            if conf.exists(['dae-server', 'secret']):
+                dae['key'] = conf.return_value(['dae-server', 'secret'])
 
             l2tp['radius_dynamic_author'] = dae
 
@@ -328,6 +331,19 @@ def verify(l2tp):
         for radius in l2tp['radius_server']:
             if not radius['key']:
                 raise ConfigError(f"Missing RADIUS secret for server { radius['key'] }")
+
+        if l2tp['radius_dynamic_author']:
+            if not l2tp['radius_dynamic_author']['server']:
+                raise ConfigError("Missing ip-address for dae-server")
+            if not l2tp['radius_dynamic_author']['key']:
+                raise ConfigError("Missing secret for dae-server")
+            address = l2tp['radius_dynamic_author']['server']
+            port = l2tp['radius_dynamic_author']['port']
+            proto = 'tcp'
+            # check if dae listen port is not used by another service
+            if check_port_availability(address, int(port), proto) is not True and \
+                not is_listen_port_bind_service(int(port), 'accel-pppd'):
+                raise ConfigError(f'"{proto}" port "{port}" is used by another service')
 
     # check for the existence of a client ip pool
     if not (l2tp['client_ip_pool'] or l2tp['client_ip_subnets']):

@@ -230,6 +230,7 @@
                             <properties>
                               <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
                             </properties>
+                            <defaultValue>1700</defaultValue>
                           </leafNode>
                           <leafNode name="secret">
                             <properties>
