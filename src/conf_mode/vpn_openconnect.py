@@ -247,7 +247,7 @@ def apply(ocserv):
             if os.path.exists(file):
                 os.unlink(file)
     else:
-        call('systemctl restart ocserv.service')
+        call('systemctl reload-or-restart ocserv.service')
         counter = 0
         while True:
             # exit early when service runs
