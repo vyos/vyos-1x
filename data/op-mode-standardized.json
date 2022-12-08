@@ -12,6 +12,7 @@
 "nat.py",
 "neighbor.py",
 "openconnect.py",
+"openvpn.py",
 "route.py",
 "system.py",
 "ipsec.py",
