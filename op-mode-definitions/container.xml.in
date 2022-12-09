@@ -69,7 +69,7 @@
                     <list>&lt;filename&gt;</list>
                   </completionHelp>
                 </properties>
-                <command>sudo podman build --layers --force-rm --tag "$4" $6</command>
+                <command>sudo podman build --net host --layers --force-rm --tag "$4" $6</command>
               </tagNode>
             </children>
           </tagNode>
