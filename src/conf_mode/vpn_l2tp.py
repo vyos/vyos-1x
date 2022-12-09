@@ -46,6 +46,7 @@ default_config_data = {
     'client_ip_pool': None,
     'client_ip_subnets': [],
     'client_ipv6_pool': [],
+    'client_ipv6_pool_configured': False,
     'client_ipv6_delegate_prefix': [],
     'dnsv4': [],
     'dnsv6': [],
@@ -247,6 +248,7 @@ def get_config(config=None):
         l2tp['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
 
     if conf.exists(['client-ipv6-pool', 'prefix']):
+        l2tp['client_ipv6_pool_configured'] = True
         l2tp['ip6_column'].append('ip6')
         for prefix in conf.list_nodes(['client-ipv6-pool', 'prefix']):
             tmp = {
@@ -308,6 +310,9 @@ def get_config(config=None):
 
     if conf.exists(['ppp-options', 'lcp-echo-interval']):
         l2tp['ppp_echo_interval'] = conf.return_value(['ppp-options', 'lcp-echo-interval'])
+
+    if conf.exists(['ppp-options', 'ipv6']):
+        l2tp['ppp_ipv6'] = conf.return_value(['ppp-options', 'ipv6'])
 
     return l2tp
 

@@ -121,8 +121,10 @@ lcp-echo-failure={{ ppp_echo_failure }}
 {% if ccp_disable %}
 ccp=0
 {% endif %}
-{% if client_ipv6_pool %}
-ipv6=allow
+{% if ppp_ipv6 is vyos_defined %}
+ipv6={{ ppp_ipv6 }}
+{% else %}
+{{ 'ipv6=allow' if client_ipv6_pool_configured else '' }}
 {% endif %}
 
 
