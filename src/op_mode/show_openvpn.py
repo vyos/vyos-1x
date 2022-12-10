@@ -59,7 +59,11 @@ def get_vpn_tunnel_address(peer, interface):
         for line in lines:
             if peer in line:
                 lst.append(line)
-        tunnel_ip = lst[1].split(',')[0]
+
+        # filter out subnet entries
+        lst = [l for l in lst[1:] if '/' not in l.split(',')[0]]
+
+        tunnel_ip = lst[0].split(',')[0]
 
         return tunnel_ip
 
