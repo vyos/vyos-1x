@@ -41,7 +41,7 @@ def check_ppp_running(interface):
 def connect(interface):
     """ Connect dialer interface """
 
-    if interface.startswith('ppp'):
+    if interface.startswith('pppoe') or interface.startswith('sstpc'):
         check_ppp_interface(interface)
         # Check if interface is already dialed
         if os.path.isdir(f'/sys/class/net/{interface}'):
@@ -62,7 +62,7 @@ def connect(interface):
 def disconnect(interface):
     """ Disconnect dialer interface """
 
-    if interface.startswith('ppp'):
+    if interface.startswith('pppoe') or interface.startswith('sstpc'):
         check_ppp_interface(interface)
 
         # Check if interface is already down

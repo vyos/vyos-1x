@@ -10,6 +10,7 @@
           <help>Take down a connection-oriented network interface</help>
           <completionHelp>
             <path>interfaces pppoe</path>
+            <path>interfaces sstpc</path>
             <path>interfaces wwan</path>
           </completionHelp>
         </properties>

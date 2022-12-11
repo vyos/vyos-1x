@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This is a Python hook script which is invoked whenever a SSTP client session
+# goes "ip-up". It will call into our vyos.ifconfig library and will then
+# execute common tasks for the SSTP interface. The reason we have to "hook" this
+# is that we can not create a sstpcX interface in advance in linux and then
+# connect pppd to this already existing interface.
+
+from sys import argv
+from sys import exit
+
+from vyos.configquery import ConfigTreeQuery
+from vyos.configdict import get_interface_dict
+from vyos.ifconfig import SSTPCIf
+
+# When the ppp link comes up, this script is called with the following
+# parameters
+#       $1      the interface name used by pppd (e.g. ppp3)
+#       $2      the tty device name
+#       $3      the tty device speed
+#       $4      the local IP address for the interface
+#       $5      the remote IP address
+#       $6      the parameter specified by the 'ipparam' option to pppd
+
+if (len(argv) < 7):
+    exit(1)
+
+interface = argv[6]
+
+conf = ConfigTreeQuery()
+_, sstpc = get_interface_dict(conf.config, ['interfaces', 'sstpc'], interface)
+
+# Update the config
+p = SSTPCIf(interface)
+p.update(sstpc)
