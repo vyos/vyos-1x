@@ -237,19 +237,7 @@
                           <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>
                       </leafNode>
-                      <leafNode name="server">
-                        <properties>
-                          <help>Server to send DDNS update to</help>
-                          <valueHelp>
-                            <format>IPv4</format>
-                            <description>IP address of DDNS server</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>FQDN</format>
-                            <description>Hostname of DDNS server</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/server-ipv4-fqdn.xml.i>
                       <leafNode name="zone">
                         <properties>
                           <help>DNS zone to update (only available with CloudFlare)</help>
