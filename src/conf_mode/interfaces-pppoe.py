@@ -23,7 +23,6 @@ from netifaces import interfaces
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
-from vyos.configdict import leaf_node_changed
 from vyos.configdict import get_pppoe_interfaces
 from vyos.configverify import verify_authentication
 from vyos.configverify import verify_source_interface
