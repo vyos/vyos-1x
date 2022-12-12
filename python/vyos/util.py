@@ -539,12 +539,15 @@ def seconds_to_human(s, separator=""):
 
     return result
 
-def bytes_to_human(bytes, initial_exponent=0):
+def bytes_to_human(bytes, initial_exponent=0, precision=2):
     """ Converts a value in bytes to a human-readable size string like 640 KB
 
     The initial_exponent parameter is the exponent of 2,
     e.g. 10 (1024) for kilobytes, 20 (1024 * 1024) for megabytes.
     """
+
+    if bytes == 0:
+        return "0 B"
 
     from math import log2
 
@@ -571,7 +574,7 @@ def bytes_to_human(bytes, initial_exponent=0):
     # Add a new case when the first machine with petabyte RAM
     # hits the market.
 
-    size_string = "{0:.2f} {1}".format(value, suffix)
+    size_string = "{0:.{1}f} {2}".format(value, precision, suffix)
     return size_string
 
 def human_to_bytes(value):

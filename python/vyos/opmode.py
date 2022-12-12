@@ -51,6 +51,12 @@ class IncorrectValue(Error):
     """
     pass
 
+class CommitInProgress(Error):
+    """ Requested operation is valid, but not possible at the time due
+    to a commit being in progress.
+    """
+    pass
+
 class InternalError(Error):
     """ Any situation when VyOS detects that it could not perform
         an operation correctly due to logic errors in its own code
