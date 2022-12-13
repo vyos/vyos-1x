@@ -7,7 +7,7 @@
       <description>File in /config/auth directory</description>
     </valueHelp>
     <constraint>
-      <validator name="file-exists" argument="--directory /config/auth"/>
+      <validator name="file-path" argument="--strict --parent-dir /config/auth"/>
     </constraint>
   </properties>
 </leafNode>
