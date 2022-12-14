@@ -10,7 +10,7 @@
       <description>Gateway interface name</description>
     </valueHelp>
     <constraint>
-      <validator name="interface-name"/>
+      #include <include/constraint/interface-name.xml.in>
     </constraint>
   </properties>
 </leafNode>
