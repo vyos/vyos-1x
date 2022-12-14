@@ -31,14 +31,7 @@ occtl_socket = '/run/ocserv/occtl.socket'
 def _get_raw_data_sessions():
     rc, out = rc_cmd(f'sudo {occtl} --json --socket-file {occtl_socket} show users')
     if rc != 0:
-        output = {'openconnect':
-            {
-                'configured': False,
-                'return_code': rc,
-                'reason': out
-            }
-        }
-        return output
+        raise vyos.opmode.DataUnavailable(out)
 
     sessions = json.loads(out)
     return sessions
@@ -61,9 +54,8 @@ def _get_formatted_sessions(data):
 
 def show_sessions(raw: bool):
     config = ConfigTreeQuery()
-    if not config.exists('vpn openconnect') and not raw:
-        print('Openconnect is not configured')
-        exit(0)
+    if not config.exists('vpn openconnect'):
+        raise vyos.opmode.UnconfiguredSubsystem('Openconnect is not configured')
 
     openconnect_data = _get_raw_data_sessions()
     if raw:
