@@ -116,7 +116,7 @@ def get_config(config=None):
     if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
             # Check if member interface is a new member
-            if not conf.exists_effective(['member', 'interface', interface]):
+            if not conf.exists_effective(base + [ifname, 'member', 'interface', interface]):
                 bond['shutdown_required'] = {}
 
             # Check if member interface is disabled
