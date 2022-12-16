@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3316: Migrate to Kea
+#        - global-parameters will not function
+#        - shared-network-parameters will not function
+#        - subnet-parameters will not function
+#        - static-mapping-parameters will not function
+#        - host-decl-name is on by default, option removed
+#        - ping-check no longer supported
+#        - failover is default enabled on all subnets that exist on failover servers
+
+import sys
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 2):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['service', 'dhcp-server']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+
+if config.exists(base + ['host-decl-name']):
+    config.delete(base + ['host-decl-name'])
+
+if config.exists(base + ['global-parameters']):
+    config.delete(base + ['global-parameters'])
+
+if config.exists(base + ['shared-network-name']):
+    for network in config.list_nodes(base + ['shared-network-name']):
+        base_network = base + ['shared-network-name', network]
+
+        if config.exists(base_network + ['ping-check']):
+            config.delete(base_network + ['ping-check'])
+
+        if config.exists(base_network + ['shared-network-parameters']):
+            config.delete(base_network +['shared-network-parameters'])
+
+        if not config.exists(base_network + ['subnet']):
+            continue
+
+        # Run this for every specified 'subnet'
+        for subnet in config.list_nodes(base_network + ['subnet']):
+            base_subnet = base_network + ['subnet', subnet]
+
+            if config.exists(base_subnet + ['enable-failover']):
+                config.delete(base_subnet + ['enable-failover'])
+
+            if config.exists(base_subnet + ['ping-check']):
+                config.delete(base_subnet + ['ping-check'])
+
+            if config.exists(base_subnet + ['subnet-parameters']):
+                config.delete(base_subnet + ['subnet-parameters'])
+
+            if config.exists(base_subnet + ['static-mapping']):
+                for mapping in config.list_nodes(base_subnet + ['static-mapping']):
+                    if config.exists(base_subnet + ['static-mapping', mapping, 'static-mapping-parameters']):
+                        config.delete(base_subnet + ['static-mapping', mapping, 'static-mapping-parameters'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

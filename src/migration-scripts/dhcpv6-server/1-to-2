@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T3316: Migrate to Kea
+# - Kea was meant to have support for key "prefix-highest" under PD which would allow an address range
+#   However this seems to have never been implemented. A conversion to prefix length is needed (where possible).
+#   Ref: https://lists.isc.org/pipermail/kea-users/2022-November/003686.html
+# - Remove prefix temporary value, convert to multi leafNode (https://kea.readthedocs.io/en/kea-2.2.0/arm/dhcp6-srv.html#dhcpv6-server-limitations)
+
+import sys
+from vyos.configtree import ConfigTree
+from vyos.utils.network import ipv6_prefix_length
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['service', 'dhcpv6-server', 'shared-network-name']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+for network in config.list_nodes(base):
+    if not config.exists(base + [network, 'subnet']):
+        continue
+
+    for subnet in config.list_nodes(base + [network, 'subnet']):
+        # Delete temporary value under address-range prefix, convert tagNode to leafNode multi
+        if config.exists(base + [network, 'subnet', subnet, 'address-range', 'prefix']):
+            prefix_base = base + [network, 'subnet', subnet, 'address-range', 'prefix']
+            prefixes = config.list_nodes(prefix_base)
+            
+            config.delete(prefix_base)
+
+            for prefix in prefixes:
+                config.set(prefix_base, value=prefix, replace=False)
+
+        if config.exists(base + [network, 'subnet', subnet, 'prefix-delegation', 'prefix']):
+            prefix_base = base + [network, 'subnet', subnet, 'prefix-delegation', 'prefix']
+
+            config.set(prefix_base)
+            config.set_tag(prefix_base)
+
+            for start in config.list_nodes(base + [network, 'subnet', subnet, 'prefix-delegation', 'start']):
+                path = base + [network, 'subnet', subnet, 'prefix-delegation', 'start', start]
+
+                delegated_length = config.return_value(path + ['prefix-length'])
+                stop = config.return_value(path + ['stop'])
+
+                prefix_length = ipv6_prefix_length(start, stop)
+
+                # This range could not be converted into a simple prefix length and must be skipped
+                if not prefix_length:
+                    continue
+
+                config.set(prefix_base + [start, 'delegated-length'], value=delegated_length)
+                config.set(prefix_base + [start, 'prefix-length'], value=prefix_length)
+
+            config.delete(base + [network, 'subnet', subnet, 'prefix-delegation', 'start'])
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

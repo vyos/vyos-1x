@@ -21,10 +21,16 @@ from ipaddress import ip_network
 from netaddr import IPAddress
 from netaddr import IPRange
 from sys import exit
+from time import sleep
 
 from vyos.config import Config
+from vyos.pki import wrap_certificate
+from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
+from vyos.utils.file import chmod_775
+from vyos.utils.file import write_file
 from vyos.utils.process import call
 from vyos.utils.process import run
 from vyos.utils.network import is_subnet_connected
@@ -33,8 +39,14 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = '/run/dhcp-server/dhcpd.conf'
-systemd_override = r'/run/systemd/system/isc-dhcp-server.service.d/10-override.conf'
+ctrl_config_file = '/run/kea/kea-ctrl-agent.conf'
+ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
+config_file = '/run/kea/kea-dhcp4.conf'
+lease_file = '/config/dhcp4.leases'
+
+ca_cert_file = '/run/kea/kea-failover-ca.pem'
+cert_file = '/run/kea/kea-failover.pem'
+cert_key_file = '/run/kea/kea-failover-key.pem'
 
 def dhcp_slice_range(exclude_list, range_dict):
     """
@@ -130,6 +142,9 @@ def get_config(config=None):
                         dhcp['shared_network_name'][network]['subnet'][subnet].update(
                                 {'range' : new_range_dict})
 
+    if dict_search('failover.certificate', dhcp):
+        dhcp['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True) 
+
     return dhcp
 
 def verify(dhcp):
@@ -165,13 +180,6 @@ def verify(dhcp):
                 for route, route_option in subnet_config['static_route'].items():
                     if 'next_hop' not in route_option:
                         raise ConfigError(f'DHCP static-route "{route}" requires router to be defined!')
-
-            # DHCP failover needs at least one subnet that uses it
-            if 'enable_failover' in subnet_config:
-                if 'failover' not in dhcp:
-                    raise ConfigError(f'Can not enable failover for "{subnet}" in "{network}".\n' \
-                                      'Failover is not configured globally!')
-                failover_ok = True
 
             # Check if DHCP address range is inside configured subnet declaration
             if 'range' in subnet_config:
@@ -249,13 +257,33 @@ def verify(dhcp):
         raise ConfigError(f'At least one shared network must be active!')
 
     if 'failover' in dhcp:
-        if not failover_ok:
-            raise ConfigError('DHCP failover must be enabled for at least one subnet!')
-
         for key in ['name', 'remote', 'source_address', 'status']:
             if key not in dhcp['failover']:
                 tmp = key.replace('_', '-')
                 raise ConfigError(f'DHCP failover requires "{tmp}" to be specified!')
+
+        if len({'certificate', 'ca_certificate'} & set(dhcp['failover'])) == 1:
+            raise ConfigError(f'DHCP secured failover requires both certificate and CA certificate')
+
+        if 'certificate' in dhcp['failover']:
+            cert_name = dhcp['failover']['certificate']
+
+            if cert_name not in dhcp['pki']['certificate']:
+                raise ConfigError(f'Invalid certificate specified for DHCP failover')
+
+            if not dict_search_args(dhcp['pki']['certificate'], cert_name, 'certificate'):
+                raise ConfigError(f'Invalid certificate specified for DHCP failover')
+
+            if not dict_search_args(dhcp['pki']['certificate'], cert_name, 'private', 'key'):
+                raise ConfigError(f'Missing private key on certificate specified for DHCP failover')
+
+        if 'ca_certificate' in dhcp['failover']:
+            ca_cert_name = dhcp['failover']['ca_certificate']
+            if ca_cert_name not in dhcp['pki']['ca']:
+                raise ConfigError(f'Invalid CA certificate specified for DHCP failover')
+
+            if not dict_search_args(dhcp['pki']['ca'], ca_cert_name, 'certificate'):
+                raise ConfigError(f'Invalid CA certificate specified for DHCP failover')
 
     for address in (dict_search('listen_address', dhcp) or []):
         if is_addr_assigned(address):
@@ -278,43 +306,71 @@ def generate(dhcp):
     if not dhcp or 'disable' in dhcp:
         return None
 
-    # Please see: https://vyos.dev/T1129 for quoting of the raw
-    # parameters we can pass to ISC DHCPd
-    tmp_file = '/tmp/dhcpd.conf'
-    render(tmp_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
-           formater=lambda _: _.replace("&quot;", '"'))
-    # XXX: as we have the ability for a user to pass in "raw" options via VyOS
-    # CLI (see T3544) we now ask ISC dhcpd to test the newly rendered
-    # configuration
-    tmp = run(f'/usr/sbin/dhcpd -4 -q -t -cf {tmp_file}')
-    if tmp > 0:
-        if os.path.exists(tmp_file):
-            os.unlink(tmp_file)
-        raise ConfigError('Configuration file errors encountered - check your options!')
+    dhcp['lease_file'] = lease_file
+    dhcp['machine'] = os.uname().machine
 
-    # Now that we know that the newly rendered configuration is "good" we can
-    # render the "real" configuration
-    render(config_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
-           formater=lambda _: _.replace("&quot;", '"'))
-    render(systemd_override, 'dhcp-server/10-override.conf.j2', dhcp)
+    if not os.path.exists(lease_file):
+        write_file(lease_file, '', user='_kea', group='vyattacfg', mode=0o755)
 
-    # Clean up configuration test file
-    if os.path.exists(tmp_file):
-        os.unlink(tmp_file)
+    for f in [cert_file, cert_key_file, ca_cert_file]:
+        if os.path.exists(f):
+            os.unlink(f)
+
+    if 'failover' in dhcp:
+        if 'certificate' in dhcp['failover']:
+            cert_name = dhcp['failover']['certificate']
+            cert_data = dhcp['pki']['certificate'][cert_name]['certificate']
+            key_data = dhcp['pki']['certificate'][cert_name]['private']['key']
+            write_file(cert_file, wrap_certificate(cert_data), user='_kea', mode=0o600)
+            write_file(cert_key_file, wrap_private_key(key_data), user='_kea', mode=0o600)
+
+            dhcp['failover']['cert_file'] = cert_file
+            dhcp['failover']['cert_key_file'] = cert_key_file
+
+        if 'ca_certificate' in dhcp['failover']:
+            ca_cert_name = dhcp['failover']['ca_certificate']
+            ca_cert_data = dhcp['pki']['ca'][ca_cert_name]['certificate']
+            write_file(ca_cert_file, wrap_certificate(ca_cert_data), user='_kea', mode=0o600)
+
+            dhcp['failover']['ca_cert_file'] = ca_cert_file
+
+    render(ctrl_config_file, 'dhcp-server/kea-ctrl-agent.conf.j2', dhcp)
+    render(config_file, 'dhcp-server/kea-dhcp4.conf.j2', dhcp)
 
     return None
 
 def apply(dhcp):
-    call('systemctl daemon-reload')
-    # bail out early - looks like removal from running config
+    services = ['kea-ctrl-agent', 'kea-dhcp4-server', 'kea-dhcp-ddns-server']
+
     if not dhcp or 'disable' in dhcp:
-        call('systemctl stop isc-dhcp-server.service')
+        for service in services:
+            call(f'systemctl stop {service}.service')
+
         if os.path.exists(config_file):
             os.unlink(config_file)
 
         return None
 
-    call('systemctl restart isc-dhcp-server.service')
+    for service in services:
+        action = 'restart'
+
+        if service == 'kea-dhcp-ddns-server' and 'dynamic_dns_update' not in dhcp:
+            action = 'stop'
+
+        if service == 'kea-ctrl-agent' and 'failover' not in dhcp:
+            action = 'stop'
+
+        call(f'systemctl {action} {service}.service')
+
+    # op-mode needs ctrl socket permission change
+    i = 0
+    while not os.path.exists(ctrl_socket):
+        if i > 15:
+            break
+        i += 1
+        sleep(1)
+    chmod_775(ctrl_socket)
+
     return None
 
 if __name__ == '__main__':

@@ -51,7 +51,7 @@
                 <properties>
                   <help>Monitor last lines of DHCP server log</help>
                 </properties>
-                <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server.service</command>
+                <command>journalctl --no-hostname --follow --boot --unit kea-dhcp4-server.service</command>
               </node>
               <node name="client">
                 <properties>
@@ -81,7 +81,7 @@
                 <properties>
                   <help>Monitor last lines of DHCPv6 server log</help>
                 </properties>
-                <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server6.service</command>
+                <command>journalctl --no-hostname --follow --boot --unit kea-dhcp6-server.service</command>
               </node>
               <node name="client">
                 <properties>

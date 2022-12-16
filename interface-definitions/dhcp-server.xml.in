@@ -63,23 +63,13 @@
                   <constraintErrorMessage>Invalid DHCP failover peer status</constraintErrorMessage>
                 </properties>
               </leafNode>
+              #include <include/pki/ca-certificate.xml.i>
+              #include <include/pki/certificate.xml.i>
             </children>
           </node>
-          <leafNode name="global-parameters">
-            <properties>
-              <help>Additional global parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
-              <multi/>
-            </properties>
-          </leafNode>
           <leafNode name="hostfile-update">
             <properties>
               <help>Updating /etc/hosts file (per client lease)</help>
-              <valueless/>
-            </properties>
-          </leafNode>
-          <leafNode name="host-decl-name">
-            <properties>
-              <help>Use host declaration name for forward DNS name</help>
               <valueless/>
             </properties>
           </leafNode>
@@ -102,16 +92,9 @@
               #include <include/dhcp/domain-name.xml.i>
               #include <include/dhcp/domain-search.xml.i>
               #include <include/dhcp/ntp-server.xml.i>
-              #include <include/dhcp/ping-check.xml.i>
               #include <include/generic-description.xml.i>
               #include <include/generic-disable-node.xml.i>
               #include <include/name-server-ipv4.xml.i>
-              <leafNode name="shared-network-parameters">
-                <properties>
-                  <help>Additional shared-network parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
-                  <multi/>
-                </properties>
-              </leafNode>
               <tagNode name="subnet">
                 <properties>
                   <help>DHCP subnet for shared network</help>
@@ -191,12 +174,6 @@
                   #include <include/dhcp/domain-search.xml.i>
                   #include <include/generic-description.xml.i>
                   #include <include/name-server-ipv4.xml.i>
-                  <leafNode name="enable-failover">
-                    <properties>
-                      <help>Enable DHCP failover support for this subnet</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
                   <leafNode name="exclude">
                     <properties>
                       <help>IP address to exclude from DHCP lease range</help>
@@ -231,7 +208,6 @@
                     <defaultValue>86400</defaultValue>
                   </leafNode>
                   #include <include/dhcp/ntp-server.xml.i>
-                  #include <include/dhcp/ping-check.xml.i>
                   <leafNode name="pop-server">
                     <properties>
                       <help>IP address of POP3 server</help>
@@ -339,12 +315,6 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="static-mapping-parameters">
-                        <properties>
-                          <help>Additional static-mapping parameters for DHCP server. Will be placed inside the "host" block of the mapping. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
-                          <multi/>
-                        </properties>
-                      </leafNode>
                     </children>
                   </tagNode>
                   <tagNode name="static-route">
@@ -384,12 +354,6 @@
                         <validator name="numeric" argument="--range 0-4294967295"/>
                       </constraint>
                       <constraintErrorMessage>Seconds must be between 0 and 4294967295 (49 days)</constraintErrorMessage>
-                    </properties>
-                  </leafNode>
-                  <leafNode name="subnet-parameters">
-                    <properties>
-                      <help>Additional subnet parameters for DHCP server. You must use the syntax of dhcpd.conf in this text-field. Using this without proper knowledge may result in a crashed DHCP server. Check system log to look for errors.</help>
-                      <multi/>
                     </properties>
                   </leafNode>
                   <leafNode name="tftp-server-name">

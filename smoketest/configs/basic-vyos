@@ -1,6 +1,7 @@
 interfaces {
     ethernet eth0 {
         address 192.168.0.1/24
+        address fe88::1/56
         duplex auto
         smp-affinity auto
         speed auto
@@ -86,6 +87,23 @@ service {
                 range LANDynamic {
                     start 192.168.0.20
                     stop 192.168.0.240
+                }
+            }
+        }
+    }
+    dhcpv6-server {
+        shared-network-name LAN6 {
+            subnet fe88::/56 {
+                address-range {
+                    prefix fe88::/56 {
+                        temporary
+                    }
+                }
+                prefix-delegation {
+                    start fe88:0000:0000:0001:: {
+                        prefix-length 64
+                        stop fe88:0000:0000:0010::
+                    }
                 }
             }
         }

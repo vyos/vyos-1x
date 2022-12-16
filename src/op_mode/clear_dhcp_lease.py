@@ -1,20 +1,34 @@
 #!/usr/bin/env python3
+#
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import re
 
-from isc_dhcp_leases import Lease
-from isc_dhcp_leases import IscDhcpLeases
-
 from vyos.configquery import ConfigTreeQuery
+from vyos.kea import kea_parse_leases
 from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
 
+# TODO: Update to use Kea control socket command "lease4-del"
 
 config = ConfigTreeQuery()
 base = ['service', 'dhcp-server']
-lease_file = '/config/dhcpd.leases'
+lease_file = '/config/dhcp4.leases'
 
 
 def del_lease_ip(address):
@@ -25,8 +39,7 @@ def del_lease_ip(address):
     """
     with open(lease_file, encoding='utf-8') as f:
         data = f.read().rstrip()
-        lease_config_ip = '{(?P<config>[\s\S]+?)\n}'
-        pattern = rf"lease {address} {lease_config_ip}"
+        pattern = rf"^{address},[^\n]+\n"
         # Delete lease for ip block
         data = re.sub(pattern, '', data)
 
@@ -38,15 +51,13 @@ def is_ip_in_leases(address):
     """
     Return True if address found in the lease file
     """
-    leases = IscDhcpLeases(lease_file)
+    leases = kea_parse_leases(lease_file)
     lease_ips = []
-    for lease in leases.get():
-        lease_ips.append(lease.ip)
-    if address not in lease_ips:
-        print(f'Address "{address}" not found in "{lease_file}"')
-        return False
-    return True
-
+    for lease in leases:
+        if address == lease['address']:
+            return True
+    print(f'Address "{address}" not found in "{lease_file}"')
+    return False
 
 if not config.exists(base):
     print('DHCP-server not configured!')
@@ -75,4 +86,4 @@ if __name__ == '__main__':
         exit(1)
     else:
         del_lease_ip(address)
-        call('systemctl restart isc-dhcp-server.service')
+        call('systemctl restart kea-dhcp4-server.service')

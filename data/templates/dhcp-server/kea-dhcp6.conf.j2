@@ -1,0 +1,48 @@
+{
+    "Dhcp6": {
+        "interfaces-config": {
+            "interfaces": [ "*" ],
+            "service-sockets-max-retries": 5,
+            "service-sockets-retry-wait-time": 5000
+        },
+        "control-socket": {
+            "socket-type": "unix",
+            "socket-name": "/run/kea/dhcp6-ctrl-socket"
+        },
+        "lease-database": {
+            "type": "memfile",
+            "persist": true,
+            "name": "{{ lease_file }}"
+        },
+        "hooks-libraries": [
+            {
+                "library": "/usr/lib/{{ machine }}-linux-gnu/kea/hooks/libdhcp_lease_cmds.so",
+                "parameters": {}
+            }
+        ],
+        "option-data": [
+{% if global_parameters.name_server is vyos_defined %}
+            {
+                "name": "dns-servers",
+                "code": 23,
+                "space": "dhcp6",
+                "csv-format": true,
+                "data": "{{ global_parameters.name_server | join(", ") }}"
+            }{{ ',' if preference is vyos_defined else '' }}
+{% endif %}
+{% if preference is vyos_defined %}
+            {
+                "name": "preference",
+                "code": 7,
+                "space": "dhcp6",
+                "csv-format": true,
+                "data": "{{ preference }}"
+            }
+{% endif %}
+        ],
+{% if shared_network_name is vyos_defined %}
+        "shared-networks": {{ shared_network_name | kea6_shared_network_json }}
+{% endif %}
+
+    }
+}
