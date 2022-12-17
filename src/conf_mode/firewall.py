@@ -65,7 +65,8 @@ valid_groups = [
     'address_group',
     'domain_group',
     'network_group',
-    'port_group'
+    'port_group',
+    'interface_group'
 ]
 
 nested_group_types = [
