@@ -18,16 +18,26 @@ from . graphql.queries import query
 from . graphql.mutations import mutation
 from . graphql.directives import directives_dict
 from . graphql.errors import op_mode_error
-from . utils.schema_from_op_mode import generate_op_mode_definitions
+from . graphql.auth_token_mutation import auth_token_mutation
+from . generate.schema_from_op_mode import generate_op_mode_definitions
+from . generate.schema_from_config_session import generate_config_session_definitions
+from . generate.schema_from_composite import generate_composite_definitions
+from . libs.token_auth import init_secret
+from . import state
 from ariadne import make_executable_schema, load_schema_from_path, snake_case_fallback_resolvers
 
 def generate_schema():
     api_schema_dir = vyos.defaults.directories['api_schema']
 
     generate_op_mode_definitions()
+    generate_config_session_definitions()
+    generate_composite_definitions()
+
+    if state.settings['app'].state.vyos_auth_type == 'token':
+        init_secret()
 
     type_defs = load_schema_from_path(api_schema_dir)
 
-    schema = make_executable_schema(type_defs, query, op_mode_error, mutation, snake_case_fallback_resolvers, directives=directives_dict)
+    schema = make_executable_schema(type_defs, query, op_mode_error, mutation, auth_token_mutation, snake_case_fallback_resolvers, directives=directives_dict)
 
     return schema

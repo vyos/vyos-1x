@@ -2,21 +2,24 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-{% if cleanup_commands is vyos_defined %}
-{%     for command in cleanup_commands %}
-{{ command }}
-{%     endfor %}
+{% if first_install is not vyos_defined %}
+delete table ip vyos_mangle
+delete table ip6 vyos_mangle
 {% endif %}
-
-table ip mangle {
-{% if first_install is vyos_defined %}
+table ip vyos_mangle {
     chain VYOS_PBR_PREROUTING {
         type filter hook prerouting priority -150; policy accept;
+{% if route is vyos_defined %}
+{%     for route_text, conf in route.items() if conf.interface is vyos_defined %}
+        iifname { {{ ",".join(conf.interface) }} } counter jump VYOS_PBR_{{ route_text }}
+{%     endfor %}
+{% endif %}
     }
+
     chain VYOS_PBR_POSTROUTING {
         type filter hook postrouting priority -150; policy accept;
     }
-{% endif %}
+
 {% if route is vyos_defined %}
 {%     for route_text, conf in route.items() %}
     chain VYOS_PBR_{{ route_text }} {
@@ -32,15 +35,20 @@ table ip mangle {
 {{ group_tmpl.groups(firewall_group, False) }}
 }
 
-table ip6 mangle {
-{% if first_install is vyos_defined %}
+table ip6 vyos_mangle {
     chain VYOS_PBR6_PREROUTING {
         type filter hook prerouting priority -150; policy accept;
+{% if route6 is vyos_defined %}
+{%     for route_text, conf in route6.items() if conf.interface is vyos_defined %}
+        iifname { {{ ",".join(conf.interface) }} } counter jump VYOS_PBR6_{{ route_text }}
+{%     endfor %}
+{% endif %}
     }
+
     chain VYOS_PBR6_POSTROUTING {
         type filter hook postrouting priority -150; policy accept;
     }
-{% endif %}
+
 {% if route6 is vyos_defined %}
 {%     for route_text, conf in route6.items() %}
     chain VYOS_PBR6_{{ route_text }} {
@@ -52,5 +60,6 @@ table ip6 mangle {
     }
 {%     endfor %}
 {% endif %}
+
 {{ group_tmpl.groups(firewall_group, True) }}
 }

@@ -22,53 +22,13 @@ from vyos.config import Config
 from vyos.util import cmd
 from vyos.util import dict_search_args
 
-def get_policy_interfaces(conf, policy, name=None, ipv6=False):
-    interfaces = conf.get_config_dict(['interfaces'], key_mangling=('-', '_'),
-                                      get_first_key=True, no_tag_node_value_mangle=True)
-
-    routes = ['route', 'route6']
-
-    def parse_if(ifname, if_conf):
-        if 'policy' in if_conf:
-            for route in routes:
-                if route in if_conf['policy']:
-                    route_name = if_conf['policy'][route]
-                    name_str = f'({ifname},{route})'
-
-                    if not name:
-                        policy[route][route_name]['interface'].append(name_str)
-                    elif not ipv6 and name == route_name:
-                        policy['interface'].append(name_str)
-
-        for iftype in ['vif', 'vif_s', 'vif_c']:
-            if iftype in if_conf:
-                for vifname, vif_conf in if_conf[iftype].items():
-                    parse_if(f'{ifname}.{vifname}', vif_conf)
-
-    for iftype, iftype_conf in interfaces.items():
-        for ifname, if_conf in iftype_conf.items():
-            parse_if(ifname, if_conf)
-
-def get_config_policy(conf, name=None, ipv6=False, interfaces=True):
+def get_config_policy(conf, name=None, ipv6=False):
     config_path = ['policy']
     if name:
         config_path += ['route6' if ipv6 else 'route', name]
 
     policy = conf.get_config_dict(config_path, key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
-    if policy and interfaces:
-        if name:
-            policy['interface'] = []
-        else:
-            if 'route' in policy:
-                for route_name, route_conf in policy['route'].items():
-                    route_conf['interface'] = []
-
-            if 'route6' in policy:
-                for route_name, route_conf in policy['route6'].items():
-                    route_conf['interface'] = []
-
-        get_policy_interfaces(conf, policy, name, ipv6)
 
     return policy
 

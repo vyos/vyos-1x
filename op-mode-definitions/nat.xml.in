@@ -64,7 +64,7 @@
                 <properties>
                   <help>Show statistics for configured destination NAT rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_nat_statistics.py --destination</command>
+                <command>${vyos_op_scripts_dir}/nat.py show_statistics --direction destination --family inet</command>
               </node>
               <node name="translations">
                 <properties>

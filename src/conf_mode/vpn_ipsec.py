@@ -22,6 +22,7 @@ from sys import exit
 from time import sleep
 from time import time
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
@@ -117,13 +118,26 @@ def get_config(config=None):
                     ipsec['ike_group'][group]['proposal'][proposal] = dict_merge(default_values,
                         ipsec['ike_group'][group]['proposal'][proposal])
 
-    if 'remote_access' in ipsec and 'connection' in ipsec['remote_access']:
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if dict_search('remote_access.connection', ipsec):
         default_values = defaults(base + ['remote-access', 'connection'])
         for rw in ipsec['remote_access']['connection']:
             ipsec['remote_access']['connection'][rw] = dict_merge(default_values,
               ipsec['remote_access']['connection'][rw])
 
-    if 'remote_access' in ipsec and 'radius' in ipsec['remote_access'] and 'server' in ipsec['remote_access']['radius']:
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if dict_search('remote_access.radius.server', ipsec):
+        # Fist handle the "base" stuff like RADIUS timeout
+        default_values = defaults(base + ['remote-access', 'radius'])
+        if 'server' in default_values:
+            del default_values['server']
+        ipsec['remote_access']['radius'] = dict_merge(default_values,
+                                                      ipsec['remote_access']['radius'])
+
+        # Take care about individual RADIUS servers implemented as tagNodes - this
+        # requires special treatment
         default_values = defaults(base + ['remote-access', 'radius', 'server'])
         for server in ipsec['remote_access']['radius']['server']:
             ipsec['remote_access']['radius']['server'][server] = dict_merge(default_values,
@@ -424,6 +438,10 @@ def verify(ipsec):
             if 'vti' in peer_conf:
                 if 'local_address' in peer_conf and 'dhcp_interface' in peer_conf:
                     raise ConfigError(f"A single local-address or dhcp-interface is required when using VTI on site-to-site peer {peer}")
+
+                if dict_search('options.disable_route_autoinstall',
+                               ipsec) == None:
+                    Warning('It\'s recommended to use ipsec vty with the next command\n[set vpn ipsec option disable-route-autoinstall]')
 
                 if 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']

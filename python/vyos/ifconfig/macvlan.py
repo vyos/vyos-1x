@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -30,9 +30,16 @@ class MACVLANIf(Interface):
     }
 
     def _create(self):
+        """
+        Create MACvlan interface in OS kernel. Interface is administrative
+        down by default.
+        """
         # please do not change the order when assembling the command
         cmd = 'ip link add {ifname} link {source_interface} type {type} mode {mode}'
         self._cmd(cmd.format(**self.config))
+
+        # interface is always A/D down. It needs to be enabled explicitly
+        self.set_admin_state('down')
 
     def set_mode(self, mode):
         ifname = self.config['ifname']

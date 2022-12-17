@@ -477,7 +477,7 @@ class FRRConfig:
                 # for the listed FRR issues above
                 pass
         if count >= count_max:
-            raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded')
+            raise ConfigurationNotValid(f'Config commit retry counter ({count_max}) exceeded for {daemon} dameon!')
 
         # Save configuration to /run/frr/config/frr.conf
         save_configuration()

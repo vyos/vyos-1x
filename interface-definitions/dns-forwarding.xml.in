@@ -605,6 +605,10 @@
                 </properties>
               </leafNode>
               #include <include/listen-address.xml.i>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>53</defaultValue>
+              </leafNode>
               <leafNode name="negative-ttl">
                 <properties>
                   <help>Maximum amount of time negative entries are cached</help>

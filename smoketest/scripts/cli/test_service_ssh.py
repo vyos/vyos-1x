@@ -262,5 +262,42 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
 
         self.assertFalse(process_named_running(SSHGUARD_PROCESS))
 
+
+    # Network Device Collaborative Protection Profile
+    def test_ssh_ndcpp(self):
+        ciphers = ['aes128-cbc', 'aes128-ctr', 'aes256-cbc', 'aes256-ctr']
+        host_key_algs = ['sk-ssh-ed25519@openssh.com', 'ssh-rsa', 'ssh-ed25519']
+        kexes = ['diffie-hellman-group14-sha1', 'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521']
+        macs = ['hmac-sha1', 'hmac-sha2-256', 'hmac-sha2-512']
+        rekey_time = '60'
+        rekey_data = '1024'
+
+        for cipher in ciphers:
+            self.cli_set(base_path + ['ciphers', cipher])
+        for host_key in host_key_algs:
+            self.cli_set(base_path + ['hostkey-algorithm', host_key])
+        for kex in kexes:
+            self.cli_set(base_path + ['key-exchange', kex])
+        for mac in macs:
+            self.cli_set(base_path + ['mac', mac])
+        # Optional rekey parameters
+        self.cli_set(base_path + ['rekey', 'data', rekey_data])
+        self.cli_set(base_path + ['rekey', 'time', rekey_time])
+
+        # commit changes
+        self.cli_commit()
+
+        ssh_lines = ['Ciphers aes128-cbc,aes128-ctr,aes256-cbc,aes256-ctr',
+                     'HostKeyAlgorithms sk-ssh-ed25519@openssh.com,ssh-rsa,ssh-ed25519',
+                     'MACs hmac-sha1,hmac-sha2-256,hmac-sha2-512',
+                     'KexAlgorithms diffie-hellman-group14-sha1,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521',
+                     'RekeyLimit 1024M 60M'
+                     ]
+        tmp_sshd_conf = read_file(SSHD_CONF)
+
+        for line in ssh_lines:
+            self.assertIn(line, tmp_sshd_conf)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

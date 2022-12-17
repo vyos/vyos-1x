@@ -22,10 +22,16 @@ import xmltodict
 from sys import exit
 from tabulate import tabulate
 
+from vyos.configquery import ConfigTreeQuery
+
 from vyos.util import cmd
 from vyos.util import dict_search
 
 import vyos.opmode
+
+
+base = 'nat'
+unconf_message = 'NAT is not configured'
 
 
 def _get_xml_translation(direction, family):
@@ -277,6 +283,20 @@ def _get_formatted_translation(dict_data, nat_direction, family):
     return output
 
 
+def _verify(func):
+    """Decorator checks if NAT config exists"""
+    from functools import wraps
+
+    @wraps(func)
+    def _wrapper(*args, **kwargs):
+        config = ConfigTreeQuery()
+        if not config.exists(base):
+            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
+        return func(*args, **kwargs)
+    return _wrapper
+
+
+@_verify
 def show_rules(raw: bool, direction: str, family: str):
     nat_rules = _get_raw_data_rules(direction, family)
     if raw:
@@ -285,6 +305,7 @@ def show_rules(raw: bool, direction: str, family: str):
         return _get_formatted_output_rules(nat_rules, direction, family)
 
 
+@_verify
 def show_statistics(raw: bool, direction: str, family: str):
     nat_statistics = _get_raw_data_rules(direction, family)
     if raw:
@@ -293,6 +314,7 @@ def show_statistics(raw: bool, direction: str, family: str):
         return _get_formatted_output_statistics(nat_statistics, direction)
 
 
+@_verify
 def show_translations(raw: bool, direction: str, family: str):
     family = 'ipv6' if family == 'inet6' else 'ipv4'
     nat_translation = _get_raw_translation(direction, family)

@@ -28,7 +28,6 @@
           #include <include/source-interface-ethernet.xml.i>
           #include <include/interface/mac.xml.i>
           #include <include/interface/mirror.xml.i>
-          #include <include/interface/interface-policy.xml.i>
           <leafNode name="mode">
             <properties>
               <help>Receive mode (default: private)</help>

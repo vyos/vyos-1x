@@ -18,6 +18,23 @@ blacklist_url='ftp://ftp.univ-tlse1.fr/pub/reseau/cache/squidguard_contrib/black
 data_dir="/opt/vyatta/etc/config/url-filtering"
 archive="${data_dir}/squidguard/archive"
 db_dir="${data_dir}/squidguard/db"
+conf_file="/etc/squidguard/squidGuard.conf"
+tmp_conf_file="/tmp/sg_update_db.conf"
+
+#$1-category
+#$2-type
+#$3-list
+create_sg_db ()
+{
+       FILE=$db_dir/$1/$2
+       if test -f "$FILE"; then
+                rm -f ${tmp_conf_file}
+                printf "dbhome $db_dir\ndest $1 {\n     $3      $1/$2\n}\nacl {\n       default {\n             pass    any\n   }\n}" >> ${tmp_conf_file}
+                /usr/bin/squidGuard -b -c ${tmp_conf_file} -C $FILE
+                rm -f ${tmp_conf_file}
+       fi
+
+}
 
 while [ $# -gt 0 ]
 do
@@ -88,7 +105,17 @@ if [[ -n $update ]] && [[ $update -eq "yes" ]]; then
 
     # fix permissions
     chown -R proxy:proxy ${db_dir}
-    chmod 2770 ${db_dir}
+
+    #create db
+    category_list=(`find $db_dir -type d -exec basename {} \; `)
+    for category in ${category_list[@]}
+    do
+        create_sg_db $category "domains" "domainlist"
+        create_sg_db $category "urls" "urllist"
+        create_sg_db $category "expressions" "expressionlist"
+    done
+    chown -R proxy:proxy ${db_dir}
+    chmod 755 ${db_dir}
 
     logger --priority WARNING "webproxy blacklist entries updated (${count_before}/${count_after})"
 

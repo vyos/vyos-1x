@@ -17,11 +17,13 @@
 import unittest
 
 from glob import glob
+from time import sleep
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
+from vyos.util import run
 
 sysfs_config = {
     'all_ping': {'sysfs': '/proc/sys/net/ipv4/icmp_echo_ignore_all', 'default': '0', 'test_value': 'disable'},
@@ -76,6 +78,17 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
 
+    def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
+        # Resolver no longer blocks commit, need to wait for daemon to populate set
+        count = 0
+        while count < max_wait:
+            code = run(f'sudo nft get element {table} {set_name} {{ {element} }}')
+            if code == 0:
+                return True
+            count += 1
+            sleep(1)
+        return False
+
     def test_geoip(self):
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'action', 'drop'])
         self.cli_set(['firewall', 'name', 'smoketest', 'rule', '1', 'source', 'geoip', 'country-code', 'se'])
@@ -125,6 +138,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'interface', 'eth0', 'in', 'name', 'smoketest'])
 
         self.cli_commit()
+
+        self.wait_for_domain_resolver('ip vyos_filter', 'D_smoketest_domain', '192.0.2.5')
+
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
             ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'return'],
@@ -274,6 +290,40 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
+    def test_ipv4_mask(self):
+        name = 'smoketest-mask'
+        interface = 'eth0'
+
+        self.cli_set(['firewall', 'group', 'address-group', 'mask_group', 'address', '1.1.1.1'])
+
+        self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'enable-default-log'])
+
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'destination', 'address', '0.0.1.2'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'destination', 'address-mask', '0.0.255.255'])
+
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'source', 'address', '!0.0.3.4'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'source', 'address-mask', '0.0.255.255'])
+
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'source', 'group', 'address-group', 'mask_group'])
+        self.cli_set(['firewall', 'name', name, 'rule', '3', 'source', 'address-mask', '0.0.255.255'])
+
+        self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'daddr & 0.0.255.255 == 0.0.1.2'],
+            [f'saddr & 0.0.255.255 != 0.0.3.4'],
+            [f'saddr & 0.0.255.255 == @A_mask_group']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+
     def test_ipv6_basic_rules(self):
         name = 'v6-smoketest'
         interface = 'eth0'
@@ -349,6 +399,39 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'log prefix "[{name}-default-D]"', 'drop'],
             ['ip6 saddr 2001:db8::/64', f'jump NAME6_{name}'],
             [f'log prefix "[{name2}-default-J]"', f'jump NAME6_{name}']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+    def test_ipv6_mask(self):
+        name = 'v6-smoketest-mask'
+        interface = 'eth0'
+
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', 'mask_group', 'address', '::beef'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'enable-default-log'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'destination', 'address', '::1111:2222:3333:4444'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'destination', 'address-mask', '::ffff:ffff:ffff:ffff'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'source', 'address', '!::aaaa:bbbb:cccc:dddd'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
+
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'source', 'group', 'address-group', 'mask_group'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '3', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
+
+        self.cli_set(['firewall', 'interface', interface, 'in', 'ipv6-name', name])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['daddr & ::ffff:ffff:ffff:ffff == ::1111:2222:3333:4444'],
+            ['saddr & ::ffff:ffff:ffff:ffff != ::aaaa:bbbb:cccc:dddd'],
+            ['saddr & ::ffff:ffff:ffff:ffff == @A6_mask_group']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')

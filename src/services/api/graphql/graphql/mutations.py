@@ -14,13 +14,13 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from importlib import import_module
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from ariadne import ObjectType, convert_kwargs_to_snake_case, convert_camel_case_to_snake
 from graphql import GraphQLResolveInfo
 from makefun import with_signature
 
 from .. import state
-from .. import key_auth
+from .. libs import key_auth
 from api.graphql.session.session import Session
 from api.graphql.session.errors.op_mode_errors import op_mode_err_msg, op_mode_err_code
 from vyos.opmode import Error as OpModeError
@@ -42,32 +42,52 @@ def make_mutation_resolver(mutation_name, class_name, session_func):
 
     func_base_name = convert_camel_case_to_snake(class_name)
     resolver_name = f'resolve_{func_base_name}'
-    func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Dict)'
+    func_sig = '(obj: Any, info: GraphQLResolveInfo, data: Optional[Dict]=None)'
 
     @mutation.field(mutation_name)
     @convert_kwargs_to_snake_case
     @with_signature(func_sig, func_name=resolver_name)
     async def func_impl(*args, **kwargs):
         try:
-            if 'data' not in kwargs:
-                return {
-                    "success": False,
-                    "errors": ['missing data']
-                }
+            auth_type = state.settings['app'].state.vyos_auth_type
 
-            data = kwargs['data']
-            key = data['key']
+            if auth_type == 'key':
+                data = kwargs['data']
+                key = data['key']
 
-            auth = key_auth.auth_required(key)
-            if auth is None:
-                return {
-                     "success": False,
-                     "errors": ['invalid API key']
-                }
+                auth = key_auth.auth_required(key)
+                if auth is None:
+                    return {
+                         "success": False,
+                         "errors": ['invalid API key']
+                    }
 
-            # We are finished with the 'key' entry, and may remove so as to
-            # pass the rest of data (if any) to function.
-            del data['key']
+                # We are finished with the 'key' entry, and may remove so as to
+                # pass the rest of data (if any) to function.
+                del data['key']
+
+            elif auth_type == 'token':
+                data = kwargs['data']
+                if data is None:
+                    data = {}
+                info = kwargs['info']
+                user = info.context.get('user')
+                if user is None:
+                    error = info.context.get('error')
+                    if error is not None:
+                        return {
+                            "success": False,
+                            "errors": [error]
+                        }
+                    return {
+                        "success": False,
+                        "errors": ['not authenticated']
+                    }
+            else:
+                # AtrributeError will have already been raised if no
+                # vyos_auth_type; validation and defaultValue ensure it is
+                # one of the previous cases, so this is never reached.
+                pass
 
             session = state.settings['app'].state.vyos_session
 
@@ -112,3 +132,7 @@ def make_config_session_mutation_resolver(mutation_name):
 
 def make_gen_op_mutation_resolver(mutation_name):
     return make_mutation_resolver(mutation_name, mutation_name, 'gen_op_mutation')
+
+def make_composite_mutation_resolver(mutation_name):
+    return make_mutation_resolver(mutation_name, mutation_name,
+                                  convert_camel_case_to_snake(mutation_name))

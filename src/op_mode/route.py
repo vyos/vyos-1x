@@ -54,6 +54,18 @@ frr_command_template = Template("""
 {% endif %}
 """)
 
+def show_summary(raw: bool):
+    from vyos.util import cmd
+
+    if raw:
+        from json import loads
+
+        output = cmd(f"vtysh -c 'show ip route summary json'")
+        return loads(output)
+    else:
+        output = cmd(f"vtysh -c 'show ip route summary'")
+        return output
+
 def show(raw: bool,
          family: str,
          net: typing.Optional[str],
@@ -83,7 +95,12 @@ def show(raw: bool,
 
         if raw:
             from json import loads
-            return loads(output)
+            d = loads(output)
+            collect = []
+            for k,_ in d.items():
+                for l in d[k]:
+                    collect.append(l)
+            return collect
         else:
             return output
 

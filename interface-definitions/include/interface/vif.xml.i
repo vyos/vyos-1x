@@ -18,7 +18,6 @@
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
     #include <include/interface/disable.xml.i>
-    #include <include/interface/interface-policy-vif.xml.i>
     <leafNode name="egress-qos">
       <properties>
         <help>VLAN egress QoS</help>

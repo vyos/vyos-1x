@@ -16,6 +16,7 @@
 import re
 import sys
 import typing
+from humps import decamelize
 
 
 class Error(Exception):
@@ -41,6 +42,25 @@ class DataUnavailable(Error):
 class PermissionDenied(Error):
     """ Requested operation is valid, but the caller has no permission
         to perform it.
+    """
+    pass
+
+class IncorrectValue(Error):
+    """ Requested operation is valid, but an argument provided has an
+        incorrect value, preventing successful completion.
+    """
+    pass
+
+class CommitInProgress(Error):
+    """ Requested operation is valid, but not possible at the time due
+    to a commit being in progress.
+    """
+    pass
+
+class InternalError(Error):
+    """ Any situation when VyOS detects that it could not perform
+        an operation correctly due to logic errors in its own code
+        or errors in underlying software.
     """
     pass
 
@@ -92,6 +112,51 @@ def _get_arg_type(t):
         return t.__args__[0]
     else:
         return t
+
+def _normalize_field_name(name):
+    # Convert the name to string if it is not
+    # (in some cases they may be numbers)
+    name = str(name)
+
+    # Replace all separators with underscores
+    name = re.sub(r'(\s|[\(\)\[\]\{\}\-\.\,:\"\'\`])+', '_', name)
+
+    # Replace specific characters with textual descriptions
+    name = re.sub(r'@', '_at_', name)
+    name = re.sub(r'%', '_percentage_', name)
+    name = re.sub(r'~', '_tilde_', name)
+
+    # Force all letters to lowercase
+    name = name.lower()
+
+    # Remove leading and trailing underscores, if any
+    name = re.sub(r'(^(_+)(?=[^_])|_+$)', '', name)
+
+    # Ensure there are only single underscores
+    name = re.sub(r'_+', '_', name)
+
+    return name
+
+def _normalize_dict_field_names(old_dict):
+    new_dict = {}
+
+    for key in old_dict:
+        new_key = _normalize_field_name(key)
+        new_dict[new_key] = _normalize_field_names(old_dict[key])
+
+    # Sanity check
+    if len(old_dict) != len(new_dict):
+        raise InternalError("Dictionary fields do not allow unique normalization")
+    else:
+        return new_dict
+
+def _normalize_field_names(value):
+    if isinstance(value, dict):
+        return _normalize_dict_field_names(value)
+    elif isinstance(value, list):
+        return list(map(lambda v: _normalize_field_names(v), value))
+    else:
+        return value
 
 def run(module):
     from argparse import ArgumentParser
@@ -148,6 +213,8 @@ def run(module):
         if not args["raw"]:
             return res
         else:
+            res = decamelize(res)
+            res = _normalize_field_names(res)
             from json import dumps
             return dumps(res, indent=4)
     else:

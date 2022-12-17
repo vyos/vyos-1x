@@ -63,16 +63,25 @@ class GenOpMutationDirective(VyosDirective):
         super().visit_field_definition(field, object_type,
                                        make_resolver=make_gen_op_mutation_resolver)
 
-class SystemStatusDirective(VyosDirective):
+class CompositeQueryDirective(VyosDirective):
     """
     Class providing implementation of 'system_status' directive in schema.
     """
     def visit_field_definition(self, field, object_type):
         super().visit_field_definition(field, object_type,
-                                       make_resolver=make_system_status_resolver)
+                                       make_resolver=make_composite_query_resolver)
+
+class CompositeMutationDirective(VyosDirective):
+    """
+    Class providing implementation of 'system_status' directive in schema.
+    """
+    def visit_field_definition(self, field, object_type):
+        super().visit_field_definition(field, object_type,
+                                       make_resolver=make_composite_mutation_resolver)
 
 directives_dict = {"configsessionquery": ConfigSessionQueryDirective,
                    "configsessionmutation": ConfigSessionMutationDirective,
                    "genopquery": GenOpQueryDirective,
                    "genopmutation": GenOpMutationDirective,
-                   "systemstatus": SystemStatusDirective}
+                   "compositequery": CompositeQueryDirective,
+                   "compositemutation": CompositeMutationDirective}

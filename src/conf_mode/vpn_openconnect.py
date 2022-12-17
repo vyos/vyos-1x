@@ -58,7 +58,7 @@ def get_config():
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
 
-    if "local" in ocserv["authentication"]["mode"]:
+    if 'mode' in ocserv["authentication"] and "local" in ocserv["authentication"]["mode"]:
         # workaround a "know limitation" - https://phabricator.vyos.net/T2665
         del ocserv['authentication']['local_users']['username']['otp']
         if not ocserv["authentication"]["local_users"]["username"]:
@@ -157,7 +157,7 @@ def verify(ocserv):
                 ocserv["network_settings"]["push_route"].remove("0.0.0.0/0")
                 ocserv["network_settings"]["push_route"].append("default")
         else:
-            ocserv["network_settings"]["push_route"] = "default"
+            ocserv["network_settings"]["push_route"] = ["default"]
     else:
         raise ConfigError('openconnect network settings required')
 
@@ -247,7 +247,7 @@ def apply(ocserv):
             if os.path.exists(file):
                 os.unlink(file)
     else:
-        call('systemctl restart ocserv.service')
+        call('systemctl reload-or-restart ocserv.service')
         counter = 0
         while True:
             # exit early when service runs

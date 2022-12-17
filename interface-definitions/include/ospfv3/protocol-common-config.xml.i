@@ -118,7 +118,7 @@
       <description>Interface used for routing information exchange</description>
     </valueHelp>
     <constraint>
-      <validator name="interface-name"/>
+      #include <include/constraint/interface-name.xml.in>
     </constraint>
   </properties>
   <children>

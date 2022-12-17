@@ -3,7 +3,7 @@
   <properties>
     <help>ICMPv6 type-name</help>
     <completionHelp>
-      <list>destination-unreachable packet-too-big time-exceeded echo-request echo-reply mld-listener-query mld-listener-report mld-listener-reduction nd-router-solicit nd-router-advert nd-neighbor-solicit nd-neighbor-advert nd-redirect parameter-problem router-renumbering</list>
+      <list>destination-unreachable packet-too-big time-exceeded echo-request echo-reply mld-listener-query mld-listener-report mld-listener-reduction nd-router-solicit nd-router-advert nd-neighbor-solicit nd-neighbor-advert nd-redirect parameter-problem router-renumbering ind-neighbor-solicit ind-neighbor-advert mld2-listener-report</list>
     </completionHelp>
     <valueHelp>
       <format>destination-unreachable</format>
@@ -65,8 +65,20 @@
       <format>router-renumbering</format>
       <description>ICMPv6 type 138: router-renumbering</description>
     </valueHelp>
+    <valueHelp>
+      <format>ind-neighbor-solicit</format>
+      <description>ICMPv6 type 141: ind-neighbor-solicit</description>
+    </valueHelp>
+    <valueHelp>
+      <format>ind-neighbor-advert</format>
+      <description>ICMPv6 type 142: ind-neighbor-advert</description>
+    </valueHelp>
+    <valueHelp>
+      <format>mld2-listener-report</format>
+      <description>ICMPv6 type 143: mld2-listener-report</description>
+    </valueHelp>
     <constraint>
-      <regex>(destination-unreachable|packet-too-big|time-exceeded|echo-request|echo-reply|mld-listener-query|mld-listener-report|mld-listener-reduction|nd-router-solicit|nd-router-advert|nd-neighbor-solicit|nd-neighbor-advert|nd-redirect|parameter-problem|router-renumbering)</regex>
+      <regex>(destination-unreachable|packet-too-big|time-exceeded|echo-request|echo-reply|mld-listener-query|mld-listener-report|mld-listener-reduction|nd-router-solicit|nd-router-advert|nd-neighbor-solicit|nd-neighbor-advert|nd-redirect|parameter-problem|router-renumbering|ind-neighbor-solicit|ind-neighbor-advert|mld2-listener-report)</regex>
     </constraint>
   </properties>
 </leafNode>

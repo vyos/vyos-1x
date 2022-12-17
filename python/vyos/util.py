@@ -539,12 +539,15 @@ def seconds_to_human(s, separator=""):
 
     return result
 
-def bytes_to_human(bytes, initial_exponent=0):
+def bytes_to_human(bytes, initial_exponent=0, precision=2):
     """ Converts a value in bytes to a human-readable size string like 640 KB
 
     The initial_exponent parameter is the exponent of 2,
     e.g. 10 (1024) for kilobytes, 20 (1024 * 1024) for megabytes.
     """
+
+    if bytes == 0:
+        return "0 B"
 
     from math import log2
 
@@ -571,8 +574,39 @@ def bytes_to_human(bytes, initial_exponent=0):
     # Add a new case when the first machine with petabyte RAM
     # hits the market.
 
-    size_string = "{0:.2f} {1}".format(value, suffix)
+    size_string = "{0:.{1}f} {2}".format(value, precision, suffix)
     return size_string
+
+def human_to_bytes(value):
+    """ Converts a data amount with a unit suffix to bytes, like 2K to 2048 """
+
+    from re import match as re_match
+
+    res = re_match(r'^\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*$', value)
+
+    if not res:
+        raise ValueError(f"'{value}' is not a valid data amount")
+    else:
+        amount = float(res.group(1))
+        unit = res.group(2).lower()
+
+        if unit == 'b':
+            res = amount
+        elif (unit == 'k') or (unit == 'kb'):
+            res = amount * 1024
+        elif (unit == 'm') or (unit == 'mb'):
+            res = amount * 1024**2
+        elif (unit == 'g') or (unit == 'gb'):
+            res = amount * 1024**3
+        elif (unit == 't') or (unit == 'tb'):
+            res = amount * 1024**4
+        else:
+            raise ValueError(f"Unsupported data unit '{unit}'")
+
+    # There cannot be fractional bytes, so we convert them to integer.
+    # However, truncating causes problems with conversion back to human unit,
+    # so we round instead -- that seems to work well enough.
+    return round(res)
 
 def get_cfg_group_id():
     from grp import getgrnam
@@ -1105,3 +1139,18 @@ def sysctl_write(name, value):
         call(f'sysctl -wq {name}={value}')
         return True
     return False
+
+# approach follows a discussion in:
+# https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
+def camel_to_snake_case(name: str) -> str:
+    pattern = r'\d+|[A-Z]?[a-z]+|\W|[A-Z]{2,}(?=[A-Z][a-z]|\d|\W|$)'
+    words = re.findall(pattern, name)
+    return '_'.join(map(str.lower, words))
+
+def load_as_module(name: str, path: str):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod

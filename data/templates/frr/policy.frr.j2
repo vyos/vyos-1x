@@ -322,6 +322,9 @@ route-map {{ route_map }} {{ rule_config.action }} {{ rule }}
 {%                     if rule_config.set.ipv6_next_hop.prefer_global is vyos_defined %}
  set ipv6 next-hop prefer-global
 {%                     endif %}
+{%                     if rule_config.set.l3vpn_nexthop.encapsulation.gre is vyos_defined %}
+set l3vpn next-hop encapsulation gre
+{%                     endif %}
 {%                     if rule_config.set.large_community.replace is vyos_defined %}
  set large-community {{ rule_config.set.large_community.replace | join(' ') }}
 {%                     endif %}

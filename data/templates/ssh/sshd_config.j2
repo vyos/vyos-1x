@@ -62,6 +62,11 @@ ListenAddress {{ address }}
 Ciphers {{ ciphers | join(',') }}
 {% endif %}
 
+{% if hostkey_algorithm is vyos_defined %}
+# Specifies the available Host Key signature algorithms
+HostKeyAlgorithms {{ hostkey_algorithm | join(',') }}
+{% endif %}
+
 {% if mac is vyos_defined %}
 # Specifies the available MAC (message authentication code) algorithms
 MACs {{ mac | join(',') }}

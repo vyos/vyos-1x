@@ -926,7 +926,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      <validator name="interface-name"/>
+      #include <include/constraint/interface-name.xml.in>
     </constraint>
   </properties>
   <children>
@@ -1428,6 +1428,12 @@
     <leafNode name="network-import-check">
       <properties>
         <help>Enable IGP route check for network statements</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="route-reflector-allow-outbound-policy">
+      <properties>
+        <help>Route reflector client allow policy outbound</help>
         <valueless/>
       </properties>
     </leafNode>

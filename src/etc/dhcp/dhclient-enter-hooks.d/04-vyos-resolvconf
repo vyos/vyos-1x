@@ -33,8 +33,8 @@ if /usr/bin/systemctl -q is-active vyos-hostsd; then
         if [ -n "$new_dhcp6_name_servers" ]; then
             logmsg info "Deleting nameservers with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
             $hostsd_client --delete-name-servers --tag "dhcpv6-$interface"
-            logmsg info "Adding nameservers \"$new_dhcpv6_name_servers\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
-            $hostsd_client --add-name-servers $new_dhcpv6_name_servers --tag "dhcpv6-$interface"
+            logmsg info "Adding nameservers \"$new_dhcp6_name_servers\" with tag \"dhcpv6-$interface\" via vyos-hostsd-client"
+            $hostsd_client --add-name-servers $new_dhcp6_name_servers --tag "dhcpv6-$interface"
             hostsd_changes=y
         fi
 

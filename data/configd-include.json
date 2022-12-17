@@ -28,6 +28,7 @@
 "interfaces-openvpn.py",
 "interfaces-pppoe.py",
 "interfaces-pseudo-ethernet.py",
+"interfaces-sstpc.py",
 "interfaces-tunnel.py",
 "interfaces-vti.py",
 "interfaces-vxlan.py",

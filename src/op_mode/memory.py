@@ -20,7 +20,7 @@ import sys
 import vyos.opmode
 
 
-def _get_system_memory():
+def _get_raw_data():
     from re import search as re_search
 
     def find_value(keyword, mem_data):
@@ -38,7 +38,7 @@ def _get_system_memory():
 
     used = total - available
 
-    res = {
+    mem_data = {
       "total":   total,
       "free":    available,
       "used":    used,
@@ -46,24 +46,21 @@ def _get_system_memory():
       "cached":  cached
     }
 
-    return res
-
-def _get_system_memory_human():
-    from vyos.util import bytes_to_human
-
-    mem = _get_system_memory()
-
-    for key in mem:
+    for key in mem_data:
         # The Linux kernel exposes memory values in kilobytes,
         # so we need to normalize them
-        mem[key] = bytes_to_human(mem[key], initial_exponent=10)
+        mem_data[key] = mem_data[key] * 1024
 
-    return mem
-
-def _get_raw_data():
-    return _get_system_memory_human()
+    return mem_data
 
 def _get_formatted_output(mem):
+    from vyos.util import bytes_to_human
+
+    # For human-readable outputs, we convert bytes to more convenient units
+    # (100M, 1.3G...)
+    for key in mem:
+        mem[key] = bytes_to_human(mem[key])
+
     out = "Total: {}\n".format(mem["total"])
     out += "Free:  {}\n".format(mem["free"])
     out += "Used:  {}".format(mem["used"])

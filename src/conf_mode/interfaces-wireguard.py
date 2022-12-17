@@ -87,6 +87,8 @@ def verify(wireguard):
                                'cannot be used for the interface!')
 
     # run checks on individual configured WireGuard peer
+    public_keys = []
+
     for tmp in wireguard['peer']:
         peer = wireguard['peer'][tmp]
 
@@ -99,6 +101,11 @@ def verify(wireguard):
         if ('address' in peer and 'port' not in peer) or ('port' in peer and 'address' not in peer):
             raise ConfigError('Both Wireguard port and address must be defined '
                               f'for peer "{tmp}" if either one of them is set!')
+
+        if peer['public_key'] in public_keys:
+            raise ConfigError(f'Duplicate public-key defined on peer "{tmp}"')
+
+        public_keys.append(peer['public_key'])
 
 def apply(wireguard):
     tmp = WireGuardIf(wireguard['ifname'])

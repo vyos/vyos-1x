@@ -137,6 +137,12 @@
               <help>Show Internet Protocol Security (IPsec) information</help>
             </properties>
             <children>
+              <node name="connections">
+                <properties>
+                  <help>Show VPN connections</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/ipsec.py show_connections</command>
+              </node>
               <node name="policy">
                 <properties>
                   <help>Show the in-kernel crypto policies</help>

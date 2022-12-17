@@ -1,8 +1,5 @@
 ---
 "**/*":
-  - dmbaturin
-  - UnicronNL
-  - zdc
-  - jestabro
-  - sever-sever
-  - c-po
+  - vyos/reviewers
+  - vyos/reviewers
+  - vyos/reviewers

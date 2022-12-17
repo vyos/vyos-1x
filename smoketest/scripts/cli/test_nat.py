@@ -16,6 +16,7 @@
 
 import jmespath
 import json
+import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
@@ -27,6 +28,9 @@ base_path = ['nat']
 src_path = base_path + ['source']
 dst_path = base_path + ['destination']
 static_path = base_path + ['static']
+
+nftables_nat_config = '/run/nftables_nat.conf'
+nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
 
 class TestNAT(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -40,6 +44,8 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
+        self.assertFalse(os.path.exists(nftables_nat_config))
+        self.assertFalse(os.path.exists(nftables_static_nat_conf))
 
     def verify_nftables(self, nftables_search, table, inverse=False, args=''):
         nftables_output = cmd(f'sudo nft {args} list table {table}')
@@ -51,6 +57,17 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
                     matched = True
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
+
+    def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
+        # Resolver no longer blocks commit, need to wait for daemon to populate set
+        count = 0
+        while count < max_wait:
+            code = run(f'sudo nft get element {table} {set_name} {{ {element} }}')
+            if code == 0:
+                return True
+            count += 1
+            sleep(1)
+        return False
 
     def test_snat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']
@@ -77,6 +94,30 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
+
+    def test_snat_groups(self):
+        address_group = 'smoketest_addr'
+        address_group_member = '192.0.2.1'
+        rule = '100'
+        outbound_iface = 'eth0'
+
+        self.cli_set(['firewall', 'group', 'address-group', address_group, 'address', address_group_member])
+
+        self.cli_set(src_path + ['rule', rule, 'source', 'group', 'address-group', address_group])
+        self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface])
+        self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'set A_{address_group}'],
+            [f'elements = {{ {address_group_member} }}'],
+            [f'ip saddr @A_{address_group}', f'oifname "{outbound_iface}"', 'masquerade']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
+        self.cli_delete(['firewall'])
 
     def test_dnat(self):
         rules = ['100', '110', '120', '130', '200', '210', '220', '230']

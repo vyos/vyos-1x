@@ -24,6 +24,7 @@ from vyos.template import render_to_string
 from vyos.util import dict_search
 from vyos.util import read_file
 from vyos.util import sysctl_write
+from vyos.configverify import verify_interface_exists
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -45,6 +46,10 @@ def verify(mpls):
     # If no config, then just bail out early.
     if not mpls:
         return None
+
+    if 'interface' in mpls:
+        for interface in mpls['interface']:
+            verify_interface_exists(interface)
 
     # Checks to see if LDP is properly configured
     if 'ldp' in mpls:

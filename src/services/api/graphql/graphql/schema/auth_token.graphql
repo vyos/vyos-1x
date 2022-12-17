@@ -1,0 +1,19 @@
+
+input AuthTokenInput {
+    username: String!
+    password: String!
+}
+
+type AuthToken {
+    result: Generic
+}
+
+type AuthTokenResult {
+    data: AuthToken
+    success: Boolean!
+    errors: [String]
+}
+
+extend type Mutation {
+    AuthToken(data: AuthTokenInput) : AuthTokenResult
+}

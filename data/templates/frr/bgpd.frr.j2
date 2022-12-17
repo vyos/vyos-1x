@@ -517,6 +517,9 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if parameters.network_import_check is vyos_defined %}
  bgp network import-check
 {% endif %}
+{% if parameters.route_reflector_allow_outbound_policy is vyos_defined %}
+bgp route-reflector allow-outbound-policy
+{% endif %}
 {% if parameters.no_client_to_client_reflection is vyos_defined %}
  no bgp client-to-client reflection
 {% endif %}

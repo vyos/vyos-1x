@@ -294,6 +294,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
         self.cli_set(base_path + ['parameters', 'no-suppress-duplicates'])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])       
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
 
@@ -322,6 +323,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp bestpath peer-type multipath-relax', frrconfig)
         self.assertIn(f' bgp minimum-holdtime {min_hold_time}', frrconfig)
         self.assertIn(f' bgp reject-as-sets', frrconfig)
+        self.assertIn(f' bgp route-reflector allow-outbound-policy', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)

@@ -20,6 +20,7 @@
       <children>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
+        #include <include/firewall/source-destination-group.xml.i>
       </children>
     </node>
     #include <include/generic-disable-node.xml.i>
@@ -285,6 +286,7 @@
       <children>
         #include <include/nat-address.xml.i>
         #include <include/nat-port.xml.i>
+        #include <include/firewall/source-destination-group.xml.i>
       </children>
     </node>
   </children>

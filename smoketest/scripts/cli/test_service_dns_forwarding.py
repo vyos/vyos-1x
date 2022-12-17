@@ -111,6 +111,10 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('serve-rfc1918')
         self.assertEqual(tmp, 'yes')
 
+        # verify default port configuration
+        tmp = get_config_value('local-port')
+        self.assertEqual(tmp, '53')
+
     def test_dnssec(self):
         # DNSSEC option testing
 
@@ -224,5 +228,21 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('dns64-prefix')
         self.assertEqual(tmp, dns_prefix)
 
+    def test_listening_port(self):
+        # We can listen on a different port compared to '53' but only one at a time
+        for port in ['1053', '5353']:
+            self.cli_set(base_path + ['port', port])
+            for network in allow_from:
+                self.cli_set(base_path + ['allow-from', network])
+            for address in listen_adress:
+                self.cli_set(base_path + ['listen-address', address])
+
+            # commit changes
+            self.cli_commit()
+
+            # verify local-port configuration
+            tmp = get_config_value('local-port')
+            self.assertEqual(tmp, port)
+
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

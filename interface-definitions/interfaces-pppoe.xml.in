@@ -19,7 +19,6 @@
           #include <include/pppoe-access-concentrator.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/dial-on-demand.xml.i>
-          #include <include/interface/interface-policy.xml.i>
           #include <include/interface/no-default-route.xml.i>
           #include <include/interface/default-route-distance.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
@@ -83,12 +82,7 @@
           <leafNode name="mtu">
             <defaultValue>1492</defaultValue>
           </leafNode>
-          <leafNode name="no-peer-dns">
-            <properties>
-              <help>Do not use DNS servers provided by the peer</help>
-              <valueless/>
-            </properties>
-          </leafNode>
+          #include <include/interface/no-peer-dns.xml.i>
           <leafNode name="remote-address">
             <properties>
               <help>IPv4 address of remote end of the PPPoE link</help>

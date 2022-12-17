@@ -1356,6 +1356,26 @@
                       </leafNode>
                     </children>
                   </node>
+                  <node name="l3vpn-nexthop">
+                    <properties>
+                      <help>Next hop Information</help>
+                    </properties>
+                    <children>
+                      <node name="encapsulation">
+                        <properties>
+                          <help>Encapsulation options (for BGP only)</help>
+                        </properties>
+                        <children>
+                          <leafNode name="gre">
+                            <properties>
+                              <help>Accept L3VPN traffic over GRE encapsulation</help>
+                              <valueless/>
+                            </properties>
+                          </leafNode>
+                        </children>
+                       </node>
+                    </children>
+                  </node>
                   <leafNode name="local-preference">
                     <properties>
                       <help>BGP local preference attribute</help>

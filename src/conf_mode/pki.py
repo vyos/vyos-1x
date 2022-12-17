@@ -16,20 +16,16 @@
 
 from sys import exit
 
-import jmespath
-
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
-from vyos.pki import load_certificate_request
 from vyos.pki import load_public_key
 from vyos.pki import load_private_key
 from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
-from vyos.util import ask_input
-from vyos.util import call
 from vyos.util import dict_search_args
 from vyos.util import dict_search_recursive
 from vyos.xml import defaults
@@ -120,6 +116,39 @@ def get_config(config=None):
     pki['system'] = conf.get_config_dict([], key_mangling=('-', '_'),
                                          get_first_key=True,
                                          no_tag_node_value_mangle=True)
+
+    if 'changed' in pki:
+        for search in sync_search:
+            for key in search['keys']:
+                changed_key = sync_translate[key]
+
+                if changed_key not in pki['changed']:
+                    continue
+
+                for item_name in pki['changed'][changed_key]:
+                    node_present = False
+                    if changed_key == 'openvpn':
+                        node_present = dict_search_args(pki, 'openvpn', 'shared_secret', item_name)
+                    else:
+                        node_present = dict_search_args(pki, changed_key, item_name)
+
+                    if node_present:
+                        search_dict = dict_search_args(pki['system'], *search['path'])
+
+                        if not search_dict:
+                            continue
+
+                        for found_name, found_path in dict_search_recursive(search_dict, key):
+                            if found_name == item_name:
+                                path = search['path']
+                                path_str = ' '.join(path + found_path)
+                                print(f'pki: Updating config: {path_str} {found_name}')
+
+                                if path[0] == 'interfaces':
+                                    ifname = found_path[0]
+                                    set_dependents(path[1], conf, ifname)
+                                else:
+                                    set_dependents(path[1], conf)
 
     return pki
 
@@ -259,37 +288,7 @@ def apply(pki):
         return None
 
     if 'changed' in pki:
-        for search in sync_search:
-            for key in search['keys']:
-                changed_key = sync_translate[key]
-
-                if changed_key not in pki['changed']:
-                    continue
-
-                for item_name in pki['changed'][changed_key]:
-                    node_present = False
-                    if changed_key == 'openvpn':
-                        node_present = dict_search_args(pki, 'openvpn', 'shared_secret', item_name)
-                    else:
-                        node_present = dict_search_args(pki, changed_key, item_name)
-
-                    if node_present:
-                        search_dict = dict_search_args(pki['system'], *search['path'])
-
-                        if not search_dict:
-                            continue
-
-                        for found_name, found_path in dict_search_recursive(search_dict, key):
-                            if found_name == item_name:
-                                path_str = ' '.join(search['path'] + found_path)
-                                print(f'pki: Updating config: {path_str} {found_name}')
-
-                                script = search['script']
-                                if found_path[0] == 'interfaces':
-                                    ifname = found_path[2]
-                                    call(f'VYOS_TAGNODE_VALUE={ifname} {script}')
-                                else:
-                                    call(script)
+        call_dependents()
 
     return None
 

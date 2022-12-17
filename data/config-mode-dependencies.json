@@ -1,0 +1,12 @@
+{
+  "firewall": {"group_resync": ["nat", "policy-route"]},
+  "http_api": {"https": ["https"]},
+  "pki": {
+           "ethernet": ["interfaces-ethernet"],
+           "openvpn": ["interfaces-openvpn"],
+           "https": ["https"],
+           "ipsec": ["vpn_ipsec"],
+           "openconnect": ["vpn_openconnect"],
+           "sstp": ["vpn_sstp"]
+         }
+}

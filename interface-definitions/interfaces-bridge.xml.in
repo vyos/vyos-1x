@@ -41,7 +41,6 @@
           #include <include/interface/disable.xml.i>
           #include <include/interface/vrf.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
-          #include <include/interface/interface-policy.xml.i>
           <leafNode name="forwarding-delay">
             <properties>
               <help>Forwarding delay</help>
@@ -151,7 +150,7 @@
                         <description>VLAN id range allowed on this interface (use '-' as delimiter)</description>
                       </valueHelp>
                       <constraint>
-                        <validator name="allowed-vlan"/>
+                        <validator name="numeric" argument="--allow-range --range 1-4094"/>
                       </constraint>
                       <constraintErrorMessage>not a valid VLAN ID value or range</constraintErrorMessage>
                       <multi/>

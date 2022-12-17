@@ -12,6 +12,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
+          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>
@@ -46,7 +47,8 @@
                   #include <include/firewall/port.xml.i>
                 </children>
               </node>
-              #include <include/policy/route-common-rule-ipv6.xml.i>
+              #include <include/policy/route-common.xml.i>
+              #include <include/policy/route-ipv6.xml.i>
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/hop-limit.xml.i>
@@ -64,6 +66,7 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
+          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
           <tagNode name="rule">
             <properties>
@@ -98,7 +101,8 @@
                   #include <include/firewall/port.xml.i>
                 </children>
               </node>
-              #include <include/policy/route-common-rule.xml.i>
+              #include <include/policy/route-common.xml.i>
+              #include <include/policy/route-ipv4.xml.i>
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/ttl.xml.i>

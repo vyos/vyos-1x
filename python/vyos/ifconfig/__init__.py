@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -36,4 +36,6 @@ from vyos.ifconfig.tunnel import TunnelIf
 from vyos.ifconfig.wireless import WiFiIf
 from vyos.ifconfig.l2tpv3 import L2TPv3If
 from vyos.ifconfig.macsec import MACsecIf
+from vyos.ifconfig.veth import VethIf
 from vyos.ifconfig.wwan import WWANIf
+from vyos.ifconfig.sstpc import SSTPCIf

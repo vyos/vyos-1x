@@ -51,7 +51,7 @@
                     <properties>
                       <help>RPKI SSH known hosts file</help>
                       <constraint>
-                        <validator name="file-exists"/>
+                        <validator name="file-path"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -59,7 +59,7 @@
                     <properties>
                       <help>RPKI SSH private key file</help>
                       <constraint>
-                        <validator name="file-exists"/>
+                        <validator name="file-path"/>
                       </constraint>
                     </properties>
                   </leafNode>
@@ -67,7 +67,7 @@
                     <properties>
                       <help>RPKI SSH public key file path</help>
                       <constraint>
-                        <validator name="file-exists"/>
+                        <validator name="file-path"/>
                       </constraint>
                     </properties>
                   </leafNode>

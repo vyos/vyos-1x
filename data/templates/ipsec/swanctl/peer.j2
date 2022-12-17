@@ -124,7 +124,7 @@
 {%             endif %}
 {%         elif tunnel_esp.mode == 'transport' %}
                 local_ts = {{ peer_conf.local_address }}{{ local_suffix }}
-                remote_ts = {{ peer }}{{ remote_suffix }}
+                remote_ts = {{ peer_conf.remote_address | join(",") }}{{ remote_suffix }}
 {%         endif %}
                 ipcomp = {{ 'yes' if tunnel_esp.compression is vyos_defined else 'no' }}
                 mode = {{ tunnel_esp.mode }}

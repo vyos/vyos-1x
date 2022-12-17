@@ -143,10 +143,10 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # caught by the resolver, and returns success 'False', so one must
         # check the return value.
 
-        self.cli_set(base_path + ['api', 'gql'])
+        self.cli_set(base_path + ['api', 'graphql'])
         self.cli_commit()
 
-        gql_url = f'https://{address}/graphql'
+        graphql_url = f'https://{address}/graphql'
 
         query_valid_key = f"""
         {{
@@ -160,7 +160,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }}
         """
 
-        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_valid_key})
+        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_valid_key})
         success = r.json()['data']['SystemStatus']['success']
         self.assertTrue(success)
 
@@ -176,7 +176,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }
         """
 
-        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_invalid_key})
+        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_invalid_key})
         success = r.json()['data']['SystemStatus']['success']
         self.assertFalse(success)
 
@@ -192,8 +192,52 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         }
         """
 
-        r = request('POST', gql_url, verify=False, headers=headers, json={'query': query_no_key})
+        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_no_key})
         self.assertEqual(r.status_code, 400)
+
+        # GraphQL token authentication test: request token; pass in header
+        # of query.
+
+        self.cli_set(base_path + ['api', 'graphql', 'authentication', 'type', 'token'])
+        self.cli_commit()
+
+        mutation = """
+        mutation {
+          AuthToken (data: {username: "vyos", password: "vyos"}) {
+            success
+            errors
+            data {
+              result
+            }
+          }
+        }
+        """
+        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': mutation})
+
+        token = r.json()['data']['AuthToken']['data']['result']['token']
+
+        headers = {'Authorization': f'Bearer {token}'}
+
+        query = """
+        {
+          ShowVersion (data: {}) {
+            success
+            errors
+            op_mode_error {
+              name
+              message
+              vyos_code
+            }
+            data {
+              result
+            }
+          }
+        }
+        """
+
+        r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query})
+        success = r.json()['data']['ShowVersion']['success']
+        self.assertTrue(success)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
