@@ -21,6 +21,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import is_node_changed
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_member
 from vyos.configdict import is_source_interface
@@ -81,10 +82,10 @@ def get_config(config=None):
     if 'mode' in bond:
         bond['mode'] = get_bond_mode(bond['mode'])
 
-    tmp = leaf_node_changed(conf, base + [ifname, 'mode'])
+    tmp = is_node_changed(conf, base + [ifname, 'mode'])
     if tmp: bond['shutdown_required'] = {}
 
-    tmp = leaf_node_changed(conf, base + [ifname, 'lacp-rate'])
+    tmp = is_node_changed(conf, base + [ifname, 'lacp-rate'])
     if tmp: bond['shutdown_required'] = {}
 
     # determine which members have been removed
