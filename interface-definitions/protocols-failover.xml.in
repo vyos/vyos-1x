@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+       <node name="failover" owner="${vyos_conf_scripts_dir}/protocols_failover.py">
+        <properties>
+          <help>Failover Routing</help>
+          <priority>490</priority>
+        </properties>
+        <children>
+          <tagNode name="route">
+            <properties>
+              <help>Failover IPv4 route</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 failover route</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+              </constraint>
+            </properties>
+            <children>
+              <tagNode name="next-hop">
+                <properties>
+                  <help>Next-hop IPv4 router address</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Next-hop router address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <node name="check">
+                    <properties>
+                      <help>Check target options</help>
+                    </properties>
+                    <children>
+                      #include <include/port-number.xml.i>
+                      <leafNode name="target">
+                        <properties>
+                          <help>Check target address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>Address to check</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="timeout">
+                        <properties>
+                          <help>Timeout between checks</help>
+                          <valueHelp>
+                            <format>u32:1-300</format>
+                            <description>Timeout in seconds between checks</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-255"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>10</defaultValue>
+                      </leafNode>
+                      <leafNode name="type">
+                        <properties>
+                          <help>Check type</help>
+                          <completionHelp>
+                            <list>arp icmp tcp</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>arp</format>
+                            <description>Check target by ARP</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>icmp</format>
+                            <description>Check target by ICMP</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>tcp</format>
+                            <description>Check target by TCP</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(arp|icmp|tcp)</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>icmp</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                  #include <include/static/static-route-interface.xml.i>
+                  <leafNode name="metric">
+                    <properties>
+                      <help>Route metric for this gateway</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Route metric</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>1</defaultValue>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
