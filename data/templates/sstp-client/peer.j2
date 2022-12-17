@@ -17,7 +17,7 @@ pty "sstpc --ipparam {{ ifname }} --nolaunchpppd {{ server }}:{{ port }} --ca-ce
 # Override any connect script that may have been set in /etc/ppp/options.
 connect /bin/true
 
-# Don't try to authenticate the remote node
+# We don't need the server to auth itself
 noauth
 
 # We won't want EAP
@@ -36,6 +36,13 @@ sstp-sock /var/run/sstpc/sstpc-{{ ifname }}
 
 persist
 debug
+
+# pppd should create a UUCP-style lock file for the serial device to ensure
+# exclusive access to the device. By default, pppd will not create a lock file.
+lock
+
+# Disables Deflate compression
+nodeflate
 
 {% if authentication is vyos_defined %}
 {{ 'user "' + authentication.user + '"' if authentication.user is vyos_defined }}
