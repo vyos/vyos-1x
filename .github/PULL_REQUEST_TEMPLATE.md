@@ -1,5 +1,5 @@
 <!-- All PR should follow this template to allow a clean and transparent review -->
-<!-- Text placed between these delimiters is considered a commend and is not rendered -->
+<!-- Text placed between these delimiters is considered a comment and is not rendered -->
 
 ## Change Summary
 <!--- Provide a general summary of your changes in the Title above -->
@@ -31,7 +31,7 @@ the box, please use [x]
 <!---
 Please describe in detail how you tested your changes. Include details of your testing
 environment, and the tests you ran. When pasting configs, logs, shell output, backtraces,
-and other large chunks of text, surround this text with triple backticks
+and other large chunks of text, surround this text with triple backtics
 ```
 like this
 ```
