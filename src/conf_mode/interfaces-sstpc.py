@@ -70,7 +70,10 @@ def verify(sstpc):
     verify_authentication(sstpc)
     verify_vrf(sstpc)
 
-    if dict_search('ssl.ca_certificate', sstpc) == None:
+    if not dict_search('server', sstpc):
+        raise ConfigError('Remote SSTP server must be specified!')
+
+    if not dict_search('ssl.ca_certificate', sstpc):
         raise ConfigError('Missing mandatory CA certificate!')
 
     return None
