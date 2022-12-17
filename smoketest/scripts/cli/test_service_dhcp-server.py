@@ -112,6 +112,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         bootfile_server = '192.0.2.1'
         wpad            = 'http://wpad.vyos.io/foo/bar'
         server_identifier = bootfile_server
+        ipv6_only_preferred = 300
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
@@ -132,6 +133,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(pool + ['server-identifier', server_identifier])
 
         self.cli_set(pool + ['static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
+        self.cli_set(pool + ['ipv6-only-preferred', ipv6_only_preferred])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
@@ -169,6 +171,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'max-lease-time 86400;', config)
         self.assertIn(f'range {range_0_start} {range_0_stop};', config)
         self.assertIn(f'set shared-networkname = "{shared_net_name}";', config)
+        self.assertIn(f'option rfc8925-ipv6-only-preferred {ipv6_only_preferred};', config)
 
         # weird syntax for those static routes
         self.assertIn(f'option rfc3442-static-route 24,10,0,0,192,0,2,1, 0,192,0,2,1;', config)
