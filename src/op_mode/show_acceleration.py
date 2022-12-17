@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import sys
 import os
@@ -24,12 +23,11 @@ from vyos.config import Config
 from vyos.util import popen
 from vyos.util import call
 
-
 def detect_qat_dev():
-    output, err = popen('sudo lspci -nn', decode='utf-8')
+    output, err = popen('lspci -nn', decode='utf-8')
     if not err:
         data = re.findall('(8086:19e2)|(8086:37c8)|(8086:0435)|(8086:6f54)', output)
-        #If QAT devices found
+        # QAT devices found
         if data:
             return
     print("\t No QAT device found")
@@ -44,11 +42,11 @@ def show_qat_status():
         sys.exit(1)
 
     # Show QAT service
-    call('sudo /etc/init.d/qat_service status')
+    call('/etc/init.d/qat_service status')
 
 # Return QAT devices
 def get_qat_devices():
-    data_st, err = popen('sudo /etc/init.d/qat_service status', decode='utf-8')
+    data_st, err = popen('/etc/init.d/qat_service status', decode='utf-8')
     if not err:
         elm_lst = re.findall('qat_dev\d', data_st)
         print('\n'.join(elm_lst))
@@ -57,7 +55,7 @@ def get_qat_devices():
 def get_qat_proc_path(qat_dev):
     q_type = ""
     q_bsf  = ""
-    output, err = popen('sudo /etc/init.d/qat_service status', decode='utf-8')
+    output, err = popen('/etc/init.d/qat_service status', decode='utf-8')
     if not err:
         # Parse QAT service output
         data_st = output.split("\n")
@@ -95,20 +93,20 @@ args = parser.parse_args()
 if args.hw:
     detect_qat_dev()
     # Show availible Intel QAT devices
-    call('sudo lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
+    call('lspci -nn | egrep -e \'8086:37c8|8086:19e2|8086:0435|8086:6f54\'')
 elif args.flow and args.dev:
     check_qat_if_conf()
-    call('sudo cat '+get_qat_proc_path(args.dev)+"fw_counters")
+    call('cat '+get_qat_proc_path(args.dev)+"fw_counters")
 elif args.interrupts:
     check_qat_if_conf()
     # Delete _dev from args.dev
-    call('sudo cat /proc/interrupts | grep qat')
+    call('cat /proc/interrupts | grep qat')
 elif args.status:
     check_qat_if_conf()
     show_qat_status()
 elif args.conf and args.dev:
     check_qat_if_conf()
-    call('sudo cat '+get_qat_proc_path(args.dev)+"dev_cfg")
+    call('cat '+get_qat_proc_path(args.dev)+"dev_cfg")
 elif args.dev_list:
     get_qat_devices()
 else:
