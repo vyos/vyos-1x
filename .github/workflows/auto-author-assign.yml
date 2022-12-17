@@ -14,7 +14,7 @@ jobs:
       - name: "Assign Author to PR"
         uses: toshimaru/auto-author-assign@v1.3.5
         with:
-          repo-token: ${{ secrets.VYOS_GITHUB_PR_ACTION_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
   # https://github.com/shufo/auto-assign-reviewer-by-files
   assign_reviewer:
@@ -23,5 +23,5 @@ jobs:
       - name: Request review based on files changes and/or groups the author belongs to
         uses: shufo/auto-assign-reviewer-by-files@v1.1.4
         with:
-          token: ${{ secrets.VYOS_GITHUB_PR_ACTION_TOKEN }}
+          token: ${{ secrets.PR_ACTION_ASSIGN_REVIEWERS }}
           config: .github/reviewers.yml
