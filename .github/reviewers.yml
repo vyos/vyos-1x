@@ -1,5 +1,3 @@
 ---
 "**/*":
-  - vyos/reviewers
-  - vyos/reviewers
-  - vyos/reviewers
+  - team: reviewers
