@@ -48,8 +48,8 @@ def reset_peer(peer, tunnel):
     result = True
     for conn in conns:
         try:
-            call(f'sudo /usr/sbin/ipsec down {conn}{{*}}', timeout = 10)
-            call(f'sudo /usr/sbin/ipsec up {conn}', timeout = 10)
+            call(f'/usr/sbin/ipsec down {conn}{{*}}', timeout = 10)
+            call(f'/usr/sbin/ipsec up {conn}', timeout = 10)
         except TimeoutExpired as e:
             print(f'Timed out while resetting {conn}')
             result = False
@@ -81,8 +81,8 @@ def reset_profile(profile, tunnel):
         print('Profile not found, aborting')
         return
 
-    call(f'sudo /usr/sbin/ipsec down {conn}')
-    result = call(f'sudo /usr/sbin/ipsec up {conn}')
+    call(f'/usr/sbin/ipsec down {conn}')
+    result = call(f'/usr/sbin/ipsec up {conn}')
 
     print('Profile reset result: ' + ('success' if result == 0 else 'failed'))
 
@@ -90,17 +90,17 @@ def debug_peer(peer, tunnel):
     peer = peer.replace(':', '-')
     if not peer or peer == "all":
         debug_commands = [
-            "sudo ipsec statusall",
-            "sudo swanctl -L",
-            "sudo swanctl -l",
-            "sudo swanctl -P",
-            "sudo ip x sa show",
-            "sudo ip x policy show",
-            "sudo ip tunnel show",
-            "sudo ip address",
-            "sudo ip rule show",
-            "sudo ip route | head -100",
-            "sudo ip route show table 220"
+            "ipsec statusall",
+            "swanctl -L",
+            "swanctl -l",
+            "swanctl -P",
+            "ip x sa show",
+            "ip x policy show",
+            "ip tunnel show",
+            "ip address",
+            "ip rule show",
+            "ip route | head -100",
+            "ip route show table 220"
         ]
         for debug_cmd in debug_commands:
             print(f'\n### {debug_cmd} ###')
@@ -117,7 +117,7 @@ def debug_peer(peer, tunnel):
         return
 
     for conn in conns:
-        call(f'sudo /usr/sbin/ipsec statusall | grep {conn}')
+        call(f'/usr/sbin/ipsec statusall | grep {conn}')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
