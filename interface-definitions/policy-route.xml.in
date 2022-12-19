@@ -52,6 +52,7 @@
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/hop-limit.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
             </children>
           </tagNode>
         </children>
@@ -106,6 +107,7 @@
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/ttl.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
             </children>
           </tagNode>
         </children>

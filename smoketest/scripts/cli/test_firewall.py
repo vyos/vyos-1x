@@ -199,6 +199,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name = 'smoketest'
         interface = 'eth0'
         mss_range = '501-1460'
+        conn_mark = '555'
 
         self.cli_set(['firewall', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'name', name, 'enable-default-log'])
@@ -234,10 +235,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'action', 'return'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'protocol', 'gre'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'outbound-interface', 'interface-name', interface])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'connection-mark', conn_mark])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
+
+        mark_hex = "{0:#010x}".format(int(conn_mark))
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
@@ -247,7 +251,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
             ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"'],
-            ['meta l4proto gre', f'oifname "{interface}"', 'return']
+            ['meta l4proto gre', f'oifname "{interface}"', f'ct mark {mark_hex}', 'return']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
