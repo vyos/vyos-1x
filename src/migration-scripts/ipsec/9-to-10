@@ -85,10 +85,10 @@ if config.exists(base + ['site-to-site', 'peer']):
             config.rename(peer_base + ['authentication', 'id'], 'local-id')
 
         # For the peer '@foo' set remote-id 'foo' if remote-id is not defined
-        if peer.startswith('@'):
-            if not config.exists(peer_base + ['authentication', 'remote-id']):
-                tmp = peer.replace('@', '')
-                config.set(peer_base + ['authentication', 'remote-id'], value=tmp)
+        # For the peer '192.0.2.1' set remote-id '192.0.2.1' if remote-id is not defined
+        if not config.exists(peer_base + ['authentication', 'remote-id']):
+            tmp = peer.replace('@', '') if peer.startswith('@') else peer
+            config.set(peer_base + ['authentication', 'remote-id'], value=tmp)
 
         # replace: 'peer <tag> force-encapsulation enable'
         #       => 'peer <tag> force-udp-encapsulation'
