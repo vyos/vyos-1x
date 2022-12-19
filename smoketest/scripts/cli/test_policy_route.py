@@ -21,6 +21,8 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.util import cmd
 
 mark = '100'
+conn_mark = '555'
+conn_mark_set = '111'
 table_mark_offset = 0x7fffffff
 table_id = '101'
 interface = 'eth0'
@@ -118,6 +120,25 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
             ['ip daddr 172.16.10.10', 'ip saddr 172.16.20.10', 'meta mark set ' + mark_hex],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_mangle')
+
+    def test_pbr_mark_connection(self):
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'source', 'address', '172.16.20.10'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'destination', 'address', '172.16.10.10'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'connection-mark', conn_mark])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'set', 'connection-mark', conn_mark_set])
+        self.cli_set(['policy', 'route', 'smoketest', 'interface', interface])
+
+        self.cli_commit()
+
+        mark_hex = "{0:#010x}".format(int(conn_mark))
+        mark_hex_set = "{0:#010x}".format(int(conn_mark_set))
+
+        nftables_search = [
+            [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
+            ['ip daddr 172.16.10.10', 'ip saddr 172.16.20.10', 'ct mark ' + mark_hex, 'ct mark set ' + mark_hex_set],
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_mangle')

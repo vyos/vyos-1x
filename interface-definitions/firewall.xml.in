@@ -461,6 +461,7 @@
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
               #include <include/firewall/hop-limit.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
               <node name="icmpv6">
                 <properties>
                   <help>ICMPv6 type and code information</help>
@@ -628,6 +629,7 @@
               #include <include/firewall/common-rule.xml.i>
               #include <include/firewall/dscp.xml.i>
               #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/connection-mark.xml.i>
               <node name="icmp">
                 <properties>
                   <help>ICMP type and code information</help>

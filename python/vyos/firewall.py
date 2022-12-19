@@ -322,6 +322,10 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if tcp_mss:
         output.append(f'tcp option maxseg size {tcp_mss}')
 
+    if 'connection_mark' in rule_conf:
+        conn_mark_str = ','.join(rule_conf['connection_mark'])
+        output.append(f'ct mark {{{conn_mark_str}}}')
+
     output.append('counter')
 
     if 'set' in rule_conf:
@@ -368,6 +372,9 @@ def parse_time(time):
 
 def parse_policy_set(set_conf, def_suffix):
     out = []
+    if 'connection_mark' in set_conf:
+        conn_mark = set_conf['connection_mark']
+        out.append(f'ct mark set {conn_mark}')
     if 'dscp' in set_conf:
         dscp = set_conf['dscp']
         out.append(f'ip{def_suffix} dscp set {dscp}')
