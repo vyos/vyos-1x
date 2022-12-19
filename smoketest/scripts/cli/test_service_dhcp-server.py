@@ -102,17 +102,17 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
     def test_dhcp_single_pool_options(self):
         shared_net_name = 'SMOKE-0815'
 
-        range_0_start   = inc_ip(subnet, 10)
-        range_0_stop    = inc_ip(subnet, 20)
-        smtp_server     = '1.2.3.4'
-        time_server     = '4.3.2.1'
-        tftp_server     = 'tftp.vyos.io'
-        search_domains  = ['foo.vyos.net', 'bar.vyos.net']
-        bootfile_name   = 'vyos'
-        bootfile_server = '192.0.2.1'
-        wpad            = 'http://wpad.vyos.io/foo/bar'
-        server_identifier = bootfile_server
-        ipv6_only_preferred = 300
+        range_0_start       = inc_ip(subnet, 10)
+        range_0_stop        = inc_ip(subnet, 20)
+        smtp_server         = '1.2.3.4'
+        time_server         = '4.3.2.1'
+        tftp_server         = 'tftp.vyos.io'
+        search_domains      = ['foo.vyos.net', 'bar.vyos.net']
+        bootfile_name       = 'vyos'
+        bootfile_server     = '192.0.2.1'
+        wpad                = 'http://wpad.vyos.io/foo/bar'
+        server_identifier   = bootfile_server
+        ipv6_only_preferred = '300'
 
         pool = base_path + ['shared-network-name', shared_net_name, 'subnet', subnet]
         # we use the first subnet IP address as default gateway
