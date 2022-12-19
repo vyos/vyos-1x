@@ -84,7 +84,7 @@ def map_type_name(type_name: type, optional: bool = False) -> str:
     if type_name == int:
         return 'Int!' if not optional else 'Int = null'
     if type_name == bool:
-        return 'Boolean!' if not optional else 'Boolean = false'
+        return 'Boolean = false'
     if typing.get_origin(type_name) == list:
         if not optional:
             return f'[{map_type_name(typing.get_args(type_name)[0])}]!'
