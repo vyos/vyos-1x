@@ -212,6 +212,12 @@
               </tagNode>
             </children>
           </node>
+          <leafNode name="router-advert">
+            <properties>
+              <help>Monitor last lines of Router Advertisement Daemon (radvd)</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit radvd.service</command>
+          </leafNode>
           <leafNode name="snmp">
             <properties>
               <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP)</help>

@@ -344,6 +344,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="router-advert">
+            <properties>
+              <help>Show log for Router Advertisement Daemon (radvd)</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit radvd.service</command>
+          </leafNode>
           <leafNode name="snmp">
             <properties>
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
