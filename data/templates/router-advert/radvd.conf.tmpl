@@ -46,7 +46,7 @@ interface {{ iface }} {
 {%         if iface_config.source_address is defined %}
     AdvRASrcAddress {
 {%             for source_address in iface_config.source_address %}
-        {{ source_address }}
+        {{ source_address }};
 {%             endfor %}
     };
 {%         endif %}
