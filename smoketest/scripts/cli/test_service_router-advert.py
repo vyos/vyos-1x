@@ -37,7 +37,6 @@ def get_config_value(key):
     return tmp[0].split()[0].replace(';','')
 
 class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
-
     @classmethod
     def setUpClass(cls):
         super(TestServiceRADVD, cls).setUpClass()
@@ -114,7 +113,6 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = get_config_value('DecrementLifetimes')
         self.assertEqual(tmp, 'off')
 
-
     def test_dns(self):
         nameserver = ['2001:db8::1', '2001:db8::2']
         dnssl = ['vyos.net', 'vyos.io']
@@ -150,7 +148,6 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
         self.assertIn(tmp, config)
 
-
     def test_deprecate_prefix(self):
         self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
         self.cli_set(base_path + ['prefix', prefix, 'deprecate-prefix'])
@@ -159,13 +156,45 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        config = read_file(RADVD_CONF)
-
         tmp = get_config_value('DeprecatePrefix')
         self.assertEqual(tmp, 'on')
 
         tmp = get_config_value('DecrementLifetimes')
         self.assertEqual(tmp, 'on')
+
+    def test_route(self):
+        route = '2001:db8:1000::/64'
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['route', route])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = f'route {route}' + ' {'
+        self.assertIn(tmp, config)
+
+        self.assertIn('AdvRouteLifetime 1800;', config)
+        self.assertIn('AdvRoutePreference medium;', config)
+        self.assertIn('RemoveRoute on;', config)
+
+    def test_rasrcaddress(self):
+        ra_src = ['fe80::1', 'fe80::2']
+
+        self.cli_set(base_path + ['prefix', prefix])
+        for src in ra_src:
+            self.cli_set(base_path + ['source-address', src])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertIn('AdvRASrcAddress {', config)
+        for src in ra_src:
+            self.assertIn(f'        {src};', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
