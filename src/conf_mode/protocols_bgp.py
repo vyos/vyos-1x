@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 from sys import argv
 
@@ -57,13 +55,18 @@ def get_config(config=None):
     # instead of the VRF instance.
     if vrf: bgp.update({'vrf' : vrf})
 
+    bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
+                                                 key_mangling=('-', '_'),
+                                                 get_first_key=True,
+                                                 no_tag_node_value_mangle=True)
+
+    bgp['dependent_vrfs'].update({'default': {'protocols': {
+        'bgp': conf.get_config_dict(base_path, key_mangling=('-', '_'),
+                                    get_first_key=True,
+                                    no_tag_node_value_mangle=True)}}})
     if not conf.exists(base):
+        # If bgp instance is deleted then mark it
         bgp.update({'deleted' : ''})
-        if not vrf:
-            # We are running in the default VRF context, thus we can not delete
-            # our main BGP instance if there are dependent BGP VRF instances.
-            bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
-                key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
         return bgp
 
     # We also need some additional information from the config, prefix-lists
@@ -74,8 +77,90 @@ def get_config(config=None):
     tmp = conf.get_config_dict(['policy'])
     # Merge policy dict into "regular" config dict
     bgp = dict_merge(tmp, bgp)
-
     return bgp
+
+
+def verify_vrf_as_import(search_vrf_name: str, afi_name: str, vrfs_config: dict) -> bool:
+    """
+    :param search_vrf_name: search vrf name in import list
+    :type search_vrf_name: str
+    :param afi_name: afi/safi name
+    :type afi_name: str
+    :param vrfs_config: configuration dependents vrfs
+    :type vrfs_config: dict
+    :return: if vrf in import list retrun true else false
+    :rtype: bool
+    """
+    for vrf_name, vrf_config in vrfs_config.items():
+        import_list = dict_search(
+            f'protocols.bgp.address_family.{afi_name}.import.vrf',
+            vrf_config)
+        if import_list:
+            if search_vrf_name in import_list:
+               return True
+    return False
+
+def verify_vrf_import_options(afi_config: dict) -> bool:
+    """
+    Search if afi contains one of options
+    :param afi_config: afi/safi
+    :type afi_config: dict
+    :return: if vrf contains rd and route-target options return true else false
+    :rtype: bool
+    """
+    options = [
+        f'rd.vpn.export',
+        f'route_target.vpn.import',
+        f'route_target.vpn.export',
+        f'route_target.vpn.both'
+    ]
+    for option in options:
+        if dict_search(option, afi_config):
+            return True
+    return False
+
+def verify_vrf_import(vrf_name: str, vrfs_config: dict, afi_name: str) -> bool:
+    """
+    Verify if vrf exists and contain options
+    :param vrf_name: name of VRF
+    :type vrf_name: str
+    :param vrfs_config: dependent vrfs config
+    :type vrfs_config: dict
+    :param afi_name: afi/safi name
+    :type afi_name: str
+    :return: if vrf contains rd and route-target options return true else false
+    :rtype: bool
+    """
+    if vrf_name != 'default':
+        verify_vrf({'vrf': vrf_name})
+    if dict_search(f'{vrf_name}.protocols.bgp.address_family.{afi_name}',
+                   vrfs_config):
+        afi_config = \
+        vrfs_config[vrf_name]['protocols']['bgp']['address_family'][
+            afi_name]
+        if verify_vrf_import_options(afi_config):
+            return True
+    return False
+
+def verify_vrflist_import(afi_name: str, afi_config: dict, vrfs_config: dict) -> bool:
+    """
+    Call function to verify
+    if scpecific vrf contains rd and route-target
+    options return true else false
+
+    :param afi_name: afi/safi name
+    :type afi_name: str
+    :param afi_config: afi/safi configuration
+    :type afi_config: dict
+    :param vrfs_config: dependent vrfs config
+    :type vrfs_config:dict
+    :return: if vrf contains rd and route-target options return true else false
+    :rtype: bool
+    """
+    for vrf_name in afi_config['import']['vrf']:
+        if verify_vrf_import(vrf_name, vrfs_config, afi_name):
+            return True
+    return False
 
 def verify_remote_as(peer_config, bgp_config):
     if 'remote_as' in peer_config:
@@ -113,12 +198,22 @@ def verify_afi(peer_config, bgp_config):
     return False
 
 def verify(bgp):
-    if not bgp or 'deleted' in bgp:
-        if 'dependent_vrfs' in bgp:
-            for vrf, vrf_options in bgp['dependent_vrfs'].items():
-                if dict_search('protocols.bgp', vrf_options) != None:
-                    raise ConfigError('Cannot delete default BGP instance, ' \
-                                      'dependent VRF instance(s) exist!')
+    if 'deleted' in bgp:
+        if 'vrf' in bgp:
+            # Cannot delete vrf if it exists in import vrf list in other vrfs
+            for tmp_afi in ['ipv4_unicast', 'ipv6_unicast']:
+                if verify_vrf_as_import(bgp['vrf'],tmp_afi,bgp['dependent_vrfs']):
+                    raise ConfigError(f'Cannot delete vrf {bgp["vrf"]} instance, ' \
+                                      'Please unconfigure import vrf commands!')
+        else:
+            # We are running in the default VRF context, thus we can not delete
+            # our main BGP instance if there are dependent BGP VRF instances.
+            if 'dependent_vrfs' in bgp:
+                for vrf, vrf_options in bgp['dependent_vrfs'].items():
+                    if vrf != 'default':
+                        if dict_search('protocols.bgp', vrf_options):
+                            raise ConfigError('Cannot delete default BGP instance, ' \
+                                              'dependent VRF instance(s) exist!')
         return None
 
     if 'system_as' not in bgp:
@@ -324,9 +419,43 @@ def verify(bgp):
                                          f'{afi} administrative distance {key}!')
 
             if afi in ['ipv4_unicast', 'ipv6_unicast']:
-                if 'import' in afi_config and 'vrf' in afi_config['import']:
-                    # Check if VRF exists
-                    verify_vrf(afi_config['import']['vrf'])
+
+                vrf_name = bgp['vrf'] if dict_search('vrf', bgp) else 'default'
+                # Verify if currant VRF contains rd and route-target options
+                # and does not exist in import list in other VRFs
+                if dict_search(f'rd.vpn.export', afi_config):
+                    if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
+                        raise ConfigError(
+                            'Command "import vrf" conflicts with "rd vpn export" command!')
+
+                if dict_search('route_target.vpn.both', afi_config):
+                    if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
+                        raise ConfigError(
+                            'Command "import vrf" conflicts with "route-target vpn both" command!')
+
+                if dict_search('route_target.vpn.import', afi_config):
+                    if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
+                        raise ConfigError(
+                            'Command "import vrf conflicts" with "route-target vpn import" command!')
+
+                if dict_search('route_target.vpn.export', afi_config):
+                    if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
+                        raise ConfigError(
+                            'Command "import vrf" conflicts with "route-target vpn export" command!')
+
+                # Verify if VRFs in import do not contain rd
+                # and route-target options
+                if dict_search('import.vrf', afi_config) is not None:
+                    # Verify if VRF with import does not contain rd
+                    # and route-target options
+                    if verify_vrf_import_options(afi_config):
+                        raise ConfigError(
+                            'Please unconfigure "import vrf" commands before using vpn commands in the same VRF!')
+                    # Verify if VRFs in import list do not contain rd
+                    # and route-target options
+                    if verify_vrflist_import(afi, afi_config, bgp['dependent_vrfs']):
+                        raise ConfigError(
+                            'Please unconfigure import vrf commands before using vpn commands in dependent VRFs!')
 
                     # FRR error: please unconfigure vpn to vrf commands before
                     # using import vrf commands
@@ -338,7 +467,6 @@ def verify(bgp):
                 for export_import in ['export', 'import']:
                     tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
                     if tmp: verify_route_map(tmp, bgp)
-
 
     return None
 
