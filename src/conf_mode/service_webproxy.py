@@ -23,12 +23,15 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.util import call
+from vyos.util import chmod_755
 from vyos.util import dict_search
 from vyos.util import write_file
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
+from vyos.base import Warning
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 squid_config_file = '/etc/squid/squid.conf'
@@ -36,24 +39,56 @@ squidguard_config_file = '/etc/squidguard/squidGuard.conf'
 squidguard_db_dir = '/opt/vyatta/etc/config/url-filtering/squidguard/db'
 user_group = 'proxy'
 
-def generate_sg_localdb(category, list_type, role, proxy):
-    cat_ = category.replace('-', '_')
-    if isinstance(dict_search(f'url_filtering.squidguard.{cat_}', proxy),
-                  list):
 
+def check_blacklist_categorydb(config_section):
+    if 'block_category' in config_section:
+        for category in config_section['block_category']:
+            check_categorydb(category)
+    if 'allow_category' in config_section:
+        for category in config_section['allow_category']:
+            check_categorydb(category)
+
+
+def check_categorydb(category: str):
+    """
+    Check if category's db exist
+    :param category:
+    :type str:
+    """
+    path_to_cat: str = f'{squidguard_db_dir}/{category}'
+    if not os.path.exists(f'{path_to_cat}/domains.db') \
+            and not os.path.exists(f'{path_to_cat}/urls.db') \
+            and not os.path.exists(f'{path_to_cat}/expressions.db'):
+        Warning(f'DB of category {category} does not exist.\n '
+                f'Use [update webproxy blacklists] '
+                f'or delete undefined category!')
+
+
+def generate_sg_rule_localdb(category, list_type, role, proxy):
+    if not category or not list_type or not role:
+        return None
+    cat_ = category.replace('-', '_')
+
+    if role == 'default':
+        path_to_cat = f'{cat_}'
+    else:
+        path_to_cat = f'rule.{role}.{cat_}'
+    if isinstance(
+            dict_search(f'url_filtering.squidguard.{path_to_cat}', proxy),
+            list):
         # local block databases must be generated "on-the-fly"
         tmp = {
-            'squidguard_db_dir' : squidguard_db_dir,
-            'category' : f'{category}-default',
-            'list_type' : list_type,
-            'rule' : role
+            'squidguard_db_dir': squidguard_db_dir,
+            'category': f'{category}-{role}',
+            'list_type': list_type,
+            'rule': role
         }
         sg_tmp_file = '/tmp/sg.conf'
-        db_file = f'{category}-default/{list_type}'
-        domains = '\n'.join(dict_search(f'url_filtering.squidguard.{cat_}', proxy))
-
+        db_file = f'{category}-{role}/{list_type}'
+        domains = '\n'.join(
+            dict_search(f'url_filtering.squidguard.{path_to_cat}', proxy))
         # local file
-        write_file(f'{squidguard_db_dir}/{category}-default/local', '',
+        write_file(f'{squidguard_db_dir}/{category}-{role}/local', '',
                    user=user_group, group=user_group)
         # database input file
         write_file(f'{squidguard_db_dir}/{db_file}', domains,
@@ -63,17 +98,18 @@ def generate_sg_localdb(category, list_type, role, proxy):
         render(sg_tmp_file, 'squid/sg_acl.conf.tmpl', tmp,
                user=user_group, group=user_group)
 
-        call(f'su - {user_group} -c "squidGuard -d -c {sg_tmp_file} -C {db_file}"')
+        call(
+            f'su - {user_group} -c "squidGuard -d -c {sg_tmp_file} -C {db_file}"')
 
         if os.path.exists(sg_tmp_file):
             os.unlink(sg_tmp_file)
-
     else:
         # if category is not part of our configuration, clean out the
         # squidguard lists
-        tmp = f'{squidguard_db_dir}/{category}-default'
+        tmp = f'{squidguard_db_dir}/{category}-{role}'
         if os.path.exists(tmp):
-            rmtree(f'{squidguard_db_dir}/{category}-default')
+            rmtree(f'{squidguard_db_dir}/{category}-{role}')
+
 
 def get_config(config=None):
     if config:
@@ -84,7 +120,8 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    proxy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                 get_first_key=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
@@ -109,9 +146,10 @@ def get_config(config=None):
         default_values = defaults(base + ['cache-peer'])
         for peer in proxy['cache_peer']:
             proxy['cache_peer'][peer] = dict_merge(default_values,
-                proxy['cache_peer'][peer])
+                                                   proxy['cache_peer'][peer])
 
     return proxy
+
 
 def verify(proxy):
     if not proxy:
@@ -169,16 +207,29 @@ def generate(proxy):
     render(squidguard_config_file, 'squid/squidGuard.conf.tmpl', proxy)
 
     cat_dict = {
-        'local-block' : 'domains',
-        'local-block-keyword' : 'expressions',
-        'local-block-url' : 'urls',
-        'local-ok' : 'domains',
-        'local-ok-url' : 'urls'
+        'local-block': 'domains',
+        'local-block-keyword': 'expressions',
+        'local-block-url': 'urls',
+        'local-ok': 'domains',
+        'local-ok-url': 'urls'
     }
-    for category, list_type in cat_dict.items():
-        generate_sg_localdb(category, list_type, 'default', proxy)
+    if dict_search(f'url_filtering.squidguard', proxy) is not None:
+        squidgard_config_section = proxy['url_filtering']['squidguard']
+
+        for category, list_type in cat_dict.items():
+            generate_sg_rule_localdb(category, list_type, 'default', proxy)
+        check_blacklist_categorydb(squidgard_config_section)
+
+        if 'rule' in squidgard_config_section:
+            for rule in squidgard_config_section['rule']:
+                rule_config_section = squidgard_config_section['rule'][
+                    rule]
+                for category, list_type in cat_dict.items():
+                    generate_sg_rule_localdb(category, list_type, rule, proxy)
+                check_blacklist_categorydb(rule_config_section)
 
     return None
+
 
 def apply(proxy):
     if not proxy:
@@ -192,8 +243,11 @@ def apply(proxy):
 
         return None
 
+    if os.path.exists(squidguard_db_dir):
+        chmod_755(squidguard_db_dir)
     call('systemctl restart squid.service')
     return None
+
 
 if __name__ == '__main__':
     try:

@@ -16,25 +16,30 @@ acl Safe_ports port 488         # gss-http
 acl Safe_ports port 591         # filemaker
 acl Safe_ports port 777         # multiling http
 acl CONNECT method CONNECT
-
+{% if domain_block is defined and domain_block is not none %}
+{%     for domain in domain_block %}
+acl BLOCKDOMAIN dstdomain {{ domain }}
+{%     endfor %}
+http_access deny BLOCKDOMAIN
+{% endif %}
 {% if authentication is defined and authentication is not none %}
-{%   if authentication.children is defined and authentication.children is not none %}
+{%     if authentication.children is defined and authentication.children is not none %}
 auth_param basic children {{ authentication.children }}
-{%   endif %}
-{%   if authentication.credentials_ttl is defined and authentication.credentials_ttl is not none %}
-auth_param basic credentialsttl {{ authentication.credentials_ttl }} minute
-{%   endif %}
-{%   if authentication.realm is defined and authentication.realm is not none %}
-auth_param basic realm "{{ authentication.realm }}"
-{%   endif %}
-{# LDAP based Authentication #}
-{%   if authentication.method is defined and authentication.method is not none  %}
-{%     if authentication.ldap is defined and authentication.ldap is not none and authentication.method == 'ldap' %}
-auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' + authentication.ldap.bind_dn + '"' if authentication.ldap.bind_dn is defined }} {{ '-w "' + authentication.ldap.password + '"' if authentication.ldap.password is defined }} {{ '-f "' + authentication.ldap.filter_expression + '"' if authentication.ldap.filter_expression is defined }} {{ '-u "' + authentication.ldap.username_attribute + '"' if authentication.ldap.username_attribute is defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is defined }} -R -h "{{ authentication.ldap.server }}"
 {%     endif %}
+{%     if authentication.credentials_ttl is defined and authentication.credentials_ttl is not none %}
+auth_param basic credentialsttl {{ authentication.credentials_ttl }} minute
+{%     endif %}
+{%     if authentication.realm is defined and authentication.realm is not none %}
+auth_param basic realm "{{ authentication.realm }}"
+{%     endif %}
+{# LDAP based Authentication #}
+{%     if authentication.method is defined and authentication.method is not none %}
+{%         if authentication.ldap is defined and authentication.ldap is not none and authentication.method == 'ldap' %}
+auth_param basic program /usr/lib/squid/basic_ldap_auth -v {{ authentication.ldap.version }} -b "{{ authentication.ldap.base_dn }}" {{ '-D "' + authentication.ldap.bind_dn + '"' if authentication.ldap.bind_dn is defined }} {{ '-w "' + authentication.ldap.password + '"' if authentication.ldap.password is defined }} {{ '-f "' + authentication.ldap.filter_expression + '"' if authentication.ldap.filter_expression is defined }} {{ '-u "' + authentication.ldap.username_attribute + '"' if authentication.ldap.username_attribute is defined }} -p {{ authentication.ldap.port }} {{ '-ZZ' if authentication.ldap.use_ssl is defined }} -R -h "{{ authentication.ldap.server }}"
+{%         endif %}
 acl auth proxy_auth REQUIRED
 http_access allow auth
-{%   endif %}
+{%     endif %}
 {% endif %}
 
 http_access allow manager localhost
@@ -46,18 +51,18 @@ http_access allow net
 http_access deny all
 
 {% if reply_block_mime is defined and reply_block_mime is not none %}
-{%   for mime_type in reply_block_mime %}
+{%     for mime_type in reply_block_mime %}
 acl BLOCK_MIME rep_mime_type {{ mime_type }}
-{%   endfor %}
+{%     endfor %}
 http_reply_access deny BLOCK_MIME
 {% endif %}
 
 {% if cache_size is defined and cache_size is not none %}
-{%   if cache_size | int > 0 %}
+{%     if cache_size | int > 0 %}
 cache_dir ufs /var/spool/squid {{ cache_size }} 16 256
-{%   else %}
+{%     else %}
 # disabling disk cache
-{%   endif %}
+{%     endif %}
 {% endif %}
 {% if mem_cache_size is defined and mem_cache_size is not none %}
 cache_mem {{ mem_cache_size }} MB
@@ -89,9 +94,9 @@ tcp_outgoing_address {{ outgoing_address }}
 
 
 {% if listen_address is defined and listen_address is not none %}
-{%   for address, config in listen_address.items() %}
+{%     for address, config in listen_address.items() %}
 http_port {{ address }}:{{ config.port if config.port is defined else default_port }} {{ 'intercept' if config.disable_transparent is not defined }}
-{%   endfor %}
+{%     endfor %}
 {% endif %}
 http_port 127.0.0.1:{{ default_port }}
 
@@ -100,16 +105,16 @@ forwarded_for off
 
 {# SquidGuard #}
 {% if url_filtering is defined and url_filtering.disable is not defined %}
-{%   if url_filtering.squidguard is defined and url_filtering.squidguard is not none %}
-redirect_program /usr/bin/squidGuard -c {{ squidguard_conf }}
-redirect_children 8
-redirector_bypass on
-{%   endif %}
+{%     if url_filtering.squidguard is defined and url_filtering.squidguard is not none %}
+url_rewrite_program /usr/bin/squidGuard -c {{ squidguard_conf }}
+url_rewrite_children 8
+url_rewrite_bypass on
+{%     endif %}
 {% endif %}
 
 {% if cache_peer is defined and cache_peer is not none %}
-{%   for peer, config in cache_peer.items() %}
+{%     for peer, config in cache_peer.items() %}
 cache_peer {{ config.address }} {{ config.type }} {{ config.http_port }} {{ config.icp_port }} {{ config.options }}
-{%   endfor %}
+{%     endfor %}
 never_direct allow all
 {% endif %}
