@@ -241,8 +241,8 @@ class TestServiceWebProxy(VyOSUnitTestSHIM.TestCase):
         config = read_file(PROXY_CONF)
         self.assertIn(f'http_port {listen_ip}:3128 intercept', config)
 
-        self.assertIn(f'redirect_program /usr/bin/squidGuard -c /etc/squidguard/squidGuard.conf', config)
-        self.assertIn(f'redirect_children 8', config)
+        self.assertIn(f'url_rewrite_program /usr/bin/squidGuard -c /etc/squidguard/squidGuard.conf', config)
+        self.assertIn(f'url_rewrite_children 8', config)
 
         # Check SquidGuard config
         sg_config = read_file('/etc/squidguard/squidGuard.conf')
