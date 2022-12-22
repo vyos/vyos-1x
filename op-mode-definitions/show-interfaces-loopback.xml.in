@@ -11,13 +11,13 @@
                 <path>interfaces loopback</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
             <children>
               <leafNode name="brief">
                 <properties>
-                  <help>Show summary of the specified dummy interface information</help>
+                  <help>Show summary of the specified Loopback interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -25,13 +25,13 @@
             <properties>
               <help>Show Loopback interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=loopback --action=show-brief</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=loopback</command>
             <children>
               <leafNode name="detail">
                 <properties>
-                  <help>Show detailed dummy interface information</help>
+                  <help>Show detailed Loopback interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=dummy --action=show</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=loopback</command>
               </leafNode>
             </children>
           </node>
