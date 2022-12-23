@@ -23,7 +23,6 @@ from vyos.util import cmd
 
 import vyos.opmode
 
-
 def _get_json_data(command: str) -> list:
     """
     Get container command format JSON
@@ -38,7 +37,7 @@ def _get_raw_data(command: str) -> list:
 
 
 def show_container(raw: bool):
-    command = 'sudo podman ps --all'
+    command = 'podman ps --all'
     container_data = _get_raw_data(command)
     if raw:
         return container_data
@@ -47,8 +46,8 @@ def show_container(raw: bool):
 
 
 def show_image(raw: bool):
-    command = 'sudo podman image ls'
-    container_data = _get_raw_data('sudo podman image ls')
+    command = 'podman image ls'
+    container_data = _get_raw_data('podman image ls')
     if raw:
         return container_data
     else:
@@ -56,7 +55,7 @@ def show_image(raw: bool):
 
 
 def show_network(raw: bool):
-    command = 'sudo podman network ls'
+    command = 'podman network ls'
     container_data = _get_raw_data(command)
     if raw:
         return container_data
@@ -67,7 +66,7 @@ def show_network(raw: bool):
 def restart(name: str):
     from vyos.util import rc_cmd
 
-    rc, output = rc_cmd(f'sudo podman restart {name}')
+    rc, output = rc_cmd(f'systemctl restart vyos-container-{name}.service')
     if rc != 0:
         print(output)
         return None
