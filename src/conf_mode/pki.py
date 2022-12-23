@@ -51,6 +51,11 @@ sync_search = [
         'script': '/usr/libexec/vyos/conf_mode/interfaces-openvpn.py'
     },
     {
+        'keys': ['ca_certificate'],
+        'path': ['interfaces', 'sstpc'],
+        'script': '/usr/libexec/vyos/conf_mode/interfaces-sstpc.py'
+    },
+    {
         'keys': ['certificate', 'ca_certificate', 'local_key', 'remote_key'],
         'path': ['vpn', 'ipsec'],
         'script': '/usr/libexec/vyos/conf_mode/vpn_ipsec.py'
