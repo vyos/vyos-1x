@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2022 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T4870: change underlaying container filesystem from vfs to overlay
+
+import os
+import sys
+import shutil
+
+from vyos.configtree import ConfigTree
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+# We actually need no filename as this is a filesystem operation
+base_path = '/usr/lib/live/mount/persistence/container/storage'
+for dir in ['libpod', 'vfs', 'vfs-containers', 'vfs-images', 'vfs-layers']:
+    if os.path.exists(f'{base_path}/{dir}'):
+        shutil.rmtree(f'{base_path}/{dir}')
+

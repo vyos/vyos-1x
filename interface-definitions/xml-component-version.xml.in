@@ -6,6 +6,7 @@
   #include <include/version/config-management-version.xml.i>
   #include <include/version/conntrack-sync-version.xml.i>
   #include <include/version/conntrack-version.xml.i>
+  #include <include/version/container-version.xml.i>
   #include <include/version/dhcp-relay-version.xml.i>
   #include <include/version/dhcp-server-version.xml.i>
   #include <include/version/dhcpv6-server-version.xml.i>
