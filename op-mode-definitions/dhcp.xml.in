@@ -16,7 +16,7 @@
                 <properties>
                   <help>Show DHCP server leases</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet</command>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -25,25 +25,25 @@
                         <path>service dhcp-server shared-network-name</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --pool $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet --pool $6</command>
                   </tagNode>
                   <tagNode name="sort">
                     <properties>
                       <help>Show DHCP server leases sorted by the specified key</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed sort</script>
+                        <list>end hostname ip mac pool remaining start state</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --sort $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet --sort $6</command>
                   </tagNode>
                   <tagNode name="state">
                     <properties>
                       <help>Show DHCP server leases with a specific state (can be multiple, comma-separated)</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcp.py --allowed state</script>
+                        <list>abandoned active all backup expired free released reset</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --leases --state $(echo $6 | tr , " ")</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet --state $6</command>
                   </tagNode>
                 </children>
               </node>
@@ -51,7 +51,7 @@
                 <properties>
                   <help>Show DHCP server statistics</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics</command>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet</command>
                 <children>
                   <tagNode name="pool">
                     <properties>
@@ -60,7 +60,7 @@
                         <path>service dhcp-server shared-network-name</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcp.py --statistics --pool $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_pool_statistics --family inet --pool $6</command>
                   </tagNode>
                 </children>
               </node>
@@ -88,28 +88,28 @@
                     <properties>
                       <help>Show DHCPv6 server leases for a specific pool</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed pool</script>
+                        <path>service dhcpv6-server shared-network-name</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --pool $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --pool $6</command>
                   </tagNode>
                   <tagNode name="sort">
                     <properties>
                       <help>Show DHCPv6 server leases sorted by the specified key</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed sort</script>
+                        <list>end iaid_duid ip last_communication pool remaining state type</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --sort $6</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --sort $6</command>
                   </tagNode>
                   <tagNode name="state">
                     <properties>
                       <help>Show DHCPv6 server leases with a specific state (can be multiple, comma-separated)</help>
                       <completionHelp>
-                        <script>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --allowed state</script>
+                        <list>abandoned active all backup expired free released reset</list>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/show_dhcpv6.py --leases --state $(echo $6 | tr , " ")</command>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet6 --state $6</command>
                   </tagNode>
                 </children>
               </node>
