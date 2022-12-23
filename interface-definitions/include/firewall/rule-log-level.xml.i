@@ -1,4 +1,4 @@
-<!-- include start from firewall/common-rule.xml.i -->
+<!-- include start from firewall/rule-log-level.xml.i -->
 <leafNode name="log-level">
   <properties>
     <help>Set log-level. Log must be enable.</help>
