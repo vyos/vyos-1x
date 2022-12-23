@@ -116,7 +116,7 @@ def get_formatted_output(dict_data):
                 reply_src = f'{reply_src}:{reply_sport}' if reply_sport else reply_src
                 reply_dst = f'{reply_dst}:{reply_dport}' if reply_dport else reply_dst
                 state = meta['state'] if 'state' in meta else ''
-                mark = meta['mark']
+                mark = meta['mark'] if 'mark' in meta else ''
                 zone = meta['zone'] if 'zone' in meta else ''
                 data_entries.append(
                     [conn_id, orig_src, orig_dst, reply_src, reply_dst, proto, state, timeout, mark, zone])
