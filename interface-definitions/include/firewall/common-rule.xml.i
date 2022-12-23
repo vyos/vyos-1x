@@ -1,6 +1,14 @@
 <!-- include start from firewall/common-rule.xml.i -->
 #include <include/firewall/action.xml.i>
 #include <include/generic-description.xml.i>
+<node name="destination">
+  <properties>
+    <help>Destination parameters</help>
+  </properties>
+  <children>
+    #include <include/firewall/mac-address.xml.i>
+  </children>
+</node>
 <leafNode name="disable">
   <properties>
     <help>Option to disable firewall rule</help>
