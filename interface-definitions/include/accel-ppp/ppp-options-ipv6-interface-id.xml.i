@@ -13,6 +13,9 @@
       <format>x:x:x:x</format>
       <description>specify interface identifier for IPv6</description>
     </valueHelp>
+    <constraint>
+      <regex>(random|((\d+){1,4}:){3}(\d+){1,4})</regex>
+    </constraint>
   </properties>
 </leafNode>
 <leafNode name="ipv6-peer-intf-id">
@@ -37,12 +40,15 @@
       <format>calling-sid</format>
       <description>Calculate interface identifier from calling-station-id</description>
     </valueHelp>
+    <constraint>
+      <regex>(random|calling-sid|ipv4|((\d+){1,4}:){3}(\d+){1,4})</regex>
+    </constraint>
   </properties>
 </leafNode>
 <leafNode name="ipv6-accept-peer-intf-id">
   <properties>
     <help>Accept peer interface identifier</help>
-    <valueless />
+    <valueless/>
   </properties>
 </leafNode>
 <!-- include end -->

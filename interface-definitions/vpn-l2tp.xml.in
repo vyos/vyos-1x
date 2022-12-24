@@ -251,6 +251,7 @@
                 <children>
                   #include <include/accel-ppp/lcp-echo-interval-failure.xml.i>
                   #include <include/accel-ppp/ppp-options-ipv6.xml.i>
+                  #include <include/accel-ppp/ppp-options-ipv6-interface-id.xml.i>
                 </children>
               </node>
             </children>
