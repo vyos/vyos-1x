@@ -168,6 +168,11 @@ def verify(container):
                     if not os.path.exists(source):
                         raise ConfigError(f'Volume "{volume}" source path "{source}" does not exist!')
 
+            if 'port' in container_config:
+                for tmp in container_config['port']:
+                    if not {'source', 'destination'} <= set(container_config['port'][tmp]):
+                        raise ConfigError(f'Both "source" and "destination" must be specified for a port mapping!')
+
             # If 'allow-host-networks' or 'network' not set.
             if 'allow_host_networks' not in container_config and 'network' not in container_config:
                 raise ConfigError(f'Must either set "network" or "allow-host-networks" for container "{name}"!')
