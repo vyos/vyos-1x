@@ -73,8 +73,18 @@ def get_config(config=None):
     # Merge per-container default values
     if 'name' in container:
         default_values = defaults(base + ['name'])
+        if 'port' in default_values:
+            del default_values['port']
         for name in container['name']:
             container['name'][name] = dict_merge(default_values, container['name'][name])
+
+            # XXX: T2665: we can not safely rely on the defaults() when there are
+            # tagNodes in place, it is better to blend in the defaults manually.
+            if 'port' in container['name'][name]:
+                for port in container['name'][name]['port']:
+                    default_values = defaults(base + ['name', 'port'])
+                    container['name'][name]['port'][port] = dict_merge(
+                        default_values, container['name'][name]['port'][port])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, base + ['network'])
@@ -242,14 +252,10 @@ def generate_run_arguments(name, container_config):
     if 'port' in container_config:
         protocol = ''
         for portmap in container_config['port']:
-            if 'protocol' in container_config['port'][portmap]:
-                protocol = container_config['port'][portmap]['protocol']
-                protocol = f'/{protocol}'
-            else:
-                protocol = '/tcp'
+            protocol = container_config['port'][portmap]['protocol']
             sport = container_config['port'][portmap]['source']
             dport = container_config['port'][portmap]['destination']
-            port += f' -p {sport}:{dport}{protocol}'
+            port += f' -p {sport}:{dport}/{protocol}'
 
     # Bind volume
     volume = ''

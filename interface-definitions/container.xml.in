@@ -207,14 +207,23 @@
               </leafNode>
               <leafNode name="protocol">
                 <properties>
-                  <help>Protocol tcp/udp</help>
+                  <help>Transport protocol used for port mapping</help>
                   <completionHelp>
                     <list>tcp udp</list>
                   </completionHelp>
+                  <valueHelp>
+                    <format>tcp</format>
+                    <description>Use Transmission Control Protocol for given port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>udp</format>
+                    <description>Use User Datagram Protocol for given port</description>
+                  </valueHelp>
                   <constraint>
                     <regex>(tcp|udp)</regex>
                   </constraint>
                 </properties>
+                <defaultValue>tcp</defaultValue>
               </leafNode>
             </children>
           </tagNode>
