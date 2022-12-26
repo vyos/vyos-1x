@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -27,6 +27,7 @@ RADVD_CONF = '/run/radvd/radvd.conf'
 interface = 'eth1'
 base_path = ['service', 'router-advert', 'interface', interface]
 address_base = ['interfaces', 'ethernet', interface, 'address']
+prefix = '::/64'
 
 def get_config_value(key):
     tmp = read_file(RADVD_CONF)
@@ -112,6 +113,39 @@ class TestServiceRADVD(VyOSUnitTestSHIM.TestCase):
 
         tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
         self.assertIn(tmp, config)
+
+    def test_route(self):
+        route = '2001:db8:1000::/64'
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['route', route])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = f'route {route}' + ' {'
+        self.assertIn(tmp, config)
+
+        self.assertIn('AdvRouteLifetime 1800;', config)
+        self.assertIn('AdvRoutePreference medium;', config)
+        self.assertIn('RemoveRoute on;', config)
+
+    def test_rasrcaddress(self):
+        ra_src = ['fe80::1', 'fe80::2']
+
+        self.cli_set(base_path + ['prefix', prefix])
+        for src in ra_src:
+            self.cli_set(base_path + ['source-address', src])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertIn('AdvRASrcAddress {', config)
+        for src in ra_src:
+            self.assertIn(f'        {src};', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
