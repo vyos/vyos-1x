@@ -684,7 +684,7 @@
                   #include <include/qos/queue-limit-1-4294967295.xml.i>
                   #include <include/qos/queue-type.xml.i>
                   <leafNode name="queue-type">
-                    <defaultValue>fair-queue</defaultValue>
+                    <defaultValue>fq-codel</defaultValue>
                   </leafNode>
                   #include <include/qos/set-dscp.xml.i>
                   #include <include/qos/target.xml.i>
@@ -746,7 +746,7 @@
                   #include <include/qos/queue-limit-1-4294967295.xml.i>
                   #include <include/qos/queue-type.xml.i>
                   <leafNode name="queue-type">
-                    <defaultValue>fair-queue</defaultValue>
+                    <defaultValue>fq-codel</defaultValue>
                   </leafNode>
                   #include <include/qos/set-dscp.xml.i>
                   #include <include/qos/target.xml.i>
