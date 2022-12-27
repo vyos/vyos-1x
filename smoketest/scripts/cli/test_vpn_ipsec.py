@@ -39,6 +39,7 @@ vif = '100'
 esp_group = 'MyESPGroup'
 ike_group = 'MyIKEGroup'
 secret = 'MYSECRETKEY'
+PROCESS_NAME = 'charon'
 
 ca_pem = """
 MIIDSzCCAjOgAwIBAgIUQHK+ZgTUYZksvXY2/MyW+Jiels4wDQYJKoZIhvcNAQEL
@@ -137,14 +138,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running('charon'))
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
         self.cli_commit()
 
         # Check for no longer running process
-        self.assertFalse(process_named_running('charon'))
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_01_dhcp_fail_handling(self):
         # Interface for dhcp-interface

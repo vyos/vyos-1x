@@ -622,7 +622,7 @@ def wait_for_vici_socket(timeout=5, sleep_interval=0.1):
         sleep(sleep_interval)
 
 def apply(ipsec):
-    systemd_service = 'strongswan-starter.service'
+    systemd_service = 'strongswan.service'
     if not ipsec:
         call(f'systemctl stop {systemd_service}')
     else:
