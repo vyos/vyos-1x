@@ -167,6 +167,8 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         dhcp_waiting = read_file(dhcp_waiting_file)
         self.assertIn(f'{interface}.{vif}', dhcp_waiting) # Ensure dhcp-failed interface was added for dhclient hook
 
+        self.cli_delete(ethernet_path + [interface, 'vif', vif, 'address'])
+
     def test_02_site_to_site(self):
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
