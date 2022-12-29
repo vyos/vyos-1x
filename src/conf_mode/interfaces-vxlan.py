@@ -49,12 +49,34 @@ def get_config(config=None):
     # VXLAN interfaces are picky and require recreation if certain parameters
     # change. But a VXLAN interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
+<<<<<<< HEAD
     for cli_option in ['external', 'gpe', 'group', 'port', 'remote',
                        'source-address', 'source-interface', 'vni',
                        'parameters ip dont-fragment', 'parameters ip tos',
                        'parameters ip ttl']:
         if is_node_changed(conf, cli_option.split()):
             vxlan.update({'rebuild_required': {}})
+=======
+    for cli_option in ['parameters', 'external', 'gpe', 'group', 'port', 'remote',
+                       'source-address', 'source-interface', 'vni']:
+        if is_node_changed(conf, base + [ifname, cli_option]):
+            vxlan.update({'rebuild_required': {}})
+            break
+
+    # We need to verify that no other VXLAN tunnel is configured when external
+    # mode is in use - Linux Kernel limitation
+    conf.set_level(base)
+    vxlan['other_tunnels'] = conf.get_config_dict([], key_mangling=('-', '_'),
+                                                  get_first_key=True,
+                                                  no_tag_node_value_mangle=True)
+
+    # This if-clause is just to be sure - it will always evaluate to true
+    ifname = vxlan['ifname']
+    if ifname in vxlan['other_tunnels']:
+        del vxlan['other_tunnels'][ifname]
+    if len(vxlan['other_tunnels']) == 0:
+        del vxlan['other_tunnels']
+>>>>>>> 355db68b5 (T4897: Fix virtual interface rebuild checks)
 
     return vxlan
 
