@@ -52,13 +52,11 @@ def get_config(config=None):
     # VXLAN interfaces are picky and require recreation if certain parameters
     # change. But a VXLAN interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
-    for cli_option in ['external', 'gpe', 'group', 'port', 'remote',
+    for cli_option in ['parameters', 'external', 'gpe', 'group', 'port', 'remote',
                        'source-address', 'source-interface', 'vni']:
-        if leaf_node_changed(conf, base + [ifname, cli_option]):
+        if is_node_changed(conf, base + [ifname, cli_option]):
             vxlan.update({'rebuild_required': {}})
-
-    if is_node_changed(conf, base + [ifname, 'parameters']):
-        vxlan.update({'rebuild_required': {}})
+            break
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation
