@@ -21,7 +21,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
 from vyos.configdict import is_source_interface
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
@@ -51,7 +51,7 @@ def get_config(config=None):
     mode = is_node_changed(conf, ['mode'])
     if mode: peth.update({'shutdown_required' : {}})
 
-    if leaf_node_changed(conf, base + [ifname, 'mode']):
+    if is_node_changed(conf, base + [ifname, 'mode']):
         peth.update({'rebuild_required': {}})
 
     if 'source_interface' in peth:
