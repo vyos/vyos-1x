@@ -30,6 +30,7 @@ if __name__ == '__main__':
     # Get the pull request object
     pr = requests.get(sys.argv[1]).json()
     if "title" not in pr:
+        print("The PR object does not have a title field!")
         print("Did not receive a valid pull request object, please check the URL!")
         sys.exit(1)
 
