@@ -1,0 +1,324 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="container" owner="${vyos_conf_scripts_dir}/container.py">
+    <properties>
+      <help>Container applications</help>
+      <priority>1280</priority>
+    </properties>
+    <children>
+      <tagNode name="name">
+        <properties>
+          <help>Container name</help>
+          <constraint>
+            <regex>[-a-zA-Z0-9]+</regex>
+          </constraint>
+          <constraintErrorMessage>Container name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+        </properties>
+        <children>
+          <leafNode name="allow-host-networks">
+            <properties>
+              <help>Allow host networks in container</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <leafNode name="cap-add">
+            <properties>
+              <help>Container capabilities/permissions</help>
+              <completionHelp>
+                <list>net-admin net-bind-service net-raw setpcap sys-admin sys-time</list>
+              </completionHelp>
+              <valueHelp>
+                <format>net-admin</format>
+                <description>Network operations (interface, firewall, routing tables)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>net-bind-service</format>
+                <description>Bind a socket to privileged ports (port numbers less than 1024)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>net-raw</format>
+                <description>Permission to create raw network sockets</description>
+              </valueHelp>
+              <valueHelp>
+                <format>setpcap</format>
+                <description>Capability sets (from bounded or inherited set)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-admin</format>
+                <description>Administation operations (quotactl, mount, sethostname, setdomainame)</description>
+              </valueHelp>
+              <valueHelp>
+                <format>sys-time</format>
+                <description>Permission to set system clock</description>
+              </valueHelp>
+              <constraint>
+                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-time)</regex>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+          #include <include/generic-description.xml.i>
+          <tagNode name="device">
+            <properties>
+              <help>Add a host device to the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source device (Example: "/dev/x")</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Source device</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container device (Example: "/dev/x")</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Destination container device</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          #include <include/generic-disable-node.xml.i>
+          <tagNode name="environment">
+            <properties>
+              <help>Add custom environment variables</help>
+              <constraint>
+                <regex>[-_a-zA-Z0-9]+</regex>
+              </constraint>
+              <constraintErrorMessage>Environment variable name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="value">
+                <properties>
+                  <help>Set environment option value</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Set environment option value</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="image">
+            <properties>
+              <help>Image name in the hub-registry</help>
+            </properties>
+          </leafNode>
+          <leafNode name="memory">
+            <properties>
+              <help>Memory (RAM) available to this container</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>u32:1-16384</format>
+                <description>Container memory in megabytes (MB)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-16384"/>
+              </constraint>
+              <constraintErrorMessage>Container memory must be in range 0 to 16384 MB</constraintErrorMessage>
+            </properties>
+            <defaultValue>512</defaultValue>
+          </leafNode>
+          <leafNode name="shared-memory">
+            <properties>
+              <help>Shared memory available to this container</help>
+              <valueHelp>
+                <format>u32:0</format>
+                <description>Unlimited</description>
+              </valueHelp>
+              <valueHelp>
+                <format>u32:1-8192</format>
+                <description>Container memory in megabytes (MB)</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 0-8192"/>
+              </constraint>
+              <constraintErrorMessage>Container memory must be in range 0 to 8192 MB</constraintErrorMessage>
+            </properties>
+            <defaultValue>64</defaultValue>
+          </leafNode>
+          <tagNode name="network">
+            <properties>
+              <help>Attach user defined network to container</help>
+              <completionHelp>
+                <path>container network</path>
+              </completionHelp>
+            </properties>
+            <children>
+              <leafNode name="address">
+                <properties>
+                  <!-- PODMAN currently does not support more then one IPv4 or IPv6 address assignments to a container -->
+                  <help>Assign static IP address to container</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <tagNode name="port">
+            <properties>
+              <help>Publish port to the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source host port</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Source host port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Source host port range (e.g. 10025-10030)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container port</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Destination container port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>start-end</format>
+                    <description>Destination container port range (e.g. 10025-10030)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="port-range"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="protocol">
+                <properties>
+                  <help>Transport protocol used for port mapping</help>
+                  <completionHelp>
+                    <list>tcp udp</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>tcp</format>
+                    <description>Use Transmission Control Protocol for given port</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>udp</format>
+                    <description>Use User Datagram Protocol for given port</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(tcp|udp)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>tcp</defaultValue>
+              </leafNode>
+            </children>
+          </tagNode>
+          <leafNode name="restart">
+            <properties>
+              <help>Restart options for container</help>
+              <completionHelp>
+                <list>no on-failure always</list>
+              </completionHelp>
+              <valueHelp>
+                <format>no</format>
+                <description>Do not restart containers on exit</description>
+              </valueHelp>
+              <valueHelp>
+                <format>on-failure</format>
+                <description>Restart containers when they exit with a non-zero exit code, retrying indefinitely</description>
+              </valueHelp>
+              <valueHelp>
+                <format>always</format>
+                <description>Restart containers when they exit, regardless of status, retrying indefinitely</description>
+              </valueHelp>
+              <constraint>
+                <regex>(no|on-failure|always)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>on-failure</defaultValue>
+          </leafNode>
+          <tagNode name="volume">
+            <properties>
+              <help>Mount a volume into the container</help>
+            </properties>
+            <children>
+              <leafNode name="source">
+                <properties>
+                  <help>Source host directory</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Source host directory</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="destination">
+                <properties>
+                  <help>Destination container directory</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Destination container directory</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+        </children>
+      </tagNode>
+      <tagNode name="network">
+        <properties>
+          <help>Network name</help>
+          <constraint>
+            <regex>[-_a-zA-Z0-9]{1,11}</regex>
+          </constraint>
+          <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
+        </properties>
+        <children>
+          <leafNode name="description">
+            <properties>
+              <help>Network description</help>
+            </properties>
+          </leafNode>
+          <leafNode name="prefix">
+            <properties>
+              <help>Prefix which allocated to that network</help>
+              <valueHelp>
+                <format>ipv4net</format>
+                <description>IPv4 network prefix</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6net</format>
+                <description>IPv6 network prefix</description>
+              </valueHelp>
+              <constraint>
+                <validator name="ipv4-prefix"/>
+                <validator name="ipv6-prefix"/>
+              </constraint>
+              <multi/>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <leafNode name="registry">
+        <properties>
+          <help>Registry Name</help>
+          <multi/>
+        </properties>
+        <defaultValue>docker.io quay.io</defaultValue>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>
