@@ -25,8 +25,27 @@
             </properties>
             <children>
               #include <include/interface/source-validation.xml.i>
+              #include <include/interface/disable-forwarding.xml.i>
             </children>
           </node>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/disable-forwarding.xml.i>
+              <node name="address">
+                <properties>
+                  <help>IPv6 address configuration modes</help>
+                </properties>
+                <children>
+                  #include <include/interface/ipv6-address-eui64.xml.i>
+                  #include <include/interface/ipv6-address-no-default-link-local.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          #include <include/interface/mtu-68-16000.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
