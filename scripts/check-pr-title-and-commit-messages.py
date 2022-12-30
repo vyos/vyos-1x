@@ -2,6 +2,7 @@
 
 import re
 import sys
+import time
 
 import requests
 from pprint import pprint
@@ -26,6 +27,13 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Please specify pull request URL!")
         sys.exit(1)
+
+    # There seems to be a race condition that causes this scripts to receive
+    # an incomplete PR object that is missing certain fields,
+    # which causes temporary CI failures that require re-running the script
+    #
+    # It's probably better to add a small delay to prevent that
+    time.sleep(5)
 
     # Get the pull request object
     pr = requests.get(sys.argv[1]).json()
