@@ -14,14 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
 from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_mtu_ipv6
@@ -49,12 +46,9 @@ def get_config(config=None):
     # GENEVE interfaces are picky and require recreation if certain parameters
     # change. But a GENEVE interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
-    for cli_option in ['remote', 'vni']:
-        if leaf_node_changed(conf, base + [ifname, cli_option]):
+    for cli_option in ['remote', 'vni', 'parameters']:
+        if is_node_changed(conf, base + [ifname, cli_option]):
             geneve.update({'rebuild_required': {}})
-
-    if is_node_changed(conf, base + [ifname, 'parameters']):
-        geneve.update({'rebuild_required': {}})
 
     return geneve
 
