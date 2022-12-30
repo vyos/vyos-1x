@@ -21,7 +21,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_interface_exists
@@ -52,7 +52,7 @@ def get_config(config=None):
     ifname, tunnel = get_interface_dict(conf, base)
 
     if 'deleted' not in tunnel:
-        tmp = leaf_node_changed(conf, base + [ifname, 'encapsulation'])
+        tmp = is_node_changed(conf, base + [ifname, 'encapsulation'])
         if tmp: tunnel.update({'encapsulation_changed': {}})
 
         # We also need to inspect other configured tunnels as there are Kernel
