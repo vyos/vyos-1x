@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+BUSYBOX_TAG="docker.io/library/busybox:stable"
+OUTPUT_PATH="/usr/share/vyos/busybox-stable.tar"
+
+if [[ -f $OUTPUT_PATH ]]; then
+    rm -f $OUTPUT_PATH
+fi
+
+skopeo copy --additional-tag "$BUSYBOX_TAG" "docker://$BUSYBOX_TAG" "docker-archive:/$OUTPUT_PATH"
