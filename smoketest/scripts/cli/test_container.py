@@ -102,7 +102,7 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         n = cmd_to_json(f'sudo podman network inspect {net_name}')
-        json_subnet = n['subnets'][0]['subnet']
+        json_subnet = n['plugins'][0]['ipam']['ranges'][0][0]['subnet']
 
         c = cmd_to_json(f'sudo podman container inspect {cont_name}')
         json_ip = c['NetworkSettings']['Networks'][net_name]['IPAddress']
