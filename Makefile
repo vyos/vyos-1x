@@ -33,11 +33,6 @@ interface_definitions: $(config_xml_obj)
 	# IPSec VPN EAP-RADIUS does not support source-address
 	rm -rf $(TMPL_DIR)/vpn/ipsec/remote-access/radius/source-address
 
-	# T4284 neq QoS implementation is not yet live
-	find $(TMPL_DIR)/interfaces -name redirect -type d -exec rm -rf {} \;
-	rm -rf $(TMPL_DIR)/qos
-	rm -rf $(TMPL_DIR)/interfaces/input
-
 	# T2472 - EIGRP support
 	rm -rf $(TMPL_DIR)/protocols/eigrp
 	# T2773 - EIGRP support for VRF

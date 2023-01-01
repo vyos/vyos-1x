@@ -1,23 +1,31 @@
 <!-- include start from interface/mirror.xml.i -->
 <node name="mirror">
   <properties>
-    <help>Incoming/outgoing packet mirroring destination</help>
+    <help>Mirror ingress/egress packets</help>
   </properties>
   <children>
     <leafNode name="ingress">
       <properties>
-        <help>Mirror the ingress traffic of the interface to the destination interface</help>
+        <help>Mirror ingress traffic to destination interface</help>
         <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces.py</script>
         </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Destination interface name</description>
+        </valueHelp>
       </properties>
     </leafNode>
     <leafNode name="egress">
       <properties>
-        <help>Mirror the egress traffic of the interface to the destination interface</help>
+        <help>Mirror egress traffic to destination interface</help>
         <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces.py</script>
         </completionHelp>
+        <valueHelp>
+          <format>txt</format>
+          <description>Destination interface name</description>
+        </valueHelp>
       </properties>
     </leafNode>
   </children>

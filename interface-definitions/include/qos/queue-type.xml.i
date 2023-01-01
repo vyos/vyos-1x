@@ -3,28 +3,31 @@
   <properties>
     <help>Queue type for default traffic</help>
     <completionHelp>
-      <list>fq-codel fair-queue drop-tail random-detect</list>
+      <list>drop-tail fair-queue fq-codel priority random-detect</list>
     </completionHelp>
     <valueHelp>
-      <format>fq-codel</format>
-      <description>Fair Queue Codel</description>
+      <format>drop-tail</format>
+      <description>First-In-First-Out (FIFO)</description>
     </valueHelp>
     <valueHelp>
       <format>fair-queue</format>
       <description>Stochastic Fair Queue (SFQ)</description>
     </valueHelp>
     <valueHelp>
-      <format>drop-tail</format>
-      <description>First-In-First-Out (FIFO)</description>
+      <format>fq-codel</format>
+      <description>Fair Queue Codel</description>
+    </valueHelp>
+    <valueHelp>
+      <format>priority</format>
+      <description>Priority queuing</description>
     </valueHelp>
     <valueHelp>
       <format>random-detect</format>
       <description>Random Early Detection (RED)</description>
     </valueHelp>
     <constraint>
-      <regex>(fq-codel|fair-queue|drop-tail|random-detect)</regex>
+      <regex>(drop-tail|fair-queue|fq-codel|priority|random-detect)</regex>
     </constraint>
   </properties>
-  <defaultValue>drop-tail</defaultValue>
 </leafNode>
 <!-- include end -->

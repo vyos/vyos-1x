@@ -1,9 +1,9 @@
-<!-- include start from qos/dscp.xml.i -->
+<!-- include start from qos/match-dscp.xml.i -->
 <leafNode name="dscp">
   <properties>
     <help>Match on Differentiated Services Codepoint (DSCP)</help>
     <completionHelp>
-      <list>default reliability throughput lowdelay priority immediate flash flash-override critical internet network AF11 AF12 AF13 AF21 AF22 AF23 AF31 AF32 AF33 AF41 AF42 AF43 CS1 CS2 CS3 CS4 CS5 CS6 CS7 EF</list>
+      <list>default reliability throughput lowdelay priority immediate flash flash-override critical internet network af11 af12 af13 af21 af22 af23 af31 af32 af33 af41 af42 af43 cs1 cs2 cs3 cs4 cs5 cs6 cs7 ef</list>
     </completionHelp>
     <valueHelp>
       <format>u32:0-63</format>
@@ -54,90 +54,89 @@
       <description>match DSCP (111000)</description>
     </valueHelp>
     <valueHelp>
-      <format>AF11</format>
+      <format>af11</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF12</format>
+      <format>af12</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF13</format>
+      <format>af13</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF21</format>
+      <format>af21</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF22</format>
+      <format>af22</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF23</format>
+      <format>af23</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>AF31</format>
+      <format>af31</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>AF32</format>
+      <format>af32</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>AF33</format>
+      <format>af33</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>AF41</format>
+      <format>af41</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>AF42</format>
+      <format>af42</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>AF43</format>
+      <format>af43</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>CS1</format>
+      <format>cs1</format>
       <description>Low-priority data</description>
     </valueHelp>
     <valueHelp>
-      <format>CS2</format>
+      <format>cs2</format>
       <description>OAM</description>
     </valueHelp>
     <valueHelp>
-      <format>CS3</format>
+      <format>cs3</format>
       <description>Broadcast video</description>
     </valueHelp>
     <valueHelp>
-      <format>CS4</format>
+      <format>cs4</format>
       <description>Real-time interactive</description>
     </valueHelp>
     <valueHelp>
-      <format>CS5</format>
+      <format>cs5</format>
       <description>Signaling</description>
     </valueHelp>
     <valueHelp>
-      <format>CS6</format>
+      <format>cs6</format>
       <description>Network control</description>
     </valueHelp>
     <valueHelp>
-      <format>CS7</format>
+      <format>cs7</format>
       <description></description>
     </valueHelp>
     <valueHelp>
-      <format>EF</format>
+      <format>ef</format>
       <description>Expedited Forwarding</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-63"/>
-      <regex>(default|reliability|throughput|lowdelay|priority|immediate|flash|flash-override|critical|internet|network|AF11|AF12|AF13|AF21|AF22|AF23|AF31|AF32|AF33|AF41|AF42|AF43|CS1|CS2|CS3|CS4|CS5|CS6|CS7|EF)</regex>
+      <regex>(default|reliability|throughput|lowdelay|priority|immediate|flash|flash-override|critical|internet|network|af11|af12|af13|af21|af22|af23|af31|af32|af33|af41|af42|af43|cs1|cs2|cs3|cs4|cs5|cs6|cs7|ef)</regex>
     </constraint>
-    <constraintErrorMessage>Priority must be between 0 and 63</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->

@@ -1,13 +1,13 @@
-<!-- include start from qos/limiter-actions.xml.i -->
-<leafNode name="exceed-action">
+<!-- include start from qos/police.xml.i -->
+<leafNode name="exceed">
   <properties>
-    <help>Default action for packets exceeding the limiter (default: drop)</help>
+    <help>Default action for packets exceeding the limiter</help>
     <completionHelp>
       <list>continue drop ok reclassify pipe</list>
     </completionHelp>
     <valueHelp>
       <format>continue</format>
-      <description>Don't do anything, just continue with the next action in line</description>
+      <description>Do not do anything, just continue with the next action in line</description>
     </valueHelp>
     <valueHelp>
       <format>drop</format>
@@ -31,15 +31,15 @@
   </properties>
   <defaultValue>drop</defaultValue>
 </leafNode>
-<leafNode name="notexceed-action">
+<leafNode name="not-exceed">
   <properties>
-    <help>Default action for packets not exceeding the limiter (default: ok)</help>
+    <help>Default action for packets not exceeding the limiter</help>
     <completionHelp>
       <list>continue drop ok reclassify pipe</list>
     </completionHelp>
     <valueHelp>
       <format>continue</format>
-      <description>Don't do anything, just continue with the next action in line</description>
+      <description>Do not do anything, just continue with the next action in line</description>
     </valueHelp>
     <valueHelp>
       <format>drop</format>
