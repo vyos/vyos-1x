@@ -15,7 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import argv,exit
+
+from vyos.base import Warning
 from vyos.configtree import ConfigTree
+from vyos.util import read_file
+
+def bandwidth_percent_to_val(interface, percent) -> int:
+    speed = read_file(f'/sys/class/net/{interface}/speed')
+    if not speed.isnumeric():
+        Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
+        speed = 10
+    speed = int(speed) *1000000 # convert to MBit/s
+    return speed * int(percent) // 100 # integer division
 
 if (len(argv) < 1):
     print("Must specify file name!")
@@ -52,7 +63,7 @@ if config.exists(['interfaces']):
         for interface in config.list_nodes(['interfaces', type]):
             interface_base = ['interfaces', type, interface, 'traffic-policy']
             tmp = get_qos(config, interface, interface_base)
-            if tmp: iface_config.append(tmp)
+            if tmp: iface_config.update(tmp)
 
             vif_path = ['interfaces', type, interface, 'vif']
             if config.exists(vif_path):
@@ -87,10 +98,16 @@ config.set(['qos'])
 config.copy(base, ['qos', 'policy'])
 config.delete(base)
 
-
 # TODO
 # - remove burst from network emulator
-# - convert rates to bits/s
+
+def change_cli_bandwidth(config, path):
+    if config.exists(path + ['bandwidth']):
+        bw = config.return_value(path + ['bandwidth'])
+        if bw.endswith('%'):
+            bw = bandwidth_percent_to_val(interface, bw.rstrip('%'))
+            config.set(path + ['bandwidth'], value=bw)
+    return
 
 # Now map the interface policy binding to the new CLI syntax
 for interface, interface_config in iface_config.items():
@@ -98,6 +115,38 @@ for interface, interface_config in iface_config.items():
         config.set(['qos', 'interface', interface, 'ingress'], value=interface_config['ingress'])
     if 'egress' in interface_config:
         config.set(['qos', 'interface', interface, 'egress'], value=interface_config['egress'])
+
+    # QoS policy <-> interface binding is now established - we now can adjust some
+    # CLI values like bandwidth in percent
+    for direction in ['ingress', 'egress']:
+        if direction not in interface_config:
+            continue
+        # Convert % bandwidth values to absolute values
+        for policy in config.list_nodes(['qos', 'policy']):
+            for policy_name in config.list_nodes(['qos', 'policy', policy]):
+                if policy_name == interface_config[direction]:
+                    policy_base = ['qos', 'policy', policy, policy_name]
+                    # This is for the toplevel bandwidth node on a policy
+                    change_cli_bandwidth(config, policy_base)
+
+                    # This is for class based bandwidth value
+                    if config.exists(policy_base + ['class']):
+                        for cls in config.list_nodes(policy_base + ['class']):
+                            cls_base = policy_base + ['class', cls]
+                            change_cli_bandwidth(config, cls_base)
+
+                    # This is for the bandwidth value specified under the
+                    # policy "default" tree
+                    if config.exists(policy_base + ['default']):
+                        default_base = policy_base + ['default']
+                        change_cli_bandwidth(config, default_base)
+
+# Remove "burst" CLI node from network emulator
+netem_base = ['qos', 'policy', 'network-emulator']
+if config.exists(netem_base):
+    for policy_name in config.list_nodes(netem_base):
+        if config.exists(netem_base + [policy_name, 'burst']):
+            config.delete(netem_base + [policy_name, 'burst'])
 
 try:
     with open(file_name, 'w') as f:

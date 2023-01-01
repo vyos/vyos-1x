@@ -16,6 +16,11 @@ interfaces {
         traffic-policy {
             out MY-HTB
         }
+        vif 200 {
+            traffic-policy {
+                out foo-emulate
+            }
+        }
     }
     loopback lo {
     }
@@ -197,6 +202,10 @@ traffic-policy {
             priority 7
             queue-type fair-queue
         }
+    }
+    network-emulator foo-emulate {
+        bandwidth 300mbit
+        burst 20000
     }
 }
 // Warning: Do not remove the following line.
