@@ -58,6 +58,9 @@ default_config_data = {
     'ppp_echo_failure' : '3',
     'ppp_echo_interval' : '30',
     'ppp_echo_timeout': '0',
+    'ppp_ipv6_accept_peer_intf_id': False,
+    'ppp_ipv6_intf_id': None,
+    'ppp_ipv6_peer_intf_id': None,
     'radius_server': [],
     'radius_acct_inter_jitter': '',
     'radius_acct_tmo': '3',
@@ -313,6 +316,15 @@ def get_config(config=None):
 
     if conf.exists(['ppp-options', 'ipv6']):
         l2tp['ppp_ipv6'] = conf.return_value(['ppp-options', 'ipv6'])
+
+    if conf.exists(['ppp-options', 'ipv6-accept-peer-intf-id']):
+        l2tp['ppp_ipv6_accept_peer_intf_id'] = True
+
+    if conf.exists(['ppp-options', 'ipv6-intf-id']):
+        l2tp['ppp_ipv6_intf_id'] = conf.return_value(['ppp-options', 'ipv6-intf-id'])
+
+    if conf.exists(['ppp-options', 'ipv6-peer-intf-id']):
+        l2tp['ppp_ipv6_peer_intf_id'] = conf.return_value(['ppp-options', 'ipv6-peer-intf-id'])
 
     return l2tp
 

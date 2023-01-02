@@ -126,7 +126,13 @@ ipv6={{ ppp_ipv6 }}
 {% else %}
 {{ 'ipv6=allow' if client_ipv6_pool_configured else '' }}
 {% endif %}
-
+{% if ppp_ipv6_intf_id is vyos_defined %}
+ipv6-intf-id={{ ppp_ipv6_intf_id }}
+{% endif %}
+{% if ppp_ipv6_peer_intf_id is vyos_defined %}
+ipv6-peer-intf-id={{ ppp_ipv6_peer_intf_id }}
+{% endif %}
+ipv6-accept-peer-intf-id={{ "1" if ppp_ipv6_accept_peer_intf_id else "0" }}
 
 {% if client_ipv6_pool %}
 [ipv6-pool]
