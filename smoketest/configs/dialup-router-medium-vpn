@@ -68,9 +68,6 @@ interfaces {
             mtu 1500
             name-server auto
             password password
-            traffic-policy {
-                out shape-17mbit
-            }
             user-id vyos
             password vyos
         }
@@ -96,9 +93,6 @@ interfaces {
         }
         smp-affinity auto
         speed auto
-        traffic-policy {
-            out shape-94mbit
-        }
     }
     loopback lo {
     }
@@ -718,24 +712,6 @@ system {
         }
     }
     time-zone Pacific/Auckland
-}
-traffic-policy {
-    shaper shape-17mbit {
-        bandwidth 17mbit
-        default {
-            bandwidth 100%
-            burst 15k
-            queue-type fq-codel
-        }
-    }
-    shaper shape-94mbit {
-        bandwidth 94mbit
-        default {
-            bandwidth 100%
-            burst 15k
-            queue-type fq-codel
-        }
-    }
 }
 /* Warning: Do not remove the following line. */
 /* === vyatta-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack-sync@1:conntrack@1:dhcp-relay@2:dhcp-server@5:dns-forwarding@1:firewall@5:ipsec@5:l2tp@1:mdns@1:nat@4:ntp@1:pptp@1:qos@1:quagga@6:snmp@1:ssh@1:system@9:vrrp@2:wanloadbalance@3:webgui@1:webproxy@1:webproxy@2:zone-policy@1" === */
