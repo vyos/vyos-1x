@@ -3,7 +3,7 @@
   <properties>
     <help>Match on Differentiated Services Codepoint (DSCP)</help>
     <completionHelp>
-      <list>default reliability throughput lowdelay priority immediate flash flash-override critical internet network af11 af12 af13 af21 af22 af23 af31 af32 af33 af41 af42 af43 cs1 cs2 cs3 cs4 cs5 cs6 cs7 ef</list>
+      <list>default reliability throughput lowdelay priority immediate flash flash-override critical internet network AF11 AF12 AF13 AF21 AF22 AF23 AF31 AF32 AF33 AF41 AF42 AF43 CS1 CS2 CS3 CS4 CS5 CS6 CS7 EF</list>
     </completionHelp>
     <valueHelp>
       <format>u32:0-63</format>
@@ -54,88 +54,88 @@
       <description>match DSCP (111000)</description>
     </valueHelp>
     <valueHelp>
-      <format>af11</format>
+      <format>AF11</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>af12</format>
+      <format>AF12</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>af13</format>
+      <format>AF13</format>
       <description>High-throughput data</description>
     </valueHelp>
     <valueHelp>
-      <format>af21</format>
+      <format>AF21</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>af22</format>
+      <format>AF22</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>af23</format>
+      <format>AF23</format>
       <description>Low-latency data</description>
     </valueHelp>
     <valueHelp>
-      <format>af31</format>
+      <format>AF31</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>af32</format>
+      <format>AF32</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>af33</format>
+      <format>AF33</format>
       <description>Multimedia streaming</description>
     </valueHelp>
     <valueHelp>
-      <format>af41</format>
+      <format>AF41</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>af42</format>
+      <format>AF42</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>af43</format>
+      <format>AF43</format>
       <description>Multimedia conferencing</description>
     </valueHelp>
     <valueHelp>
-      <format>cs1</format>
+      <format>CS1</format>
       <description>Low-priority data</description>
     </valueHelp>
     <valueHelp>
-      <format>cs2</format>
+      <format>CS2</format>
       <description>OAM</description>
     </valueHelp>
     <valueHelp>
-      <format>cs3</format>
+      <format>CS3</format>
       <description>Broadcast video</description>
     </valueHelp>
     <valueHelp>
-      <format>cs4</format>
+      <format>CS4</format>
       <description>Real-time interactive</description>
     </valueHelp>
     <valueHelp>
-      <format>cs5</format>
+      <format>CS5</format>
       <description>Signaling</description>
     </valueHelp>
     <valueHelp>
-      <format>cs6</format>
+      <format>CS6</format>
       <description>Network control</description>
     </valueHelp>
     <valueHelp>
-      <format>cs7</format>
+      <format>CS7</format>
       <description></description>
     </valueHelp>
     <valueHelp>
-      <format>ef</format>
+      <format>EF</format>
       <description>Expedited Forwarding</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 0-63"/>
-      <regex>(default|reliability|throughput|lowdelay|priority|immediate|flash|flash-override|critical|internet|network|af11|af12|af13|af21|af22|af23|af31|af32|af33|af41|af42|af43|cs1|cs2|cs3|cs4|cs5|cs6|cs7|ef)</regex>
+      <regex>(default|reliability|throughput|lowdelay|priority|immediate|flash|flash-override|critical|internet|network|AF11|AF12|AF13|AF21|AF22|AF23|AF31|AF32|AF33|AF41|AF42|AF43|CS1|CS2|CS3|CS4|CS5|CS6|CS7|EF)</regex>
     </constraint>
   </properties>
 </leafNode>

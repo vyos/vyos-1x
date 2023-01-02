@@ -139,9 +139,6 @@ def get_config(config=None):
                             qos['policy'][policy][p_name]['precedence'][precedence]['queue_limit'] = \
                                 str(int(4 * max_thr))
 
-    import pprint
-    pprint.pprint(qos)
-
     return qos
 
 def verify(qos):

@@ -7,7 +7,7 @@
     </completionHelp>
     <valueHelp>
       <format>auto</format>
-      <description>Rate matches interface speed</description>
+      <description>Bandwidth matches interface speed</description>
     </valueHelp>
     <valueHelp>
       <format>&lt;number&gt;</format>
@@ -35,7 +35,7 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--positive"/>
-      <regex>\d+(bit|kbit|mbit|gbit|tbit)</regex>
+      <regex>(auto|\d+(bit|kbit|mbit|gbit|tbit))</regex>
     </constraint>
   </properties>
   <defaultValue>auto</defaultValue>
