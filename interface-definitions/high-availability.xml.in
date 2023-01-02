@@ -365,7 +365,8 @@
             </properties>
             <defaultValue>nat</defaultValue>
           </leafNode>
-          #include <include/port-number.xml.i>
+          #include <include/firewall/fwmark.xml.i>
+          #include <include/port-number-start-zero.xml.i>
           <leafNode name="persistence-timeout">
             <properties>
               <help>Timeout for persistent connections</help>
@@ -404,7 +405,7 @@
               <help>Real server address</help>
             </properties>
             <children>
-              #include <include/port-number.xml.i>
+              #include <include/port-number-start-zero.xml.i>
               <leafNode name="connection-timeout">
                 <properties>
                   <help>Server connection timeout</help>
@@ -417,6 +418,21 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <node name="health-check">
+                <properties>
+                  <help>Health check script</help>
+                </properties>
+                <children>
+                  <leafNode name="script">
+                    <properties>
+                      <help>Health check script file</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
             </children>
           </tagNode>
         </children>

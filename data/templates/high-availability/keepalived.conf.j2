@@ -126,7 +126,12 @@ vrrp_sync_group {{ name }} {
 {% if virtual_server is vyos_defined %}
 # Virtual-server configuration
 {%     for vserver, vserver_config in virtual_server.items() %}
+# Vserver {{ vserver }}
+{%         if vserver_config.port is vyos_defined %}
 virtual_server {{ vserver }} {{ vserver_config.port }} {
+{%         else %}
+virtual_server fwmark {{ vserver_config.fwmark }} {
+{%         endif %}
     delay_loop {{ vserver_config.delay_loop }}
 {%         if vserver_config.algorithm is vyos_defined('round-robin') %}
     lb_algo rr
@@ -156,9 +161,14 @@ virtual_server {{ vserver }} {{ vserver_config.port }} {
 {%             for rserver, rserver_config in vserver_config.real_server.items() %}
     real_server {{ rserver }} {{ rserver_config.port }} {
         weight 1
+{%                 if rserver_config.health_check.script is vyos_defined %}
+        MISC_CHECK {
+            misc_path {{ rserver_config.health_check.script }}
+{%                 else %}
         {{ vserver_config.protocol | upper }}_CHECK {
-{%                 if rserver_config.connection_timeout is vyos_defined %}
+{%                     if rserver_config.connection_timeout is vyos_defined %}
             connect_timeout {{ rserver_config.connection_timeout }}
+{%                     endif %}
 {%                 endif %}
         }
     }
