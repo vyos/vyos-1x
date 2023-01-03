@@ -316,14 +316,20 @@ def show_statistics(raw: bool, direction: str, family: str):
 
 
 @_verify
-def show_translations(raw: bool, direction: str, family: str, address: typing.Optional[str]):
+def show_translations(raw: bool, direction:
+                      str, family: str,
+                      address: typing.Optional[str],
+                      verbose: typing.Optional[bool]):
     family = 'ipv6' if family == 'inet6' else 'ipv4'
-    nat_translation = _get_raw_translation(direction, family=family, address=address)
+    nat_translation = _get_raw_translation(direction,
+                                           family=family,
+                                           address=address)
 
     if raw:
         return nat_translation
     else:
-        return _get_formatted_translation(nat_translation, direction, family, verbose)
+        return _get_formatted_translation(nat_translation, direction, family,
+                                          verbose)
 
 
 if __name__ == '__main__':
