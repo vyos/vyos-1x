@@ -78,23 +78,34 @@ def get_config_diff(config, key_mangling=None):
             isinstance(key_mangling[1], str)):
         raise ValueError("key_mangling must be a tuple of two strings")
 
-    diff_t = DiffTree(config._running_config, config._session_config)
+    if hasattr(config, 'cached_diff_tree'):
+        diff_t = getattr(config, 'cached_diff_tree')
+    else:
+        diff_t = DiffTree(config._running_config, config._session_config)
+        setattr(config, 'cached_diff_tree', diff_t)
 
-    return ConfigDiff(config, key_mangling, diff_tree=diff_t)
+    if hasattr(config, 'cached_diff_dict'):
+        diff_d = getattr(config, 'cached_diff_dict')
+    else:
+        diff_d = diff_t.dict
+        setattr(config, 'cached_diff_dict', diff_d)
+
+    return ConfigDiff(config, key_mangling, diff_tree=diff_t,
+                                            diff_dict=diff_d)
 
 class ConfigDiff(object):
     """
     The class of config changes as represented by comparison between the
     session config dict and the effective config dict.
     """
-    def __init__(self, config, key_mangling=None, diff_tree=None):
+    def __init__(self, config, key_mangling=None, diff_tree=None, diff_dict=None):
         self._level = config.get_level()
         self._session_config_dict = config.get_cached_root_dict(effective=False)
         self._effective_config_dict = config.get_cached_root_dict(effective=True)
         self._key_mangling = key_mangling
 
         self._diff_tree = diff_tree
-        self._diff_dict = diff_tree.dict if diff_tree else {}
+        self._diff_dict = diff_dict
 
     # mirrored from Config; allow path arguments relative to level
     def _make_path(self, path):
@@ -209,9 +220,9 @@ class ConfigDiff(object):
             if self._diff_tree is None:
                 raise NotImplementedError("diff_tree class not available")
             else:
-                add = get_sub_dict(self._diff_tree.dict, ['add'], get_first_key=True)
-                sub = get_sub_dict(self._diff_tree.dict, ['sub'], get_first_key=True)
-                inter = get_sub_dict(self._diff_tree.dict, ['inter'], get_first_key=True)
+                add = get_sub_dict(self._diff_dict, ['add'], get_first_key=True)
+                sub = get_sub_dict(self._diff_dict, ['sub'], get_first_key=True)
+                inter = get_sub_dict(self._diff_dict, ['inter'], get_first_key=True)
                 ret = {}
                 ret[enum_to_key(Diff.MERGE)] = session_dict
                 ret[enum_to_key(Diff.DELETE)] = get_sub_dict(sub, self._make_path(path),
@@ -284,9 +295,9 @@ class ConfigDiff(object):
             if self._diff_tree is None:
                 raise NotImplementedError("diff_tree class not available")
             else:
-                add = get_sub_dict(self._diff_tree.dict, ['add'], get_first_key=True)
-                sub = get_sub_dict(self._diff_tree.dict, ['sub'], get_first_key=True)
-                inter = get_sub_dict(self._diff_tree.dict, ['inter'], get_first_key=True)
+                add = get_sub_dict(self._diff_dict, ['add'], get_first_key=True)
+                sub = get_sub_dict(self._diff_dict, ['sub'], get_first_key=True)
+                inter = get_sub_dict(self._diff_dict, ['inter'], get_first_key=True)
                 ret = {}
                 ret[enum_to_key(Diff.MERGE)] = session_dict
                 ret[enum_to_key(Diff.DELETE)] = get_sub_dict(sub, self._make_path(path))
