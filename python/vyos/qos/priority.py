@@ -33,6 +33,7 @@ class Priority(QoSBase):
             self._cmd(tmp)
 
             for cls in config['class']:
+                cls = int(cls)
                 tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:{cls:x} pfifo'
                 self._cmd(tmp)
 

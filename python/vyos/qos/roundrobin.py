@@ -26,10 +26,10 @@ class RoundRobin(QoSBase):
         if 'class' in config:
             for cls in config['class']:
                 cls = int(cls)
-                tmp = f'tc class add dev {self._interface} parent 1:1 classid 1:{cls:x} drr'
+                tmp = f'tc class replace dev {self._interface} parent 1:1 classid 1:{cls:x} drr'
                 self._cmd(tmp)
 
-                tmp = f'tc qdisc add dev {self._interface} parent 1:{cls:x} pfifo'
+                tmp = f'tc qdisc replace dev {self._interface} parent 1:{cls:x} pfifo'
                 self._cmd(tmp)
 
         if 'default' in config:
@@ -37,7 +37,7 @@ class RoundRobin(QoSBase):
             default_cls_id = int(class_id_max) +1
 
             # class ID via CLI is in range 1-4095, thus 1000 hex = 4096
-            tmp = f'tc class add dev {self._interface} parent 1:1 classid 1:{default_cls_id:x} drr'
+            tmp = f'tc class replace dev {self._interface} parent 1:1 classid 1:{default_cls_id:x} drr'
             self._cmd(tmp)
 
         # call base class

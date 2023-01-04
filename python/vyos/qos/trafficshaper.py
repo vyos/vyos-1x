@@ -39,7 +39,6 @@ class TrafficShaper(QoSBase):
         # need a bigger r2q if going fast than 16 mbits/sec
         if (speed_bps // r2q) >= MAXQUANTUM: # integer division
             r2q = ceil(speed_bps // MAXQUANTUM)
-            print(r2q)
         else:
             # if there is a slow class then may need smaller value
             if 'class' in config:
@@ -59,10 +58,10 @@ class TrafficShaper(QoSBase):
 
 
         default_minor_id = int(class_id_max) +1
-        tmp = f'tc qdisc add dev {self._interface} root handle {self._parent:x}: htb r2q {r2q} default {default_minor_id:x}' # default is in hex
+        tmp = f'tc qdisc replace dev {self._interface} root handle {self._parent:x}: htb r2q {r2q} default {default_minor_id:x}' # default is in hex
         self._cmd(tmp)
 
-        tmp = f'tc class add dev {self._interface} parent {self._parent:x}: classid {self._parent:x}:1 htb rate {speed}'
+        tmp = f'tc class replace dev {self._interface} parent {self._parent:x}: classid {self._parent:x}:1 htb rate {speed}'
         self._cmd(tmp)
 
         if 'class' in config:
@@ -75,23 +74,26 @@ class TrafficShaper(QoSBase):
                 burst = cls_config['burst']
                 quantum = cls_config['codel_quantum']
 
-                tmp = f'tc class add dev {self._interface} parent {self._parent:x}:1 classid {self._parent:x}:{cls:x} htb rate {rate} burst {burst} quantum {quantum}'
+                tmp = f'tc class replace dev {self._interface} parent {self._parent:x}:1 classid {self._parent:x}:{cls:x} htb rate {rate} burst {burst} quantum {quantum}'
                 if 'priority' in cls_config:
                     priority = cls_config['priority']
                     tmp += f' prio {priority}'
                 self._cmd(tmp)
 
-                tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:{cls:x} sfq'
+                tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{cls:x} sfq'
                 self._cmd(tmp)
 
         if 'default' in config:
-                tmp = f'tc class add dev {self._interface} parent {self._parent:x}:1 classid {self._parent:x}:{default_minor_id:x} htb rate {rate} burst {burst} quantum {quantum}'
+                rate = self._rate_convert(config['default']['bandwidth'])
+                burst = config['default']['burst']
+                quantum = config['default']['codel_quantum']
+                tmp = f'tc class replace dev {self._interface} parent {self._parent:x}:1 classid {self._parent:x}:{default_minor_id:x} htb rate {rate} burst {burst} quantum {quantum}'
                 if 'priority' in config['default']:
                     priority = config['default']['priority']
                     tmp += f' prio {priority}'
                 self._cmd(tmp)
 
-                tmp = f'tc qdisc add dev {self._interface} parent {self._parent:x}:{default_minor_id:x} sfq'
+                tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{default_minor_id:x} sfq'
                 self._cmd(tmp)
 
         # call base class

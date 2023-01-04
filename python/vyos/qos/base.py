@@ -13,17 +13,21 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from vyos.base import Warning
 from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import read_file
 
 class QoSBase:
-    _debug = True
+    _debug = False
     _direction = ['egress']
     _parent = 0xffff
 
     def __init__(self, interface):
+        if os.path.exists('/tmp/vyos.qos.debug'):
+            self._debug = True
         self._interface = interface
 
     def _cmd(self, command):
@@ -41,7 +45,7 @@ class QoSBase:
             return tmp[-1]
         return None
 
-    def _tmp_qdisc(self, config : dict, cls_id : int):
+    def _build_base_qdisc(self, config : dict, cls_id : int):
         """
         Add/replace qdisc for every class (also default is a class). This is
         a genetic method which need an implementation "per" queue-type.
@@ -143,8 +147,7 @@ class QoSBase:
 
         if 'class' in config:
             for cls, cls_config in config['class'].items():
-
-                self._tmp_qdisc(cls_config, int(cls))
+                self._build_base_qdisc(cls_config, int(cls))
 
                 if 'match' in cls_config:
                     for match, match_config in cls_config['match'].items():
@@ -243,11 +246,10 @@ class QoSBase:
                                 self._cmd(filter_cmd)
 
         if 'default' in config:
-            class_id_max = self._get_class_max_id(config)
-            default_cls_id = int(class_id_max) +1
-
-            if 'default' in config:
-                self._tmp_qdisc(config['default'], default_cls_id)
+            if 'class' in config:
+                class_id_max = self._get_class_max_id(config)
+                default_cls_id = int(class_id_max) +1
+                self._build_base_qdisc(config['default'], default_cls_id)
 
             filter_cmd = f'tc filter replace dev {self._interface} parent {self._parent:x}: '
             filter_cmd += 'prio 255 protocol all basic'
@@ -255,25 +257,26 @@ class QoSBase:
             # The police block allows limiting of the byte or packet rate of
             # traffic matched by the filter it is attached to.
             # https://man7.org/linux/man-pages/man8/tc-police.8.html
-            if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
+            if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in config['default']):
                 filter_cmd += f' action police'
 
-            if 'exceed' in cls_config:
-                action = cls_config['exceed']
+            if 'exceed' in config['default']:
+                action = config['default']['exceed']
                 filter_cmd += f' conform-exceed {action}'
-                if 'not_exceed' in cls_config:
-                    action = cls_config['not_exceed']
+                if 'not_exceed' in config['default']:
+                    action = config['default']['not_exceed']
                     filter_cmd += f'/{action}'
 
-            if 'bandwidth' in cls_config:
-                rate = self._rate_convert(cls_config['bandwidth'])
+            if 'bandwidth' in config['default']:
+                rate = self._rate_convert(config['default']['bandwidth'])
                 filter_cmd += f' rate {rate}'
 
-            if 'burst' in cls_config:
-                burst = cls_config['burst']
+            if 'burst' in config['default']:
+                burst = config['default']['burst']
                 filter_cmd += f' burst {burst}'
 
+            if 'class' in config:
+                filter_cmd += f' flowid {self._parent:x}:{default_cls_id:x}'
 
-            filter_cmd += f' flowid {self._parent:x}:{default_cls_id:x}'
             self._cmd(filter_cmd)
 

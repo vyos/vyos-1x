@@ -282,8 +282,6 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        self.skipTest('iproute2 bug - invalid JSON')
-
         for interface in self._interfaces:
             for filter in get_tc_filter_json(interface, 'ingress'):
                 # bail out early if filter has no attached action
