@@ -130,7 +130,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
 
     def test_03_fair_queue(self):
         hash_interval = 10
-        queue_limit = 50
+        queue_limit = 5
         policy_type = 'fair-queue'
 
         first = True
@@ -150,13 +150,13 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['policy', policy_type, policy_name, 'queue-limit', str(queue_limit)])
 
             hash_interval += 1
-            queue_limit += 10
+            queue_limit += 1
 
         # commit changes
         self.cli_commit()
 
         hash_interval = 10
-        queue_limit = 50
+        queue_limit = 5
         for interface in self._interfaces:
             tmp = get_tc_qdisc_json(interface)
 
@@ -165,7 +165,7 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(queue_limit, tmp['options']['limit'])
 
             hash_interval += 1
-            queue_limit += 10
+            queue_limit += 1
 
     def test_04_fq_codel(self):
         policy_type = 'fq-codel'
