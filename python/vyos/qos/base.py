@@ -116,11 +116,14 @@ class QoSBase:
             'tbit'  : 1000000000000,
         }
 
-        if rate == 'auto':
+        if rate == 'auto' or rate.endswith('%'):
             speed = read_file(f'/sys/class/net/{self._interface}/speed')
             if not speed.isnumeric():
                 Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
                 speed = 10
+            if rate.endswith('%'):
+                percent = rate.rstrip('%')
+                speed = int(speed) * int(percent) // 100
             return int(speed) *1000000 # convert to MBit/s
 
         rate_numeric = int(''.join([n for n in rate if n.isdigit()]))

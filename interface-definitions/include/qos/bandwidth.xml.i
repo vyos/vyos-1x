@@ -26,9 +26,13 @@
       <format>&lt;number&gt;tbit</format>
       <description>Terabits per second</description>
     </valueHelp>
+    <valueHelp>
+      <format>&lt;number&gt;%</format>
+      <description>Percentage of interface link speed</description>
+    </valueHelp>
     <constraint>
       <validator name="numeric" argument="--positive"/>
-      <regex>\d+(bit|kbit|mbit|gbit|tbit)</regex>
+      <regex>(\d+(bit|kbit|mbit|gbit|tbit)|(100|\d(\d)?)%)</regex>
     </constraint>
   </properties>
 </leafNode>
