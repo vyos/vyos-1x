@@ -105,6 +105,7 @@
              </properties>
              <children>
                #include <include/source-address-ipv4-ipv6.xml.i>
+               #include <include/source-interface.xml.i>
              </children>
            </node>
            <leafNode name="startup-beep">
