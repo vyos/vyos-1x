@@ -27,6 +27,7 @@ from vyos.template import render
 from vyos.util import cmd
 from vyos.util import is_systemd_service_running
 from vyos.validate import is_addr_assigned
+from vyos.validate import is_intf_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -69,10 +70,17 @@ def verify(options):
     if 'ssh_client' in options:
         config = options['ssh_client']
         if 'source_address' in config:
+            address = config['source_address']
             if not is_addr_assigned(config['source_address']):
-                raise ConfigError('No interface with give address specified!')
+                raise ConfigError('No interface with address "{address}" configured!')
+
         if 'source_interface' in config:
             verify_source_interface(config)
+            if 'source_address' in config:
+                address = config['source_address']
+                interface = config['source_interface']
+                if not is_intf_addr_assigned(interface, address):
+                    raise ConfigError(f'Address "{address}" not assigned on interface "{interface}"!')
 
     return None
 
