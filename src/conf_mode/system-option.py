@@ -32,7 +32,7 @@ from vyos import airbag
 airbag.enable()
 
 curlrc_config = r'/etc/curlrc'
-ssh_config = r'/etc/ssh/ssh_config'
+ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 
 def get_config(config=None):
