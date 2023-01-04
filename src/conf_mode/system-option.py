@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,6 +22,7 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_source_interface
 from vyos.template import render
 from vyos.util import cmd
 from vyos.util import is_systemd_service_running
@@ -70,6 +71,8 @@ def verify(options):
         if 'source_address' in config:
             if not is_addr_assigned(config['source_address']):
                 raise ConfigError('No interface with give address specified!')
+        if 'source_interface' in config:
+            verify_source_interface(config)
 
     return None
 

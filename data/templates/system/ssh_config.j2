@@ -1,3 +1,6 @@
 {% if ssh_client.source_address is vyos_defined %}
 BindAddress {{ ssh_client.source_address }}
 {% endif %}
+{% if ssh_client.source_interface is vyos_defined %}
+BindInterface {{ ssh_client.source_interface }}
+{% endif %}
