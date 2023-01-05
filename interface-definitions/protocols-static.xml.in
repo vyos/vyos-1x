@@ -26,20 +26,13 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="description">
-                <properties>
-                  <help>Table description</help>
-                  <constraint>
-                    <!--
-                      iproute2 only considers the first "word" until whitespace in the name field
-                      but does not complain about special characters.
-                      We put an artificial limit here to make table descriptions potentially valid node names
-                      to avoid quoting and simplify future syntax changes if we decide to make any.
-                    -->
-                    <regex>[a-zA-Z0-9_\-]+</regex>
-                  </constraint>
-                </properties>
-              </leafNode>
+              <!--
+                iproute2 only considers the first "word" until whitespace in the name field
+                but does not complain about special characters.
+                We put an artificial limit here to make table descriptions potentially valid node names
+                to avoid quoting and simplify future syntax changes if we decide to make any.
+              -->
+              #include <include/generic-description.xml.i>
               #include <include/static/static-route.xml.i>
               #include <include/static/static-route6.xml.i>
             </children>

@@ -6,6 +6,9 @@
       <format>txt</format>
       <description>Description</description>
     </valueHelp>
+    <constraint>
+      <regex>[a-zA-Z0-9_\-]+</regex>
+    </constraint>
   </properties>
 </leafNode>
 <!-- include end -->
