@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,6 +26,17 @@ from systemd import journal
 
 
 my_name = Path(__file__).stem
+
+
+def is_route_exists(route, gateway, interface, metric):
+    """Check if route with expected gateway, dev and metric exists"""
+    rc, data = rc_cmd(f'sudo ip --json route show protocol failover {route} '
+                      f'via {gateway} dev {interface} metric {metric}')
+    if rc == 0:
+        data = json.loads(data)
+        if len(data) > 0:
+            return True
+    return False
 
 
 def get_best_route_options(route, debug=False):
@@ -137,7 +148,7 @@ if __name__ == '__main__':
 
         for route, route_config in config.get('route').items():
 
-            exists_route = exists_gateway, exists_iface, exists_metric =  get_best_route_options(route, debug=debug)
+            exists_gateway, exists_iface, exists_metric =  get_best_route_options(route, debug=debug)
 
             for next_hop, nexthop_config in route_config.get('next_hop').items():
                 conf_iface = nexthop_config.get('interface')
@@ -148,8 +159,8 @@ if __name__ == '__main__':
                 target = nexthop_config.get('check').get('target')
                 timeout = nexthop_config.get('check').get('timeout')
 
-                # Best route not fonund in the current routing table
-                if exists_route == (None, None, None):
+                # Route not found in the current routing table
+                if not is_route_exists(route, next_hop, conf_iface, conf_metric):
                     if debug: print(f"    [NEW_ROUTE_DETECTED] route: [{route}]")
                     # Add route if check-target alive
                     if is_target_alive(target, conf_iface, proto, port, debug=debug):
@@ -172,7 +183,7 @@ if __name__ == '__main__':
                 # Route was added, check if the target is alive
                 # We should delete route if check fails only if route exists in the routing table
                 if not is_target_alive(target, conf_iface, proto, port, debug=debug) and \
-                        exists_route != (None, None, None):
+                        is_route_exists(route, next_hop, conf_iface, conf_metric):
                     if debug:
                         print(f'Nexh_hop {next_hop} fail, target not response')
                         print(f'    [ DEL ] -- ip route del {route} via {next_hop} dev {conf_iface} '
