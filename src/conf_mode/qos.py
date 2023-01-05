@@ -188,7 +188,7 @@ def verify(qos):
                                     raise ConfigError(f'Policy "{policy}" uses queue-limit "{queue_lim}" < max-threshold "{max_tr}"!')
 
                 if 'default' in policy_config:
-                    if 'bandwidth' not in policy_config['default']:
+                    if 'bandwidth' not in policy_config['default'] and policy_type not in ['priority_queue', 'round_robin']:
                         raise ConfigError('Bandwidth not defined for default traffic!')
 
     # we should check interface ingress/egress configuration after verifying that

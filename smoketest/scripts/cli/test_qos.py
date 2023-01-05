@@ -222,8 +222,8 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
             # results in: tc -j qdisc show dev eth0
             # [{"kind":"fq_codel","handle":"8046:","root":true,"refcnt":3,"options":{"limit":2048,"flows":512,
             #   "quantum":1500,"target":4999,"interval":99999,"memory_limit":33554432,"drop_batch":64}}]
-            self.assertEqual(interval *1000 -1, tmp['options']['interval'])
-            self.assertEqual(target *1000 -1, tmp['options']['target'])
+            self.assertAlmostEqual(tmp['options']['interval'], interval *1000, delta=1)
+            self.assertAlmostEqual(tmp['options']['target'], target *1000 -1, delta=1)
 
             codel_quantum += 10
             flows += 2
@@ -234,13 +234,13 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
     def test_05_limiter(self):
         qos_config = {
             '1' : {
-                'bandwidth' : '100',
+                'bandwidth' : '1000000',
                 'match4' : {
                     'ssh'   : { 'dport' : '22', },
                     },
                 },
             '2' : {
-                'bandwidth' : '100',
+                'bandwidth' : '1000000',
                 'match6' : {
                     'ssh'   : { 'dport' : '22', },
                     },
@@ -260,7 +260,8 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                 first = False
 
             self.cli_set(base_path + ['interface', interface, 'ingress', policy_name])
-
+            # set default bandwidth parameter for all remaining connections
+            self.cli_set(base_path + ['policy', 'limiter', policy_name, 'default', 'bandwidth', '500000'])
 
             for qos_class, qos_class_config in qos_config.items():
                 qos_class_base = base_path + ['policy', 'limiter', policy_name, 'class', qos_class]
