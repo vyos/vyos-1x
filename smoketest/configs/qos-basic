@@ -89,13 +89,14 @@ traffic-policy {
         class 10 {
             bandwidth 100%
             burst 15k
-            match ADDRESS10 {
+            match ssh4 {
                 ip {
-                    dscp CS4
+                    destination {
+                        port 22
+                    }
                 }
             }
             queue-type fair-queue
-            set-dscp CS5
         }
         default {
             bandwidth 10mbit
@@ -125,7 +126,6 @@ traffic-policy {
             ceiling 100%
             match ADDRESS40 {
                 ip {
-                    dscp CS4
                     source {
                         address 10.2.1.0/24
                     }
@@ -138,12 +138,13 @@ traffic-policy {
             bandwidth 100%
             burst 15k
             match ADDRESS50 {
-                ip {
-                    dscp CS5
+                ipv6 {
+                    source {
+                        address "2001:db8::1/64"
+                    }
                 }
             }
             queue-type fair-queue
-            set-dscp CS7
         }
         default {
             bandwidth 10%
@@ -151,7 +152,6 @@ traffic-policy {
             ceiling 100%
             priority 7
             queue-type fair-queue
-            set-dscp CS1
         }
     }
     shaper FS {
@@ -167,7 +167,6 @@ traffic-policy {
                 }
             }
             queue-type fair-queue
-            set-dscp CS4
         }
         class 20 {
             bandwidth 100%
@@ -180,7 +179,6 @@ traffic-policy {
                 }
             }
             queue-type fair-queue
-            set-dscp CS5
         }
         class 30 {
             bandwidth 100%
@@ -193,7 +191,6 @@ traffic-policy {
                 }
             }
             queue-type fair-queue
-            set-dscp CS6
         }
         default {
             bandwidth 10%
