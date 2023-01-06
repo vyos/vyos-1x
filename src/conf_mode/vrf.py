@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -140,11 +140,9 @@ def verify(vrf):
 
 
 def generate(vrf):
-    render(config_file, 'vrf/vrf.conf.j2', vrf)
+    render(config_file, 'iproute2/vrf.conf.j2', vrf)
     # Render nftables zones config
-
     render(nft_vrf_config, 'firewall/nftables-vrf-zones.j2', vrf)
-
     return None
 
 
