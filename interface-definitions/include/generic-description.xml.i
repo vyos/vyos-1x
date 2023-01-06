@@ -7,7 +7,7 @@
       <description>Description</description>
     </valueHelp>
     <constraint>
-      <regex>[a-zA-Z0-9_\-]+</regex>
+      <regex>[a-zA-Z0-9_\-\s]+</regex>
     </constraint>
   </properties>
 </leafNode>
