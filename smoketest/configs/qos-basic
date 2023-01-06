@@ -25,16 +25,6 @@ interfaces {
     loopback lo {
     }
 }
-protocols {
-    static {
-        route 0.0.0.0/0 {
-            next-hop 10.9.9.2 {
-            }
-            next-hop 10.1.1.1 {
-            }
-        }
-    }
-}
 system {
     config-management {
         commit-revisions 10
