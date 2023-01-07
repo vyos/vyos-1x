@@ -34,6 +34,10 @@ prefix_list_in6 = 'pfx-foo-in6'
 prefix_list_out6 = 'pfx-foo-out6'
 bfd_profile = 'foo-bar-baz'
 
+import_afi = 'ipv4-unicast'
+import_vrf = 'red'
+import_rd = ASN + ':100'
+import_vrf_base = ['vrf', 'name']
 neighbor_config = {
     '192.0.2.1' : {
         'bfd'              : '',
@@ -188,6 +192,15 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
+
+
+    def create_bgp_instances_for_import_test(self):
+        table = '1000'
+        self.cli_set(base_path + ['system-as', ASN])
+        # testing only one AFI is sufficient as it's generic code
+
+        self.cli_set(import_vrf_base + [import_vrf, 'table', table])
+        self.cli_set(import_vrf_base + [import_vrf, 'protocols', 'bgp', 'system-as', ASN])
 
     def verify_frr_config(self, peer, peer_config, frrconfig):
         # recurring patterns to verify for both a simple neighbor and a peer-group
@@ -959,6 +972,101 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' neighbor {neighbor} remote-as {remote_asn}', frrconfig)
         self.assertIn(f' neighbor {neighbor} local-as {local_asn}', frrconfig)
 
+    def test_bgp_16_import_rd_rt_compatibility(self):
+        # Verify if import vrf and rd vpn export
+        # exist in the same address family
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'import', 'vrf',
+                         import_vrf])
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'rd', 'vpn', 'export',
+                         import_rd])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_bgp_17_import_rd_rt_compatibility(self):
+        # Verify if vrf that is in import vrf list contains rd vpn export
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'import', 'vrf',
+                         import_vrf])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f'address-family ipv4 unicast', frrconfig)
+        self.assertIn(f'  import vrf {import_vrf}', frrconfig)
+        self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
+
+        self.cli_set(
+            import_vrf_base + [import_vrf] + base_path + ['address-family',
+                                                          import_afi, 'rd',
+                                                          'vpn', 'export',
+                                                          import_rd])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_bgp_18_deleting_import_vrf(self):
+        # Verify deleting vrf that is in import vrf list
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'import', 'vrf',
+                         import_vrf])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f'address-family ipv4 unicast', frrconfig)
+        self.assertIn(f'  import vrf {import_vrf}', frrconfig)
+        self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
+        self.cli_delete(import_vrf_base + [import_vrf])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_bgp_19_deleting_default_vrf(self):
+        # Verify deleting existent vrf default if other vrfs were created
+        self.create_bgp_instances_for_import_test()
+        self.cli_commit()
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
+        self.cli_delete(base_path)
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_bgp_20_import_rd_rt_compatibility(self):
+        # Verify if vrf that has rd vpn export is in import vrf of other vrfs
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(
+            import_vrf_base + [import_vrf] + base_path + ['address-family',
+                                                          import_afi, 'rd',
+                                                          'vpn', 'export',
+                                                          import_rd])
+        self.cli_commit()
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}')
+        frrconfig_vrf = self.getFRRconfig(f'router bgp {ASN} vrf {import_vrf}')
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertIn(f'router bgp {ASN} vrf {import_vrf}', frrconfig_vrf)
+        self.assertIn(f'address-family ipv4 unicast', frrconfig_vrf)
+        self.assertIn(f'  rd vpn export {import_rd}', frrconfig_vrf)
+
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'import', 'vrf',
+                         import_vrf])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+    def test_bgp_21_import_unspecified_vrf(self):
+        # Verify if vrf that is in import is unspecified
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(
+            base_path + ['address-family', import_afi, 'import', 'vrf',
+                         'test'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
