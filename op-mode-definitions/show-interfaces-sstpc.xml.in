@@ -11,7 +11,7 @@
                 <path>interfaces sstpc</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=sstpc</command>
             <children>
               <leafNode name="log">
                 <properties>

@@ -11,13 +11,13 @@
                 <path>interfaces dummy</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=dummy</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified dummy interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=dummy</command>
               </leafNode>
             </children>
           </tagNode>
