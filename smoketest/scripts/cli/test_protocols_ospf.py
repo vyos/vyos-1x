@@ -272,6 +272,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' passive-interface default', frrconfig)
+
         for interface in interfaces:
             config = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f'interface {interface}', config)
