@@ -33,7 +33,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           <leafNode name="device-type">
             <properties>
               <help>OpenVPN interface device-type</help>

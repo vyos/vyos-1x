@@ -115,7 +115,7 @@
               </leafNode>
             </children>
           </node>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/mtu-68-16000.xml.i>
           <leafNode name="mtu">

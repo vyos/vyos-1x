@@ -34,7 +34,7 @@
             </properties>
             <defaultValue>300</defaultValue>
           </leafNode>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           #include <include/interface/dhcp-options.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
           #include <include/interface/disable-link-detect.xml.i>

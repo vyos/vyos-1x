@@ -27,7 +27,7 @@
               </constraint>
             </properties>
             <children>
-              #include <include/interface/description.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="alias">
                 <properties>
                   <help>Human-readable name for this console</help>

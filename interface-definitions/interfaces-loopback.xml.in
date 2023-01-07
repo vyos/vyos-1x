@@ -17,7 +17,7 @@
         </properties>
         <children>
           #include <include/interface/address-ipv4-ipv6.xml.i>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           <node name="ip">
             <properties>
               <help>IPv4 routing parameters</help>

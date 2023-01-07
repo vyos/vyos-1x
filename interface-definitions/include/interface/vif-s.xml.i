@@ -12,8 +12,8 @@
     <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
   </properties>
   <children>
+    #include <include/generic-description.xml.i>
     #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-    #include <include/interface/description.xml.i>
     #include <include/interface/dhcp-options.xml.i>
     #include <include/interface/dhcpv6-options.xml.i>
     #include <include/interface/disable-link-detect.xml.i>
@@ -53,8 +53,8 @@
         <constraintErrorMessage>VLAN ID must be between 0 and 4094</constraintErrorMessage>
       </properties>
       <children>
+        #include <include/generic-description.xml.i>
         #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
-        #include <include/interface/description.xml.i>
         #include <include/interface/dhcp-options.xml.i>
         #include <include/interface/dhcpv6-options.xml.i>
         #include <include/interface/disable-link-detect.xml.i>

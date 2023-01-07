@@ -16,7 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
           #include <include/interface/authentication.xml.i>
           #include <include/interface/no-default-route.xml.i>

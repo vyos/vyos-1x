@@ -22,7 +22,7 @@
           #include <include/interface/no-default-route.xml.i>
           #include <include/interface/default-route-distance.xml.i>
           #include <include/interface/dhcpv6-options.xml.i>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
           <leafNode name="idle-timeout">
             <properties>

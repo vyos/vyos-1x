@@ -15,7 +15,7 @@
           <constraintErrorMessage>Netns name must be alphanumeric and can contain hyphens and underscores.</constraintErrorMessage>
         </properties>
         <children>
-          #include <include/interface/description.xml.i>
+          #include <include/generic-description.xml.i>
         </children>
       </tagNode>
     </children>
