@@ -12,7 +12,7 @@
                 <script>cd /sys/class/net; ls -d wwan*</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wirelessmodem</command>
             <children>
               <leafNode name="capabilities">
                 <properties>

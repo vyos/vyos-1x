@@ -11,13 +11,13 @@
                 <path>interfaces pseudo-ethernet</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=pseudo-ethernet</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified pseudo-ethernet/MACvlan interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=pseudo-ethernet</command>
               </leafNode>
             </children>
           </tagNode>

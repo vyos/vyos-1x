@@ -11,7 +11,7 @@
                 <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
               </completionHelp>
             </properties>
-	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wireguard</command>
             <children>
               <leafNode name="allowed-ips">
                 <properties>
