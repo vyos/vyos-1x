@@ -74,6 +74,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'rfc1583-compatibility'])
         self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
         self.cli_set(base_path + ['default-metric', metric])
+        self.cli_set(base_path + ['passive-interface', 'default'])
 
         # commit changes
         self.cli_commit()
@@ -88,6 +89,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         self.assertIn(f' capability opaque', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)
+        self.assertIn(f' passive-interface default', frrconfig)
 
 
     def test_ospf_03_access_list(self):
