@@ -58,23 +58,7 @@ secrets {
 {% if site_to_site.peer is vyos_defined %}
 {%     for peer, peer_conf in site_to_site.peer.items() if peer not in dhcp_no_address and peer_conf.disable is not vyos_defined %}
 {%         set peer_name = peer.replace("@", "") | dot_colon_to_dash %}
-{%         if peer_conf.authentication.mode is vyos_defined('pre-shared-secret') %}
-    ike_{{ peer_name }} {
-{%             if peer_conf.local_address is vyos_defined %}
-        id-local = {{ peer_conf.local_address }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
-{%             endif %}
-{%             for address in peer_conf.remote_address %}
-        id-remote_{{ address | dot_colon_to_dash }} = {{ address }}
-{%             endfor %}
-{%             if peer_conf.authentication.local_id is vyos_defined %}
-        id-localid = {{ peer_conf.authentication.local_id }}
-{%             endif %}
-{%             if peer_conf.authentication.remote_id is vyos_defined %}
-        id-remoteid = {{ peer_conf.authentication.remote_id }}
-{%             endif %}
-        secret = "{{ peer_conf.authentication.pre_shared_secret }}"
-    }
-{%         elif peer_conf.authentication.mode is vyos_defined('x509') %}
+{%         if peer_conf.authentication.mode is vyos_defined('x509') %}
     private_{{ peer_name }} {
         file = {{ peer_conf.authentication.x509.certificate }}.pem
 {%             if peer_conf.authentication.x509.passphrase is vyos_defined %}
@@ -91,6 +75,20 @@ secrets {
 {%         endif %}
 {%     endfor %}
 {% endif %}
+{% if authentication.psk is vyos_defined %}
+{%     for psk, psk_config in authentication.psk.items() %}
+    ike-{{ psk }} {
+{%         if psk_config.id is vyos_defined %}
+        # ID's from auth psk <tag> id xxx
+{%             for id in psk_config.id %}
+        id-{{ id | dot_colon_to_dash }} = {{ id }}
+{%             endfor %}
+{%         endif %}
+        secret = "{{ psk_config.secret }}"
+    }
+{%     endfor %}
+{% endif %}
+
 {% if remote_access.connection is vyos_defined %}
 {%     for ra, ra_conf in remote_access.connection.items() if ra_conf.disable is not vyos_defined %}
 {%         if ra_conf.authentication.server_mode is vyos_defined('pre-shared-secret') %}
@@ -130,4 +128,3 @@ secrets {
 {%     endif %}
 {% endif %}
 }
-
