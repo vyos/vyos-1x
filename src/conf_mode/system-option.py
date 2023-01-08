@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2022 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,16 +22,18 @@ from time import sleep
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_source_interface
 from vyos.template import render
 from vyos.util import cmd
 from vyos.validate import is_addr_assigned
+from vyos.validate import is_intf_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
 curlrc_config = r'/etc/curlrc'
-ssh_config = r'/etc/ssh/ssh_config'
+ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
 
 def get_config(config=None):
@@ -67,8 +69,17 @@ def verify(options):
     if 'ssh_client' in options:
         config = options['ssh_client']
         if 'source_address' in config:
+            address = config['source_address']
             if not is_addr_assigned(config['source_address']):
-                raise ConfigError('No interface with give address specified!')
+                raise ConfigError('No interface with address "{address}" configured!')
+
+        if 'source_interface' in config:
+            verify_source_interface(config)
+            if 'source_address' in config:
+                address = config['source_address']
+                interface = config['source_interface']
+                if not is_intf_addr_assigned(interface, address):
+                    raise ConfigError(f'Address "{address}" not assigned on interface "{interface}"!')
 
     return None
 
