@@ -1,0 +1,254 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="babel" owner="${vyos_conf_scripts_dir}/protocols_babel.py">
+        <properties>
+          <help>Babel Routing Protocol</help>
+          <priority>650</priority>
+        </properties>
+        <children>
+          <node name="parameters">
+            <properties>
+              <help>Babel-specific parameters</help>
+            </properties>
+            <children>
+              <leafNode name="diversity">
+                <properties>
+                  <help>Enable diversity-aware routing</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="diversity-factor">
+                <properties>
+                  <help>Multiplicative factor used for diversity routing</help>
+                  <valueHelp>
+                    <format>u32:1-256</format>
+                    <description>Multiplicative factor, in units of 1/256</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-256"/>
+                  </constraint>
+                </properties>
+                <defaultValue>256</defaultValue>
+              </leafNode>
+              <leafNode name="resend-delay">
+                <properties>
+                  <help>Time before resending a message</help>
+                  <valueHelp>
+                    <format>u32:20-655340</format>
+                    <description>Milliseconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 20-655340"/>
+                  </constraint>
+                </properties>
+                <defaultValue>2000</defaultValue>
+              </leafNode>
+              <leafNode name="smoothing-half-life">
+                <properties>
+                  <help>Smoothing half-life</help>
+                  <valueHelp>
+                    <format>u32:0-65534</format>
+                    <description>Seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-65534"/>
+                  </constraint>
+                </properties>
+                <defaultValue>4</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          #include <include/babel/interface.xml.i>
+          <node name="redistribute">
+            <properties>
+              <help>Redistribute information from another routing protocol</help>
+            </properties>
+            <children>
+              <node name="ipv4">
+                <properties>
+                  <help>Redistribute IPv4 routes</help>
+                </properties>
+                <children>
+                  <leafNode name="bgp">
+                    <properties>
+                      <help>Redistribute BGP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="connected">
+                    <properties>
+                      <help>Redistribute connected routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="eigrp">
+                    <properties>
+                      <help>Redistribute EIGRP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="isis">
+                    <properties>
+                      <help>Redistribute IS-IS routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="kernel">
+                    <properties>
+                      <help>Redistribute kernel routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nhrp">
+                    <properties>
+                      <help>Redistribute NHRP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ospf">
+                    <properties>
+                      <help>Redistribute OSPF routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rip">
+                    <properties>
+                      <help>Redistribute RIP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="static">
+                    <properties>
+                      <help>Redistribute static routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>Redistribute IPv6 routes</help>
+                </properties>
+                <children>
+                  <leafNode name="bgp">
+                    <properties>
+                      <help>Redistribute BGP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="connected">
+                    <properties>
+                      <help>Redistribute connected routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="isis">
+                    <properties>
+                      <help>Redistribute IS-IS routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="kernel">
+                    <properties>
+                      <help>Redistribute kernel routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nhrp">
+                    <properties>
+                      <help>Redistribute NHRP routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ospfv3">
+                    <properties>
+                      <help>Redistribute OSPFv3 routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="ripng">
+                    <properties>
+                      <help>Redistribute RIPng routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="static">
+                    <properties>
+                      <help>Redistribute static routes</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="distribute-list">
+            <properties>
+              <help>Filter networks in routing updates</help>
+            </properties>
+            <children>
+              <node name="ipv4">
+                <properties>
+                  <help>Filter IPv4 routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/access-list.xml.i>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Apply filtering to an interface</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Apply filtering to an interface</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.in>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/rip/access-list.xml.i>
+                      #include <include/rip/prefix-list.xml.i>
+                    </children>
+                  </tagNode>
+                  #include <include/rip/prefix-list.xml.i>
+                </children>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>Filter IPv6 routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/access-list6.xml.i>
+                  <tagNode name="interface">
+                    <properties>
+                      <help>Apply filtering to an interface</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Apply filtering to an interface</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                      </completionHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.in>
+                      </constraint>
+                    </properties>
+                    <children>
+                      #include <include/rip/access-list6.xml.i>
+                      #include <include/rip/prefix-list6.xml.i>
+                    </children>
+                  </tagNode>
+                  #include <include/rip/prefix-list6.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

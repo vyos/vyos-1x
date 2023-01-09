@@ -68,6 +68,12 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon zebra</command>
       </leafNode>
+      <leafNode name="babel">
+        <properties>
+          <help>Restart Babel routing daemon</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon babeld</command>
+      </leafNode>
     </children>
   </node>
 </interfaceDefinition>
