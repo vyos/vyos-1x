@@ -34,6 +34,8 @@ REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
+ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
+DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
 
 # Default "commit via" string
 APP = "vyos-http-api"
@@ -203,4 +205,16 @@ class ConfigSession(object):
 
     def reset(self, path):
         out = self.__run_command(RESET + path)
+        return out
+
+    def add_container_image(self, name):
+        out = self.__run_command(ADD + ['container', 'image'] + [name])
+        return out
+
+    def delete_container_image(self, name):
+        out = self.__run_command(DELETE + ['container', 'image'] + [name])
+        return out
+
+    def show_container_image(self):
+        out = self.__run_command(SHOW + ['container', 'image'])
         return out
