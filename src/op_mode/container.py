@@ -35,6 +35,19 @@ def _get_raw_data(command: str) -> list:
     data = json.loads(json_data)
     return data
 
+def add_image(name: str):
+    from vyos.util import rc_cmd
+
+    rc, output = rc_cmd(f'podman image pull {name}')
+    if rc != 0:
+        raise vyos.opmode.InternalError(output)
+
+def delete_image(name: str):
+    from vyos.util import rc_cmd
+
+    rc, output = rc_cmd(f'podman image rm --force {name}')
+    if rc != 0:
+        raise vyos.opmode.InternalError(output)
 
 def show_container(raw: bool):
     command = 'podman ps --all'
