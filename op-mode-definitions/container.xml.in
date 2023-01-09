@@ -11,7 +11,7 @@
             <properties>
               <help>Pull a new image for container</help>
             </properties>
-            <command>sudo podman image pull "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/container.py add_image --name "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -44,7 +44,7 @@
                 <script>sudo podman image ls -q</script>
               </completionHelp>
             </properties>
-            <command>sudo podman image rm --force "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/container.py delete_image --name "${4}"</command>
           </tagNode>
         </children>
       </node>
