@@ -39,7 +39,6 @@ Depends:
   beep,
   bmon,
   bsdmainutils,
-  charon-systemd,
   conntrack,
   conntrackd,
   conserver-client,
