@@ -30,7 +30,7 @@ def load_op_mode_as_module(name: str):
     return load_as_module(name, path)
 
 def is_op_mode_function_name(name):
-    if re.match(r"^(show|clear|reset|restart)", name):
+    if re.match(r"^(show|clear|reset|restart|add|delete)", name):
         return True
     return False
 

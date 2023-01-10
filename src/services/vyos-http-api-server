@@ -175,6 +175,19 @@ class ImageModel(ApiModel):
             }
         }
 
+class ContainerImageModel(ApiModel):
+    op: StrictStr
+    name: StrictStr = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "key": "id_key",
+                "op": "add | delete | show",
+                "name": "imagename",
+            }
+        }
+
 class GenerateModel(ApiModel):
     op: StrictStr
     path: List[StrictStr]
@@ -389,7 +402,7 @@ class MultipartRoute(APIRoute):
                 if endpoint in ('/retrieve','/generate','/show','/reset'):
                     if request.ERR_NO_OP or request.ERR_NO_PATH:
                         return error(400, "Missing required field. \"op\" and \"path\" fields are required")
-                if endpoint in ('/config-file', '/image'):
+                if endpoint in ('/config-file', '/image', '/container-image'):
                     if request.ERR_NO_OP:
                         return error(400, "Missing required field \"op\"")
 
@@ -571,6 +584,37 @@ def image_op(data: ImageModel):
             else:
                 return error(400, "Missing required field \"name\"")
             res = session.remove_image(name)
+        else:
+            return error(400, "\"{0}\" is not a valid operation".format(op))
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+@app.post('/container-image')
+def image_op(data: ContainerImageModel):
+    session = app.state.vyos_session
+
+    op = data.op
+
+    try:
+        if op == 'add':
+            if data.name:
+                name = data.name
+            else:
+                return error(400, "Missing required field \"name\"")
+            res = session.add_container_image(name)
+        elif op == 'delete':
+            if data.name:
+                name = data.name
+            else:
+                return error(400, "Missing required field \"name\"")
+            res = session.delete_container_image(name)
+        elif op == 'show':
+            res = session.show_container_image()
         else:
             return error(400, "\"{0}\" is not a valid operation".format(op))
     except ConfigSessionError as e:
