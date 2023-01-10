@@ -45,6 +45,10 @@ class PermissionDenied(Error):
     """
     pass
 
+class UnsupportedOperation(Error):
+    """ Requested operation is technically valid but is not implemented yet. """
+    pass
+
 class IncorrectValue(Error):
     """ Requested operation is valid, but an argument provided has an
         incorrect value, preventing successful completion.
