@@ -70,13 +70,13 @@ class InternalError(Error):
 
 
 def _is_op_mode_function_name(name):
-    if re.match(r"^(show|clear|reset|restart|add|delete)", name):
+    if re.match(r"^(show|clear|reset|restart|add|delete|generate)", name):
         return True
     else:
         return False
 
-def _is_show(name):
-    if re.match(r"^show", name):
+def _capture_output(name):
+    if re.match(r"^(show|generate)", name):
         return True
     else:
         return False
@@ -203,14 +203,14 @@ def run(module):
     # it would cause an extra argument error when we pass the dict to a function
     del args["subcommand"]
 
-    # Show commands must always get the "raw" argument,
-    # but other commands (clear/reset/restart) should not,
+    # Show and generate commands must always get the "raw" argument,
+    # but other commands (clear/reset/restart/add/delete) should not,
     # because they produce no output and it makes no sense for them.
-    if ("raw" not in args) and _is_show(function_name):
+    if ("raw" not in args) and _capture_output(function_name):
         args["raw"] = False
 
-    if re.match(r"^show", function_name):
-        # Show commands are slightly special:
+    if _capture_output(function_name):
+        # Show and generate commands are slightly special:
         # they may return human-formatted output
         # or a raw dict that we need to serialize in JSON for printing
         res = func(**args)
