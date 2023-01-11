@@ -245,7 +245,7 @@ def apply(proxy):
 
     if os.path.exists(squidguard_db_dir):
         chmod_755(squidguard_db_dir)
-    call('systemctl restart squid.service')
+    call('systemctl reload-or-restart squid.service')
     return None
 
 
