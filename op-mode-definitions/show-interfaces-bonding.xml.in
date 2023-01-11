@@ -11,13 +11,13 @@
                 <path>interfaces bonding</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4"</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=bonding</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified bonding interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=bonding</command>
               </leafNode>
               <leafNode name="detail">
                 <properties>
@@ -38,13 +38,13 @@
                     <path>interfaces bonding ${COMP_WORDS[3]} vif</path>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4.$6"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4.$6" --intf_type=bonding</command>
                 <children>
                   <leafNode name="brief">
                     <properties>
                       <help>Show summary of specified virtual network interface (vif) information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4.$6"</command>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4.$6" --intf_type=bonding</command>
                   </leafNode>
                 </children>
               </tagNode>
