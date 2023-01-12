@@ -11,13 +11,13 @@
                 <path>interfaces tunnel</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --intf-type=tunnel</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified tunnel interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief --intf-type=tunnel</command>
               </leafNode>
             </children>
           </tagNode>

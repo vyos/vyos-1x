@@ -11,13 +11,13 @@
                 <path>interfaces ethernet</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4"</command>
+            <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --intf-type=ethernet</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified ethernet interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief --intf-type=ethernet</command>
               </leafNode>
               <leafNode name="identify">
                 <properties>
@@ -58,13 +58,13 @@
                     <path>interfaces ethernet ${COMP_WORDS[3]} vif</path>
                   </completionHelp>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6"</command>
+                <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --intf-type=ethernet</command>
                 <children>
                   <leafNode name="brief">
                     <properties>
                       <help>Show summary of specified virtual network interface (vif) information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --action=show-brief</command>
+                    <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4.$6" --action=show-brief --intf-type=ethernet</command>
                   </leafNode>
                 </children>
               </tagNode>
