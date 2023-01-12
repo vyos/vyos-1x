@@ -8,6 +8,7 @@
 "dhcp.py",
 "dns.py",
 "interfaces.py",
+"lldp.py",
 "log.py",
 "memory.py",
 "nat.py",
