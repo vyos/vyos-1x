@@ -95,6 +95,7 @@ def get_config(config=None):
     del default_values['esp_group']
     del default_values['ike_group']
     del default_values['remote_access']
+    del default_values['site_to_site']
     ipsec = dict_merge(default_values, ipsec)
 
     if 'esp_group' in ipsec:
@@ -142,6 +143,14 @@ def get_config(config=None):
         for server in ipsec['remote_access']['radius']['server']:
             ipsec['remote_access']['radius']['server'][server] = dict_merge(default_values,
                 ipsec['remote_access']['radius']['server'][server])
+
+    # XXX: T2665: we can not safely rely on the defaults() when there are
+    # tagNodes in place, it is better to blend in the defaults manually.
+    if dict_search('site_to_site.peer', ipsec):
+        default_values = defaults(base + ['site-to-site', 'peer'])
+        for peer in ipsec['site_to_site']['peer']:
+            ipsec['site_to_site']['peer'][peer] = dict_merge(default_values,
+              ipsec['site_to_site']['peer'][peer])
 
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
