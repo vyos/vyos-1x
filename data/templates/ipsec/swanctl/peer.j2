@@ -45,11 +45,7 @@
 {% endif %}
         }
         remote {
-{% if peer_conf.authentication.remote_id is vyos_defined %}
             id = "{{ peer_conf.authentication.remote_id }}"
-{% else %}
-            id = "{{ peer }}"
-{% endif %}
             auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
 {% if peer_conf.authentication.mode == 'rsa' %}
             pubkeys = {{ peer_conf.authentication.rsa.remote_key }}.pem
