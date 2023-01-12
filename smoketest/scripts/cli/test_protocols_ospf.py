@@ -75,6 +75,9 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['log-adjacency-changes', 'detail'])
         self.cli_set(base_path + ['default-metric', metric])
         self.cli_set(base_path + ['passive-interface', 'default'])
+        self.cli_set(base_path + ['area', '10', 'network', '10.0.0.0/16'])
+        self.cli_set(base_path + ['area', '10', 'range', '10.0.1.0/24'])
+        self.cli_set(base_path + ['area', '10', 'range', '10.0.2.0/24', 'not-advertise'])
 
         # commit changes
         self.cli_commit()
@@ -90,6 +93,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' capability opaque', frrconfig)
         self.assertIn(f' default-metric {metric}', frrconfig)
         self.assertIn(f' passive-interface default', frrconfig)
+        self.assertIn(f' area 10 stub', frrconfig)
+        self.assertIn(f' area 10 network 10.0.0.0/16', frrconfig)
+        self.assertIn(f' area 10 range 10.0.1.0/24', frrconfig)
+        self.assertNotIn(f' area 10 range 10.0.1.0/24 not-advertise', frrconfig)
+        self.assertIn(f' area 10 range 10.0.2.0/24 not-advertise', frrconfig)
 
 
     def test_ospf_03_access_list(self):
