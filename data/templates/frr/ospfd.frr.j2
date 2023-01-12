@@ -84,11 +84,13 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         endfor %}
 {%         if area_config.range is vyos_defined %}
 {%             for range, range_config in area_config.range.items() %}
-{%                 if range_config.cost is vyos_defined %}
- area {{ area_id }} range {{ range }} cost {{ range_config.cost }}
-{%                 endif %}
 {%                 if range_config.not_advertise is vyos_defined %}
  area {{ area_id }} range {{ range }} not-advertise
+{%                 else %}
+ area {{ area_id }} range {{ range }}
+{%                 endif %}
+{%                 if range_config.cost is vyos_defined %}
+ area {{ area_id }} range {{ range }} cost {{ range_config.cost }}
 {%                 endif %}
 {%                 if range_config.substitute is vyos_defined %}
  area {{ area_id }} range {{ range }} substitute {{ range_config.substitute }}
