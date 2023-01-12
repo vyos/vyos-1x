@@ -117,6 +117,9 @@ def verify(ospfv3):
             if 'area_type' in area_config:
                 if len(area_config['area_type']) > 1:
                     raise ConfigError(f'Can only configure one area-type for OSPFv3 area "{area}"!')
+            for range, range_config in area_config['range'].items():
+                if {'not_advertise', 'advertise'} <= range_config.keys():
+                    raise ConfigError(f'"not-advertise" and "advertise" for "range {range}" cannot be both configured at the same time!')
 
     if 'interface' in ospfv3:
         for interface, interface_config in ospfv3['interface'].items():
