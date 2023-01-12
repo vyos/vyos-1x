@@ -348,9 +348,11 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
         l = l.strip()
         if l:
             match = re.match(key_value_re, l)
-            if match:
+            if match and (len(match.groups()) == 2):
                 key = match.groups()[0].strip()
                 value = match.groups()[1].strip()
+            else:
+                raise ValueError(f"""Line "{l}" could not be parsed a colon-separated pair """, l)
             if key in data.keys():
                 if uniquekeys:
                     raise ValueError("Data string has duplicate keys: {0}".format(key))
