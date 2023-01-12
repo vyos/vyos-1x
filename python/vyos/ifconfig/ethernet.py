@@ -248,10 +248,12 @@ class EthernetIf(Interface):
             # representation of the CPUs which should participate on RPS, we
             # can enable more CPUs that are physically present on the system,
             # Linux will clip that internally!
-            rps_cpus = 'ffffffff,ffffffff,ffffffff,fffffffe'
+            rps_cpus = os.cpu_count()
+            if rps_cpus > 1:
+                rps_cpus -= 1
 
         for i in range(0, queues):
-            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', rps_cpus)
+            self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', f'{rps_cpus:x}')
 
         # send bitmask representation as hex string without leading '0x'
         return True
