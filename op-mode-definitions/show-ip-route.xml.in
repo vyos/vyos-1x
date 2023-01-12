@@ -50,10 +50,23 @@
               #include <include/show-route-ospf.xml.i>
               #include <include/show-route-rip.xml.i>
               #include <include/show-route-static.xml.i>
-              #include <include/show-route-summary.xml.i>
               #include <include/show-route-supernets-only.xml.i>
               #include <include/show-route-table.xml.i>
               #include <include/show-route-tag.xml.i>
+              <node name="summary">
+                <properties>
+                  <help>Summary of all routes</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/route.py show_summary --family inet</command>
+                <children>
+                  <tagNode name="table">
+                    <properties>
+                      <help>Summary of routes in a particular table</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/route.py show_summary --family inet --table $6</command>
+                  </tagNode>
+                </children>
+              </node>
               <tagNode name="vrf">
                 <properties>
                   <help>Show IP routes in VRF</help>
