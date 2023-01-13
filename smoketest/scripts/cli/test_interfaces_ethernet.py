@@ -160,7 +160,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
                 self.assertFalse(is_intf_addr_assigned(intf, addr['addr']))
 
     def test_offloading_rps(self):
-        # enable RPS on all available CPUs, RPS works woth a CPU bitmask,
+        # enable RPS on all available CPUs, RPS works with a CPU bitmask,
         # where each bit represents a CPU (core/thread). The formula below
         # expands to rps_cpus = 255 for a 8 core system
         rps_cpus = (1 << os.cpu_count()) -1
