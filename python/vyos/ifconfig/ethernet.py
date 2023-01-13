@@ -239,7 +239,7 @@ class EthernetIf(Interface):
         if not isinstance(state, bool):
             raise ValueError('Value out of range')
 
-        rps_cpus = '0'
+        rps_cpus = 0
         queues = len(glob(f'/sys/class/net/{self.ifname}/queues/rx-*'))
         if state:
             # Enable RPS on all available CPUs except CPU0 which we will not
@@ -248,9 +248,13 @@ class EthernetIf(Interface):
             # representation of the CPUs which should participate on RPS, we
             # can enable more CPUs that are physically present on the system,
             # Linux will clip that internally!
-            rps_cpus = os.cpu_count()
-            if rps_cpus > 1:
-                rps_cpus -= 1
+            rps_cpus = (1 << os.cpu_count()) -1
+
+            # XXX: we should probably reserve one core when the system is under
+            # high preasure so we can still have a core left for housekeeping.
+            # This is done by masking out the lowst bit so CPU0 is spared from
+            # receive packet steering.
+            rps_cpus &= ~1
 
         for i in range(0, queues):
             self._write_sysfs(f'/sys/class/net/{self.ifname}/queues/rx-{i}/rps_cpus', f'{rps_cpus:x}')
