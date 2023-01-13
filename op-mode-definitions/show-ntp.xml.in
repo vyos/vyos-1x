@@ -6,22 +6,13 @@
         <properties>
           <help>Show peer status of NTP daemon</help>
         </properties>
-        <command>${vyos_op_scripts_dir}/show_ntp.sh --basic</command>
+        <command>${vyos_op_scripts_dir}/show_ntp.sh --sourcestats</command>
         <children>
-          <tagNode name="server">
+          <node name="system">
             <properties>
-              <help>Show date and time of specified NTP server</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_ntp_servers.sh</script>
-              </completionHelp>
+              <help>Show parameters about the system clock performance</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show_ntp.sh --server "$4"</command>
-          </tagNode>
-          <node name="info">
-            <properties>
-              <help>Show NTP operational summary</help>
-            </properties>
-            <command>${vyos_op_scripts_dir}/show_ntp.sh --info</command>
+            <command>${vyos_op_scripts_dir}/show_ntp.sh --tracking</command>
           </node>
         </children>
       </node>

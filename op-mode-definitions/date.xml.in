@@ -37,28 +37,6 @@
         </properties>
         <command>/bin/date "$3"</command>
       </tagNode>
-      <node name="date">
-        <properties>
-          <help>Set system date and time</help>
-        </properties>
-        <children>
-          <node name="ntp">
-            <properties>
-              <help>Set system date and time from NTP server (default: 0.pool.ntp.org)</help>
-            </properties>
-            <command>/usr/sbin/ntpdate -u 0.pool.ntp.org</command>
-          </node>
-          <tagNode name="ntp">
-            <properties>
-              <help>Set system date and time from NTP server</help>
-              <completionHelp>
-                <script>${vyos_completion_dir}/list_ntp_servers.sh</script>
-              </completionHelp>
-            </properties>
-            <command>/usr/sbin/ntpdate -u "$4"</command>
-          </tagNode>
-        </children>
-      </node>
     </children>
   </node>
 </interfaceDefinition>

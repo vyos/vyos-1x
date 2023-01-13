@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,26 +21,29 @@ from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
 from vyos.util import call
+from vyos.util import chmod_750
 from vyos.util import get_interface_config
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_file = r'/run/ntpd/ntpd.conf'
-systemd_override = r'/etc/systemd/system/ntp.service.d/override.conf'
+config_file = r'/run/chrony/chrony.conf'
+systemd_override = r'/run/systemd/system/chrony.service.d/override.conf'
+user_group = '_chrony'
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    base = ['system', 'ntp']
+    base = ['service', 'ntp']
     if not conf.exists(base):
         return None
 
     ntp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
     ntp['config_file'] = config_file
+    ntp['user'] = user_group
 
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: ntp.update({'restart_required': {}})
@@ -52,7 +55,7 @@ def verify(ntp):
     if not ntp:
         return None
 
-    if 'allow_clients' in ntp and 'server' not in ntp:
+    if 'server' not in ntp:
         raise ConfigError('NTP server not configured')
 
     verify_vrf(ntp)
@@ -77,13 +80,17 @@ def generate(ntp):
     if not ntp:
         return None
 
-    render(config_file, 'ntp/ntpd.conf.j2', ntp)
-    render(systemd_override, 'ntp/override.conf.j2', ntp)
+    render(config_file, 'chrony/chrony.conf.j2', ntp, user=user_group, group=user_group)
+    render(systemd_override, 'chrony/override.conf.j2', ntp, user=user_group, group=user_group)
+
+    # Ensure proper permission for chrony command socket
+    config_dir = os.path.dirname(config_file)
+    chmod_750(config_dir)
 
     return None
 
 def apply(ntp):
-    systemd_service = 'ntp.service'
+    systemd_service = 'chrony.service'
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
 
