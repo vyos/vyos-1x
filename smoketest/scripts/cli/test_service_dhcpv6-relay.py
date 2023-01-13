@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,22 +34,30 @@ listen_addr = '2001:db8:ffff::1/64'
 interfaces = []
 
 class TestServiceDHCPv6Relay(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceDHCPv6Relay, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+        for tmp in Section.interfaces('ethernet', vlan=False):
+            interfaces.append(tmp)
+            listen = listen_addr
+            if tmp == upstream_if:
+                listen = upstream_if_addr
+            cls.cli_set(['interfaces', 'ethernet', tmp, 'address', listen])
+
+    @classmethod
+    def tearDownClass(cls):
         for tmp in interfaces:
             listen = listen_addr
             if tmp == upstream_if:
                 listen = upstream_if_addr
-            self.cli_set(['interfaces', 'ethernet', tmp, 'address', listen])
+            cld.cli_delete(['interfaces', 'ethernet', tmp, 'address', listen])
 
-    def tearDown(self):
-        self.cli_delete(base_path)
-        for tmp in interfaces:
-            listen = listen_addr
-            if tmp == upstream_if:
-                listen = upstream_if_addr
-            self.cli_delete(['interfaces', 'ethernet', tmp, 'address', listen])
-
-        self.cli_commit()
+        super(TestServiceDHCPv6Relay, cls).tearDownClass()
 
     def test_relay_default(self):
         dhcpv6_server = '2001:db8::ffff'
@@ -100,9 +108,5 @@ class TestServiceDHCPv6Relay(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
-    for tmp in Section.interfaces('ethernet'):
-        if '.' not in tmp:
-            interfaces.append(tmp)
-
     unittest.main(verbosity=2)
 
