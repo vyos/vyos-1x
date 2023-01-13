@@ -105,6 +105,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
           </leafNode>
+          <leafNode name="ntp">
+            <properties>
+              <help>Monitor last lines of Network Time Protocol (NTP) log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit chrony.service</command>
+          </leafNode>
           <node name="pppoe">
             <properties>
               <help>Monitor last lines of PPPoE log</help>

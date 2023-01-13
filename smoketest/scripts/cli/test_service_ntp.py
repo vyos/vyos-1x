@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,14 +19,12 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.template import address_from_cidr
-from vyos.template import netmask_from_cidr
-from vyos.util import read_file
+from vyos.util import cmd
 from vyos.util import process_named_running
 
-PROCESS_NAME = 'ntpd'
-NTP_CONF = '/run/ntpd/ntpd.conf'
-base_path = ['system', 'ntp']
+PROCESS_NAME = 'chronyd'
+NTP_CONF = '/run/chrony/chrony.conf'
+base_path = ['service', 'ntp']
 
 class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -38,6 +36,8 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, base_path)
 
     def tearDown(self):
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_commit()
 
@@ -46,7 +46,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     def test_01_ntp_options(self):
         # Test basic NTP support with multiple servers and their options
         servers = ['192.0.2.1', '192.0.2.2']
-        options = ['noselect', 'preempt', 'prefer']
+        options = ['noselect', 'prefer']
         pools = ['pool.vyos.io']
 
         for server in servers:
@@ -61,12 +61,14 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated configuration
-        config = read_file(NTP_CONF)
-        self.assertIn('driftfile /var/lib/ntp/ntp.drift', config)
-        self.assertIn('restrict default noquery nopeer notrap nomodify', config)
-        self.assertIn('restrict source nomodify notrap noquery', config)
-        self.assertIn('restrict 127.0.0.1', config)
-        self.assertIn('restrict -6 ::1', config)
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
+        self.assertIn('driftfile /run/chrony/drift', config)
+        self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('clientloglimit 1048576', config)
+        self.assertIn('rtcsync', config)
+        self.assertIn('makestep 1.0 3', config)
+        self.assertIn('leapsectz right/UTC', config)
 
         for server in servers:
             self.assertIn(f'server {server} iburst ' + ' '.join(options), config)
@@ -80,9 +82,9 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         for listen in listen_address:
             self.cli_set(base_path + ['listen-address', listen])
 
-        networks = ['192.0.2.0/24', '2001:db8:1000::/64']
+        networks = ['192.0.2.0/24', '2001:db8:1000::/64', '100.64.0.0', '2001:db8::ffff']
         for network in networks:
-            self.cli_set(base_path + ['allow-clients', 'address', network])
+            self.cli_set(base_path + ['allow-client', 'address', network])
 
         # Verify "NTP server not configured" verify() statement
         with self.assertRaises(ConfigSessionError):
@@ -95,18 +97,14 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
-        config = read_file(NTP_CONF)
-        self.assertIn('restrict default ignore', config)
-
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
         for network in networks:
-            network_address = address_from_cidr(network)
-            network_netmask = netmask_from_cidr(network)
-            self.assertIn(f'restrict {network_address} mask {network_netmask} nomodify notrap nopeer', config)
+            self.assertIn(f'allow {network}', config)
 
         # Check listen address
-        self.assertIn('interface ignore wildcard', config)
         for listen in listen_address:
-            self.assertIn(f'interface listen {listen}', config)
+            self.assertIn(f'bindaddress {listen}', config)
 
     def test_03_ntp_interface(self):
         interfaces = ['eth0', 'eth1']
@@ -120,10 +118,24 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check generated client address configuration
-        config = read_file(NTP_CONF)
-        self.assertIn('interface ignore wildcard', config)
+        # this file must be read with higher permissions
+        config = cmd(f'sudo cat {NTP_CONF}')
         for interface in interfaces:
-            self.assertIn(f'interface listen {interface}', config)
+            self.assertIn(f'binddevice {interface}', config)
+
+    def test_04_ntp_vrf(self):
+        vrf_name = 'vyos-mgmt'
+
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(base_path + ['vrf', vrf_name])
+
+        servers = ['time1.vyos.net', 'time2.vyos.net']
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        self.cli_commit()
+
+        self.cli_delete(['vrf', 'name', vrf_name])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
