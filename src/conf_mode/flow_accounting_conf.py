@@ -38,7 +38,7 @@ airbag.enable()
 
 uacctd_conf_path = '/run/pmacct/uacctd.conf'
 systemd_service = 'uacctd.service'
-systemd_override = f'/etc/systemd/system/{systemd_service}.d/override.conf'
+systemd_override = f'/run/systemd/system/{systemd_service}.d/override.conf'
 nftables_nflog_table = 'raw'
 nftables_nflog_chain = 'VYOS_CT_PREROUTING_HOOK'
 egress_nftables_nflog_table = 'inet mangle'
@@ -192,7 +192,7 @@ def verify(flow_config):
                     raise ConfigError("All sFlow servers must use the same IP protocol")
             else:
                 sflow_collector_ipver = ip_address(server).version
-	
+
         # check if vrf is defined for Sflow
         sflow_vrf = None
         if 'vrf' in flow_config:

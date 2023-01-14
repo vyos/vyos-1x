@@ -40,7 +40,7 @@ config_file_client  = r'/etc/snmp/snmp.conf'
 config_file_daemon  = r'/etc/snmp/snmpd.conf'
 config_file_access  = r'/usr/share/snmp/snmpd.conf'
 config_file_user    = r'/var/lib/snmp/snmpd.conf'
-systemd_override    = r'/etc/systemd/system/snmpd.service.d/override.conf'
+systemd_override    = r'/run/systemd/system/snmpd.service.d/override.conf'
 systemd_service     = 'snmpd.service'
 
 def get_config(config=None):

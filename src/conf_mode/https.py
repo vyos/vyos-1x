@@ -37,7 +37,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/etc/nginx/sites-available/default'
-systemd_override = r'/etc/systemd/system/nginx.service.d/override.conf'
+systemd_override = r'/run/systemd/system/nginx.service.d/override.conf'
 cert_dir = '/etc/ssl/certs'
 key_dir = '/etc/ssl/private'
 certbot_dir = vyos.defaults.directories['certbot']

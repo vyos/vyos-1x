@@ -31,7 +31,7 @@ airbag.enable()
 
 service_name = 'vyos-failover'
 service_conf = Path(f'/run/{service_name}.conf')
-systemd_service = '/etc/systemd/system/vyos-failover.service'
+systemd_service = '/run/systemd/system/vyos-failover.service'
 rt_proto_failover = '/etc/iproute2/rt_protos.d/failover.conf'
 
 

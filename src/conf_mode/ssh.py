@@ -32,7 +32,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/run/sshd/sshd_config'
-systemd_override = r'/etc/systemd/system/ssh.service.d/override.conf'
+systemd_override = r'/run/systemd/system/ssh.service.d/override.conf'
 
 sshguard_config_file = '/etc/sshguard/sshguard.conf'
 sshguard_whitelist = '/etc/sshguard/whitelist'

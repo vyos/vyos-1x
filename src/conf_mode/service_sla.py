@@ -27,15 +27,13 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-
 owamp_config_dir = '/etc/owamp-server'
 owamp_config_file = f'{owamp_config_dir}/owamp-server.conf'
-systemd_override_owamp = r'/etc/systemd/system/owamp-server.d/20-override.conf'
+systemd_override_owamp = r'/run/systemd/system/owamp-server.d/20-override.conf'
 
 twamp_config_dir = '/etc/twamp-server'
 twamp_config_file = f'{twamp_config_dir}/twamp-server.conf'
-systemd_override_twamp = r'/etc/systemd/system/twamp-server.d/20-override.conf'
-
+systemd_override_twamp = r'/run/systemd/system/twamp-server.d/20-override.conf'
 
 def get_config(config=None):
     if config:

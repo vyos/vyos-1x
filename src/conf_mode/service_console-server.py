@@ -27,7 +27,7 @@ from vyos.xml import defaults
 from vyos import ConfigError
 
 config_file = '/run/conserver/conserver.cf'
-dropbear_systemd_file = '/etc/systemd/system/dropbear@{port}.service.d/override.conf'
+dropbear_systemd_file = '/run/systemd/system/dropbear@{port}.service.d/override.conf'
 
 def get_config(config=None):
     if config:

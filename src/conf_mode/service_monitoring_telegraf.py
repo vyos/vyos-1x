@@ -38,7 +38,7 @@ cache_dir = f'/etc/telegraf/.cache'
 config_telegraf = f'/run/telegraf/telegraf.conf'
 custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
-systemd_override = '/etc/systemd/system/telegraf.service.d/10-override.conf'
+systemd_override = '/run/systemd/system/telegraf.service.d/10-override.conf'
 
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
