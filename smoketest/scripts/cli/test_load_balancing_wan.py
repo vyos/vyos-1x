@@ -46,7 +46,6 @@ def cmd_in_netns(netns, cmd):
 def delete_netns(name):
     return call(f'sudo ip netns del {name}')
 
-
 class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -61,7 +60,6 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_table_routes(self):
-
         ns1 = 'ns201'
         ns2 = 'ns202'
         ns3 = 'ns203'
@@ -79,6 +77,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         create_veth_pair(iface1, container_iface1)
         create_veth_pair(iface2, container_iface2)
         create_veth_pair(iface3, container_iface3)
+
         move_interface_to_netns(container_iface1, ns1)
         move_interface_to_netns(container_iface2, ns2)
         move_interface_to_netns(container_iface3, ns3)
@@ -125,7 +124,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, original)
 
         # Delete veth interfaces and netns
-        for iface in [iface1, iface2]:
+        for iface in [iface1, iface2, iface3, container_iface1, container_iface2, container_iface3]:
             call(f'sudo ip link del dev {iface}')
 
         delete_netns(ns1)
@@ -196,9 +195,10 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         call(f'sudo ip address add 203.0.113.10/24 dev {iface1}')
         call(f'sudo ip address add 192.0.2.10/24 dev {iface2}')
         call(f'sudo ip address add 198.51.100.10/24 dev {iface3}')
-        call(f'sudo ip link set dev {iface1} up')
-        call(f'sudo ip link set dev {iface2} up')
-        call(f'sudo ip link set dev {iface3} up')
+
+        for iface in [iface1, iface2, iface3]:
+            call(f'sudo ip link set dev {iface} up')
+
         cmd_in_netns(ns1, f'ip link set {container_iface1} name eth0')
         cmd_in_netns(ns2, f'ip link set {container_iface2} name eth0')
         cmd_in_netns(ns3, f'ip link set {container_iface3} name eth0')
@@ -247,12 +247,11 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, nat_vyos_pre_snat_hook)
 
         # Delete veth interfaces and netns
-        for iface in [iface1, iface2]:
+        for iface in [iface1, iface2, iface3, container_iface1, container_iface2, container_iface3]:
             call(f'sudo ip link del dev {iface}')
 
         delete_netns(ns1)
         delete_netns(ns2)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
