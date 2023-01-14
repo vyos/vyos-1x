@@ -47,7 +47,7 @@ class TestServiceDHCPv6Relay(VyOSUnitTestSHIM.TestCase):
             listen = listen_addr
             if tmp == upstream_if:
                 listen = upstream_if_addr
-            cls.cli_set(['interfaces', 'ethernet', tmp, 'address', listen])
+            cls.cli_set(cls, ['interfaces', 'ethernet', tmp, 'address', listen])
 
     @classmethod
     def tearDownClass(cls):
@@ -55,7 +55,7 @@ class TestServiceDHCPv6Relay(VyOSUnitTestSHIM.TestCase):
             listen = listen_addr
             if tmp == upstream_if:
                 listen = upstream_if_addr
-            cld.cli_delete(['interfaces', 'ethernet', tmp, 'address', listen])
+            cls.cli_delete(cls, ['interfaces', 'ethernet', tmp, 'address', listen])
 
         super(TestServiceDHCPv6Relay, cls).tearDownClass()
 
