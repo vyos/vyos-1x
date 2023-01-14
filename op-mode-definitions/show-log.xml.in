@@ -204,7 +204,7 @@
           </leafNode>
           <leafNode name="lldp">
             <properties>
-              <help>Show log for LLDP</help>
+              <help>Show log for Link Layer Discovery Protocol (LLDP)</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit lldpd.service</command>
           </leafNode>
@@ -216,7 +216,7 @@
           </leafNode>
           <leafNode name="nhrp">
             <properties>
-              <help>Show log for NHRP</help>
+              <help>Show log for Next Hop Resolution Protocol (NHRP)</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
           </leafNode>
