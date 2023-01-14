@@ -101,9 +101,9 @@
           </leafNode>
           <leafNode name="nhrp">
             <properties>
-              <help>Monitor last lines of NHRP log</help>
+              <help>Monitor last lines of Next Hop Resolution Protocol (NHRP) log</help>
             </properties>
-            <command>journalctl --no-hostname --boot --unit opennhrp.service</command>
+            <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
           </leafNode>
           <node name="pppoe">
             <properties>
