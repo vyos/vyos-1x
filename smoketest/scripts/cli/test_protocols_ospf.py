@@ -95,7 +95,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' default-metric {metric}', frrconfig)
         self.assertIn(f' passive-interface default', frrconfig)
         self.assertIn(f' area 10 stub', frrconfig)
-        self.assertIn(f' area 10 network 10.0.0.0/16', frrconfig)
+        self.assertIn(f' network 10.0.0.0/16 area 10', frrconfig)
         self.assertIn(f' area 10 range 10.0.1.0/24', frrconfig)
         self.assertNotIn(f' area 10 range 10.0.1.0/24 not-advertise', frrconfig)
         self.assertIn(f' area 10 range 10.0.2.0/24 not-advertise', frrconfig)
