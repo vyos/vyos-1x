@@ -49,7 +49,7 @@ for server in config.list_nodes(new_base_path + ['server']):
 
 # Rename "allow-clients" -> "allow-client"
 if config.exists(new_base_path + ['allow-clients']):
-    config.rename(new_base_path + ['allow-client'])
+    config.rename(new_base_path + ['allow-clients'], 'allow-client')
 
 # By default VyOS 1.3 allowed NTP queries for all networks - in chrony we
 # explicitly disable this behavior and clients need to be specified using the
