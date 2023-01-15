@@ -54,16 +54,35 @@ frr_command_template = Template("""
 {% endif %}
 """)
 
-def show_summary(raw: bool):
+def show_summary(raw: bool, family: str, table: typing.Optional[int]):
     from vyos.util import cmd
+
+    if family == 'inet':
+        family_cmd = 'ip'
+    elif family == 'inet6':
+        family_cmd = 'ipv6'
+    else:
+        raise ValueError(f"Usupported address family {family}")
+
+    # Replace with Jinja if it ever starts growing
+    if table:
+        table_command = f"table {table}"
+    else:
+        table_command = ""
 
     if raw:
         from json import loads
 
-        output = cmd(f"vtysh -c 'show ip route summary json'")
-        return loads(output)
+        output = cmd(f"vtysh -c 'show {family_cmd} route summary {table_command} json'").strip()
+
+        # If there are no routes in a table, its "JSON" output is an empty string,
+        # as of FRR 8.4.1
+        if output:
+            return loads(output)
+        else:
+            return {}
     else:
-        output = cmd(f"vtysh -c 'show ip route summary'")
+        output = cmd(f"vtysh -c 'show {family_cmd} route summary {table_command}'")
         return output
 
 def show(raw: bool,

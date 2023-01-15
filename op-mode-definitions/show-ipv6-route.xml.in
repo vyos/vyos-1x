@@ -50,9 +50,22 @@
               #include <include/show-route-ospfv3.xml.i>
               #include <include/show-route-ripng.xml.i>
               #include <include/show-route-static.xml.i>
-              #include <include/show-route-summary.xml.i>
               #include <include/show-route-table.xml.i>
               #include <include/show-route-tag.xml.i>
+              <node name="summary">
+                <properties>
+                  <help>Summary of all routes</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6</command>
+                <children>
+                  <tagNode name="table">
+                    <properties>
+                      <help>Summary of routes in a particular table</help>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/route.py show_summary --family inet6 --table $6</command>
+                  </tagNode>
+                </children>
+              </node>
               <tagNode name="vrf">
                 <properties>
                   <help>Show IPv6 routes in VRF</help>
