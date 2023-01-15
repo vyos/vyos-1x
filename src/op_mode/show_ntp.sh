@@ -1,39 +1,34 @@
 #!/bin/sh
 
-basic=0
-info=0
+sourcestats=0
+tracking=0
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --info) info=1 ;;
-        --basic) basic=1 ;;
-        --server) server=$2; shift ;;
+        --sourcestats) sourcestats=1 ;;
+        --tracking) tracking=1 ;;
         *) echo "Unknown parameter passed: $1" ;;
     esac
     shift
 done
 
-if ! ps -C ntpd &>/dev/null; then
+if ! ps -C chronyd &>/dev/null; then
     echo NTP daemon disabled
     exit 1
 fi
 
-PID=$(pgrep ntpd)
-VRF_NAME=$(ip vrf identify ${PID})
+PID=$(pgrep chronyd | head -n1)
+VRF_NAME=$(ip vrf identify )
 
 if [ ! -z ${VRF_NAME} ]; then
     VRF_CMD="sudo ip vrf exec ${VRF_NAME}"
 fi
 
-if [ $basic -eq 1 ]; then
-    $VRF_CMD ntpq -n -c peers
-elif [ $info -eq 1 ]; then
-    echo "=== sysingo ==="
-    $VRF_CMD ntpq -n -c sysinfo
-    echo
-    echo "=== kerninfo ==="
-    $VRF_CMD ntpq -n -c kerninfo
-elif [ ! -z $server ]; then
-    $VRF_CMD /usr/sbin/ntpdate -q $server
+if [ $sourcestats -eq 1 ]; then
+    $VRF_CMD chronyc sourcestats -v
+elif [ $tracking -eq 1 ]; then
+    $VRF_CMD chronyc tracking -v
+else
+    echo "Unknown option"
 fi
 

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- NTP configuration -->
 <interfaceDefinition>
-  <node name="system">
+  <node name="service">
     <children>
       <node name="ntp" owner="${vyos_conf_scripts_dir}/ntp.py">
         <properties>
@@ -43,12 +43,6 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="preempt">
-                <properties>
-                  <help>Specifies the association as preemptable rather than the default persistent</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
               <leafNode name="prefer">
                 <properties>
                   <help>Marks the server as preferred</help>
@@ -57,24 +51,33 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="allow-clients">
+          <node name="allow-client">
             <properties>
-              <help>Network Time Protocol (NTP) server options</help>
+              <help>Specify NTP clients allowed to access the server</help>
             </properties>
             <children>
               <leafNode name="address">
                 <properties>
                   <help>IP address</help>
                   <valueHelp>
+                    <format>ipv4</format>
+                    <description>Allowed IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
                     <format>ipv4net</format>
-                    <description>IP address and prefix length</description>
+                    <description>Allowed IPv4 prefix</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Allowed IPv6 address</description>
                   </valueHelp>
                   <valueHelp>
                     <format>ipv6net</format>
-                    <description>IPv6 address and prefix length</description>
+                    <description>Allowed IPv6 prefix</description>
                   </valueHelp>
                   <multi/>
                   <constraint>
+                    <validator name="ip-address"/>
                     <validator name="ip-prefix"/>
                   </constraint>
                 </properties>
