@@ -54,7 +54,7 @@ frr_command_template = Template("""
 {% endif %}
 """)
 
-def show_summary(raw: bool, family: str, table: typing.Optional[int]):
+def show_summary(raw: bool, family: str, table: typing.Optional[int], vrf: typing.Optional[str]):
     from vyos.util import cmd
 
     if family == 'inet':
@@ -62,18 +62,26 @@ def show_summary(raw: bool, family: str, table: typing.Optional[int]):
     elif family == 'inet6':
         family_cmd = 'ipv6'
     else:
-        raise ValueError(f"Usupported address family {family}")
+        raise ValueError(f"Unsupported address family {family}")
+
+    if (table is not None) and (vrf is not None):
+        raise ValueError("table and vrf options are mutually exclusive")
 
     # Replace with Jinja if it ever starts growing
     if table:
-        table_command = f"table {table}"
+        table_cmd = f"table {table}"
     else:
-        table_command = ""
+        table_cmd = ""
+
+    if vrf:
+        vrf_cmd = f"vrf {vrf}"
+    else:
+        vrf_cmd = ""
 
     if raw:
         from json import loads
 
-        output = cmd(f"vtysh -c 'show {family_cmd} route summary {table_command} json'").strip()
+        output = cmd(f"vtysh -c 'show {family_cmd} route {vrf_cmd} summary {table_cmd} json'").strip()
 
         # If there are no routes in a table, its "JSON" output is an empty string,
         # as of FRR 8.4.1
@@ -82,7 +90,7 @@ def show_summary(raw: bool, family: str, table: typing.Optional[int]):
         else:
             return {}
     else:
-        output = cmd(f"vtysh -c 'show {family_cmd} route summary {table_command}'")
+        output = cmd(f"vtysh -c 'show {family_cmd} route {vrf_cmd} summary {table_cmd}'")
         return output
 
 def show(raw: bool,
