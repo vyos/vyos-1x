@@ -135,6 +135,10 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
+        # Check for process in VRF
+        tmp = cmd(f'ip vrf pids {vrf_name}')
+        self.assertIn(PROCESS_NAME, tmp)
+
         self.cli_delete(['vrf', 'name', vrf_name])
 
 if __name__ == '__main__':
