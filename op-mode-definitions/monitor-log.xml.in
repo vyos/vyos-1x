@@ -255,14 +255,14 @@
           </node>
           <node name="vpn">
             <properties>
-              <help>Show log for Virtual Private Network (VPN)</help>
+              <help>Monitor Virtual Private Network (VPN) services</help>
             </properties>
             <children>
               <leafNode name="all">
                 <properties>
                   <help>Monitor last lines of ALL VPNs</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service --unit accel-ppp@*.service</command>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service --unit accel-ppp@*.service --unit ocserv.service</command>
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
@@ -275,6 +275,12 @@
                   <help>Monitor last lines of L2TP</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
+              </leafNode>
+              <leafNode name="openconnect">
+                <properties>
+                  <help>Monitor last lines of OpenConnect</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit ocserv.service</command>
               </leafNode>
               <leafNode name="pptp">
                 <properties>

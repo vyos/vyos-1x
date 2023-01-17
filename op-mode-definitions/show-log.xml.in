@@ -409,7 +409,7 @@
                 <properties>
                   <help>Show log for ALL</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit strongswan-starter.service --unit accel-ppp@*.service</command>
+                <command>journalctl --no-hostname --boot --unit strongswan-starter.service --unit accel-ppp@*.service --unit ocserv.service</command>
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
@@ -422,6 +422,12 @@
                   <help>Show log for L2TP</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --unit accel-ppp@l2tp.service</command>
+              </leafNode>
+              <leafNode name="openconnect">
+                <properties>
+                  <help>Show log for OpenConnect</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit ocserv.service</command>
               </leafNode>
               <leafNode name="pptp">
                 <properties>
