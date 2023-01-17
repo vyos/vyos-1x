@@ -11,6 +11,40 @@
           <priority>901</priority>
         </properties>
         <children>
+          <node name="authentication">
+            <properties>
+              <help>Authentication</help>
+            </properties>
+            <children>
+              <tagNode name="psk">
+                <properties>
+                  <help>Pre-shared key name</help>
+                </properties>
+                <children>
+                  #include <include/dhcp-interface-multi.xml.i>
+                  <leafNode name="id">
+                    <properties>
+                      <help>ID for authentication</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>ID used for authentication</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="secret">
+                    <properties>
+                      <help>IKE pre-shared secret key</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>IKE pre-shared secret key</description>
+                      </valueHelp>
+                    </properties>
+                  </leafNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
           <leafNode name="disable-uniqreqids">
             <properties>
               <help>Disable requirement for unique IDs in the Security Database</help>
@@ -948,7 +982,6 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      #include <include/ipsec/authentication-pre-shared-secret.xml.i>
                       <leafNode name="remote-id">
                         <properties>
                           <help>ID for remote authentication</help>

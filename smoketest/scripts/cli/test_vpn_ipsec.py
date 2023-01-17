@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,12 +34,15 @@ swanctl_file = '/etc/swanctl/swanctl.conf'
 
 peer_ip = '203.0.113.45'
 connection_name = 'main-branch'
+local_id = 'left'
+remote_id = 'right'
 interface = 'eth1'
 vif = '100'
 esp_group = 'MyESPGroup'
 ike_group = 'MyIKEGroup'
 secret = 'MYSECRETKEY'
 PROCESS_NAME = 'charon'
+regex_uuid4 = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
 
 ca_pem = """
 MIIDSzCCAjOgAwIBAgIUQHK+ZgTUYZksvXY2/MyW+Jiels4wDQYJKoZIhvcNAQEL
@@ -151,10 +154,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Interface for dhcp-interface
         self.cli_set(ethernet_path + [interface, 'vif', vif, 'address', 'dhcp']) # Use VLAN to avoid getting IP from qemu dhcp server
 
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
         # Site to site
         peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
-        self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
         self.cli_set(peer_base_path + ['default-esp-group', esp_group])
         self.cli_set(peer_base_path + ['dhcp-interface', f'{interface}.{vif}'])
@@ -172,18 +180,25 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     def test_02_site_to_site(self):
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
-        # Site to site
         local_address = '192.0.2.10'
         priority = '20'
         life_bytes = '100000'
         life_packets = '2000000'
+
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_address])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
+        # Site to site
         peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
 
         self.cli_set(base_path + ['esp-group', esp_group, 'life-bytes', life_bytes])
         self.cli_set(base_path + ['esp-group', esp_group, 'life-packets', life_packets])
 
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
-        self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
         self.cli_set(peer_base_path + ['default-esp-group', esp_group])
         self.cli_set(peer_base_path + ['local-address', local_address])
@@ -230,12 +245,14 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
-            f'id-local = {local_address} # dhcp:no',
-            f'id-remote_{peer_ip.replace(".","-")} = {peer_ip}',
+            f'id-{regex_uuid4} = "{local_id}"',
+            f'id-{regex_uuid4} = "{remote_id}"',
+            f'id-{regex_uuid4} = "{local_address}"',
+            f'id-{regex_uuid4} = "{peer_ip}"',
             f'secret = "{secret}"'
         ]
         for line in swanctl_secrets_lines:
-            self.assertIn(line, swanctl_conf)
+            self.assertRegex(swanctl_conf, fr'{line}')
 
 
     def test_03_site_to_site_vti(self):
@@ -249,10 +266,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # VTI interface
         self.cli_set(vti_path + [vti, 'address', '10.1.1.1/24'])
 
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
         # Site to site
         peer_base_path = base_path + ['site-to-site', 'peer', connection_name]
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
-        self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['connection-type', 'none'])
         self.cli_set(peer_base_path + ['force-udp-encapsulation'])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
@@ -295,12 +317,12 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
-            f'id-local = {local_address} # dhcp:no',
-            f'id-remote_{peer_ip.replace(".","-")} = {peer_ip}',
+            f'id-{regex_uuid4} = "{local_id}"',
+            f'id-{regex_uuid4} = "{remote_id}"',
             f'secret = "{secret}"'
         ]
         for line in swanctl_secrets_lines:
-            self.assertIn(line, swanctl_conf)
+            self.assertRegex(swanctl_conf, fr'{line}')
 
 
     def test_04_dmvpn(self):
@@ -453,9 +475,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['options', 'interface', 'tun1'])
         self.cli_set(base_path + ['ike-group', ike_group, 'key-exchange', 'ikev2'])
 
+        # vpn ipsec auth psk <tag> id <x.x.x.x>
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', remote_id])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', local_address])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'id', peer_ip])
+        self.cli_set(base_path + ['authentication', 'psk', connection_name, 'secret', secret])
+
         self.cli_set(peer_base_path + ['authentication', 'local-id', local_id])
         self.cli_set(peer_base_path + ['authentication', 'mode', 'pre-shared-secret'])
-        self.cli_set(peer_base_path + ['authentication', 'pre-shared-secret', secret])
         self.cli_set(peer_base_path + ['authentication', 'remote-id', remote_id])
         self.cli_set(peer_base_path + ['connection-type', 'initiate'])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
@@ -485,15 +513,15 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
             self.assertIn(line, swanctl_conf)
 
         swanctl_secrets_lines = [
-            f'id-local = {local_address} # dhcp:no',
-            f'id-remote_{peer_ip.replace(".","-")} = {peer_ip}',
-            f'id-localid = {local_id}',
-            f'id-remoteid = {remote_id}',
+            f'id-{regex_uuid4} = "{local_id}"',
+            f'id-{regex_uuid4} = "{remote_id}"',
+            f'id-{regex_uuid4} = "{peer_ip}"',
+            f'id-{regex_uuid4} = "{local_address}"',
             f'secret = "{secret}"',
         ]
 
         for line in swanctl_secrets_lines:
-            self.assertIn(line, swanctl_conf)
+            self.assertRegex(swanctl_conf, fr'{line}')
 
         # Verify charon configuration
         charon_conf = read_file(charon_file)
