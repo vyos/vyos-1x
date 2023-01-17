@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -70,7 +70,7 @@ def _get_parent_sa_proposal(connection_name: str, data: list) -> dict:
     for sa in data:
         # check if parent SA exist
         if connection_name not in sa.keys():
-            return {}
+            continue
         if 'encr-alg' in sa[connection_name]:
             encr_alg = sa.get(connection_name, '').get('encr-alg')
             cipher = encr_alg.split('_')[0]
@@ -98,16 +98,17 @@ def _get_parent_sa_state(connection_name: str, data: list) -> str:
     Returns:
         Parent SA connection state
     """
+    ike_state = 'down'
     if not data:
-        return 'down'
+        return ike_state
     for sa in data:
         # check if parent SA exist
-        if connection_name not in sa.keys():
-            return 'down'
-        if sa[connection_name]['state'].lower() == 'established':
-            return 'up'
-        else:
-            return 'down'
+        for connection, connection_conf in sa.items():
+            if connection_name != connection:
+                continue
+            if connection_conf['state'].lower() == 'established':
+                ike_state = 'up'
+    return ike_state
 
 
 def _get_child_sa_state(connection_name: str, tunnel_name: str,
@@ -120,19 +121,20 @@ def _get_child_sa_state(connection_name: str, tunnel_name: str,
     Returns:
         str: `up` if child SA state is 'installed' otherwise `down`
     """
+    child_sa = 'down'
     if not data:
-        return 'down'
+        return child_sa
     for sa in data:
         # check if parent SA exist
         if connection_name not in sa.keys():
-            return 'down'
+            continue
         child_sas = sa[connection_name]['child-sas']
         # Get all child SA states
         # there can be multiple SAs per tunnel
         child_sa_states = [
             v['state'] for k, v in child_sas.items() if v['name'] == tunnel_name
         ]
-        return 'up' if 'INSTALLED' in child_sa_states else 'down'
+        return 'up' if 'INSTALLED' in child_sa_states else child_sa
 
 
 def _get_child_sa_info(connection_name: str, tunnel_name: str,
@@ -148,7 +150,7 @@ def _get_child_sa_info(connection_name: str, tunnel_name: str,
     for sa in data:
         # check if parent SA exist
         if connection_name not in sa.keys():
-            return {}
+            continue
         child_sas = sa[connection_name]['child-sas']
         # Get all child SA data
         # Skip temp SA name (first key), get only SA values as dict
