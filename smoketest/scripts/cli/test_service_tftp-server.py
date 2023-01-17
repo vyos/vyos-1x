@@ -33,14 +33,31 @@ address_ipv6 = '2001:db8::1'
 vrf = 'mgmt'
 
 class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(dummy_if_path + ['address', address_ipv4 + '/32'])
-        self.cli_set(dummy_if_path + ['address', address_ipv6 + '/128'])
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceTFTPD, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
+        cls.cli_set(cls, dummy_if_path + ['address', address_ipv4 + '/32'])
+        cls.cli_set(cls, dummy_if_path + ['address', address_ipv6 + '/128'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, dummy_if_path)
+        super(TestServiceTFTPD, cls).tearDownClass()
 
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
-        self.cli_delete(dummy_if_path)
         self.cli_commit()
+
+        # Check for no longer running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_01_tftpd_single(self):
         directory = '/tmp'
@@ -60,9 +77,6 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(directory, config)
         # verify upload
         self.assertIn('--create --umask 000', config)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_02_tftpd_multi(self):
         directory = '/tmp'
@@ -124,9 +138,6 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         self.assertIn(directory, config)
         # verify upload
         self.assertIn('--create --umask 000', config)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
         # Check for process in VRF
         tmp = cmd(f'ip vrf pids {vrf}')
