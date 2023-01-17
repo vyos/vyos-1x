@@ -26,6 +26,9 @@ monitor  -r 10 -e linkDownTrap "Generate linkDown" ifOperStatus == 2
 # interface (with different ifIndex) - this is the case on e.g. ppp interfaces
 interface_replace_old yes
 
+# T4902: exclude container storage from monitoring
+ignoreDisk /usr/lib/live/mount/persistence/container
+
 ########################
 # configurable section #
 ########################
