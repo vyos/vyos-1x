@@ -11,13 +11,13 @@
             <properties>
               <help>Show summary of zone policy for a specific zone</help>
               <completionHelp>
-                <path>zone-policy zone</path>
+                <path>firewall zone</path>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/zone_policy.py --action show --name $4</command>
+            <command>sudo ${vyos_op_scripts_dir}/zone.py show --zone $4</command>
           </tagNode>
         </children>
-        <command>sudo ${vyos_op_scripts_dir}/zone_policy.py --action show</command>
+        <command>sudo ${vyos_op_scripts_dir}/zone.py show</command>
       </node>
     </children>
   </node>

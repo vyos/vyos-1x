@@ -21,5 +21,6 @@
 "storage.py",
 "uptime.py",
 "version.py",
-"vrf.py"
+"vrf.py",
+"zone.py"
 ]
