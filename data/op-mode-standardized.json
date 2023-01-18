@@ -22,5 +22,6 @@
 "uptime.py",
 "version.py",
 "vrf.py",
+"vrrp.py",
 "zone.py"
 ]
