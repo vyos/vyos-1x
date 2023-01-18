@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,8 +23,7 @@ modules = {
     "intel_qat": ["qat_200xx", "qat_200xxvf", "qat_c3xxx", "qat_c3xxxvf",
                   "qat_c62x", "qat_c62xvf", "qat_d15xx", "qat_d15xxvf",
                   "qat_dh895xcc", "qat_dh895xccvf"],
-    "accel_ppp": ["ipoe", "vlan_mon"],
-    "misc": ["wireguard"]
+    "accel_ppp": ["ipoe", "vlan_mon"]
 }
 
 class TestKernelModules(unittest.TestCase):
