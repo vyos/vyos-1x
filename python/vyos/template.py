@@ -476,6 +476,8 @@ def get_esp_ike_cipher(group_config, ike_group=None):
                 continue
 
             tmp = '{encryption}-{hash}'.format(**proposal)
+            if 'prf' in proposal:
+                tmp += '-' + proposal['prf']
             if 'dh_group' in proposal:
                 tmp += '-' + pfs_lut[ 'dh-group' +  proposal['dh_group'] ]
             elif 'pfs' in group_config and group_config['pfs'] != 'disable':

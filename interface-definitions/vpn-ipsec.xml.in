@@ -465,6 +465,45 @@
                     </properties>
                     <defaultValue>2</defaultValue>
                   </leafNode>
+                  <leafNode name="prf">
+                    <properties>
+                      <help>Pseudo-Random Functions</help>
+                      <completionHelp>
+                        <list>prfmd5 prfsha1 prfaesxcbc prfaescmac prfsha256 prfsha384 prfsha512</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>prfmd5</format>
+                        <description>MD5 PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfsha1</format>
+                        <description>SHA1 PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfaesxcbc</format>
+                        <description>AES XCBC PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfaescmac</format>
+                        <description>AES CMAC PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfsha256</format>
+                        <description>SHA2_256 PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfsha384</format>
+                        <description>SHA2_384 PRF</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>prfsha512</format>
+                        <description>SHA2_512 PRF</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(prfmd5|prfsha1|prfaesxcbc|prfaescmac|prfsha256|prfsha384|prfsha512)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   #include <include/vpn-ipsec-encryption.xml.i>
                   #include <include/vpn-ipsec-hash.xml.i>
                 </children>

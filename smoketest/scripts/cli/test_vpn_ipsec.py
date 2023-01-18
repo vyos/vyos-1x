@@ -337,6 +337,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'dh-group', '2'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'encryption', 'aes256'])
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'hash', 'sha1'])
+        self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '2', 'prf', 'prfsha1'])
 
         # Profile
         self.cli_set(base_path + ['profile', 'NHRPVPN', 'authentication', 'mode', 'pre-shared-secret'])
@@ -349,7 +350,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
         swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
-            f'proposals = aes128-sha1-modp1024,aes256-sha1-modp1024',
+            f'proposals = aes128-sha1-modp1024,aes256-sha1-prfsha1-modp1024',
             f'version = 1',
             f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
