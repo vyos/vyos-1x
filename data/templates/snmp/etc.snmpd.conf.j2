@@ -59,26 +59,45 @@ agentaddress unix:/run/snmpd.socket{{ ',' ~ options | join(',') if options is vy
 {%         if comm_config.client is vyos_defined %}
 {%             for client in comm_config.client %}
 {%                 if client | is_ipv4 %}
-{{ comm_config.authorization }}community {{ comm }} {{ client }}
+{{ comm_config.authorization }}community {{ comm }} {{ client }} -V RESTRICTED
 {%                 elif client | is_ipv6 %}
-{{ comm_config.authorization }}community6 {{ comm }} {{ client }}
+{{ comm_config.authorization }}community6 {{ comm }} {{ client }} -V RESTRICTED
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
 {%         if comm_config.network is vyos_defined %}
 {%             for network in comm_config.network %}
 {%                 if network | is_ipv4 %}
-{{ comm_config.authorization }}community {{ comm }} {{ network }}
+{{ comm_config.authorization }}community {{ comm }} {{ network }} -V RESTRICTED
 {%                 elif network | is_ipv6 %}
-{{ comm_config.authorization }}community6 {{ comm }} {{ network }}
+{{ comm_config.authorization }}community6 {{ comm }} {{ network }} -V RESTRICTED
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
 {%         if comm_config.client is not vyos_defined and comm_config.network is not vyos_defined %}
-{{ comm_config.authorization }}community {{ comm }}
-{{ comm_config.authorization }}community6 {{ comm }}
+{{ comm_config.authorization }}community {{ comm }} -V RESTRICTED
+{{ comm_config.authorization }}community6 {{ comm }} -V RESTRICTED
 {%         endif %}
 {%     endfor %}
+{% endif %}
+
+# Default RESTRICTED view
+view RESTRICTED    included .1 80
+{% if 'ip-route-table' not in oid_enable %}
+# ipRouteTable oid: excluded
+view RESTRICTED    excluded  .1.3.6.1.2.1.4.21
+{% endif %}
+{% if 'ip-net-to-media-table' not in oid_enable %}
+# ipNetToMediaTable oid: excluded
+view RESTRICTED    excluded  .1.3.6.1.2.1.4.22
+{% endif %}
+{% if 'ip-net-to-physical-phys-address' not in oid_enable %}
+# ipNetToPhysicalPhysAddress oid: excluded
+view RESTRICTED    excluded  .1.3.6.1.2.1.4.35
+{% endif %}
+{% if 'ip-forward' not in oid_enable %}
+# ipForward oid: excluded
+view RESTRICTED    excluded  .1.3.6.1.2.1.4.24
 {% endif %}
 
 {% if contact is vyos_defined %}
