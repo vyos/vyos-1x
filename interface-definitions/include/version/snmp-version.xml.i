@@ -1,3 +1,3 @@
 <!-- include start from include/version/snmp-version.xml.i -->
-<syntaxVersion component='snmp' version='2'></syntaxVersion>
+<syntaxVersion component='snmp' version='3'></syntaxVersion>
 <!-- include end -->

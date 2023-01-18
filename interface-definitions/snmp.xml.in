@@ -129,19 +129,19 @@
               </completionHelp>
               <valueHelp>
                 <format>ip-forward</format>
-                <description>Enable oid .1.3.6.1.2.1.4.24</description>
+                <description>Enable ipForward: .1.3.6.1.2.1.4.24</description>
               </valueHelp>
               <valueHelp>
                 <format>ip-route-table</format>
-                <description>Enable oid .1.3.6.1.2.1.4.21</description>
+                <description>Enable ipRouteTable: .1.3.6.1.2.1.4.21</description>
               </valueHelp>
               <valueHelp>
                 <format>ip-net-to-media-table</format>
-                <description>Enable oid .1.3.6.1.2.1.4.22</description>
+                <description>Enable ipNetToMediaTable: .1.3.6.1.2.1.4.22</description>
               </valueHelp>
               <valueHelp>
                 <format>ip-net-to-physical-phys-address</format>
-                <description>Enable oid .1.3.6.1.2.1.4.35</description>
+                <description>Enable ipNetToPhysicalPhysAddress: .1.3.6.1.2.1.4.35</description>
               </valueHelp>
               <constraint>
                 <regex>(ip-forward|ip-route-table|ip-net-to-media-table|ip-net-to-physical-phys-address)</regex>

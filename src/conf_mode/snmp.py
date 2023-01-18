@@ -167,7 +167,7 @@ def verify(snmp):
                 raise ConfigError(f'Trap target "{trap}" requires a community to be set!')
 
     if 'oid_enable' in snmp:
-        Warning(f'Custom oids are enabled and may lead to system instability and high resource consumption')
+        Warning(f'Custom OIDs are enabled and may lead to system instability and high resource consumption')
 
 
     verify_vrf(snmp)
