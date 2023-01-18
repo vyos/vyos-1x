@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,52 +15,62 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys
-import time
-import argparse
 import json
-import tabulate
+import sys
 
-import vyos.util
+import vyos.opmode
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.ifconfig.vrrp import VRRP
-from vyos.ifconfig.vrrp import VRRPError, VRRPNoData
+from vyos.ifconfig.vrrp import VRRP, VRRPError
+from vyos.util import print_error
 
 
-parser = argparse.ArgumentParser()
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-s", "--summary", action="store_true", help="Print VRRP summary")
-group.add_argument("-t", "--statistics", action="store_true", help="Print VRRP statistics")
-group.add_argument("-d", "--data", action="store_true", help="Print detailed VRRP data")
+def _is_configured():
+    """Check if VRRP is configured"""
+    return ConfigTreeQuery().exists(['high-availability', 'vrrp', 'group'])
 
-args = parser.parse_args()
+def show(raw: bool):
+    if raw:
+        return json.loads(VRRP.collect('json'))
+    else:
+        raise vyos.opmode.UnsupportedOperation\
+            ('VRRP show supports only raw output.')
 
-def is_configured():
-    """ Check if VRRP is configured """
-    config = ConfigTreeQuery()
-    if not config.exists(['high-availability', 'vrrp', 'group']):
-        return False
-    return True
+def show_summary(raw: bool):
+    if not raw:
+        return VRRP.format(VRRP.collect('json'))
+    else:
+        raise vyos.opmode.UnsupportedOperation\
+            ('VRRP summary does not support raw output.')
 
-# Exit early if VRRP is dead or not configured
-if  is_configured() == False:
-    print('VRRP not configured!')
-    exit(0)
+def show_statistics(raw: bool):
+    if not raw:
+        return VRRP.collect('stats')
+    else:
+        raise vyos.opmode.UnsupportedOperation\
+            ('VRRP statistics does not support raw output.')
+
+def show_state(raw: bool):
+    if not raw:
+        return VRRP.collect('state')
+    else:
+        raise vyos.opmode.UnsupportedOperation\
+            ('VRRP detailed state does not support raw output.')
+
+
+if not _is_configured():
+    print_error('VRRP is not configured.')
+    sys.exit(0)
 if not VRRP.is_running():
-    print('VRRP is not running')
+    print_error('VRRP is not running.')
     sys.exit(0)
 
-try:
-    if args.summary:
-        print(VRRP.format(VRRP.collect('json')))
-    elif args.statistics:
-        print(VRRP.collect('stats'))
-    elif args.data:
-        print(VRRP.collect('state'))
-    else:
-        parser.print_help()
+
+if __name__ == "__main__":
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except (ValueError, vyos.opmode.Error, VRRPError) as e:
+        print_error(e)
         sys.exit(1)
-except VRRPNoData as e:
-    print(e)
-    sys.exit(1)
