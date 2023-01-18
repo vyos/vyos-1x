@@ -488,7 +488,7 @@ def is_listen_port_bind_service(port: int, service: str) -> bool:
     Example:
         % is_listen_port_bind_service(443, 'nginx')
         True
-        % is_listen_port_bind_service(443, 'ocservr-main')
+        % is_listen_port_bind_service(443, 'ocserv-main')
         False
     """
     from psutil import net_connections as connections

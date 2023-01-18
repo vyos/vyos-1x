@@ -150,7 +150,7 @@
               </node>
             </children>
           </node>
-          #include <include/listen-address-ipv4.xml.i>
+          #include <include/listen-address-ipv4-single.xml.i>
           <leafNode name="listen-address">
             <defaultValue>0.0.0.0</defaultValue>
           </leafNode>

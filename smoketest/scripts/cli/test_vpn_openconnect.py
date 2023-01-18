@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.template import ip_from_cidr
 from vyos.util import process_named_running
 from vyos.util import read_file
 
@@ -52,6 +53,9 @@ config_file = '/run/ocserv/ocserv.conf'
 auth_file = '/run/ocserv/ocpasswd'
 otp_file = '/run/ocserv/users.oath'
 
+listen_if = 'dum116'
+listen_address = '100.64.0.1/32'
+
 class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -61,6 +65,8 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
 
+        cls.cli_set(cls, ['interfaces', 'dummy', listen_if, 'address', listen_address])
+
         cls.cli_set(cls, pki_path + ['ca', 'openconnect', 'certificate', cert_data.replace('\n','')])
         cls.cli_set(cls, pki_path + ['certificate', 'openconnect', 'certificate', cert_data.replace('\n','')])
         cls.cli_set(cls, pki_path + ['certificate', 'openconnect', 'private', 'key', key_data.replace('\n','')])
@@ -68,6 +74,7 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, pki_path)
+        cls.cli_delete(cls, ['interfaces', 'dummy', listen_if])
         super(TestVPNOpenConnect, cls).tearDownClass()
 
     def tearDown(self):
@@ -104,6 +111,9 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ssl', 'ca-certificate', 'openconnect'])
         self.cli_set(base_path + ['ssl', 'certificate', 'openconnect'])
 
+        listen_ip_no_cidr = ip_from_cidr(listen_address)
+        self.cli_set(base_path + ['listen-address', listen_ip_no_cidr])
+
         self.cli_commit()
 
         # Verify configuration
@@ -111,9 +121,14 @@ class TestVPNOpenConnect(VyOSUnitTestSHIM.TestCase):
 
         # authentication mode local password-otp
         self.assertIn(f'auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"', daemon_config)
+        self.assertIn(f'listen-host = {listen_ip_no_cidr}', daemon_config)
         self.assertIn(f'ipv4-network = {v4_subnet}', daemon_config)
         self.assertIn(f'ipv6-network = {v6_prefix}', daemon_config)
         self.assertIn(f'ipv6-subnet-prefix = {v6_len}', daemon_config)
+
+        # defaults
+        self.assertIn(f'tcp-port = 443', daemon_config)
+        self.assertIn(f'udp-port = 443', daemon_config)
 
         for ns in name_server:
             self.assertIn(f'dns = {ns}', daemon_config)
