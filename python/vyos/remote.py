@@ -42,6 +42,8 @@ from vyos.version import get_version
 
 
 CHUNK_SIZE = 8192
+CHECK_SPACE_FOR_IMAGE = False
+IMAGE_DIRECTORY = '/usr/lib/live/mount/persistence'
 
 class InteractivePolicy(MissingHostKeyPolicy):
     """
@@ -79,12 +81,13 @@ def check_storage(path, size):
     """
     Check whether `path` has enough storage space for a transfer of `size` bytes.
     """
-    path = os.path.abspath(os.path.expanduser(path))
-    directory = path if os.path.isdir(path) else (os.path.dirname(os.path.expanduser(path)) or os.getcwd())
     # `size` can be None or 0 to indicate unknown size.
     if not size:
         print_error('Warning: Cannot determine size of remote file. Bravely continuing regardless.')
         return
+
+    path = os.path.abspath(os.path.expanduser(path))
+    directory = path if os.path.isdir(path) else (os.path.dirname(os.path.expanduser(path)) or os.getcwd())
 
     if size < 1024 * 1024:
         print_error(f'The file is {size / 1024.0:.3f} KiB.')
@@ -94,6 +97,13 @@ def check_storage(path, size):
     # Will throw `FileNotFoundError' if `directory' is absent.
     if size > shutil.disk_usage(directory).free:
         raise OSError(f'Not enough disk space available in "{directory}".')
+    # This check is a special case for image installs that probes a hardcoded `IMAGE_DIRECTORY'.
+    elif CHECK_SPACE_FOR_IMAGE and (size > shutil.disk_usage(IMAGE_DIRECTORY).free):
+        print_error('Warning: There is enough space to store the image but likely not enough to install it.')
+        if not ask_yes_no('Do you still wish to continue?'):
+            sys.exit(-1)
+        else:
+            print_error('As you wish. Continuing download.')
 
 
 class FtpC:
@@ -304,16 +314,23 @@ def get_remote_config(urlstring, source_host='', source_port=0):
     finally:
         os.remove(temp)
 
-def friendly_download(local_path, urlstring, source_host='', source_port=0):
+def friendly_download(local_path, urlstring, source_host='', source_port=0, image=False):
     """
     Download with a progress bar, reassuring messages and free space checks.
     """
+    # The `image' argument is used by `install-image' to indicate that we're downloading
+    # a VyOS image. In this case, we need to check not only the path the image is being
+    # downloaded (/tmp) but also the directory that keeps installed images.
+    # `CHECK_SPACE_FOR_IMAGE' is read by `check_storage()'.
+    if image:
+        global CHECK_SPACE_FOR_IMAGE
+        CHECK_SPACE_FOR_IMAGE = True
     try:
         print_error('Downloading...')
         download(local_path, urlstring, True, True, source_host, source_port)
-    except KeyboardInterrupt:
-        print_error('\nDownload aborted by user.')
-        sys.exit(1)
+    except (KeyboardInterrupt, SystemExit):
+        print_error('\nDownload aborted.')
+        sys.exit(-1)
     except:
         import traceback
         print_error(f'Failed to download {urlstring}.')
