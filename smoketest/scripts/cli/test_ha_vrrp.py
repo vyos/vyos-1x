@@ -87,11 +87,13 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         advertise_interval = '77'
         priority = '123'
         preempt_delay = '400'
+        startup_delay = '120'
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
             vip = f'100.64.{vlan_id}.1/24'
             group_base = base_path + ['vrrp', 'group', group]
+            global_param_base = base_path + ['vrrp', 'global-parameters']
 
             self.cli_set(['interfaces', 'ethernet', vrrp_interface, 'vif', vlan_id, 'address', inc_ip(vip, 1) + '/' + vip.split('/')[-1]])
 
@@ -109,6 +111,10 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             # Authentication
             self.cli_set(group_base + ['authentication', 'type', 'plaintext-password'])
             self.cli_set(group_base + ['authentication', 'password', f'{group}'])
+
+            # Global parameters
+            config = getConfig(f'global_defs')
+            self.cli_set(global_param_base + ['startup-delay', f'{startup_delay}'])
 
         # commit changes
         self.cli_commit()
