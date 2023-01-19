@@ -13,7 +13,7 @@
         <children>
           <node name="global-parameters">
             <properties>
-              <help>VRRP Globas parameters</help>
+              <help>VRRP global parameters</help>
             </properties>
             <children>
               <leafNode name="startup-delay">
