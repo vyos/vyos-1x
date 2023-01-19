@@ -18,7 +18,7 @@
             <children>
               <leafNode name="startup-delay">
                 <properties>
-                  <help>Time vrrp startup process (in seconds)</help>
+                  <help>Time VRRP startup process (in seconds)</help>
                   <valueHelp>
                     <format>u32:1-600</format>
                     <description>Interval in seconds</description>

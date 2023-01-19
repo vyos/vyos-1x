@@ -137,6 +137,9 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             # Authentication
             self.assertIn(f'auth_pass "{group}"', config)
             self.assertIn(f'auth_type PASS', config)
+            # Global parameters
+            config = getConfig(f'global_defs')
+            self.assertIn(f'vrrp_startup_delay {startup_delay}', config)
 
     def test_03_sync_group(self):
         sync_group = 'VyOS'
