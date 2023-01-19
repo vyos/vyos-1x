@@ -15,12 +15,6 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/igmp-proxy.py show_interface</command>
               </leafNode>
-              <leafNode name="mfc">
-                <properties>
-                  <help>Show multicast fowarding cache</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/igmp-proxy.py show_mfc</command>
-              </leafNode>
               <leafNode name="summary">
                 <properties>
                   <help>IP multicast information</help>
