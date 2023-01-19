@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="add">
+    <properties>
+      <help>Add an object</help>
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Add item to a system facility</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Add a new image to the system</help>
+              <completionHelp>
+                <list>/path/to/vyos-image.iso "http://example.com/vyos-image.iso"</list>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}"</command>
+            <children>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Download image via specified VRF</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --vrf "${6}"</command>
+                <children>
+                  <tagNode name="username">
+                    <properties>
+                      <help>Username for authentication</help>
+                    </properties>
+                    <children>
+                      <tagNode name="password">
+                        <properties>
+                          <help>Password to use with authentication</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </tagNode>
+              <tagNode name="username">
+                <properties>
+                  <help>Username for authentication</help>
+                </properties>
+                <children>
+                  <tagNode name="password">
+                    <properties>
+                      <help>Password to use with authentication</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --username "${6}" --password "${8}"</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="set">
+    <properties>
+      <help>Install a new system</help>
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Set system operational parameters</help>
+        </properties>
+        <children>
+          <node name="image">
+            <properties>
+              <help>Set system image parameters</help>
+            </properties>
+            <children>
+              <tagNode name="default-boot">
+                <properties>
+                  <help>Set default image to boot.</help>
+                  <completionHelp>
+                    <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set --image_name "${5}"</command>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="install">
+    <properties>
+      <help>Install a new system</help>
+    </properties>
+    <children>
+      <node name="image">
+        <properties>
+          <help>Install new system image to hard drive</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action install</command>
+      </node>
+    </children>
+  </node>
+  <node name="delete">
+    <properties>
+      <help>Delete an object</help>
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Delete system objects</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>Remove an installed image from the system</help>
+              <completionHelp>
+                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image_name "${4}"</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="rename">
+    <properties>
+      <help>Rename an object</help>
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Rename a system object</help>
+        </properties>
+        <children>
+          <tagNode name="image">
+            <properties>
+              <help>System image to rename</help>
+              <completionHelp>
+                <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <tagNode name="to">
+                <properties>
+                  <help>A new name for an image</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action rename --image_name "${4}" --image_new_name "${6}"</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <properties>
+      <help>Rename an object</help>
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Show system information</help>
+        </properties>
+        <children>
+          <node name="image">
+            <properties>
+              <help>Show installed VyOS images</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/image_info.py show_images_summary</command>
+            <children>
+              <node name="details">
+                <properties>
+                  <help>Show details about installed VyOS images</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/image_info.py show_images_details</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
