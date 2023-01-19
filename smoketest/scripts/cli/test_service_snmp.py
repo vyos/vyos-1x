@@ -123,6 +123,28 @@ class TestSNMPService(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
         self.cli_delete(['interfaces', 'dummy', dummy_if])
 
+        ## Check communities and default view RESTRICTED
+        for auth in ['ro', 'rw']:
+            community = 'VyOS' + auth
+            for addr in clients:
+                if is_ipv4(addr):
+                    entry = auth + 'community ' + community + ' ' + addr + ' -V'
+                else:
+                    entry = auth + 'community6 ' + community + ' ' + addr + ' -V'
+                config = get_config_value(entry)
+                expected = 'RESTRICTED'
+                self.assertIn(expected, config)
+            for addr in networks:
+                if is_ipv4(addr):
+                    entry = auth + 'community ' + community + ' ' + addr + ' -V'
+                else:
+                    entry = auth + 'community6 ' + community + ' ' + addr + ' -V'
+                config = get_config_value(entry)
+                expected = 'RESTRICTED'
+                self.assertIn(expected, config)
+        # And finally check global entry for RESTRICTED view
+        config = get_config_value('view RESTRICTED    included .1')
+        self.assertIn('80', config)
 
     def test_snmpv3_sha(self):
         # Check if SNMPv3 can be configured with SHA authentication
