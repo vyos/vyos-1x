@@ -1,0 +1,22 @@
+# load EFI video modules
+if [ "${grub_platform}" == "efi" ]; then
+    insmod efi_gop
+    insmod efi_uga
+fi
+
+# create and activate serial console
+function setup_serial {
+    # initialize the first serial port by default
+    if [ "${console_type}" == "ttyS" ]; then
+        serial --unit=${console_num}
+    else
+        serial --unit=0
+    fi
+    terminal_output --append serial console
+    terminal_input --append serial console
+}
+
+setup_serial
+
+# find root device
+#search --no-floppy --fs-uuid --set=root ${root_uuid}

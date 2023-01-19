@@ -1,0 +1,22 @@
+{% set boot_opts_default = "boot=live rootdelay=5 noautologin net.ifnames=0 biosdevname=0 vyos-union=/boot/" + version_name %}
+{% if boot_opts != '' %}
+{%     set boot_opts_rendered = boot_opts %}
+{% else %}
+{%     set boot_opts_rendered = boot_opts_default %}
+{% endif %}
+menuentry "{{ version_name }}" --id {{ version_uuid }} {
+    set boot_opts="{{ boot_opts_rendered }}"
+    # load rootfs to RAM
+    if [ "${boot_toram}" == "yes" ]; then
+        set boot_opts="${boot_opts} toram"
+    fi
+    if [ "${bootmode}" == "pw_reset" ]; then
+        set boot_opts="${boot_opts} console=${console_type}${console_num} init=/opt/vyatta/sbin/standalone_root_pw_reset"
+    elif [ "${bootmode}" == "recovery" ]; then
+        set boot_opts="${boot_opts} console=${console_type}${console_num} init=/usr/bin/busybox init"
+    else
+        set boot_opts="${boot_opts} console=${console_type}${console_num}"
+    fi
+    linux "/boot/{{ version_name }}/vmlinuz" ${boot_opts}
+    initrd "/boot/{{ version_name }}/initrd.img"
+}
