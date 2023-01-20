@@ -24,4 +24,9 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
     ],
+    entry_points={
+        "console_scripts": [
+            "config-mgmt = vyos.config_mgmt:run",
+        ],
+    },
 )

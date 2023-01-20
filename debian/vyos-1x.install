@@ -18,6 +18,7 @@ etc/vyos
 lib/
 opt/
 usr/sbin
+usr/bin/config-mgmt
 usr/bin/initial-setup
 usr/bin/vyos-config-file-query
 usr/bin/vyos-config-to-commands
