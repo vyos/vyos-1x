@@ -61,6 +61,9 @@ def _get_raw_data(interface=None, detail=False):
 
 def _get_formatted_output(raw_data):
     data_entries = []
+    tmp = dict_search('lldp.interface', raw_data)
+    if not tmp:
+        return None
     for neighbor in dict_search('lldp.interface', raw_data):
         for local_if, values in neighbor.items():
             tmp = []
