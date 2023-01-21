@@ -75,6 +75,8 @@ def get_config(config=None):
         default_values = defaults(base + ['name'])
         if 'port' in default_values:
             del default_values['port']
+        if 'volume' in default_values:
+            del default_values['volume']
         for name in container['name']:
             container['name'][name] = dict_merge(default_values, container['name'][name])
 
@@ -85,6 +87,13 @@ def get_config(config=None):
                     default_values = defaults(base + ['name', 'port'])
                     container['name'][name]['port'][port] = dict_merge(
                         default_values, container['name'][name]['port'][port])
+            # XXX: T2665: we can not safely rely on the defaults() when there are
+            # tagNodes in place, it is better to blend in the defaults manually.
+            if 'volume' in container['name'][name]:
+                for volume in container['name'][name]['volume']:
+                    default_values = defaults(base + ['name', 'volume'])
+                    container['name'][name]['volume'][volume] = dict_merge(
+                        default_values, container['name'][name]['volume'][volume])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, base + ['network'])
@@ -245,7 +254,7 @@ def generate_run_arguments(name, container_config):
     env_opt = ''
     if 'environment' in container_config:
         for k, v in container_config['environment'].items():
-            env_opt += f" -e \"{k}={v['value']}\""
+            env_opt += f" --env \"{k}={v['value']}\""
 
     # Publish ports
     port = ''
@@ -255,7 +264,7 @@ def generate_run_arguments(name, container_config):
             protocol = container_config['port'][portmap]['protocol']
             sport = container_config['port'][portmap]['source']
             dport = container_config['port'][portmap]['destination']
-            port += f' -p {sport}:{dport}/{protocol}'
+            port += f' --publish {sport}:{dport}/{protocol}'
 
     # Bind volume
     volume = ''
@@ -263,7 +272,8 @@ def generate_run_arguments(name, container_config):
         for vol, vol_config in container_config['volume'].items():
             svol = vol_config['source']
             dvol = vol_config['destination']
-            volume += f' -v {svol}:{dvol}'
+            mode = vol_config['mode']
+            volume += f' --volume {svol}:{dvol}:{mode}'
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
