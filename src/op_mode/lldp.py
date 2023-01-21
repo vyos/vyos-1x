@@ -80,6 +80,10 @@ def _get_formatted_output(raw_data):
             # Capabilities
             cap = ''
             capabilities = jmespath.search('chassis.[*][0][0].capability', values)
+            # One can not always ensure that "capability" is of type list, add
+            # safeguard. E.G. Unify US-24-250W only has a dict, not a list of dicts
+            if isinstance(capabilities, dict):
+                capabilities = [capabilities]
             if capabilities:
                 for capability in capabilities:
                     if capability['enabled']:
