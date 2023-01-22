@@ -64,7 +64,11 @@ def _get_formatted_output(raw_data):
     tmp = dict_search('lldp.interface', raw_data)
     if not tmp:
         return None
-    for neighbor in dict_search('lldp.interface', raw_data):
+    # One can not always ensure that "interface" is of type list, add safeguard.
+    # E.G. Juniper Networks, Inc. ex2300-c-12t only has a dict, not a list of dicts
+    if isinstance(tmp, dict):
+        tmp = [tmp]
+    for neighbor in tmp:
         for local_if, values in neighbor.items():
             tmp = []
 
