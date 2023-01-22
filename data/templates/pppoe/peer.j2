@@ -36,10 +36,13 @@ maxfail 0
 
 plugin rp-pppoe.so {{ source_interface }}
 {% if access_concentrator is vyos_defined %}
-rp_pppoe_ac '{{ access_concentrator }}'
+pppoe-ac "{{ access_concentrator }}"
 {% endif %}
 {% if service_name is vyos_defined %}
-rp_pppoe_service '{{ service_name }}'
+pppoe-service "{{ service_name }}"
+{% endif %}
+{% if host_uniq is vyos_defined %}
+pppoe-host-uniq "{{ host_uniq }}"
 {% endif %}
 
 persist

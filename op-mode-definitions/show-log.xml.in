@@ -270,7 +270,7 @@
                 <properties>
                   <help>Show PPPoE log on specific interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py -t pppoe</script>
+                    <path>interfaces pppoe</path>
                   </completionHelp>
                 </properties>
                 <command>journalctl --no-hostname --boot --unit "ppp@$5.service"</command>

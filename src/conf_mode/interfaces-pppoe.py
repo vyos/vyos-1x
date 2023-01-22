@@ -54,7 +54,8 @@ def get_config(config=None):
     # All parameters that can be changed on-the-fly (like interface description)
     # should not lead to a reconnect!
     for options in ['access-concentrator', 'connect-on-demand', 'service-name',
-                    'source-interface', 'vrf', 'no-default-route', 'authentication']:
+                    'source-interface', 'vrf', 'no-default-route',
+                    'authentication', 'host_uniq']:
         if is_node_changed(conf, base + [ifname, options]):
             pppoe.update({'shutdown_required': {}})
             # bail out early - no need to further process other nodes

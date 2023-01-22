@@ -37,6 +37,19 @@
               <constraintErrorMessage>Timeout must be in range 0 to 86400</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="host-uniq">
+            <properties>
+              <help>PPPoE RFC2516 host-uniq tag</help>
+              <valueHelp>
+                <format>txt</format>
+                <description>Host-uniq tag as byte string in HEX</description>
+              </valueHelp>
+              <constraint>
+                <regex>([a-fA-F0-9][a-fA-F0-9]){1,18}</regex>
+              </constraint>
+              <constraintErrorMessage>Host-uniq must be specified as hex-adecimal byte-string (even number of HEX characters)</constraintErrorMessage>
+            </properties>
+          </leafNode>
           <node name="ip">
             <properties>
               <help>IPv4 routing parameters</help>

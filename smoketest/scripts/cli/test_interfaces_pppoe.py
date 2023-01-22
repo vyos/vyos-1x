@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -57,8 +57,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def test_01_pppoe_client(self):
         # Check if PPPoE dialer can be configured and runs
         for interface in self._interfaces:
-            user = 'VyOS-user-' + interface
-            passwd = 'VyOS-passwd-' + interface
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
             mtu = '1400'
 
             self.cli_set(base_path + [interface, 'authentication', 'user', user])
@@ -76,23 +76,26 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
         # verify configuration file(s)
         for interface in self._interfaces:
-            user = 'VyOS-user-' + interface
-            password = 'VyOS-passwd-' + interface
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
 
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, mtu)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
-            self.assertEqual(tmp, password)
+            self.assertEqual(tmp, passwd)
             tmp = get_config_value(interface, 'ifname')[1]
             self.assertEqual(tmp, interface)
 
     def test_02_pppoe_client_disabled_interface(self):
         # Check if PPPoE Client can be disabled
         for interface in self._interfaces:
-            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
-            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'disable'])
 
@@ -117,7 +120,10 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     def test_03_pppoe_authentication(self):
         # When username or password is set - so must be the other
         for interface in self._interfaces:
-            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
 
@@ -125,7 +131,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
 
-            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
 
         self.cli_commit()
 
@@ -136,8 +142,11 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         sla_len = '8'
 
         for interface in self._interfaces:
-            self.cli_set(base_path + [interface, 'authentication', 'user', 'vyos'])
-            self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'no-default-route'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
@@ -149,18 +158,54 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.cli_set(dhcpv6_pd_base + ['interface', self._source_interface, 'address', address])
             self.cli_set(dhcpv6_pd_base + ['interface', self._source_interface, 'sla-id',  sla_id])
 
-            # commit changes
-            self.cli_commit()
+        # commit changes
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
 
             # verify "normal" PPPoE value - 1492 is default MTU
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, '1492')
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
-            self.assertEqual(tmp, 'vyos')
+            self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
-            self.assertEqual(tmp, 'vyos')
+            self.assertEqual(tmp, passwd)
             tmp = get_config_value(interface, '+ipv6 ipv6cp-use-ipaddr')
             self.assertListEqual(tmp, ['+ipv6', 'ipv6cp-use-ipaddr'])
+
+    def test_05_pppoe_options(self):
+        # Check if PPPoE dialer can be configured with DHCPv6-PD
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+            ac_name = f'AC{interface}'
+            service_name = f'SRV{interface}'
+            host_uniq = 'cafebeefBABE123456'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+
+            self.cli_set(base_path + [interface, 'access-concentrator', ac_name])
+            self.cli_set(base_path + [interface, 'service-name', service_name])
+            self.cli_set(base_path + [interface, 'host-uniq', host_uniq])
+
+        # commit changes
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            ac_name = f'AC{interface}'
+            service_name = f'SRV{interface}'
+            host_uniq = 'cafebeefBABE123456'
+
+            tmp = get_config_value(interface, 'pppoe-ac')[1]
+            self.assertEqual(tmp, f'"{ac_name}"')
+            tmp = get_config_value(interface, 'pppoe-service')[1]
+            self.assertEqual(tmp, f'"{service_name}"')
+            tmp = get_config_value(interface, 'pppoe-host-uniq')[1]
+            self.assertEqual(tmp, f'"{host_uniq}"')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
