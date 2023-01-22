@@ -211,7 +211,7 @@
                 <properties>
                   <help>Monitor last lines of specific MACsec interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py -t macsec</script>
+                    <path>interfaces macsec</path>
                   </completionHelp>
                 </properties>
                 <command>SRC=$(cli-shell-api returnValue interfaces macsec "$5" source-interface); journalctl --no-hostname --boot --follow --unit "wpa_supplicant-macsec@$SRC.service"</command>
