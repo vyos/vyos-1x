@@ -246,7 +246,7 @@
                 <properties>
                   <help>Monitor last lines of SSTP client log for specific interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py -t sstpc</script>
+                    <path>interfaces sstpc</path>
                   </completionHelp>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit "ppp@$5.service"</command>
