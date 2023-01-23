@@ -88,6 +88,14 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         priority = '123'
         preempt_delay = '400'
         startup_delay = '120'
+        garp_master_delay = '2'
+        garp_master_repeat = '3'
+        garp_master_refresh = '4'
+        garp_master_refresh_repeat = '5'
+        garp_interval = '1.5'
+        group_garp_master_delay = '12'
+        group_garp_master_repeat = '13'
+        group_garp_master_refresh = '14'
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
@@ -112,12 +120,31 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(group_base + ['authentication', 'type', 'plaintext-password'])
             self.cli_set(group_base + ['authentication', 'password', f'{group}'])
 
-            # Global parameters
-            config = getConfig(f'global_defs')
-            self.cli_set(global_param_base + ['startup-delay', f'{startup_delay}'])
+            # GARP
+            self.cli_set(group_base + ['garp', 'master-delay', group_garp_master_delay])
+            self.cli_set(group_base + ['garp', 'master-repeat', group_garp_master_repeat])
+            self.cli_set(group_base + ['garp', 'master-refresh', group_garp_master_refresh])
+
+        # Global parameters
+        #config = getConfig(f'global_defs')
+        self.cli_set(global_param_base + ['startup-delay', f'{startup_delay}'])
+        self.cli_set(global_param_base + ['garp', 'interval', f'{garp_interval}'])
+        self.cli_set(global_param_base + ['garp', 'master-delay', f'{garp_master_delay}'])
+        self.cli_set(global_param_base + ['garp', 'master-repeat', f'{garp_master_repeat}'])
+        self.cli_set(global_param_base + ['garp', 'master-refresh', f'{garp_master_refresh}'])
+        self.cli_set(global_param_base + ['garp', 'master-refresh-repeat', f'{garp_master_refresh_repeat}'])
 
         # commit changes
         self.cli_commit()
+
+        # Check Global parameters
+        config = getConfig(f'global_defs')
+        self.assertIn(f'vrrp_startup_delay {startup_delay}', config)
+        self.assertIn(f'vrrp_garp_interval {garp_interval}', config)
+        self.assertIn(f'vrrp_garp_master_delay {garp_master_delay}', config)
+        self.assertIn(f'vrrp_garp_master_repeat {garp_master_repeat}', config)
+        self.assertIn(f'vrrp_garp_master_refresh {garp_master_refresh}', config)
+        self.assertIn(f'vrrp_garp_master_refresh_repeat {garp_master_refresh_repeat}', config)
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
@@ -137,9 +164,11 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
             # Authentication
             self.assertIn(f'auth_pass "{group}"', config)
             self.assertIn(f'auth_type PASS', config)
-            # Global parameters
-            config = getConfig(f'global_defs')
-            self.assertIn(f'vrrp_startup_delay {startup_delay}', config)
+
+            #GARP
+            self.assertIn(f'garp_master_delay {group_garp_master_delay}', config)
+            self.assertIn(f'garp_master_refresh {group_garp_master_refresh}', config)
+            self.assertIn(f'garp_master_repeat {group_garp_master_repeat}', config)
 
     def test_03_sync_group(self):
         sync_group = 'VyOS'

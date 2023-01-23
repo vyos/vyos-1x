@@ -51,6 +51,8 @@ def get_config(config=None):
     if 'vrrp' in ha:
         if 'group' in ha['vrrp']:
             default_values_vrrp = defaults(base_vrrp + ['group'])
+            if 'garp' in default_values_vrrp:
+                del default_values_vrrp['garp']
             for group in ha['vrrp']['group']:
                 ha['vrrp']['group'][group] = dict_merge(default_values_vrrp, ha['vrrp']['group'][group])
 

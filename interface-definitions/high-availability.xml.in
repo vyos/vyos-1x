@@ -16,6 +16,7 @@
               <help>VRRP global parameters</help>
             </properties>
             <children>
+              #include <include/vrrp/garp.xml.i>
               <leafNode name="startup-delay">
                 <properties>
                   <help>Time VRRP startup process (in seconds)</help>
@@ -36,6 +37,7 @@
             </properties>
             <children>
               #include <include/generic-interface-broadcast.xml.i>
+              #include <include/vrrp/garp.xml.i>
               <leafNode name="advertise-interval">
                 <properties>
                   <help>Advertise interval</help>

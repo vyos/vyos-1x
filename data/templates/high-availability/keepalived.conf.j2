@@ -8,6 +8,23 @@ global_defs {
 {% if vrrp.global_parameters.startup_delay is vyos_defined %}
     vrrp_startup_delay {{ vrrp.global_parameters.startup_delay }}
 {% endif %}
+{% if vrrp.global_parameters.garp is vyos_defined %}
+{%     if vrrp.global_parameters.garp.interval is vyos_defined %}
+    vrrp_garp_interval {{ vrrp.global_parameters.garp.interval }}
+{%     endif %}
+{%     if vrrp.global_parameters.garp.master_delay is vyos_defined %}
+    vrrp_garp_master_delay {{ vrrp.global_parameters.garp.master_delay }}
+{%     endif %}
+{%     if vrrp.global_parameters.garp.master_refresh is vyos_defined %}
+    vrrp_garp_master_refresh {{ vrrp.global_parameters.garp.master_refresh }}
+{%     endif %}
+{%     if vrrp.global_parameters.garp.master_refresh_repeat is vyos_defined %}
+    vrrp_garp_master_refresh_repeat {{ vrrp.global_parameters.garp.master_refresh_repeat }}
+{%     endif %}
+{%     if vrrp.global_parameters.garp.master_repeat is vyos_defined %}
+    vrrp_garp_master_repeat {{ vrrp.global_parameters.garp.master_repeat }}
+{%     endif %}
+{% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
@@ -31,6 +48,23 @@ vrrp_instance {{ name }} {
     virtual_router_id {{ group_config.vrid }}
     priority {{ group_config.priority }}
     advert_int {{ group_config.advertise_interval }}
+{%         if group_config.garp is vyos_defined %}
+{%             if group_config.garp.interval is vyos_defined %}
+    garp_interval {{ group_config.garp.interval }}
+{%             endif %}
+{%             if group_config.garp.master_delay is vyos_defined %}
+    garp_master_delay {{ group_config.garp.master_delay }}
+{%             endif %}
+{%             if group_config.garp.master_repeat is vyos_defined %}
+    garp_master_repeat {{ group_config.garp.master_repeat }}
+{%             endif %}
+{%             if group_config.garp.master_refresh is vyos_defined %}
+    garp_master_refresh {{ group_config.garp.master_refresh }}
+{%             endif %}
+{%             if group_config.garp.master_refresh_repeat is vyos_defined %}
+    garp_master_refresh_repeat {{ group_config.garp.master_refresh_repeat }}
+{%             endif %}
+{%         endif %}
 {%         if group_config.track.exclude_vrrp_interface is vyos_defined %}
     dont_track_primary
 {%         endif %}
