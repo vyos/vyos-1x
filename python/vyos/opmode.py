@@ -217,6 +217,9 @@ def run(module):
         if not args["raw"]:
             return res
         else:
+            if not isinstance(res, dict) and not isinstance(res, list):
+                raise InternalError(f"Bare literal is not an acceptable raw output, must be a list or an object.\
+                  The output was:{res}")
             res = decamelize(res)
             res = _normalize_field_names(res)
             from json import dumps
