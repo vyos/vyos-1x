@@ -2,6 +2,7 @@
 "accelppp.py",
 "bgp.py",
 "bridge.py",
+"config_mgmt.py",
 "conntrack.py",
 "container.py",
 "cpu.py",
