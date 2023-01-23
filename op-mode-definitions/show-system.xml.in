@@ -29,13 +29,13 @@
                     <properties>
                       <help>Compare config file revisions</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/config_mgmt.py show_commit_diff --rev "$5" --revb "$7"</command>
+                    <command>${vyos_op_scripts_dir}/config_mgmt.py show_commit_diff --rev "$5" --rev2 "$7"</command>
                     <children>
                       <leafNode name="commands">
                         <properties>
                           <help>Compare config file revision commands</help>
                         </properties>
-                        <command>${vyos_op_scripts_dir}/config_mgmt.py show_commit_diff --rev "$5" --revb "$7" --commands</command>
+                        <command>${vyos_op_scripts_dir}/config_mgmt.py show_commit_diff --rev "$5" --rev2 "$7" --commands</command>
                       </leafNode>
                     </children>
                   </tagNode>

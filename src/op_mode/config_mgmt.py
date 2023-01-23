@@ -20,17 +20,17 @@ import typing
 import vyos.opmode
 from vyos.config_mgmt import ConfigMgmt
 
-def show_commit_diff(raw: bool, rev: int, revb: typing.Optional[int],
+def show_commit_diff(raw: bool, rev: int, rev2: typing.Optional[int],
                      commands: bool):
     config_mgmt = ConfigMgmt()
-    config_diff = config_mgmt.show_commit_diff(rev, revb, commands)
+    config_diff = config_mgmt.show_commit_diff(rev, rev2, commands)
 
     if raw:
-        revb = (rev+1) if revb is None else revb
+        rev2 = (rev+1) if rev2 is None else rev2
         if commands:
-            d = {f'config_command_diff_{revb}_{rev}': config_diff}
+            d = {f'config_command_diff_{rev2}_{rev}': config_diff}
         else:
-            d = {f'config_file_diff_{revb}_{rev}': config_diff}
+            d = {f'config_file_diff_{rev2}_{rev}': config_diff}
         return d
 
     return config_diff
