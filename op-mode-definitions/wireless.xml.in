@@ -21,7 +21,7 @@
             <properties>
               <help>Clear interface information for a given wireless interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --type wireless</script>
+                <path>interfaces wireless</path>
               </completionHelp>
             </properties>
             <children>

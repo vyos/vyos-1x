@@ -26,7 +26,7 @@
                 <properties>
                   <help>Show IPv6 neighbor table for specified interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py -b</script>
+                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --interface "$5"</command>

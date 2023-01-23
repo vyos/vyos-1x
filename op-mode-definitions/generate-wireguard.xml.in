@@ -19,7 +19,7 @@
                 <properties>
                   <help>Local interface used for connection</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
+                    <path>interfaces wireguard</path>
                   </completionHelp>
                 </properties>
                 <children>

@@ -16,7 +16,7 @@
                 <properties>
                   <help>Local interface used for connection</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --type openvpn</script>
+                    <path>interfaces openvpn</path>
                   </completionHelp>
                 </properties>
                 <children>

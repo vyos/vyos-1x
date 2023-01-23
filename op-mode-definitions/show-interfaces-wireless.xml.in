@@ -28,7 +28,7 @@
             <properties>
               <help>Show specified wireless interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --type wireless</script>
+                <path>interfaces wireless</path>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wireless</command>

@@ -8,7 +8,7 @@
             <properties>
               <help>Show specified WireGuard interface information</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --type wireguard</script>
+                <path>interfaces wireguard</path>
               </completionHelp>
             </properties>
 	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wireguard</command>
