@@ -70,7 +70,7 @@ class InternalError(Error):
 
 
 def _is_op_mode_function_name(name):
-    if re.match(r"^(show|clear|reset|restart|add|delete|generate)", name):
+    if re.match(r"^(show|clear|reset|restart|add|delete|generate|set)", name):
         return True
     else:
         return False
