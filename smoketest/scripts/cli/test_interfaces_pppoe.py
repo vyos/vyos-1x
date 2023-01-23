@@ -192,5 +192,37 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + [interface, 'authentication', 'password', 'vyos'])
         self.cli_commit()
 
+    def test_pppoe_options(self):
+        # Check if PPPoE dialer can be configured with DHCPv6-PD
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+            ac_name = f'AC{interface}'
+            service_name = f'SRV{interface}'
+            host_uniq = 'cafebeefBABE123456'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+
+            self.cli_set(base_path + [interface, 'access-concentrator', ac_name])
+            self.cli_set(base_path + [interface, 'service-name', service_name])
+            self.cli_set(base_path + [interface, 'host-uniq', host_uniq])
+
+        # commit changes
+        self.cli_commit()
+
+        for interface in self._interfaces:
+            ac_name = f'AC{interface}'
+            service_name = f'SRV{interface}'
+            host_uniq = 'cafebeefBABE123456'
+
+            tmp = get_config_value(interface, 'rp_pppoe_ac')[1]
+            self.assertEqual(tmp, f'"{ac_name}"')
+            tmp = get_config_value(interface, 'rp_pppoe_service')[1]
+            self.assertEqual(tmp, f'"{service_name}"')
+            tmp = get_config_value(interface, 'host-uniq')[1]
+            self.assertEqual(tmp, f'"{host_uniq}"')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

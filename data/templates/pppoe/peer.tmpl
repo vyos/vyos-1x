@@ -36,10 +36,13 @@ maxfail 0
 
 plugin rp-pppoe.so {{ source_interface }}
 {% if access_concentrator is defined and access_concentrator is not none %}
-rp_pppoe_ac '{{ access_concentrator }}'
+rp_pppoe_ac "{{ access_concentrator }}"
 {% endif %}
 {% if service_name is defined and service_name is not none %}
-rp_pppoe_service '{{ service_name }}'
+rp_pppoe_service "{{ service_name }}"
+{% endif %}
+{% if host_uniq is defined and host_uniq is not none %}
+host-uniq "{{ host_uniq }}"
 {% endif %}
 
 persist
