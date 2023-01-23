@@ -268,7 +268,7 @@
           </node>
           <node name="pppoe">
             <properties>
-              <help>Show log for PPPoE</help>
+              <help>Show log for PPPoE interface</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit "ppp@pppoe*.service"</command>
             <children>
@@ -283,6 +283,12 @@
               </tagNode>
             </children>
           </node>
+          <leafNode name="pppoe-server">
+            <properties>
+              <help>Show log for PPPoE server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@pppoe.service</command>
+          </leafNode>
           <node name="protocol">
             <properties>
               <help>Show log for Routing Protocol</help>
