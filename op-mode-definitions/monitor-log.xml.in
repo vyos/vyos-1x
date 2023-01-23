@@ -93,6 +93,12 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit uacctd.service</command>
           </leafNode>
+          <leafNode name="ipoe-server">
+            <properties>
+              <help>Monitor last lines of IPoE server log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@ipoe.service</command>
+          </leafNode>
           <leafNode name="kernel">
             <properties>
               <help>Monitor last lines of Linux Kernel log</help>

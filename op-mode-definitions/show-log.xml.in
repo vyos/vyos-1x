@@ -196,6 +196,12 @@
               </tagNode>
             </children>
           </tagNode>
+          <leafNode name="ipoe-server">
+            <properties>
+              <help>Show log for IPoE server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@ipoe.service</command>
+          </leafNode>
           <leafNode name="kernel">
             <properties>
               <help>Show log for Linux Kernel</help>
