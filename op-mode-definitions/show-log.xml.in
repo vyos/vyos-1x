@@ -177,6 +177,12 @@
               </tagNode>
             </children>
           </tagNode>
+          <leafNode name="ipoe-server">
+            <properties>
+              <help>Show log for IPoE server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@ipoe.service</command>
+          </leafNode>
           <leafNode name="kernel">
             <properties>
               <help>Show messages in kernel ring buffer</help>
@@ -212,6 +218,29 @@
               </tagNode>
             </children>
           </node>
+          <node name="pppoe">
+            <properties>
+              <help>Show log for PPPoE interface</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit "ppp@pppoe*.service"</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Show PPPoE log on specific interface</help>
+                  <completionHelp>
+                    <path>interfaces pppoe</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit "ppp@$5.service"</command>
+              </tagNode>
+            </children>
+          </node>
+          <leafNode name="pppoe-server">
+            <properties>
+              <help>Show log for PPPoE server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@pppoe.service</command>
+          </leafNode>
           <leafNode name="snmp">
             <properties>
               <help>Show log for Simple Network Monitoring Protocol (SNMP)</help>
