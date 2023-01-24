@@ -3,6 +3,9 @@
   <node name="generate">
     <children>
       <node name="interfaces">
+        <properties>
+          <help>Interface specific commands</help>
+        </properties>
         <children>
           <node name="debug-archive">
             <properties>
