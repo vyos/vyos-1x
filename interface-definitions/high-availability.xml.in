@@ -230,16 +230,15 @@
                 <properties>
                   <help>Virtual IP address</help>
                   <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 virtual address</description>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 virtual address</description>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="ipv4-host"/>
-                    <validator name="ipv6-host"/>
+                    <validator name="ip-host"/>
                   </constraint>
                 </properties>
                 <children>
