@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,10 @@ from humps import decamelize
 class Error(Exception):
     """ Any error that makes requested operation impossible to complete
         for reasons unrelated to the user input or script logic.
+
+        This is the base class, scripts should not use it directly
+        and should raise more specific errors instead,
+        whenever possible.
     """
     pass
 
@@ -42,6 +46,13 @@ class DataUnavailable(Error):
 class PermissionDenied(Error):
     """ Requested operation is valid, but the caller has no permission
         to perform it.
+    """
+    pass
+
+class InsufficientResources(Error):
+    """ Requested operation and its arguments are valid but the system
+        does not have enough resources (such as drive space or memory)
+        to complete it.
     """
     pass
 
