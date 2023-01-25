@@ -82,6 +82,15 @@ class ConfigMgmt:
         else:
             self.hostname = 'vyos'
 
+        # upload only on existence of effective values, notably, on boot.
+        # one still needs session self.locations (above) for setting
+        # post-commit hook in conf_mode script
+        path = ['system', 'config-management', 'commit-archive', 'location']
+        if config.exists_effective(path):
+            self.effective_locations = config.return_effective_values(path)
+        else:
+            self.effective_locations = []
+
         # a call to compare without args is edit_level aware
         edit_level = os.getenv('VYATTA_EDIT_LEVEL', '')
         edit_path = [l for l in edit_level.split('/') if l]
@@ -346,7 +355,7 @@ Proceed ?'''
         remote_file = f'config.boot-{hostname}.{timestamp}'
         source_address = self.source_address
 
-        for location in self.locations:
+        for location in self.effective_locations:
             upload(archive_config_file, f'{location}/{remote_file}',
                    source_host=source_address)
 
@@ -618,7 +627,10 @@ def run():
     for s in list(commit_hooks):
         if sys.argv[0].replace('-', '_').endswith(s):
             func = getattr(config_mgmt, s)
-            func()
+            try:
+                func()
+            except Exception as e:
+                print(f'{s}: {e}')
             sys.exit(0)
 
     parser = ArgumentParser()
