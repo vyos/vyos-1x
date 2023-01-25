@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+
+import sys
+import re
+
+from vyos.util import read_file
+
+services_file = '/etc/services'
+
+def get_services():
+    names = []
+    service_data = read_file(services_file, "")
+    for line in service_data.split("\n"):
+        if not line or line[0] == '#':
+            continue
+        names.append(line.split(None, 1)[0])
+    return names
+
+def error(port_range):
+    print(f'Error: {port_range} is not a valid port or port range')
+    sys.exit(1)
+
+if __name__ == '__main__':
+    if len(sys.argv)>1:
+        port_range = sys.argv[1]
+        if re.match('^[0-9]{1,5}-[0-9]{1,5}$', port_range):
+            port_1, port_2 = port_range.split('-')
+            if int(port_1) not in range(1, 65536) or int(port_2) not in range(1, 65536):
+                error(port_range)
+            if int(port_1) > int(port_2):
+                error(port_range)
+        elif port_range.isnumeric() and int(port_range) not in range(1, 65536):
+            error(port_range)
+        elif not port_range.isnumeric() and port_range not in get_services():
+            print(f'Error: {port_range} is not a valid service name')
+            sys.exit(1)
+    else:
+        sys.exit(2)
+
+    sys.exit(0)
