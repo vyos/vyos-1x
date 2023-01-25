@@ -5,6 +5,7 @@
       <node name="config-management" owner="${vyos_conf_scripts_dir}/config_mgmt.py">
         <properties>
           <help>Configuration management settings</help>
+          <priority>400</priority>
         </properties>
         <children>
           <node name="commit-archive">
