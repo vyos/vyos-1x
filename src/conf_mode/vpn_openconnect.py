@@ -46,6 +46,52 @@ radius_servers = cfg_dir + '/radius_servers'
 def get_hash(password):
     return crypt(password, mksalt(METHOD_SHA512))
 
+
+def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
+    """
+    https://phabricator.vyos.net/T2665
+    Clear unnecessary key values in merged config by dict_merge function
+    :param origin: config
+    :type origin: dict
+    :param default_values: default values
+    :type default_values: dict
+    :return: merged dict
+    :rtype: dict
+    """
+    if 'mode' in origin["authentication"] and "local" in \
+            origin["authentication"]["mode"]:
+        del origin['authentication']['local_users']['username']['otp']
+        if not origin["authentication"]["local_users"]["username"]:
+            raise ConfigError(
+                'Openconnect mode local required at least one user')
+        default_ocserv_usr_values = \
+        default_values['authentication']['local_users']['username']['otp']
+        for user, params in origin['authentication']['local_users'][
+            'username'].items():
+            # Not every configuration requires OTP settings
+            if origin['authentication']['local_users']['username'][user].get(
+                    'otp'):
+                origin['authentication']['local_users']['username'][user][
+                    'otp'] = dict_merge(default_ocserv_usr_values,
+                                        origin['authentication'][
+                                            'local_users']['username'][user][
+                                            'otp'])
+
+    if 'mode' in origin["authentication"] and "radius" in \
+            origin["authentication"]["mode"]:
+        del origin['authentication']['radius']['server']['port']
+        if not origin["authentication"]['radius']['server']:
+            raise ConfigError(
+                'Openconnect mode radius required at least one radius server')
+        default_values_radius_port = \
+        default_values['authentication']['radius']['server']['port']
+        for server, params in origin['authentication']['radius'][
+            'server'].items():
+            if 'port' not in params:
+                params['port'] = default_values_radius_port
+    return origin
+
+
 def get_config():
     conf = Config()
     base = ['vpn', 'openconnect']
@@ -57,18 +103,8 @@ def get_config():
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
-
-    if 'mode' in ocserv["authentication"] and "local" in ocserv["authentication"]["mode"]:
-        # workaround a "know limitation" - https://phabricator.vyos.net/T2665
-        del ocserv['authentication']['local_users']['username']['otp']
-        if not ocserv["authentication"]["local_users"]["username"]:
-            raise ConfigError('openconnect mode local required at least one user')
-        default_ocserv_usr_values = default_values['authentication']['local_users']['username']['otp']
-        for user, params in ocserv['authentication']['local_users']['username'].items():
-            # Not every configuration requires OTP settings
-            if ocserv['authentication']['local_users']['username'][user].get('otp'):
-                ocserv['authentication']['local_users']['username'][user]['otp'] = dict_merge(default_ocserv_usr_values, ocserv['authentication']['local_users']['username'][user]['otp'])
-
+    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+    ocserv = T2665_default_dict_cleanup(ocserv, default_values)
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)
