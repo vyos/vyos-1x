@@ -37,6 +37,11 @@ if not config.exists(base_path):
     # Nothing to do
     sys.exit(0)
 
+# config.copy does not recursively create a path, so create ['service'] if
+# it doesn't yet exist, such as for config.boot.default
+if not config.exists(['service']):
+    config.set(['service'])
+
 # copy "system ntp" to "service ntp"
 config.copy(base_path, new_base_path)
 config.delete(base_path)
