@@ -12,6 +12,14 @@ run-as-group = daemon
 
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf{{ ',groupconfig=true' if authentication.radius.groupconfig is vyos_defined else '' }}]"
+{%     if "config_per_x" in authentication %}
+{%         if authentication.config_per_x.disabled is not vyos_defined %}
+{%             if "group" in authentication.config_per_x.mode %}
+config-per-group = {{ authentication.config_per_x.directory }}
+default-group-config = {{ authentication.config_per_x.default_config }}
+{%             endif %}
+{%         endif %}
+{%     endif %}
 {% elif "local" in authentication.mode %}
 {%     if authentication.mode.local == "password-otp" %}
 auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
@@ -22,6 +30,13 @@ auth = "plain[/run/ocserv/ocpasswd]"
 {%     endif %}
 {% else %}
 auth = "plain[/run/ocserv/ocpasswd]"
+{% endif %}
+
+{% if "config_per_x" in authentication %}
+{%     if "user" in authentication.config_per_x.mode %}
+config-per-user = {{ authentication.config_per_x.directory }}
+default-user-config = {{ authentication.config_per_x.default_config }}
+{%     endif %}
 {% endif %}
 
 {% if ssl.certificate is vyos_defined %}

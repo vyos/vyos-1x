@@ -113,6 +113,17 @@ def verify(ocserv):
                                 users_wo_pswd.append(user)
                         if users_wo_pswd:
                             raise ConfigError(f'password required for users:\n{users_wo_pswd}')
+            # Validate that if config-per-x is configured all child config nodes are set
+            if 'config_per_x' in ocserv["authentication"]:
+                if 'disabled' not in ocserv["authentication"]["config_per_x"]:
+                    if 'mode' not in ocserv["authentication"]["config_per_x"]:
+                        raise ConfigError('OpenConnect radius config-per-x enabled but mode not selected')
+                    elif 'group' in ocserv["authentication"]["config_per_x"]["mode"] and "radius" not in ocserv["authentication"]["mode"]:
+                        raise ConfigError('OpenConnect config-per-group must be used with radius authentication')
+                    if 'directory' not in ocserv["authentication"]["config_per_x"]:
+                        raise ConfigError('OpenConnect config-per-x enabled but directory not set')
+                    if 'default_config' not in ocserv["authentication"]["config_per_x"]:
+                        raise ConfigError('OpenConnect config-per-x enabled but default-config not set')
         else:
             raise ConfigError('openconnect authentication mode required')
     else:
