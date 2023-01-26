@@ -428,7 +428,7 @@ Proceed ?'''
     #
     @staticmethod
     def _strip_version(s):
-        return re.split(r'(//)', s)[0]
+        return re.split(r'(^//)', s)[0]
 
     def _get_saved_config_tree(self):
         with open(config_file) as f:
