@@ -2,27 +2,23 @@
 nas-identifier VyOS
 
 #### Accounting
-{% if "radius" in accounting['mode'] %}
-{%     for acctsrv in accounting['radius']['server'] %}
-{%         if not "disable" in accounting['radius']['server'][acctsrv] %}
-{%             if "port" in accounting['radius']['server'][acctsrv] %}
-acctserver {{ acctsrv }}:{{ accounting['radius']['server'][acctsrv]['port'] }}
-{%             else %}
+{% if accounting.mode.radius is vyos_defined %}
+{%     for acctsrv, srv_conf in accounting.radius.server.items() if 'disable' not in srv_conf %}
+{%         if srv_conf.port is vyos_defined %}
+acctserver {{ acctsrv }}:{{ srv_conf.port }}
+{%         else %}
 acctserver {{ acctsrv }}
-{%             endif %}
 {%         endif %}
 {%     endfor %}
 {% endif %}
 
 #### Authentication
-{% if "radius" in authentication['mode'] %}
-{%     for authsrv in authentication['radius']['server'] %}
-{%         if not "disable" in authentication['radius']['server'][authsrv] %}
-{%             if "port" in authentication['radius']['server'][authsrv] %}
-authserver {{ authsrv }}:{{ authentication['radius']['server'][authsrv]['port'] }}
-{%             else %}
+{% if authentication.mode.radius is vyos_defined %}
+{%     for authsrv, srv_conf in authentication.radius.server.items() if 'disable' not in srv_conf %}
+{%         if srv_conf.port is vyos_defined %}
+authserver {{ authsrv }}:{{ srv_conf.port }}
+{%         else %}
 authserver {{ authsrv }}
-{%             endif %}
 {%         endif %}
 {%     endfor %}
 radius_timeout {{ authentication['radius']['timeout'] }}

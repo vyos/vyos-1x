@@ -210,18 +210,16 @@ def generate(ocserv):
         return None
 
     if "radius" in ocserv["authentication"]["mode"]:
-        if "accounting" in ocserv and "mode" in ocserv["accounting"] and "radius" in ocserv["accounting"]["mode"]:
-            acct_and_auth_config = {'accounting': ocserv["accounting"], 'authentication': ocserv["authentication"]}
+        if dict_search(ocserv, 'accounting.mode.radius'):
             # Render radius client configuration
-            render(radius_cfg, 'ocserv/radius_conf.j2', acct_and_auth_config)
+            render(radius_cfg, 'ocserv/radius_conf.j2', ocserv)
             merged_servers = ocserv["accounting"]["radius"]["server"] | ocserv["authentication"]["radius"]["server"]
             # Render radius servers
             # Merge the accounting and authentication servers into a single dictionary
             render(radius_servers, 'ocserv/radius_servers.j2', {'server': merged_servers})
         else:
-            acct_and_auth_config = {'accounting': {'mode': ''}, 'authentication': ocserv['authentication']}
             # Render radius client configuration
-            render(radius_cfg, 'ocserv/radius_conf.j2', acct_and_auth_config)
+            render(radius_cfg, 'ocserv/radius_conf.j2', ocserv)
             # Render radius servers
             render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
     elif "local" in ocserv["authentication"]["mode"]:
