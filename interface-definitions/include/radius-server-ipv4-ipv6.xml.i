@@ -23,7 +23,7 @@
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/radius-server-key.xml.i>
-        #include <include/radius-server-port.xml.i>
+        #include <include/radius-server-auth-port.xml.i>
       </children>
     </tagNode>
     <leafNode name="source-address">

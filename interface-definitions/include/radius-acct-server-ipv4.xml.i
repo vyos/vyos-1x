@@ -1,10 +1,9 @@
-<!-- include start from radius-server-ipv4.xml.i -->
+<!-- include start from radius-acct-server-ipv4.xml.i -->
 <node name="radius">
   <properties>
-    <help>RADIUS based user authentication</help>
+    <help>RADIUS accounting for users OpenConnect VPN sessions OpenConnect authentication mode radius</help>
   </properties>
   <children>
-    #include <include/source-address-ipv4.xml.i>
     <tagNode name="server">
       <properties>
         <help>RADIUS server configuration</help>
@@ -19,7 +18,7 @@
       <children>
         #include <include/generic-disable-node.xml.i>
         #include <include/radius-server-key.xml.i>
-        #include <include/radius-server-port.xml.i>
+        #include <include/radius-server-acct-port.xml.i>
       </children>
     </tagNode>
   </children>

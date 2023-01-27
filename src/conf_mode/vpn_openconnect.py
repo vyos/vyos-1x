@@ -121,6 +121,14 @@ def verify(ocserv):
                 not is_listen_port_bind_service(int(port), 'ocserv-main'):
             raise ConfigError(f'"{proto}" port "{port}" is used by another service')
 
+    # Check accounting
+    if "accounting" in ocserv:
+        if "mode" in ocserv["accounting"] and "radius" in ocserv["accounting"]["mode"]:
+            if "authentication" not in ocserv or "mode" not in ocserv["authentication"]:
+                raise ConfigError('Accounting depends on OpenConnect authentication configuration')
+            elif "radius" not in ocserv["authentication"]["mode"]:
+                raise ConfigError('RADIUS accounting must be used with RADIUS authentication')
+
     # Check authentication
     if "authentication" in ocserv:
         if "mode" in ocserv["authentication"]:
@@ -202,10 +210,20 @@ def generate(ocserv):
         return None
 
     if "radius" in ocserv["authentication"]["mode"]:
-        # Render radius client configuration
-        render(radius_cfg, 'ocserv/radius_conf.j2', ocserv["authentication"]["radius"])
-        # Render radius servers
-        render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
+        if "accounting" in ocserv and "mode" in ocserv["accounting"] and "radius" in ocserv["accounting"]["mode"]:
+            acct_and_auth_config = {'accounting': ocserv["accounting"], 'authentication': ocserv["authentication"]}
+            # Render radius client configuration
+            render(radius_cfg, 'ocserv/radius_conf.j2', acct_and_auth_config)
+            merged_servers = ocserv["accounting"]["radius"]["server"] | ocserv["authentication"]["radius"]["server"]
+            # Render radius servers
+            # Merge the accounting and authentication servers into a single dictionary
+            render(radius_servers, 'ocserv/radius_servers.j2', {'server': merged_servers})
+        else:
+            acct_and_auth_config = {'accounting': {'mode': ''}, 'authentication': ocserv['authentication']}
+            # Render radius client configuration
+            render(radius_cfg, 'ocserv/radius_conf.j2', acct_and_auth_config)
+            # Render radius servers
+            render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
     elif "local" in ocserv["authentication"]["mode"]:
         # if mode "OTP", generate OTP users file parameters
         if "otp" in ocserv["authentication"]["mode"]["local"]:
