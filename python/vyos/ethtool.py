@@ -56,10 +56,10 @@ class Ethtool:
 
     def __init__(self, ifname):
         # Get driver used for interface
-        sysfs_file = f'/sys/class/net/{ifname}/device/driver/module'
-        if os.path.exists(sysfs_file):
-            link = os.readlink(sysfs_file)
-            self._driver_name = os.path.basename(link)
+        out, err = popen(f'ethtool --driver {ifname}')
+        driver = re.search(r'driver:\s(\w+)', out)
+        if driver:
+            self._driver_name = driver.group(1)
 
         # Build a dictinary of supported link-speed and dupley settings.
         out, err = popen(f'ethtool {ifname}')
