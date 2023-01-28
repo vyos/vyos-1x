@@ -242,7 +242,8 @@ class ConfigTree(object):
             raise ConfigTreeError()
         res = self.__copy(self.__config, oldpath_str, newpath_str)
         if (res != 0):
-            raise ConfigTreeError("Path [{}] doesn't exist".format(old_path))
+            msg = self.__get_error().decode()
+            raise ConfigTreeError(msg)
 
         if self.__migration:
             print(f"- op: copy old_path: {old_path} new_path: {new_path}")
