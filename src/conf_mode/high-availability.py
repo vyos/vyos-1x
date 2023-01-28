@@ -28,6 +28,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
@@ -49,12 +50,27 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     if 'vrrp' in ha:
+        if dict_search('vrrp.global_parameters.garp', ha) != None:
+            default_values = defaults(base_vrrp + ['global-parameters', 'garp'])
+            ha['vrrp']['global_parameters']['garp'] = dict_merge(
+                default_values, ha['vrrp']['global_parameters']['garp'])
+
         if 'group' in ha['vrrp']:
-            default_values_vrrp = defaults(base_vrrp + ['group'])
-            if 'garp' in default_values_vrrp:
-                del default_values_vrrp['garp']
+            default_values = defaults(base_vrrp + ['group'])
+            default_values_garp = defaults(base_vrrp + ['group', 'garp'])
+
+            # XXX: T2665: we can not safely rely on the defaults() when there are
+            # tagNodes in place, it is better to blend in the defaults manually.
+            if 'garp' in default_values:
+                del default_values['garp']
             for group in ha['vrrp']['group']:
-                ha['vrrp']['group'][group] = dict_merge(default_values_vrrp, ha['vrrp']['group'][group])
+                ha['vrrp']['group'][group] = dict_merge(default_values, ha['vrrp']['group'][group])
+
+                # XXX: T2665: we can not safely rely on the defaults() when there are
+                # tagNodes in place, it is better to blend in the defaults manually.
+                if 'garp' in ha['vrrp']['group'][group]:
+                    ha['vrrp']['group'][group]['garp'] = dict_merge(
+                        default_values_garp, ha['vrrp']['group'][group]['garp'])
 
     # Merge per virtual-server default values
     if 'virtual_server' in ha:
