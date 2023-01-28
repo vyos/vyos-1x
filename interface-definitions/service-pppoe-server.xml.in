@@ -20,7 +20,7 @@
               #include <include/accel-ppp/auth-local-users.xml.i>
               #include <include/accel-ppp/auth-mode.xml.i>
               #include <include/accel-ppp/auth-protocols.xml.i>
-              #include <include/radius-server-ipv4.xml.i>
+              #include <include/radius-auth-server-ipv4.xml.i>
               #include <include/accel-ppp/radius-additions.xml.i>
               <node name="radius">
                 <children>

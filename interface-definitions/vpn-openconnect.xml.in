@@ -8,6 +8,27 @@
           <priority>901</priority>
         </properties>
         <children>
+          <node name="accounting">
+            <properties>
+              <help>Accounting for users OpenConnect VPN Sessions</help>
+            </properties>
+            <children>
+              <node name="mode">
+                <properties>
+                  <help>Accounting mode used by this server</help>
+                </properties>
+                <children>
+                  <leafNode name="radius">
+                    <properties>
+                      <help>Use RADIUS server for accounting</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/radius-acct-server-ipv4.xml.i>
+            </children>
+          </node>
           <node name="authentication">
             <properties>
               <help>Authentication for remote access SSL VPN Server</help>
@@ -137,7 +158,7 @@
                   </tagNode>
                 </children>
               </node>
-              #include <include/radius-server-ipv4.xml.i>
+              #include <include/radius-auth-server-ipv4.xml.i>
               <node name="radius">
                 <children>
                   #include <include/radius-timeout.xml.i>

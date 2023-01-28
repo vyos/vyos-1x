@@ -923,7 +923,7 @@
                   #include <include/name-server-ipv4-ipv6.xml.i>
                 </children>
               </tagNode>
-              #include <include/radius-server-ipv4.xml.i>
+              #include <include/radius-auth-server-ipv4.xml.i>
               <node name="radius">
                 <children>
                   #include <include/radius-nas-identifier.xml.i>

@@ -10,6 +10,10 @@ udp-port = {{ listen_ports.udp }}
 run-as-user = nobody
 run-as-group = daemon
 
+{% if accounting.mode.radius is vyos_defined %}
+acct = "radius [config=/run/ocserv/radiusclient.conf]"
+{% endif %}
+
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf{{ ',groupconfig=true' if authentication.radius.groupconfig is vyos_defined else '' }}]"
 {% elif "local" in authentication.mode %}

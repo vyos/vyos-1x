@@ -82,10 +82,23 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
         del origin['authentication']['radius']['server']['port']
         if not origin["authentication"]['radius']['server']:
             raise ConfigError(
-                'Openconnect mode radius required at least one radius server')
+                'Openconnect authentication mode radius required at least one radius server')
         default_values_radius_port = \
         default_values['authentication']['radius']['server']['port']
         for server, params in origin['authentication']['radius'][
+            'server'].items():
+            if 'port' not in params:
+                params['port'] = default_values_radius_port
+
+    if 'mode' in origin["accounting"] and "radius" in \
+            origin["accounting"]["mode"]:
+        del origin['accounting']['radius']['server']['port']
+        if not origin["accounting"]['radius']['server']:
+            raise ConfigError(
+                'Openconnect accounting mode radius required at least one radius server')
+        default_values_radius_port = \
+            default_values['accounting']['radius']['server']['port']
+        for server, params in origin['accounting']['radius'][
             'server'].items():
             if 'port' not in params:
                 params['port'] = default_values_radius_port
@@ -120,6 +133,14 @@ def verify(ocserv):
         if check_port_availability(ocserv['listen_address'], int(port), proto) is not True and \
                 not is_listen_port_bind_service(int(port), 'ocserv-main'):
             raise ConfigError(f'"{proto}" port "{port}" is used by another service')
+
+    # Check accounting
+    if "accounting" in ocserv:
+        if "mode" in ocserv["accounting"] and "radius" in ocserv["accounting"]["mode"]:
+            if "authentication" not in ocserv or "mode" not in ocserv["authentication"]:
+                raise ConfigError('Accounting depends on OpenConnect authentication configuration')
+            elif "radius" not in ocserv["authentication"]["mode"]:
+                raise ConfigError('RADIUS accounting must be used with RADIUS authentication')
 
     # Check authentication
     if "authentication" in ocserv:
@@ -202,10 +223,18 @@ def generate(ocserv):
         return None
 
     if "radius" in ocserv["authentication"]["mode"]:
-        # Render radius client configuration
-        render(radius_cfg, 'ocserv/radius_conf.j2', ocserv["authentication"]["radius"])
-        # Render radius servers
-        render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
+        if dict_search(ocserv, 'accounting.mode.radius'):
+            # Render radius client configuration
+            render(radius_cfg, 'ocserv/radius_conf.j2', ocserv)
+            merged_servers = ocserv["accounting"]["radius"]["server"] | ocserv["authentication"]["radius"]["server"]
+            # Render radius servers
+            # Merge the accounting and authentication servers into a single dictionary
+            render(radius_servers, 'ocserv/radius_servers.j2', {'server': merged_servers})
+        else:
+            # Render radius client configuration
+            render(radius_cfg, 'ocserv/radius_conf.j2', ocserv)
+            # Render radius servers
+            render(radius_servers, 'ocserv/radius_servers.j2', ocserv["authentication"]["radius"])
     elif "local" in ocserv["authentication"]["mode"]:
         # if mode "OTP", generate OTP users file parameters
         if "otp" in ocserv["authentication"]["mode"]["local"]:
