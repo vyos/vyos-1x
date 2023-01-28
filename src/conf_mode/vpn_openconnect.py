@@ -82,10 +82,23 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
         del origin['authentication']['radius']['server']['port']
         if not origin["authentication"]['radius']['server']:
             raise ConfigError(
-                'Openconnect mode radius required at least one radius server')
+                'Openconnect authentication mode radius required at least one radius server')
         default_values_radius_port = \
         default_values['authentication']['radius']['server']['port']
         for server, params in origin['authentication']['radius'][
+            'server'].items():
+            if 'port' not in params:
+                params['port'] = default_values_radius_port
+
+    if 'mode' in origin["accounting"] and "radius" in \
+            origin["accounting"]["mode"]:
+        del origin['accounting']['radius']['server']['port']
+        if not origin["accounting"]['radius']['server']:
+            raise ConfigError(
+                'Openconnect accounting mode radius required at least one radius server')
+        default_values_radius_port = \
+            default_values['accounting']['radius']['server']['port']
+        for server, params in origin['accounting']['radius'][
             'server'].items():
             if 'port' not in params:
                 params['port'] = default_values_radius_port
