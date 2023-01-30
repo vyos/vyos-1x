@@ -193,6 +193,16 @@ def dot_colon_to_dash(text):
     text = text.replace(".", "-")
     return text
 
+@register_filter('generate_uuid4')
+def generate_uuid4(text):
+    """ Generate random unique ID
+    Example:
+      % uuid4()
+      UUID('958ddf6a-ef14-4e81-8cfb-afb12456d1c5')
+    """
+    from uuid import uuid4
+    return uuid4()
+
 @register_filter('netmask_from_cidr')
 def netmask_from_cidr(prefix):
     """ Take CIDR prefix and convert the prefix length to a "subnet mask".

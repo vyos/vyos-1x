@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import ipaddress
 import os
 import re
+import jmespath
 
 from sys import exit
 from time import sleep
@@ -218,6 +219,12 @@ def verify_pki_rsa(pki, rsa_conf):
 def verify(ipsec):
     if not ipsec:
         return None
+
+    if 'authentication' in ipsec:
+        if 'psk' in ipsec['authentication']:
+            for psk, psk_config in ipsec['authentication']['psk'].items():
+                if 'id' not in psk_config or 'secret' not in psk_config:
+                    raise ConfigError(f'Authentication psk "{psk}" missing "id" or "secret"')
 
     if 'interfaces' in ipsec :
         for ifname in ipsec['interface']:
@@ -602,6 +609,14 @@ def generate(ipsec):
 
                     ipsec['site_to_site']['peer'][peer]['tunnel'][tunnel]['passthrough'] = passthrough
 
+        # auth psk <tag> dhcp-interface <xxx>
+        if jmespath.search('authentication.psk.*.dhcp_interface', ipsec):
+            for psk, psk_config in ipsec['authentication']['psk'].items():
+                if 'dhcp_interface' in psk_config:
+                    for iface in psk_config['dhcp_interface']:
+                        id = get_dhcp_address(iface)
+                        if id:
+                            ipsec['authentication']['psk'][psk]['id'].append(id)
 
     render(ipsec_conf, 'ipsec/ipsec.conf.j2', ipsec)
     render(ipsec_secrets, 'ipsec/ipsec.secrets.j2', ipsec)
