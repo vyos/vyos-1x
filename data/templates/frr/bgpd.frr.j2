@@ -414,10 +414,14 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
    route-target both {{ vni_config.route_target.both }}
 {%                 endif %}
 {%                 if vni_config.route_target.export is vyos_defined %}
-   route-target export {{ vni_config.route_target.export }}
+{%                     for route_target in vni_config.route_target.export %}
+  route-target export {{ route_target }}
+{%                     endfor %}
 {%                 endif %}
 {%                 if vni_config.route_target.import is vyos_defined %}
-   route-target import {{ vni_config.route_target.import }}
+{%                     for route_target in vni_config.route_target.import %}
+  route-target import {{ route_target }}
+{%                     endfor %}
 {%                 endif %}
   exit-vni
 {%             endfor %}
