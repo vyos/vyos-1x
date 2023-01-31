@@ -155,7 +155,7 @@
           <description>FW mark to match</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 0x0-0xffff"/>
+          <validator name="numeric" argument="--range 0-65535 "/>
         </constraint>
       </properties>
     </leafNode>
