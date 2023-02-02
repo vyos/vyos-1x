@@ -311,6 +311,9 @@ def apply(login):
     except Exception as e:
         raise ConfigError(f'RADIUS configuration failed: {e}')
 
+    # sync user data files to disk
+    os.sync()
+
     return None
 
 
