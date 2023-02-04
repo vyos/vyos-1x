@@ -1004,6 +1004,7 @@
       </properties>
     </leafNode>
     #include <include/bgp/remote-as.xml.i>
+    #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     <leafNode name="solo">
       <properties>
