@@ -68,6 +68,7 @@ neighbor_config = {
         'pfx_list_in'      : prefix_list_in,
         'pfx_list_out'     : prefix_list_out,
         'no_send_comm_std' : '',
+        'local_role'       : 'rs-client',
         },
     '192.0.2.3' : {
         'advertise_map'    : route_map_in,
@@ -98,6 +99,8 @@ neighbor_config = {
         'no_send_comm_std' : '',
         'addpath_per_as'   : '',
         'peer_group'       : 'foo-bar',
+        'local_role'       : 'customer',
+        'local_role_strict': '',
         },
     '2001:db8::2' : {
         'remote_as'        : '456',
@@ -154,6 +157,8 @@ peer_group_config = {
         'update_src'       : 'lo',
         'route_map_in'     : route_map_in,
         'route_map_out'    : route_map_out,
+        'local_role'       : 'peer',
+        'local_role_strict': '',
         },
 }
 
@@ -221,6 +226,11 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} ebgp-multihop {peer_config["multi_hop"]}', frrconfig)
         if 'local_as' in peer_config:
             self.assertIn(f' neighbor {peer} local-as {peer_config["local_as"]} no-prepend replace-as', frrconfig)
+        if 'local_role' in peer_config:
+            tmp = f' neighbor {peer} local-role {peer_config["local_role"]}'
+            if 'local_role_strict' in peer_config:
+                tmp += ' strict'
+            self.assertIn(tmp, frrconfig)
         if 'cap_over' in peer_config:
             self.assertIn(f' neighbor {peer} override-capability', frrconfig)
         if 'passive' in peer_config:
@@ -307,7 +317,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'minimum-holdtime', min_hold_time])
         self.cli_set(base_path + ['parameters', 'no-suppress-duplicates'])
         self.cli_set(base_path + ['parameters', 'reject-as-sets'])
-        self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])       
+        self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
 
@@ -380,6 +390,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'ebgp-multihop', peer_config["multi_hop"]])
             if 'local_as' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'local-as', peer_config["local_as"], 'no-prepend', 'replace-as'])
+            if 'local_role' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'local-role', peer_config["local_role"]])
+                if 'local_role_strict' in peer_config:
+                    self.cli_set(base_path + ['neighbor', peer, 'local-role', peer_config["local_role"], 'strict'])
             if 'cap_over' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'override-capability'])
             if 'passive' in peer_config:
@@ -476,6 +490,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'ebgp-multihop', config["multi_hop"]])
             if 'local_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'local-as', config["local_as"], 'no-prepend', 'replace-as'])
+            if 'local_role' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'local-role', config["local_role"]])
+                if 'local_role_strict' in config:
+                    self.cli_set(base_path + ['peer-group', peer_group, 'local-role', config["local_role"], 'strict'])
             if 'cap_over' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'override-capability'])
             if 'passive' in config:
