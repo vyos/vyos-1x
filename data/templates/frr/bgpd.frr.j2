@@ -10,9 +10,7 @@
  neighbor {{ neighbor }} remote-as {{ config.remote_as }}
 {% endif %}
 {% if config.local_role is vyos_defined %}
-{%     for role, strict in config.local_role.items() %}
- neighbor {{ neighbor }} local-role {{ role }} {{ 'strict-mode' if strict }}
-{%     endfor %}
+ neighbor {{ neighbor }} local-role {{ config.local_role }} {{ 'strict-mode' if config.local_role_strict is vyos_defined }}
 {% endif %}
 {% if config.interface.remote_as is vyos_defined %}
  neighbor {{ neighbor }} interface remote-as {{ config.interface.remote_as }}

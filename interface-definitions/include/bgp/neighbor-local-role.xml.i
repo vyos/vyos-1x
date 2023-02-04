@@ -1,7 +1,7 @@
 <!-- include start from bgp/neigbhor-local-role.xml.i -->
-<tagNode name="local-role">
+<leafNode name="local-role">
   <properties>
-    <help>Local role for this bgp session.</help>
+    <help>Local role for neighbor</help>
     <completionHelp>
       <list>customer peer provider rs-client rs-server</list>
     </completionHelp>
@@ -30,13 +30,11 @@
     </constraint>
     <constraintErrorMessage>Invalid Option</constraintErrorMessage>
   </properties>
-  <children>
-    <leafNode name="strict">
-      <properties>
-        <help>Your neighbor must send you Capability with the value of his role. Otherwise, a Role Mismatch Notification will be sent.</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</tagNode>
+</leafNode>
+<leafNode name="local-role-strict">
+  <properties>
+    <help>Strict enforcement of local-role - role mismatch notification will be sent if unconfigured on peer</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <!-- include end -->
