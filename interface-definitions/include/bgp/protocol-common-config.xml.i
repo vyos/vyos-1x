@@ -987,6 +987,7 @@
       </children>
     </node>
     #include <include/bgp/neighbor-local-as.xml.i>
+    #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
@@ -1004,7 +1005,6 @@
       </properties>
     </leafNode>
     #include <include/bgp/remote-as.xml.i>
-    #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     <leafNode name="solo">
       <properties>
@@ -1504,6 +1504,7 @@
     #include <include/bgp/neighbor-graceful-restart.xml.i>
     #include <include/bgp/neighbor-graceful-restart.xml.i>
     #include <include/bgp/neighbor-local-as.xml.i>
+    #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
