@@ -1,7 +1,7 @@
 <!-- include start from bgp/neigbhor-local-role.xml.i -->
 <tagNode name="local-role">
   <properties>
-    <help>Local role for this bgp session.</help>
+    <help>Local role for BGP neighbor (RFC9234)</help>
     <completionHelp>
       <list>customer peer provider rs-client rs-server</list>
     </completionHelp>
@@ -28,12 +28,12 @@
     <constraint>
       <regex>(provider|rs-server|rs-client|customer|peer)</regex>
     </constraint>
-    <constraintErrorMessage>Invalid Option</constraintErrorMessage>
+    <constraintErrorMessage>BGP local-role must be one of the following: customer, peer, provider, rs-client or rs-server</constraintErrorMessage>
   </properties>
   <children>
     <leafNode name="strict">
       <properties>
-        <help>Your neighbor must send you Capability with the value of his role. Otherwise, a Role Mismatch Notification will be sent.</help>
+        <help>Neighbor must send this exact capability, otherwise a role missmatch notification will be sent</help>
         <valueless/>
       </properties>
     </leafNode>
