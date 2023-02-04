@@ -32,7 +32,7 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--positive"/>
-      <regex>(\d+(bit|kbit|mbit|gbit|tbit)|(100|\d(\d)?)%)</regex>
+      <regex>(\d+(bit|kbit|mbit|gbit|tbit)?|(100|\d(\d)?)%)</regex>
     </constraint>
   </properties>
 </leafNode>

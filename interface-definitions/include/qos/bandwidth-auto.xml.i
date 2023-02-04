@@ -39,7 +39,7 @@
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--positive"/>
-      <regex>(auto|\d+(bit|kbit|mbit|gbit|tbit)|(100|\d(\d)?)%)</regex>
+      <regex>(auto|\d+(bit|kbit|mbit|gbit|tbit)?|(100|\d(\d)?)%)</regex>
     </constraint>
   </properties>
   <defaultValue>auto</defaultValue>
