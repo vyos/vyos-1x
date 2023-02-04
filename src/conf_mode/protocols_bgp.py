@@ -235,6 +235,11 @@ def verify(bgp):
                     raise ConfigError(f'Specified peer-group "{peer_group}" for '\
                                       f'neighbor "{neighbor}" does not exist!')
 
+            if 'local_role' in peer_config:
+                #Ensure Local Role has only one value.
+                if len(peer_config['local_role']) > 1:
+                    raise ConfigError(f'Only one local role can be specified for peer "{peer}"!')
+
             if 'local_as' in peer_config:
                 if len(peer_config['local_as']) > 1:
                     raise ConfigError(f'Only one local-as number can be specified for peer "{peer}"!')
