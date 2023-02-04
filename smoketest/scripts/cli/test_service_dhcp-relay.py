@@ -82,6 +82,43 @@ class TestServiceDHCPRelay(VyOSUnitTestSHIM.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_relay_interfaces(self):
+        max_size = '800'
+        hop_count = '20'
+        agents_packets = 'append'
+        servers = ['192.0.2.1', '192.0.2.2']
+        listen_iface = 'eth0'
+        up_iface = 'eth1'
+
+        self.cli_set(base_path + ['interface', up_iface])
+        self.cli_set(base_path + ['listen-interface', listen_iface])
+        # check validate() - backward interface plus listen_interface
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['interface'])
+
+        self.cli_set(base_path + ['upstream-interface', up_iface])
+
+        for server in servers:
+            self.cli_set(base_path + ['server', server])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check configured port
+        config = read_file(RELAY_CONF)
+
+        # Test configured relay interfaces
+        self.assertIn(f'-id {listen_iface}', config)
+        self.assertIn(f'-iu {up_iface}', config)
+
+        # Test relay servers
+        for server in servers:
+            self.assertIn(f' {server}', config)
+
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 
