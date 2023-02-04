@@ -18,6 +18,7 @@ import os
 
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
@@ -61,6 +62,7 @@ def verify(relay):
                           'At least one DHCP relay server required.')
 
     if 'interface' in relay:
+        Warning('DHCP relay interface is DEPRECATED - please use upstream-interface and listen-interface instead!')
         if 'upstream_interface' in relay or 'listen_interface' in relay:
             raise ConfigError('<interface> configuration is not compatible with upstream/listen interface')
         else:
