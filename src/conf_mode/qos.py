@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 from sys import exit
 from netifaces import interfaces
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.configverify import verify_interface_exists
 from vyos.qos import CAKE
 from vyos.qos import DropTail
 from vyos.qos import FairQueue
@@ -194,8 +196,6 @@ def verify(qos):
     # we should check interface ingress/egress configuration after verifying that
     # the policy name is used only once - this makes the logic easier!
     for interface, interface_config in qos['interface'].items():
-        verify_interface_exists(interface)
-
         for direction in ['egress', 'ingress']:
             # bail out early if shaper for given direction is not used at all
             if direction not in interface_config:
@@ -229,6 +229,13 @@ def apply(qos):
         return None
 
     for interface, interface_config in qos['interface'].items():
+        if not os.path.exists(f'/sys/class/net/{interface}'):
+            # When shaper is bound to a dialup (e.g. PPPoE) interface it is
+            # possible that it is yet not availbale when to QoS code runs.
+            # Skip the configuration and inform the user
+            Warning(f'Interface "{interface}" does not exist!')
+            continue
+
         for direction in ['egress', 'ingress']:
             # bail out early if shaper for given direction is not used at all
             if direction not in interface_config:
