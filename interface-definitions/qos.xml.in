@@ -29,8 +29,12 @@
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
-                <description>QoS Policy name</description>
+                <description>QoS policy to use</description>
               </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="egress">
@@ -51,8 +55,12 @@
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
-                <description>QoS Policy name</description>
+                <description>QoS policy to use</description>
               </valueHelp>
+              <constraint>
+                <regex>[[:alnum:]][-_[:alnum:]]*</regex>
+              </constraint>
+              <constraintErrorMessage>Only alpha-numeric policy name allowed</constraintErrorMessage>
             </properties>
           </leafNode>
         </children>
