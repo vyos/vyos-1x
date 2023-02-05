@@ -18,6 +18,7 @@ import unittest
 
 from psutil import process_iter
 from base_vyostest_shim import VyOSUnitTestSHIM
+from time import sleep
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -51,7 +52,13 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        count = 0
+        while count < 10:
+            count += 1
+            tmp = process_named_running(PROCESS_NAME)
+            if tmp: break
+            sleep(1)
+        self.assertTrue(tmp)
 
         self.cli_delete(base_path)
         self.cli_commit()
