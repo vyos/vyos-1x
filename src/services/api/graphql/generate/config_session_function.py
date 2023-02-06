@@ -8,8 +8,12 @@ def show_config(path: list[str], configFormat: typing.Optional[str]):
 def show(path: list[str]):
     pass
 
+def show_user_info(user: str):
+    pass
+
 queries = {'show_config': show_config,
-           'show': show}
+           'show': show,
+           'show_user_info': show_user_info}
 
 def save_config_file(fileName: typing.Optional[str]):
     pass
