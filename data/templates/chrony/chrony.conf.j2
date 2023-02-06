@@ -40,8 +40,9 @@ user {{ user }}
 {%     for address in allow_client.address %}
 allow {{ address }}
 {%     endfor %}
-{% endif %}
+{% else %}
 deny all
+{% endif %}
 
 {% if listen_address is vyos_defined or interface is vyos_defined %}
 # NTP should listen on configured addresses only
