@@ -165,6 +165,35 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ip-pool']['gw-ip-address'], self._gateway)
 
 
+    def test_pppoe_server_client_ip_pool_name(self):
+        # Test configuration of named client pools
+        self.basic_config()
+
+        subnet = '192.0.2.0/24'
+        gateway = '192.0.2.1'
+        pool = 'VYOS'
+
+        subnet_name = f'{subnet},name'
+        gw_ip_prefix = f'{gateway}/24'
+
+        self.set(['client-ip-pool', 'name', pool, 'subnet', subnet])
+        self.set(['client-ip-pool', 'name', pool, 'gateway-address', gateway])
+        self.cli_delete(self._base_path + ['gateway-address'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Validate configuration values
+        conf = ConfigParser(allow_no_value=True, delimiters='=')
+        conf.read(self._config_file)
+
+        # Validate configuration
+        self.assertEqual(conf['ip-pool'][subnet_name], pool)
+        self.assertEqual(conf['ip-pool']['gw-ip-address'], gateway)
+        self.assertEqual(conf['pppoe']['ip-pool'], pool)
+        self.assertEqual(conf['pppoe']['gw-ip-address'], gw_ip_prefix)
+
+
     def test_pppoe_server_client_ipv6_pool(self):
         # Test configuration of IPv6 client pools
         self.basic_config()
