@@ -1,4 +1,4 @@
-# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 
 from vyos import ConfigError
 from vyos.util import dict_search
+from vyos.util import dict_search_recursive
 
 def verify_mtu(config):
     """
@@ -414,7 +415,17 @@ def verify_accel_ppp_base_service(config, local_users=True):
             if 'key' not in radius_config:
                 raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
-    if 'gateway_address' not in config:
+    # Check global gateway or gateway in named pool
+    gateway = False
+    if 'gateway_address' in config:
+        gateway = True
+    else:
+        if dict_search_recursive(config, 'gateway_address', ['client_ip_pool', 'name']):
+            for _, v in config['client_ip_pool']['name'].items():
+                if 'gateway_address' in v:
+                    gateway = True
+                    break
+    if not gateway:
         raise ConfigError('Server requires gateway-address to be configured!')
 
     if 'name_server_ipv4' in config:
