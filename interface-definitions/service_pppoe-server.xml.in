@@ -148,6 +148,7 @@
                     <validator name="numeric" argument="--range 68-65535"/>
                   </constraint>
                 </properties>
+                <defaultValue>1280</defaultValue>
               </leafNode>
               <leafNode name="mru">
                 <properties>
