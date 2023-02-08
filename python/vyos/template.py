@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -157,6 +157,24 @@ def force_to_list(value):
         return value
     else:
         return [value]
+
+@register_filter('seconds_to_human')
+def seconds_to_human(seconds, separator=""):
+    """ Convert seconds to human-readable values like 1d6h15m23s """
+    from vyos.util import seconds_to_human
+    return seconds_to_human(seconds, separator=separator)
+
+@register_filter('bytes_to_human')
+def bytes_to_human(bytes, initial_exponent=0, precision=2):
+    """ Convert bytes to human-readable values like 1.44M """
+    from vyos.util import bytes_to_human
+    return bytes_to_human(bytes, initial_exponent=initial_exponent, precision=precision)
+
+@register_filter('human_to_bytes')
+def human_to_bytes(value):
+    """ Convert a data amount with a unit suffix to bytes, like 2K to 2048 """
+    from vyos.util import human_to_bytes
+    return human_to_bytes(value)
 
 @register_filter('ip_from_cidr')
 def ip_from_cidr(prefix):
