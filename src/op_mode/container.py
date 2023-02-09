@@ -23,8 +23,6 @@ from vyos.util import cmd
 
 import vyos.opmode
 
-config_containers_auth = '/etc/containers/auth.json'
-
 def _get_json_data(command: str) -> list:
     """
     Get container command format JSON
@@ -40,7 +38,7 @@ def _get_raw_data(command: str) -> list:
 def add_image(name: str):
     from vyos.util import rc_cmd
 
-    rc, output = rc_cmd(f'podman image pull --authfile {config_containers_auth} {name}')
+    rc, output = rc_cmd(f'podman image pull {name}')
     if rc != 0:
         raise vyos.opmode.InternalError(output)
 

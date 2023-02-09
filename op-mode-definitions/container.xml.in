@@ -167,7 +167,7 @@
                 <path>container name</path>
               </completionHelp>
             </properties>
-            <command>if cli-shell-api existsActive container name "$4"; then sudo podman pull --authfile /etc/containers/auth.json $(cli-shell-api returnActiveValue container name "$4" image); else echo "Container $4 does not exist"; fi</command>
+            <command>if cli-shell-api existsActive container name "$4"; then sudo podman pull $(cli-shell-api returnActiveValue container name "$4" image); else echo "Container $4 does not exist"; fi</command>
           </tagNode>
         </children>
       </node>
