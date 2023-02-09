@@ -751,8 +751,8 @@ class Interface(Control):
             elif all_rp_filter == 2: global_setting = 'loose'
 
             from vyos.base import Warning
-            Warning(f'Global source-validation is set to "{global_setting} '\
-                    f'this overrides per interface setting!')
+            Warning(f'Global source-validation is set to "{global_setting}", this '\
+                    f'overrides per interface setting on "{self.ifname}"!')
 
         tmp = self.get_interface('rp_filter')
         if int(tmp) == value:
