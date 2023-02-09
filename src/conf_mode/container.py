@@ -18,8 +18,8 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
+from time import sleep
 from json import dumps as json_write
-from json import dump as json_write_file
 
 from vyos.base import Warning
 from vyos.config import Config
@@ -28,7 +28,6 @@ from vyos.configdict import node_changed
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import run
-from vyos.util import rc_cmd
 from vyos.util import write_file
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -41,7 +40,6 @@ airbag.enable()
 
 config_containers_registry = '/etc/containers/registries.conf'
 config_containers_storage = '/etc/containers/storage.conf'
-config_containers_auth = '/etc/containers/auth.json'
 systemd_unit_path = '/run/systemd/system'
 
 def _cmd(command):
@@ -220,10 +218,6 @@ def verify(container):
             if v6_prefix > 1:
                 raise ConfigError(f'Only one IPv6 prefix can be defined for network "{network}"!')
 
-    if 'registry' in container:
-        for registry, registry_config in container['registry'].items():
-            if ('username' in registry_config) != ('password' in registry_config):
-                raise ConfigError(f'Must either not defined username and password, or defined both for registry {registry}')
 
     # A network attached to a container can not be deleted
     if {'network_remove', 'name'} <= set(container):
@@ -306,12 +300,6 @@ def generate(container):
             os.unlink(config_containers_storage)
         return None
 
-    # no matter we configure container registry or not, auth file is needed
-    if os.path.exists(config_containers_auth):
-        os.unlink(config_containers_auth)
-    with open(config_containers_auth, "w") as f:
-        json_write_file({}, f)
-
     if 'network' in container:
         for network, network_config in container['network'].items():
             tmp = {
@@ -342,19 +330,6 @@ def generate(container):
                 tmp['plugins'][0]['ipam']['routes'].append({'dst': default_route})
 
             write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
-
-    if 'registry' in container:
-        for registry, registry_config in container['registry'].items():
-            if 'disable' in registry_config:
-                continue
-
-            if 'username' in registry_config and 'password' in registry_config:
-                login_username = registry_config['username']
-                login_password = registry_config['password']
-                cmd = f'podman login --authfile {config_containers_auth} --username {login_username} --password {login_password} {registry}'
-                rc, out = rc_cmd(cmd)
-                if rc != 0:
-                    raise ConfigError(out)
 
     render(config_containers_registry, 'container/registries.conf.j2', container)
     render(config_containers_storage, 'container/storage.conf.j2', container)
