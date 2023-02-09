@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 import unittest
 import glob
 import json
@@ -31,6 +32,7 @@ prefix = '192.168.205.0/24'
 net_name = 'NET01'
 PROCESS_NAME = 'conmon'
 PROCESS_PIDFILE = '/run/vyos-container-{0}.service.pid'
+config_containers_registry = '/etc/containers/registries.conf'
 
 busybox_image_path = '/usr/share/vyos/busybox-stable.tar'
 
@@ -109,6 +111,27 @@ class TestContainer(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(json_subnet, prefix)
         self.assertEqual(json_ip, cont_ip)
+
+    def test_03_container_registry(self):
+        def extract_rendered_registry(text_to_find):
+            registry_pattern = re.compile(r'^unqualified-search-registries = (\[.*\])', re.M)
+            return re.findall(registry_pattern, text_to_find)
+
+        with open(config_containers_registry, 'r') as f:
+            registry_conf_content = f.read()
+
+        expected_default_render_registry = json.dumps(['docker.io', 'quay.io'])
+        default_rendered_registry = extract_rendered_registry(registry_conf_content)
+        self.assertNotEqual(0, len(default_rendered_registry))
+        self.assertEqual(expected_default_render_registry, default_rendered_registry[-1])
+
+        self.cli_set(base_path + ['registry', 'docker.io'])
+        self.cli_set(base_path + ['registry', 'example.com'])
+        self.cli_commit()
+        expected_render_registry = json.dumps(['docker.io', 'quay.io', 'example.com'])
+        rendered_registry = extract_rendered_registry(registry_conf_content)
+        self.assertNotEqual(0, len(rendered_registry))
+        self.assertEqual(expected_render_registry, rendered_registry[-1])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

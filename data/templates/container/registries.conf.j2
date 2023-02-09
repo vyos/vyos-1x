@@ -22,6 +22,11 @@
 # An array of host[:port] registries to try when pulling an unqualified image, in order.
 # unqualified-search-registries = ["example.com"]
 
-{% if registry is vyos_defined %}
-unqualified-search-registries = {{ registry }}
+{% set registry_value = [] %}
+{% if default_registry is vyos_defined %}
+{%     set registry_value = default_registry %}
 {% endif %}
+{% if registry is vyos_defined %}
+{%     set registry_value = ((registry_value + (registry.keys() | list)) | unique | list) %}
+{% endif %}
+unqualified-search-registries = {{ registry_value | tojson }}
