@@ -50,13 +50,13 @@
             <properties>
               <help>Show NHRP interface connection information</help>
             </properties>
-            <command>if pgrep opennhrp >/dev/null; then sudo opennhrpctl interface show; else echo OpenNHRP is not running; fi</command>
+            <command>${vyos_op_scripts_dir}/nhrp.py show_interface</command>
           </leafNode>
           <leafNode name="tunnel">
             <properties>
               <help>Show NHRP tunnel connection information</help>
             </properties>
-            <command>if pgrep opennhrp >/dev/null; then sudo opennhrpctl show ; else echo OpenNHRP is not running; fi</command>
+            <command>${vyos_op_scripts_dir}/nhrp.py show_tunnel</command>
           </leafNode>
         </children>
       </node>
