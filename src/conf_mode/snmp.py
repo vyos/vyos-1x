@@ -103,6 +103,9 @@ def get_config(config=None):
 
     if 'community' in snmp:
         default_values = defaults(base + ['community'])
+        if 'network' in default_values:
+            # convert multiple default networks to list
+            default_values['network'] = default_values['network'].split()
         for community in snmp['community']:
             snmp['community'][community] = dict_merge(
                 default_values, snmp['community'][community])
