@@ -24,7 +24,7 @@ from datetime import datetime
 from tabulate import tabulate
 
 from vyos.config import Config
-from vyos.configtree import ConfigTree
+from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
 from vyos.defaults import directories
 from vyos.util import is_systemd_service_active, ask_yes_no, rc_cmd
 
@@ -93,15 +93,7 @@ class ConfigMgmt:
 
         # a call to compare without args is edit_level aware
         edit_level = os.getenv('VYATTA_EDIT_LEVEL', '')
-        edit_path = [l for l in edit_level.split('/') if l]
-        if edit_path:
-            eff_conf = config.show_config(edit_path, effective=True)
-            self.edit_level_active_config = ConfigTree(eff_conf)
-            conf = config.show_config(edit_path)
-            self.edit_level_working_config = ConfigTree(conf)
-        else:
-            self.edit_level_active_config = None
-            self.edit_level_working_config = None
+        self.edit_path = [l for l in edit_level.split('/') if l]
 
         self.active_config = config._running_config
         self.working_config = config._session_config
@@ -241,14 +233,8 @@ Proceed ?'''
         revision n vs. revision m; working version vs. active version;
         or working version vs. saved version.
         """
-        from difflib import unified_diff
-
-        ct1 = self.edit_level_active_config
-        if ct1 is None:
-            ct1 = self.active_config
-        ct2 = self.edit_level_working_config
-        if ct2 is None:
-            ct2 = self.working_config
+        ct1 = self.active_config
+        ct2 = self.working_config
         msg = 'No changes between working and active configurations.\n'
         if saved:
             ct1 = self._get_saved_config_tree()
@@ -268,19 +254,16 @@ Proceed ?'''
             ct1 = self._get_config_tree_revision(rev2)
             msg = f'No changes between revisions {rev2} and {rev1} configurations.\n'
 
-        if commands:
-            lines1 = ct1.to_commands().splitlines(keepends=True)
-            lines2 = ct2.to_commands().splitlines(keepends=True)
-        else:
-            lines1 = ct1.to_string().splitlines(keepends=True)
-            lines2 = ct2.to_string().splitlines(keepends=True)
-
         out = ''
-        comp = unified_diff(lines1, lines2)
-        for line in comp:
-            if re.match(r'(\-\-)|(\+\+)|(@@)', line):
-                continue
-            out += line
+        path = [] if commands else self.edit_path
+        try:
+            if commands:
+                out = show_diff(ct1, ct2, path=path, commands=True)
+            else:
+                out = show_diff(ct1, ct2, path=path)
+        except ConfigTreeError as e:
+            return e, 1
+
         if out:
             msg = out
 

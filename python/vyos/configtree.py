@@ -16,7 +16,7 @@ import os
 import re
 import json
 
-from ctypes import cdll, c_char_p, c_void_p, c_int
+from ctypes import cdll, c_char_p, c_void_p, c_int, c_bool
 
 LIBPATH = '/usr/lib/libvyosconfig.so.0'
 
@@ -321,6 +321,36 @@ class ConfigTree(object):
         res = self.__get_subtree(self.__config, path_str, with_node)
         subt = ConfigTree(address=res)
         return subt
+
+def show_diff(left, right, path=[], commands=False, libpath=LIBPATH):
+    if left is None:
+        left = ConfigTree(config_string='\n')
+    if right is None:
+        right = ConfigTree(config_string='\n')
+    if not (isinstance(left, ConfigTree) and isinstance(right, ConfigTree)):
+        raise TypeError("Arguments must be instances of ConfigTree")
+    if path:
+        if (not left.exists(path)) and (not right.exists(path)):
+            raise ConfigTreeError(f"Path {path} doesn't exist")
+
+    check_path(path)
+    path_str = " ".join(map(str, path)).encode()
+
+    __lib = cdll.LoadLibrary(libpath)
+    __show_diff = __lib.show_diff
+    __show_diff.argtypes = [c_bool, c_char_p, c_void_p, c_void_p]
+    __show_diff.restype = c_char_p
+    __get_error = __lib.get_error
+    __get_error.argtypes = []
+    __get_error.restype = c_char_p
+
+    res = __show_diff(commands, path_str, left._get_config(), right._get_config())
+    res = res.decode()
+    if res == "#1@":
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
+    return res
 
 class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
