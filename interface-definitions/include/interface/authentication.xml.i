@@ -4,12 +4,12 @@
     <help>Authentication settings</help>
   </properties>
   <children>
-    <leafNode name="user">
+    <leafNode name="username">
       <properties>
-        <help>User name</help>
+        <help>Username used for authentication</help>
         <valueHelp>
           <format>txt</format>
-          <description>Username used for connection</description>
+          <description>Username</description>
         </valueHelp>
         <constraint>
           <regex>[[:alnum:]][-_#@[:alnum:]]{0,127}</regex>
@@ -19,10 +19,10 @@
     </leafNode>
     <leafNode name="password">
       <properties>
-        <help>Password</help>
+        <help>Password used for authentication</help>
         <valueHelp>
           <format>txt</format>
-          <description>Password used for connection</description>
+          <description>Password</description>
         </valueHelp>
         <constraint>
           <regex>[[:ascii:]]{1,128}</regex>

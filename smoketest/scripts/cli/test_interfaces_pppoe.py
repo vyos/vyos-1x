@@ -61,7 +61,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             passwd = f'VyOS-passwd-{interface}'
             mtu = '1400'
 
-            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'mtu', mtu])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
@@ -94,7 +94,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
 
-            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'disable'])
@@ -123,7 +123,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
 
-            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
 
@@ -145,7 +145,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
 
-            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'no-default-route'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
@@ -184,7 +184,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             service_name = f'SRV{interface}'
             host_uniq = 'cafebeefBABE123456'
 
-            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
 

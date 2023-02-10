@@ -53,7 +53,7 @@ mtu {{ mtu }}
 mru {{ mtu }}
 
 {% if authentication is vyos_defined %}
-{{ 'user "' + authentication.user + '"' if authentication.user is vyos_defined }}
+{{ 'user "' + authentication.username + '"' if authentication.username is vyos_defined }}
 {{ 'password "' + authentication.password + '"' if authentication.password is vyos_defined }}
 {% endif %}
 

@@ -171,7 +171,7 @@ def apply(wwan):
 
         options = f'ip-type={ip_type},apn=' + wwan['apn']
         if 'authentication' in wwan:
-            options += ',user={user},password={password}'.format(**wwan['authentication'])
+            options += ',user={username},password={password}'.format(**wwan['authentication'])
 
         command = f'{base_cmd} --simple-connect="{options}"'
         call(command, stdout=DEVNULL)

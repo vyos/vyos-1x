@@ -233,7 +233,7 @@ def verify_authentication(config):
     """
     if 'authentication' not in config:
         return
-    if not {'user', 'password'} <= set(config['authentication']):
+    if not {'username', 'password'} <= set(config['authentication']):
         raise ConfigError('Authentication requires both username and ' \
                           'password to be set!')
 
