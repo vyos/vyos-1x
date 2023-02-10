@@ -143,6 +143,9 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.basic_config()
 
         subnet = '172.18.0.0/24'
+        fwmark = '223'
+        limiter = 'htb'
+
         self.set(['client-ip-pool', 'subnet', subnet])
 
         start = '192.0.2.10'
@@ -151,6 +154,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         start_stop = f'{start}-{stop_octet}'
         self.set(['client-ip-pool', 'start', start])
         self.set(['client-ip-pool', 'stop', stop])
+        self.set(['shaper', 'fwmark', fwmark])
 
         # commit changes
         self.cli_commit()
@@ -163,6 +167,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ip-pool'][subnet], None)
         self.assertEqual(conf['ip-pool'][start_stop], None)
         self.assertEqual(conf['ip-pool']['gw-ip-address'], self._gateway)
+        self.assertEqual(conf['shaper']['fwmark'], fwmark)
+        self.assertEqual(conf['shaper']['down-limiter'], limiter)
 
 
     def test_pppoe_server_client_ip_pool_name(self):
