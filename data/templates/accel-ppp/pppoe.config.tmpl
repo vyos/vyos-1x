@@ -65,8 +65,6 @@ ccp={{ "1" if ppp_options.ccp is defined else "0" }}
 unit-preallocate={{ "1" if authentication.radius.preallocate_vif is defined else "0" }}
 {% if ppp_options.min_mtu is defined and ppp_options.min_mtu is not none %}
 min-mtu={{ ppp_options.min_mtu }}
-{% else %}
-min-mtu={{ mtu }}
 {% endif %}
 {% if ppp_options.mru is defined and ppp_options.mru is not none %}
 mru={{ ppp_options.mru }}
