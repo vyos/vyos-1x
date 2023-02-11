@@ -118,6 +118,28 @@ if config.exists(netem_base):
         if config.exists(netem_base + [policy_name, 'burst']):
             config.delete(netem_base + [policy_name, 'burst'])
 
+# Change bandwidth unit MBit -> mbit as tc only supports mbit
+base = ['qos', 'policy']
+if config.exists(base):
+    for policy_type in config.list_nodes(base):
+        for policy in config.list_nodes(base + [policy_type]):
+            policy_base = base + [policy_type, policy]
+            if config.exists(policy_base + ['bandwidth']):
+                tmp = config.return_value(policy_base + ['bandwidth'])
+                config.set(policy_base + ['bandwidth'], value=tmp.lower())
+
+            if config.exists(policy_base + ['class']):
+                for cls in config.list_nodes(policy_base + ['class']):
+                    cls_base = policy_base + ['class', cls]
+                    if config.exists(cls_base + ['bandwidth']):
+                        tmp = config.return_value(cls_base + ['bandwidth'])
+                        config.set(cls_base + ['bandwidth'], value=tmp.lower())
+
+            if config.exists(policy_base + ['default', 'bandwidth']):
+                if config.exists(policy_base + ['default', 'bandwidth']):
+                    tmp = config.return_value(policy_base + ['default', 'bandwidth'])
+                    config.set(policy_base + ['default', 'bandwidth'], value=tmp.lower())
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())

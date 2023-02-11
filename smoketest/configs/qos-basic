@@ -8,7 +8,7 @@ interfaces {
     ethernet eth1 {
         address 10.2.1.1/24
         traffic-policy {
-          out M2
+          out ISPC
         }
     }
     ethernet eth2 {
@@ -74,25 +74,15 @@ system {
     }
 }
 traffic-policy {
-    shaper M2 {
-        bandwidth auto
-        class 10 {
-            bandwidth 100%
-            burst 15k
-            match ssh4 {
-                ip {
-                    destination {
-                        port 22
-                    }
-                }
-            }
-            queue-type fair-queue
-        }
+    shaper ISPC {
+        bandwidth 600Mbit
         default {
-            bandwidth 10mbit
-            burst 15k
-            queue-type fair-queue
+            bandwidth 50%
+            burst 768k
+            ceiling 100%
+            queue-type fq-codel
         }
+        description "Outbound Traffic Shaper - ISPC"
     }
     shaper MY-HTB {
         bandwidth 10mbit
