@@ -966,7 +966,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' neighbor {peer_group} remote-as {remote_asn}', frrconfig)
 
     def test_bgp_15_local_as_ebgp(self):
-        # https://phabricator.vyos.net/T4560
+        # https://vyos.dev/T4560
         # local-as allowed only for ebgp peers
 
         neighbor = '192.0.2.99'

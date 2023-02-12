@@ -46,7 +46,7 @@ class LoopbackIf(Interface):
             if addr in self._persistent_addresses:
                 # Do not allow deletion of the default loopback addresses as
                 # this will cause weird system behavior like snmp/ssh no longer
-                # operating as expected, see https://phabricator.vyos.net/T2034.
+                # operating as expected, see https://vyos.dev/T2034.
                 continue
 
             self.del_addr(addr)

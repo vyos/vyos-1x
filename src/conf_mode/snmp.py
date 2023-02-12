@@ -92,7 +92,7 @@ def get_config(config=None):
 
         # Always listen on localhost if an explicit address has been configured
         # This is a safety measure to not end up with invalid listen addresses
-        # that are not configured on this system. See https://phabricator.vyos.net/T850
+        # that are not configured on this system. See https://vyos.dev/T850
         if '127.0.0.1' not in snmp['listen_address']:
             tmp = {'127.0.0.1': {'port': '161'}}
             snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])

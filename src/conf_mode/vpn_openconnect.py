@@ -49,7 +49,7 @@ def get_hash(password):
 
 def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
     """
-    https://phabricator.vyos.net/T2665
+    https://vyos.dev/T2665
     Clear unnecessary key values in merged config by dict_merge function
     :param origin: config
     :type origin: dict
@@ -116,7 +116,7 @@ def get_config():
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
-    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+    # workaround a "know limitation" - https://vyos.dev/T2665
     ocserv = T2665_default_dict_cleanup(ocserv, default_values)
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),

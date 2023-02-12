@@ -46,7 +46,7 @@ def get_otp_ocserv(username):
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
-    # workaround a "know limitation" - https://phabricator.vyos.net/T2665
+    # workaround a "know limitation" - https://vyos.dev/T2665
     del ocserv['authentication']['local_users']['username']['otp']
     if not ocserv["authentication"]["local_users"]["username"]:
         return None

@@ -283,7 +283,7 @@ def generate(dhcp):
     if not dhcp or 'disable' in dhcp:
         return None
 
-    # Please see: https://phabricator.vyos.net/T1129 for quoting of the raw
+    # Please see: https://vyos.dev/T1129 for quoting of the raw
     # parameters we can pass to ISC DHCPd
     tmp_file = '/tmp/dhcpd.conf'
     render(tmp_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
