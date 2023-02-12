@@ -1,4 +1,4 @@
-# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -719,6 +719,26 @@ def dict_search(path, dict_object):
     for p in parts[:-1]:
         c = c.get(p, {})
     return c.get(parts[-1], None)
+
+def dict_search_recursive(dict_object, key, path=[]):
+    """ Traverse a dictionary recurisvely and return the value of the key
+    we are looking for.
+    Thankfully copied from https://stackoverflow.com/a/19871956
+    Modified to yield optional path to found keys
+    """
+    if isinstance(dict_object, list):
+        for i in dict_object:
+            new_path = path + [i]
+            for x in dict_search_recursive(i, key, new_path):
+                yield x
+    elif isinstance(dict_object, dict):
+        if key in dict_object:
+            new_path = path + [key]
+            yield dict_object[key], new_path
+        for k, j in dict_object.items():
+            new_path = path + [k]
+            for x in dict_search_recursive(j, key, new_path):
+                yield x
 
 def convert_data(data):
     """Convert multiple types of data to types usable in CLI
