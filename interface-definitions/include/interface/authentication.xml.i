@@ -12,9 +12,9 @@
           <description>Username</description>
         </valueHelp>
         <constraint>
-          <regex>[[:alnum:]][-_#@[:alnum:]]{0,127}</regex>
+          <regex>[[:ascii:]]{1,128}</regex>
         </constraint>
-        <constraintErrorMessage>Username is limited to alphanumerical characters, -, _, #, and @ with a total lenght of 128</constraintErrorMessage>
+        <constraintErrorMessage>Username is limited to ASCII characters only, with a total lenght of 128</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="password">
