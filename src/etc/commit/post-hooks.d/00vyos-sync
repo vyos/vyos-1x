@@ -2,6 +2,6 @@
 # When power is lost right after a commit modified files, the
 # system can be corrupted and e.g. login is no longer possible.
 # Always sync files to the backend storage after a commit.
-# https://phabricator.vyos.net/T4975
+# https://vyos.dev/T4975
 sync
 

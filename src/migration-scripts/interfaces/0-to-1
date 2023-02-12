@@ -3,7 +3,7 @@
 # Change syntax of bridge interface
 # - move interface based bridge-group to actual bridge (de-nest)
 # - make stp and igmp-snooping nodes valueless
-# https://phabricator.vyos.net/T1556
+# https://vyos.dev/T1556
 
 import sys
 from vyos.configtree import ConfigTree

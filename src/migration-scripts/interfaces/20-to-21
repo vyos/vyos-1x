@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # T3619: mirror Linux Kernel defaults for ethernet offloading options into VyOS
-#        CLI. See https://phabricator.vyos.net/T3619#102254 for all the details.
+#        CLI. See https://vyos.dev/T3619#102254 for all the details.
 # T3787: Remove deprecated UDP fragmentation offloading option
 
 from sys import argv
