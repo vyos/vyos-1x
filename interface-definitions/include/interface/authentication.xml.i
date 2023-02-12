@@ -14,7 +14,7 @@
         <constraint>
           <regex>[[:ascii:]]{1,128}</regex>
         </constraint>
-        <constraintErrorMessage>Username is limited to ASCII characters only, with a total lenght of 128</constraintErrorMessage>
+        <constraintErrorMessage>Username is limited to ASCII characters only, with a total length of 128</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="password">
@@ -27,7 +27,7 @@
         <constraint>
           <regex>[[:ascii:]]{1,128}</regex>
         </constraint>
-        <constraintErrorMessage>Password is limited to ASCII characters only, with a total lenght of 128</constraintErrorMessage>
+        <constraintErrorMessage>Password is limited to ASCII characters only, with a total length of 128</constraintErrorMessage>
       </properties>
     </leafNode>
   </children>
