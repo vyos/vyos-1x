@@ -16,19 +16,19 @@
 #define memcpy(dest, src, n) __builtin_memcpy((dest), (src), (n))
 #endif
 
-struct bpf_map_def SEC("maps") tx_port = {
-	.type = BPF_MAP_TYPE_DEVMAP,
-	.key_size = sizeof(int),
-	.value_size = sizeof(int),
-	.max_entries = 256,
-};
+struct {
+	__uint(type, BPF_MAP_TYPE_DEVMAP);
+	__type(key, int);
+	__type(value, int);
+	__uint(max_entries, 256);
+} tx_port SEC(".maps");
 
-struct bpf_map_def SEC("maps") redirect_params = {
-	.type = BPF_MAP_TYPE_HASH,
-	.key_size = ETH_ALEN,
-	.value_size = ETH_ALEN,
-	.max_entries = 1,
-};
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, ETH_ALEN);
+	__type(value, ETH_ALEN);
+	__uint(max_entries, 1);
+} redirect_params SEC(".maps");
 
 static __always_inline __u16 csum_fold_helper(__u32 csum)
 {
@@ -208,8 +208,12 @@ out:
 	return xdp_stats_record_action(ctx, action);
 }
 
+#ifndef AF_INET
 #define AF_INET 2
+#endif
+#ifndef AF_INET6
 #define AF_INET6 10
+#endif
 #define IPV6_FLOWINFO_MASK bpf_htonl(0x0FFFFFFF)
 
 /* from include/net/ip.h */

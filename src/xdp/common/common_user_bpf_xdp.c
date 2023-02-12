@@ -21,7 +21,7 @@ int xdp_link_attach(int ifindex, __u32 xdp_flags, int prog_fd)
 	int err;
 
 	/* libbpf provide the XDP net_device link-level hook attach helper */
-	err = bpf_set_link_xdp_fd(ifindex, prog_fd, xdp_flags);
+	err = bpf_xdp_attach(ifindex, prog_fd, xdp_flags, NULL);
 	if (err == -EEXIST && !(xdp_flags & XDP_FLAGS_UPDATE_IF_NOEXIST)) {
 		/* Force mode didn't work, probably because a program of the
 		 * opposite type is loaded. Let's unload that and try loading
@@ -32,9 +32,9 @@ int xdp_link_attach(int ifindex, __u32 xdp_flags, int prog_fd)
 
 		xdp_flags &= ~XDP_FLAGS_MODES;
 		xdp_flags |= (old_flags & XDP_FLAGS_SKB_MODE) ? XDP_FLAGS_DRV_MODE : XDP_FLAGS_SKB_MODE;
-		err = bpf_set_link_xdp_fd(ifindex, -1, xdp_flags);
+		err = bpf_xdp_detach(ifindex, xdp_flags, NULL);
 		if (!err)
-			err = bpf_set_link_xdp_fd(ifindex, prog_fd, old_flags);
+			err = bpf_xdp_attach(ifindex, prog_fd, old_flags, NULL);
 	}
 	if (err < 0) {
 		fprintf(stderr, "ERR: "
@@ -65,7 +65,7 @@ int xdp_link_detach(int ifindex, __u32 xdp_flags, __u32 expected_prog_id)
 	__u32 curr_prog_id;
 	int err;
 
-	err = bpf_get_link_xdp_id(ifindex, &curr_prog_id, xdp_flags);
+	err = bpf_xdp_query_id(ifindex,  xdp_flags, &curr_prog_id);
 	if (err) {
 		fprintf(stderr, "ERR: get link xdp id failed (err=%d): %s\n",
 			-err, strerror(-err));
@@ -86,7 +86,7 @@ int xdp_link_detach(int ifindex, __u32 xdp_flags, __u32 expected_prog_id)
 		return EXIT_FAIL;
 	}
 
-	if ((err = bpf_set_link_xdp_fd(ifindex, -1, xdp_flags)) < 0) {
+	if ((err = bpf_xdp_detach(ifindex, xdp_flags, NULL)) < 0) {
 		fprintf(stderr, "ERR: %s() link set xdp failed (err=%d): %s\n",
 			__func__, err, strerror(-err));
 		return EXIT_FAIL_XDP;
@@ -109,21 +109,27 @@ struct bpf_object *load_bpf_object_file(const char *filename, int ifindex)
 	 * hardware offloading XDP programs (note this sets libbpf
 	 * bpf_program->prog_ifindex and foreach bpf_map->map_ifindex).
 	 */
-	struct bpf_prog_load_attr prog_load_attr = {
-		.prog_type = BPF_PROG_TYPE_XDP,
-		.ifindex   = ifindex,
-	};
-	prog_load_attr.file = filename;
+	struct bpf_program *prog;
+	obj = bpf_object__open_file(filename, NULL);
+
+	if (libbpf_get_error(obj))
+		return NULL;
+
+	prog = bpf_object__next_program(obj, NULL);
+	bpf_program__set_type(prog, BPF_PROG_TYPE_XDP);
+	bpf_program__set_ifindex(prog, ifindex);
 
 	/* Use libbpf for extracting BPF byte-code from BPF-ELF object, and
 	 * loading this into the kernel via bpf-syscall
 	 */
-	err = bpf_prog_load_xattr(&prog_load_attr, &obj, &first_prog_fd);
+	err = bpf_object__load(obj);
 	if (err) {
 		fprintf(stderr, "ERR: loading BPF-OBJ file(%s) (%d): %s\n",
 			filename, err, strerror(-err));
 		return NULL;
 	}
+
+	first_prog_fd = bpf_program__fd(prog);
 
 	/* Notice how a pointer to a libbpf bpf_object is returned */
 	return obj;
@@ -136,12 +142,15 @@ static struct bpf_object *open_bpf_object(const char *file, int ifindex)
 	struct bpf_map *map;
 	struct bpf_program *prog, *first_prog = NULL;
 
-	struct bpf_object_open_attr open_attr = {
-		.file = file,
-		.prog_type = BPF_PROG_TYPE_XDP,
-	};
+	obj = bpf_object__open_file(file, NULL);
 
-	obj = bpf_object__open_xattr(&open_attr);
+	if (libbpf_get_error(obj))
+		return NULL;
+
+	prog = bpf_object__next_program(obj, NULL);
+	bpf_program__set_type(prog, BPF_PROG_TYPE_XDP);
+
+	err = bpf_object__load(obj);
 	if (IS_ERR_OR_NULL(obj)) {
 		err = -PTR_ERR(obj);
 		fprintf(stderr, "ERR: opening BPF-OBJ file(%s) (%d): %s\n",
@@ -157,7 +166,7 @@ static struct bpf_object *open_bpf_object(const char *file, int ifindex)
 	}
 
 	bpf_object__for_each_map(map, obj) {
-		if (!bpf_map__is_offload_neutral(map))
+		if (bpf_map__type(map) != BPF_MAP_TYPE_PERF_EVENT_ARRAY)
 			bpf_map__set_ifindex(map, ifindex);
 	}
 
@@ -264,10 +273,10 @@ struct bpf_object *load_bpf_and_xdp_attach(struct config *cfg)
 
 	if (cfg->progsec[0])
 		/* Find a matching BPF prog section name */
-		bpf_prog = bpf_object__find_program_by_title(bpf_obj, cfg->progsec);
+		bpf_prog = bpf_object__find_program_by_name(bpf_obj, cfg->progsec);
 	else
 		/* Find the first program */
-		bpf_prog = bpf_program__next(NULL, bpf_obj);
+		bpf_prog = bpf_object__next_program(bpf_obj, NULL);
 
 	if (!bpf_prog) {
 		fprintf(stderr, "ERR: couldn't find a program in ELF section '%s'\n", cfg->progsec);

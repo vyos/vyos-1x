@@ -78,7 +78,7 @@ Depends:
   lcdproc,
   lcdproc-extra-drivers,
   libatomic1,
-  libbpf0 [amd64],
+  libbpf1 [amd64],
   libcharon-extra-plugins (>=5.9),
   libcharon-extauth-plugins (>=5.9),
   libndp-tools,
