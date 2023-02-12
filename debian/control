@@ -44,7 +44,6 @@ Depends:
   conserver-client,
   conserver-server,
   console-data,
-  crda,
   cron,
   curl,
   dbus,
