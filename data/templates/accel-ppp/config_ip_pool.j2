@@ -11,4 +11,14 @@ gw-ip-address={{ gateway_address }}
 {{ subnet }}
 {%     endfor %}
 {%   endif %}
+{%   if client_ip_pool.name is defined and client_ip_pool.name is not none %}
+{%     for pool, pool_config in client_ip_pool.name.items() %}
+{%       if pool_config.subnet is defined and pool_config.subnet is not none %}
+{{ pool_config.subnet }},name={{ pool }}
+{%       endif %}
+{%       if pool_config.gateway_address is defined and pool_config.gateway_address is not none %}
+gw-ip-address={{ pool_config.gateway_address }}
+{%       endif %}
+{%     endfor %}
+{%   endif %}
 {% endif %}
