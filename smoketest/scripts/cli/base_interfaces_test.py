@@ -123,7 +123,7 @@ class BasicInterfaceTest:
 
                 # Also enable DHCP (ISC DHCP always places interface in admin up
                 # state so we check that we do not start DHCP client.
-                # https://phabricator.vyos.net/T2767
+                # https://vyos.dev/T2767
                 self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
 
             self.cli_commit()
@@ -476,7 +476,7 @@ class BasicInterfaceTest:
                         self.assertEqual(to_key, new_egress_qos_to)
 
         def test_vif_8021q_lower_up_down(self):
-            # Testcase for https://phabricator.vyos.net/T3349
+            # Testcase for https://vyos.dev/T3349
             if not self._test_vlan:
                 self.skipTest('not supported')
 

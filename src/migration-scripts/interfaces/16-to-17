@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Command line migration of port mirroring
-# https://phabricator.vyos.net/T3089
+# https://vyos.dev/T3089
 
 import sys
 from vyos.configtree import ConfigTree

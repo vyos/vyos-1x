@@ -245,7 +245,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% else %}
  no bgp ebgp-requires-policy
 {% endif %}
-{#   Option must be set before any neighbor - see https://phabricator.vyos.net/T3463 #}
+{#   Option must be set before any neighbor - see https://vyos.dev/T3463 #}
  no bgp default ipv4-unicast
 {# Workaround for T2100 until we have decided about a migration script #}
  no bgp network import-check

@@ -47,7 +47,7 @@ def get_config(config=None):
 
     # reload-or-restart does not implemented in accel-ppp
     # use this workaround until it will be implemented
-    # https://phabricator.accel-ppp.org/T3
+    # https://vyos.dev/T3
     if is_node_changed(conf, base + ['client-ip-pool']) or is_node_changed(
             conf, base + ['client-ipv6-pool']):
         pppoe.update({'restart_required': {}})
