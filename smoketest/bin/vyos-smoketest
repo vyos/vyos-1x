@@ -26,7 +26,7 @@ for root, dirs, files in os.walk('/usr/libexec/vyos/tests/smoke'):
         test_file = os.path.join(root, name)
         mode = os.stat(test_file).st_mode
 
-        if mode & S_IXOTH:
+        if name.startswith("test_") and mode & S_IXOTH:
             print('Running Testcase: ' + test_file)
             process = Popen([test_file], stdout=PIPE)
             (output, err) = process.communicate()
