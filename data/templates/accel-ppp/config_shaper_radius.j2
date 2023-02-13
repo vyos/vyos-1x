@@ -1,13 +1,19 @@
-{% if authentication is defined and authentication.mode is defined and authentication.mode == 'radius' %}
-{%   if authentication is defined and authentication.radius is defined and authentication.radius.rate_limit is defined and authentication.radius.rate_limit.enable is defined %}
+{% if authentication is defined and authentication.mode is defined and authentication.mode == 'radius' or shaper is defined %}
 [shaper]
 verbose=1
+{%   if authentication is defined and authentication.radius is defined and authentication.radius.rate_limit is defined and authentication.radius.rate_limit.enable is defined %}
 attr={{ authentication.radius.rate_limit.attribute }}
 {%     if authentication.radius.rate_limit.vendor is defined and authentication.radius.rate_limit.vendor is not none %}
 vendor={{ authentication.radius.rate_limit.vendor }}
 {%     endif %}
 {%     if authentication.radius.rate_limit.multiplier is defined and authentication.radius.rate_limit.multiplier is not none %}
 rate-multiplier={{ authentication.radius.rate_limit.multiplier }}
+{%     endif %}
+{%   endif %}
+{%   if shaper is defined %}
+{%     if shaper.fwmark is defined and shaper.fwmark is not none %}
+fwmark={{ shaper.fwmark }}
+down-limiter=htb
 {%     endif %}
 {%   endif %}
 {% endif %}

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -147,6 +147,8 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.basic_config()
 
         subnet = '172.18.0.0/24'
+        fwmark = '223'
+        limiter = 'htb'
         self.set(['client-ip-pool', 'subnet', subnet])
 
         start = '192.0.2.10'
@@ -155,6 +157,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         start_stop = f'{start}-{stop_octet}'
         self.set(['client-ip-pool', 'start', start])
         self.set(['client-ip-pool', 'stop', stop])
+        self.set(['shaper', 'fwmark', fwmark])
 
         # commit changes
         self.cli_commit()
