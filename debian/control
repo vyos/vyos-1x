@@ -8,6 +8,7 @@ Build-Depends:
   fakeroot,
   gcc-multilib [amd64],
   clang [amd64],
+  iproute2,
   llvm [amd64],
   libbpf-dev [amd64],
   libelf-dev (>= 0.2) [amd64],
