@@ -11,7 +11,7 @@ DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
 {% if connect_on_demand is not defined %}
-# See https://phabricator.vyos.net/T2248. Determine if we are enslaved to a
+# See https://vyos.dev/T2248. Determine if we are enslaved to a
 # VRF, this is needed to properly insert the default route.
 VRF_NAME=""
 if [ -d /sys/class/net/{{ ifname }}/upper_* ]; then

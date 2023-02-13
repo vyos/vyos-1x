@@ -54,7 +54,7 @@ systemctl restart dhcp6c@{{ ifname }}.service
 {% endif %}
 
 {% if default_route != 'none' %}
-# See https://phabricator.vyos.net/T2248 & T2220. Determine if we are enslaved
+# See https://vyos.dev/T2248 & T2220. Determine if we are enslaved
 # to a VRF, this is needed to properly insert the default route.
 
 SED_OPT="^ipv6 route"

@@ -12,7 +12,7 @@ DIALER_PID=$(cat /var/run/{{ ifname }}.pid)
 logger -t pppd[$DIALER_PID] "executing $0"
 
 {%   if default_route != 'none' %}
-# See https://phabricator.vyos.net/T2248 & T2220. Determine if we are enslaved
+# See https://vyos.dev/T2248 & T2220. Determine if we are enslaved
 # to a VRF, this is needed to properly insert the default route.
 
 SED_OPT="^ip route"

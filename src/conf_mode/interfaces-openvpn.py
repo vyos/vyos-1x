@@ -489,7 +489,7 @@ def generate(openvpn):
                    user=user, group=group)
 
     # we need to support quoting of raw parameters from OpenVPN CLI
-    # see https://phabricator.vyos.net/T1632
+    # see https://vyos.dev/T1632
     render(cfg_file.format(**openvpn), 'openvpn/server.conf.tmpl', openvpn,
            formater=lambda _: _.replace("&quot;", '"'), user=user, group=group)
 

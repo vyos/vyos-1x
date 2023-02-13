@@ -2,7 +2,7 @@
 
 # Change syntax of openvpn encryption settings
 # - move cipher from encryption to encryption cipher
-# https://phabricator.vyos.net/T1704
+# https://vyos.dev/T1704
 
 import sys
 from vyos.configtree import ConfigTree

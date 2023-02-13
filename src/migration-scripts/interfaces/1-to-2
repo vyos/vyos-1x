@@ -2,7 +2,7 @@
 
 # Change syntax of bond interface
 # - move interface based bond-group to actual bond (de-nest)
-# https://phabricator.vyos.net/T1614
+# https://vyos.dev/T1614
 
 import sys
 from vyos.configtree import ConfigTree
@@ -40,7 +40,7 @@ else:
     # some combinations were allowed in the past from a CLI perspective
     # but the kernel overwrote them - remove from CLI to not confuse the users.
     # In addition new consitency checks are in place so users can't repeat the
-    # mistake. One of those nice issues is https://phabricator.vyos.net/T532
+    # mistake. One of those nice issues is https://vyos.dev/T532
     for bond in config.list_nodes(base):
         if config.exists(base + [bond, 'arp-monitor', 'interval']) and config.exists(base + [bond, 'mode']):
             mode = config.return_value(base + [bond, 'mode'])
