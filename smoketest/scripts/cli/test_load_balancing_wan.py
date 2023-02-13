@@ -143,15 +143,15 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         container_iface3 = 'ceth2'
         mangle_isp1 = """table ip mangle {
 	chain ISP_veth1 {
-		counter ct mark set 0xc9 
-		counter meta mark set 0xc9 
+		counter ct mark set 0xc9
+		counter meta mark set 0xc9
 		counter accept
 	}
 }"""
         mangle_isp2 = """table ip mangle {
 	chain ISP_veth2 {
-		counter ct mark set 0xca 
-		counter meta mark set 0xca 
+		counter ct mark set 0xca
+		counter meta mark set 0xca
 		counter accept
 	}
 }"""
@@ -163,7 +163,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
 }"""
         mangle_wanloadbalance_pre = """table ip mangle {
 	chain WANLOADBALANCE_PRE {
-		iifname "veth3" ip saddr 198.51.100.0/24 ct state new  counter jump ISP_veth1
+		iifname "veth3" ip saddr 198.51.100.0/24 ct state new meta random & 2147483647 < 1073741824 counter jump ISP_veth1
 		iifname "veth3" ip saddr 198.51.100.0/24 ct state new counter jump ISP_veth2
 		iifname "veth3" ip saddr 198.51.100.0/24 counter meta mark set ct mark
 	}
@@ -177,7 +177,6 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         nat_vyos_pre_snat_hook = """table ip nat {
 	chain VYOS_PRE_SNAT_HOOK {
 		type nat hook postrouting priority srcnat - 1; policy accept;
-		counter jump WANLOADBALANCE
 		return
 	}
 }"""
