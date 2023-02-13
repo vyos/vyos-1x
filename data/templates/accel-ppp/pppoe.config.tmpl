@@ -136,6 +136,21 @@ pado-delay={{ pado_delay_param.value }}
 called-sid={{ authentication.radius.called_sid_format }}
 {% endif %}
 
+{% if authentication is defined and authentication.mode is defined and authentication.mode == 'local' %}
+{%   if client_ip_pool is defined and client_ip_pool is not none %}
+{%     if client_ip_pool.name is defined and client_ip_pool.name is not none %}
+{%       for pool, pool_config in client_ip_pool.name.items() %}
+{%         if pool_config.subnet is defined and pool_config.subnet is not none %}
+ip-pool={{ pool }}
+{%           if pool_config.gateway_address is defined and pool_config.gateway_address is not none %}
+gw-ip-address={{ pool_config.gateway_address }}/{{ pool_config.subnet.split('/')[1] }}
+{%           endif %}
+{%         endif %}
+{%       endfor %}
+{%     endif %}
+{%  endif %}
+{% endif %}
+
 {% if limits is defined %}
 [connlimit]
 {%   if limits.connection_limit is defined and limits.connection_limit is not none %}
