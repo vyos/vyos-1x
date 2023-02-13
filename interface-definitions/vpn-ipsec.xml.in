@@ -269,6 +269,7 @@
                     <regex>(none|hold|restart)</regex>
                   </constraint>
                 </properties>
+                <defaultValue>none</defaultValue>
               </leafNode>
               <node name="dead-peer-detection">
                 <properties>
@@ -297,6 +298,7 @@
                         <regex>(hold|clear|restart)</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>clear</defaultValue>
                   </leafNode>
                   <leafNode name="interval">
                     <properties>
