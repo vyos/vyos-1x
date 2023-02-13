@@ -10,7 +10,7 @@ ssl=yes
 {%             set web_skip = ", web-skip='" ~ iface_config.use_web.skip ~ "'" if iface_config.use_web.skip is vyos_defined else '' %}
 use=web, web='{{ iface_config.use_web.url }}'{{ web_skip }}
 {%         else %}
-{{ 'usev6=if' if iface_config.ipv6_enable is vyos_defined else 'use=if' }}, if={{ iface }}
+{{ 'usev6=ifv6' if iface_config.ipv6_enable is vyos_defined else 'use=if' }}, if={{ iface }}
 {%         endif %}
 
 {%         if iface_config.rfc2136 is vyos_defined %}
