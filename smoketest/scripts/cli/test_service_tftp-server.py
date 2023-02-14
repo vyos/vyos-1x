@@ -56,6 +56,7 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         while count < 10:
             count += 1
             tmp = process_named_running(PROCESS_NAME)
+            print(tmp)
             if tmp: break
             sleep(1)
         self.assertTrue(tmp)
@@ -147,7 +148,13 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
         self.assertIn('--create --umask 000', config)
 
         # Check for process in VRF
-        tmp = cmd(f'ip vrf pids {vrf}')
+        count = 0
+        while count < 10:
+            count += 1
+            tmp = cmd(f'ip vrf pids {vrf}')
+            print(tmp)
+            if tmp: break
+            sleep(1)
         self.assertIn(PROCESS_NAME, tmp)
 
         # delete VRF
