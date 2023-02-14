@@ -425,7 +425,7 @@ def get_peer_connections(peer, tunnel):
     return matches
 
 
-def reset_peer(peer: str, tunnel:typing.Optional[str]):
+def reset_peer(peer: str, tunnel:typing.Optional[str] = None):
     conns = get_peer_connections(peer, tunnel)
 
     if not conns:
