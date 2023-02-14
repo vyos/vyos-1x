@@ -274,13 +274,13 @@
                 <properties>
                   <help>Monitor last lines of ALL VPNs</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service --unit accel-ppp@*.service --unit ocserv.service</command>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
                   <help>Monitor last lines of IPsec</help>
                 </properties>
-                <command>journalctl --no-hostname --boot --follow --unit strongswan-starter.service</command>
+                <command>journalctl --no-hostname --boot --follow --unit strongswan.service</command>
               </leafNode>
               <leafNode name="l2tp">
                 <properties>

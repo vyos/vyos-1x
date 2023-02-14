@@ -53,11 +53,11 @@
   </node>
   <node name="restart">
     <children>
-      <node name="vpn">
+      <node name="ipsec">
         <properties>
           <help>Restart the IPsec VPN process</help>
         </properties>
-        <command>if pgrep charon >/dev/null ; then sudo ipsec restart ; sleep 3 ; sudo swanctl -q ; else echo "IPsec process not running" ; fi</command>
+        <command>if systemctl is-active --quiet strongswan; then sudo systemctl restart strongswan ; echo "IPsec process restarted";  else echo "IPsec process not running" ; fi</command>
       </node>
     </children>
   </node>
@@ -128,7 +128,7 @@
                 <properties>
                   <help>Show summary of IKE process information</help>
                 </properties>
-                <command>if pgrep charon >/dev/null ; then echo "Running: $(pgrep charon)" ; else echo "Process is not running" ; fi</command>
+                <command>if systemctl is-active --quiet strongswan ; then systemctl status strongswan ; else echo "Process is not running" ; fi</command>
               </node>
             </children>
           </node>
@@ -190,10 +190,10 @@
                     <properties>
                       <help>Show Verbose Detail on all active IPsec Security Associations (SA)</help>
                     </properties>
-                    <command>if pgrep charon >/dev/null ; then sudo /usr/sbin/ipsec statusall ; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo /usr/sbin/ipsec statusall ; else echo "IPsec process not running" ; fi</command>
                   </node>
                 </children>
-                <command>if pgrep charon >/dev/null ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
+                <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
               </node>
               <node name="state">
                 <properties>
@@ -205,7 +205,7 @@
                 <properties>
                   <help>Show status of IPsec process</help>
                 </properties>
-                <command>if pgrep charon >/dev/null ; then echo -e "IPsec Process Running: $(pgrep charon)\n$(sudo /usr/sbin/ipsec status)" ; else echo "IPsec process not running" ; fi</command>
+                <command>if systemctl is-active --quiet strongswan >/dev/null ; then echo -e "IPsec Process Running: $(pgrep charon)\n$(sudo /usr/sbin/ipsec status)" ; else echo "IPsec process not running" ; fi</command>
               </node>
             </children>
           </node>
