@@ -28,7 +28,7 @@
                 <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="vti"</command>
               </node>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="all"</command>
+            <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4"</command>
           </tagNode>
           <tagNode name="ipsec-profile">
             <properties>
