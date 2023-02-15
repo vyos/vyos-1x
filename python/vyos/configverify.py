@@ -420,11 +420,12 @@ def verify_accel_ppp_base_service(config, local_users=True):
     if 'gateway_address' in config:
         gateway = True
     else:
-        if dict_search_recursive(config, 'gateway_address', ['client_ip_pool', 'name']):
-            for _, v in config['client_ip_pool']['name'].items():
-                if 'gateway_address' in v:
-                    gateway = True
-                    break
+        if 'client_ip_pool' in config:
+            if dict_search_recursive(config, 'gateway_address', ['client_ip_pool', 'name']):
+                for _, v in config['client_ip_pool']['name'].items():
+                    if 'gateway_address' in v:
+                        gateway = True
+                        break
     if not gateway:
         raise ConfigError('Server requires gateway-address to be configured!')
 
