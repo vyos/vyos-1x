@@ -53,8 +53,6 @@ dhcp_wait_attempts = 2
 dhcp_wait_sleep = 1
 
 swanctl_dir        = '/etc/swanctl'
-ipsec_conf         = '/etc/ipsec.conf'
-ipsec_secrets      = '/etc/ipsec.secrets'
 charon_conf        = '/etc/strongswan.d/charon.conf'
 charon_dhcp_conf   = '/etc/strongswan.d/charon/dhcp.conf'
 charon_radius_conf = '/etc/strongswan.d/charon/eap-radius.conf'
@@ -618,8 +616,6 @@ def generate(ipsec):
                         if id:
                             ipsec['authentication']['psk'][psk]['id'].append(id)
 
-    render(ipsec_conf, 'ipsec/ipsec.conf.j2', ipsec)
-    render(ipsec_secrets, 'ipsec/ipsec.secrets.j2', ipsec)
     render(charon_conf, 'ipsec/charon.j2', ipsec)
     render(charon_dhcp_conf, 'ipsec/charon/dhcp.conf.j2', ipsec)
     render(charon_radius_conf, 'ipsec/charon/eap-radius.conf.j2', ipsec)
@@ -634,25 +630,12 @@ def resync_nhrp(ipsec):
     if tmp > 0:
         print('ERROR: failed to reapply NHRP settings!')
 
-def wait_for_vici_socket(timeout=5, sleep_interval=0.1):
-    start_time = time()
-    test_command = f'sudo socat -u OPEN:/dev/null UNIX-CONNECT:{vici_socket}'
-    while True:
-        if (start_time + timeout) < time():
-            return None
-        result = run(test_command)
-        if result == 0:
-            return True
-        sleep(sleep_interval)
-
 def apply(ipsec):
     systemd_service = 'strongswan.service'
     if not ipsec:
         call(f'systemctl stop {systemd_service}')
     else:
         call(f'systemctl reload-or-restart {systemd_service}')
-        if wait_for_vici_socket():
-            call('sudo swanctl -q')
 
     resync_nhrp(ipsec)
 

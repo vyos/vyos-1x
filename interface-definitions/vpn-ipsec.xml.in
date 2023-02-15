@@ -546,16 +546,6 @@
               </tagNode>
             </children>
           </tagNode>
-          <leafNode name="include-ipsec-conf">
-            <properties>
-              <help>Absolute path to specify a strongSwan config include file</help>
-            </properties>
-          </leafNode>
-          <leafNode name="include-ipsec-secrets">
-            <properties>
-              <help>Absolute path to a strongSwan secrets include file</help>
-            </properties>
-          </leafNode>
           #include <include/generic-interface-multi.xml.i>
           <node name="log">
             <properties>
