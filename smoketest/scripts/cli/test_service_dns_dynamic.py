@@ -155,7 +155,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(login, user)
         self.assertEqual(pwd, f"'{password}'")
         self.assertEqual(server, srv)
-        self.assertEqual(usev6, f"if, if={interface}")
+        self.assertEqual(usev6, f"ifv6, if={interface}")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

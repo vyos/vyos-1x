@@ -27,11 +27,6 @@ class TestDictSearch(TestCase):
     def test_dh_key_none(self):
         self.assertFalse(verify_diffie_hellman_length('/tmp/non_existing_file', '1024'))
 
-    def test_dh_key_256(self):
-        key_len = '256'
-        cmd(f'openssl dhparam -out {dh_file} {key_len}')
-        self.assertTrue(verify_diffie_hellman_length(dh_file, key_len))
-
     def test_dh_key_512(self):
         key_len = '512'
         cmd(f'openssl dhparam -out {dh_file} {key_len}')

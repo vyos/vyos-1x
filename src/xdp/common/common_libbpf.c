@@ -24,10 +24,6 @@ static inline bool IS_ERR_OR_NULL(const void *ptr)
 int bpf_prog_load_xattr_maps(const struct bpf_prog_load_attr_maps *attr,
 			     struct bpf_object **pobj, int *prog_fd)
 {
-	struct bpf_object_open_attr open_attr = {
-		.file		= attr->file,
-		.prog_type	= attr->prog_type,
-	};
 	struct bpf_program *prog, *first_prog = NULL;
 	enum bpf_attach_type expected_attach_type;
 	enum bpf_prog_type prog_type;
@@ -41,10 +37,13 @@ int bpf_prog_load_xattr_maps(const struct bpf_prog_load_attr_maps *attr,
 	if (!attr->file)
 		return -EINVAL;
 
+	obj = bpf_object__open_file(attr->file, NULL);
 
-	obj = bpf_object__open_xattr(&open_attr);
-	if (IS_ERR_OR_NULL(obj))
-		return -ENOENT;
+	if (libbpf_get_error(obj))
+		return -EINVAL;
+
+	prog = bpf_object__next_program(obj, NULL);
+	bpf_program__set_type(prog, attr->prog_type);
 
 	bpf_object__for_each_program(prog, obj) {
 		/*
@@ -82,7 +81,7 @@ int bpf_prog_load_xattr_maps(const struct bpf_prog_load_attr_maps *attr,
 	bpf_map__for_each(map, obj) {
 		const char* mapname = bpf_map__name(map);
 
-		if (!bpf_map__is_offload_neutral(map))
+		if (bpf_map__type(map) != BPF_MAP_TYPE_PERF_EVENT_ARRAY)
 			bpf_map__set_ifindex(map, attr->ifindex);
                         /* Was: map->map_ifindex = attr->ifindex; */
 
