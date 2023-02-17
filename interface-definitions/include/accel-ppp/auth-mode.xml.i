@@ -10,11 +10,15 @@
       <format>radius</format>
       <description>Use RADIUS server for user autentication</description>
     </valueHelp>
+    <valueHelp>
+      <format>noauth</format>
+      <description>Authentication disabled</description>
+    </valueHelp>
     <constraint>
-      <regex>(local|radius)</regex>
+      <regex>(local|radius|noauth)</regex>
     </constraint>
     <completionHelp>
-      <list>local radius</list>
+      <list>local radius noauth</list>
     </completionHelp>
   </properties>
   <defaultValue>local</defaultValue>

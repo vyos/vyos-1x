@@ -117,29 +117,7 @@
               <help>Client authentication methods</help>
             </properties>
             <children>
-              <leafNode name="mode">
-                <properties>
-                  <help>Authetication mode</help>
-                  <completionHelp>
-                    <list>local radius noauth</list>
-                  </completionHelp>
-                  <constraint>
-                    <regex>(local|radius|noauth)</regex>
-                  </constraint>
-                  <valueHelp>
-                    <format>local</format>
-                    <description>Authentication based on local definition</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>radius</format>
-                    <description>Authentication based on a RADIUS server</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>noauth</format>
-                    <description>Authentication disabled</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
+              #include <include/accel-ppp/auth-mode.xml.i>
               <tagNode name="interface">
                 <properties>
                   <help>Network interface for client MAC addresses</help>
