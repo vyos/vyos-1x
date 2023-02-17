@@ -30,6 +30,11 @@ syslog=accel-pppoe,daemon
 copy=1
 level=5
 
+{% if authentication.mode is vyos_defined("noauth") %}
+[auth]
+noauth=1
+{% endif %}
+
 {% if snmp.master_agent is vyos_defined %}
 [snmp]
 master=1
@@ -133,7 +138,10 @@ pado-delay={{ pado_delay_param.value }}
 called-sid={{ authentication.radius.called_sid_format }}
 {% endif %}
 
-{% if authentication.mode is vyos_defined("local") %}
+{% if authentication.mode is vyos_defined("local") or authentication.mode is vyos_defined("noauth") %}
+{%     if authentication.mode is vyos_defined("noauth") %}
+noauth=1
+{%     endif %}
 {%     if client_ip_pool.name is vyos_defined %}
 {%         for pool, pool_config in client_ip_pool.name.items() %}
 {%             if pool_config.subnet is vyos_defined %}
