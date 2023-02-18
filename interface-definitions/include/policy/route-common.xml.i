@@ -163,11 +163,11 @@
       <properties>
         <help>Connection marking</help>
         <valueHelp>
-          <format>u32:1-2147483647</format>
+          <format>u32:0-2147483647</format>
           <description>Connection marking</description>
         </valueHelp>
         <constraint>
-          <validator name="numeric" argument="--range 1-2147483647"/>
+          <validator name="numeric" argument="--range 0-2147483647"/>
         </constraint>
       </properties>
     </leafNode>
