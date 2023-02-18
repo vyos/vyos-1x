@@ -36,8 +36,14 @@ def verify_mtu(config):
         mtu = int(config['mtu'])
 
         tmp = Interface(config['ifname'])
-        min_mtu = tmp.get_min_mtu()
-        max_mtu = tmp.get_max_mtu()
+        # Not all interfaces support min/max MTU
+        # https://vyos.dev/T5011
+        try:
+            min_mtu = tmp.get_min_mtu()
+            max_mtu = tmp.get_max_mtu()
+        except: # Fallback to defaults
+            min_mtu = 68
+            max_mtu = 9000
 
         if mtu < min_mtu:
             raise ConfigError(f'Interface MTU too low, ' \
