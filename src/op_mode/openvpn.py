@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -153,6 +153,8 @@ def _get_raw_data(mode: str) -> dict:
         d = data[intf]
         d['local_host'] = conf_dict[intf].get('local-host', '')
         d['local_port'] = conf_dict[intf].get('local-port', '')
+        if conf.exists(f'interfaces openvpn {intf} server client'):
+            d['configured_clients'] = conf.list_nodes(f'interfaces openvpn {intf} server client')
         if mode in ['client', 'site-to-site']:
             for client in d['clients']:
                 if 'shared-secret-key-file' in list(conf_dict[intf]):
