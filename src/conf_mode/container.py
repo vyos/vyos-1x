@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -84,16 +84,16 @@ def get_config(config=None):
             # tagNodes in place, it is better to blend in the defaults manually.
             if 'port' in container['name'][name]:
                 for port in container['name'][name]['port']:
-                    default_values = defaults(base + ['name', 'port'])
+                    default_values_port = defaults(base + ['name', 'port'])
                     container['name'][name]['port'][port] = dict_merge(
-                        default_values, container['name'][name]['port'][port])
+                        default_values_port, container['name'][name]['port'][port])
             # XXX: T2665: we can not safely rely on the defaults() when there are
             # tagNodes in place, it is better to blend in the defaults manually.
             if 'volume' in container['name'][name]:
                 for volume in container['name'][name]['volume']:
-                    default_values = defaults(base + ['name', 'volume'])
+                    default_values_volume = defaults(base + ['name', 'volume'])
                     container['name'][name]['volume'][volume] = dict_merge(
-                        default_values, container['name'][name]['volume'][volume])
+                        default_values_volume, container['name'][name]['volume'][volume])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, base + ['network'])
