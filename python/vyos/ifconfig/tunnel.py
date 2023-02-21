@@ -162,6 +162,15 @@ class TunnelIf(Interface):
         """ Get a synthetic MAC address. """
         return self.get_mac_synthetic()
 
+    def set_multicast(self):
+        """ Set multicast """
+        if self.config.get('multicast', 'disable') == 'enable':
+            cmd = 'ip link set dev {ifname} multicast on'
+        else:
+            cmd = 'ip link set dev {ifname} multicast off'
+
+        self._cmd(cmd.format(**self.config))
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -169,6 +178,9 @@ class TunnelIf(Interface):
         on any interface. """
         # Adjust iproute2 tunnel parameters if necessary
         self._change_options()
+
+        # Add multicast
+        self.set_multicast()
 
         # call base class first
         super().update(config)
