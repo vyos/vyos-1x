@@ -7,7 +7,7 @@
           <help>Local time zone (default UTC)</help>
           <priority>100</priority>
           <completionHelp>
-            <script>find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/:: | sort</script>
+            <script>timedatectl list-timezones</script>
           </completionHelp>
           <constraint>
             <validator name="timezone" argument="--validate"/>
