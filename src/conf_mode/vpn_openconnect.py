@@ -105,8 +105,11 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
     return origin
 
 
-def get_config():
-    conf = Config()
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
     base = ['vpn', 'openconnect']
     if not conf.exists(base):
         return None
