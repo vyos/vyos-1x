@@ -540,8 +540,7 @@ def generate(ipsec):
     cleanup_pki_files()
 
     if not ipsec:
-        for config_file in [ipsec_conf, ipsec_secrets, charon_dhcp_conf,
-                            charon_radius_conf, interface_conf, swanctl_conf]:
+        for config_file in [charon_dhcp_conf, charon_radius_conf, interface_conf, swanctl_conf]:
             if os.path.isfile(config_file):
                 os.unlink(config_file)
         render(charon_conf, 'ipsec/charon.j2', {'install_routes': default_install_routes})
