@@ -131,6 +131,7 @@ Depends:
   python3-netaddr,
   python3-netifaces,
   python3-paramiko,
+  python3-passlib,
   python3-psutil,
   python3-pyhumps,
   python3-pystache,

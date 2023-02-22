@@ -16,12 +16,10 @@
 
 import os
 
-from crypt import crypt
-from crypt import METHOD_SHA512
+from passlib.hosts import linux_context
 from psutil import users
 from pwd import getpwall
 from pwd import getpwnam
-from spwd import getspnam
 from sys import exit
 from time import sleep
 
@@ -55,6 +53,13 @@ def get_local_users():
 
     return local_users
 
+def get_shadow_password(username):
+    with open('/etc/shadow') as f:
+        for user in f.readlines():
+            items = user.split(":")
+            if username == items[0]:
+                return items[1]
+    return None
 
 def get_config(config=None):
     if config:
@@ -154,7 +159,7 @@ def generate(login):
         for user, user_config in login['user'].items():
             tmp = dict_search('authentication.plaintext_password', user_config)
             if tmp:
-                encrypted_password = crypt(tmp, METHOD_SHA512)
+                encrypted_password = linux_context.hash(tmp)
                 login['user'][user]['authentication']['encrypted_password'] = encrypted_password
                 del login['user'][user]['authentication']['plaintext_password']
 
@@ -187,7 +192,7 @@ def generate(login):
                 call(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
             else:
                 try:
-                    if getspnam(user).sp_pwdp == dict_search('authentication.encrypted_password', user_config):
+                    if get_shadow_password(user) == dict_search('authentication.encrypted_password', user_config):
                         # If the current encrypted bassword matches the encrypted password
                         # from the config - do not update it. This will remove the encrypted
                         # value from the system logs.
