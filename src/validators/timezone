@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument("--validate", action="store", required=True, help="Check if timezone is valid")
     args = parser.parse_args()
 
-    tz_data = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+    tz_data = cmd('timedatectl list-timezones')
     tz_data = tz_data.split('\n')
 
     if args.validate not in tz_data:
