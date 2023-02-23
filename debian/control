@@ -55,6 +55,7 @@ Depends:
   etherwake,
   ethtool,
   fdisk,
+  exfatprogs,
   fastnetmon [amd64],
   file,
   frr (>= 7.5),
