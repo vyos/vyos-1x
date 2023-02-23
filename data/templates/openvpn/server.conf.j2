@@ -213,6 +213,9 @@ keysize 256
 data-ciphers {{ encryption.ncp_ciphers | openvpn_ncp_ciphers }}
 {%     endif %}
 {% endif %}
+# https://vyos.dev/T5027
+# Required to support BF-CBC (default ciphername when none given)
+providers legacy default
 
 {% if hash is vyos_defined %}
 auth {{ hash }}
