@@ -27,29 +27,51 @@ from vyos.util import rc_cmd
 accel_dict = {
     'ipoe': {
         'port': 2002,
-        'path': 'service ipoe-server'
+        'path': 'service ipoe-server',
+        'base_path': 'service ipoe-server'
     },
     'pppoe': {
         'port': 2001,
-        'path': 'service pppoe-server'
+        'path': 'service pppoe-server',
+        'base_path': 'service pppoe-server'
     },
     'pptp': {
         'port': 2003,
-        'path': 'vpn pptp'
+        'path': 'vpn pptp',
+        'base_path': 'vpn pptp'
     },
     'l2tp': {
         'port': 2004,
-        'path': 'vpn l2tp'
+        'path': 'vpn l2tp',
+        'base_path': 'vpn l2tp remote-access'
     },
     'sstp': {
         'port': 2005,
-        'path': 'vpn sstp'
+        'path': 'vpn sstp',
+        'base_path': 'vpn sstp'
     }
 }
 
 
-def _get_raw_statistics(accel_output, pattern):
-    return vyos.accel_ppp.get_server_statistics(accel_output, pattern, sep=':')
+def _get_config_settings(protocol):
+    '''Get config dict from VyOS configuration'''
+    conf = ConfigTreeQuery()
+    base_path = accel_dict[protocol]['base_path']
+    data = conf.get_config_dict(base_path,
+                                key_mangling=('-', '_'),
+                                get_first_key=True,
+                                no_tag_node_value_mangle=True)
+    if conf.exists(f'{base_path} authentication local-users'):
+        # Delete sensitive data
+        del data['authentication']['local_users']
+    return {'config_option': data}
+
+
+def _get_raw_statistics(accel_output, pattern, protocol):
+    return {
+        **vyos.accel_ppp.get_server_statistics(accel_output, pattern, sep=':'),
+        **_get_config_settings(protocol)
+    }
 
 
 def _get_raw_sessions(port):
@@ -103,7 +125,7 @@ def show_statistics(raw: bool, protocol: str):
     rc, output = rc_cmd(f'/usr/bin/accel-cmd -p {port} show stat')
 
     if raw:
-        return _get_raw_statistics(output, pattern)
+        return _get_raw_statistics(output, pattern, protocol)
 
     return output
 

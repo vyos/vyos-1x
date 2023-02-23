@@ -38,6 +38,9 @@ def get_server_statistics(accel_statistics, pattern, sep=':') -> dict:
             if key in ['starting', 'active', 'finishing']:
                 stat_dict['sessions'][key] = value.strip()
                 continue
+            if key == 'cpu':
+                stat_dict['cpu_load_percentage'] = int(re.sub(r'%', '', value.strip()))
+                continue
             stat_dict[key] = value.strip()
     return stat_dict
 
