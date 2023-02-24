@@ -74,10 +74,10 @@
                       <help>Secure Connectivity Association Key Name</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>32-byte (256-bit) hex-string (64 hex-digits)</description>
+                        <description>>1..32-bytes (8..256 bit) hex-string (2..64 hex-digits)</description>
                       </valueHelp>
                       <constraint>
-                        <regex>^[A-Fa-f0-9]{64}$</regex>
+                        <regex>^[A-Fa-f0-9]{2,64}$</regex>
                       </constraint>
                     </properties>
                   </leafNode>
