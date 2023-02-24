@@ -18,6 +18,7 @@ etc/update-motd.d
 etc/vyos
 lib/
 opt/
+srv/localui
 usr/sbin
 usr/bin/config-mgmt
 usr/bin/initial-setup
