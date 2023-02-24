@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -39,6 +39,34 @@ radius_servers = cfg_dir + '/radius_servers'
 def get_hash(password):
     return crypt(password, mksalt(METHOD_SHA512))
 
+
+def _default_dict_cleanup(origin: dict, default_values: dict) -> dict:
+    """
+    https://vyos.dev/T2665
+    Clear unnecessary key values in merged config by dict_merge function
+    :param origin: config
+    :type origin: dict
+    :param default_values: default values
+    :type default_values: dict
+    :return: merged dict
+    :rtype: dict
+    """
+
+    if 'mode' in origin["authentication"] and "radius" in \
+            origin["authentication"]["mode"]:
+        del origin['authentication']['radius']['server']['port']
+        if not origin["authentication"]['radius']['server']:
+            raise ConfigError(
+                'openconnect authentication mode radius requires at least one RADIUS server')
+        default_values_radius_port = \
+        default_values['authentication']['radius']['server']['port']
+        for server, params in origin['authentication']['radius'][
+            'server'].items():
+            if 'port' not in params:
+                params['port'] = default_values_radius_port
+    return origin
+
+
 def get_config():
     conf = Config()
     base = ['vpn', 'openconnect']
@@ -50,7 +78,7 @@ def get_config():
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
-
+    ocserv = _default_dict_cleanup(ocserv, default_values)
     return ocserv
 
 def verify(ocserv):
@@ -62,7 +90,7 @@ def verify(ocserv):
         if "mode" in ocserv["authentication"]:
             if "local" in ocserv["authentication"]["mode"]:
                 if 'local_users' not in ocserv["authentication"] or 'username' not in ocserv["authentication"]["local_users"]:
-                    raise ConfigError('openconnect mode local requires at leat one user')
+                    raise ConfigError('openconnect authentication mode local requires at least one user')
                 else:
                     for user in ocserv["authentication"]["local_users"]["username"]:
                         if not "password" in ocserv["authentication"]["local_users"]["username"][user]:
