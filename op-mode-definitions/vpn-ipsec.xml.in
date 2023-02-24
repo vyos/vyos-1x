@@ -18,6 +18,9 @@
               <tagNode name="tunnel">
                 <properties>
                   <help>Reset a specific tunnel for given peer</help>
+                  <completionHelp>
+                    <path>vpn ipsec site-to-site peer ${COMP_WORDS[3]} tunnel</path>
+                  </completionHelp>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="$6"</command>
               </tagNode>
