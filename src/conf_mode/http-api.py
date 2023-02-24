@@ -79,9 +79,10 @@ def get_config(config=None):
     # http-api.conf format for api_keys:
     if 'keys' in api_dict:
         api_dict['api_keys'] = []
-        for el in list(api_dict['keys']['id']):
-            key = api_dict['keys']['id'][el]['key']
-            api_dict['api_keys'].append({'id': el, 'key': key})
+        for el in list(api_dict['keys'].get('id', {})):
+            key = api_dict['keys']['id'][el].get('key', '')
+            if key:
+                api_dict['api_keys'].append({'id': el, 'key': key})
         del api_dict['keys']
 
     # Do we run inside a VRF context?
