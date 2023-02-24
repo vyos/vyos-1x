@@ -28,6 +28,7 @@ from time import sleep
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
+from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.util import cmd
@@ -159,7 +160,7 @@ def generate(login):
 
                 # remove old plaintext password and set new encrypted password
                 env = os.environ.copy()
-                env['vyos_libexec_dir'] = '/usr/libexec/vyos'
+                env['vyos_libexec_dir'] = directories['base']
 
                 # Set default commands for re-adding user with encrypted password
                 del_user_plain = f"system login user '{user}' authentication plaintext-password"
