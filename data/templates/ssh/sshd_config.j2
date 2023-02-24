@@ -29,7 +29,7 @@ PermitRootLogin no
 PidFile /run/sshd/sshd.pid
 AddressFamily any
 DebianBanner no
-PasswordAuthentication no
+KbdInteractiveAuthentication no
 
 #
 # User configurable section
@@ -48,7 +48,7 @@ Port {{ value }}
 LogLevel {{ loglevel | upper }}
 
 # Specifies whether password authentication is allowed
-ChallengeResponseAuthentication {{ "no" if disable_password_authentication is vyos_defined else "yes" }}
+PasswordAuthentication {{ "no" if disable_password_authentication is vyos_defined else "yes" }}
 
 {% if listen_address is vyos_defined %}
 # Specifies the local addresses sshd should listen on
