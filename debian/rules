@@ -8,6 +8,7 @@ VYOS_DATA_DIR := usr/share/vyos
 VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 VYOS_MIBS_DIR := usr/share/snmp/mibs
+VYOS_LOCALUI_DIR := srv/localui
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
@@ -88,6 +89,9 @@ override_dh_auto_install:
 	# Install data files
 	mkdir -p $(DIR)/$(VYOS_DATA_DIR)
 	cp -r data/* $(DIR)/$(VYOS_DATA_DIR)
+
+	# Create localui dir
+	mkdir -p $(DIR)/$(VYOS_LOCALUI_DIR)
 
 	# Install SNMP MIBs
 	mkdir -p $(DIR)/$(VYOS_MIBS_DIR)

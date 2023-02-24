@@ -16,6 +16,8 @@ server {
         server_name {{ name }};
 {%     endfor %}
 
+        root /srv/localui;
+
 {%     if server.certbot %}
         ssl_certificate {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/fullchain.pem;
         ssl_certificate_key {{ server.certbot_dir }}/live/{{ server.certbot_domain_dir }}/privkey.pem;
