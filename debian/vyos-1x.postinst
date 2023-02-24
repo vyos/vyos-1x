@@ -24,9 +24,9 @@ fi
 # Enable 2FA/MFA support for SSH and local logins
 for file in /etc/pam.d/sshd /etc/pam.d/login
 do
-    PAM_CONFIG="auth       required     pam_google_authenticator.so nullok"
-    grep -qF -- "${PAM_CONFIG}" $file || \
-    sed -i "/^@include common-auth/a # Check 2FA/MFA authentication token if enabled (per user)\n${PAM_CONFIG}" $file
+    PAM_CONFIG="# Check 2FA/MFA authentication token if enabled (per user)\nauth       required     pam_google_authenticator.so nullok forward_pass\n"
+    grep -qF -- "pam_google_authenticator.so" $file || \
+    sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
 # Add RADIUS operator user for RADIUS authenticated users to map to
