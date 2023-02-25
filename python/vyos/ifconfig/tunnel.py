@@ -83,11 +83,6 @@ class TunnelIf(Interface):
                 'convert': enable_to_on,
                 'shellcmd': 'ip link set dev {ifname} multicast {value}',
             },
-            'allmulticast': {
-                'validate': lambda v: assert_list(v, ['enable', 'disable']),
-                'convert': enable_to_on,
-                'shellcmd': 'ip link set dev {ifname} allmulticast {value}',
-            },
         }
     }
 
@@ -162,14 +157,9 @@ class TunnelIf(Interface):
         """ Get a synthetic MAC address. """
         return self.get_mac_synthetic()
 
-    def set_multicast(self):
-        """ Set multicast """
-        if self.config.get('multicast', 'disable') == 'enable':
-            cmd = 'ip link set dev {ifname} multicast on'
-        else:
-            cmd = 'ip link set dev {ifname} multicast off'
-
-        self._cmd(cmd.format(**self.config))
+    def set_multicast(self, enable):
+        """ Change the MULTICAST flag on the device """
+        return self.set_interface('multicast', enable)
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
@@ -179,8 +169,10 @@ class TunnelIf(Interface):
         # Adjust iproute2 tunnel parameters if necessary
         self._change_options()
 
-        # Add multicast
-        self.set_multicast()
+        # IP Multicast
+        tmp = dict_search('enable_multicast', config)
+        value = 'enable' if (tmp != None) else 'disable'
+        self.set_multicast(value)
 
         # call base class first
         super().update(config)

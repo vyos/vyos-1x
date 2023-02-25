@@ -106,24 +106,10 @@
             </properties>
           </leafNode>
           #include <include/interface/mirror.xml.i>
-          <leafNode name="multicast">
+          <leafNode name="enable-multicast">
             <properties>
-              <help>Multicast operation over tunnel</help>
-              <completionHelp>
-                <list>enable disable</list>
-              </completionHelp>
-              <valueHelp>
-                <format>enable</format>
-                <description>Enable multicast</description>
-              </valueHelp>
-              <valueHelp>
-                <format>disable</format>
-                <description>Disable multicast (default)</description>
-              </valueHelp>
-              <constraint>
-                <regex>(enable|disable)</regex>
-              </constraint>
-              <constraintErrorMessage>Must be 'disable' or 'enable'</constraintErrorMessage>
+              <help>Enable multicast operation over tunnel</help>
+              <valueless/>
             </properties>
           </leafNode>
           <node name="parameters">
