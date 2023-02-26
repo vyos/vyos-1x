@@ -29,14 +29,13 @@ def generate_token(user: str, passwd: str, secret: str, exp: int) -> dict:
         payload_data = {'iss': user, 'sub': user_id, 'exp': exp}
         secret = state.settings.get('secret')
         if secret is None:
-            return {
-                    "success": False,
-                    "errors": ['failed secret generation']
-                   }
+            return {"errors": ['missing secret']}
         token = jwt.encode(payload=payload_data, key=secret, algorithm="HS256")
 
         users |= {user_id: user}
         return {'token': token}
+    else:
+        return {"errors": ['failed pam authentication']}
 
 def get_user_context(request):
     context = {}

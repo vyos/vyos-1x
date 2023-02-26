@@ -20,6 +20,7 @@ from ariadne import ObjectType, UnionType
 from graphql import GraphQLResolveInfo
 
 from .. libs.token_auth import generate_token
+from .. session.session import get_user_info
 from .. import state
 
 auth_token_mutation = ObjectType("Mutation")
@@ -36,11 +37,22 @@ def auth_token_resolver(obj: Any, info: GraphQLResolveInfo, data: Dict):
                   datetime.timedelta(seconds=exp_interval))
 
     res = generate_token(user, passwd, secret, expiration)
-    if res:
+    try:
+        res |= get_user_info(user)
+    except ValueError:
+        # non-existent user already caught
+        pass
+    if 'token' in res:
         data['result'] = res
         return {
             "success": True,
             "data": data
+        }
+
+    if 'errors' in res:
+        return {
+            "success": False,
+            "errors": res['errors']
         }
 
     return {

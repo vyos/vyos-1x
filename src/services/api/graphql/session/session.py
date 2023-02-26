@@ -29,6 +29,28 @@ from api.graphql.libs.op_mode import normalize_output
 
 op_mode_include_file = os.path.join(directories['data'], 'op-mode-standardized.json')
 
+def get_config_dict(path=[], effective=False, key_mangling=None,
+                     get_first_key=False, no_multi_convert=False,
+                     no_tag_node_value_mangle=False):
+    config = Config()
+    return config.get_config_dict(path=path, effective=effective,
+                                  key_mangling=key_mangling,
+                                  get_first_key=get_first_key,
+                                  no_multi_convert=no_multi_convert,
+                                  no_tag_node_value_mangle=no_tag_node_value_mangle)
+
+def get_user_info(user):
+    user_info = {}
+    info = get_config_dict(['system', 'login', 'user', user],
+                           get_first_key=True)
+    if not info:
+        raise ValueError("No such user")
+
+    user_info['user'] = user
+    user_info['full_name'] = info.get('full-name', '')
+
+    return user_info
+
 class Session:
     """
     Wrapper for calling configsession functions based on GraphQL requests.
@@ -45,17 +67,6 @@ class Session:
                 self._op_mode_list = json.loads(f.read())
         except Exception:
             self._op_mode_list = None
-
-    @staticmethod
-    def _get_config_dict(path=[], effective=False, key_mangling=None,
-                         get_first_key=False, no_multi_convert=False,
-                         no_tag_node_value_mangle=False):
-        config = Config()
-        return config.get_config_dict(path=path, effective=effective,
-                                      key_mangling=key_mangling,
-                                      get_first_key=get_first_key,
-                                      no_multi_convert=no_multi_convert,
-                                      no_tag_node_value_mangle=no_tag_node_value_mangle)
 
     def show_config(self):
         session = self._session
@@ -134,10 +145,7 @@ class Session:
         user_info = {}
         user = data['user']
         try:
-            info = self._get_config_dict(['system', 'login', 'user', user,
-                                          'full-name'])
-            user_info['user'] = user
-            user_info['full_name'] = info.get('full-name', '')
+            user_info = get_user_info(user)
         except Exception as error:
             raise error
 
