@@ -54,7 +54,7 @@ class TestProtocolsNHRP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(tunnel_path + [tunnel_if, "address", "172.16.253.134/29"])
         self.cli_set(tunnel_path + [tunnel_if, "encapsulation", tunnel_encapsulation])
         self.cli_set(tunnel_path + [tunnel_if, "source-address", tunnel_source])
-        self.cli_set(tunnel_path + [tunnel_if, "multicast", "enable"])
+        self.cli_set(tunnel_path + [tunnel_if, "enable-multicast"])
         self.cli_set(tunnel_path + [tunnel_if, "parameters", "ip", "key", "1"])
 
         # NHRP

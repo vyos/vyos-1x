@@ -335,7 +335,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(tunnel_path + [tunnel_if, 'address', '172.16.253.134/29'])
         self.cli_set(tunnel_path + [tunnel_if, 'encapsulation', 'gre'])
         self.cli_set(tunnel_path + [tunnel_if, 'source-address', '192.0.2.1'])
-        self.cli_set(tunnel_path + [tunnel_if, 'multicast', 'enable'])
+        self.cli_set(tunnel_path + [tunnel_if, 'enable-multicast'])
         self.cli_set(tunnel_path + [tunnel_if, 'parameters', 'ip', 'key', '1'])
 
         # NHRP
