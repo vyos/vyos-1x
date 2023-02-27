@@ -19,7 +19,7 @@
                 <properties>
                   <help>Local interface used for connection</help>
                   <completionHelp>
-                    <path>interfaces wireguard</path>
+                    <script>${vyos_completion_dir}/list_interfaces --type wireguard</script>
                   </completionHelp>
                 </properties>
                 <children>

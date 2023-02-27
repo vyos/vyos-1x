@@ -39,7 +39,7 @@
                     <properties>
                       <help>Show SNMP ifAlias for specified interface</help>
                       <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifalias="$6"</command>
@@ -48,7 +48,7 @@
                     <properties>
                       <help>Show SNMP ifDescr for specified interface</help>
                       <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifdescr="$6"</command>
@@ -57,7 +57,7 @@
                     <properties>
                       <help>Show SNMP ifDescr for specified interface</help>
                       <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>
                     </properties>
                     <command>${vyos_op_scripts_dir}/snmp_ifmib.py --ifindex="$6"</command>

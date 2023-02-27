@@ -48,7 +48,7 @@
                     <properties>
                       <help>Show DHCP client log on specific interface</help>
                       <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                        <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
                       </completionHelp>
                     </properties>
                     <command>journalctl --no-hostname --follow --boot --unit "dhclient@$6.service"</command>
@@ -78,7 +78,7 @@
                     <properties>
                       <help>Show DHCPv6 client log on specific interface</help>
                       <completionHelp>
-                        <script>${vyos_completion_dir}/list_interfaces.py</script>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
                       </completionHelp>
                     </properties>
                     <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@$6.service"</command>

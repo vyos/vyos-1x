@@ -12,7 +12,7 @@
             <properties>
               <help>Show Address Resolution Protocol (ARP) cache for specified interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/neighbor.py show --family inet --interface "$4"</command>

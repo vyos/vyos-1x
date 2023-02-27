@@ -20,7 +20,7 @@
             <properties>
               <help>Reset OpenVPN process on interface</help>
               <completionHelp>
-                <path>interfaces openvpn</path>
+                <script>sudo ${vyos_completion_dir}/list_interfaces --type openvpn</script>
               </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/openvpn.py reset --interface $4</command>
@@ -51,7 +51,7 @@
             <properties>
               <help>Show OpenVPN interface information</help>
               <completionHelp>
-                <path>interfaces openvpn</path>
+                <script>sudo ${vyos_completion_dir}/list_interfaces --type openvpn</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name=$4</command>

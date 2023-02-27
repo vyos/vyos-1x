@@ -25,7 +25,7 @@
         <properties>
           <help>Show bridge information for a given bridge interface</help>
           <completionHelp>
-            <path>interfaces bridge</path>
+            <script>${vyos_completion_dir}/list_interfaces --type bridge</script>
           </completionHelp>
         </properties>
         <command>bridge -c link show | grep "master $3"</command>

@@ -9,7 +9,7 @@
         <properties>
           <help>Interface where the station is connected</help>
           <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
+            <script>${vyos_completion_dir}/list_interfaces</script>
           </completionHelp>
         </properties>
         <children>
