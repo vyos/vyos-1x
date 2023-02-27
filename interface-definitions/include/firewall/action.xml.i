@@ -3,7 +3,7 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept jump reject return drop</list>
+      <list>accept jump reject return drop queue</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
@@ -25,8 +25,12 @@
       <format>drop</format>
       <description>Drop matching entries</description>
     </valueHelp>
+    <valueHelp>
+      <format>queue</format>
+      <description>Enqueue packet to userspace</description>
+    </valueHelp>
     <constraint>
-      <regex>(accept|jump|reject|return|drop)</regex>
+      <regex>(accept|jump|reject|return|drop|queue)</regex>
     </constraint>
   </properties>
 </leafNode>

@@ -502,6 +502,7 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              #include <include/firewall/nft-queue.xml.i>
             </children>
           </tagNode>
         </children>
@@ -671,6 +672,7 @@
                 </properties>
               </leafNode>
               #include <include/firewall/ttl.xml.i>
+              #include <include/firewall/nft-queue.xml.i>
             </children>
           </tagNode>
         </children>

@@ -284,6 +284,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name2, 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'name', name2, 'rule', '1', 'jump-target', name])
 
+        self.cli_set(['firewall', 'name', name2, 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '2', 'action', 'queue'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '2', 'queue', '3'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '3', 'protocol', 'udp'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '3', 'action', 'queue'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '3', 'queue-options', 'fanout'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '3', 'queue-options', 'bypass'])
+        self.cli_set(['firewall', 'name', name2, 'rule', '3', 'queue', '0-15'])
+
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
 
         self.cli_commit()
@@ -294,7 +303,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'return'],
             [f'log prefix "[{name}-default-D]"', 'drop'],
             ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
-            [f'log prefix "[{name2}-default-J]"', f'jump NAME_{name}']
+            [f'log prefix "[{name2}-default-J]"', f'jump NAME_{name}'],
+            [f'meta l4proto tcp','queue to 3'],
+            [f'meta l4proto udp','queue flags bypass,fanout to 0-15']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
