@@ -26,7 +26,7 @@
                 <properties>
                   <help>Show IPv6 neighbor table for specified interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/neighbor.py show --family inet6 --interface "$5"</command>
@@ -71,7 +71,7 @@
                 <properties>
                   <help>Reset IPv6 ND cache for interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <command>sudo ip -f inet6 neigh flush dev "$5"</command>

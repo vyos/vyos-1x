@@ -32,7 +32,7 @@
   <properties>
     <help>Show IS-IS interfaces</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
   </properties>
   <children>
@@ -49,7 +49,7 @@
   <properties>
     <help>Show specific IS-IS interface</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
@@ -75,7 +75,7 @@
       <properties>
         <help>Show specific IS-IS interface</help>
         <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces</script>
         </completionHelp>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>

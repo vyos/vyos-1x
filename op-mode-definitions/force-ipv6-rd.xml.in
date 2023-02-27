@@ -11,7 +11,7 @@
             <properties>
               <help>IPv6 Router Discovery on specified interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <command>/usr/bin/rdisc6 "$4"</command>

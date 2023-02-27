@@ -20,7 +20,7 @@
                 <properties>
                   <help>Source interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <command>${vyos_op_scripts_dir}/force_mtu_host.sh $4 $6</command>

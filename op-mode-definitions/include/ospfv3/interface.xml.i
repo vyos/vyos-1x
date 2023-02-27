@@ -38,7 +38,7 @@
   <properties>
     <help>Specific insterface to examine</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
