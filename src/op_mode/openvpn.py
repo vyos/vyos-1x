@@ -173,8 +173,8 @@ def _format_openvpn(data: dict) -> str:
                'TX bytes', 'RX bytes', 'Connected Since']
 
     out = ''
-    data_out = []
     for intf in list(data):
+        data_out = []
         l_host = data[intf]['local_host']
         l_port = data[intf]['local_port']
         for client in list(data[intf]['clients']):
@@ -192,7 +192,9 @@ def _format_openvpn(data: dict) -> str:
             data_out.append([name, remote, tunnel, local, tx_bytes,
                              rx_bytes, online_since])
 
-        out += tabulate(data_out, headers)
+        if data_out:
+            out += tabulate(data_out, headers)
+            out += "\n"
 
     return out
 
