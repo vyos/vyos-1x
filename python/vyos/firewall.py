@@ -337,6 +337,15 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
             target = rule_conf['jump_target']
             output.append(f'NAME{def_suffix}_{target}')
 
+        if 'queue' in rule_conf['action']:
+            if 'queue' in rule_conf:
+                target = rule_conf['queue']
+                output.append(f'num {target}')
+
+            if 'queue_options' in rule_conf:
+                queue_opts = ','.join(rule_conf['queue_options'])
+                output.append(f'{queue_opts}')
+
     else:
         output.append('return')
 

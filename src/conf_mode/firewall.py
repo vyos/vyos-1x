@@ -197,6 +197,15 @@ def verify_rule(firewall, rule_conf, ipv6):
             if target not in dict_search_args(firewall, 'ipv6_name'):
                 raise ConfigError(f'Invalid jump-target. Firewall ipv6-name {target} does not exist on the system')
 
+    if 'queue_options' in rule_conf:
+        if 'queue' not in rule_conf['action']:
+            raise ConfigError('queue-options defined, but action queue needed and it is not defined')
+        if 'fanout' in rule_conf['queue_options'] and ('queue' not in rule_conf or '-' not in rule_conf['queue']):
+            raise ConfigError('queue-options fanout defined, then queue needs to be defined as a range')
+
+    if 'queue' in rule_conf and 'queue' not in rule_conf['action']:
+        raise ConfigError('queue defined, but action queue needed and it is not defined')
+
     if 'fragment' in rule_conf:
         if {'match_frag', 'match_non_frag'} <= set(rule_conf['fragment']):
             raise ConfigError('Cannot specify both "match-frag" and "match-non-frag"')
