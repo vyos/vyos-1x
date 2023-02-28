@@ -144,6 +144,9 @@ class QoSBase:
 
     def update(self, config, direction, priority=None):
         """ method must be called from derived class after it has completed qdisc setup """
+        if self._debug:
+            import pprint
+            pprint.pprint(config)
 
         if 'class' in config:
             for cls, cls_config in config['class'].items():
