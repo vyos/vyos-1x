@@ -394,6 +394,14 @@
             #include <include/isis/redistribute-level-1-2.xml.i>
           </children>
         </node>
+        <node name="babel">
+          <properties>
+            <help>Redistribute Babel routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-level-1-2.xml.i>
+          </children>
+        </node>
         <node name="static">
           <properties>
             <help>Redistribute static routes into IS-IS</help>
@@ -444,6 +452,14 @@
         <node name="ripng">
           <properties>
             <help>Redistribute RIPng routes into IS-IS</help>
+          </properties>
+          <children>
+            #include <include/isis/redistribute-level-1-2.xml.i>
+          </children>
+        </node>
+        <node name="babel">
+          <properties>
+            <help>Redistribute Babel routes into IS-IS</help>
           </properties>
           <children>
             #include <include/isis/redistribute-level-1-2.xml.i>

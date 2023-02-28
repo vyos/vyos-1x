@@ -123,6 +123,14 @@
                   #include <include/rip/redistribute.xml.i>
                 </children>
               </node>
+              <node name="babel">
+                <properties>
+                  <help>Redistribute Babel routes</help>
+                </properties>
+                <children>
+                  #include <include/rip/redistribute.xml.i>
+                </children>
+              </node>
             </children>
           </node>
           <leafNode name="route">

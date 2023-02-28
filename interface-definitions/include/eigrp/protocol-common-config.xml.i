@@ -87,6 +87,10 @@
       <description>Routing Information Protocol (RIP)</description>
     </valueHelp>
     <valueHelp>
+      <format>babel</format>
+      <description>Babel routing protocol (Babel)</description>
+    </valueHelp>
+    <valueHelp>
       <format>static</format>
       <description>Statically configured routes</description>
     </valueHelp>
@@ -98,7 +102,7 @@
       <list>bgp connected nhrp ospf rip static vnc</list>
     </completionHelp>
     <constraint>
-      <regex>(bgp|connected|nhrp|ospf|rip|static|vnc)</regex>
+      <regex>(bgp|connected|nhrp|ospf|rip|babel|static|vnc)</regex>
     </constraint>
     <multi/>
   </properties>
