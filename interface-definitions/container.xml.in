@@ -113,6 +113,15 @@
               <constraintErrorMessage>Entrypoint must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
+          <leafNode name="host-name">
+            <properties>
+              <help>Container host name</help>
+              <constraint>
+                <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]</regex>
+              </constraint>
+              <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+            </properties>
+          </leafNode>
           <leafNode name="image">
             <properties>
               <help>Image name in the hub-registry</help>
