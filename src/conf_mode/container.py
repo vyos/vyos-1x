@@ -256,6 +256,11 @@ def generate_run_arguments(name, container_config):
         for k, v in container_config['environment'].items():
             env_opt += f" --env \"{k}={v['value']}\""
 
+    hostname = ''
+    if 'host_name' in container_config:
+        hostname = container_config['host_name']
+        hostname = f'--hostname {hostname}'
+
     # Publish ports
     port = ''
     if 'port' in container_config:
@@ -277,13 +282,18 @@ def generate_run_arguments(name, container_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {device} {port} {volume} {env_opt}'
+                         f'--name {name} {hostname} {device} {port} {volume} {env_opt}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:
         # it needs to be json-formatted with single quote on the outside
         entrypoint = json_write(container_config['entrypoint'].split()).replace('"', "&quot;")
         entrypoint = f'--entrypoint &apos;{entrypoint}&apos;'
+
+    hostname = ''
+    if 'host_name' in container_config:
+        hostname = container_config['host_name']
+        hostname = f'--hostname {hostname}'
 
     command = ''
     if 'command' in container_config:
