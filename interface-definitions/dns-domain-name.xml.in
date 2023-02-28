@@ -34,7 +34,7 @@
         <properties>
           <help>System host name (default: vyos)</help>
           <constraint>
-            <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]</regex>
+            #include <include/constraint/host-name.xml.in>
           </constraint>
         </properties>
       </leafNode>
