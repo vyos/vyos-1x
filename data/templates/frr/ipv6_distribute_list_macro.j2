@@ -1,0 +1,30 @@
+{% macro render_ipv6_distribute_list(distribute_list) %}
+{% if distribute_list.access_list.in is vyos_defined %}
+ ipv6 distribute-list {{ distribute_list.access_list.in }} in
+{% endif %}
+{% if distribute_list.access_list.out is vyos_defined %}
+ ipv6 distribute-list {{ distribute_list.access_list.out }} out
+{% endif %}
+{% if distribute_list.interface is vyos_defined %}
+{%     for interface, interface_config in distribute_list.interface.items() %}
+{%         if interface_config.access_list.in is vyos_defined %}
+ ipv6 distribute-list {{ interface_config.access_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.access_list.out is vyos_defined %}
+ ipv6 distribute-list {{ interface_config.access_list.out }} out {{ interface }}
+{%         endif %}
+{%         if interface_config.prefix_list.in is vyos_defined %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.in }} in {{ interface }}
+{%         endif %}
+{%         if interface_config.prefix_list.out is vyos_defined %}
+ ipv6 distribute-list prefix {{ interface_config.prefix_list.out }} out {{ interface }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if distribute_list.prefix_list.in is vyos_defined %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.in }} in
+{% endif %}
+{% if distribute_list.prefix_list.out is vyos_defined %}
+ ipv6 distribute-list prefix {{ distribute_list.prefix_list.out }} out
+{% endif %}
+{% endmacro %}

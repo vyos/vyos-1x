@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -47,7 +47,7 @@ def get_hash(password):
     return crypt(password, mksalt(METHOD_SHA512))
 
 
-def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
+def _default_dict_cleanup(origin: dict, default_values: dict) -> dict:
     """
     https://vyos.dev/T2665
     Clear unnecessary key values in merged config by dict_merge function
@@ -63,7 +63,7 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
         del origin['authentication']['local_users']['username']['otp']
         if not origin["authentication"]["local_users"]["username"]:
             raise ConfigError(
-                'Openconnect mode local required at least one user')
+                'Openconnect authentication mode local requires at least one user')
         default_ocserv_usr_values = \
         default_values['authentication']['local_users']['username']['otp']
         for user, params in origin['authentication']['local_users'][
@@ -82,7 +82,7 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
         del origin['authentication']['radius']['server']['port']
         if not origin["authentication"]['radius']['server']:
             raise ConfigError(
-                'Openconnect authentication mode radius required at least one radius server')
+                'Openconnect authentication mode radius requires at least one RADIUS server')
         default_values_radius_port = \
         default_values['authentication']['radius']['server']['port']
         for server, params in origin['authentication']['radius'][
@@ -95,7 +95,7 @@ def T2665_default_dict_cleanup(origin: dict, default_values: dict) -> dict:
         del origin['accounting']['radius']['server']['port']
         if not origin["accounting"]['radius']['server']:
             raise ConfigError(
-                'Openconnect accounting mode radius required at least one radius server')
+                'Openconnect accounting mode radius requires at least one RADIUS server')
         default_values_radius_port = \
             default_values['accounting']['radius']['server']['port']
         for server, params in origin['accounting']['radius'][
@@ -120,7 +120,7 @@ def get_config(config=None):
     default_values = defaults(base)
     ocserv = dict_merge(default_values, ocserv)
     # workaround a "know limitation" - https://vyos.dev/T2665
-    ocserv = T2665_default_dict_cleanup(ocserv, default_values)
+    ocserv = _default_dict_cleanup(ocserv, default_values)
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                 get_first_key=True, no_tag_node_value_mangle=True)

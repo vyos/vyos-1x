@@ -1,0 +1,85 @@
+{% from 'frr/distribute_list_macro.j2' import render_distribute_list %}
+{% from 'frr/ipv6_distribute_list_macro.j2' import render_ipv6_distribute_list %}
+!
+{# Interface specific configuration #}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.type is vyos_defined('wired') or iface_config.type is vyos_defined('wireless') %}
+ babel {{ iface_config.type }}
+{%         endif %}
+{%         if iface_config.split_horizon is vyos_defined("enable") %}
+ babel split-horizon
+{%         elif iface_config.split_horizon is vyos_defined("disable") %}
+ no babel split-horizon
+{%         endif %}
+{%         if iface_config.hello_interval is vyos_defined %}
+ babel hello-interval {{ iface_config.hello_interval }}
+{%         endif %}
+{%         if iface_config.update_interval is vyos_defined %}
+ babel update-interval {{ iface_config.update_interval }}
+{%         endif %}
+{%         if iface_config.rxcost is vyos_defined %}
+ babel rxcost {{ iface_config.rxcost }}
+{%         endif %}
+{%         if iface_config.rtt_decay is vyos_defined %}
+ babel rtt-decay {{ iface_config.rtt_decay }}
+{%         endif %}
+{%         if iface_config.rtt_min is vyos_defined %}
+ babel rtt-min {{ iface_config.rtt_min }}
+{%         endif %}
+{%         if iface_config.rtt_max is vyos_defined %}
+ babel rtt-max {{ iface_config.rtt_max }}
+{%         endif %}
+{%         if iface_config.max_rtt_penalty is vyos_defined %}
+ babel max-rtt-penalty {{ iface_config.max_rtt_penalty }}
+{%         endif %}
+{%         if iface_config.enable_timestamps is vyos_defined %}
+ babel enable-timestamps
+{%         endif %}
+{%         if iface_config.channel is vyos_defined %}
+ babel channel {{ iface_config.channel | replace("non-interfering", "noninterfering") }}
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}
+!
+{# Babel configuration #}
+router babel
+{% if parameters.diversity is vyos_defined %}
+ babel diversity
+{% endif %}
+{% if parameters.diversity_factor is vyos_defined %}
+ babel diversity-factor {{ parameters.diversity_factor }}
+{% endif %}
+{% if parameters.resend_delay is vyos_defined %}
+ babel resend-delay {{ parameters.resend_delay }}
+{% endif %}
+{% if parameters.smoothing_half_life is vyos_defined %}
+ babel smoothing-half-life {{ parameters.smoothing_half_life }}
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+ network {{ iface }}
+{%     endfor %}
+{% endif %}
+{% if redistribute is vyos_defined %}
+{%     for address_family in redistribute %}
+{%         for protocol, protocol_config in redistribute[address_family].items() %}
+{%             if protocol is vyos_defined('ospfv3') %}
+{%                 set protocol = 'ospf6' %}
+{%             endif %}
+ redistribute {{ address_family }} {{ protocol }}
+{%         endfor %}
+{%     endfor %}
+{% endif %}
+{% if distribute_list.ipv4 is vyos_defined %}
+{{ render_distribute_list(distribute_list.ipv4) }}
+{% endif %}
+{% if distribute_list.ipv6 is vyos_defined %}
+{{ render_ipv6_distribute_list(distribute_list.ipv6) }}
+{% endif %}
+exit
+!
+end

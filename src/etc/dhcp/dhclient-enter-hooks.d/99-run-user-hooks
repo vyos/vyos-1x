@@ -1,0 +1,5 @@
+#!/bin/bash
+DHCP_PRE_HOOKS="/config/scripts/dhcp-client/pre-hooks.d/"
+if [ -d "${DHCP_PRE_HOOKS}" ] ; then
+    run-parts "${DHCP_PRE_HOOKS}"
+fi

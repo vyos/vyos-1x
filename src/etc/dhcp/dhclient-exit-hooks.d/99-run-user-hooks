@@ -1,0 +1,5 @@
+#!/bin/bash
+DHCP_POST_HOOKS="/config/scripts/dhcp-client/post-hooks.d/"
+if [ -d "${DHCP_POST_HOOKS}" ] ; then
+    run-parts "${DHCP_POST_HOOKS}"
+fi

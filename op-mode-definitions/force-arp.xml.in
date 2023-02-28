@@ -19,7 +19,7 @@
                 <properties>
                   <help>Send gratuitous ARP reply on specified interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
                   </completionHelp>
                 </properties>
                 <children>
@@ -50,7 +50,7 @@
                 <properties>
                   <help>Send gratuitous ARP request on specified interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
                   </completionHelp>
                 </properties>
                 <children>
@@ -81,7 +81,7 @@
                 <properties>
                   <help>Send ARP for DAD detection on specified interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+                    <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
                   </completionHelp>
                 </properties>
                 <children>

@@ -13,7 +13,7 @@
             <properties>
               <help>Show flow accounting statistics for specified interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <command>${vyos_op_scripts_dir}/flow_accounting_op.py --action show --interface $4</command>

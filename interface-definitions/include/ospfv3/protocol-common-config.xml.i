@@ -238,6 +238,14 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <node name="babel">
+      <properties>
+        <help>Redistribute Babel routes</help>
+      </properties>
+      <children>
+        #include <include/route-map.xml.i>
+      </children>
+    </node>
     <node name="static">
       <properties>
         <help>Redistribute static routes</help>

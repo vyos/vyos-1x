@@ -45,7 +45,7 @@
                 <properties>
                   <help>Reset ARP cache for interface</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/neighbor.py reset --family inet --interface "$5"</command>

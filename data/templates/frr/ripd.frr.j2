@@ -1,3 +1,4 @@
+{% from 'frr/distribute_list_macro.j2' import render_distribute_list %}
 {# RIP key-chain definition #}
 {% if interface is vyos_defined %}
 {%     for iface, iface_config in interface.items() %}
@@ -60,34 +61,7 @@ router rip
 {%     endfor %}
 {% endif %}
 {% if distribute_list is vyos_defined %}
-{%     if distribute_list.access_list.in is vyos_defined %}
- distribute-list {{ distribute_list.access_list.in }} in
-{%     endif %}
-{%     if distribute_list.access_list.out is vyos_defined %}
- distribute-list {{ distribute_list.access_list.out }} out
-{%     endif %}
-{%     if distribute_list.interface is vyos_defined %}
-{%         for interface, interface_config in distribute_list.interface.items() %}
-{%             if interface_config.access_list.in is vyos_defined %}
- distribute-list {{ interface_config.access_list.in }} in {{ interface }}
-{%             endif %}
-{%             if interface_config.access_list.out is vyos_defined %}
- distribute-list {{ interface_config.access_list.out }} out {{ interface }}
-{%             endif %}
-{%             if interface_config.prefix_list.in is vyos_defined %}
- distribute-list prefix {{ interface_config.prefix_list.in }} in {{ interface }}
-{%             endif %}
-{%             if interface_config.prefix_list.out is vyos_defined %}
- distribute-list prefix {{ interface_config.prefix_list.out }} out {{ interface }}
-{%             endif %}
-{%         endfor %}
-{%     endif %}
-{%     if distribute_list.prefix_list.in is vyos_defined %}
- distribute-list prefix {{ distribute_list.prefix_list.in }} in
-{%     endif %}
-{%     if distribute_list.prefix_list.out is vyos_defined %}
- distribute-list prefix {{ distribute_list.prefix_list.out }} out
-{%     endif %}
+{{ render_distribute_list(distribute_list) }}
 {% endif %}
 {% include 'frr/rip_ripng.frr.j2' %}
 {% if version is vyos_defined %}

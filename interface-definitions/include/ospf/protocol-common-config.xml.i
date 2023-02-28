@@ -756,6 +756,16 @@
         #include <include/route-map.xml.i>
       </children>
     </node>
+    <node name="babel">
+      <properties>
+        <help>Redistribute Babel routes</help>
+      </properties>
+      <children>
+        #include <include/ospf/metric.xml.i>
+        #include <include/ospf/metric-type.xml.i>
+        #include <include/route-map.xml.i>
+      </children>
+    </node>
     <node name="static">
       <properties>
         <help>Redistribute statically configured routes</help>
