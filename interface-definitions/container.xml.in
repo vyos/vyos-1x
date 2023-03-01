@@ -104,9 +104,45 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="entrypoint">
+            <properties>
+              <help>Override the default ENTRYPOINT from the image</help>
+              <constraint>
+                <regex>[ !#-%&amp;(-~]+</regex>
+              </constraint>
+              <constraintErrorMessage>Entrypoint must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="host-name">
+            <properties>
+              <help>Container host name</help>
+              <constraint>
+                #include <include/constraint/host-name.xml.in>
+              </constraint>
+              <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+            </properties>
+          </leafNode>
           <leafNode name="image">
             <properties>
               <help>Image name in the hub-registry</help>
+            </properties>
+          </leafNode>
+          <leafNode name="command">
+            <properties>
+              <help>Override the default CMD from the image</help>
+              <constraint>
+                <regex>[ !#-%&amp;(-~]+</regex>
+              </constraint>
+              <constraintErrorMessage>Command must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          <leafNode name="arguments">
+            <properties>
+              <help>The command's arguments for this container</help>
+              <constraint>
+                <regex>[ !#-%&amp;(-~]+</regex>
+              </constraint>
+              <constraintErrorMessage>The command's arguments must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="memory">

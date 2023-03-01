@@ -256,6 +256,11 @@ def generate_run_arguments(name, container_config):
         for k, v in container_config['environment'].items():
             env_opt += f" --env \"{k}={v['value']}\""
 
+    hostname = ''
+    if 'host_name' in container_config:
+        hostname = container_config['host_name']
+        hostname = f'--hostname {hostname}'
+
     # Publish ports
     port = ''
     if 'port' in container_config:
@@ -277,10 +282,29 @@ def generate_run_arguments(name, container_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {device} {port} {volume} {env_opt}'
+                         f'--name {name} {hostname} {device} {port} {volume} {env_opt}'
+
+    entrypoint = ''
+    if 'entrypoint' in container_config:
+        # it needs to be json-formatted with single quote on the outside
+        entrypoint = json_write(container_config['entrypoint'].split()).replace('"', "&quot;")
+        entrypoint = f'--entrypoint &apos;{entrypoint}&apos;'
+
+    hostname = ''
+    if 'host_name' in container_config:
+        hostname = container_config['host_name']
+        hostname = f'--hostname {hostname}'
+
+    command = ''
+    if 'command' in container_config:
+        command = container_config['command'].strip()
+
+    command_arguments = ''
+    if 'arguments' in container_config:
+        command_arguments = container_config['arguments'].strip()
 
     if 'allow_host_networks' in container_config:
-        return f'{container_base_cmd} --net host {image}'
+        return f'{container_base_cmd} --net host {entrypoint} {image} {command} {command_arguments}'.strip()
 
     ip_param = ''
     networks = ",".join(container_config['network'])
@@ -289,7 +313,7 @@ def generate_run_arguments(name, container_config):
             address = container_config['network'][network]['address']
             ip_param = f'--ip {address}'
 
-    return f'{container_base_cmd} --net {networks} {ip_param} {image}'
+    return f'{container_base_cmd} --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
 
 def generate(container):
     # bail out early - looks like removal from running config
@@ -341,7 +365,8 @@ def generate(container):
 
             file_path = os.path.join(systemd_unit_path, f'vyos-container-{name}.service')
             run_args = generate_run_arguments(name, container_config)
-            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args})
+            render(file_path, 'container/systemd-unit.j2', {'name': name, 'run_args': run_args,},
+                   formater=lambda _: _.replace("&quot;", '"').replace("&apos;", "'"))
 
     return None
 
