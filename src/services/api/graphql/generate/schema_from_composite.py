@@ -29,9 +29,6 @@ if __package__ is None or __package__ == '':
     sys.path.append("/usr/libexec/vyos/services/api")
     from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
     from composite_function import queries, mutations
-    from vyos.config import Config
-    from vyos.configdict import dict_merge
-    from vyos.xml import defaults
 else:
     from .. libs.op_mode import snake_to_pascal_case, map_type_name
     from . composite_function import queries, mutations
@@ -39,40 +36,16 @@ else:
 
 SCHEMA_PATH = directories['api_schema']
 
-if __package__ is None or __package__ == '':
-    # allow running stand-alone
-    conf = Config()
-    base = ['service', 'https', 'api']
-    graphql_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                          no_tag_node_value_mangle=True,
-                                          get_first_key=True)
-    if 'graphql' not in graphql_dict:
-        exit("graphql is not configured")
-
-    graphql_dict = dict_merge(defaults(base), graphql_dict)
-    auth_type = graphql_dict['graphql']['authentication']['type']
-else:
-    auth_type = state.settings['app'].state.vyos_auth_type
-
-schema_data: dict = {'auth_type': auth_type,
-                     'schema_name': '',
+schema_data: dict = {'schema_name': '',
                      'schema_fields': []}
 
 query_template  = """
-{%- if auth_type == 'key' %}
 input {{ schema_name }}Input {
-    key: String!
+    key: String
     {%- for field_entry in schema_fields %}
     {{ field_entry }}
     {%- endfor %}
 }
-{%- elif schema_fields %}
-input {{ schema_name }}Input {
-    {%- for field_entry in schema_fields %}
-    {{ field_entry }}
-    {%- endfor %}
-}
-{%- endif %}
 
 type {{ schema_name }} {
     result: Generic
@@ -85,29 +58,17 @@ type {{ schema_name }}Result {
 }
 
 extend type Query {
-{%- if auth_type == 'key' or schema_fields %}
     {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @compositequery
-{%- else %}
-    {{ schema_name }} : {{ schema_name }}Result @compositequery
-{%- endif %}
 }
 """
 
 mutation_template  = """
-{%- if auth_type == 'key' %}
 input {{ schema_name }}Input {
-    key: String!
+    key: String
     {%- for field_entry in schema_fields %}
     {{ field_entry }}
     {%- endfor %}
 }
-{%- elif schema_fields %}
-input {{ schema_name }}Input {
-    {%- for field_entry in schema_fields %}
-    {{ field_entry }}
-    {%- endfor %}
-}
-{%- endif %}
 
 type {{ schema_name }} {
     result: Generic
@@ -120,11 +81,7 @@ type {{ schema_name }}Result {
 }
 
 extend type Mutation {
-{%- if auth_type == 'key' or schema_fields %}
     {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @compositemutation
-{%- else %}
-    {{ schema_name }} : {{ schema_name }}Result @compositemutation
-{%- endif %}
 }
 """
 
