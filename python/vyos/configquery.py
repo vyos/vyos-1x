@@ -88,7 +88,7 @@ class ConfigTreeQuery(GenericConfigQuery):
                 with open(config_file) as f:
                     config_string = f.read()
             except OSError as err:
-                raise ConfigQueryError('No config file available') from err
+                config_string = ''
 
             config_source = ConfigSourceString(running_config_text=config_string,
                                                session_config_text=config_string)
