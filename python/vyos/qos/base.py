@@ -152,25 +152,31 @@ class QoSBase:
             for cls, cls_config in config['class'].items():
                 self._build_base_qdisc(cls_config, int(cls))
 
+                # every match criteria has it's tc instance
+                filter_cmd = f'tc filter replace dev {self._interface} parent {self._parent:x}:'
+
+                if priority:
+                    filter_cmd += f' prio {cls}'
+                elif 'priority' in cls_config:
+                    prio = cls_config['priority']
+                    filter_cmd += f' prio {prio}'
+
+                filter_cmd += ' protocol all'
+
                 if 'match' in cls_config:
                     for match, match_config in cls_config['match'].items():
+                        if 'mark' in match_config:
+                            mark = match_config['mark']
+                            filter_cmd += f' handle {mark} fw'
+
                         for af in ['ip', 'ipv6']:
-                            # every match criteria has it's tc instance
-                            filter_cmd = f'tc filter replace dev {self._interface} parent {self._parent:x}:'
-
-                            if priority:
-                                filter_cmd += f' prio {cls}'
-                            elif 'priority' in cls_config:
-                                prio = cls_config['priority']
-                                filter_cmd += f' prio {prio}'
-
-                            filter_cmd += ' protocol all u32'
-
                             tc_af = af
                             if af == 'ipv6':
                                 tc_af = 'ip6'
 
                             if af in match_config:
+                                filter_cmd += ' u32'
+
                                 tmp = dict_search(f'{af}.source.address', match_config)
                                 if tmp: filter_cmd += f' match {tc_af} src {tmp}'
 
@@ -223,30 +229,34 @@ class QoSBase:
                                     elif af == 'ipv6':
                                         filter_cmd += f' match u8 {mask} {mask} at 53'
 
-                                # The police block allows limiting of the byte or packet rate of
-                                # traffic matched by the filter it is attached to.
-                                # https://man7.org/linux/man-pages/man8/tc-police.8.html
-                                if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
-                                    filter_cmd += f' action police'
+                else:
 
-                                if 'exceed' in cls_config:
-                                    action = cls_config['exceed']
-                                    filter_cmd += f' conform-exceed {action}'
-                                    if 'not_exceed' in cls_config:
-                                        action = cls_config['not_exceed']
-                                        filter_cmd += f'/{action}'
+                    filter_cmd += ' basic'
 
-                                if 'bandwidth' in cls_config:
-                                    rate = self._rate_convert(cls_config['bandwidth'])
-                                    filter_cmd += f' rate {rate}'
+                # The police block allows limiting of the byte or packet rate of
+                # traffic matched by the filter it is attached to.
+                # https://man7.org/linux/man-pages/man8/tc-police.8.html
+                if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
+                    filter_cmd += f' action police'
 
-                                if 'burst' in cls_config:
-                                    burst = cls_config['burst']
-                                    filter_cmd += f' burst {burst}'
+                if 'exceed' in cls_config:
+                    action = cls_config['exceed']
+                    filter_cmd += f' conform-exceed {action}'
+                    if 'not_exceed' in cls_config:
+                        action = cls_config['not_exceed']
+                        filter_cmd += f'/{action}'
 
-                                cls = int(cls)
-                                filter_cmd += f' flowid {self._parent:x}:{cls:x}'
-                                self._cmd(filter_cmd)
+                if 'bandwidth' in cls_config:
+                    rate = self._rate_convert(cls_config['bandwidth'])
+                    filter_cmd += f' rate {rate}'
+
+                if 'burst' in cls_config:
+                    burst = cls_config['burst']
+                    filter_cmd += f' burst {burst}'
+
+                cls = int(cls)
+                filter_cmd += f' flowid {self._parent:x}:{cls:x}'
+                self._cmd(filter_cmd)
 
         if 'default' in config:
             if 'class' in config:
