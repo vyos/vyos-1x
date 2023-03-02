@@ -30,7 +30,7 @@ from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.util import cmd
-from vyos.util import call
+from vyos.util import call, rc_cmd
 from vyos.util import run
 from vyos.util import DEVNULL
 from vyos.util import dict_search
@@ -203,7 +203,9 @@ def generate(login):
                     add_user_encrypt = " ".join(add_user_encrypt)
 
                 call(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
-                call(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
+                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
+                if ret:
+                    raise ConfigError(out)
             else:
                 try:
                     if get_shadow_password(user) == dict_search('authentication.encrypted_password', user_config):
