@@ -14,8 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-
 from sys import argv
 from sys import exit
 
@@ -64,7 +62,7 @@ if config.exists(base + ['site-to-site', 'peer']):
                 tmp = config.return_value(peer_base + ['local-address'])
                 config.set(base + ['authentication', 'psk', peer, 'id'], value=tmp, replace=False)
             if config.exists(peer_base + ['remote-address']):
-                tmp = config.return_value(peer_base + ['remote-address'])
+                tmp = config.return_values(peer_base + ['remote-address'])
                 if tmp:
                     for remote_addr in tmp:
                         if remote_addr == 'any':
