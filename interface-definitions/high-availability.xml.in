@@ -17,6 +17,88 @@
             </properties>
             <children>
               #include <include/vrrp/garp.xml.i>
+              <node name="notification">
+                <properties>
+                  <help>Notification parameters</help>
+                </properties>
+                <children>
+                  <leafNode name="mail">
+                    <properties>
+                      <help>Destination email address for notification</help>
+                      <constraint>
+                        <regex>([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,50})</regex>
+                      </constraint>
+                      <constraintErrorMessage>Email must be alphanumeric with at symbol and can contain hyphens and underscores.</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="send-faults">
+                    <properties>
+                      <help>Send SMTP alert for fault condition</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="source-mail">
+                    <properties>
+                      <help>Source email address for notification</help>
+                      <constraint>
+                        <regex>([a-zA-Z0-9_\-\.]+)@([a-zA-Z0-9_\-\.]+)\.([a-zA-Z]{2,50})</regex>
+                      </constraint>
+                      <constraintErrorMessage>Email must be alphanumeric with at symbol and can contain hyphens and underscores.</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <node name="smtp-server">
+                    <properties>
+                      <help>SMTP server parameters</help>
+                    </properties>
+                    <children>
+                      <leafNode name="address">
+                        <properties>
+                          <help>SMTP server address</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address of the remote SMTP server</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>IPv6 address of the remote SMTP server</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>hostname</format>
+                            <description>Fully qualified domain name of the remote SMTP server</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                            <validator name="ipv6-address"/>
+                            <validator name="fqdn"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                      <leafNode name="connection-timeout">
+                        <properties>
+                          <help>SMTP server connection timeout (in seconds)</help>
+                          <valueHelp>
+                            <format>u32:1-600</format>
+                            <description>Interval in seconds</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-600"/>
+                          </constraint>
+                        </properties>
+                        <defaultValue>30</defaultValue>
+                      </leafNode>
+                      #include <include/port-number.xml.i>
+                      <leafNode name="port">
+                        <defaultValue>25</defaultValue>
+                      </leafNode>
+                    </children>
+                  </node>
+                </children>
+              </node>
+              <leafNode name="router-id">
+                <properties>
+                  <help>Router ID</help>
+                </properties>
+              </leafNode>
               <leafNode name="startup-delay">
                 <properties>
                   <help>Time VRRP startup process (in seconds)</help>

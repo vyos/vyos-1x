@@ -26,6 +26,31 @@ global_defs {
     vrrp_garp_master_repeat {{ vrrp.global_parameters.garp.master_repeat }}
 {%     endif %}
 {% endif %}
+{% if vrrp.global_parameters.router_id is vyos_defined %}
+    router_id {{ vrrp.global_parameters.router_id }}
+{% endif %}
+{% if vrrp.global_parameters.notification is vyos_defined %}
+{%     if vrrp.global_parameters.notification.mail is vyos_defined %}
+    notification_email {
+        {{ vrrp.global_parameters.notification.mail }}
+    }
+{%     endif %}
+{%     if vrrp.global_parameters.notification.send_faults is not vyos_defined %}
+    # Don't send smtp alerts for fault conditions
+    no_email_faults
+{%     endif %}
+{%     if vrrp.global_parameters.notification.smtp_server is vyos_defined %}
+{%         if vrrp.global_parameters.notification.smtp_server.address is vyos_defined %}
+    smtp_server {{ vrrp.global_parameters.notification.smtp_server.address }} {{ vrrp.global_parameters.notification.smtp_server.port }}
+{%         endif %}
+{%         if vrrp.global_parameters.notification.smtp_server.connection_timeout is vyos_defined %}
+    smtp_connect_timeout {{ vrrp.global_parameters.notification.smtp_server.connection_timeout }}
+{%         endif %}
+{%     endif %}
+{%     if vrrp.global_parameters.notification.source_mail is vyos_defined %}
+    notification_email_from {{ vrrp.global_parameters.notification.source_mail }}
+{%     endif %}
+{% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }

@@ -55,6 +55,11 @@ def get_config(config=None):
             ha['vrrp']['global_parameters']['garp'] = dict_merge(
                 default_values, ha['vrrp']['global_parameters']['garp'])
 
+        if dict_search('vrrp.global_parameters.notification', ha) != None:
+            default_values = defaults(base_vrrp + ['global-parameters', 'notification'])
+            ha['vrrp']['global_parameters']['notification'] = dict_merge(
+                default_values, ha['vrrp']['global_parameters']['notification'])
+
         if 'group' in ha['vrrp']:
             default_values = defaults(base_vrrp + ['group'])
             default_values_garp = defaults(base_vrrp + ['group', 'garp'])
@@ -88,6 +93,13 @@ def get_config(config=None):
 def verify(ha):
     if not ha:
         return None
+
+    # Notification global-parameters
+    if dict_search('vrrp.global_parameters.notification', ha):
+        if not dict_search('vrrp.global_parameters.notification.mail', ha):
+            raise ConfigError(f'Mail address is required but not set for notifications')
+        if not dict_search('vrrp.global_parameters.notification.smtp_server.address', ha):
+            raise ConfigError(f'SMTP server address is required but not set for notifications')
 
     used_vrid_if = []
     if 'vrrp' in ha and 'group' in ha['vrrp']:
