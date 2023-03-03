@@ -28,7 +28,7 @@ from vyos.defaults import directories
 from vyos.opmode import _is_op_mode_function_name as is_op_mode_function_name
 from vyos.util import load_as_module
 if __package__ is None or __package__ == '':
-    sys.path.append("/usr/libexec/vyos/services/api")
+    sys.path.append(os.path.join(directories['services'], 'api'))
     from graphql.libs.op_mode import is_show_function_name
     from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
 else:

@@ -22,6 +22,7 @@ directories = {
   'data' : '/usr/share/vyos/',
   'conf_mode' : f'{base_dir}/conf_mode',
   'op_mode' : f'{base_dir}/op_mode',
+  'services' : f'{base_dir}/services',
   'config' : '/opt/vyatta/etc/config',
   'current' : '/opt/vyatta/etc/config-migrate/current',
   'migrate' : '/opt/vyatta/etc/config-migrate/migrate',

@@ -26,7 +26,7 @@ from jinja2 import Template
 
 from vyos.defaults import directories
 if __package__ is None or __package__ == '':
-    sys.path.append("/usr/libexec/vyos/services/api")
+    sys.path.append(os.path.join(directories['services'], 'api'))
     from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
     from config_session_function import queries, mutations
 else:
