@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import typing
 import xmltodict
 
 from tabulate import tabulate
@@ -23,6 +24,7 @@ from vyos.util import run
 
 import vyos.opmode
 
+ArgFamily = typing.Literal['inet', 'inet6']
 
 def _get_xml_data(family):
     """
@@ -126,7 +128,7 @@ def get_formatted_output(dict_data):
     return output
 
 
-def show(raw: bool, family: str):
+def show(raw: bool, family: ArgFamily):
     family = 'ipv6' if family == 'inet6' else 'ipv4'
     conntrack_data = _get_raw_data(family)
     if raw:
