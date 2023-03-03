@@ -26,6 +26,7 @@ from jinja2 import Template
 
 from vyos.defaults import directories
 from vyos.opmode import _is_op_mode_function_name as is_op_mode_function_name
+from vyos.opmode import _get_literal_values as get_literal_values
 from vyos.util import load_as_module
 if __package__ is None or __package__ == '':
     sys.path.append(os.path.join(directories['services'], 'api'))
@@ -94,6 +95,14 @@ extend type Mutation {
 }
 """
 
+enum_template = """
+enum {{ enum_name }} {
+    {%- for field_entry in enum_fields %}
+    {{ field_entry }}
+    {%- endfor %}
+}
+"""
+
 error_template = """
 interface OpModeError {
     name: String!
@@ -109,12 +118,18 @@ type {{ name }} implements OpModeError {
 {%- endfor %}
 """
 
-def create_schema(func_name: str, base_name: str, func: callable) -> str:
+def create_schema(func_name: str, base_name: str, func: callable,
+                  enums: dict) -> str:
     sig = signature(func)
+
+    for k in sig.parameters:
+        t = get_literal_values(sig.parameters[k].annotation)
+        if t:
+            enums[t] = snake_to_pascal_case(sig.parameters[k].name + '_' + base_name)
 
     field_dict = {}
     for k in sig.parameters:
-        field_dict[sig.parameters[k].name] = map_type_name(sig.parameters[k].annotation)
+        field_dict[sig.parameters[k].name] = map_type_name(sig.parameters[k].annotation, enums)
 
     # It is assumed that if one is generating a schema for a 'show_*'
     # function, that 'get_raw_data' is present and 'raw' is desired.
@@ -136,6 +151,20 @@ def create_schema(func_name: str, base_name: str, func: callable) -> str:
     res = j2_template.render(schema_data)
 
     return res
+
+def create_enums(enums: dict) -> str:
+    enum_data = []
+    for k, v in enums.items():
+        enum = {'enum_name': v, 'enum_fields': list(k)}
+        enum_data.append(enum)
+
+    out = ''
+    j2_template = Template(enum_template)
+    for el in enum_data:
+        out += j2_template.render(el)
+        out += '\n'
+
+    return out
 
 def create_error_schema():
     from vyos import opmode
@@ -176,11 +205,13 @@ def generate_op_mode_definitions():
             funcs_dict[name] = thunk
 
         results = []
+        enums = {} # gather enums from function Literal type args
         for name,func in funcs_dict.items():
-            res = create_schema(name, basename, func)
+            res = create_schema(name, basename, func, enums)
             results.append(res)
 
-        out = '\n'.join(results)
+        out = create_enums(enums)
+        out += '\n'.join(results)
         with open(f'{SCHEMA_PATH}/{basename}.graphql', 'w') as f:
             f.write(out)
 
