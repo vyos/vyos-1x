@@ -193,7 +193,8 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         """
 
         r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query_no_key})
-        self.assertEqual(r.status_code, 400)
+        success = r.json()['data']['SystemStatus']['success']
+        self.assertFalse(success)
 
         # GraphQL token authentication test: request token; pass in header
         # of query.

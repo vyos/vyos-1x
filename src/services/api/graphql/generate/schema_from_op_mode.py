@@ -28,12 +28,9 @@ from vyos.defaults import directories
 from vyos.opmode import _is_op_mode_function_name as is_op_mode_function_name
 from vyos.util import load_as_module
 if __package__ is None or __package__ == '':
-    sys.path.append("/usr/libexec/vyos/services/api")
+    sys.path.append(os.path.join(directories['services'], 'api'))
     from graphql.libs.op_mode import is_show_function_name
     from graphql.libs.op_mode import snake_to_pascal_case, map_type_name
-    from vyos.config import Config
-    from vyos.configdict import dict_merge
-    from vyos.xml import defaults
 else:
     from .. libs.op_mode import is_show_function_name
     from .. libs.op_mode import snake_to_pascal_case, map_type_name
@@ -46,40 +43,16 @@ DATA_DIR = directories['data']
 op_mode_include_file = os.path.join(DATA_DIR, 'op-mode-standardized.json')
 op_mode_error_schema = 'op_mode_error.graphql'
 
-if __package__ is None or __package__ == '':
-    # allow running stand-alone
-    conf = Config()
-    base = ['service', 'https', 'api']
-    graphql_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                          no_tag_node_value_mangle=True,
-                                          get_first_key=True)
-    if 'graphql' not in graphql_dict:
-        exit("graphql is not configured")
-
-    graphql_dict = dict_merge(defaults(base), graphql_dict)
-    auth_type = graphql_dict['graphql']['authentication']['type']
-else:
-    auth_type = state.settings['app'].state.vyos_auth_type
-
-schema_data: dict = {'auth_type': auth_type,
-                     'schema_name': '',
+schema_data: dict = {'schema_name': '',
                      'schema_fields': []}
 
 query_template  = """
-{%- if auth_type == 'key' %}
 input {{ schema_name }}Input {
-    key: String!
+    key: String
     {%- for field_entry in schema_fields %}
     {{ field_entry }}
     {%- endfor %}
 }
-{%- elif schema_fields %}
-input {{ schema_name }}Input {
-    {%- for field_entry in schema_fields %}
-    {{ field_entry }}
-    {%- endfor %}
-}
-{%- endif %}
 
 type {{ schema_name }} {
     result: Generic
@@ -93,29 +66,17 @@ type {{ schema_name }}Result {
 }
 
 extend type Query {
-{%- if auth_type == 'key' or schema_fields %}
     {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @genopquery
-{%- else %}
-    {{ schema_name }} : {{ schema_name }}Result @genopquery
-{%- endif %}
 }
 """
 
 mutation_template  = """
-{%- if auth_type == 'key' %}
 input {{ schema_name }}Input {
-    key: String!
+    key: String
     {%- for field_entry in schema_fields %}
     {{ field_entry }}
     {%- endfor %}
 }
-{%- elif schema_fields %}
-input {{ schema_name }}Input {
-    {%- for field_entry in schema_fields %}
-    {{ field_entry }}
-    {%- endfor %}
-}
-{%- endif %}
 
 type {{ schema_name }} {
     result: Generic
@@ -129,11 +90,7 @@ type {{ schema_name }}Result {
 }
 
 extend type Mutation {
-{%- if auth_type == 'key' or schema_fields %}
     {{ schema_name }}(data: {{ schema_name }}Input) : {{ schema_name }}Result @genopmutation
-{%- else %}
-    {{ schema_name }} : {{ schema_name }}Result @genopquery
-{%- endif %}
 }
 """
 
