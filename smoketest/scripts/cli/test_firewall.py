@@ -227,10 +227,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '4', 'destination', 'port', '22'])
         self.cli_set(['firewall', 'name', name, 'rule', '4', 'recent', 'count', '10'])
         self.cli_set(['firewall', 'name', name, 'rule', '4', 'recent', 'time', 'minute'])
+        self.cli_set(['firewall', 'name', name, 'rule', '4', 'packet-type', 'host'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'action', 'accept'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'tcp', 'mss', mss_range])
+        self.cli_set(['firewall', 'name', name, 'rule', '5', 'packet-type', 'broadcast'])
         self.cli_set(['firewall', 'name', name, 'rule', '5', 'inbound-interface', 'interface-name', interface])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'action', 'return'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'protocol', 'gre'])
@@ -249,8 +251,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
             ['tcp dport 22', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
-            ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'drop'],
-            ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"'],
+            ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
+            ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"', 'meta pkttype broadcast'],
             ['meta l4proto gre', f'oifname "{interface}"', f'ct mark {mark_hex}', 'return']
         ]
 

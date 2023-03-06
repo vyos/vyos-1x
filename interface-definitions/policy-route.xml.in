@@ -50,7 +50,7 @@
               #include <include/policy/route-common.xml.i>
               #include <include/policy/route-ipv6.xml.i>
               #include <include/firewall/dscp.xml.i>
-              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/packet-options.xml.i>
               #include <include/firewall/hop-limit.xml.i>
               #include <include/firewall/connection-mark.xml.i>
             </children>
@@ -105,7 +105,7 @@
               #include <include/policy/route-common.xml.i>
               #include <include/policy/route-ipv4.xml.i>
               #include <include/firewall/dscp.xml.i>
-              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/packet-options.xml.i>
               #include <include/firewall/ttl.xml.i>
               #include <include/firewall/connection-mark.xml.i>
             </children>
