@@ -54,9 +54,9 @@ password=csid
 {% endif %}
 proxy-arp=1
 
-{% for interface in interfaces %}
-{%     if (interface.shared == '0') and (interface.vlan_mon) %}
-vlan-mon={{ interface.name }},{{ interface.vlan_mon | join(',') }}
+{% for iface, iface_options in interface.items() %}
+{%     if iface_options.network is vyos_defined('vlan') %}
+vlan-mon={{ iface }},{{ iface_options.vlan | join(',') }}
 {%     endif %}
 {% endfor %}
 
