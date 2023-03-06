@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -233,6 +233,36 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'    {vip_dev} dev {none_vrrp_interface}', config)
         self.assertIn(f'track_interface', config)
         self.assertIn(f'    {none_vrrp_interface}', config)
+
+    def test_05_vrrp_global_parameters(self):
+        global_param_path = base_path + ['vrrp', 'global-parameters']
+        notification_path = global_param_path + ['notification']
+        router_id = 'VyOS_host'
+        to_mail = 'destination@example.local'
+        from_mail = 'source@example.local'
+        smtp_server = '127.0.0.1'
+        smtp_port = '25'
+        timeout = '30'
+
+        self.cli_set(global_param_path + ['router-id', router_id])
+        self.cli_set(notification_path + ['mail', to_mail])
+        self.cli_set(notification_path + ['source-mail', from_mail])
+        self.cli_set(notification_path + ['send-faults'])
+        self.cli_set(notification_path + ['smtp-server', 'address', smtp_server])
+        self.cli_set(notification_path + ['smtp-server', 'connection-timeout', timeout])
+        self.cli_set(notification_path + ['smtp-server', 'port', smtp_port])
+
+        # commit changes
+        self.cli_commit()
+
+        config = getConfig('global_defs')
+
+        self.assertIn(f'router_id {router_id}', config)
+        self.assertIn(f'notification_email', config)
+        self.assertIn(f'    {to_mail}', config)
+        self.assertIn(f'notification_email_from {from_mail}', config)
+        self.assertIn(f'smtp_server {smtp_server} {smtp_port}', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
