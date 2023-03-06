@@ -663,7 +663,21 @@ def nat_static_rule(rule_conf, rule_id, nat_type):
 
 @register_filter('range_to_regex')
 def range_to_regex(num_range):
+    """Convert range of numbers or list of ranges
+       to regex
+
+       % range_to_regex('11-12')
+       '(1[1-2])'
+       % range_to_regex(['11-12', '14-15'])
+       '(1[1-2]|1[4-5])'
+    """
     from vyos.range_regex import range_to_regex
+    if isinstance(num_range, list):
+        data = []
+        for entry in num_range:
+            data.append(range_to_regex(entry))
+        return f'({"|".join(data)})'
+
     if '-' not in num_range:
         return num_range
 
