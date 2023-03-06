@@ -121,13 +121,20 @@ class QoSBase:
         }
 
         if rate == 'auto' or rate.endswith('%'):
-            speed = read_file(f'/sys/class/net/{self._interface}/speed')
-            if not speed.isnumeric():
-                Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
-                speed = 10
-            if rate.endswith('%'):
-                percent = rate.rstrip('%')
-                speed = int(speed) * int(percent) // 100
+            speed = 10
+            # Not all interfaces have valid entries in the speed file. PPPoE
+            # interfaces have the appropriate speed file, but you can not read it:
+            # cat: /sys/class/net/pppoe7/speed: Invalid argument
+            try:
+                speed = read_file(f'/sys/class/net/{self._interface}/speed')
+                if not speed.isnumeric():
+                    Warning('Interface speed cannot be determined (assuming 10 Mbit/s)')
+                if rate.endswith('%'):
+                    percent = rate.rstrip('%')
+                    speed = int(speed) * int(percent) // 100
+            except:
+                pass
+
             return int(speed) *1000000 # convert to MBit/s
 
         rate_numeric = int(''.join([n for n in rate if n.isdigit()]))
