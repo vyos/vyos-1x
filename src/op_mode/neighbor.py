@@ -32,6 +32,9 @@ import typing
 
 import vyos.opmode
 
+ArgFamily = typing.Literal['inet', 'inet6']
+ArgState = typing.Literal['reachable', 'stale', 'failed', 'permanent']
+
 def interface_exists(interface):
     import os
     return os.path.exists(f'/sys/class/net/{interface}')
@@ -88,7 +91,8 @@ def format_neighbors(neighs, interface=None):
     headers = ["Address", "Interface", "Link layer address",  "State"]
     return tabulate(neighs, headers)
 
-def show(raw: bool, family: str, interface: typing.Optional[str], state: typing.Optional[str]):
+def show(raw: bool, family: ArgFamily, interface: typing.Optional[str],
+         state: typing.Optional[ArgState]):
     """ Display neighbor table contents """
     data = get_raw_data(family, interface, state=state)
 
@@ -97,7 +101,7 @@ def show(raw: bool, family: str, interface: typing.Optional[str], state: typing.
     else:
         return format_neighbors(data, interface)
 
-def reset(family: str, interface: typing.Optional[str], address: typing.Optional[str]):
+def reset(family: ArgFamily, interface: typing.Optional[str], address: typing.Optional[str]):
     from vyos.util import run
 
     if address and interface:

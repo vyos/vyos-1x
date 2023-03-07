@@ -18,6 +18,7 @@
 
 import os
 import sys
+import typing
 from tabulate import tabulate
 
 import vyos.opmode
@@ -25,6 +26,8 @@ from vyos.util import bytes_to_human
 from vyos.util import commit_in_progress
 from vyos.util import call
 from vyos.config import Config
+
+ArgMode = typing.Literal['client', 'server', 'site_to_site']
 
 def _get_tunnel_address(peer_host, peer_port, status_file):
     peer = peer_host + ':' + peer_port
@@ -155,7 +158,7 @@ def _get_raw_data(mode: str) -> dict:
         d['local_port'] = conf_dict[intf].get('local-port', '')
         if conf.exists(f'interfaces openvpn {intf} server client'):
             d['configured_clients'] = conf.list_nodes(f'interfaces openvpn {intf} server client')
-        if mode in ['client', 'site-to-site']:
+        if mode in ['client', 'site_to_site']:
             for client in d['clients']:
                 if 'shared-secret-key-file' in list(conf_dict[intf]):
                     client['name'] = 'None (PSK)'
@@ -198,7 +201,7 @@ def _format_openvpn(data: dict) -> str:
 
     return out
 
-def show(raw: bool, mode: str) -> str:
+def show(raw: bool, mode: ArgMode) -> str:
     openvpn_data = _get_raw_data(mode)
 
     if raw:

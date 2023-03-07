@@ -30,6 +30,7 @@ from vyos.configquery import ConfigTreeQuery
 
 import vyos.opmode
 
+ArgFamily = typing.Literal['inet', 'inet6']
 
 frr_command_template = Template("""
 {% if family %}
@@ -75,7 +76,7 @@ def _verify(func):
 
 @_verify
 def show_neighbors(raw: bool,
-                   family: str,
+                   family: ArgFamily,
                    peer: typing.Optional[str],
                    vrf: typing.Optional[str]):
     kwargs = dict(locals())

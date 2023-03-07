@@ -31,6 +31,8 @@ from vyos.util import dict_search
 base = 'nat'
 unconf_message = 'NAT is not configured'
 
+ArgDirection = typing.Literal['source', 'destination']
+ArgFamily = typing.Literal['inet', 'inet6']
 
 def _get_xml_translation(direction, family, address=None):
     """
@@ -298,7 +300,7 @@ def _verify(func):
 
 
 @_verify
-def show_rules(raw: bool, direction: str, family: str):
+def show_rules(raw: bool, direction: ArgDirection, family: ArgFamily):
     nat_rules = _get_raw_data_rules(direction, family)
     if raw:
         return nat_rules
@@ -307,7 +309,7 @@ def show_rules(raw: bool, direction: str, family: str):
 
 
 @_verify
-def show_statistics(raw: bool, direction: str, family: str):
+def show_statistics(raw: bool, direction: ArgDirection, family: ArgFamily):
     nat_statistics = _get_raw_data_rules(direction, family)
     if raw:
         return nat_statistics
@@ -316,8 +318,8 @@ def show_statistics(raw: bool, direction: str, family: str):
 
 
 @_verify
-def show_translations(raw: bool, direction:
-                      str, family: str,
+def show_translations(raw: bool, direction: ArgDirection,
+                      family: ArgFamily,
                       address: typing.Optional[str],
                       verbose: typing.Optional[bool]):
     family = 'ipv6' if family == 'inet6' else 'ipv4'

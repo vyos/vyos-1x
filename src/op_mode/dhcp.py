@@ -36,6 +36,9 @@ lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned
 sort_valid_inet = ['end', 'mac', 'hostname', 'ip', 'pool', 'remaining', 'start', 'state']
 sort_valid_inet6 = ['end', 'iaid_duid', 'ip', 'last_communication', 'pool', 'remaining', 'state', 'type']
 
+ArgFamily = typing.Literal['inet', 'inet6']
+ArgState = typing.Literal['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
+
 def _utc_to_local(utc_dt):
     return datetime.fromtimestamp((datetime.fromtimestamp(utc_dt) - datetime(1970, 1, 1)).total_seconds())
 
@@ -248,7 +251,7 @@ def _verify(func):
 
 
 @_verify
-def show_pool_statistics(raw: bool, family: str, pool: typing.Optional[str]):
+def show_pool_statistics(raw: bool, family: ArgFamily, pool: typing.Optional[str]):
     pool_data = _get_raw_pool_statistics(family=family, pool=pool)
     if raw:
         return pool_data
@@ -257,8 +260,8 @@ def show_pool_statistics(raw: bool, family: str, pool: typing.Optional[str]):
 
 
 @_verify
-def show_server_leases(raw: bool, family: str, pool: typing.Optional[str],
-                       sorted: typing.Optional[str], state: typing.Optional[str]):
+def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
+                       sorted: typing.Optional[str], state: typing.Optional[ArgState]):
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
     if not is_systemd_service_running('isc-dhcp-server.service'):
         Warning('DHCP server is configured but not started. Data may be stale.')

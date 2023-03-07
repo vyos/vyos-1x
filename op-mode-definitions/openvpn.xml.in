@@ -122,7 +122,7 @@
             <properties>
               <help>Show tunnel status for OpenVPN site-to-site interfaces</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/openvpn.py show --mode site-to-site</command>
+            <command>sudo ${vyos_op_scripts_dir}/openvpn.py show --mode site_to_site</command>
           </leafNode>
         </children>
       </node>

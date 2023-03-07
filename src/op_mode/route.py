@@ -54,7 +54,9 @@ frr_command_template = Template("""
 {% endif %}
 """)
 
-def show_summary(raw: bool, family: str, table: typing.Optional[int], vrf: typing.Optional[str]):
+ArgFamily = typing.Literal['inet', 'inet6']
+
+def show_summary(raw: bool, family: ArgFamily, table: typing.Optional[int], vrf: typing.Optional[str]):
     from vyos.util import cmd
 
     if family == 'inet':
@@ -94,7 +96,7 @@ def show_summary(raw: bool, family: str, table: typing.Optional[int], vrf: typin
         return output
 
 def show(raw: bool,
-         family: str,
+         family: ArgFamily,
          net: typing.Optional[str],
          table: typing.Optional[int],
          protocol: typing.Optional[str],

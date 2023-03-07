@@ -128,6 +128,25 @@ def _get_arg_type(t):
     else:
         return t
 
+def _is_literal_type(t):
+    if _is_optional_type(t):
+        t = _get_arg_type(t)
+
+    if typing.get_origin(t) == typing.Literal:
+        return True
+
+    return False
+
+def _get_literal_values(t):
+    """ Returns the tuple of allowed values for a Literal type
+    """
+    if not _is_literal_type(t):
+        return tuple()
+    if _is_optional_type(t):
+        t = _get_arg_type(t)
+
+    return typing.get_args(t)
+
 def _normalize_field_name(name):
     # Convert the name to string if it is not
     # (in some cases they may be numbers)
@@ -194,9 +213,21 @@ def run(module):
                 subparser.add_argument(f"--{opt}", action='store_true')
             else:
                 if _is_optional_type(th):
-                    subparser.add_argument(f"--{opt}", type=_get_arg_type(th), default=None)
+                    if _is_literal_type(th):
+                        subparser.add_argument(f"--{opt}",
+                                               choices=list(_get_literal_values(th)),
+                                               default=None)
+                    else:
+                        subparser.add_argument(f"--{opt}",
+                                               type=_get_arg_type(th), default=None)
                 else:
-                    subparser.add_argument(f"--{opt}", type=_get_arg_type(th), required=True)
+                    if _is_literal_type(th):
+                        subparser.add_argument(f"--{opt}",
+                                               choices=list(_get_literal_values(th)),
+                                               required=True)
+                    else:
+                        subparser.add_argument(f"--{opt}",
+                                               type=_get_arg_type(th), required=True)
 
     # Get options as a dict rather than a namespace,
     # so that we can modify it and pack for passing to functions

@@ -16,13 +16,13 @@
 import os
 import re
 import typing
-import importlib.util
-from typing import Union
+from typing import Union, Tuple, Optional
 from humps import decamelize
 
 from vyos.defaults import directories
 from vyos.util import load_as_module
 from vyos.opmode import _normalize_field_names
+from vyos.opmode import _is_literal_type, _get_literal_values
 
 def load_op_mode_as_module(name: str):
     path = os.path.join(directories['op_mode'], name)
@@ -73,7 +73,7 @@ def snake_to_pascal_case(name: str) -> str:
     res = ''.join(map(str.title, name.split('_')))
     return res
 
-def map_type_name(type_name: type, optional: bool = False) -> str:
+def map_type_name(type_name: type, enums: Optional[dict] = None, optional: bool = False) -> str:
     if type_name == str:
         return 'String!' if not optional else 'String = null'
     if type_name == int:
@@ -82,12 +82,17 @@ def map_type_name(type_name: type, optional: bool = False) -> str:
         return 'Boolean = false'
     if typing.get_origin(type_name) == list:
         if not optional:
-            return f'[{map_type_name(typing.get_args(type_name)[0])}]!'
-        return f'[{map_type_name(typing.get_args(type_name)[0])}]'
+            return f'[{map_type_name(typing.get_args(type_name)[0], enums=enums)}]!'
+        return f'[{map_type_name(typing.get_args(type_name)[0], enums=enums)}]'
+    if _is_literal_type(type_name):
+        mapped = enums.get(_get_literal_values(type_name), '')
+        if not mapped:
+            raise ValueError(typing.get_args(type_name))
+        return f'{mapped}!' if not optional else mapped
     # typing.Optional is typing.Union[_, NoneType]
     if (typing.get_origin(type_name) is typing.Union and
             typing.get_args(type_name)[1] == type(None)):
-        return f'{map_type_name(typing.get_args(type_name)[0], optional=True)}'
+        return f'{map_type_name(typing.get_args(type_name)[0], enums=enums, optional=True)}'
 
     # scalar 'Generic' is defined in schema.graphql
     return 'Generic'
