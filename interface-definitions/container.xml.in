@@ -368,9 +368,33 @@
           </leafNode>
         </children>
       </tagNode>
-      <leafNode name="registry">
+      <tagNode name="registry">
         <properties>
           <help>Registry Name</help>
+        </properties>
+        <children>
+          #include <include/generic-disable-node.xml.i>
+          <leafNode name="username">
+            <properties>
+              <help>User name for authentication</help>
+              <constraint>
+                <regex>[[:alnum:]][-_#@[:alnum:]]{0,127}</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+          <leafNode name="password">
+            <properties>
+              <help>Password for authentication</help>
+              <constraint>
+                <regex>[[:ascii:]]{1,128}</regex>
+              </constraint>
+            </properties>
+          </leafNode>
+        </children>
+      </tagNode>
+      <leafNode name="default-registry">
+        <properties>
+          <help>Default registry to use alongside registry configuration</help>
           <multi/>
         </properties>
         <defaultValue>docker.io quay.io</defaultValue>
