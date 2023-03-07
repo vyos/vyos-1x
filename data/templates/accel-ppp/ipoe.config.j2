@@ -25,7 +25,7 @@ verbose=1
 {%     for iface, iface_config in interface.items() %}
 {%         set tmp = 'interface=' %}
 {%         if iface_config.vlan is vyos_defined %}
-{%             set tmp = tmp ~ 're:' ~ iface ~ '\.\d+' %}
+{%             set tmp = tmp ~ 're:^' ~ iface ~ '\.' ~ iface_config.vlan | range_to_regex ~ '$' %}
 {%         else %}
 {%             set tmp = tmp ~ iface %}
 {%         endif %}
@@ -36,6 +36,9 @@ verbose=1
 {%             set shared = 'shared=0,' %}
 {%         endif %}
 {{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,range={{ iface_config.client_subnet }},start=dhcpv4,ipv6=1
+{%         if iface_config.vlan is vyos_defined %}
+vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
+{%         endif %}
 {%     endfor %}
 {% endif %}
 {% if authentication.mode is vyos_defined('noauth') %}
@@ -53,12 +56,6 @@ username=ifname
 password=csid
 {% endif %}
 proxy-arp=1
-
-{% for iface, iface_options in interface.items() %}
-{%     if iface_options.network is vyos_defined('vlan') %}
-vlan-mon={{ iface }},{{ iface_options.vlan | join(',') }}
-{%     endif %}
-{% endfor %}
 
 {% if client_ip_pool.name is vyos_defined %}
 [ip-pool]
