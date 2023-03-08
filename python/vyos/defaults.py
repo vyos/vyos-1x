@@ -30,6 +30,7 @@ directories = {
   'templates' : '/usr/share/vyos/templates/',
   'certbot' : '/config/auth/letsencrypt',
   'api_schema': f'{base_dir}/services/api/graphql/graphql/schema/',
+  'api_client_op': f'{base_dir}/services/api/graphql/graphql/client_op/',
   'api_templates': f'{base_dir}/services/api/graphql/session/templates/',
   'vyos_udev_dir' : '/run/udev/vyos'
 }
