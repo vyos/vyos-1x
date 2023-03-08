@@ -136,7 +136,7 @@ def verify(tunnel):
             if our_key != None:
                 if their_address == our_address and their_key == our_key:
                     raise ConfigError(f'Key "{our_key}" for source-address "{our_address}" ' \
-                                      f'is already used for tunnel "{tunnel_if}"!')
+                                      f'is already used for tunnel "{o_tunnel}"!')
             else:
                 our_source_if = dict_search('source_interface', tunnel)
                 their_source_if = dict_search('source_interface', o_tunnel_conf)
