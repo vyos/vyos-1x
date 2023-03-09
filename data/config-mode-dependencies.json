@@ -8,5 +8,25 @@
            "ipsec": ["vpn_ipsec"],
            "openconnect": ["vpn_openconnect"],
            "sstp": ["vpn_sstp"]
+         },
+  "qos": {
+           "bonding": ["interfaces-bonding"],
+           "bridge": ["interfaces-bridge"],
+           "dummy": ["interfaces-dummy"],
+           "ethernet": ["interfaces-ethernet"],
+           "geneve": ["interfaces-geneve"],
+           "input": ["interfaces-input"],
+           "l2tpv3": ["interfaces-l2tpv3"],
+           "loopback": ["interfaces-loopback"],
+           "macsec": ["interfaces-macsec"],
+           "openvpn": ["interfaces-openvpn"],
+           "pppoe": ["interfaces-pppoe"],
+           "pseudo-ethernet": ["interfaces-pseudo-ethernet"],
+           "tunnel": ["interfaces-tunnel"],
+           "vti": ["interfaces-vti"],
+           "vxlan": ["interfaces-vxlan"],
+           "wireguard": ["interfaces-wireguard"],
+           "wireless": ["interfaces-wireless"],
+           "wwan": ["interfaces-wwan"]
          }
 }
