@@ -21,7 +21,9 @@ from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.configdict import dict_merge
+from vyos.ifconfig import Section
 from vyos.qos import CAKE
 from vyos.qos import DropTail
 from vyos.qos import FairQueue
@@ -82,6 +84,18 @@ def get_config(config=None):
     qos = conf.get_config_dict(base, key_mangling=('-', '_'),
                                get_first_key=True,
                                no_tag_node_value_mangle=True)
+
+    if 'interface' in qos:
+        for ifname, if_conf in qos['interface'].items():
+            if_node = Section.get_config_path(ifname)
+
+            if not if_node:
+                continue
+
+            path = f'interfaces {if_node}'
+            if conf.exists(f'{path} mirror') or conf.exists(f'{path} redirect'):
+                type_node = path.split(" ")[1] # return only interface type node
+                set_dependents(type_node, conf, ifname)
 
     if 'policy' in qos:
         for policy in qos['policy']:
@@ -244,6 +258,8 @@ def apply(qos):
             shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
             tmp = shaper_type(interface)
             tmp.update(shaper_config, direction)
+
+    call_dependents()
 
     return None
 
