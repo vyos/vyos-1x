@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 yOS maintainers and contributors
+# Copyright (C) 2018-2023 yOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -115,7 +115,7 @@ def verify(tunnel):
             if our_key != None:
                 if their_address == our_address and their_key == our_key:
                     raise ConfigError(f'Key "{our_key}" for source-address "{our_address}" ' \
-                                      f'is already used for tunnel "{tunnel_if}"!')
+                                      f'is already used for tunnel "{o_tunnel}"!')
             else:
                 our_source_if = dict_search('source_interface', tunnel)
                 their_source_if = dict_search('source_interface', o_tunnel_conf)
