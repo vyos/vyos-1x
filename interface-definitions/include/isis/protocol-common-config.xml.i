@@ -572,7 +572,7 @@
   <properties>
     <help>Interface params</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
   </properties>
   <children>

@@ -7,7 +7,7 @@
       <description>Interface name</description>
     </valueHelp>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
     <constraint>
       #include <include/constraint/interface-name.xml.in>

@@ -51,7 +51,7 @@
           <properties>
             <help>Delegate IPv6 prefix from provider to this interface</help>
             <completionHelp>
-              <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+              <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
             </completionHelp>
           </properties>
           <children>

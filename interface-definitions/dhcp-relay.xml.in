@@ -14,7 +14,7 @@
             <properties>
               <help>Interface for DHCP Relay Agent to listen for requests</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <valueHelp>
                 <format>txt</format>
@@ -30,7 +30,7 @@
             <properties>
               <help>Interface for DHCP Relay Agent forward requests out</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <valueHelp>
                 <format>txt</format>

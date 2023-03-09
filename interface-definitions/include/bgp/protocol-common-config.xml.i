@@ -359,7 +359,7 @@
               <properties>
                 <help>Interface</help>
                 <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
                 </completionHelp>
                 <multi/>
               </properties>
@@ -739,7 +739,7 @@
               <properties>
                 <help>Interface</help>
                 <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces.py</script>
+                  <script>${vyos_completion_dir}/list_interfaces</script>
                 </completionHelp>
                 <multi/>
               </properties>

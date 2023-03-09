@@ -3,7 +3,7 @@
   <properties>
     <help>Gateway interface name</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
     <valueHelp>
       <format>txt</format>

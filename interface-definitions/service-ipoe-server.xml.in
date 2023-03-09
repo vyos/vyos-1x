@@ -12,7 +12,7 @@
             <properties>
               <help>Interface to listen dhcp or unclassified packets</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <children>
@@ -122,7 +122,7 @@
                 <properties>
                   <help>Network interface for client MAC addresses</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <children>

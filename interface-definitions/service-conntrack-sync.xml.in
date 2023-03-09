@@ -127,7 +127,7 @@
             <properties>
               <help>Interface to use for syncing conntrack entries</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
+                <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
               </completionHelp>
             </properties>
             <children>

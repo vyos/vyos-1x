@@ -44,7 +44,7 @@
             <properties>
               <help>Interface name</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <children>
@@ -226,7 +226,7 @@
                   <help>Inbound interface name (e.g., "eth0") [REQUIRED]</help>
                   <completionHelp>
                     <list>any</list>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
               </leafNode>
@@ -234,7 +234,7 @@
                 <properties>
                   <help>Interface name [REQUIRED]</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <children>

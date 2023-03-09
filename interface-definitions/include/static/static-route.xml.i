@@ -19,7 +19,7 @@
       <properties>
         <help>Next-hop IPv4 router interface</help>
         <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces</script>
         </completionHelp>
         <valueHelp>
           <format>txt</format>

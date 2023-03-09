@@ -4,7 +4,7 @@
     <help>Suppress routing updates on an interface</help>
     <completionHelp>
       <list>default</list>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
     <valueHelp>
       <format>txt</format>

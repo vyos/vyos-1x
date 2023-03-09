@@ -3,7 +3,7 @@
   <properties>
     <help>Interface Name to use</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py --broadcast</script>
+      <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
     </completionHelp>
     <valueHelp>
       <format>txt</format>

@@ -4,7 +4,7 @@
     <help>Inbound interface of NAT traffic</help>
     <completionHelp>
       <list>any</list>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
   </properties>
 </leafNode>

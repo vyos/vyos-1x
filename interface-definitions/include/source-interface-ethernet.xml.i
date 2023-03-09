@@ -7,7 +7,7 @@
       <description>Physical interface used for traffic forwarding</description>
     </valueHelp>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py -t ethernet</script>
+      <script>${vyos_completion_dir}/list_interfaces --type ethernet</script>
     </completionHelp>
   </properties>
 </leafNode>

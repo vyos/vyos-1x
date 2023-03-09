@@ -192,7 +192,7 @@
                 <properties>
                   <help>Member interface name</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+                    <script>${vyos_completion_dir}/list_interfaces --bondable</script>
                   </completionHelp>
                   <valueHelp>
                     <format>txt</format>
@@ -211,7 +211,7 @@
             <properties>
               <help>Primary device interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py --bondable</script>
+                <script>${vyos_completion_dir}/list_interfaces --bondable</script>
               </completionHelp>
               <valueHelp>
                 <format>txt</format>

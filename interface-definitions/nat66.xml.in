@@ -46,7 +46,7 @@
                 <properties>
                   <help>Outbound interface of NAT66 traffic</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
               </leafNode>
@@ -179,7 +179,7 @@
                   <help>Inbound interface of NAT66 traffic</help>
                   <completionHelp>
                     <list>any</list>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
               </leafNode>

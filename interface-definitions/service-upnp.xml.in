@@ -21,7 +21,7 @@
             <properties>
               <help>WAN network interface</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <constraint>
                 #include <include/constraint/interface-name.xml.in>
@@ -95,7 +95,7 @@
               <help>Local IP addresses for service to listen on</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <valueHelp>
                 <format>&lt;interface&gt;</format>

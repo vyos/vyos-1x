@@ -146,7 +146,7 @@
                 <properties>
                   <help>Interface-group member</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                   <multi/>
                 </properties>
@@ -347,7 +347,7 @@
         <properties>
           <help>Interface name to apply firewall configuration</help>
           <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
+            <script>${vyos_completion_dir}/list_interfaces</script>
           </completionHelp>
         </properties>
         <children>
@@ -912,7 +912,7 @@
                 <description>Interface associated with zone</description>
               </valueHelp>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <multi/>
             </properties>

@@ -121,7 +121,7 @@
                 <properties>
                   <help>Member interface name</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
+                    <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
                   </completionHelp>
                 </properties>
                 <children>

@@ -37,7 +37,7 @@
                     <description>Apply filtering to an interface</description>
                   </valueHelp>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                   <constraint>
                     #include <include/constraint/interface-name.xml.in>
@@ -73,7 +73,7 @@
                 <description>Suppress routing updates on interface</description>
               </valueHelp>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <multi/>
             </properties>

@@ -7,7 +7,7 @@
           <help>System Domain Name Servers (DNS)</help>
           <priority>400</priority>
           <completionHelp>
-            <script>${vyos_completion_dir}/list_interfaces.py</script>
+            <script>${vyos_completion_dir}/list_interfaces</script>
           </completionHelp>
           <valueHelp>
             <format>ipv4</format>

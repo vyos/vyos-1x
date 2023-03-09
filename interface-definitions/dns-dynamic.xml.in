@@ -16,7 +16,7 @@
                 <properties>
                   <help>Interface to send DDNS updates for</help>
                   <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces.py</script>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
                 </properties>
                 <children>

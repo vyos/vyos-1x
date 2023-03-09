@@ -3,7 +3,7 @@
   <properties>
     <help>Redirect incoming packet to destination</help>
     <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces.py</script>
+      <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
     <valueHelp>
       <format>txt</format>

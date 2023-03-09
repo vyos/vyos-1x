@@ -8,7 +8,7 @@
       <properties>
         <help>Mirror ingress traffic to destination interface</help>
         <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces</script>
         </completionHelp>
         <valueHelp>
           <format>txt</format>
@@ -20,7 +20,7 @@
       <properties>
         <help>Mirror egress traffic to destination interface</help>
         <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces.py</script>
+          <script>${vyos_completion_dir}/list_interfaces</script>
         </completionHelp>
         <valueHelp>
           <format>txt</format>

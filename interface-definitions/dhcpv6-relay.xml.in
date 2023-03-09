@@ -13,7 +13,7 @@
             <properties>
               <help>Interface for DHCPv6 Relay Agent to listen for requests</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <children>
@@ -49,7 +49,7 @@
             <properties>
               <help>Interface for DHCPv6 Relay Agent forward requests out</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces.py</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
             </properties>
             <children>
