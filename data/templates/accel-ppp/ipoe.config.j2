@@ -35,7 +35,8 @@ verbose=1
 {%         elif iface_config.network is vyos_defined('vlan') %}
 {%             set shared = 'shared=0,' %}
 {%         endif %}
-{{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,range={{ iface_config.client_subnet }},start=dhcpv4,ipv6=1
+{%         set range = 'range=' ~ iface_config.client_subnet ~ ',' if iface_config.client_subnet is vyos_defined else '' %}
+{{ tmp }},{{ shared }}mode={{ iface_config.mode | upper }},ifcfg=1,{{ range }}start=dhcpv4,ipv6=1
 {%         if iface_config.vlan is vyos_defined %}
 vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {%         endif %}
