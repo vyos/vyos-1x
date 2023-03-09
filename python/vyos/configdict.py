@@ -427,6 +427,10 @@ def get_interface_dict(config, base, ifname=''):
     # Add interface instance name into dictionary
     dict.update({'ifname': ifname})
 
+    # Check if QoS policy applied on this interface - See ifconfig.interface.set_mirror_redirect()
+    if config.exists(['qos', 'interface', ifname]):
+        dict.update({'traffic_policy': {}})
+
     # XXX: T2665: When there is no DHCPv6-PD configuration given, we can safely
     # remove the default values from the dict.
     if 'dhcpv6_options' not in dict:
@@ -498,6 +502,9 @@ def get_interface_dict(config, base, ifname=''):
         # Add subinterface name to dictionary
         dict['vif'][vif].update({'ifname' : f'{ifname}.{vif}'})
 
+        if config.exists(['qos', 'interface', f'{ifname}.{vif}']):
+            dict['vif'][vif].update({'traffic_policy': {}})
+
         default_vif_values = defaults(base + ['vif'])
         # XXX: T2665: When there is no DHCPv6-PD configuration given, we can safely
         # remove the default values from the dict.
@@ -531,6 +538,9 @@ def get_interface_dict(config, base, ifname=''):
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         # Add subinterface name to dictionary
         dict['vif_s'][vif_s].update({'ifname' : f'{ifname}.{vif_s}'})
+
+        if config.exists(['qos', 'interface', f'{ifname}.{vif_s}']):
+            dict['vif_s'][vif_s].update({'traffic_policy': {}})
 
         default_vif_s_values = defaults(base + ['vif-s'])
         # XXX: T2665: we only wan't the vif-s defaults - do not care about vif-c
@@ -570,6 +580,9 @@ def get_interface_dict(config, base, ifname=''):
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             # Add subinterface name to dictionary
             dict['vif_s'][vif_s]['vif_c'][vif_c].update({'ifname' : f'{ifname}.{vif_s}.{vif_c}'})
+
+            if config.exists(['qos', 'interface', f'{ifname}.{vif_s}.{vif_c}']):
+                dict['vif_s'][vif_s]['vif_c'][vif_c].update({'traffic_policy': {}})
 
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
 
