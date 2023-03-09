@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -53,8 +53,11 @@ def verify(ipoe):
     if 'interface' not in ipoe:
         raise ConfigError('No IPoE interface configured')
 
-    for interface in ipoe['interface']:
+    for interface, iface_config in ipoe['interface'].items():
         verify_interface_exists(interface)
+        if 'client_subnet' in iface_config and 'vlan' in iface_config:
+            raise ConfigError('Option "client-subnet" incompatible with "vlan"!'
+                              'Use "ipoe client-ip-pool" instead.')
 
     #verify_accel_ppp_base_service(ipoe, local_users=False)
 
