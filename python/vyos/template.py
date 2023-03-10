@@ -675,7 +675,10 @@ def range_to_regex(num_range):
     if isinstance(num_range, list):
         data = []
         for entry in num_range:
-            data.append(range_to_regex(entry))
+            if '-' not in entry:
+                data.append(entry)
+            else:
+                data.append(range_to_regex(entry))
         return f'({"|".join(data)})'
 
     if '-' not in num_range:
