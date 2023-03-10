@@ -18,7 +18,6 @@ import os
 
 from ipaddress import ip_address
 from ipaddress import ip_network
-from time import sleep
 from json import dumps as json_write
 
 from vyos.base import Warning
@@ -28,6 +27,7 @@ from vyos.configdict import node_changed
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import run
+from vyos.util import rc_cmd
 from vyos.util import write_file
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
@@ -68,6 +68,9 @@ def get_config(config=None):
     # container base default values can not be merged here - remove and add them later
     if 'name' in default_values:
         del default_values['name']
+    # registry will be handled below
+    if 'registry' in default_values:
+        del default_values['registry']
     container = dict_merge(default_values, container)
 
     # Merge per-container default values
@@ -94,6 +97,15 @@ def get_config(config=None):
                     default_values_volume = defaults(base + ['name', 'volume'])
                     container['name'][name]['volume'][volume] = dict_merge(
                         default_values_volume, container['name'][name]['volume'][volume])
+
+    # registry is a tagNode with default values - merge the list from
+    # default_values['registry'] into the tagNode variables
+    if 'registry' not in container:
+        container.update({'registry' : {}})
+        default_values = defaults(base)
+        for registry in default_values['registry'].split():
+            tmp = {registry : {}}
+            container['registry'] = dict_merge(tmp, container['registry'])
 
     # Delete container network, delete containers
     tmp = node_changed(conf, base + ['network'])
@@ -226,6 +238,11 @@ def verify(container):
                 if 'network' in container_config and network in container_config['network']:
                     raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
 
+    if 'registry' in container and 'authentication' in container['registry']:
+        for registry, registry_config in container['registry']['authentication'].items():
+            if not {'username', 'password'} <= set(registry_config):
+                raise ConfigError('If registry username or or password is defined, so must be the other!')
+
     return None
 
 def generate_run_arguments(name, container_config):
@@ -354,6 +371,24 @@ def generate(container):
                 tmp['plugins'][0]['ipam']['routes'].append({'dst': default_route})
 
             write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
+
+    if 'registry' in container:
+        cmd = f'podman logout --all'
+        rc, out = rc_cmd(cmd)
+        if rc != 0:
+            raise ConfigError(out)
+
+        for registry, registry_config in container['registry'].items():
+            if 'disable' in registry_config:
+                continue
+            if 'authentication' in registry_config:
+                if {'username', 'password'} <= set(registry_config['authentication']):
+                    username = registry_config['authentication']['username']
+                    password = registry_config['authentication']['password']
+                    cmd = f'podman login --username {username} --password {password} {registry}'
+                    rc, out = rc_cmd(cmd)
+                    if rc != 0:
+                        raise ConfigError(out)
 
     render(config_containers_registry, 'container/registries.conf.j2', container)
     render(config_containers_storage, 'container/storage.conf.j2', container)
