@@ -16,19 +16,8 @@
             </properties>
           </leafNode>
           #include <include/port-number.xml.i>
-          <leafNode name="username">
-            <properties>
-              <help>Proxy username</help>
-              <constraint>
-                <regex>[a-z0-9-_\.]{1,100}</regex>
-              </constraint>
-            </properties>
-          </leafNode>
-          <leafNode name="password">
-            <properties>
-              <help>Proxy password</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-username.xml.i>
+          #include <include/generic-password.xml.i>
         </children>
       </node>
     </children>
