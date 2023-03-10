@@ -874,12 +874,16 @@ def convert_data(data):
     Returns:
         str | list | dict: converted data
     """
+    from base64 import b64encode
     from collections import OrderedDict
 
     if isinstance(data, str):
         return data
     if isinstance(data, bytes):
-        return data.decode()
+        try:
+            return data.decode()
+        except UnicodeDecodeError:
+            return b64encode(data).decode()
     if isinstance(data, list):
         list_tmp = []
         for item in data:
