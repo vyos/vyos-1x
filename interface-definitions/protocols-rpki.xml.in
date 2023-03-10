@@ -71,11 +71,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
-                  <leafNode name="username">
-                    <properties>
-                      <help>RPKI SSH username</help>
-                    </properties>
-                  </leafNode>
+                  #include <include/generic-username.xml.i>
                 </children>
               </node>
             </children>
