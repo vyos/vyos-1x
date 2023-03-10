@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -85,7 +85,7 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[]) -> l
         data_lease['ip'] = lease.ip
         data_lease['state'] = lease.binding_state
         data_lease['pool'] = lease.sets.get('shared-networkname', '')
-        data_lease['end'] = lease.end.timestamp()
+        data_lease['end'] = lease.end.timestamp() if lease.end else None
 
         if family == 'inet':
             data_lease['mac'] = lease.ethernet
@@ -98,17 +98,18 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[]) -> l
             lease_types_long = {'na': 'non-temporary', 'ta': 'temporary', 'pd': 'prefix delegation'}
             data_lease['type'] = lease_types_long[lease.type]
 
-        data_lease['remaining'] = lease.end - datetime.utcnow()
+        data_lease['remaining'] = '-'
 
-        if data_lease['remaining'].days >= 0:
-            # substraction gives us a timedelta object which can't be formatted with strftime
-            # so we use str(), split gets rid of the microseconds
-            data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
-        else:
-            data_lease['remaining'] = ''
+        if lease.end:
+            data_lease['remaining'] = lease.end - datetime.utcnow()
+
+            if data_lease['remaining'].days >= 0:
+                # substraction gives us a timedelta object which can't be formatted with strftime
+                # so we use str(), split gets rid of the microseconds
+                data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
 
         # Do not add old leases
-        if data_lease['remaining'] != '' and data_lease['pool'] in pool:
+        if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
             if not state or data_lease['state'] in state:
                 data.append(data_lease)
 
@@ -140,7 +141,7 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             start = lease.get('start')
             start =  _utc_to_local(start).strftime('%Y/%m/%d %H:%M:%S')
             end = lease.get('end')
-            end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S')
+            end =  _utc_to_local(end).strftime('%Y/%m/%d %H:%M:%S') if end else '-'
             remain = lease.get('remaining')
             pool = lease.get('pool')
             hostname = lease.get('hostname')
