@@ -277,6 +277,9 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         negated_lengths_str = ','.join(rule_conf['packet_length_exclude'])
         output.append(f'ip{def_suffix} length != {{{negated_lengths_str}}}')
 
+    if 'packet_type' in rule_conf:
+        output.append(f'pkttype ' + rule_conf['packet_type'])
+
     if 'dscp' in rule_conf:
         dscp_str = ','.join(rule_conf['dscp'])
         output.append(f'ip{def_suffix} dscp {{{dscp_str}}}')

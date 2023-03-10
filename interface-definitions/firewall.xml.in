@@ -459,7 +459,7 @@
               </node>
               #include <include/firewall/common-rule.xml.i>
               #include <include/firewall/dscp.xml.i>
-              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/packet-options.xml.i>
               #include <include/firewall/hop-limit.xml.i>
               #include <include/firewall/connection-mark.xml.i>
               <node name="icmpv6">
@@ -629,7 +629,7 @@
               </node>
               #include <include/firewall/common-rule.xml.i>
               #include <include/firewall/dscp.xml.i>
-              #include <include/firewall/packet-length.xml.i>
+              #include <include/firewall/packet-options.xml.i>
               #include <include/firewall/connection-mark.xml.i>
               <node name="icmp">
                 <properties>
