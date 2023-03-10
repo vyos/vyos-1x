@@ -16,23 +16,7 @@
           </valueHelp>
         </properties>
         <children>
-          <node name="authentication">
-            <properties>
-              <help>Authentication options</help>
-            </properties>
-            <children>
-              <leafNode name="password">
-                <properties>
-                  <help>OpenVPN password used for authentication</help>
-                </properties>
-              </leafNode>
-              <leafNode name="username">
-                <properties>
-                  <help>OpenVPN username used for authentication</help>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/interface/authentication.xml.i>
           #include <include/generic-description.xml.i>
           <leafNode name="device-type">
             <properties>
