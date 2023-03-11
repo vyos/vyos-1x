@@ -60,6 +60,7 @@ Depends:
   frr-pythontools,
   frr-rpki-rtrlib,
   frr-snmp,
+  fuse-overlayfs,
   libpam-google-authenticator,
   grc,
   hostapd,
