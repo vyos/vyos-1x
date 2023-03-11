@@ -97,6 +97,7 @@ Depends:
   mtr-tiny,
   ndisc6,
   ndppd,
+  netavark,
   netplug,
   nfct,
   nftables (>= 0.9.3),
