@@ -26,7 +26,7 @@ verbose=1
 {% for interface in interfaces %}
 {%   set ifname = interface.name %}
 {%   if interface.vlan_mon %}
-{%     set ifname = 're:' ~ interface.name ~ '\.\d+' %}
+{%     set ifname = 're:^' ~ interface.name ~ '\.' ~ interface.vlan_mon | range_to_regex ~ '$' %}
 {%   endif %}
 interface={{ ifname }},shared={{ interface.shared }},mode={{ interface.mode }},ifcfg={{ interface.ifcfg }}{{ ',range=' ~ interface.range if interface.range is defined and interface.range is not none }},start={{ interface.sess_start }},ipv6=1
 {% endfor %}
