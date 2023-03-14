@@ -74,6 +74,7 @@
 "system-logs.py",
 "system-option.py",
 "system-proxy.py",
+"system_sflow.py",
 "system_sysctl.py",
 "system-syslog.py",
 "system-timezone.py",
