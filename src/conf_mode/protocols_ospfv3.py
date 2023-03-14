@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -146,14 +146,24 @@ def generate(ospfv3):
     if not ospfv3 or 'deleted' in ospfv3:
         return None
 
+    ospfv3['protocol'] = 'ospf6' # required for frr/vrf.route-map.v6.frr.j2
+    ospfv3['frr_zebra_config'] = render_to_string('frr/vrf.route-map.v6.frr.j2', ospfv3)
     ospfv3['new_frr_config'] = render_to_string('frr/ospf6d.frr.j2', ospfv3)
     return None
 
 def apply(ospfv3):
     ospf6_daemon = 'ospf6d'
+    zebra_daemon = 'zebra'
 
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section('(\s+)?ipv6 protocol ospf6 route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    if 'frr_zebra_config' in ospfv3:
+        frr_cfg.add_before(frr.default_add_before, ospfv3['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
     # will be either empty (default VRF) or contain the "vrf <name" statement
