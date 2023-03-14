@@ -47,6 +47,9 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             protocol = '{ tcp, udp }'
         output.append(f'meta l4proto {protocol}')
 
+    if 'packet_type' in rule_conf:
+        output.append(f'pkttype ' + rule_conf['packet_type'])
+
     if 'exclude' in rule_conf:
         translation_str = 'return'
         log_suffix = '-EXCL'
