@@ -119,7 +119,7 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/firewall/rule-log-level.xml.i>
+#include <include/firewall/rule-log-options.xml.i>
 <node name="connection-status">
   <properties>
     <help>Connection status</help>
