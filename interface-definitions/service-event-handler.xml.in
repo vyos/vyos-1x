@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="event-handler" owner="${vyos_conf_scripts_dir}/service_event_handler.py">
+        <properties>
+          <help>Service event handler</help>
+        </properties>
+        <children>
+          <tagNode name="event">
+            <properties>
+              <help>Event handler name</help>
+            </properties>
+            <children>
+              <node name="filter">
+                <properties>
+                  <help>Logs filter settings</help>
+                </properties>
+                <children>
+                  <leafNode name="pattern">
+                    <properties>
+                      <help>Match pattern (regex)</help>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="syslog-identifier">
+                    <properties>
+                      <help>Identifier of a process in syslog (string)</help>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="script">
+                <properties>
+                  <help>Event handler script file</help>
+                </properties>
+                <children>
+                  <leafNode name="arguments">
+                    <properties>
+                      <help>Script arguments</help>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="environment">
+                    <properties>
+                      <help>Script environment arguments</help>
+                    </properties>
+                    <children>
+                      <leafNode name="value">
+                        <properties>
+                          <help>Environment value</help>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <leafNode name="path">
+                    <properties>
+                      <help>Path to the script</help>
+                      <constraint>
+                        <validator name="script"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
