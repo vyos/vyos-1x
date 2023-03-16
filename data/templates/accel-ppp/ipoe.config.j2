@@ -44,17 +44,17 @@ vlan-mon={{ iface }},{{ iface_config.vlan | join(',') }}
 {% endif %}
 {% if authentication.mode is vyos_defined('noauth') %}
 noauth=1
-{%     if client_ip_pool.name is vyos_defined %}
-{%         for pool, pool_options in client_ip_pool.name.items() %}
-{%             if pool_options.subnet is vyos_defined and pool_options.gateway_address is vyos_defined %}
-ip-pool={{ pool }}
-gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
-{%             endif %}
-{%         endfor %}
-{%     endif %}
 {% elif authentication.mode is vyos_defined('local') %}
 username=ifname
 password=csid
+{% endif %}
+{% if client_ip_pool.name is vyos_defined %}
+{%     for pool, pool_options in client_ip_pool.name.items() %}
+{%         if pool_options.subnet is vyos_defined and pool_options.gateway_address is vyos_defined %}
+ip-pool={{ pool }}
+gw-ip-address={{ pool_options.gateway_address }}/{{ pool_options.subnet.split('/')[1] }}
+{%         endif %}
+{%     endfor %}
 {% endif %}
 proxy-arp=1
 
