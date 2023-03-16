@@ -92,6 +92,23 @@
                   #include <include/show-route-static.xml.i>
                   #include <include/show-route-supernets-only.xml.i>
                   #include <include/show-route-tag.xml.i>
+                  <node name="node.tag">
+                    <properties>
+                      <help>Show IP routes of specified IP address or prefix</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                    <children>
+                      <leafNode name="longer-prefixes">
+                        <properties>
+                          <help>Show longer prefixes of routes for specified prefix</help>
+                        </properties>
+                        <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+                      </leafNode>
+                    </children>
+                  </node>
                 </children>
               </tagNode>
             </children>
