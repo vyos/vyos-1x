@@ -60,6 +60,17 @@ def verify(ipoe):
                               'Use "ipoe client-ip-pool" instead.')
 
     #verify_accel_ppp_base_service(ipoe, local_users=False)
+    # IPoE server does not have 'gateway' option in the CLI
+    # we cannot use configverify.py verify_accel_ppp_base_service for ipoe-server
+
+    if dict_search('authentication.mode', ipoe) == 'radius':
+        if not dict_search('authentication.radius.server', ipoe):
+            raise ConfigError('RADIUS authentication requires at least one server')
+
+        for server in dict_search('authentication.radius.server', ipoe):
+            radius_config = ipoe['authentication']['radius']['server'][server]
+            if 'key' not in radius_config:
+                raise ConfigError(f'Missing RADIUS secret key for server "{server}"')
 
     if 'client_ipv6_pool' in ipoe:
         if 'delegate' in ipoe['client_ipv6_pool'] and 'prefix' not in ipoe['client_ipv6_pool']:
