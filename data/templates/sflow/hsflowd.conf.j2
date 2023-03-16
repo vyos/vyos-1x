@@ -1,0 +1,28 @@
+# Genereated by /usr/libexec/vyos/conf_mode/system_sflow.py
+# Parameters http://sflow.net/host-sflow-linux-config.php
+
+sflow {
+{% if polling is vyos_defined %}
+  polling={{ polling }}
+{% endif %}
+{% if sampling_rate is vyos_defined %}
+  sampling={{ sampling_rate }}
+  sampling.bps_ratio=0
+{% endif %}
+{% if agent_address is vyos_defined %}
+  agentIP={{ agent_address }}
+{% endif %}
+{% if agent_interface is vyos_defined %}
+  agent={{ agent_interface }}
+{% endif %}
+{% if server is vyos_defined %}
+{%     for server, server_config in server.items() %}
+  collector { ip = {{ server }} udpport = {{ server_config.port }} }
+{%     endfor %}
+{% endif %}
+{% if interface is vyos_defined %}
+{%     for iface in interface %}
+  pcap { dev={{ iface }} }
+{%     endfor %}
+{% endif %}
+}

@@ -64,6 +64,7 @@ Depends:
   libpam-google-authenticator,
   grc,
   hostapd,
+  hsflowd,
   hvinfo,
   igmpproxy,
   ipaddrcheck,

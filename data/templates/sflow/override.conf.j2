@@ -1,0 +1,16 @@
+[Unit]
+After=
+After=vyos-router.service
+ConditionPathExists=
+ConditionPathExists=/run/sflow/hsflowd.conf
+
+[Service]
+EnvironmentFile=
+ExecStart=
+ExecStart=/usr/sbin/hsflowd -m %m -d -f /run/sflow/hsflowd.conf
+WorkingDirectory=
+WorkingDirectory=/run/sflow
+PIDFile=
+PIDFile=/run/sflow/hsflowd.pid
+Restart=always
+RestartSec=10
