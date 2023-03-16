@@ -1,4 +1,4 @@
-# Copyright 2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -19,7 +19,8 @@ import re
 from vyos.util import popen
 
 # These drivers do not support using ethtool to change the speed, duplex, or flow control settings
-_drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront', 'iavf', 'ice', 'i40e']
+_drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
+                                      'iavf', 'ice', 'i40e', 'veth']
 
 class Ethtool:
     """
