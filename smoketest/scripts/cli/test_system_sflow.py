@@ -56,7 +56,9 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         polling = '24'
         sampling_rate = '128'
         server = '192.0.2.254'
+        local_server = '127.0.0.1'
         port = '8192'
+        default_port = '6343'
         mon_limit = '50'
 
         self.cli_set(
@@ -73,6 +75,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['polling', polling])
         self.cli_set(base_path + ['sampling-rate', sampling_rate])
         self.cli_set(base_path + ['server', server, 'port', port])
+        self.cli_set(base_path + ['server', local_server])
         self.cli_set(base_path + ['drop-monitor-limit', mon_limit])
 
         # commit changes
@@ -86,6 +89,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'agentIP={agent_address}', hsflowd)
         self.assertIn(f'agent={agent_interface}', hsflowd)
         self.assertIn(f'collector {{ ip = {server} udpport = {port} }}', hsflowd)
+        self.assertIn(f'collector {{ ip = {local_server} udpport = {default_port} }}', hsflowd)
         self.assertIn(f'dropmon {{ limit={mon_limit} start=on sw=on hw=off }}', hsflowd)
 
         for interface in Section.interfaces('ethernet'):
