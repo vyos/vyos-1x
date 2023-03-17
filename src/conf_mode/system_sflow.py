@@ -57,6 +57,12 @@ def get_config(config=None):
     if 'port' in sflow['server']:
         del sflow['server']['port']
 
+    # Set default values per server
+    if 'server' in sflow:
+        for server in sflow['server']:
+            default_values = defaults(base + ['server'])
+            sflow['server'][server] = dict_merge(default_values, sflow['server'][server])
+
     return sflow
 
 
