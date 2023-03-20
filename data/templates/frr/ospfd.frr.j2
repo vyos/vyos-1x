@@ -44,6 +44,12 @@ interface {{ iface }}
 {%         if iface_config.bfd.profile is vyos_defined %}
  ip ospf bfd profile {{ iface_config.bfd.profile }}
 {%         endif %}
+{%         if iface_config.ldp_sync.disable is vyos_defined %}
+ no ip ospf mpls ldp-sync
+{%         elif iface_config.ldp_sync.holddown is vyos_defined %}
+ ip ospf mpls ldp-sync
+ ip ospf mpls ldp-sync holddown {{ iface_config.ldp_sync.holddown }}
+{%         endif %}
 {%         if iface_config.mtu_ignore is vyos_defined %}
  ip ospf mtu-ignore
 {%         endif %}
@@ -132,6 +138,11 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% endif %}
 {% if maximum_paths is vyos_defined %}
  maximum-paths {{ maximum_paths }}
+{% endif %}
+{% if ldp_sync.holddown is vyos_defined %}
+ mpls ldp-sync holddown {{ ldp_sync.holddown }}
+{% elif ldp_sync is vyos_defined %}
+ mpls ldp-sync
 {% endif %}
 {% if distance.global is vyos_defined %}
  distance {{ distance.global }}

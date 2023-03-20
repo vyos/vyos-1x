@@ -308,5 +308,48 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' segment-routing prefix {prefix_three} absolute {prefix_three_value} explicit-null', tmp)
         self.assertIn(f' segment-routing prefix {prefix_four} absolute {prefix_four_value} no-php-flag', tmp)
 
+    def test_isis_08_ldp_sync(self):
+        holddown = "500"
+        interface = 'lo'
+
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['ldp-sync', 'holddown', holddown])
+        
+        # Commit main ISIS changes
+        self.cli_commit()
+        
+        # Verify main ISIS changes
+        tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+        self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' mpls ldp-sync', tmp)
+        self.assertIn(f' mpls ldp-sync holddown {holddown}', tmp)
+        
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
+
+            # Commit interface changes for holddown
+            self.cli_commit()
+
+            # Verify interface changes for holddown
+            tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
+            self.assertIn(f'interface {interface}', tmp)
+            self.assertIn(f' ip router isis {domain}', tmp)
+            self.assertIn(f' ipv6 router isis {domain}', tmp)
+            self.assertIn(f' isis mpls ldp-sync holddown {holddown}', tmp)
+            
+        for interface in self._interfaces:
+            self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
+            
+            # Commit interface changes for disable
+            self.cli_commit()
+            
+            # Verify interface changes for disable
+            tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
+            self.assertIn(f'interface {interface}', tmp)
+            self.assertIn(f' ip router isis {domain}', tmp)
+            self.assertIn(f' ipv6 router isis {domain}', tmp)
+            self.assertIn(f' no isis mpls ldp-sync', tmp)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
