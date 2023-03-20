@@ -65,6 +65,10 @@ mru {{ mtu }}
 noipv6
 {% endif %}
 
+{% if holdoff is vyos_defined %}
+holdoff {{ holdoff }}
+{% endif %}
+
 {% if connect_on_demand is vyos_defined %}
 demand
 # See T2249. PPP default route options should only be set when in on-demand
