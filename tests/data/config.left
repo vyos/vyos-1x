@@ -1,0 +1,36 @@
+node1 {
+    tag_node foo {
+        valueless
+        multi_node 'v2'
+        multi_node 'v1'
+        single 'left_val'
+    }
+    tag_node bar {
+        node {
+            single 'v0'
+        }
+    }
+    tag_node other {
+        leaf 'leaf_l'
+    }
+}
+
+node3 {
+}
+
+node2 {
+    sub_node_other {
+        single 'val'
+    }
+    sub_node {
+        tag_node other {
+            single 'val'
+        }
+        tag_node bob {
+            valued 'baz'
+        }
+        tag_node duff {
+            valued 'buz'
+        }
+    }
+}
