@@ -60,7 +60,7 @@ class ConfigTree(object):
         self.__get_error.restype = c_char_p
 
         self.__to_string = self.__lib.to_string
-        self.__to_string.argtypes = [c_void_p]
+        self.__to_string.argtypes = [c_void_p, c_bool]
         self.__to_string.restype = c_char_p
 
         self.__to_commands = self.__lib.to_commands
@@ -160,8 +160,8 @@ class ConfigTree(object):
     def _get_config(self):
         return self.__config
 
-    def to_string(self):
-        config_string = self.__to_string(self.__config).decode()
+    def to_string(self, ordered_values=False):
+        config_string = self.__to_string(self.__config, ordered_values).decode()
         config_string = "{0}\n{1}".format(config_string, self.__version)
         return config_string
 
