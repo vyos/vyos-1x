@@ -434,6 +434,47 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' segment-routing prefix {prefix_one} index {prefix_one_value} explicit-null', frrconfig)
         self.assertIn(f' segment-routing prefix {prefix_two} index {prefix_two_value} no-php-flag', frrconfig)
 
+    def test_ospf_15_ldp_sync(self):
+        holddown = "500"
+        interface = 'lo'
+        interfaces = Section.interfaces('ethernet')
+
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(base_path + ['ldp-sync', 'holddown', holddown])
+        
+        # Commit main OSPF changes
+        self.cli_commit()
+        
+        # Verify main OSPF changes
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig)
+        self.assertIn(f' mpls ldp-sync holddown {holddown}', frrconfig)
+        
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
+
+            # Commit interface changes for holddown
+            self.cli_commit()
+
+            # Verify interface changes for holddown
+            config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf dead-interval 40', config)
+            self.assertIn(f' ip ospf mpls ldp-sync', config)
+            self.assertIn(f' ip ospf mpls ldp-sync holddown {holddown}', config)
+            
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
+            
+            # Commit interface changes for disable
+            self.cli_commit()
+            
+            # Verify interface changes for disable
+            config = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', config)
+            self.assertIn(f' ip ospf dead-interval 40', config)
+            self.assertIn(f' no ip ospf mpls ldp-sync', config)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

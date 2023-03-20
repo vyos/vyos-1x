@@ -54,6 +54,30 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
+<node name="mpls">
+  <properties>
+    <help>Show IS-IS MPLS specific information</help>
+  </properties>
+  <children>
+    <node name="ldp-sync">
+      <properties>
+        <help>Show IS-IS LDP-IGP synchronization information</help>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+      <children>
+        <tagNode name="interface">
+          <properties>
+            <help>Show specific IS-IS LDP-IGP synchronization for an interface</help>
+            <completionHelp>
+              <script>${vyos_completion_dir}/list_interfaces</script>
+            </completionHelp>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </tagNode>
+      </children>
+    </node>
+  </children>
+</node>
 <node name="mpls-te">
   <properties>
     <help>Show IS-IS MPLS traffic engineering information</help>
