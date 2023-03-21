@@ -282,6 +282,16 @@ def verify_rule(firewall, rule_conf, ipv6):
                 if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
+    if 'log_options' in rule_conf:
+        if 'log' not in rule_conf or 'enable' not in rule_conf['log']:
+            raise ConfigError('log-options defined, but log is not enable')
+
+        if 'snapshot_length' in rule_conf['log_options'] and 'group' not in rule_conf['log_options']:
+            raise ConfigError('log-options snapshot-length defined, but log group is not define')
+
+        if 'queue_threshold' in rule_conf['log_options'] and 'group' not in rule_conf['log_options']:
+            raise ConfigError('log-options queue-threshold defined, but log group is not define')
+
 def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
         return
