@@ -17,6 +17,7 @@
 "nhrp.py",
 "openconnect.py",
 "openvpn.py",
+"reset_vpn.py",
 "route.py",
 "system.py",
 "ipsec.py",
