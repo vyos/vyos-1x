@@ -333,8 +333,9 @@ def get_dhcp_interfaces(conf, vrf=None):
             if dict_search('dhcp_options.default_route_distance', config) != None:
                 options.update({'dhcp_options' : config['dhcp_options']})
             if 'vrf' in config:
-                if vrf is config['vrf']: tmp.update({ifname : options})
-            else: tmp.update({ifname : options})
+                if vrf == config['vrf']: tmp.update({ifname : options})
+            else:
+                if vrf is None: tmp.update({ifname : options})
 
         return tmp
 
@@ -382,8 +383,9 @@ def get_pppoe_interfaces(conf, vrf=None):
         if 'no_default_route' in ifconfig:
             options.update({'no_default_route' : {}})
         if 'vrf' in ifconfig:
-            if vrf is ifconfig['vrf']: pppoe_interfaces.update({ifname : options})
-        else: pppoe_interfaces.update({ifname : options})
+            if vrf == ifconfig['vrf']: pppoe_interfaces.update({ifname : options})
+        else:
+            if vrf is None: pppoe_interfaces.update({ifname : options})
 
     return pppoe_interfaces
 
