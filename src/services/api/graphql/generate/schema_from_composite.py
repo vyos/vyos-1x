@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,8 +20,7 @@
 
 import os
 import sys
-import json
-from inspect import signature, getmembers, isfunction, isclass, getmro
+from inspect import signature
 from jinja2 import Template
 
 from vyos.defaults import directories
@@ -32,9 +31,9 @@ if __package__ is None or __package__ == '':
 else:
     from .. libs.op_mode import snake_to_pascal_case, map_type_name
     from . composite_function import queries, mutations
-    from .. import state
 
 SCHEMA_PATH = directories['api_schema']
+CLIENT_OP_PATH = directories['api_client_op']
 
 schema_data: dict = {'schema_name': '',
                      'schema_fields': []}
@@ -85,6 +84,30 @@ extend type Mutation {
 }
 """
 
+op_query_template = """
+query {{ op_name }} ({{ op_sig }}) {
+  {{ op_name }} (data: { {{ op_arg }} }) {
+    success
+    errors
+    data {
+      result
+    }
+  }
+}
+"""
+
+op_mutation_template = """
+mutation {{ op_name }} ({{ op_sig }}) {
+  {{ op_name }} (data: { {{ op_arg }} }) {
+    success
+    errors
+    data {
+      result
+    }
+  }
+}
+"""
+
 def create_schema(func_name: str, func: callable, template: str) -> str:
     sig = signature(func)
 
@@ -104,18 +127,51 @@ def create_schema(func_name: str, func: callable, template: str) -> str:
 
     return res
 
+def create_client_op(func_name: str, func: callable, template: str) -> str:
+    sig = signature(func)
+
+    field_dict = {}
+    for k in sig.parameters:
+        field_dict[sig.parameters[k].name] = map_type_name(sig.parameters[k].annotation)
+
+    op_sig = ['$key: String']
+    op_arg = ['key: $key']
+    for k,v in field_dict.items():
+        op_sig.append('$'+k+': '+v)
+        op_arg.append(k+': $'+k)
+
+    op_data = {}
+    op_data['op_name'] = snake_to_pascal_case(func_name)
+    op_data['op_sig'] = ', '.join(op_sig)
+    op_data['op_arg'] = ', '.join(op_arg)
+
+    j2_template = Template(template)
+
+    res = j2_template.render(op_data)
+
+    return res
+
 def generate_composite_definitions():
-    results = []
+    schema = []
+    client_op = []
     for name,func in queries.items():
         res = create_schema(name, func, query_template)
-        results.append(res)
+        schema.append(res)
+        res = create_client_op(name, func, op_query_template)
+        client_op.append(res)
 
     for name,func in mutations.items():
         res = create_schema(name, func, mutation_template)
-        results.append(res)
+        schema.append(res)
+        res = create_client_op(name, func, op_mutation_template)
+        client_op.append(res)
 
-    out = '\n'.join(results)
+    out = '\n'.join(schema)
     with open(f'{SCHEMA_PATH}/composite.graphql', 'w') as f:
+        f.write(out)
+
+    out = '\n'.join(client_op)
+    with open(f'{CLIENT_OP_PATH}/composite.graphql', 'w') as f:
         f.write(out)
 
 if __name__ == '__main__':
