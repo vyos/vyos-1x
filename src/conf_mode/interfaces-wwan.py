@@ -101,6 +101,9 @@ def verify(wwan):
     verify_vrf(wwan)
     verify_mirror_redirect(wwan)
 
+    if ('ping-check' in wwan) and ('enable' in wwan['ping-check']) and ('address' not in wwan['ping-check']):
+        raise ConfigError(f'An address is required with ping-check for "{ifname}"')
+
     return None
 
 def generate(wwan):
@@ -127,7 +130,7 @@ def apply(wwan):
     if not is_systemd_service_active(service_name):
         cmd(f'systemctl start {service_name}')
 
-        counter = 100
+        counter = 200
         # Wait until a modem is detected and then we can continue
         while counter > 0:
             counter -= 1

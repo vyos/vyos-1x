@@ -17,6 +17,7 @@
 from vyos.configquery import VbashOpRun
 from vyos.configquery import ConfigTreeQuery
 
+from vyos.utils.process import rc_cmd
 from vyos.utils.network import is_wwan_connected
 
 conf = ConfigTreeQuery()
@@ -28,6 +29,13 @@ for interface, interface_config in dict.items():
         if 'disable' in interface_config:
             # do not restart this interface as it's disabled by the user
             continue
+
+        # user wish to use ping to validate interface
+        if 'enable' in interface_config.get("ping-check"):
+            rc, output = rc_cmd(["/bin/ping", "-c", interface_config.get("count"), "-w", interface_config.get("deadline"), interface_config.get("address")])
+            if rc != 0:
+                op = VbashOpRun()
+                op.run(['disconnect', 'interface', interface])
 
         op = VbashOpRun()
         op.run(['connect', 'interface', interface])
