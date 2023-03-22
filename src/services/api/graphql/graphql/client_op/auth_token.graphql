@@ -1,0 +1,10 @@
+
+mutation AuthToken ($username: String!, $password: String!) {
+  AuthToken (data: { username: $username, password: $password }) {
+    success
+    errors
+    data {
+      result
+    }
+  }
+}
