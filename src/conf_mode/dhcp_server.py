@@ -247,7 +247,7 @@ def verify(dhcp):
                 net2 = ip_network(n)
                 if (net != net2):
                     if net.overlaps(net2):
-                        raise ConfigError('Conflicting subnet ranges: "{net}" overlaps "{net2}"!')
+                        raise ConfigError(f'Conflicting subnet ranges: "{net}" overlaps "{net2}"!')
 
     # Prevent 'disable' for shared-network if only one network is configured
     if (shared_networks - disabled_shared_networks) < 1:
