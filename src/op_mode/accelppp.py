@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -75,8 +75,8 @@ def _get_raw_statistics(accel_output, pattern, protocol):
 
 
 def _get_raw_sessions(port):
-    cmd_options = 'show sessions ifname,username,ip,ip6,ip6-dp,type,state,' \
-                  'uptime-raw,calling-sid,called-sid,sid,comp,rx-bytes-raw,' \
+    cmd_options = 'show sessions ifname,username,ip,ip6,ip6-dp,type,rate-limit,' \
+                  'state,uptime-raw,calling-sid,called-sid,sid,comp,rx-bytes-raw,' \
                   'tx-bytes-raw,rx-pkts,tx-pkts'
     output = vyos.accel_ppp.accel_cmd(port, cmd_options)
     parsed_data: list[dict[str, str]] = vyos.accel_ppp.accel_out_parse(
