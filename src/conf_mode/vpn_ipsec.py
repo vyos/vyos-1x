@@ -549,6 +549,8 @@ def generate(ipsec):
     if ipsec['dhcp_no_address']:
         with open(DHCP_HOOK_IFLIST, 'w') as f:
             f.write(" ".join(ipsec['dhcp_no_address'].values()))
+    elif os.path.exists(DHCP_HOOK_IFLIST):
+        os.unlink(DHCP_HOOK_IFLIST)
 
     for path in [swanctl_dir, CERT_PATH, CA_PATH, CRL_PATH, PUBKEY_PATH]:
         if not os.path.exists(path):
