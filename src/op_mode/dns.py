@@ -17,7 +17,6 @@
 
 import sys
 
-from sys import exit
 from tabulate import tabulate
 
 from vyos.configquery import ConfigTreeQuery
@@ -75,8 +74,7 @@ def show_forwarding_statistics(raw: bool):
 
     config = ConfigTreeQuery()
     if not config.exists('service dns forwarding'):
-        print("DNS forwarding is not configured")
-        exit(0)
+        raise vyos.opmode.UnconfiguredSubsystem('DNS forwarding is not configured')
 
     dns_data = _get_raw_forwarding_statistics()
     if raw:
