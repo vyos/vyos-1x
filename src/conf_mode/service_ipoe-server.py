@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import jmespath
 
 from sys import exit
 
@@ -29,8 +30,91 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+
 ipoe_conf = '/run/accel-pppd/ipoe.conf'
 ipoe_chap_secrets = '/run/accel-pppd/ipoe.chap-secrets'
+
+
+def get_pools_in_order(data: dict) -> list:
+    """Return a list of dictionaries representing pool data in the order
+    in which they should be allocated. Pool must be defined before we can
+    use it with 'next-pool' option.
+
+    Args:
+        data: A dictionary of pool data, where the keys are pool names and the
+        values are dictionaries containing the 'subnet' key and the optional
+        'next_pool' key.
+
+    Returns:
+        list: A list of dictionaries
+
+    Raises:
+        ValueError: If a 'next_pool' key references a pool name that
+                    has not been defined.
+        ValueError: If a circular reference is found in the 'next_pool' keys.
+
+    Example:
+        config_data = {
+        ... 'first-pool': {
+        ... 'next_pool': 'second-pool',
+        ... 'subnet': '192.0.2.0/25'
+        ... },
+        ... 'second-pool': {
+        ... 'next_pool': 'third-pool',
+        ... 'subnet': '203.0.113.0/25'
+        ... },
+        ... 'third-pool': {
+        ... 'subnet': '198.51.100.0/24'
+        ... },
+        ... 'foo': {
+        ... 'subnet': '100.64.0.0/24',
+        ... 'next_pool': 'second-pool'
+        ... }
+        ... }
+
+        % get_pools_in_order(config_data)
+        [{'third-pool': {'subnet': '198.51.100.0/24'}},
+        {'second-pool': {'next_pool': 'third-pool', 'subnet': '203.0.113.0/25'}},
+        {'first-pool': {'next_pool': 'second-pool', 'subnet': '192.0.2.0/25'}},
+        {'foo': {'next_pool': 'second-pool', 'subnet': '100.64.0.0/24'}}]
+    """
+    pools = []
+    unresolved_pools = {}
+
+    for pool, pool_config in data.items():
+        if 'next_pool' not in pool_config:
+            pools.insert(0, {pool: pool_config})
+        else:
+            unresolved_pools[pool] = pool_config
+
+    while unresolved_pools:
+        resolved_pools = []
+
+        for pool, pool_config in unresolved_pools.items():
+            next_pool_name = pool_config['next_pool']
+
+            if any(p for p in pools if next_pool_name in p):
+                index = next(
+                    (i for i, p in enumerate(pools) if next_pool_name in p),
+                    None)
+                pools.insert(index + 1, {pool: pool_config})
+                resolved_pools.append(pool)
+            elif next_pool_name in unresolved_pools:
+                # next pool not yet resolved
+                pass
+            else:
+                raise ValueError(
+                    f"Pool '{next_pool_name}' not defined in configuration data"
+                )
+
+        if not resolved_pools:
+            raise ValueError("Circular reference in configuration data")
+
+        for pool in resolved_pools:
+            unresolved_pools.pop(pool)
+
+    return pools
+
 
 def get_config(config=None):
     if config:
@@ -43,6 +127,19 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     ipoe = get_accel_dict(conf, base, ipoe_chap_secrets)
+
+    if jmespath.search('client_ip_pool.name', ipoe):
+        dict_named_pools = jmespath.search('client_ip_pool.name', ipoe)
+        # Multiple named pools require ordered values T5099
+        ipoe['ordered_named_pools'] = get_pools_in_order(dict_named_pools)
+        # T5099 'next-pool' option
+        if jmespath.search('client_ip_pool.name.*.next_pool', ipoe):
+            for pool, pool_config in ipoe['client_ip_pool']['name'].items():
+                if 'next_pool' in pool_config:
+                    ipoe['first_named_pool'] = pool
+                    ipoe['first_named_pool_subnet'] = pool_config
+                    break
+
     return ipoe
 
 

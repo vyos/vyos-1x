@@ -13,6 +13,18 @@
   <children>
     #include <include/accel-ppp/gateway-address.xml.i>
     #include <include/accel-ppp/client-ip-pool-subnet-single.xml.i>
+    <leafNode name="next-pool">
+      <properties>
+        <help>Next pool name</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>Name of IP pool</description>
+        </valueHelp>
+        <constraint>
+          <regex>[-_a-zA-Z0-9.]+</regex>
+        </constraint>
+      </properties>
+    </leafNode>
   </children>
 </tagNode>
 <!-- include end -->
