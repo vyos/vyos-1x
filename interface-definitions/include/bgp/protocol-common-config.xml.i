@@ -1497,7 +1497,7 @@
   <properties>
     <help>Name of peer-group</help>
     <constraint>
-      <regex>[-_a-zA-Z0-9]+</regex>
+      #include <include/constraint/alpha-numeric-hyphen-underscore.xml.in>
     </constraint>
   </properties>
   <children>
