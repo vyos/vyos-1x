@@ -20,6 +20,7 @@ import re
 import sys
 import glob
 import argparse
+from tabulate import tabulate
 
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
@@ -158,6 +159,30 @@ def pppoe(ifname):
 	    return 'D'
     return ''
 
+def _format_stats(stats, indent=4):
+    stat_names = {
+        'rx': ['bytes', 'packets', 'errors', 'dropped', 'overrun', 'mcast'],
+        'tx': ['bytes', 'packets', 'errors', 'dropped', 'carrier', 'collisions'],
+    }
+
+    stats_dir = {
+        'rx': ['rx_bytes', 'rx_packets', 'rx_errors', 'rx_dropped', 'rx_over_errors', 'multicast'],
+        'tx': ['tx_bytes', 'tx_packets', 'tx_errors', 'tx_dropped', 'tx_carrier_errors', 'collisions'],
+    }
+    tabs = []
+    for rtx in list(stats_dir):
+        tabs.append([f'{rtx.upper()}:', ] + stat_names[rtx])
+        tabs.append(['', ] + [stats[_] for _ in stats_dir[rtx]])
+
+    s = tabulate(
+        tabs,
+        stralign="right",
+        numalign="right",
+        tablefmt="plain"
+    )
+
+    p = ' '*indent
+    return f'{p}' + s.replace('\n', f'\n{p}')
 
 @register('show')
 def run_show_intf(ifnames, iftypes, vif, vrrp):
@@ -185,8 +210,12 @@ def run_show_intf(ifnames, iftypes, vif, vrrp):
         if description:
             print(f'    Description: {description}')
 
+        stats = interface.operational.get_stats()
+        for k in list(stats):
+            stats[k] = get_counter_val(cache[k], stats[k])
+
         print()
-        print(interface.operational.formated_stats())
+        print(_format_stats(stats))
 
     for ifname in ifnames:
         if ifname not in handled and ifname.startswith('pppoe'):
