@@ -46,7 +46,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
     def test_01_ntp_options(self):
         # Test basic NTP support with multiple servers and their options
         servers = ['192.0.2.1', '192.0.2.2']
-        options = ['noselect', 'prefer']
+        options = ['nts', 'noselect', 'prefer']
         pools = ['pool.vyos.io']
 
         for server in servers:
@@ -65,6 +65,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
         config = cmd(f'sudo cat {NTP_CONF}')
         self.assertIn('driftfile /run/chrony/drift', config)
         self.assertIn('dumpdir /run/chrony', config)
+        self.assertIn('ntsdumpdir /run/chrony', config)
         self.assertIn('clientloglimit 1048576', config)
         self.assertIn('rtcsync', config)
         self.assertIn('makestep 1.0 3', config)

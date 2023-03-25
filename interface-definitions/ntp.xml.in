@@ -37,6 +37,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="nts">
+                <properties>
+                  <help>Enable Network Time Security (NTS) for the server</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="pool">
                 <properties>
                   <help>Associate with a number of remote servers</help>
