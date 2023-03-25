@@ -17,6 +17,7 @@ clientloglimit 1048576
 
 driftfile /run/chrony/drift
 dumpdir /run/chrony
+ntsdumpdir /run/chrony
 pidfile {{ config_file | replace('.conf', '.pid') }}
 
 # Determine when will the next leap second occur and what is the current offset
@@ -31,7 +32,7 @@ user {{ user }}
 {%         if config.pool is vyos_defined %}
 {%             set association = 'pool' %}
 {%         endif %}
-{{ association }} {{ server | replace('_', '-') }} iburst {{ 'noselect' if config.noselect is vyos_defined }} {{ 'prefer' if config.prefer is vyos_defined }}
+{{ association }} {{ server | replace('_', '-') }} iburst {{ 'nts' if config.nts is vyos_defined }} {{ 'noselect' if config.noselect is vyos_defined }} {{ 'prefer' if config.prefer is vyos_defined }}
 {%     endfor %}
 {% endif %}
 
