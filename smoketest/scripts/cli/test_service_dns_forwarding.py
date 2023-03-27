@@ -169,10 +169,13 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['listen-address', address])
 
         domains = ['vyos.io', 'vyos.net', 'vyos.com']
-        nameservers = ['192.0.2.1', '192.0.2.2']
+        nameservers = {'192.0.2.1': {}, '192.0.2.2': {'port': '53'}, '2001:db8::1': {'port': '853'}}
         for domain in domains:
-            for nameserver in nameservers:
-                self.cli_set(base_path + ['domain', domain, 'server', nameserver])
+            for h,p in nameservers.items():
+                if 'port' in p:
+                    self.cli_set(base_path + ['domain', domain, 'name-server', h, 'port', p['port']])
+                else:
+                    self.cli_set(base_path + ['domain', domain, 'name-server', h])
 
             # Test 'recursion-desired' flag for only one domain
             if domain == domains[0]:
@@ -192,7 +195,9 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             if domain == domains[0]: key =f'\+{domain}'
             else: key =f'{domain}'
             tmp = get_config_value(key, file=FORWARD_FILE)
-            self.assertEqual(tmp, ', '.join(nameservers))
+            canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
+                        for (h, p) in nameservers.items()]
+            self.assertEqual(tmp, ', '.join(canonical_entries))
 
             # Test 'negative trust anchor' flag for the second domain only
             if domain == domains[1]:

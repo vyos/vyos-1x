@@ -329,7 +329,7 @@ tag_regex_schema = op_type_schema.extend({
 forward_zone_add_schema = op_type_schema.extend({
     'data': {
         str: {
-            'server': [str],
+            'name_server': [str],
             'addnta': Any({}, None),
             'recursion_desired': Any({}, None),
             }

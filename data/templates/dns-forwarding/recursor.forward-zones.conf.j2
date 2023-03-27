@@ -23,7 +23,6 @@
 {% if forward_zones is vyos_defined %}
 # zones added via 'service dns forwarding domain'
 {%     for zone, zonedata in forward_zones.items() %}
-{{ "+" if zonedata.recursion_desired is vyos_defined }}{{ zone | replace('_', '-') }}={{ zonedata.server | join(', ') }}
+{{ "+" if zonedata.recursion_desired is vyos_defined }}{{ zone | replace('_', '-') }}={{ zonedata.name_server | join(', ') }}
 {%     endfor %}
 {% endif %}
-
