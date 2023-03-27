@@ -207,7 +207,11 @@ def _get_raw_data(ifname: typing.Optional[str],
 
         res_intf['description'] = interface.get_alias()
 
-        res_intf['stats'] = interface.operational.get_stats()
+        stats = interface.operational.get_stats()
+        for k in list(stats):
+            stats[k] = _get_counter_val(cache[k], stats[k])
+
+        res_intf['stats'] = stats
 
         ret.append(res_intf)
 
