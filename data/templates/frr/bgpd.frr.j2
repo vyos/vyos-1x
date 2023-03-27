@@ -553,6 +553,9 @@ bgp route-reflector allow-outbound-policy
 {% if parameters.suppress_fib_pending is vyos_defined %}
  bgp suppress-fib-pending
 {% endif %}
+{% if parameters.tcp_keepalive.idle is vyos_defined and parameters.tcp_keepalive.interval is vyos_defined and parameters.tcp_keepalive.probes is vyos_defined %}
+ bgp tcp-keepalive {{ parameters.tcp_keepalive.idle }} {{ parameters.tcp_keepalive.interval }} {{ parameters.tcp_keepalive.probes }}
+{% endif %}
 {% if timers.keepalive is vyos_defined and timers.holdtime is vyos_defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}

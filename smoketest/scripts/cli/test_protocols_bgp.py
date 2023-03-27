@@ -297,6 +297,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         max_path_v6ibgp = '16'
         cond_adv_timer = '30'
         min_hold_time = '2'
+        tcp_keepalive_idle = '66'
+        tcp_keepalive_interval = '77'
+        tcp_keepalive_probes = '22'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -327,6 +330,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'idle', tcp_keepalive_idle])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'interval', tcp_keepalive_interval])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'probes', tcp_keepalive_probes])
 
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
@@ -356,6 +362,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp route-reflector allow-outbound-policy', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
+        self.assertIn(f' bgp tcp-keepalive {tcp_keepalive_idle} {tcp_keepalive_interval} {tcp_keepalive_probes}', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
         self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 

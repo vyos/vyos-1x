@@ -412,6 +412,11 @@ def verify(bgp):
                 raise ConfigError('Missing mandatory configuration option for '\
                                  f'global administrative distance {key}!')
 
+    # TCP keepalive requires all three parameters to be set
+    if dict_search('parameters.tcp_keepalive', bgp) != None:
+        if not {'idle', 'interval', 'probes'} <= set(bgp['parameters']['tcp_keepalive']):
+            raise ConfigError('TCP keepalive incomplete - idle, keepalive and probes must be set')
+
     # Address Family specific validation
     if 'address_family' in bgp:
         for afi, afi_config in bgp['address_family'].items():

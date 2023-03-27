@@ -1481,6 +1481,49 @@
       </properties>
     </leafNode>
     #include <include/router-id.xml.i>
+    <node name="tcp-keepalive">
+      <properties>
+        <help>TCP keepalive parameters</help>
+      </properties>
+      <children>
+        <leafNode name="idle">
+          <properties>
+            <help>TCP keepalive idle time</help>
+            <valueHelp>
+              <format>u32:1-65535</format>
+              <description>Idle time in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-65535"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="interval">
+          <properties>
+            <help>TCP keepalive interval</help>
+            <valueHelp>
+              <format>u32:1-65535</format>
+              <description>Interval in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-65535"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="probes">
+          <properties>
+            <help>TCP keepalive maximum probes</help>
+            <valueHelp>
+              <format>u32:1-30</format>
+              <description>Maximum probes</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-30"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <tagNode name="peer-group">
