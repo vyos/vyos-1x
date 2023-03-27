@@ -74,6 +74,9 @@
 {% if config.password is vyos_defined %}
  neighbor {{ neighbor }} password {{ config.password }}
 {% endif %}
+{% if config.path_attribute.discard is vyos_defined %}
+ neighbor {{ neighbor }} path-attribute discard {{ config.path_attribute.discard }}
+{% endif %}
 {% if config.port is vyos_defined %}
  neighbor {{ neighbor }} port {{ config.port }}
 {% endif %}

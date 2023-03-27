@@ -1005,6 +1005,7 @@
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
+    #include <include/bgp/neighbor-path-attribute.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
     #include <include/bgp/peer-group.xml.i>
@@ -1511,6 +1512,7 @@
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
+    #include <include/bgp/neighbor-path-attribute.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>

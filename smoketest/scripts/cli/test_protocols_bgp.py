@@ -55,6 +55,7 @@ neighbor_config = {
         'route_map_out'    : route_map_out,
         'no_send_comm_ext' : '',
         'addpath_all'      : '',
+        'p_attr_discard'   : '123',
         },
     '192.0.2.2' : {
         'bfd_profile'      : bfd_profile,
@@ -129,6 +130,7 @@ peer_group_config = {
         'cap_over'         : '',
         'ttl_security'     : '5',
         'disable_conn_chk' : '',
+        'p_attr_discard'   : '250',
         },
     'bar' : {
         'remote_as'        : '111',
@@ -264,6 +266,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' no neighbor {peer} send-community extended', frrconfig)
         if 'addpath_all' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
+        if 'p_attr_discard' in peer_config:
+            self.assertIn(f' neighbor {peer} path-attribute discard {peer_config["p_attr_discard"]}', frrconfig)
         if 'addpath_per_as' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
         if 'advertise_map' in peer_config:
@@ -417,6 +421,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'ttl-security', 'hops', peer_config["ttl_security"]])
             if 'update_src' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'update-source', peer_config["update_src"]])
+            if 'p_attr_discard' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'discard', peer_config["p_attr_discard"]])
             if 'route_map_in' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'route-map', 'import', peer_config["route_map_in"]])
             if 'route_map_out' in peer_config:
@@ -535,6 +541,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'restart-helper'])
             if 'disable_conn_chk' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'disable-connected-check'])
+            if 'p_attr_discard' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'discard', config["p_attr_discard"]])
 
             # Conditional advertisement
             if 'advertise_map' in config:
