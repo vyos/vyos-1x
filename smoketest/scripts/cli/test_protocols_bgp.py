@@ -132,7 +132,8 @@ peer_group_config = {
         },
     'bar' : {
         'remote_as'        : '111',
-        'graceful_rst_no'  : ''
+        'graceful_rst_no'  : '',
+        'port'             : '667',
         },
     'foo-bar' : {
         'advertise_map'    : route_map_in,
@@ -237,6 +238,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} passive', frrconfig)
         if 'password' in peer_config:
             self.assertIn(f' neighbor {peer} password {peer_config["password"]}', frrconfig)
+        if 'port' in peer_config:
+            self.assertIn(f' neighbor {peer} port {peer_config["port"]}', frrconfig)
         if 'remote_as' in peer_config:
             self.assertIn(f' neighbor {peer} remote-as {peer_config["remote_as"]}', frrconfig)
         if 'solo' in peer_config:
@@ -463,8 +466,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in neighbor_config.items():
             if 'adv_interv' in peer_config:
                 self.assertIn(f' neighbor {peer} advertisement-interval {peer_config["adv_interv"]}', frrconfig)
-            if 'port' in peer_config:
-                self.assertIn(f' neighbor {peer} port {peer_config["port"]}', frrconfig)
             if 'cap_strict' in peer_config:
                 self.assertIn(f' neighbor {peer} strict-capability-match', frrconfig)
 
@@ -500,6 +501,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'passive'])
             if 'password' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'password', config["password"]])
+            if 'port' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'port', config["port"]])
             if 'remote_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', config["remote_as"]])
             if 'shutdown' in config:

@@ -1008,18 +1008,6 @@
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
     #include <include/bgp/peer-group.xml.i>
-    <leafNode name="port">
-      <properties>
-        <help>Neighbor BGP port</help>
-        <valueHelp>
-          <format>u32:1-65535</format>
-          <description>Neighbor BGP port number</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 1-65535"/>
-        </constraint>
-      </properties>
-    </leafNode>
     #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     <leafNode name="solo">
@@ -1061,6 +1049,7 @@
     </node>
     #include <include/bgp/neighbor-ttl-security.xml.i>
     #include <include/bgp/neighbor-update-source.xml.i>
+    #include <include/port-number.xml.i>
   </children>
 </tagNode>
 <node name="parameters">
@@ -1524,10 +1513,11 @@
     #include <include/bgp/neighbor-override-capability.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
-    #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     #include <include/bgp/neighbor-ttl-security.xml.i>
     #include <include/bgp/neighbor-update-source.xml.i>
+    #include <include/bgp/remote-as.xml.i>
+    #include <include/port-number.xml.i>
   </children>
 </tagNode>
 #include <include/route-map.xml.i>
