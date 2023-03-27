@@ -150,7 +150,8 @@ def _get_raw_data(mode: str) -> list:
     if not conf_dict:
         return data
 
-    interfaces = [x for x in list(conf_dict) if conf_dict[x]['mode'] == mode]
+    interfaces = [x for x in list(conf_dict) if
+                  conf_dict[x]['mode'].replace('-', '_') == mode]
     for intf in interfaces:
         d = _get_interface_status(mode, intf)
         d['local_host'] = conf_dict[intf].get('local-host', '')
