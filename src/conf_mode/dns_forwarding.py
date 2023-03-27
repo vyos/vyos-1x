@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.template import render
-from vyos.template import is_ipv6
+from vyos.template import bracketize_ipv6
 from vyos.util import call
 from vyos.util import chown
 from vyos.util import dict_search
@@ -58,7 +58,15 @@ def get_config(config=None):
     default_values = defaults(base)
     # T2665 due to how defaults under tag nodes work, we must clear these out before we merge
     del default_values['authoritative_domain']
+    del default_values['name_server']
     dns = dict_merge(default_values, dns)
+
+    # T2665: we cleared default values for tag node 'name_server' above.
+    # We now need to add them back back in a granular way.
+    if 'name_server' in dns:
+        default_values = defaults(base + ['name-server'])
+        for server in dns['name_server']:
+            dns['name_server'][server] = dict_merge(default_values, dns['name_server'][server])
 
     # some additions to the default dictionary
     if 'system' in dns:
@@ -329,7 +337,12 @@ def apply(dns):
         # sources
         hc.delete_name_servers([hostsd_tag])
         if 'name_server' in dns:
-            hc.add_name_servers({hostsd_tag: dns['name_server']})
+            # 'name_server' is a dict of the form
+            # {'192.0.2.1': {'port': 53}, '2001:db8::1': {'port': 853}, ...}
+            # canonicalize them as ['192.0.2.1:53', '[2001:db8::1]:853', ...] with IPv6 hosts bracketized
+            nslist = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port']}")(h, p)
+                      for (h, p) in dns['name_server'].items()]
+            hc.add_name_servers({hostsd_tag: nslist})
 
         # delete all nameserver tags
         hc.delete_name_server_tags_recursor(hc.get_name_server_tags_recursor())

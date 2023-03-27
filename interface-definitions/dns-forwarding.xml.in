@@ -635,7 +635,7 @@
                 </properties>
                 <defaultValue>1500</defaultValue>
               </leafNode>
-              #include <include/name-server-ipv4-ipv6.xml.i>
+              #include <include/name-server-ipv4-ipv6-port.xml.i>
               <leafNode name="source-address">
                 <properties>
                   <help>Local addresses from which to send DNS queries</help>

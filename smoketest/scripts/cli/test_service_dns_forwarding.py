@@ -20,6 +20,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
+from vyos.template import bracketize_ipv6
 from vyos.util import read_file
 from vyos.util import process_named_running
 
@@ -141,15 +142,20 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
         for address in listen_adress:
             self.cli_set(base_path + ['listen-address', address])
 
-        nameservers = ['192.0.2.1', '192.0.2.2']
-        for nameserver in nameservers:
-            self.cli_set(base_path + ['name-server', nameserver])
+        nameservers = {'192.0.2.1': {}, '192.0.2.2': {'port': '53'}, '2001:db8::1': {'port': '853'}}
+        for h,p in nameservers.items():
+            if 'port' in p:
+                self.cli_set(base_path + ['name-server', h, 'port', p['port']])
+            else:
+                self.cli_set(base_path + ['name-server', h])
 
         # commit changes
         self.cli_commit()
 
         tmp = get_config_value(r'\+.', file=FORWARD_FILE)
-        self.assertEqual(tmp, ', '.join(nameservers))
+        canonical_entries = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port'] if 'port' in p else 53}")(h, p)
+                             for (h, p) in nameservers.items()]
+        self.assertEqual(tmp, ', '.join(canonical_entries))
 
         # Do not use local /etc/hosts file in name resolution
         # default: yes
