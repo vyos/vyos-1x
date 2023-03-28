@@ -406,6 +406,18 @@ def show_counters(raw: bool, intf_name: typing.Optional[str],
         return data
     return _format_show_counters(data)
 
+def clear_counters(intf_name: typing.Optional[str],
+                   intf_type: typing.Optional[str],
+                   vif: bool, vrrp: bool):
+    for interface in filtered_interfaces(intf_name, intf_type, vif, vrrp):
+        interface.operational.clear_counters()
+
+def reset_counters(intf_name: typing.Optional[str],
+                   intf_type: typing.Optional[str],
+                   vif: bool, vrrp: bool):
+    for interface in filtered_interfaces(intf_name, intf_type, vif, vrrp):
+        interface.operational.reset_counters()
+
 if __name__ == '__main__':
     try:
         res = vyos.opmode.run(sys.modules[__name__])
