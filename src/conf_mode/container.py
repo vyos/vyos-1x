@@ -25,8 +25,10 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.configdict import is_node_changed
 from vyos.util import call
 from vyos.util import cmd
+from vyos.util import dict_search
 from vyos.util import run
 from vyos.util import write_file
 from vyos.template import inc_ip
@@ -79,6 +81,15 @@ def get_config(config=None):
             del default_values['volume']
         for name in container['name']:
             container['name'][name] = dict_merge(default_values, container['name'][name])
+
+            # T5047: Any container related configuration changed? We only
+            # wan't to restart the required containers and not all of them ...
+            tmp = is_node_changed(conf, base + ['name', name])
+            if tmp:
+                if 'container_restart' not in container:
+                    container['container_restart'] = [name]
+                else:
+                    container['container_restart'].append(name)
 
             # XXX: T2665: we can not safely rely on the defaults() when there are
             # tagNodes in place, it is better to blend in the defaults manually.
@@ -412,7 +423,8 @@ def apply(container):
                         os.unlink(file_path)
                 continue
 
-            cmd(f'systemctl restart vyos-container-{name}.service')
+            if name in dict_search('container_restart', container):
+                cmd(f'systemctl restart vyos-container-{name}.service')
 
     if disabled_new:
         call('systemctl daemon-reload')
