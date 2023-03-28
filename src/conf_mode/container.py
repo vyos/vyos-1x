@@ -38,8 +38,9 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-config_containers_registry = '/etc/containers/registries.conf'
-config_containers_storage = '/etc/containers/storage.conf'
+config_containers = '/etc/containers/containers.conf'
+config_registry = '/etc/containers/registries.conf'
+config_storage = '/etc/containers/storage.conf'
 systemd_unit_path = '/run/systemd/system'
 
 def _cmd(command):
@@ -335,10 +336,9 @@ def generate_run_arguments(name, container_config):
 def generate(container):
     # bail out early - looks like removal from running config
     if not container:
-        if os.path.exists(config_containers_registry):
-            os.unlink(config_containers_registry)
-        if os.path.exists(config_containers_storage):
-            os.unlink(config_containers_storage)
+        for file in [config_containers, config_registry, config_storage]:
+            if os.path.exists(file):
+                os.unlink(file)
         return None
 
     if 'network' in container:
@@ -390,8 +390,9 @@ def generate(container):
                     if rc != 0:
                         raise ConfigError(out)
 
-    render(config_containers_registry, 'container/registries.conf.j2', container)
-    render(config_containers_storage, 'container/storage.conf.j2', container)
+    render(config_containers, 'container/containers.conf.j2', container)
+    render(config_registry, 'container/registries.conf.j2', container)
+    render(config_storage, 'container/storage.conf.j2', container)
 
     if 'name' in container:
         for name, container_config in container['name'].items():
