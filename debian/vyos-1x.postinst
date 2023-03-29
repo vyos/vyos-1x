@@ -115,5 +115,12 @@ done
 sed -i '/^\/var\/log\/messages$/d' /etc/logrotate.d/rsyslog
 sed -i '/^\/var\/log\/auth.log$/d' /etc/logrotate.d/rsyslog
 
+# Fix FRR pam.d "vtysh_pam" vtysh_pam: Failed in account validation T5110
+if test -f /etc/pam.d/frr; then
+    if grep -q 'pam_rootok.so' /etc/pam.d/frr; then
+        sed -i -re 's/rootok/permit/' /etc/pam.d/frr
+    fi
+fi
+
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py
