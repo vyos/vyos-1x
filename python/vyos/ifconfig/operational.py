@@ -143,15 +143,17 @@ class Operational(Control):
         except IOError:
             return no_stats
 
-    def clear_counters(self, counters=None):
-        clear = self._stats_all if counters is None else []
-        stats = self.load_counters()
+    def clear_counters(self):
+        stats = self.get_stats()
         for counter, value in stats.items():
-            stats[counter] = 0 if counter in clear else value
+            stats[counter] = value
         self.save_counters(stats)
 
     def reset_counters(self):
-        os.remove(self.cachefile(self.ifname))
+        try:
+            os.remove(self.cachefile(self.ifname))
+        except FileNotFoundError:
+            pass
 
     def get_stats(self):
         """ return a dict() with the value for each interface counter """
