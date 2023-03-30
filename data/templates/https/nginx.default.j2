@@ -50,6 +50,12 @@ server {
 {%     else %}
                 return 503;
 {%     endif %}
+{%     if server.allow_client %}
+{%         for client in server.allow_client %}
+                allow {{ client }};
+{%         endfor %}
+                deny all;
+{%     endif %}
         }
 
         error_page 497 =301 https://$host:{{ server.port }}$request_uri;

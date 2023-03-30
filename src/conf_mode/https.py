@@ -159,6 +159,8 @@ def generate(https):
             server_block['port'] = data.get('listen-port', '443')
             name = data.get('server-name', ['_'])
             server_block['name'] = name
+            allow_client = data.get('allow-client', {})
+            server_block['allow_client'] = allow_client.get('address', [])
             server_block_list.append(server_block)
 
     # get certificate data
