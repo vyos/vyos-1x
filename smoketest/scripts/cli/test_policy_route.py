@@ -26,6 +26,7 @@ conn_mark_set = '111'
 table_mark_offset = 0x7fffffff
 table_id = '101'
 interface = 'eth0'
+interface_wc = 'ppp*'
 interface_ip = '172.16.10.1/24'
 
 class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
@@ -236,7 +237,8 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '5', 'set', 'table', table_id])
 
         self.cli_set(['policy', 'route', 'smoketest', 'interface', interface])
-        self.cli_set(['policy', 'route6', 'smoketest6', 'interface', interface])
+        self.cli_set(['policy', 'route', 'smoketest', 'interface', interface_wc])
+        self.cli_set(['policy', 'route6', 'smoketest6', 'interface', interface_wc])
 
         self.cli_commit()
 
@@ -244,7 +246,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         # IPv4
         nftables_search = [
-            [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
+            ['iifname { "' + interface + '", "' + interface_wc + '" }', 'jump VYOS_PBR_smoketest'],
             ['meta l4proto udp', 'drop'],
             ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
@@ -256,7 +258,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         # IPv6
         nftables6_search = [
-            [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
+            [f'iifname "{interface_wc}"', 'jump VYOS_PBR6_smoketest'],
             ['meta l4proto udp', 'drop'],
             ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],

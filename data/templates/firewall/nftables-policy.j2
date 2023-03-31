@@ -11,7 +11,7 @@ table ip vyos_mangle {
         type filter hook prerouting priority -150; policy accept;
 {% if route is vyos_defined %}
 {%     for route_text, conf in route.items() if conf.interface is vyos_defined %}
-        iifname { {{ ",".join(conf.interface) }} } counter jump VYOS_PBR_{{ route_text }}
+        iifname { {{ conf.interface | join(",") }} } counter jump VYOS_PBR_{{ route_text }}
 {%     endfor %}
 {% endif %}
     }
