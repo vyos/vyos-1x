@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -177,7 +177,7 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         nat_vyos_pre_snat_hook = """table ip nat {
 	chain VYOS_PRE_SNAT_HOOK {
 		type nat hook postrouting priority srcnat - 1; policy accept;
-		return
+		counter jump WANLOADBALANCE
 	}
 }"""
 
