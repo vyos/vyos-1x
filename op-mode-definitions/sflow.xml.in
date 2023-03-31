@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- sflow op mode commands -->
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="sflow">
+        <properties>
+          <help>Show sFlow statistics</help>
+        </properties>
+        <!-- requires sudo, do not remove it -->
+        <command>sudo ${vyos_op_scripts_dir}/sflow.py show</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

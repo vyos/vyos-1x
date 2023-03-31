@@ -91,6 +91,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'collector {{ ip = {server} udpport = {port} }}', hsflowd)
         self.assertIn(f'collector {{ ip = {local_server} udpport = {default_port} }}', hsflowd)
         self.assertIn(f'dropmon {{ limit={mon_limit} start=on sw=on hw=off }}', hsflowd)
+        self.assertIn('dbus { }', hsflowd)
 
         for interface in Section.interfaces('ethernet'):
             self.assertIn(f'pcap {{ dev={interface} }}', hsflowd)
