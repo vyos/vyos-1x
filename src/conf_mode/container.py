@@ -16,6 +16,7 @@
 
 import os
 
+from hashlib import sha256
 from ipaddress import ip_address
 from ipaddress import ip_network
 from json import dumps as json_write
@@ -27,7 +28,6 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.util import call
 from vyos.util import cmd
-from vyos.util import dict_search
 from vyos.util import run
 from vyos.util import rc_cmd
 from vyos.util import write_file
@@ -166,21 +166,29 @@ def verify(container):
                     raise ConfigError(f'Container network "{network_name}" does not exist!')
 
                 if 'address' in container_config['network'][network_name]:
-                    address = container_config['network'][network_name]['address']
-                    network = None
-                    if is_ipv4(address):
-                        network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
-                    elif is_ipv6(address):
-                        network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
+                    cnt_ipv4 = 0
+                    cnt_ipv6 = 0
+                    for address in container_config['network'][network_name]['address']:
+                        network = None
+                        if is_ipv4(address):
+                            network = [x for x in container['network'][network_name]['prefix'] if is_ipv4(x)][0]
+                            cnt_ipv4 += 1
+                        elif is_ipv6(address):
+                            network = [x for x in container['network'][network_name]['prefix'] if is_ipv6(x)][0]
+                            cnt_ipv6 += 1
 
-                    # Specified container IP address must belong to network prefix
-                    if ip_address(address) not in ip_network(network):
-                        raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
+                        # Specified container IP address must belong to network prefix
+                        if ip_address(address) not in ip_network(network):
+                            raise ConfigError(f'Used container address "{address}" not in network "{network}"!')
 
-                    # We can not use the first IP address of a network prefix as this is used by podman
-                    if ip_address(address) == ip_network(network)[1]:
-                        raise ConfigError(f'IP address "{address}" can not be used for a container, '\
-                                          'reserved for the container engine!')
+                        # We can not use the first IP address of a network prefix as this is used by podman
+                        if ip_address(address) == ip_network(network)[1]:
+                            raise ConfigError(f'IP address "{address}" can not be used for a container, '\
+                                              'reserved for the container engine!')
+
+                    if cnt_ipv4 > 1 or cnt_ipv6 > 1:
+                        raise ConfigError(f'Only one IP address per address family can be used for '\
+                                          f'container "{name}". {cnt_ipv4} IPv4 and {cnt_ipv6} IPv6 address(es)!')
 
             if 'device' in container_config:
                 for dev, dev_config in container_config['device'].items():
@@ -338,9 +346,13 @@ def generate_run_arguments(name, container_config):
     ip_param = ''
     networks = ",".join(container_config['network'])
     for network in container_config['network']:
-        if 'address' in container_config['network'][network]:
-            address = container_config['network'][network]['address']
-            ip_param = f'--ip {address}'
+        if 'address' not in container_config['network'][network]:
+            continue
+        for address in container_config['network'][network]['address']:
+            if is_ipv6(address):
+                ip_param += f' --ip6 {address}'
+            else:
+                ip_param += f' --ip {address}'
 
     return f'{container_base_cmd} --net {networks} {ip_param} {entrypoint} {image} {command} {command_arguments}'.strip()
 
@@ -355,33 +367,26 @@ def generate(container):
     if 'network' in container:
         for network, network_config in container['network'].items():
             tmp = {
-                'cniVersion' : '0.4.0',
-                'name' : network,
-                'plugins' : [{
-                    'type': 'bridge',
-                    'bridge': f'cni-{network}',
-                    'isGateway': True,
-                    'ipMasq': False,
-                    'hairpinMode': False,
-                    'ipam' : {
-                        'type': 'host-local',
-                        'routes': [],
-                        'ranges' : [],
-                    },
-                }]
+                'name': network,
+                'id' : sha256(f'{network}'.encode()).hexdigest(),
+                'driver': 'bridge',
+                'network_interface': f'podman-{network}',
+                'subnets': [],
+                'ipv6_enabled': False,
+                'internal': False,
+                'dns_enabled': False,
+                'ipam_options': {
+                    'driver': 'host-local'
+                }
             }
-
             for prefix in network_config['prefix']:
-                net = [{'gateway' : inc_ip(prefix, 1), 'subnet' : prefix}]
-                tmp['plugins'][0]['ipam']['ranges'].append(net)
+                net = {'subnet' : prefix, 'gateway' : inc_ip(prefix, 1)}
+                tmp['subnets'].append(net)
 
-                # install per address-family default orutes
-                default_route = '0.0.0.0/0'
                 if is_ipv6(prefix):
-                    default_route = '::/0'
-                tmp['plugins'][0]['ipam']['routes'].append({'dst': default_route})
+                    tmp['ipv6_enabled'] = True
 
-            write_file(f'/etc/cni/net.d/{network}.conflist', json_write(tmp, indent=2))
+            write_file(f'/etc/containers/networks/{network}.json', json_write(tmp, indent=2))
 
     if 'registry' in container:
         cmd = f'podman logout --all'
@@ -432,10 +437,7 @@ def apply(container):
     # Delete old networks if needed
     if 'network_remove' in container:
         for network in container['network_remove']:
-            call(f'podman network rm {network}')
-            tmp = f'/etc/cni/net.d/{network}.conflist'
-            if os.path.exists(tmp):
-                os.unlink(tmp)
+            call(f'podman network rm {network} >/dev/null 2>&1')
 
     # Add container
     disabled_new = False
@@ -459,8 +461,7 @@ def apply(container):
                         os.unlink(file_path)
                 continue
 
-            tmp = dict_search('container_restart', container)
-            if tmp and name in tmp:
+            if 'container_restart' in container and name in container['container_restart']:
                 cmd(f'systemctl restart vyos-container-{name}.service')
 
     if disabled_new:
