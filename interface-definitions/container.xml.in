@@ -368,13 +368,16 @@
           </leafNode>
         </children>
       </tagNode>
-      <leafNode name="registry">
+      <tagNode name="registry">
         <properties>
-          <help>Registry Name (default: docker.io, quay.io)</help>
-          <multi/>
+          <help>Registry Name</help>
         </properties>
         <defaultValue>docker.io quay.io</defaultValue>
-      </leafNode>
+        <children>
+          #include <include/interface/authentication.xml.i>
+          #include <include/generic-disable-node.xml.i>
+        </children>
+      </tagNode>
     </children>
   </node>
 </interfaceDefinition>
