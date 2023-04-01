@@ -94,7 +94,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
   </children>
-  <command>vtysh -c "show isis neighbor"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <tagNode name="neighbor">
   <properties>
@@ -129,7 +129,7 @@
      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
    </leafNode>
   </children>
-  <command>vtysh -c "show isis route"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <node name="segment-routing">
   <properties>
