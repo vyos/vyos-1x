@@ -37,6 +37,7 @@ def _get_raw_sflow():
         sflow, dbus_interface='net.sflow.hsflowd.telemetry')
     agent_address = sflow_telemetry.GetAgent()
     samples_dropped = int(sflow_telemetry.Get('dropped_samples'))
+    samples_drop_events_sent = int(sflow_telemetry.Get('event_samples'))
     samples_packet_sent = int(sflow_telemetry.Get('flow_samples'))
     samples_counter_sent = int(sflow_telemetry.Get('counter_samples'))
     datagrams_sent = int(sflow_telemetry.Get('datagrams'))
@@ -52,6 +53,7 @@ def _get_raw_sflow():
         'sflow_servers': servers,
         'counter_samples_sent': samples_counter_sent,
         'datagrams_sent': datagrams_sent,
+        'samples_drop_events_sent': samples_drop_events_sent,
         'packet_samples_dropped': samples_dropped,
         'packet_samples_sent': samples_packet_sent,
         'rtmetric_samples': rtmetric_samples,
@@ -67,10 +69,11 @@ def _get_formatted_sflow(data):
         ['Agent address', f'{data.get("agent_address")}'],
         ['sFlow interfaces', f'{data.get("sflow_interfaces", "n/a")}'],
         ['sFlow servers', f'{data.get("sflow_servers", "n/a")}'],
+        ['Counter samples sent', f'{data.get("counter_samples_sent")}'],
         ['Datagrams sent', f'{data.get("datagrams_sent")}'],
         ['Packet samples sent', f'{data.get("packet_samples_sent")}'],
         ['Packet samples dropped', f'{data.get("packet_samples_dropped")}'],
-        ['Counter samples sent', f'{data.get("counter_samples_sent")}'],
+        ['Samples drop events sent', f'{data.get("samples_drop_events_sent")}'],
         ['Flow samples suppressed', f'{data.get("flow_samples_suppressed")}'],
         ['Counter samples suppressed', f'{data.get("counter_samples_suppressed")}']
     ]
