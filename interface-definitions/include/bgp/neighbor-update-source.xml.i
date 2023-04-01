@@ -22,7 +22,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>
 </leafNode>

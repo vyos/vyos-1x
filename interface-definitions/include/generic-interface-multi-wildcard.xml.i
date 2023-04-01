@@ -10,7 +10,7 @@
       <description>Interface name, wildcard (*) supported</description>
     </valueHelp>
     <constraint>
-      #include <include/constraint/interface-name-with-wildcard.xml.in>
+      #include <include/constraint/interface-name-with-wildcard.xml.i>
     </constraint>
     <multi/>
   </properties>

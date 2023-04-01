@@ -942,7 +942,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>
   <children>
@@ -1530,7 +1530,7 @@
   <properties>
     <help>Name of peer-group</help>
     <constraint>
-      #include <include/constraint/alpha-numeric-hyphen-underscore.xml.in>
+      #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
     </constraint>
   </properties>
   <children>

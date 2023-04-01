@@ -117,7 +117,7 @@
             <properties>
               <help>Container host name</help>
               <constraint>
-                #include <include/constraint/host-name.xml.in>
+                #include <include/constraint/host-name.xml.i>
               </constraint>
               <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
             </properties>

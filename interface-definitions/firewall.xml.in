@@ -350,7 +350,7 @@
             <script>${vyos_completion_dir}/list_interfaces</script>
           </completionHelp>
           <constraint>
-            #include <include/constraint/interface-name-with-wildcard.xml.in>
+            #include <include/constraint/interface-name-with-wildcard.xml.i>
           </constraint>
         </properties>
         <children>
