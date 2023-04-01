@@ -459,7 +459,8 @@ def apply(container):
                         os.unlink(file_path)
                 continue
 
-            if name in dict_search('container_restart', container):
+            tmp = dict_search('container_restart', container)
+            if tmp and name in tmp:
                 cmd(f'systemctl restart vyos-container-{name}.service')
 
     if disabled_new:
