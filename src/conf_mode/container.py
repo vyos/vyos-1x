@@ -258,9 +258,11 @@ def verify(container):
                 if 'network' in container_config and network in container_config['network']:
                     raise ConfigError(f'Can not remove network "{network}", used by container "{container}"!')
 
-    if 'registry' in container and 'authentication' in container['registry']:
-        for registry, registry_config in container['registry']['authentication'].items():
-            if not {'username', 'password'} <= set(registry_config):
+    if 'registry' in container:
+        for registry, registry_config in container['registry'].items():
+            if 'authentication' not in registry_config:
+                continue
+            if not {'username', 'password'} <= set(registry_config['authentication']):
                 raise ConfigError('If registry username or or password is defined, so must be the other!')
 
     return None
