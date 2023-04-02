@@ -486,6 +486,7 @@ def generate(bgp):
 
     bgp['protocol'] = 'bgp' # required for frr/vrf.route-map.frr.j2
     bgp['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', bgp)
+    bgp['frr_zebra_config_v6'] = render_to_string('frr/vrf.route-map.v6.frr.j2', bgp)
     bgp['frr_bgpd_config']  = render_to_string('frr/bgpd.frr.j2', bgp)
 
     return None
@@ -499,9 +500,15 @@ def apply(bgp):
 
     # The route-map used for the FIB (zebra) is part of the zebra daemon
     frr_cfg.load_configuration(zebra_daemon)
+
     frr_cfg.modify_section(r'(\s+)?ip protocol bgp route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
     if 'frr_zebra_config' in bgp:
         frr_cfg.add_before(frr.default_add_before, bgp['frr_zebra_config'])
+
+    frr_cfg.modify_section(r'(\s+)?ipv6 protocol bgp route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    if 'frr_zebra_config_v6' in bgp:
+        frr_cfg.add_before(frr.default_add_before, bgp['frr_zebra_config_v6'])
+
     frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
