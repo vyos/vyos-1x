@@ -538,11 +538,7 @@
                           <multi/>
                         </properties>
                       </leafNode>
-                      <leafNode name="description">
-                        <properties>
-                          <help>Description for source-group</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-description.xml.i>
                       <leafNode name="domain">
                         <properties>
                           <help>Domain for source-group</help>
@@ -644,11 +640,7 @@
                           </leafNode>
                         </children>
                       </tagNode>
-                      <leafNode name="description">
-                        <properties>
-                          <help>Time-period description</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-description.xml.i>
                     </children>
                   </tagNode>
                 </children>

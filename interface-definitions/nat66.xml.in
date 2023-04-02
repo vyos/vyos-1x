@@ -24,11 +24,7 @@
               <constraintErrorMessage>NAT66 rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="description">
-                <properties>
-                  <help>Rule description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               <leafNode name="disable">
                 <properties>
                   <help>Disable NAT66 rule</help>
@@ -156,11 +152,7 @@
               <constraintErrorMessage>NAT66 rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
-              <leafNode name="description">
-                <properties>
-                  <help>Rule description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               <leafNode name="disable">
                 <properties>
                   <help>Disable NAT66 rule</help>

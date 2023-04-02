@@ -16,11 +16,7 @@
               <help>CA certificate in PEM format</help>
             </properties>
           </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Description</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-description.xml.i>
           <node name="private">
             <properties>
               <help>CA private key in PEM format</help>
@@ -63,11 +59,7 @@
               <help>Certificate in PEM format</help>
             </properties>
           </leafNode>
-          <leafNode name="description">
-            <properties>
-              <help>Description</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-description.xml.i>
           <node name="private">
             <properties>
               <help>Certificate private key</help>

@@ -348,11 +348,7 @@
           <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
         </properties>
         <children>
-          <leafNode name="description">
-            <properties>
-              <help>Network description</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-description.xml.i>
           <leafNode name="prefix">
             <properties>
               <help>Prefix which allocated to that network</help>

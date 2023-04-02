@@ -191,15 +191,7 @@
               </constraint>
             </properties>
             <children>
-              <leafNode name="description">
-                <properties>
-                  <help>Description for this rule</help>
-                  <valueHelp>
-                    <format>txt</format>
-                    <description>Description for this rule</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               <node name="destination">
                 <properties>
                   <help>Destination</help>
