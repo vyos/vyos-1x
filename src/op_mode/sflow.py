@@ -37,11 +37,12 @@ def _get_raw_sflow():
         sflow, dbus_interface='net.sflow.hsflowd.telemetry')
     agent_address = sflow_telemetry.GetAgent()
     samples_dropped = int(sflow_telemetry.Get('dropped_samples'))
-    samples_drop_events_sent = int(sflow_telemetry.Get('event_samples'))
+    packet_drop_sent = int(sflow_telemetry.Get('event_samples'))
     samples_packet_sent = int(sflow_telemetry.Get('flow_samples'))
     samples_counter_sent = int(sflow_telemetry.Get('counter_samples'))
     datagrams_sent = int(sflow_telemetry.Get('datagrams'))
     rtmetric_samples = int(sflow_telemetry.Get('rtmetric_samples'))
+    event_samples_suppressed = int(sflow_telemetry.Get('event_samples_suppressed'))
     samples_suppressed = int(sflow_telemetry.Get('flow_samples_suppressed'))
     counter_samples_suppressed = int(
         sflow_telemetry.Get("counter_samples_suppressed"))
@@ -53,10 +54,11 @@ def _get_raw_sflow():
         'sflow_servers': servers,
         'counter_samples_sent': samples_counter_sent,
         'datagrams_sent': datagrams_sent,
-        'samples_drop_events_sent': samples_drop_events_sent,
+        'packet_drop_sent': packet_drop_sent,
         'packet_samples_dropped': samples_dropped,
         'packet_samples_sent': samples_packet_sent,
         'rtmetric_samples': rtmetric_samples,
+        'event_samples_suppressed': event_samples_suppressed,
         'flow_samples_suppressed': samples_suppressed,
         'counter_samples_suppressed': counter_samples_suppressed,
         'hsflowd_version': version
@@ -73,7 +75,8 @@ def _get_formatted_sflow(data):
         ['Datagrams sent', f'{data.get("datagrams_sent")}'],
         ['Packet samples sent', f'{data.get("packet_samples_sent")}'],
         ['Packet samples dropped', f'{data.get("packet_samples_dropped")}'],
-        ['Samples drop events sent', f'{data.get("samples_drop_events_sent")}'],
+        ['Packet drops sent', f'{data.get("packet_drop_sent")}'],
+        ['Packet drops suppressed', f'{data.get("event_samples_suppressed")}'],
         ['Flow samples suppressed', f'{data.get("flow_samples_suppressed")}'],
         ['Counter samples suppressed', f'{data.get("counter_samples_suppressed")}']
     ]
