@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -263,6 +263,27 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         tmp = re.findall(r'group:\s+mapname\s+files', nsswitch_conf)
         self.assertTrue(tmp)
+
+    def test_system_login_max_login_session(self):
+        max_logins = '2'
+        timeout = '600'
+
+        self.cli_set(base_path + ['max-login-session', max_logins])
+
+        # 'max-login-session' must be only with 'timeout' option
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + ['timeout', timeout])
+
+        self.cli_commit()
+
+        security_limits = read_file('/etc/security/limits.d/10-vyos.conf')
+        self.assertIn(f'* - maxsyslogins {max_logins}', security_limits)
+
+        self.cli_delete(base_path + ['timeout'])
+        self.cli_delete(base_path + ['max-login-session'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
