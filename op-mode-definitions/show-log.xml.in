@@ -8,6 +8,12 @@
         </properties>
         <command>journalctl --no-hostname --boot</command>
         <children>
+          <leafNode name="audit">
+            <properties>
+              <help>Show audit logs</help>
+            </properties>
+            <command>cat /var/log/audit/audit.log</command>
+          </leafNode>
           <leafNode name="all">
             <properties>
               <help>Show contents of all master log files</help>
