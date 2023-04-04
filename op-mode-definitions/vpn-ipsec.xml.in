@@ -7,49 +7,101 @@
           <help>Reset Virtual Private Network (VPN) information</help>
         </properties>
         <children>
-          <tagNode name="ipsec-peer">
+          <node name="ipsec">
             <properties>
-              <help>Reset all tunnels for given peer</help>
-              <completionHelp>
-                <path>vpn ipsec site-to-site peer</path>
-              </completionHelp>
+              <help>Reset IPSec VPN sessions</help>
             </properties>
             <children>
-              <tagNode name="tunnel">
-                <properties>
-                  <help>Reset a specific tunnel for given peer</help>
-                  <completionHelp>
-                    <path>vpn ipsec site-to-site peer ${COMP_WORDS[3]} tunnel</path>
-                  </completionHelp>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="$6"</command>
-              </tagNode>
-              <node name="vti">
-                <properties>
-                  <help>Reset the VTI tunnel for given peer</help>
-                </properties>
-                <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4" --tunnel="vti"</command>
-              </node>
-            </children>
-            <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$4"</command>
-          </tagNode>
-          <tagNode name="ipsec-profile">
-            <properties>
-              <help>Reset all tunnels for given DMVPN profile</help>
-              <completionHelp>
-                <path>vpn ipsec profile</path>
-              </completionHelp>
-            </properties>
-            <children>
-              <tagNode name="tunnel">
+              <tagNode name="profile">
                 <properties>
                   <help>Reset a specific tunnel for given DMVPN profile</help>
+                  <completionHelp>
+                    <path>vpn ipsec profile</path>
+                  </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="reset-profile" --name="$4" --tunnel="$6"</command>
+                <children>
+                  <tagNode name="tunnel">
+                    <properties>
+                      <help>Reset a specific tunnel for given DMVPN profile</help>
+                      <completionHelp>
+                        <script>sudo ${vyos_completion_dir}/list_ipsec_profile_tunnels.py --profile ${COMP_WORDS[4]}</script>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="remote-host">
+                        <properties>
+                          <help>Reset a specific tunnel for given DMVPN NBMA</help>
+                          <completionHelp>
+                            <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_dst --profile="$5" --tunnel="$7" --nbma_dst="$9"</command>
+                      </tagNode>
+                    </children>
+                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_all --profile="$5" --tunnel="$7"</command>
+                  </tagNode>
+                </children>
               </tagNode>
+              <node name="remote-access">
+                <properties>
+                  <help>Reset remote access IPSec VPN connections</help>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Reset all users current remote access IPSec VPN sessions</help>
+                    </properties>
+                     <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_ra</command>
+                  </node>
+                  <tagNode name="user">
+                    <properties>
+                      <help>Reset specified user current remote access IPsec VPN session(s)</help>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_ra --user="$6"</command>
+                  </tagNode>
+                </children>
+              </node>
+              <node name="site-to-site">
+                <properties>
+                  <help>Reset site-to-site IPSec VPN connections</help>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Reset all site-to-site IPSec VPN sessions</help>
+                    </properties>
+                     <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_all_peers</command>
+                  </node>
+                  <tagNode name="peer">
+                    <properties>
+                      <help>Reset all tunnels for given peer</help>
+                      <completionHelp>
+                        <path>vpn ipsec site-to-site peer</path>
+                      </completionHelp>
+                    </properties>
+                    <children>
+                      <tagNode name="tunnel">
+                        <properties>
+                          <help>Reset a specific tunnel for given peer</help>
+                          <completionHelp>
+                            <path>vpn ipsec site-to-site peer ${COMP_WORDS[5]} tunnel</path>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="$8"</command>
+                      </tagNode>
+                      <node name="vti">
+                        <properties>
+                          <help>Reset the VTI tunnel for given peer</help>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6" --tunnel="vti"</command>
+                      </node>
+                    </children>
+                    <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_peer --peer="$6"</command>
+                  </tagNode>
+                </children>
+              </node>
             </children>
-            <command>sudo ${vyos_op_scripts_dir}/vpn_ipsec.py --action="reset-profile" --name="$4" --tunnel="all"</command>
-          </tagNode>
+          </node>
         </children>
       </node>
     </children>

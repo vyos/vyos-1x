@@ -34,11 +34,7 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="description">
-                <properties>
-                  <help>Description</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               #include <include/generic-interface-multi.xml.i>
               #include <include/port-number.xml.i>
             </children>

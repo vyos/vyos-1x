@@ -28,5 +28,3 @@ mutations = {'save_config_file': save_config_file,
              'load_config_file': load_config_file,
              'add_system_image': add_system_image,
              'delete_system_image': delete_system_image}
-
-

@@ -16,7 +16,7 @@
     </valueHelp>
     <constraint>
       <regex>(default)</regex>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
     <multi/>
   </properties>

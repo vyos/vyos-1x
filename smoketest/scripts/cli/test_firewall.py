@@ -198,6 +198,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
     def test_ipv4_basic_rules(self):
         name = 'smoketest'
         interface = 'eth0'
+        interface_wc = 'l2tp*'
         mss_range = '501-1460'
         conn_mark = '555'
 
@@ -207,13 +208,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '1', 'source', 'address', '172.16.20.10'])
         self.cli_set(['firewall', 'name', name, 'rule', '1', 'destination', 'address', '172.16.10.10'])
         self.cli_set(['firewall', 'name', name, 'rule', '1', 'log', 'enable'])
-        self.cli_set(['firewall', 'name', name, 'rule', '1', 'log-level', 'debug'])
+        self.cli_set(['firewall', 'name', name, 'rule', '1', 'log-options', 'level', 'debug'])
         self.cli_set(['firewall', 'name', name, 'rule', '1', 'ttl', 'eq', '15'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'destination', 'port', '8888'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'log', 'enable'])
-        self.cli_set(['firewall', 'name', name, 'rule', '2', 'log-level', 'err'])
+        self.cli_set(['firewall', 'name', name, 'rule', '2', 'log-options', 'level', 'err'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
         self.cli_set(['firewall', 'name', name, 'rule', '2', 'ttl', 'gt', '102'])
@@ -240,6 +241,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'connection-mark', conn_mark])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
+        self.cli_set(['firewall', 'interface', interface_wc, 'in', 'name', name])
 
         self.cli_commit()
 
@@ -247,8 +249,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" level debug', 'ip ttl 15', 'return'],
-            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" level err', 'ip ttl > 102', 'reject'],
+            [f'iifname "{interface_wc}"', f'jump NAME_{name}'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'return'],
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
             ['tcp dport 22', 'limit rate 5/minute', 'return'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
@@ -272,6 +275,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'packet-length', '1024'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'dscp', '17'])
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'dscp', '52'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'log', 'enable'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'log-options', 'group', '66'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'log-options', 'snapshot-length', '6666'])
+        self.cli_set(['firewall', 'name', name, 'rule', '6', 'log-options', 'queue-threshold','32000'])
 
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'action', 'accept'])
         self.cli_set(['firewall', 'name', name, 'rule', '7', 'packet-length', '1-30000'])
@@ -301,7 +308,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
-            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', 'return'],
+            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'return'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'return'],
             [f'log prefix "[{name}-default-D]"', 'drop'],
             ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
@@ -357,7 +364,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'source', 'address', '2002::1'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'log', 'enable'])
-        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'log-level', 'crit'])
+        self.cli_set(['firewall', 'ipv6-name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv6-name', name, 'rule', '2', 'protocol', 'tcp_udp'])
@@ -374,7 +381,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" level crit', 'return'],
+            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" log level crit', 'return'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', f'iifname "{interface}"', 'reject'],
             ['meta l4proto gre', f'oifname "{interface}"', 'return'],
             ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']

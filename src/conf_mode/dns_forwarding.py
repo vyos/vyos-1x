@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.template import render
-from vyos.template import is_ipv6
+from vyos.template import bracketize_ipv6
 from vyos.util import call
 from vyos.util import chown
 from vyos.util import dict_search
@@ -58,7 +58,25 @@ def get_config(config=None):
     default_values = defaults(base)
     # T2665 due to how defaults under tag nodes work, we must clear these out before we merge
     del default_values['authoritative_domain']
+    del default_values['name_server']
+    del default_values['domain']['name_server']
     dns = dict_merge(default_values, dns)
+
+    # T2665: we cleared default values for tag node 'name_server' above.
+    # We now need to add them back back in a granular way.
+    if 'name_server' in dns:
+        default_values = defaults(base + ['name-server'])
+        for server in dns['name_server']:
+            dns['name_server'][server] = dict_merge(default_values, dns['name_server'][server])
+
+    # T2665: we cleared default values for tag node 'domain' above.
+    # We now need to add them back back in a granular way.
+    if 'domain' in dns:
+        default_values = defaults(base + ['domain', 'name-server'])
+        for domain in dns['domain'].keys():
+            for server in dns['domain'][domain]['name_server']:
+                dns['domain'][domain]['name_server'][server] = dict_merge(
+                    default_values, dns['domain'][domain]['name_server'][server])
 
     # some additions to the default dictionary
     if 'system' in dns:
@@ -263,7 +281,7 @@ def verify(dns):
     # as a domain will contains dot's which is out dictionary delimiter.
     if 'domain' in dns:
         for domain in dns['domain']:
-            if 'server' not in dns['domain'][domain]:
+            if 'name_server' not in dns['domain'][domain]:
                 raise ConfigError(f'No server configured for domain {domain}!')
 
     if 'dns64_prefix' in dns:
@@ -329,7 +347,12 @@ def apply(dns):
         # sources
         hc.delete_name_servers([hostsd_tag])
         if 'name_server' in dns:
-            hc.add_name_servers({hostsd_tag: dns['name_server']})
+            # 'name_server' is of the form
+            # {'192.0.2.1': {'port': 53}, '2001:db8::1': {'port': 853}, ...}
+            # canonicalize them as ['192.0.2.1:53', '[2001:db8::1]:853', ...]
+            nslist = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port']}")(h, p)
+                      for (h, p) in dns['name_server'].items()]
+            hc.add_name_servers({hostsd_tag: nslist})
 
         # delete all nameserver tags
         hc.delete_name_server_tags_recursor(hc.get_name_server_tags_recursor())
@@ -358,7 +381,14 @@ def apply(dns):
         # the list and keys() are required as get returns a dict, not list
         hc.delete_forward_zones(list(hc.get_forward_zones().keys()))
         if 'domain' in dns:
-            hc.add_forward_zones(dns['domain'])
+            zones = dns['domain']
+            for domain in zones.keys():
+                # 'name_server' is of the form
+                # {'192.0.2.1': {'port': 53}, '2001:db8::1': {'port': 853}, ...}
+                # canonicalize them as ['192.0.2.1:53', '[2001:db8::1]:853', ...]
+                zones[domain]['name_server'] = [(lambda h, p: f"{bracketize_ipv6(h)}:{p['port']}")(h, p)
+                                                for (h, p) in zones[domain]['name_server'].items()]
+            hc.add_forward_zones(zones)
 
         # hostsd generates NTAs for the authoritative zones
         # the list and keys() are required as get returns a dict, not list

@@ -1,0 +1,25 @@
+node1 {
+    tag_node baz {
+        other_node {
+            multi_node 'some_val'
+            multe_node 'other_val'
+        }
+    }
+    tag_node foo {
+        valueless
+        multi_node 'v3'
+        multi_node 'v1'
+        single 'right_val'
+    }
+    tag_node other {
+        leaf 'leaf_r'
+    }
+}
+
+node2 {
+    sub_node {
+        tag_node other {
+            multi 'mv'
+        }
+    }
+}

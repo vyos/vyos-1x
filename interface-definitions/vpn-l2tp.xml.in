@@ -124,11 +124,7 @@
                 </children>
               </node>
               #include <include/accel-ppp/client-ipv6-pool.xml.i>
-              <leafNode name="description">
-                <properties>
-                  <help>Description for L2TP remote-access settings</help>
-                </properties>
-              </leafNode>
+              #include <include/generic-description.xml.i>
               #include <include/dhcp-interface.xml.i>
               <leafNode name="idle">
                 <properties>

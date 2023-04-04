@@ -34,8 +34,8 @@ class TestConfigParser(TestCase):
 
     def test_top_level_tag(self):
         self.assertTrue(self.config.exists(["top-level-tag-node"]))
-        # No sorting is intentional, child order must be preserved
-        self.assertEqual(self.config.list_nodes(["top-level-tag-node"]), ["foo", "bar"])
+        # Sorting is now intentional, during parsing of config
+        self.assertEqual(self.config.list_nodes(["top-level-tag-node"]), ["bar", "foo"])
 
     def test_copy(self):
         self.config.copy(["top-level-tag-node", "bar"], ["top-level-tag-node", "baz"])

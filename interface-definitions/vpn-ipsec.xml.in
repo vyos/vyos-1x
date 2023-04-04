@@ -357,11 +357,11 @@
                 <properties>
                   <help>IKE lifetime</help>
                   <valueHelp>
-                    <format>u32:30-86400</format>
+                    <format>u32:0-86400</format>
                     <description>IKE lifetime in seconds</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="numeric" argument="--range 30-86400"/>
+                    <validator name="numeric" argument="--range 0-86400"/>
                   </constraint>
                 </properties>
                 <defaultValue>28800</defaultValue>

@@ -207,7 +207,11 @@ def _get_raw_data(ifname: typing.Optional[str],
 
         res_intf['description'] = interface.get_alias()
 
-        res_intf['stats'] = interface.operational.get_stats()
+        stats = interface.operational.get_stats()
+        for k in list(stats):
+            stats[k] = _get_counter_val(cache[k], stats[k])
+
+        res_intf['stats'] = stats
 
         ret.append(res_intf)
 
@@ -401,6 +405,18 @@ def show_counters(raw: bool, intf_name: typing.Optional[str],
     if raw:
         return data
     return _format_show_counters(data)
+
+def clear_counters(intf_name: typing.Optional[str],
+                   intf_type: typing.Optional[str],
+                   vif: bool, vrrp: bool):
+    for interface in filtered_interfaces(intf_name, intf_type, vif, vrrp):
+        interface.operational.clear_counters()
+
+def reset_counters(intf_name: typing.Optional[str],
+                   intf_type: typing.Optional[str],
+                   vif: bool, vrrp: bool):
+    for interface in filtered_interfaces(intf_name, intf_type, vif, vrrp):
+        interface.operational.reset_counters()
 
 if __name__ == '__main__':
     try:

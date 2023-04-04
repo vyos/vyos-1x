@@ -15,7 +15,7 @@
           <description>Name of IPv6 prefix-list</description>
         </valueHelp>
         <constraint>
-          <regex>[-_a-zA-Z0-9]+</regex>
+          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
         </constraint>
         <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
       </properties>
@@ -31,7 +31,7 @@
           <description>Name of IPv6 prefix-list</description>
         </valueHelp>
         <constraint>
-          <regex>[-_a-zA-Z0-9]+</regex>
+          #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
         </constraint>
         <constraintErrorMessage>Name of prefix-list6 can only contain alpha-numeric letters, hyphen and underscores</constraintErrorMessage>
       </properties>

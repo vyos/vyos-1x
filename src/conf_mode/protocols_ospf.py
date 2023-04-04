@@ -89,7 +89,7 @@ def get_config(config=None):
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
 
-    for protocol in ['bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
+    for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
         # table is a tagNode thus we need to clean out all occurances for the
         # default values and load them in later individually
         if protocol == 'table':
@@ -234,7 +234,7 @@ def verify(ospf):
         if list(set(global_range) & set(local_range)):
             raise ConfigError(f'Segment-Routing Global Block ({g_low_label_value}/{g_high_label_value}) '\
                               f'conflicts with Local Block ({l_low_label_value}/{l_high_label_value})!')
-        
+
     # Check for a blank or invalid value per prefix
     if dict_search('segment_routing.prefix', ospf):
         for prefix, prefix_config in ospf['segment_routing']['prefix'].items():

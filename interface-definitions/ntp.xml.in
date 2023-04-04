@@ -37,6 +37,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="nts">
+                <properties>
+                  <help>Enable Network Time Security (NTS) for the server</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="pool">
                 <properties>
                   <help>Associate with a number of remote servers</help>
@@ -51,39 +57,7 @@
               </leafNode>
             </children>
           </tagNode>
-          <node name="allow-client">
-            <properties>
-              <help>Specify NTP clients allowed to access the server</help>
-            </properties>
-            <children>
-              <leafNode name="address">
-                <properties>
-                  <help>IP address</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Allowed IPv4 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv4net</format>
-                    <description>Allowed IPv4 prefix</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Allowed IPv6 address</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6net</format>
-                    <description>Allowed IPv6 prefix</description>
-                  </valueHelp>
-                  <multi/>
-                  <constraint>
-                    <validator name="ip-address"/>
-                    <validator name="ip-prefix"/>
-                  </constraint>
-                </properties>
-              </leafNode>
-            </children>
-          </node>
+          #include <include/allow-client.xml.i>
           #include <include/generic-interface-multi.xml.i>
           #include <include/listen-address.xml.i>
           #include <include/interface/vrf.xml.i>

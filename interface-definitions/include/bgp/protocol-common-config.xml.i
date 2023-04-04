@@ -942,7 +942,7 @@
     <constraint>
       <validator name="ipv4-address"/>
       <validator name="ipv6-address"/>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>
   <children>
@@ -1005,21 +1005,10 @@
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
+    #include <include/bgp/neighbor-path-attribute.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
     #include <include/bgp/peer-group.xml.i>
-    <leafNode name="port">
-      <properties>
-        <help>Neighbor BGP port</help>
-        <valueHelp>
-          <format>u32:1-65535</format>
-          <description>Neighbor BGP port number</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 1-65535"/>
-        </constraint>
-      </properties>
-    </leafNode>
     #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     <leafNode name="solo">
@@ -1061,6 +1050,7 @@
     </node>
     #include <include/bgp/neighbor-ttl-security.xml.i>
     #include <include/bgp/neighbor-update-source.xml.i>
+    #include <include/port-number.xml.i>
   </children>
 </tagNode>
 <node name="parameters">
@@ -1491,13 +1481,56 @@
       </properties>
     </leafNode>
     #include <include/router-id.xml.i>
+    <node name="tcp-keepalive">
+      <properties>
+        <help>TCP keepalive parameters</help>
+      </properties>
+      <children>
+        <leafNode name="idle">
+          <properties>
+            <help>TCP keepalive idle time</help>
+            <valueHelp>
+              <format>u32:1-65535</format>
+              <description>Idle time in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-65535"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="interval">
+          <properties>
+            <help>TCP keepalive interval</help>
+            <valueHelp>
+              <format>u32:1-65535</format>
+              <description>Interval in seconds</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-65535"/>
+            </constraint>
+          </properties>
+        </leafNode>
+        <leafNode name="probes">
+          <properties>
+            <help>TCP keepalive maximum probes</help>
+            <valueHelp>
+              <format>u32:1-30</format>
+              <description>Maximum probes</description>
+            </valueHelp>
+            <constraint>
+              <validator name="numeric" argument="--range 1-30"/>
+            </constraint>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
   </children>
 </node>
 <tagNode name="peer-group">
   <properties>
     <help>Name of peer-group</help>
     <constraint>
-      <regex>[-_a-zA-Z0-9]+</regex>
+      #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
     </constraint>
   </properties>
   <children>
@@ -1522,12 +1555,14 @@
     #include <include/bgp/neighbor-local-as.xml.i>
     #include <include/bgp/neighbor-local-role.xml.i>
     #include <include/bgp/neighbor-override-capability.xml.i>
+    #include <include/bgp/neighbor-path-attribute.xml.i>
     #include <include/bgp/neighbor-passive.xml.i>
     #include <include/bgp/neighbor-password.xml.i>
-    #include <include/bgp/remote-as.xml.i>
     #include <include/bgp/neighbor-shutdown.xml.i>
     #include <include/bgp/neighbor-ttl-security.xml.i>
     #include <include/bgp/neighbor-update-source.xml.i>
+    #include <include/bgp/remote-as.xml.i>
+    #include <include/port-number.xml.i>
   </children>
 </tagNode>
 #include <include/route-map.xml.i>

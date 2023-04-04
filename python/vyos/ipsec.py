@@ -139,3 +139,41 @@ def terminate_vici_by_name(ike_name: str, child_name: str) -> None:
         else:
             raise ViciCommandError(
                 f'Failed to terminate SA for IKE {ike_name}')
+
+
+def vici_initiate(ike_sa_name: str, child_sa_name: str, src_addr: str,
+                  dst_addr: str) -> bool:
+    """Initiate IKE SA connection with specific peer
+
+    Args:
+        ike_sa_name (str): an IKE SA connection name
+        child_sa_name (str): a child SA profile name
+        src_addr (str): source address
+        dst_addr (str): remote address
+
+    Returns:
+        bool: a result of initiation command
+    """
+    from vici import Session as vici_session
+
+    try:
+        session = vici_session()
+    except Exception:
+        raise ViciInitiateError("IPsec not initialized")
+
+    try:
+        session_generator = session.initiate({
+            'ike': ike_sa_name,
+            'child': child_sa_name,
+            'timeout': '-1',
+            'my-host': src_addr,
+            'other-host': dst_addr
+        })
+        # a dummy `for` loop is required because of requirements
+        # from vici. Without a full iteration on the output, the
+        # command to vici may not be executed completely
+        for _ in session_generator:
+            pass
+        return True
+    except Exception:
+        raise ViciCommandError(f'Failed to initiate SA for IKE {ike_sa_name}')

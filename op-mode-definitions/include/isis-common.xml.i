@@ -118,7 +118,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
   </children>
-  <command>vtysh -c "show isis neighbor"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <tagNode name="neighbor">
   <properties>
@@ -146,8 +146,14 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
+    <leafNode name="prefix-sid">
+     <properties>
+       <help>Show Prefix-SID information</help>
+     </properties>
+     <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+   </leafNode>
   </children>
-  <command>vtysh -c "show isis route"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <node name="segment-routing">
   <properties>
@@ -157,12 +163,6 @@
     <leafNode name="node">
       <properties>
         <help>Show node information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="prefix-sids">
-      <properties>
-        <help>Show prefix segment IDs</help>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>

@@ -53,7 +53,7 @@ def _get_tunnel_address(peer_host, peer_port, status_file):
 def _get_interface_status(mode: str, interface: str) -> dict:
     status_file = f'/run/openvpn/{interface}.status'
 
-    data = {
+    data: dict = {
         'mode': mode,
         'intf': interface,
         'local_host': '',
@@ -142,18 +142,18 @@ def _get_interface_status(mode: str, interface: str) -> dict:
 
     return data
 
-def _get_raw_data(mode: str) -> dict:
-    data = {}
+def _get_raw_data(mode: str) -> list:
+    data: list = []
     conf = Config()
     conf_dict = conf.get_config_dict(['interfaces', 'openvpn'],
                                      get_first_key=True)
     if not conf_dict:
         return data
 
-    interfaces = [x for x in list(conf_dict) if conf_dict[x]['mode'] == mode]
+    interfaces = [x for x in list(conf_dict) if
+                  conf_dict[x]['mode'].replace('-', '_') == mode]
     for intf in interfaces:
-        data[intf] = _get_interface_status(mode, intf)
-        d = data[intf]
+        d = _get_interface_status(mode, intf)
         d['local_host'] = conf_dict[intf].get('local-host', '')
         d['local_port'] = conf_dict[intf].get('local-port', '')
         if conf.exists(f'interfaces openvpn {intf} server client'):
@@ -164,10 +164,11 @@ def _get_raw_data(mode: str) -> dict:
                     client['name'] = 'None (PSK)'
                 client['remote_host'] = conf_dict[intf].get('remote-host', [''])[0]
                 client['remote_port'] = conf_dict[intf].get('remote-port', '1194')
+        data.append(d)
 
     return data
 
-def _format_openvpn(data: dict) -> str:
+def _format_openvpn(data: list) -> str:
     if not data:
         out = 'No OpenVPN interfaces configured'
         return out
@@ -176,11 +177,12 @@ def _format_openvpn(data: dict) -> str:
                'TX bytes', 'RX bytes', 'Connected Since']
 
     out = ''
-    for intf in list(data):
+    for d in data:
         data_out = []
-        l_host = data[intf]['local_host']
-        l_port = data[intf]['local_port']
-        for client in list(data[intf]['clients']):
+        intf = d['intf']
+        l_host = d['local_host']
+        l_port = d['local_port']
+        for client in d['clients']:
             r_host = client['remote_host']
             r_port = client['remote_port']
 
@@ -201,7 +203,7 @@ def _format_openvpn(data: dict) -> str:
 
     return out
 
-def show(raw: bool, mode: ArgMode) -> str:
+def show(raw: bool, mode: ArgMode) -> typing.Union[list,str]:
     openvpn_data = _get_raw_data(mode)
 
     if raw:

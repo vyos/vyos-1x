@@ -223,10 +223,23 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
         output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
 
-        if 'log_level' in rule_conf:
-            log_level = rule_conf['log_level']
-            output.append(f'level {log_level}')
+        if 'log_options' in rule_conf:
 
+            if 'level' in rule_conf['log_options']:
+                log_level = rule_conf['log_options']['level']
+                output.append(f'log level {log_level}')
+
+            if 'group' in rule_conf['log_options']:
+                log_group = rule_conf['log_options']['group']
+                output.append(f'log group {log_group}')
+
+                if 'queue_threshold' in rule_conf['log_options']:
+                    queue_threshold = rule_conf['log_options']['queue_threshold']
+                    output.append(f'queue-threshold {queue_threshold}')
+
+                if 'snapshot_length' in rule_conf['log_options']:
+                    log_snaplen = rule_conf['log_options']['snapshot_length']
+                    output.append(f'snaplen {log_snaplen}')
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}

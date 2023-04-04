@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -14,14 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import gzip
 import re
+import os
 import platform
 import unittest
 
+from vyos.util import call
 from vyos.util import read_file
 
 kernel = platform.release()
 config = read_file(f'/boot/config-{kernel}')
+CONFIG = '/proc/config.gz'
+
 
 class TestKernelModules(unittest.TestCase):
     """ VyOS makes use of a lot of Kernel drivers, modules and features. The
@@ -42,6 +47,22 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', config)
             self.assertTrue(tmp)
 
+    def test_dropmon_enabled(self):
+        options_to_check = [
+            'CONFIG_NET_DROP_MONITOR=y',
+            'CONFIG_UPROBE_EVENTS=y',
+            'CONFIG_BPF_EVENTS=y',
+            'CONFIG_TRACEPOINTS=y'
+        ]
+        if not os.path.isfile(CONFIG):
+            call('sudo modprobe configs')
+
+        with gzip.open(CONFIG, 'rt') as f:
+            config_data = f.read()
+        for option in options_to_check:
+            self.assertIn(option, config_data,
+                          f"Option {option} is not present in /proc/config.gz")
+
     def test_qemu_support(self):
         # The bond/lacp interface must be enabled in the OS Kernel
         for option in ['CONFIG_VIRTIO_BLK', 'CONFIG_SCSI_VIRTIO',
@@ -57,6 +78,7 @@ class TestKernelModules(unittest.TestCase):
         for option in ['CONFIG_VMXNET3']:
             tmp = re.findall(f'{option}=(y|m)', config)
             self.assertTrue(tmp)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

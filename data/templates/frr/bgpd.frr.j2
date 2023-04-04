@@ -74,6 +74,9 @@
 {% if config.password is vyos_defined %}
  neighbor {{ neighbor }} password {{ config.password }}
 {% endif %}
+{% if config.path_attribute.discard is vyos_defined %}
+ neighbor {{ neighbor }} path-attribute discard {{ config.path_attribute.discard }}
+{% endif %}
 {% if config.port is vyos_defined %}
  neighbor {{ neighbor }} port {{ config.port }}
 {% endif %}
@@ -549,6 +552,9 @@ bgp route-reflector allow-outbound-policy
 {% endif %}
 {% if parameters.suppress_fib_pending is vyos_defined %}
  bgp suppress-fib-pending
+{% endif %}
+{% if parameters.tcp_keepalive.idle is vyos_defined and parameters.tcp_keepalive.interval is vyos_defined and parameters.tcp_keepalive.probes is vyos_defined %}
+ bgp tcp-keepalive {{ parameters.tcp_keepalive.idle }} {{ parameters.tcp_keepalive.interval }} {{ parameters.tcp_keepalive.probes }}
 {% endif %}
 {% if timers.keepalive is vyos_defined and timers.holdtime is vyos_defined %}
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}

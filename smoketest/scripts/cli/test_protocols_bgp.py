@@ -55,6 +55,7 @@ neighbor_config = {
         'route_map_out'    : route_map_out,
         'no_send_comm_ext' : '',
         'addpath_all'      : '',
+        'p_attr_discard'   : '123',
         },
     '192.0.2.2' : {
         'bfd_profile'      : bfd_profile,
@@ -129,10 +130,12 @@ peer_group_config = {
         'cap_over'         : '',
         'ttl_security'     : '5',
         'disable_conn_chk' : '',
+        'p_attr_discard'   : '250',
         },
     'bar' : {
         'remote_as'        : '111',
-        'graceful_rst_no'  : ''
+        'graceful_rst_no'  : '',
+        'port'             : '667',
         },
     'foo-bar' : {
         'advertise_map'    : route_map_in,
@@ -237,6 +240,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} passive', frrconfig)
         if 'password' in peer_config:
             self.assertIn(f' neighbor {peer} password {peer_config["password"]}', frrconfig)
+        if 'port' in peer_config:
+            self.assertIn(f' neighbor {peer} port {peer_config["port"]}', frrconfig)
         if 'remote_as' in peer_config:
             self.assertIn(f' neighbor {peer} remote-as {peer_config["remote_as"]}', frrconfig)
         if 'solo' in peer_config:
@@ -261,6 +266,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' no neighbor {peer} send-community extended', frrconfig)
         if 'addpath_all' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
+        if 'p_attr_discard' in peer_config:
+            self.assertIn(f' neighbor {peer} path-attribute discard {peer_config["p_attr_discard"]}', frrconfig)
         if 'addpath_per_as' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
         if 'advertise_map' in peer_config:
@@ -290,6 +297,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         max_path_v6ibgp = '16'
         cond_adv_timer = '30'
         min_hold_time = '2'
+        tcp_keepalive_idle = '66'
+        tcp_keepalive_interval = '77'
+        tcp_keepalive_probes = '22'
 
         self.cli_set(base_path + ['parameters', 'router-id', router_id])
         self.cli_set(base_path + ['parameters', 'log-neighbor-changes'])
@@ -320,6 +330,9 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['parameters', 'route-reflector-allow-outbound-policy'])
         self.cli_set(base_path + ['parameters', 'shutdown'])
         self.cli_set(base_path + ['parameters', 'suppress-fib-pending'])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'idle', tcp_keepalive_idle])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'interval', tcp_keepalive_interval])
+        self.cli_set(base_path + ['parameters', 'tcp-keepalive', 'probes', tcp_keepalive_probes])
 
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
@@ -349,6 +362,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' bgp route-reflector allow-outbound-policy', frrconfig)
         self.assertIn(f' bgp shutdown', frrconfig)
         self.assertIn(f' bgp suppress-fib-pending', frrconfig)
+        self.assertIn(f' bgp tcp-keepalive {tcp_keepalive_idle} {tcp_keepalive_interval} {tcp_keepalive_probes}', frrconfig)
         self.assertNotIn(f'bgp ebgp-requires-policy', frrconfig)
         self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 
@@ -414,6 +428,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'ttl-security', 'hops', peer_config["ttl_security"]])
             if 'update_src' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'update-source', peer_config["update_src"]])
+            if 'p_attr_discard' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'discard', peer_config["p_attr_discard"]])
             if 'route_map_in' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'route-map', 'import', peer_config["route_map_in"]])
             if 'route_map_out' in peer_config:
@@ -463,8 +479,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for peer, peer_config in neighbor_config.items():
             if 'adv_interv' in peer_config:
                 self.assertIn(f' neighbor {peer} advertisement-interval {peer_config["adv_interv"]}', frrconfig)
-            if 'port' in peer_config:
-                self.assertIn(f' neighbor {peer} port {peer_config["port"]}', frrconfig)
             if 'cap_strict' in peer_config:
                 self.assertIn(f' neighbor {peer} strict-capability-match', frrconfig)
 
@@ -500,6 +514,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'passive'])
             if 'password' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'password', config["password"]])
+            if 'port' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'port', config["port"]])
             if 'remote_as' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'remote-as', config["remote_as"]])
             if 'shutdown' in config:
@@ -532,6 +548,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'graceful-restart', 'restart-helper'])
             if 'disable_conn_chk' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'disable-connected-check'])
+            if 'p_attr_discard' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'discard', config["p_attr_discard"]])
 
             # Conditional advertisement
             if 'advertise_map' in config:

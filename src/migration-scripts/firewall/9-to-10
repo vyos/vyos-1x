@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5050: Log options
+#  cli changes from:       
+#  set firewall [name | ipv6-name] <name> rule <number> log-level <log_level>
+#  To
+#  set firewall [name | ipv6-name] <name> rule <number> log-options level <log_level>
+
+import re
+
+from sys import argv
+from sys import exit
+
+from vyos.configtree import ConfigTree
+from vyos.ifconfig import Section
+
+if (len(argv) < 1):
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+base = ['firewall']
+config = ConfigTree(config_file)
+
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+
+if config.exists(base + ['name']):
+    for name in config.list_nodes(base + ['name']):
+        if not config.exists(base + ['name', name, 'rule']):
+            continue
+
+        for rule in config.list_nodes(base + ['name', name, 'rule']):
+            log_options_base = base + ['name', name, 'rule', rule, 'log-options'] 
+            rule_log_level = base + ['name', name, 'rule', rule, 'log-level']
+
+            if config.exists(rule_log_level):
+                tmp = config.return_value(rule_log_level)
+                config.delete(rule_log_level)
+                config.set(log_options_base + ['level'], value=tmp)
+
+if config.exists(base + ['ipv6-name']):
+    for name in config.list_nodes(base + ['ipv6-name']):
+        if not config.exists(base + ['ipv6-name', name, 'rule']):
+            continue
+
+        for rule in config.list_nodes(base + ['ipv6-name', name, 'rule']):
+            log_options_base = base + ['ipv6-name', name, 'rule', rule, 'log-options'] 
+            rule_log_level = base + ['ipv6-name', name, 'rule', rule, 'log-level']
+
+            if config.exists(rule_log_level):
+                tmp = config.return_value(rule_log_level)
+                config.delete(rule_log_level)
+                config.set(log_options_base + ['level'], value=tmp)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

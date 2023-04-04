@@ -117,6 +117,8 @@ rgiyCHemtMepq57Pl1Nmj49eEA==
 """
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
+    skip_process_check = False
+
     @classmethod
     def setUpClass(cls):
         super(TestVPNIPsec, cls).setUpClass()
@@ -141,7 +143,10 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
 
     def tearDown(self):
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        if not self.skip_process_check:
+            self.assertTrue(process_named_running(PROCESS_NAME))
+        else:
+            self.skip_process_check = False # Reset
 
         self.cli_delete(base_path)
         self.cli_delete(tunnel_path)
@@ -151,6 +156,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_01_dhcp_fail_handling(self):
+        # Skip process check - connection is not created for this test
+        self.skip_process_check = True
+
         # Interface for dhcp-interface
         self.cli_set(ethernet_path + [interface, 'vif', vif, 'address', 'dhcp']) # Use VLAN to avoid getting IP from qemu dhcp server
 

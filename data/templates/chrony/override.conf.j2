@@ -5,10 +5,9 @@ ConditionPathExists={{ config_file }}
 After=vyos-router.service
 
 [Service]
-User=root
 EnvironmentFile=
 ExecStart=
-ExecStart={{ vrf_command }}/usr/sbin/chronyd -F 1 -f {{ config_file }}
+ExecStart=!{{ vrf_command }}/usr/sbin/chronyd -F 1 -f {{ config_file }}
 PIDFile=
 PIDFile={{ config_file | replace('.conf', '.pid') }}
 Restart=always

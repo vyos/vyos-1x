@@ -74,7 +74,7 @@
                         <properties>
                           <help>Application client id</help>
                           <constraint>
-                            <regex>[-_a-zA-Z0-9]+</regex>
+                            #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                           </constraint>
                           <constraintErrorMessage>Client-id is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                         </properties>
@@ -83,7 +83,7 @@
                         <properties>
                           <help>Application client secret</help>
                           <constraint>
-                            <regex>[-_a-zA-Z0-9]+</regex>
+                            #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                           </constraint>
                           <constraintErrorMessage>Client-secret is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                         </properties>
@@ -92,7 +92,7 @@
                         <properties>
                           <help>Set tenant id</help>
                           <constraint>
-                            <regex>[-_a-zA-Z0-9]+</regex>
+                            #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                           </constraint>
                           <constraintErrorMessage>Tenant-id is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                         </properties>
@@ -107,7 +107,7 @@
                         <description>Remote database name</description>
                       </valueHelp>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9]+</regex>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                       </constraint>
                       <constraintErrorMessage>Database is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                     </properties>
@@ -140,7 +140,7 @@
                         <description>Table name</description>
                       </valueHelp>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9]+</regex>
+                        #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                       </constraint>
                       <constraintErrorMessage>Table is limited to alphanumerical characters and can contain hyphen and underscores</constraintErrorMessage>
                     </properties>

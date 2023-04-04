@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -35,7 +35,6 @@ if __package__ is None or __package__ == '':
 else:
     from .. libs.op_mode import is_show_function_name
     from .. libs.op_mode import snake_to_pascal_case, map_type_name
-    from .. import state
 
 OP_MODE_PATH = directories['op_mode']
 SCHEMA_PATH = directories['api_schema']
