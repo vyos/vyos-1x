@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -40,6 +40,7 @@ from vyos import airbag
 airbag.enable()
 
 autologout_file = "/etc/profile.d/autologout.sh"
+limits_file = "/etc/security/limits.d/10-vyos.conf"
 radius_config_file = "/etc/pam_radius_auth.conf"
 
 # LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
@@ -164,6 +165,9 @@ def verify(login):
             if ipv6_count > 1:
                 raise ConfigError('Only one IPv6 source-address can be set!')
 
+    if 'max_login_session' in login and 'timeout' not in login:
+        raise ConfigError('"login timeout" must be configured!')
+
     return None
 
 
@@ -225,6 +229,14 @@ def generate(login):
     else:
         if os.path.isfile(radius_config_file):
             os.unlink(radius_config_file)
+
+    # /etc/security/limits.d/10-vyos.conf
+    if 'max_login_session' in login:
+        render(limits_file, 'login/limits.j2', login,
+                   permission=0o644, user='root', group='root')
+    else:
+        if os.path.isfile(limits_file):
+            os.unlink(limits_file)
 
     if 'timeout' in login:
         render(autologout_file, 'login/autologout.j2', login,
