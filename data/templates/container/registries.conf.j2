@@ -23,5 +23,9 @@
 # unqualified-search-registries = ["example.com"]
 
 {% if registry is defined and registry is not none %}
-unqualified-search-registries = {{ registry }}
+{%     set registry_list = [] %}
+{%     for r, r_options in registry.items() if r_options.disable is not defined %}
+{%         set _ = registry_list.append(r) %}
+{%     endfor %}
+unqualified-search-registries = {{ registry_list }}
 {% endif %}
