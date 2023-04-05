@@ -14,6 +14,12 @@
             </properties>
             <command>/usr/bin/id -Gn</command>
           </leafNode>
+          <leafNode name="last-log">
+            <properties>
+              <help>Show recent login of all users</help>
+            </properties>
+            <command>/usr/bin/lastlog</command>
+          </leafNode>
           <leafNode name="level">
             <properties>
               <help>Show current login level</help>
