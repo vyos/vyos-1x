@@ -479,8 +479,13 @@ def apply(container):
     # the network interface in advance
     if 'network' in container:
         for network, network_config in container['network'].items():
-            tmp = Interface(f'podman-{network}')
-            tmp.set_vrf(network_config.get('vrf', ''))
+            network_name = f'podman-{network}'
+            # T5147: Networks are started only as soon as there is a consumer.
+            # If only a network is created in the first place, no need to assign
+            # it to a VRF as there's no consumer, yet.
+            if os.path.exists(f'/sys/class/net/{network_name}'):
+                tmp = Interface(network_name)
+                tmp.set_vrf(network_config.get('vrf', ''))
 
     return None
 
