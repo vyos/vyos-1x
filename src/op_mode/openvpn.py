@@ -16,6 +16,7 @@
 #
 #
 
+import json
 import os
 import sys
 import typing
@@ -25,6 +26,7 @@ import vyos.opmode
 from vyos.util import bytes_to_human
 from vyos.util import commit_in_progress
 from vyos.util import call
+from vyos.util import rc_cmd
 from vyos.config import Config
 
 ArgMode = typing.Literal['client', 'server', 'site_to_site']
@@ -142,6 +144,25 @@ def _get_interface_status(mode: str, interface: str) -> dict:
 
     return data
 
+
+def _get_interface_state(iface):
+    rc, out = rc_cmd(f'ip --json link show dev {iface}')
+    try:
+        data = json.loads(out)
+    except:
+        return 'DOWN'
+    return data[0].get('operstate', 'DOWN')
+
+
+def _get_interface_description(iface):
+    rc, out = rc_cmd(f'ip --json link show dev {iface}')
+    try:
+        data = json.loads(out)
+    except:
+        return ''
+    return data[0].get('ifalias', '')
+
+
 def _get_raw_data(mode: str) -> list:
     data: list = []
     conf = Config()
@@ -154,6 +175,8 @@ def _get_raw_data(mode: str) -> list:
                   conf_dict[x]['mode'].replace('-', '_') == mode]
     for intf in interfaces:
         d = _get_interface_status(mode, intf)
+        d['state'] = _get_interface_state(intf)
+        d['description'] = _get_interface_description(intf)
         d['local_host'] = conf_dict[intf].get('local-host', '')
         d['local_port'] = conf_dict[intf].get('local-port', '')
         if conf.exists(f'interfaces openvpn {intf} server client'):
