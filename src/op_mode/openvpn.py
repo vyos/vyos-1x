@@ -63,7 +63,7 @@ def _get_interface_status(mode: str, interface: str) -> dict:
     }
 
     if not os.path.exists(status_file):
-        raise vyos.opmode.DataUnavailable('No information for interface {interface}')
+        return data
 
     with open(status_file, 'r') as f:
         lines = f.readlines()
