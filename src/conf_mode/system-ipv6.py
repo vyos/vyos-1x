@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,11 +19,14 @@ import os
 from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_route_map
+from vyos.template import render_to_string
 from vyos.util import dict_search
 from vyos.util import sysctl_write
 from vyos.util import write_file
 from vyos.xml import defaults
 from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -41,13 +44,30 @@ def get_config(config=None):
     default_values = defaults(base)
     opt = dict_merge(default_values, opt)
 
+    # When working with FRR we need to know the corresponding address-family
+    opt['afi'] = 'ipv6'
+
+    # We also need the route-map information from the config
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
+                                                          get_first_key=True)}}
+    # Merge policy dict into "regular" config dict
+    opt = dict_merge(tmp, opt)
     return opt
 
 def verify(opt):
-    pass
+    if 'protocol' in opt:
+        for protocol, protocol_options in opt['protocol'].items():
+            if 'route_map' in protocol_options:
+                verify_route_map(protocol_options['route_map'], opt)
+    return
 
 def generate(opt):
-    pass
+    if 'protocol' in opt:
+        opt['frr_zebra_config'] = render_to_string('frr/zebra.route-map.frr.j2', opt)
+    return
 
 def apply(opt):
     # configure multipath
@@ -77,6 +97,18 @@ def apply(opt):
         for name in files:
             if name == 'accept_dad':
                 write_file(os.path.join(root, name), value)
+
+    if 'protocol' in opt:
+        zebra_daemon = 'zebra'
+        # Save original configuration prior to starting any commit actions
+        frr_cfg = frr.FRRConfig()
+
+        # The route-map used for the FIB (zebra) is part of the zebra daemon
+        frr_cfg.load_configuration(zebra_daemon)
+        frr_cfg.modify_section(r'ipv6 protocol \w+ route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+        if 'frr_zebra_config' in opt:
+            frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
+        frr_cfg.commit_configuration(zebra_daemon)
 
 if __name__ == '__main__':
     try:

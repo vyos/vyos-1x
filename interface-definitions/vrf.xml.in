@@ -34,6 +34,7 @@
             </properties>
             <children>
               #include <include/interface/disable-forwarding.xml.i>
+              #include <include/system-ip-protocol.xml.i>
             </children>
           </node>
           <node name="ipv6">
@@ -42,6 +43,7 @@
             </properties>
             <children>
               #include <include/interface/disable-forwarding.xml.i>
+              #include <include/system-ipv6-protocol.xml.i>
             </children>
           </node>
           <node name="protocols">

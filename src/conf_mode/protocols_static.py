@@ -105,16 +105,9 @@ def generate(static):
 
 def apply(static):
     static_daemon = 'staticd'
-    zebra_daemon = 'zebra'
 
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section(r'^ip protocol static route-map [-a-zA-Z0-9.]+', '')
-    frr_cfg.commit_configuration(zebra_daemon)
-    frr_cfg.load_configuration(static_daemon)
 
     if 'vrf' in static:
         vrf = static['vrf']

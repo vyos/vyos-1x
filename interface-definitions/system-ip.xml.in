@@ -48,6 +48,7 @@
               </leafNode>
             </children>
           </node>
+          #include <include/system-ip-protocol.xml.i>
         </children>
       </node>
     </children>
