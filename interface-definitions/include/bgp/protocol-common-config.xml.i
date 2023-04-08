@@ -1565,7 +1565,6 @@
     #include <include/port-number.xml.i>
   </children>
 </tagNode>
-#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>BGP protocol timers</help>

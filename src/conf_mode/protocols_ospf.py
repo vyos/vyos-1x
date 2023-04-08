@@ -256,24 +256,14 @@ def generate(ospf):
     if not ospf or 'deleted' in ospf:
         return None
 
-    ospf['protocol'] = 'ospf' # required for frr/vrf.route-map.frr.j2
-    ospf['frr_zebra_config'] = render_to_string('frr/vrf.route-map.frr.j2', ospf)
     ospf['frr_ospfd_config'] = render_to_string('frr/ospfd.frr.j2', ospf)
     return None
 
 def apply(ospf):
     ospf_daemon = 'ospfd'
-    zebra_daemon = 'zebra'
 
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
-
-    # The route-map used for the FIB (zebra) is part of the zebra daemon
-    frr_cfg.load_configuration(zebra_daemon)
-    frr_cfg.modify_section('(\s+)?ip protocol ospf route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
-    if 'frr_zebra_config' in ospf:
-        frr_cfg.add_before(frr.default_add_before, ospf['frr_zebra_config'])
-    frr_cfg.commit_configuration(zebra_daemon)
 
     # Generate empty helper string which can be ammended to FRR commands, it
     # will be either empty (default VRF) or contain the "vrf <name" statement
@@ -292,6 +282,7 @@ def apply(ospf):
 
     if 'frr_ospfd_config' in ospf:
         frr_cfg.add_before(frr.default_add_before, ospf['frr_ospfd_config'])
+
     frr_cfg.commit_configuration(ospf_daemon)
 
     return None

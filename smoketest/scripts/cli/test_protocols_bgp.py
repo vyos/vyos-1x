@@ -713,7 +713,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for prefix in listen_ranges:
             self.assertIn(f' bgp listen range {prefix} peer-group {peer_group}', frrconfig)
 
-
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
@@ -742,26 +741,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'vni {vni}', vniconfig)
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
-
-    def test_bgp_08_zebra_route_map(self):
-        # Implemented because of T3328
-        self.cli_set(base_path + ['route-map', route_map_in])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol bgp route-map {route_map_in}'
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertIn(zebra_route_map, frrconfig)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertNotIn(zebra_route_map, frrconfig)
 
     def test_bgp_09_distance_and_flowspec(self):
         distance_external = '25'

@@ -108,6 +108,7 @@ def apply(static):
 
     # Save original configuration prior to starting any commit actions
     frr_cfg = frr.FRRConfig()
+    frr_cfg.load_configuration(static_daemon)
 
     if 'vrf' in static:
         vrf = static['vrf']
