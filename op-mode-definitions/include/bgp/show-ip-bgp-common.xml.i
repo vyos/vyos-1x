@@ -93,6 +93,12 @@
               </properties>
               <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
             </leafNode>
+            <leafNode name="filtered-routes">
+              <properties>
+                <help>Show the filtered routes from neighbor</help>
+              </properties>
+              <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+            </leafNode>
             <leafNode name="received-routes">
               <properties>
                 <help>Show the received routes from neighbor</help>
