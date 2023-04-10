@@ -19,7 +19,7 @@
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from shutil import copy, rmtree, copytree
+from shutil import copy, chown, rmtree, copytree
 from sys import exit
 from urllib.parse import urlparse
 
@@ -29,7 +29,9 @@ from vyos.configtree import ConfigTree
 from vyos.remote import download
 from vyos.system import disk, grub, image
 from vyos.template import render
-from vyos.util import ask_input, ask_yes_no, run
+from vyos.utils.io import ask_input, ask_yes_no
+from vyos.utils.file import chmod_2775
+from vyos.util import run
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -391,6 +393,8 @@ def install_image() -> None:
         print('Creating a configuration file')
         target_config_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw/opt/vyatta/etc/config/'
         Path(target_config_dir).mkdir(parents=True)
+        chown(target_config_dir, group='vyattacfg')
+        chmod_2775(target_config_dir)
         # copy config
         if migrate_config():
             copy('/opt/vyatta/etc/config/config.boot', target_config_dir)
@@ -485,9 +489,16 @@ def add_image(image_path: str) -> None:
         # copy config
         if migrate_config():
             print('Copying configuration directory')
-            copytree('/opt/vyatta/etc/config/', target_config_dir)
+            # copytree preserves perms but not ownership:
+            Path(target_config_dir).mkdir(parents=True)
+            chown(target_config_dir, group='vyattacfg')
+            chmod_2775(target_config_dir)
+            copytree('/opt/vyatta/etc/config/', target_config_dir,
+                     dirs_exist_ok=True)
         else:
             Path(target_config_dir).mkdir(parents=True)
+            chown(target_config_dir, group='vyattacfg')
+            chmod_2775(target_config_dir)
             Path(f'{target_config_dir}/.vyatta_config').touch()
 
         # copy system image and kernel files
