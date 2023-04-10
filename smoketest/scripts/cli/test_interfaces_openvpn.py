@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -368,6 +368,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['hash', auth_hash])
             self.cli_set(path + ['mode', 'server'])
             self.cli_set(path + ['local-port', port])
+            self.cli_set(path + ['server', 'mfa', 'totp'])
             self.cli_set(path + ['server', 'subnet', subnet])
             self.cli_set(path + ['server', 'topology', 'subnet'])
             self.cli_set(path + ['keep-alive', 'failure-count', '5'])
@@ -388,6 +389,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         for ii in num_range:
             interface = f'vtun{ii}'
+            plugin = f'plugin "/usr/lib/openvpn/openvpn-otp.so" "otp_secrets=/config/auth/openvpn/{interface}-otp-secrets otp_slop=180 totp_t0=0 totp_step=30 totp_digits=6 password_is_cr=1"'
             subnet = f'192.0.{ii}.0/24'
 
             start_addr = inc_ip(subnet, '2')
@@ -411,6 +413,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'topology subnet', config)
             self.assertIn(f'lport {port}', config)
             self.assertIn(f'push "redirect-gateway def1"', config)
+            self.assertIn(f'{plugin}', config)
             self.assertIn(f'keepalive 5 25', config)
 
             # TLS options
