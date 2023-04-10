@@ -1,21 +1,9 @@
 !
-{% if vrf is vyos_defined %}
-vrf {{ vrf }}
-{%     if protocol is vyos_defined %}
-{%         for prot, prot_config in protocol.items() %}
- {{ afi }} protocol {{ protocol }} route-map {{ prot_config.route_map }}
-{%         endfor %}
-{%     endif %}
- exit-vrf
-!
-{% else %}
-{%     if protocol is vyos_defined %}
-{%         for prot, prot_config in protocol.items() %}
-{%             if prot is vyos_defined('ospfv3') %}
-{%                 set prot = 'ospf6' %}
-{%             endif %}
-{{ afi }} protocol {{ prot }} route-map {{ prot_config.route_map }}
-{%         endfor %}
-{%     endif %}
+{% if protocol is vyos_defined %}
+{%     for protocol_name, protocol_config in protocol.items() %}
+{%         if protocol_name is vyos_defined('ospfv3') %}
+{%             set protocol_name = 'ospf6' %}
+{%         endif %}
+{{ afi }} protocol {{ protocol_name }} route-map {{ protocol_config.route_map }}
+{%     endfor %}
 {% endif %}
-!

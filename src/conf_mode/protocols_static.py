@@ -112,7 +112,7 @@ def apply(static):
 
     if 'vrf' in static:
         vrf = static['vrf']
-        frr_cfg.modify_section(f'^vrf {vrf}', stop_pattern='^exit', remove_stop_mark=True)
+        frr_cfg.modify_section(f'^vrf {vrf}', stop_pattern='^exit-vrf', remove_stop_mark=True)
     else:
         frr_cfg.modify_section(r'^ip route .*')
         frr_cfg.modify_section(r'^ipv6 route .*')

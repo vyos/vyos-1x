@@ -1,0 +1,24 @@
+!
+{% if name is vyos_defined %}
+{%     for vrf, vrf_config in name.items() %}
+vrf {{ vrf }}
+{%         if vrf_config.ip.protocol is vyos_defined %}
+{%             for protocol_name, protocol_config in vrf_config.ip.protocol.items() %}
+ ip protocol {{ protocol_name }} route-map {{ protocol_config.route_map }}
+{%             endfor %}
+{%         endif %}
+{%         if vrf_config.ipv6.protocol is vyos_defined %}
+{%             for protocol_name, protocol_config in vrf_config.ipv6.protocol.items() %}
+{%                 if protocol_name is vyos_defined('ospfv3') %}
+{%                     set protocol_name = 'ospf6' %}
+{%                 endif %}
+ ipv6 protocol {{ protocol_name }} route-map {{ protocol_config.route_map }}
+{%             endfor %}
+{%         endif %}
+{%         if vrf_config.vni is vyos_defined %}
+ vni {{ vrf_config.vni }}
+{%         endif %}
+{%     endfor %}
+ exit-vrf
+!
+{% endif %}
