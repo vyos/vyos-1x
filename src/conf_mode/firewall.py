@@ -282,6 +282,9 @@ def verify_rule(firewall, rule_conf, ipv6):
                 if rule_conf['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port or port-group')
 
+            if 'port' in side_conf and dict_search_args(side_conf, 'group', 'port_group'):
+                raise ConfigError(f'{side} port-group and port cannot both be defined')
+
     if 'log_options' in rule_conf:
         if 'log' not in rule_conf or 'enable' not in rule_conf['log']:
             raise ConfigError('log-options defined, but log is not enable')
