@@ -21,6 +21,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from shutil import copy, chown, rmtree, copytree
 from sys import exit
+from passlib.hosts import linux_context
 from urllib.parse import urlparse
 
 from psutil import disk_partitions
@@ -192,15 +193,33 @@ def setup_grub(root_dir: str) -> None:
 
 
 def configure_authentication(config_file: str, password: str) -> None:
-    config = ConfigTree(config_file)
+    """Write encrypted password to config file
+
+    Args:
+        config_file (str): path of target config file
+        password (str): plaintext password
+
+    N.B. this can not be deferred by simply setting the plaintext password
+    and relying on the config mode script to process at boot, as the config
+    will not automatically be saved in that case, thus leaving the
+    plaintext exposed
+    """
+    encrypted_password = linux_context.hash(password)
+
+    with open(config_file) as f:
+        config_string = f.read()
+
+    config = ConfigTree(config_string)
     config.set([
         'system', 'login', 'user', 'vyos', 'authentication',
-        'plaintext-password'
+        'encrypted-password'
     ],
-               value=password,
+               value=encrypted_password,
                replace=True)
     config.set_tag(['system', 'login', 'user'])
 
+    with open(config_file, 'w') as f:
+        f.write(config.to_string())
 
 def validate_signature(file_path: str, sign_type: str) -> None:
     """Validate a file by signature and delete a signature file
