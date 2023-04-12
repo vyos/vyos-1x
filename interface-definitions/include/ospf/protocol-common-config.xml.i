@@ -331,7 +331,7 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/ldp-sync-protocol.xml.i>
+#include <include/isis/ldp-sync-protocol.xml.i>
 <node name="distance">
   <properties>
     <help>Administrative distance</help>
@@ -386,7 +386,7 @@
     #include <include/ospf/authentication.xml.i>
     #include <include/ospf/intervals.xml.i>
     #include <include/ospf/interface-common.xml.i>
-    #include <include/ldp-sync-interface.xml.i>
+    #include <include/isis/ldp-sync-interface.xml.i>
     <leafNode name="bandwidth">
       <properties>
         <help>Interface bandwidth (Mbit/s)</help>

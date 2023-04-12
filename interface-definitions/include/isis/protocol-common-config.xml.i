@@ -152,7 +152,7 @@
     </constraint>
   </properties>
 </leafNode>
-#include <include/ldp-sync-protocol.xml.i>
+#include <include/isis/ldp-sync-protocol.xml.i>
 <leafNode name="net">
   <properties>
     <help>A Network Entity Title for this process (ISO only)</help>
@@ -632,7 +632,7 @@
       </properties>
     </leafNode>
     #include <include/isis/metric.xml.i>
-    #include <include/ldp-sync-interface.xml.i>
+    #include <include/isis/ldp-sync-interface.xml.i>
     <node name="network">
       <properties>
         <help>Set network type</help>
