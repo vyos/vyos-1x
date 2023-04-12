@@ -54,9 +54,17 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
+<node name="mpls">
+  <properties>
+    <help>Show MPLS information</help>
+  </properties>
+  <children>
+  #include <include/ldp-sync.xml.i>
+  </children>
+</node>
 <node name="mpls-te">
   <properties>
-    <help>Show IS-IS MPLS traffic engineering information</help>
+    <help>Show MPLS traffic engineering information</help>
   </properties>
   <children>
     <leafNode name="router">
