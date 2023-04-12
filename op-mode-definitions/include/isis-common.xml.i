@@ -35,15 +35,7 @@
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="interface">
-  <properties>
-    <help>Show specific IS-IS interface</help>
-    <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces</script>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
+#include <include/vtysh-generic-interface-tagNode.xml.i>
 <node name="mpls">
   <properties>
     <help>Show MPLS information</help>
@@ -69,15 +61,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
-    <tagNode name="interface">
-      <properties>
-        <help>Show specific IS-IS interface</help>
-        <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces</script>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
+    #include <include/vtysh-generic-interface-tagNode.xml.i>
   </children>
 </node>
 <node name="neighbor">

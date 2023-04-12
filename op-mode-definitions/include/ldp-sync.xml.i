@@ -5,15 +5,7 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <tagNode name="interface">
-      <properties>
-        <help>Show specific LDP-IGP synchronization for an interface</help>
-        <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces</script>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
+    #include <include/vtysh-generic-interface-tagNode.xml.i>
   </children>
 </node>
 <!-- included end -->

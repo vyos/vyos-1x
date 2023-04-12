@@ -508,15 +508,7 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="interface">
-  <properties>
-    <help>Show IPv4 OSPF information for specified interface</help>
-    <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces</script>
-    </completionHelp>
-  </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
+#include <include/vtysh-generic-interface-tagNode.xml.i>
 <node name="mpls">
   <properties>
     <help>Show MPLS information</help>
