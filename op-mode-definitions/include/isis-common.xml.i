@@ -4,12 +4,7 @@
     <help>Show IS-IS link state database</help>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
@@ -36,12 +31,7 @@
     </completionHelp>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
@@ -95,12 +85,7 @@
     <help>Show IS-IS neighbor adjacencies</help>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
