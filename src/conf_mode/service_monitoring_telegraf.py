@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import socket
 import json
 
 from sys import exit
@@ -77,6 +78,14 @@ def get_nft_filter_chains():
     return chain_list
 
 
+def get_hostname() -> str:
+    try:
+        hostname = socket.getfqdn()
+    except socket.gaierror:
+        hostname = socket.gethostname()
+    return hostname
+
+
 def get_config(config=None):
 
     if config:
@@ -96,6 +105,7 @@ def get_config(config=None):
     monitoring = dict_merge(default_values, monitoring)
 
     monitoring['custom_scripts_dir'] = custom_scripts_dir
+    monitoring['hostname'] = get_hostname()
     monitoring['interfaces_ethernet'] = get_interfaces('ethernet', vlan=False)
     monitoring['nft_chains'] = get_nft_filter_chains()
 
