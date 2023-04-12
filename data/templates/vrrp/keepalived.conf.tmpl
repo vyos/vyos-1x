@@ -5,6 +5,11 @@
 global_defs {
     dynamic_interfaces
     script_user root
+{% if global_parameters is defined and global_parameters is not none %}
+{%     if global_parameters.startup_delay is defined %}
+    vrrp_startup_delay {{ global_parameters.startup_delay }}
+{%     endif %}
+{% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
 }
