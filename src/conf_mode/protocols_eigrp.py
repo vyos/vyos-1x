@@ -69,8 +69,6 @@ def get_config(config=None):
     # Merge policy dict into "regular" config dict
     eigrp = dict_merge(tmp, eigrp)
 
-    import pprint
-    pprint.pprint(eigrp)
     return eigrp
 
 def verify(eigrp):
