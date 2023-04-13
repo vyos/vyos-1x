@@ -343,9 +343,9 @@
         <properties>
           <help>Network name</help>
           <constraint>
-            <regex>[-_a-zA-Z0-9]{1,11}</regex>
+            <regex>[-_a-zA-Z0-9]{1,9}</regex>
           </constraint>
-          <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
+          <constraintErrorMessage>Network name cannot be longer than 9 characters</constraintErrorMessage>
         </properties>
         <children>
           #include <include/generic-description.xml.i>
