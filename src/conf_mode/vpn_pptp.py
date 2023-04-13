@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -44,6 +44,8 @@ default_pptp = {
     'radius_nas_ip' : '',
     'radius_source_address' : '',
     'radius_shaper_attr' : '',
+    'radius_shaper_enable': False,
+    'radius_shaper_multiplier': '',
     'radius_shaper_vendor': '',
     'radius_dynamic_author' : '',
     'chap_secrets_file': pptp_chap_secrets, # used in Jinja2 template
@@ -183,15 +185,18 @@ def get_config(config=None):
 
             pptp['radius_dynamic_author'] = dae
 
-        if conf.exists(['rate-limit', 'enable']):
-            pptp['radius_shaper_attr'] = 'Filter-Id'
-            c_attr = ['rate-limit', 'enable', 'attribute']
-            if conf.exists(c_attr):
-                pptp['radius_shaper_attr'] = conf.return_value(c_attr)
+        # Rate limit
+        if conf.exists(['rate-limit', 'attribute']):
+            pptp['radius_shaper_attr'] = conf.return_value(['rate-limit', 'attribute'])
 
-            c_vendor = ['rate-limit', 'enable', 'vendor']
-            if conf.exists(c_vendor):
-                pptp['radius_shaper_vendor'] = conf.return_value(c_vendor)
+        if conf.exists(['rate-limit', 'enable']):
+            pptp['radius_shaper_enable'] = True
+
+        if conf.exists(['rate-limit', 'multiplier']):
+            pptp['radius_shaper_multiplier'] = conf.return_value(['rate-limit', 'multiplier'])
+
+        if conf.exists(['rate-limit', 'vendor']):
+            pptp['radius_shaper_vendor'] = conf.return_value(['rate-limit', 'vendor'])
 
     conf.set_level(base_path)
     if conf.exists(['client-ip-pool']):
