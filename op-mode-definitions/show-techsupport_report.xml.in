@@ -2,7 +2,7 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-      <node name="techsupport">
+      <node name="tech-support">
         <children>
           <node name="report">
             <properties>
