@@ -20,9 +20,12 @@ from sys import exit
 from json import loads
 
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
+from vyos.configverify import verify_route_map
 from vyos.ifconfig import Interface
 from vyos.template import render
+from vyos.template import render_to_string
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
@@ -99,6 +102,14 @@ def get_config(config=None):
         routes = vrf_routing(conf, name)
         if routes: vrf['vrf_remove'][name]['route'] = routes
 
+    # We also need the route-map information from the config
+    #
+    # XXX: one MUST always call this without the key_mangling() option! See
+    # vyos.configverify.verify_common_route_maps() for more information.
+    tmp = {'policy' : {'route-map' : conf.get_config_dict(['policy', 'route-map'],
+                                                          get_first_key=True)}}
+    # Merge policy dict into "regular" config dict
+    vrf = dict_merge(tmp, vrf)
     return vrf
 
 def verify(vrf):
@@ -116,35 +127,50 @@ def verify(vrf):
         reserved_names = ["add", "all", "broadcast", "default", "delete", "dev", "get", "inet", "mtu", "link", "type",
                           "vrf"]
         table_ids = []
-        for name, config in vrf['name'].items():
+        for name, vrf_config in vrf['name'].items():
             # Reserved VRF names
             if name in reserved_names:
                 raise ConfigError(f'VRF name "{name}" is reserved and connot be used!')
 
             # table id is mandatory
-            if 'table' not in config:
+            if 'table' not in vrf_config:
                 raise ConfigError(f'VRF "{name}" table id is mandatory!')
 
             # routing table id can't be changed - OS restriction
             if os.path.isdir(f'/sys/class/net/{name}'):
                 tmp = str(dict_search('linkinfo.info_data.table', get_interface_config(name)))
-                if tmp and tmp != config['table']:
+                if tmp and tmp != vrf_config['table']:
                     raise ConfigError(f'VRF "{name}" table id modification not possible!')
 
             # VRf routing table ID must be unique on the system
-            if config['table'] in table_ids:
+            if vrf_config['table'] in table_ids:
                 raise ConfigError(f'VRF "{name}" table id is not unique!')
-            table_ids.append(config['table'])
+            table_ids.append(vrf_config['table'])
+
+            tmp = dict_search('ip.protocol', vrf_config)
+            if tmp != None:
+                for protocol, protocol_options in tmp.items():
+                    if 'route_map' in protocol_options:
+                        verify_route_map(protocol_options['route_map'], vrf)
+
+            tmp = dict_search('ipv6.protocol', vrf_config)
+            if tmp != None:
+                for protocol, protocol_options in tmp.items():
+                    if 'route_map' in protocol_options:
+                        verify_route_map(protocol_options['route_map'], vrf)
 
     return None
 
 
 def generate(vrf):
+    # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
     # Render nftables zones config
     render(nft_vrf_config, 'firewall/nftables-vrf-zones.j2', vrf)
-    return None
+    # Render VRF Kernel/Zebra route-map filters
+    vrf['frr_zebra_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
 
+    return None
 
 def apply(vrf):
     # Documentation
@@ -249,6 +275,17 @@ def apply(vrf):
             nft_add_element = f'add element inet vrf_zones ct_iface_map {{ "{name}" : {table} }}'
             cmd(f'nft {nft_add_element}')
 
+    # Apply FRR filters
+    zebra_daemon = 'zebra'
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(f'^vrf .+', stop_pattern='^exit-vrf', remove_stop_mark=True)
+    if 'frr_zebra_config' in vrf:
+        frr_cfg.add_before(frr.default_add_before, vrf['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
 
     # return to default lookup preference when no VRF is configured
     if 'name' not in vrf:

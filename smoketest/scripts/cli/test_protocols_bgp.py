@@ -713,7 +713,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         for prefix in listen_ranges:
             self.assertIn(f' bgp listen range {prefix} peer-group {peer_group}', frrconfig)
 
-
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
@@ -742,26 +741,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'vni {vni}', vniconfig)
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
-
-    def test_bgp_08_zebra_route_map(self):
-        # Implemented because of T3328
-        self.cli_set(base_path + ['route-map', route_map_in])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol bgp route-map {route_map_in}'
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertIn(zebra_route_map, frrconfig)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertNotIn(zebra_route_map, frrconfig)
 
     def test_bgp_09_distance_and_flowspec(self):
         distance_external = '25'
@@ -830,7 +809,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(vrf_base + ['table', table])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'system-as', ASN])
             self.cli_set(vrf_base + ['protocols', 'bgp', 'parameters', 'router-id', router_id])
-            self.cli_set(vrf_base + ['protocols', 'bgp', 'route-map', route_map_in])
             table = str(int(table) + 1000)
 
             # import VRF routes do main RIB
@@ -843,7 +821,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'router bgp {ASN}', frrconfig)
         self.assertIn(f' address-family ipv6 unicast', frrconfig)
 
-
         for vrf in vrfs:
             self.assertIn(f'  import vrf {vrf}', frrconfig)
 
@@ -851,15 +828,6 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             frr_vrf_config = self.getFRRconfig(f'router bgp {ASN} vrf {vrf}')
             self.assertIn(f'router bgp {ASN} vrf {vrf}', frr_vrf_config)
             self.assertIn(f' bgp router-id {router_id}', frr_vrf_config)
-
-            # XXX: Currently this is not working as FRR() class does not support
-            # route-maps for multiple vrfs because the modify_section() only works
-            # on lines and not text blocks.
-            #
-            # vrfconfig = self.getFRRconfig(f'vrf {vrf}')
-            # zebra_route_map = f' ip protocol bgp route-map {route_map_in}'
-            # self.assertIn(zebra_route_map, vrfconfig)
-
 
     def test_bgp_11_confederation(self):
         router_id = '127.10.10.2'

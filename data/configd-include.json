@@ -86,5 +86,4 @@
 "vpn_pptp.py",
 "vpn_sstp.py",
 "vrf.py",
-"vrf_vni.py"
 ]
