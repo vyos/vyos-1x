@@ -84,7 +84,7 @@
                 <properties>
                   <help>Domain to forward to a custom DNS server</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>An absolute DNS domain name</description>
                   </valueHelp>
                   <constraint>
@@ -111,7 +111,7 @@
                 <properties>
                   <help>Domain to host authoritative records for</help>
                   <valueHelp>
-                    <format>text</format>
+                    <format>txt</format>
                     <description>An absolute DNS domain name</description>
                   </valueHelp>
                   <constraint>
@@ -128,7 +128,7 @@
                         <properties>
                           <help>"A" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -165,7 +165,7 @@
                         <properties>
                           <help>"AAAA" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -202,7 +202,7 @@
                         <properties>
                           <help>"CNAME" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -234,7 +234,7 @@
                         <properties>
                           <help>"MX" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -281,7 +281,7 @@
                         <properties>
                           <help>"PTR" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -313,7 +313,7 @@
                         <properties>
                           <help>"TXT" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -329,7 +329,7 @@
                             <properties>
                               <help>Record contents</help>
                               <valueHelp>
-                                <format>text</format>
+                                <format>txt</format>
                                 <description>Record contents</description>
                               </valueHelp>
                               <multi/>
@@ -343,7 +343,7 @@
                         <properties>
                           <help>"SPF" record (type=SPF)</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -359,7 +359,7 @@
                             <properties>
                               <help>Record contents</help>
                               <valueHelp>
-                                <format>text</format>
+                                <format>txt</format>
                                 <description>Record contents</description>
                               </valueHelp>
                             </properties>
@@ -372,7 +372,7 @@
                         <properties>
                           <help>"SRV" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
@@ -456,7 +456,7 @@
                         <properties>
                           <help>"NAPTR" record</help>
                           <valueHelp>
-                            <format>text</format>
+                            <format>txt</format>
                             <description>A DNS name relative to the root record</description>
                           </valueHelp>
                           <valueHelp>
