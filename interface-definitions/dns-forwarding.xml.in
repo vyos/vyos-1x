@@ -83,6 +83,13 @@
               <tagNode name="domain">
                 <properties>
                   <help>Domain to forward to a custom DNS server</help>
+                  <valueHelp>
+                    <format>text</format>
+                    <description>An absolute DNS domain name</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
                 </properties>
                 <children>
                   #include <include/name-server-ipv4-ipv6-port.xml.i>
@@ -105,10 +112,10 @@
                   <help>Domain to host authoritative records for</help>
                   <valueHelp>
                     <format>text</format>
-                    <description>An absolute DNS name</description>
+                    <description>An absolute DNS domain name</description>
                   </valueHelp>
                   <constraint>
-                    <regex>[-_a-zA-Z0-9.]{1,63}</regex>
+                    <validator name="fqdn"/>
                   </constraint>
                 </properties>
                 <children>
