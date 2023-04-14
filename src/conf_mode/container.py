@@ -380,7 +380,7 @@ def generate(container):
                 'subnets': [],
                 'ipv6_enabled': False,
                 'internal': False,
-                'dns_enabled': False,
+                'dns_enabled': True,
                 'ipam_options': {
                     'driver': 'host-local'
                 }

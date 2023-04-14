@@ -34,6 +34,7 @@ Package: vyos-1x
 Architecture: amd64 arm64
 Depends:
   ${python3:Depends},
+  aardvark-dns,
   accel-ppp,
   auditd,
   avahi-daemon,
