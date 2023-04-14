@@ -376,7 +376,7 @@ def generate(container):
                 'name': network,
                 'id' : sha256(f'{network}'.encode()).hexdigest(),
                 'driver': 'bridge',
-                'network_interface': f'podman-{network}',
+                'network_interface': f'pod-{network}',
                 'subnets': [],
                 'ipv6_enabled': False,
                 'internal': False,
@@ -479,7 +479,7 @@ def apply(container):
     # the network interface in advance
     if 'network' in container:
         for network, network_config in container['network'].items():
-            network_name = f'podman-{network}'
+            network_name = f'pod-{network}'
             # T5147: Networks are started only as soon as there is a consumer.
             # If only a network is created in the first place, no need to assign
             # it to a VRF as there's no consumer, yet.
