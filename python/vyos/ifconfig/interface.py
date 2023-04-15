@@ -1709,6 +1709,14 @@ class VLANIf(Interface):
         if self.exists(f'{self.ifname}'):
             return
 
+        # If source_interface or vlan_id was not explicitly defined (e.g. when
+        # calling  VLANIf('eth0.1').remove() we can define source_interface and
+        # vlan_id here, as it's quiet obvious that it would be eth0 in that case.
+        if 'source_interface' not in self.config:
+            self.config['source_interface'] = '.'.join(self.ifname.split('.')[:-1])
+        if 'vlan_id' not in self.config:
+            self.config['vlan_id'] = self.ifname.split('.')[-1]
+
         cmd = 'ip link add link {source_interface} name {ifname} type vlan id {vlan_id}'
         if 'protocol' in self.config:
             cmd += ' protocol {protocol}'
