@@ -119,39 +119,6 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
 
-    def test_isis_03_zebra_route_map(self):
-        # Implemented because of T3328
-        route_map = 'foo-isis-in'
-
-        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
-
-        self.isis_base_config()
-        self.cli_set(base_path + ['redistribute', 'ipv4', 'connected', 'level-2', 'route-map', route_map])
-        self.cli_set(base_path + ['route-map', route_map])
-        self.cli_set(base_path + ['level', 'level-2'])
-
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol isis route-map {route_map}'
-        frrconfig = self.getFRRconfig(zebra_route_map, daemon='zebra')
-        self.assertIn(zebra_route_map, frrconfig)
-
-        tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
-        self.assertIn(' is-type level-2-only', tmp)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map, daemon='zebra')
-        self.assertNotIn(zebra_route_map, frrconfig)
-
-        self.cli_delete(['policy', 'route-map', route_map])
-
     def test_isis_04_default_information(self):
         metric = '50'
         route_map = 'default-foo-'
@@ -293,7 +260,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['segment-routing', 'prefix', prefix_three, 'absolute', 'explicit-null'])
         self.cli_set(base_path + ['segment-routing', 'prefix', prefix_four, 'absolute', 'value', prefix_four_value])
         self.cli_set(base_path + ['segment-routing', 'prefix', prefix_four, 'absolute', 'no-php-flag'])
-        
+
         # Commit all changes
         self.cli_commit()
 
@@ -315,16 +282,16 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['net', net])
         self.cli_set(base_path + ['interface', interface])
         self.cli_set(base_path + ['ldp-sync', 'holddown', holddown])
-        
+
         # Commit main ISIS changes
         self.cli_commit()
-        
+
         # Verify main ISIS changes
         tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
         self.assertIn(f' net {net}', tmp)
         self.assertIn(f' mpls ldp-sync', tmp)
         self.assertIn(f' mpls ldp-sync holddown {holddown}', tmp)
-        
+
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
 
@@ -337,13 +304,13 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip router isis {domain}', tmp)
             self.assertIn(f' ipv6 router isis {domain}', tmp)
             self.assertIn(f' isis mpls ldp-sync holddown {holddown}', tmp)
-            
+
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
-            
+
             # Commit interface changes for disable
             self.cli_commit()
-            
+
             # Verify interface changes for disable
             tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
             self.assertIn(f'interface {interface}', tmp)

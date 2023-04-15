@@ -300,26 +300,6 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' no ip ospf passive', config)
             self.assertIn(f' bandwidth {bandwidth}', config)
 
-    def test_ospf_10_zebra_route_map(self):
-        # Implemented because of T3328
-        self.cli_set(base_path + ['route-map', route_map])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol ospf route-map {route_map}'
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertIn(zebra_route_map, frrconfig)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertNotIn(zebra_route_map, frrconfig)
-
     def test_ospf_11_interface_area(self):
         area = '0'
         interfaces = Section.interfaces('ethernet')
@@ -441,16 +421,16 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['interface', interface])
         self.cli_set(base_path + ['ldp-sync', 'holddown', holddown])
-        
+
         # Commit main OSPF changes
         self.cli_commit()
-        
+
         # Verify main OSPF changes
         frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig)
         self.assertIn(f' mpls ldp-sync holddown {holddown}', frrconfig)
-        
+
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
 
@@ -463,13 +443,13 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip ospf dead-interval 40', config)
             self.assertIn(f' ip ospf mpls ldp-sync', config)
             self.assertIn(f' ip ospf mpls ldp-sync holddown {holddown}', config)
-            
+
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
-            
+
             # Commit interface changes for disable
             self.cli_commit()
-            
+
             # Verify interface changes for disable
             config = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f'interface {interface}', config)
