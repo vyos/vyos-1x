@@ -14,425 +14,290 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.util import call
 import os
 
-
-def header(cmd):
-    print(16 * '-' + '\n' + cmd + '\n' + 16 * '-')
-    return
-
-
-# get intefaces info
-interfaces_list = os.popen('ls /sys/class/net/ | grep eth').read().split()
-bridges_list = os.popen('ls /sys/class/net/ | grep br').read().split()
-
-###################### THE PART OF CONFIGURATION ######################
-
-cmd_list_conf = [
-    "VyOS Version and Package Changes%/opt/vyatta/bin/vyatta-op-cmd-wrapper show version all",
-    "Configuration File%cat /opt/vyatta/etc/config/config.boot",
-    "Running configuration%/opt/vyatta/bin/vyatta-op-cmd-wrapper show configuration",
-    "Package Repository Configuration File%cat /etc/apt/sources.list",
-    "User Startup Scripts%cat /etc/rc.local",
-    "Quagga Configuration%vtysh -c 'show run'"
-]
+from typing import List
+from vyos.util import rc_cmd
+from vyos.ifconfig import Section
+from vyos.ifconfig import Interface
 
 
-def CONFIGURATION(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        head = line[0]
-        command = line[1]
-        header(head)
-        call(command)
-    return
+def print_header(command: str) -> None:
+    """Prints a command with headers '-'.
+
+    Example:
+
+    % print_header('Example command')
+
+    ---------------
+    Example command
+    ---------------
+    """
+    header_length = len(command) * '-'
+    print(f"\n{header_length}\n{command}\n{header_length}")
 
 
-###################### THE PART OF INTERFACES ######################
+def execute_command(command: str, header_text: str) -> None:
+    """Executes a command and prints the output with a header.
 
-cmd_list_int = [
-    "Interfaces%/opt/vyatta/bin/vyatta-op-cmd-wrapper show interfaces",
-    "Ethernet",
-    "Interface statistics%ip -s link show",
-    "Physical Interface statistics for%ethtool -S",
-    "Physical Interface Details for %/opt/vyatta/bin/vyatta-op-cmd-wrapper show interfaces ethernet%ethtool -k $eth",
-    "ARP Table (Total entries)%/opt/vyatta/bin/vyatta-op-cmd-wrapper show arp",
-    "Number of incomplete entries in ARP table%show arp | grep incomplete | wc -l",
-    "Bridges"
-]
+    Example:
+    % execute_command('uptime', "Uptime of the system")
 
+    --------------------
+    Uptime of the system
+    --------------------
+    20:21:57 up  9:04,  5 users,  load average: 0.00, 0.00, 0.0
 
-def INTERFACES(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        head = line[0]
-        if command_line.startswith("Ethernet"):
-            header(command_line)
-        elif command_line.startswith("Physical Interface statistics"):
-            for command_interface in interfaces_list:
-                header(f'{head} {command_interface}')
-                call(f'{line[1]} {command_interface}')
-        elif command_line.startswith("Physical Interface Details"):
-            for command_interface in interfaces_list:
-                header(f'{head} {command_interface}')
-                call(f'{line[1]} {command_interface} physical')
-                call(f'{line[2]} {command_interface}')
-        elif command_line.startswith("Bridges"):
-            header(command_line)
-            for command_interface in bridges_list:
-                header(f'Information for {command_interface}')
-                call(f'/sbin/brctl showstp {command_interface}')
-                call(f'/sbin/brctl showmacs {command_interface}')
-        else:
-            command = line[1]
-            header(head)
-            call(command)
-    return
+    """
+    print_header(header_text)
+    try:
+        rc, output = rc_cmd(command)
+        print(output)
+    except Exception as e:
+        print(f"Error executing command: {command}")
+        print(f"Error message: {e}")
 
 
-###################### THE PART OF ROUTING ######################
-
-cmd_list_route = [
-    "show ip route bgp",
-    "show ip route cache",
-    "show ip route connected",
-    "show ip route forward",
-    "show ip route isis",
-    "show ip route kernel",
-    "show ip route ospf",
-    "show ip route rip",
-    "show ip route static",
-    "show ip route summary",
-    "show ip route supernets-only",
-    "show ip route table",
-    "show ip route tag",
-    "show ip route vrf",
-    "show ipv6 route bgp",
-    "show ipv6 route cache",
-    "show ipv6 route connected",
-    "show ipv6 route forward",
-    "show ipv6 route isis",
-    "show ipv6 route kernel",
-    "show ipv6 route ospf",
-    "show ipv6 route rip",
-    "show ipv6 route static",
-    "show ipv6 route summary",
-    "show ipv6 route supernets-only",
-    "show ipv6 route table",
-    "show ipv6 route tag",
-    "show ipv6 route vrf",
-]
+def op(cmd: str) -> str:
+    """Returns a command with the VyOS operational mode wrapper."""
+    return f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {cmd}'
 
 
-def ROUTING(cmd):
-    for command_line in cmd:
-        head = command_line
-        command = command_line
-        header(head)
-        call(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {command}')
-    return
+def get_ethernet_interfaces() -> List[Interface]:
+    """Returns a list of Ethernet interfaces."""
+    return Section.interfaces('ethernet')
 
 
-###################### THE PART OF IPTABLES ######################
-
-cmd_list_iptables = [
-    "Filter Chain Details%sudo /sbin/iptables -L -vn",
-    "Nat Chain Details%sudo /sbin/iptables -t nat -L -vn",
-    "Mangle Chain Details%sudo /sbin/iptables -t mangle -L -vn",
-    "Raw Chain Details%sudo /sbin/iptables -t raw -L -vn",
-    "Save Iptables Rule-Set%sudo iptables-save -c"
-]
+def show_version() -> None:
+    """Prints the VyOS version and package changes."""
+    execute_command(op('show version'), 'VyOS Version and Package Changes')
 
 
-def IPTABLES(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        head = line[0]
-        command = line[1]
-        header(head)
-        call(command)
-    return
+def show_config_file() -> None:
+    """Prints the contents of a configuration file with a header."""
+    execute_command('cat /opt/vyatta/etc/config/config.boot', 'Configuration file')
 
 
-###################### THE PART OF SYSTEM ######################
-
-cmd_list_system = [
-    "Show System Image Version%show system image version",
-    "Show System Image Storage%show system image storage",
-    "Current Time%date",
-    "Installed Packages%dpkg -l",
-    "Loaded Modules%cat /proc/modules",
-    "CPU",
-    "Installed CPU/s%lscpu",
-    "Cumulative CPU Time Used by Running Processes%top -n1 -b -S",
-    "Hardware Interrupt Counters%cat /proc/interrupts",
-    "Load Average%cat /proc/loadavg"
-]
+def show_running_config() -> None:
+    """Prints the running configuration."""
+    execute_command(op('show configuration'), 'Running configuration')
 
 
-def SYSTEM(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        head = line[0]
-        if command_line.startswith("CPU"):
-            header(command_line)
-        elif line[1].startswith("show"):
-            header(head)
-            command = line[1]
-            call(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {command}')
-        else:
-            header(head)
-            command = line[1]
-            call(command)
-    return
+def show_package_repository_config() -> None:
+    """Prints the package repository configuration file."""
+    execute_command('cat /etc/apt/sources.list', 'Package Repository Configuration File')
+    execute_command('ls -l /etc/apt/sources.list.d/', 'Repositories')
 
 
-###################### THE PART OF PROCESSES ######################
-
-cmd_list_processes = [
-    "Running Processes%ps -ef",
-    "Memory",
-    "Installed Memory%cat /proc/meminfo",
-    " Memory Usage%free",
-    "Storage",
-    "Devices%cat /proc/devices",
-    "Partitions%cat /proc/partitions",
-    "Partitioning for disks%fdisk -l /dev/"
-]
+def show_user_startup_scripts() -> None:
+    """Prints the user startup scripts."""
+    execute_command('cat /config/scripts/vyos-postconfig-bootup.script', 'User Startup Scripts')
 
 
-def PROCESSES(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        head = line[0]
-        if command_line.startswith("Memory"):
-            header(command_line)
-        elif command_line.startswith("Storage"):
-            header(command_line)
-        elif command_line.startswith("Partitioning for disks"):
-            header(head)
-            disks = set()
-            with open('/proc/partitions') as partitions_file:
-                for line in partitions_file:
-                    fields = line.strip().split()
-                    if len(fields) == 4 and fields[3].isalpha() and fields[3] != 'name':
-                        disks.add(fields[3])
-                for disk in disks:
-                    call(f'fdisk -l /dev/{disk}')
-        else:
-            header(head)
-            command = line[1]
-            call(command)
-    return
+def show_frr_config() -> None:
+    """Prints the FRR configuration."""
+    execute_command('vtysh -c "show run"', 'FRR configuration')
 
 
-###################### THE PART OF CORE SECTION ######################
-
-cmd_list_core = [
-    "Mounts%cat /proc/mounts",
-    "Diskstats%cat /proc/diskstats",
-    "Hard Drive Usage%df -h -x squashfs",
-    # "General System",
-    "Boot Messages%cat /var/log/dmesg",
-    "Recent Kernel messages (dmesg)%dmesg",
-    "PCI Info%sudo lspci -vvx",
-    "PCI Vendor and Device Codes%sudo lspci -nn",
-    # "System Info%${vyatta_bindir}/vyatta-show-dmi",
-    "GRUB Command line%cat /proc/cmdline",
-    "Open Ports%sudo lsof -P -n -i",
-    "System Startup Files%ls -l /etc/rc?.d",
-    "Login History%last -ix",
-    "Recent Log Messages%tail -n 250 /var/log/messages",
-    "NTP%/opt/vyatta/bin/vyatta-op-cmd-wrapper show ntp",
-]
+def show_interfaces() -> None:
+    """Prints the interfaces."""
+    execute_command(op('show interfaces'), 'Interfaces')
 
 
-def CORE(cmd):
-    for command_line in cmd:
-        line = command_line.split('%')
-        command = line[1]
-        header(line[0])
-        call(command)
-    return
+def show_interface_statistics() -> None:
+    """Prints the interface statistics."""
+    execute_command('ip -s link show', 'Interface statistics')
 
 
-###################### THE PART OF VyOS INFORMATION ######################
-
-cmd_list_vyos = [
-    "BGP",
-    "header BGP Summary",
-    "show ip bgp summary",
-    "header BGP Neighbors",
-    "show ip bgp neighbors",
-    "header BGP Debugging Information",
-    "show monitoring protocols bgp",
-    "CLUSTERING",
-    "Cluster Status",
-    "show cluster status",
-    "DHCP Server",
-    "DHCP Leases",
-    "show dhcp server leases",
-    "DHCP Statistics",
-    "show dhcp server statistics",
-    "DHCP Client",
-    "DHCP Client Leases",
-    "show dhcp client leases",
-    "DHCPV6 Server",
-    "DHCPV6 Server Status",
-    "show dhcpv6 server status",
-    "DHCPV6 Server Leases",
-    "show dhcpv6 server leases",
-    "DHCPV6 Relay",
-    "DHCPV6 Relay Status",
-    "show dhcpv6 relay-agent status",
-    "DHCPV6 Client",
-    "DHCPV6 Client Leases",
-    "show dhcpv6 client leases",
-    "DNS",
-    "DNS Dynamic Status",
-    "show dns dynamic status",
-    "DNS Forwarding Statistics",
-    "show dns forwarding statistics",
-    "DNS Forwarding Nameservers",
-    "show dns forwarding nameservers",
-    "FIREWALL",
-    "Firewall Group",
-    "show firewall group",
-    "Firewall Summary",
-    "show firewall summary",
-    "Firewall Statistics",
-    "show firewall statistics",
-    "IPSec",
-    "IPSec Status",
-    "show vpn ipsec status",
-    "IPSec sa",
-    "show vpn ipsec sa",
-    "IPSec sa Detail",
-    "show vpn ipsec sa detail",
-    "IPSec sa Statistics",
-    "show vpn ipsec sa statistics",
-    "/etc/ipsec.conf",
-    "cat /etc/ipsec.conf",
-    "/etc/ipsec.secrets",
-    "cat /etc/ipsec.secrets",
-    "NAT",
-    "NAT Rules",
-    "show nat rules",
-    "NAT Statistics",
-    "show nat statistics",
-    "NAT Translations Detail",
-    "show nat translations detail",
-    "FlowAccounting",
-    "show flow-accounting",
-    "OPENVPN",
-    "OpenVPN Interfaces",
-    "show interfaces openvpn detail",
-    "OpenVPN Server Status",
-    "show openvpn status server",
-    "OSPF",
-    "OSPF Neighbor",
-    "show ip ospf neighbor",
-    "OSPF Route",
-    "show ip ospf route",
-    "OSPF Debugging Information",
-    "show monitoring protocols ospf",
-    "OSPFV3",
-    "OSPFV3 Debugging Information",
-    "show monitoring protocols ospfv3",
-    "Policy",
-    "IP Route Maps",
-    "show ip protocol",
-    "Route-Map",
-    "show route-map",
-    # header IP Access Lists
-    # show ip access-lists
-    "IP Community List",
-    "show ip community-list",
-    "Traffic Policy",
-    "Current Traffic Policies",
-    "show queueing",
-    "RIP",
-    "IP RIP",
-    "show ip rip",
-    "RIP Status",
-    "show ip rip status",
-    "RIP Debugging Information",
-    "show monitoring protocols rip",
-    "RIPNG",
-    "RIPNG Debugging Information",
-    "show monitoring protocols ripng",
-    "VPN-L2TP",
-    "VPN ike secrets",
-    "show vpn ike secrets",
-    "VPN rsa-keys",
-    "show vpn ike rsa-keys",
-    "VPN ike sa",
-    "show vpn ike sa",
-    "VPN ike Status",
-    "show vpn ike status",
-    "VPN Remote-Access",
-    "show vpn remote-access",
-    "VPN Debug Detail",
-    "show vpn debug detail",
-    "VPN-PPTP",
-    "VPN Remote-Access",
-    "show vpn remote-access",
-    "VRRP",
-    # XXX: not checking if configured, we'd have to walk all VIFs
-    "show vrrp detail",
-    "WAN LOAD BALANCING",
-    "Wan Load Balance",
-    "show wan-load-balance",
-    "Wan Load Balance Status",
-    "show wan-load-balance status",
-    "Wan Load Balance Connection",
-    "show wan-load-balance connection",
-    "WEBPROXY/URL-FILTERING",
-    "WebProxy Blacklist Categories",
-    "show webproxy blacklist categories",
-    "WebProxy Blacklist Domains",
-    "show webproxy blacklist domains",
-    "WebProxy Blacklist URLs",
-    "show webproxy blacklist urls",
-    "WebProxy Blacklist Log",
-    "show webproxy blacklist log summary",
-]
+def show_physical_interface_statistics() -> None:
+    """Prints the physical interface statistics."""
+    execute_command('/usr/bin/true', 'Physical Interface statistics')
+    for iface in get_ethernet_interfaces():
+        # Exclude vlans
+        if '.' in iface:
+            continue
+        execute_command(f'ethtool --driver {iface}', f'ethtool --driver {iface}')
+        execute_command(f'ethtool --statistics {iface}', f'ethtool --statistics {iface}')
+        execute_command(f'ethtool --show-ring {iface}', f'ethtool --show-ring {iface}')
+        execute_command(f'ethtool --show-coalesce {iface}', f'ethtool --show-coalesce {iface}')
+        execute_command(f'ethtool --pause {iface}', f'ethtool --pause {iface}')
+        execute_command(f'ethtool --show-features {iface}', f'ethtool --show-features {iface}')
+        execute_command(f'ethtool --phy-statistics {iface}', f'ethtool --phy-statistics {iface}')
+    execute_command('netstat --interfaces', 'netstat --interfaces')
+    execute_command('netstat --listening', 'netstat --listening')
+    execute_command('cat /proc/net/dev', 'cat /proc/net/dev')
 
 
-def VyOS(cmd):
-    for command_line in cmd:
-        if command_line.startswith("show"):
-            call(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {command_line}')
-        elif command_line.startswith("cat"):
-            call(command_line)
-        else:
-            header(command_line)
-    return
+def show_bridge() -> None:
+    """Show bridge interfaces."""
+    execute_command(op('show bridge'), 'Show bridge')
 
 
-###################### execute all the commands ######################
+def show_arp() -> None:
+    """Prints ARP entries."""
+    execute_command(op('show arp'), 'ARP Table (Total entries)')
+    execute_command(op('show ipv6 neighbors'), 'show ipv6 neighbors')
 
-header('CONFIGURATION')
-CONFIGURATION(cmd_list_conf)
 
-header('INTERFACES')
-INTERFACES(cmd_list_int)
+def show_route() -> None:
+    """Prints routing information."""
 
-header('ROUTING')
-ROUTING(cmd_list_route)
+    cmd_list_route = [
+        "show ip route bgp | head -108",
+        "show ip route cache",
+        "show ip route connected",
+        "show ip route forward",
+        "show ip route isis | head -108",
+        "show ip route kernel",
+        "show ip route ospf | head -108",
+        "show ip route rip",
+        "show ip route static",
+        "show ip route summary",
+        "show ip route supernets-only",
+        "show ip route table all",
+        "show ip route vrf all",
+        "show ipv6 route bgp | head 108",
+        "show ipv6 route cache",
+        "show ipv6 route connected",
+        "show ipv6 route forward",
+        "show ipv6 route isis",
+        "show ipv6 route kernel",
+        "show ipv6 route ospf",
+        "show ipv6 route rip",
+        "show ipv6 route static",
+        "show ipv6 route summary",
+        "show ipv6 route table all",
+        "show ipv6 route vrf all",
+    ]
+    for command in cmd_list_route:
+        execute_command(op(command), command)
 
-header('IPTABLES')
-IPTABLES(cmd_list_iptables)
 
-header('SYSTEM')
-SYSTEM(cmd_list_system)
+def show_firewall() -> None:
+    """Prints firweall information."""
+    execute_command('sudo nft list ruleset', 'nft list ruleset')
 
-header('PROCESSES')
-PROCESSES(cmd_list_processes)
 
-header('CORE')
-CORE(cmd_list_core)
+def show_system() -> None:
+    """Prints system parameters."""
+    execute_command(op('show system image version'), 'Show System Image Version')
+    execute_command(op('show system image storage'), 'Show System Image Storage')
 
-header('VyOS Information')
-VyOS(cmd_list_vyos)
+
+def show_date() -> None:
+    """Print the current date."""
+    execute_command('date', 'Current Time')
+
+
+def show_installed_packages() -> None:
+    """Prints installed packages."""
+    execute_command('dpkg --list', 'Installed Packages')
+
+
+def show_loaded_modules() -> None:
+    """Prints loaded modules /proc/modules"""
+    execute_command('cat /proc/modules', 'Loaded Modules')
+
+
+def show_cpu_statistics() -> None:
+    """Prints CPU statistics."""
+    execute_command('/usr/bin/true', 'CPU')
+    execute_command('lscpu', 'Installed CPU\'s')
+    execute_command('top --iterations 1 --batch-mode --accum-time-toggle', 'Cumulative CPU Time Used by Running Processes')
+    execute_command('cat /proc/loadavg', 'Load Average')
+
+
+def show_system_interrupts() -> None:
+    """Prints system interrupts."""
+    execute_command('cat /proc/interrupts', 'Hardware Interrupt Counters')
+
+
+def show_soft_irqs() -> None:
+    """Prints soft IRQ's."""
+    execute_command('cat /proc/softirqs', 'Soft IRQ\'s')
+
+
+def show_softnet_statistics() -> None:
+    """Prints softnet statistics."""
+    execute_command('cat /proc/net/softnet_stat', 'cat /proc/net/softnet_stat')
+
+
+def show_running_processes() -> None:
+    """Prints current running processes"""
+    execute_command('ps -ef', 'Running Processes')
+
+
+def show_memory_usage() -> None:
+    """Prints memory usage"""
+    execute_command('/usr/bin/true', 'Memory')
+    execute_command('cat /proc/meminfo', 'Installed Memory')
+    execute_command('free', 'Memory Usage')
+
+
+def list_disks():
+    disks = set()
+    with open('/proc/partitions') as partitions_file:
+        for line in partitions_file:
+            fields = line.strip().split()
+            if len(fields) == 4 and fields[3].isalpha() and fields[3] != 'name':
+                disks.add(fields[3])
+    return disks
+
+
+def show_storage() -> None:
+    """Prints storage information."""
+    execute_command('cat /proc/devices', 'Devices')
+    execute_command('cat /proc/partitions', 'Partitions')
+
+    for disk in list_disks():
+        execute_command(f'fdisk --list /dev/{disk}', f'Partitioning for disk {disk}')
+
+
+def main():
+    # Configuration data
+    show_version()
+    show_config_file()
+    show_running_config()
+    show_package_repository_config()
+    show_user_startup_scripts()
+    show_frr_config()
+
+    # Interfaces
+    show_interfaces()
+    show_interface_statistics()
+    show_physical_interface_statistics()
+    show_bridge()
+    show_arp()
+
+    # Routing
+    show_route()
+
+    # Firewall
+    show_firewall()
+
+    # System
+    show_system()
+    show_date()
+    show_installed_packages()
+    show_loaded_modules()
+
+    # CPU
+    show_cpu_statistics()
+    show_system_interrupts()
+    show_soft_irqs()
+    show_softnet_statistics()
+
+    # Memory
+    show_memory_usage()
+
+    # Storage
+    show_storage()
+
+    # Processes
+    show_running_processes()
+
+    # TODO: Get information from clouds
+
+
+if __name__ == "__main__":
+    main()
