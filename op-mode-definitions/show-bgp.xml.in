@@ -51,6 +51,33 @@
             </properties>
             <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </leafNode>
+          #include <include/vni-tagnode-all.xml.i>
+          <tagNode name="vni">
+            <children>
+              <tagNode name="vtep">
+                <properties>
+                  <help>Remote VTEP IP address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </tagNode>
+              <node name="type">
+                <properties>
+                  <help>Display number of prefixes for all afi/safi</help>
+                </properties>
+                <children>
+                  #include <include/bgp/evpn-type-1.xml.i>
+                  #include <include/bgp/evpn-type-2.xml.i>
+                  #include <include/bgp/evpn-type-3.xml.i>
+                  #include <include/bgp/evpn-type-ead.xml.i>
+                  #include <include/bgp/evpn-type-macip.xml.i>
+                  #include <include/bgp/evpn-type-multicast.xml.i>
+                </children>
+              </node>
+            </children>
+          </tagNode>
           <leafNode name="vrf">
             <properties>
               <help>Show BGP VRF information</help>

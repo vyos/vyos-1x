@@ -171,66 +171,16 @@
                 <help>Specify Route type</help>
               </properties>
               <children>
-                <leafNode name="1">
-                  <properties>
-                    <help>EAD (Type-1) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="2">
-                  <properties>
-                    <help>MAC-IP (Type-2) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="3">
-                  <properties>
-                    <help>Multicast (Type-3) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="4">
-                  <properties>
-                    <help>Ethernet Segment (Type-4) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="5">
-                  <properties>
-                    <help>Prefix (Type-5) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="ead">
-                  <properties>
-                    <help>EAD (Type-1) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="es">
-                  <properties>
-                    <help>Ethernet Segment (Type-4) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="macip">
-                  <properties>
-                    <help>MAC-IP (Type-2) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="multicast">
-                  <properties>
-                    <help>Multicast (Type-3) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
-                <leafNode name="prefix">
-                  <properties>
-                    <help>Prefix (Type-5) route</help>
-                  </properties>
-                  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-                </leafNode>
+                #include <include/bgp/evpn-type-1.xml.i>
+                #include <include/bgp/evpn-type-2.xml.i>
+                #include <include/bgp/evpn-type-3.xml.i>
+                #include <include/bgp/evpn-type-4.xml.i>
+                #include <include/bgp/evpn-type-5.xml.i>
+                #include <include/bgp/evpn-type-ead.xml.i>
+                #include <include/bgp/evpn-type-es.xml.i>
+                #include <include/bgp/evpn-type-macip.xml.i>
+                #include <include/bgp/evpn-type-multicast.xml.i>
+                #include <include/bgp/evpn-type-prefix.xml.i>
               </children>
             </node>
             #include <include/vni-tagnode-all.xml.i>
