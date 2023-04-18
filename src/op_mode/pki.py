@@ -87,6 +87,9 @@ def get_config_certificate(name=None):
 
 def get_certificate_ca(cert, ca_certs):
     # Find CA certificate for given certificate
+    if not ca_certs:
+        return None
+
     for ca_name, ca_dict in ca_certs.items():
         if 'certificate' not in ca_dict:
             continue
