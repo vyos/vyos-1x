@@ -12,11 +12,11 @@ run-as-group = daemon
 
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf{{ ',groupconfig=true' if authentication.radius.groupconfig is vyos_defined else '' }}]"
-{%     if "config_per_x" in authentication %}
-{%         if authentication.config_per_x.disabled is not vyos_defined %}
-{%             if "group" in authentication.config_per_x.mode %}
-config-per-group = {{ authentication.config_per_x.directory }}
-default-group-config = {{ authentication.config_per_x.default_config }}
+{%     if "identity_based_config" in authentication %}
+{%         if authentication.identity_based_config.disabled is not vyos_defined %}
+{%             if "group" in authentication.identity_based_config.mode %}
+config-per-group = {{ authentication.identity_based_config.directory }}
+default-group-config = {{ authentication.identity_based_config.default_config }}
 {%             endif %}
 {%         endif %}
 {%     endif %}
@@ -32,10 +32,10 @@ auth = "plain[/run/ocserv/ocpasswd]"
 auth = "plain[/run/ocserv/ocpasswd]"
 {% endif %}
 
-{% if "config_per_x" in authentication %}
-{%     if "user" in authentication.config_per_x.mode %}
-config-per-user = {{ authentication.config_per_x.directory }}
-default-user-config = {{ authentication.config_per_x.default_config }}
+{% if "identity_based_config" in authentication %}
+{%     if "user" in authentication.identity_based_config.mode %}
+config-per-user = {{ authentication.identity_based_config.directory }}
+default-user-config = {{ authentication.identity_based_config.default_config }}
 {%     endif %}
 {% endif %}
 

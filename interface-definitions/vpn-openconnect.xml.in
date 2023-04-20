@@ -50,7 +50,7 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/openconnect-config-per-x.xml.i>
+              #include <include/openconnect-identity-based-config.xml.i>
               <leafNode name="group">
                 <properties>
                   <help>Group that a client is allowed to select (from a list). Maps to RADIUS Class attribute.</help>

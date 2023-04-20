@@ -1,5 +1,5 @@
-<!-- include start from openconnect-config-per-x.xml.i -->
-<node name="config-per-x">
+<!-- include start from openconnect-identity-based-config.xml.i -->
+<node name="identity-based-config">
     <properties>
         <help>Configures OpenConnect to search the configured directory for a config file matching the Group name or Username</help>
     </properties>
