@@ -204,12 +204,37 @@
                 </properties>
                 <command>sudo ip xfrm policy list</command>
               </node>
-              <leafNode name="remote-access">
-                 <properties>
-                   <help>Show active VPN server sessions</help>
-                 </properties>
-                <command>${vyos_op_scripts_dir}/show_vpn_ra.py</command>
-              </leafNode>
+              <node name="remote-access">
+                <properties>
+                  <help>Show active VPN server sessions</help>
+                </properties>
+                <children>
+                  <node name="detail">
+                    <properties>
+                      <help>Show detail active IKEv2 RA sessions</help>
+                    </properties>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail; else echo "IPsec process not running" ; fi</command>
+                  </node>
+                  <tagNode name="connection-id">
+                    <properties>
+                      <help>Show detail active IKEv2 RA sessions by connection-id</help>
+                    </properties>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --conn_id="$6"; else echo "IPsec process not running" ; fi</command>
+                  </tagNode>
+                  <node name="summary">
+                    <properties>
+                      <help>Show active IKEv2 RA sessions summary</help>
+                    </properties>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_summary; else echo "IPsec process not running" ; fi</command>
+                  </node>
+                  <tagNode name="username">
+                    <properties>
+                      <help>Show detail active IKEv2 RA sessions by username</help>
+                    </properties>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --username="$6"; else echo "IPsec process not running" ; fi</command>
+                  </tagNode>
+                </children>
+              </node>
               <node name="sa">
                 <properties>
                   <help>Show all active IPsec Security Associations (SA)</help>
@@ -241,11 +266,11 @@
                     <command></command>
                   </tagNode>
                   -->
-                  <node name="verbose">
+                  <node name="detail">
                     <properties>
                       <help>Show Verbose Detail on all active IPsec Security Associations (SA)</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo /usr/sbin/ipsec statusall ; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa_detail ; else echo "IPsec process not running" ; fi</command>
                   </node>
                 </children>
                 <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_sa ; else echo "IPsec process not running" ; fi</command>
