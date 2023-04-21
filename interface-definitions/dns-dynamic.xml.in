@@ -14,10 +14,17 @@
             <children>
               <tagNode name="interface">
                 <properties>
-                  <help>Interface to send DDNS updates for</help>
+                  <help>Interface to send Dynamic DNS updates for</help>
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces</script>
                   </completionHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Interface name</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
                 </properties>
                 <children>
                   <tagNode name="rfc2136">
@@ -127,144 +134,59 @@
                     <children>
                       <leafNode name="host-name">
                         <properties>
-                          <help>Hostname registered with DDNS service</help>
+                          <help>Hostname to register with Dynamic DNS service</help>
                           <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="login">
                         <properties>
-                          <help>Login for DDNS service</help>
+                          <help>Login for Dynamic DNS service (not used by all protocols, or referred as api-token in some cases)</help>
                         </properties>
                       </leafNode>
                       <leafNode name="password">
                         <properties>
-                          <help>Password for DDNS service</help>
+                          <help>Password for Dynamic DNS service (referred as api-token, global-token or api-secret in some cases)</help>
                         </properties>
                       </leafNode>
                       <leafNode name="protocol">
                         <properties>
-                          <help>ddclient protocol used for DDNS service</help>
+                          <help>ddclient protocol used for Dynamic DNS service</help>
                           <completionHelp>
-                            <list>changeip cloudflare dnsmadeeasy dnspark dondominio dslreports1 dtdns duckdns dyndns2 easydns freedns freemyip googledomains hammernode1 namecheap nfsn noip sitelutions woima yandex zoneedit1</list>
+                            <script>${vyos_completion_dir}/list_ddclient_protocols.sh</script>
                           </completionHelp>
-                          <valueHelp>
-                            <format>changeip</format>
-                            <description>ChangeIP protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>cloudflare</format>
-                            <description>Cloudflare protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dnsmadeeasy</format>
-                            <description>DNS Made Easy protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dnspark</format>
-                            <description>DNS Park protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dondominio</format>
-                            <description>DonDominio protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dslreports1</format>
-                            <description>DslReports protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dtdns</format>
-                            <description>DtDNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>duckdns</format>
-                            <description>DuckDNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>dyndns2</format>
-                            <description>DynDNS protocol v2</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>easydns</format>
-                            <description>easyDNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>freedns</format>
-                            <description>FreeDNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>freemyip</format>
-                            <description>freemyip protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>googledomains</format>
-                            <description>Google domains protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>hammernode1</format>
-                            <description>Hammernode protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>namecheap</format>
-                            <description>Namecheap protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>nfsn</format>
-                            <description>NearlyFreeSpeech DNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>noip</format>
-                            <description>No-IP protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>sitelutions</format>
-                            <description>Sitelutions protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>woima</format>
-                            <description>WOIMA protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>yandex</format>
-                            <description>Yandex.DNS protocol</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>zoneedit1</format>
-                            <description>Zoneedit protocol</description>
-                          </valueHelp>
                           <constraint>
-                            <regex>(changeip|cloudflare|dnsmadeeasy|dnspark|dondominio|dslreports1|dtdns|duckdns|dyndns2|easydns|freedns|freemyip|googledomains|hammernode1|namecheap|nfsn|noip|sitelutions|woima|yandex|zoneedit1)</regex>
+                            <validator name="ddclient-protocol"/>
                           </constraint>
-                          <constraintErrorMessage>Please choose from the list of allowed protocols</constraintErrorMessage>
                         </properties>
                       </leafNode>
                       #include <include/server-ipv4-fqdn.xml.i>
                       <leafNode name="zone">
                         <properties>
-                          <help>DNS zone to update (only available with CloudFlare)</help>
+                          <help>DNS zone to update (not used by all protocols)</help>
                         </properties>
                       </leafNode>
                     </children>
                   </tagNode>
                   <node name="use-web">
                     <properties>
-                      <help>Web check used for obtaining the external IP address</help>
+                      <help>Use http(s) web request to obtain the external IP address instead of the IP address associated with the interface</help>
                     </properties>
                     <children>
                       <leafNode name="skip">
                         <properties>
-                          <help>Skip everything before this on the given URL</help>
+                          <help>Text pattern to skip from the respose of the given URL to extract the external IP address</help>
                         </properties>
                       </leafNode>
                       <leafNode name="url">
                         <properties>
-                          <help>URL to obtain the current external IP address</help>
+                          <help>Custom URL to obtain the current external IP address over http(s) web request, overriding ddclient default</help>
                         </properties>
                       </leafNode>
                     </children>
                   </node>
                   <leafNode name="ipv6-enable">
                     <properties>
-                      <help>Allow explicit IPv6 addresses for Dynamic DNS for this interface</help>
+                      <help>Explicitly use IPv6 address instead of IPv4 address to update the Dynamic DNS IP address</help>
                       <valueless/>
                     </properties>
                   </leafNode>
