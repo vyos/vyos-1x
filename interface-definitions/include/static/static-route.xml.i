@@ -51,6 +51,7 @@
         #include <include/static/static-route-distance.xml.i>
         #include <include/static/static-route-interface.xml.i>
         #include <include/static/static-route-vrf.xml.i>
+        #include <include/static/static-route-bfd.xml.i>
       </children>
     </tagNode>
   </children>
