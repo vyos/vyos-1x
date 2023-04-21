@@ -541,10 +541,19 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
-<leafNode name="route">
+<node name="route">
   <properties>
     <help>Show IPv4 OSPF route information</help>
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</leafNode>
+  <children>
+    <leafNode name="detail">
+      <properties>
+        <help>Show detailed IPv4 OSPF route information</help>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </leafNode>
+  </children>
+</node>
 <!-- included end -->
+
