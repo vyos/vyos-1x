@@ -36,6 +36,7 @@
               #include <include/arp-ndp-table-size.xml.i>
             </children>
           </node>
+          #include <include/system-ipv6-protocol.xml.i>
           <leafNode name="strict-dad">
             <properties>
               <help>Disable IPv6 operation on interface when DAD fails on LL addr</help>

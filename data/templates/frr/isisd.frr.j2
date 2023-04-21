@@ -25,6 +25,12 @@ interface {{ iface }}
 {%         if iface_config.hello_padding is vyos_defined %}
  isis hello padding
 {%         endif %}
+{%         if iface_config.ldp_sync.disable is vyos_defined %}
+ no isis mpls ldp-sync
+{%         elif iface_config.ldp_sync.holddown is vyos_defined %}
+ isis mpls ldp-sync
+ isis mpls ldp-sync holddown {{ iface_config.ldp_sync.holddown }}
+{%         endif %}
 {%         if iface_config.metric is vyos_defined %}
  isis metric {{ iface_config.metric }}
 {%         endif %}
@@ -83,6 +89,11 @@ router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
 {% endif %}
 {% if max_lsp_lifetime is vyos_defined %}
  max-lsp-lifetime {{ max_lsp_lifetime }}
+{% endif %}
+{% if ldp_sync.holddown is vyos_defined %}
+ mpls ldp-sync holddown {{ ldp_sync.holddown }}
+{% elif ldp_sync is vyos_defined %}
+ mpls ldp-sync
 {% endif %}
 {% if spf_interval is vyos_defined %}
  spf-interval {{ spf_interval }}

@@ -12,8 +12,8 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
-          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
+          #include <include/generic-interface-multi-wildcard.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Policy rule number</help>
@@ -67,8 +67,8 @@
         </properties>
         <children>
           #include <include/generic-description.xml.i>
-          #include <include/generic-interface-multi.xml.i>
           #include <include/firewall/enable-default-log.xml.i>
+          #include <include/generic-interface-multi-wildcard.xml.i>
           <tagNode name="rule">
             <properties>
               <help>Policy rule number</help>

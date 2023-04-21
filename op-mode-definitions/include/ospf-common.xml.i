@@ -508,15 +508,15 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="interface">
+#include <include/vtysh-generic-interface-tagNode.xml.i>
+<node name="mpls">
   <properties>
-    <help>Show IPv4 OSPF information for specified interface</help>
-    <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces</script>
-    </completionHelp>
+    <help>Show MPLS information</help>
   </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
+  <children>
+  #include <include/ldp-sync.xml.i>
+  </children>
+</node>
 <node name="neighbor">
   <properties>
     <help>Show IPv4 OSPF neighbor information</help>
@@ -556,3 +556,4 @@
   </children>
 </node>
 <!-- included end -->
+

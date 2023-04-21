@@ -195,6 +195,12 @@
         </leafNode>
       </children>
     </node>
+    <leafNode name="filtered-routes">
+      <properties>
+        <help>Show filtered routes from BGP neighbor</help>
+      </properties>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </leafNode>
     <leafNode name="received-routes">
       <properties>
         <help>Show received routes from BGP neighbor</help>

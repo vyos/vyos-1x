@@ -118,7 +118,7 @@
       <description>Interface used for routing information exchange</description>
     </valueHelp>
     <constraint>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>
   <children>
@@ -256,5 +256,4 @@
     </node>
   </children>
 </node>
-#include <include/route-map.xml.i>
 <!-- include end -->

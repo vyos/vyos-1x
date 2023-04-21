@@ -4,12 +4,7 @@
     <help>Show IS-IS link state database</help>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
@@ -36,27 +31,22 @@
     </completionHelp>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
-<tagNode name="interface">
+#include <include/vtysh-generic-interface-tagNode.xml.i>
+<node name="mpls">
   <properties>
-    <help>Show specific IS-IS interface</help>
-    <completionHelp>
-      <script>${vyos_completion_dir}/list_interfaces</script>
-    </completionHelp>
+    <help>Show MPLS information</help>
   </properties>
-  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-</tagNode>
+  <children>
+  #include <include/ldp-sync.xml.i>
+  </children>
+</node>
 <node name="mpls-te">
   <properties>
-    <help>Show IS-IS MPLS traffic engineering information</help>
+    <help>Show MPLS traffic engineering information</help>
   </properties>
   <children>
     <leafNode name="router">
@@ -71,15 +61,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
-    <tagNode name="interface">
-      <properties>
-        <help>Show specific IS-IS interface</help>
-        <completionHelp>
-          <script>${vyos_completion_dir}/list_interfaces</script>
-        </completionHelp>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </tagNode>
+    #include <include/vtysh-generic-interface-tagNode.xml.i>
   </children>
 </node>
 <node name="neighbor">
@@ -87,14 +69,9 @@
     <help>Show IS-IS neighbor adjacencies</help>
   </properties>
   <children>
-    <leafNode name="detail">
-      <properties>
-        <help>Show detailed information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
+    #include <include/vtysh-generic-detail.xml.i>
   </children>
-  <command>vtysh -c "show isis neighbor"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <tagNode name="neighbor">
   <properties>
@@ -122,8 +99,14 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>
+    <leafNode name="prefix-sid">
+     <properties>
+       <help>Show Prefix-SID information</help>
+     </properties>
+     <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+   </leafNode>
   </children>
-  <command>vtysh -c "show isis route"</command>
+  <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </node>
 <node name="segment-routing">
   <properties>
@@ -133,12 +116,6 @@
     <leafNode name="node">
       <properties>
         <help>Show node information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </leafNode>
-    <leafNode name="prefix-sids">
-      <properties>
-        <help>Show prefix segment IDs</help>
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
     </leafNode>

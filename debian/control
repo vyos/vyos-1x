@@ -34,7 +34,9 @@ Package: vyos-1x
 Architecture: amd64 arm64
 Depends:
   ${python3:Depends},
+  aardvark-dns,
   accel-ppp,
+  auditd,
   avahi-daemon,
   beep,
   bmon,
@@ -80,6 +82,7 @@ Depends:
   lcdproc,
   lcdproc-extra-drivers,
   libatomic1,
+  libauparse0,
   libbpf1 [amd64],
   libcharon-extra-plugins (>=5.9),
   libcharon-extauth-plugins (>=5.9),
@@ -99,6 +102,7 @@ Depends:
   mtr-tiny,
   ndisc6,
   ndppd,
+  netavark,
   netplug,
   nfct,
   nftables (>= 0.9.3),

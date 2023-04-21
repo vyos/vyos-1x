@@ -108,9 +108,13 @@
                       </tagNode>
                     </children>
                   </node>
+                  <node name="radius">
+                    <children>
+                      #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
+                    </children>
+                  </node>
                   #include <include/radius-auth-server-ipv4.xml.i>
                   #include <include/accel-ppp/radius-additions.xml.i>
-                  #include <include/accel-ppp/radius-additions-rate-limit.xml.i>
                 </children>
               </node>
             </children>

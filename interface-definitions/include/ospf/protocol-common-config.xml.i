@@ -331,6 +331,7 @@
     </constraint>
   </properties>
 </leafNode>
+#include <include/isis/ldp-sync-protocol.xml.i>
 <node name="distance">
   <properties>
     <help>Administrative distance</help>
@@ -358,7 +359,7 @@
       <description>Interface name</description>
     </valueHelp>
     <constraint>
-      #include <include/constraint/interface-name.xml.in>
+      #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>
   <children>
@@ -385,6 +386,7 @@
     #include <include/ospf/authentication.xml.i>
     #include <include/ospf/intervals.xml.i>
     #include <include/ospf/interface-common.xml.i>
+    #include <include/isis/ldp-sync-interface.xml.i>
     <leafNode name="bandwidth">
       <properties>
         <help>Interface bandwidth (Mbit/s)</help>
@@ -814,7 +816,6 @@
     </leafNode>
   </children>
 </node>
-#include <include/route-map.xml.i>
 <node name="timers">
   <properties>
     <help>Adjust routing timers</help>

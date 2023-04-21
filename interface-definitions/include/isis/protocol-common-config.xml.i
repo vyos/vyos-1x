@@ -152,6 +152,7 @@
     </constraint>
   </properties>
 </leafNode>
+#include <include/isis/ldp-sync-protocol.xml.i>
 <leafNode name="net">
   <properties>
     <help>A Network Entity Title for this process (ISO only)</help>
@@ -172,7 +173,7 @@
 </leafNode>
 <node name="traffic-engineering">
   <properties>
-    <help>Show IS-IS neighbor adjacencies</help>
+    <help>IS-IS traffic engineering extensions</help>
   </properties>
   <children>
     <leafNode name="enable">
@@ -631,6 +632,7 @@
       </properties>
     </leafNode>
     #include <include/isis/metric.xml.i>
+    #include <include/isis/ldp-sync-interface.xml.i>
     <node name="network">
       <properties>
         <help>Set network type</help>
@@ -685,5 +687,4 @@
     </leafNode>
   </children>
 </tagNode>
-#include <include/route-map.xml.i>
 <!-- include end -->

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,7 +17,7 @@
 import os
 import re
 import sys
-import vici
+import vyos.ipsec
 
 from json import loads
 from pathlib import Path
@@ -51,9 +51,8 @@ def vici_get_ipsec_uniqueid(conn: str, src_nbma: str,
         logger.info(
             f'Resolving IKE unique ids for: conn: {conn}, '
             f'src_nbma: {src_nbma}, dst_nbma: {dst_nbma}')
-        session: vici.Session = vici.Session()
         list_ikeid: list[str] = []
-        list_sa = session.list_sas({'ike': conn})
+        list_sa: list = vyos.ipsec.get_vici_sas_by_name(conn, None)
         for sa in list_sa:
             if sa[conn]['local-host'].decode('ascii') == src_nbma \
                     and sa[conn]['remote-host'].decode('ascii') == dst_nbma:
@@ -78,16 +77,7 @@ def vici_ike_terminate(list_ikeid: list[str]) -> bool:
         return False
 
     try:
-        session = vici.Session()
-        for ikeid in list_ikeid:
-            logger.info(f'Terminating IKE SA with id {ikeid}')
-            session_generator = session.terminate(
-                {'ike-id': ikeid, 'timeout': '-1'})
-            # a dummy `for` loop is required because of requirements
-            # from vici. Without a full iteration on the output, the
-            # command to vici may not be executed completely
-            for _ in session_generator:
-                pass
+        vyos.ipsec.terminate_vici_ikeid_list(list_ikeid)
         return True
     except Exception as err:
         logger.error(f'Failed to terminate SA for IKE ids {list_ikeid}: {err}')
@@ -180,19 +170,7 @@ def vici_initiate(conn: str, child_sa: str, src_addr: str,
         f'Trying to initiate connection. Name: {conn}, child sa: {child_sa}, '
         f'src_addr: {src_addr}, dst_addr: {dest_addr}')
     try:
-        session = vici.Session()
-        session_generator = session.initiate({
-            'ike': conn,
-            'child': child_sa,
-            'timeout': '-1',
-            'my-host': src_addr,
-            'other-host': dest_addr
-        })
-        # a dummy `for` loop is required because of requirements
-        # from vici. Without a full iteration on the output, the
-        # command to vici may not be executed completely
-        for _ in session_generator:
-            pass
+        vyos.ipsec.vici_initiate(conn, child_sa, src_addr, dest_addr)
         return True
     except Exception as err:
         logger.error(f'Unable to initiate connection {err}')
@@ -218,8 +196,11 @@ def vici_terminate(conn: str, src_addr: str, dest_addr: str) -> None:
             f'No active sessions found for IKE profile {conn}, '
             f'local NBMA {src_addr}, remote NBMA {dest_addr}')
     else:
-        vici_ike_terminate(ikeid_list)
-
+        try:
+            vyos.ipsec.terminate_vici_ikeid_list(ikeid_list)
+        except Exception as err:
+            logger.error(
+                f'Failed to terminate SA for IKE ids {ikeid_list}: {err}')
 
 def iface_up(interface: str) -> None:
     """Proceed tunnel interface UP event

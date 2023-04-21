@@ -433,30 +433,5 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
 
                     self.assertIn(tmp, frrconfig)
 
-    def test_04_static_zebra_route_map(self):
-        # Implemented because of T3328
-        route_map = 'foo-static-in'
-        self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
-
-        self.cli_set(base_path + ['route-map', route_map])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        zebra_route_map = f'ip protocol static route-map {route_map}'
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertIn(zebra_route_map, frrconfig)
-
-        # Remove the route-map again
-        self.cli_delete(base_path + ['route-map'])
-        # commit changes
-        self.cli_commit()
-
-        # Verify FRR configuration
-        frrconfig = self.getFRRconfig(zebra_route_map)
-        self.assertNotIn(zebra_route_map, frrconfig)
-
-        self.cli_delete(['policy', 'route-map', route_map])
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

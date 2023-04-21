@@ -24,7 +24,7 @@
                 <script>${vyos_completion_dir}/list_interfaces</script>
               </completionHelp>
               <constraint>
-                #include <include/constraint/interface-name.xml.in>
+                #include <include/constraint/interface-name.xml.i>
               </constraint>
             </properties>
           </leafNode>
@@ -119,7 +119,7 @@
               </valueHelp>
               <multi/>
               <constraint>
-                #include <include/constraint/interface-name.xml.in>
+                #include <include/constraint/interface-name.xml.i>
                 <validator name="ipv4-address"/>
                 <validator name="ipv4-prefix"/>
                 <validator name="ipv6-address"/>

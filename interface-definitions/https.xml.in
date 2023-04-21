@@ -60,6 +60,7 @@
                   <multi/>
                 </properties>
               </leafNode>
+              #include <include/allow-client.xml.i>
             </children>
           </tagNode>
           <node name="api" owner="${vyos_conf_scripts_dir}/http-api.py">

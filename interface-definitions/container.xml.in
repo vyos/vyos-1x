@@ -117,7 +117,7 @@
             <properties>
               <help>Container host name</help>
               <constraint>
-                #include <include/constraint/host-name.xml.in>
+                #include <include/constraint/host-name.xml.i>
               </constraint>
               <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
             </properties>
@@ -191,15 +191,20 @@
             <children>
               <leafNode name="address">
                 <properties>
-                  <!-- PODMAN currently does not support more then one IPv4 or IPv6 address assignments to a container -->
                   <help>Assign static IP address to container</help>
                   <valueHelp>
                     <format>ipv4</format>
                     <description>IPv4 address</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address</description>
+                  </valueHelp>
                   <constraint>
                     <validator name="ipv4-address"/>
+                    <validator name="ipv6-address"/>
                   </constraint>
+                  <multi/>
                 </properties>
               </leafNode>
             </children>
@@ -343,11 +348,7 @@
           <constraintErrorMessage>Network name cannot be longer than 11 characters</constraintErrorMessage>
         </properties>
         <children>
-          <leafNode name="description">
-            <properties>
-              <help>Network description</help>
-            </properties>
-          </leafNode>
+          #include <include/generic-description.xml.i>
           <leafNode name="prefix">
             <properties>
               <help>Prefix which allocated to that network</help>
@@ -366,6 +367,7 @@
               <multi/>
             </properties>
           </leafNode>
+          #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>
       <tagNode name="registry">

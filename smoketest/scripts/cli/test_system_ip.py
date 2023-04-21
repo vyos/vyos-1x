@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.util import read_file
 
 base_path = ['system', 'ip']
@@ -81,6 +82,32 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(read_file(gc_thresh3), str(size))
             self.assertEqual(read_file(gc_thresh2), str(size // 2))
             self.assertEqual(read_file(gc_thresh1), str(size // 8))
+
+    def test_system_ip_protocol_route_map(self):
+        protocols = ['any', 'babel', 'bgp', 'connected', 'eigrp', 'isis',
+                     'kernel', 'ospf', 'rip', 'static', 'table']
+
+        for protocol in protocols:
+            self.cli_set(['policy', 'route-map', f'route-map-{protocol}', 'rule', '10', 'action', 'permit'])
+            self.cli_set(base_path + ['protocol', protocol, 'route-map', f'route-map-{protocol}'])
+
+        self.cli_commit()
+
+        # Verify route-map properly applied to FRR
+        frrconfig = self.getFRRconfig('ip protocol', end='', daemon='zebra')
+        for protocol in protocols:
+            self.assertIn(f'ip protocol {protocol} route-map route-map-{protocol}', frrconfig)
+
+    def test_system_ip_protocol_non_existing_route_map(self):
+        non_existing = 'non-existing'
+        self.cli_set(base_path + ['protocol', 'static', 'route-map', non_existing])
+
+        # VRF does yet not exist - an error must be thrown
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['policy', 'route-map', non_existing, 'rule', '10', 'action', 'deny'])
+        # Commit again
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -67,6 +67,11 @@ network={
     # discards such frames to protect against potential attacks by rogue
     # devices, but this option can be used to disable that protection for cases
     # where the server/authenticator does not need to be authenticated.
-    phase1="allow_canned_success=1"
+    #
+    # "tls_disable_tlsv1_0=0" is used to allow TLSv1 for compatibility with
+    # legacy networks. This follows the behavior of Debian's wpa_supplicant,
+    # which includes a custom patch for allowing TLSv1, but the patch currently
+    # does not work for VyOS' git builds of wpa_supplicant.
+    phase1="allow_canned_success=1 tls_disable_tlsv1_0=0"
 }
 

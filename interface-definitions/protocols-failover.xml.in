@@ -48,6 +48,7 @@
                           <constraint>
                             <validator name="ipv4-address"/>
                           </constraint>
+                          <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="timeout">

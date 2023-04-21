@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import re
 import sys
 import typing
@@ -485,6 +486,67 @@ def reset_ra(username: typing.Optional[str] = None):
         list_sa_id = _get_ra_session_list_by_username()
     if list_sa_id:
         vyos.ipsec.terminate_vici_ikeid_list(list_sa_id)
+
+
+def reset_profile_dst(profile: str, tunnel: str, nbma_dst: str):
+    if profile and tunnel and nbma_dst:
+        ike_sa_name = f'dmvpn-{profile}-{tunnel}'
+        try:
+            # Get IKE SAs
+            sa_list = convert_data(
+                vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None))
+            if not sa_list:
+                raise vyos.opmode.IncorrectValue(
+                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting')
+            sa_nbma_list = list([x for x in sa_list if
+                                 ike_sa_name in x and x[ike_sa_name][
+                                     'remote-host'] == nbma_dst])
+            if not sa_nbma_list:
+                raise vyos.opmode.IncorrectValue(
+                    f'SA(s) for profile {profile} tunnel {tunnel} remote-host {nbma_dst} not found, aborting')
+            # terminate IKE SAs
+            vyos.ipsec.terminate_vici_ikeid_list(list(
+                [x[ike_sa_name]['uniqueid'] for x in sa_nbma_list if
+                 ike_sa_name in x]))
+            # initiate IKE SAs
+            for ike in sa_nbma_list:
+                if ike_sa_name in ike:
+                    vyos.ipsec.vici_initiate(ike_sa_name, 'dmvpn',
+                                             ike[ike_sa_name]['local-host'],
+                                             ike[ike_sa_name]['remote-host'])
+            print(
+                f'Profile {profile} tunnel {tunnel} remote-host {nbma_dst} reset result: success')
+        except (vyos.ipsec.ViciInitiateError) as err:
+            raise vyos.opmode.UnconfiguredSubsystem(err)
+        except (vyos.ipsec.ViciCommandError) as err:
+            raise vyos.opmode.IncorrectValue(err)
+
+
+def reset_profile_all(profile: str, tunnel: str):
+    if profile and tunnel:
+        ike_sa_name = f'dmvpn-{profile}-{tunnel}'
+        try:
+            # Get IKE SAs
+            sa_list: list = convert_data(
+                vyos.ipsec.get_vici_sas_by_name(ike_sa_name, None))
+            if not sa_list:
+                raise vyos.opmode.IncorrectValue(
+                    f'SA(s) for profile {profile} tunnel {tunnel} not found, aborting')
+            # terminate IKE SAs
+            vyos.ipsec.terminate_vici_by_name(ike_sa_name, None)
+            # initiate IKE SAs
+            for ike in sa_list:
+                if ike_sa_name in ike:
+                    vyos.ipsec.vici_initiate(ike_sa_name, 'dmvpn',
+                                             ike[ike_sa_name]['local-host'],
+                                             ike[ike_sa_name]['remote-host'])
+                print(
+                    f'Profile {profile} tunnel {tunnel} remote-host {ike[ike_sa_name]["remote-host"]} reset result: success')
+            print(f'Profile {profile} tunnel {tunnel} reset result: success')
+        except (vyos.ipsec.ViciInitiateError) as err:
+            raise vyos.opmode.UnconfiguredSubsystem(err)
+        except (vyos.ipsec.ViciCommandError) as err:
+            raise vyos.opmode.IncorrectValue(err)
 
 
 def show_sa(raw: bool):

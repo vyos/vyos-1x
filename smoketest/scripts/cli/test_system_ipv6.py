@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
 from vyos.util import read_file
 from vyos.util import get_interface_config
@@ -87,6 +88,37 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(read_file(gc_thresh3), str(size))
             self.assertEqual(read_file(gc_thresh2), str(size // 2))
             self.assertEqual(read_file(gc_thresh1), str(size // 8))
+
+    def test_system_ipv6_protocol_route_map(self):
+        protocols = ['any', 'babel', 'bgp', 'connected', 'isis',
+                     'kernel', 'ospfv3', 'ripng', 'static', 'table']
+
+        for protocol in protocols:
+            route_map = 'route-map-' + protocol.replace('ospfv3', 'ospf6')
+
+            self.cli_set(['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
+            self.cli_set(base_path + ['protocol', protocol, 'route-map', route_map])
+
+        self.cli_commit()
+
+        # Verify route-map properly applied to FRR
+        frrconfig = self.getFRRconfig('ipv6 protocol', end='', daemon='zebra')
+        for protocol in protocols:
+            # VyOS and FRR use a different name for OSPFv3 (IPv6)
+            if protocol == 'ospfv3':
+                protocol = 'ospf6'
+            self.assertIn(f'ipv6 protocol {protocol} route-map route-map-{protocol}', frrconfig)
+
+    def test_system_ipv6_protocol_non_existing_route_map(self):
+        non_existing = 'non-existing6'
+        self.cli_set(base_path + ['protocol', 'static', 'route-map', non_existing])
+
+        # VRF does yet not exist - an error must be thrown
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['policy', 'route-map', non_existing, 'rule', '10', 'action', 'deny'])
+        # Commit again
+        self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

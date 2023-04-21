@@ -28,4 +28,5 @@ sflow {
 {% if drop_monitor_limit is vyos_defined %}
   dropmon { limit={{ drop_monitor_limit }} start=on sw=on hw=off }
 {% endif %}
+  dbus { }
 }

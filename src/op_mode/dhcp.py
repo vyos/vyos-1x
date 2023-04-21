@@ -264,8 +264,10 @@ def show_pool_statistics(raw: bool, family: ArgFamily, pool: typing.Optional[str
 def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
                        sorted: typing.Optional[str], state: typing.Optional[ArgState]):
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
-    if not is_systemd_service_running('isc-dhcp-server.service'):
-        Warning('DHCP server is configured but not started. Data may be stale.')
+    v = '6' if family == 'inet6' else ''
+    service_name = 'DHCPv6' if family == 'inet6' else 'DHCP'
+    if not is_systemd_service_running(f'isc-dhcp-server{v}.service'):
+        Warning(f'{service_name} server is configured but not started. Data may be stale.')
 
     v = 'v6' if family == 'inet6' else ''
     if pool and pool not in _get_dhcp_pools(family=family):

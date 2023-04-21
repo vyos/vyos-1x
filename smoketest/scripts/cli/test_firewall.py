@@ -198,6 +198,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
     def test_ipv4_basic_rules(self):
         name = 'smoketest'
         interface = 'eth0'
+        interface_wc = 'l2tp*'
         mss_range = '501-1460'
         conn_mark = '555'
 
@@ -240,6 +241,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'name', name, 'rule', '6', 'connection-mark', conn_mark])
 
         self.cli_set(['firewall', 'interface', interface, 'in', 'name', name])
+        self.cli_set(['firewall', 'interface', interface_wc, 'in', 'name', name])
 
         self.cli_commit()
 
@@ -247,6 +249,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
+            [f'iifname "{interface_wc}"', f'jump NAME_{name}'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'return'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
             ['tcp dport 22', 'limit rate 5/minute', 'return'],
