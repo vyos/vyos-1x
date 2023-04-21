@@ -35,18 +35,27 @@ def get_config(config=None):
         vrf_name = argv[1]
 
     base = ['vrf', 'name', vrf_name]
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=False)
+    if not tmp:
+        return None
     vrf = { 'name' : conf.get_config_dict(base, key_mangling=('-', '_'),
                                           get_first_key=False) }
 
     return vrf
 
 def verify(vrf):
+    if not vrf:
+        return
+
     if len(argv) < 2:
         raise ConfigError('VRF parameter not specified when valling vrf_vni.py')
 
     return None
 
 def generate(vrf):
+    if not vrf:
+        return
+
     vrf['new_frr_config'] = render_to_string('frr/zebra.vrf.route-map.frr.j2', vrf)
     return None
 
@@ -56,8 +65,11 @@ def apply(vrf):
     # add configuration to FRR
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
-    frr_cfg.modify_section(f'^vrf .+', stop_pattern='^exit-vrf', remove_stop_mark=True)
-    if 'new_frr_config' in vrf:
+    # There is only one VRF inside the dict as we read only one in get_config()
+    if vrf and 'name' in vrf:
+        vrf_name = next(iter(vrf['name']))
+        frr_cfg.modify_section(f'^vrf {vrf_name}', stop_pattern='^exit-vrf', remove_stop_mark=True)
+    if vrf and 'new_frr_config' in vrf:
         frr_cfg.add_before(frr.default_add_before, vrf['new_frr_config'])
     frr_cfg.commit_configuration(frr_daemon)
 
