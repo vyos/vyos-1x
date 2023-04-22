@@ -37,7 +37,7 @@ vrf {{ vrf }}
 {%     endfor %}
 {% endif %}
 {% if vrf is vyos_defined %}
- exit-vrf
+exit-vrf
 {% endif %}
 !
 {# Policy route tables #}
