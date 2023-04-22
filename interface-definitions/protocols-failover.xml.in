@@ -37,6 +37,26 @@
                       <help>Check target options</help>
                     </properties>
                     <children>
+                      <leafNode name="policy">
+                        <properties>
+                          <help>Policy for check targets</help>
+                          <completionHelp>
+                            <list>any-available all-available</list>
+                          </completionHelp>
+                          <valueHelp>
+                            <format>all-available</format>
+                            <description>All targets must be alive</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>any-available</format>
+                            <description>Any target must be alive</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>(all-available|any-available)</regex>
+                          </constraint>
+                        </properties>
+                        <defaultValue>any-available</defaultValue>
+                      </leafNode>
                       #include <include/port-number.xml.i>
                       <leafNode name="target">
                         <properties>

@@ -93,7 +93,12 @@ def is_port_open(ip, port):
         s.close()
 
 
-def is_target_alive(target_list=None, iface='', proto='icmp', port=None, debug=False):
+def is_target_alive(target_list=None,
+                    iface='',
+                    proto='icmp',
+                    port=None,
+                    debug=False,
+                    policy='any-available') -> bool:
     """Check the availability of each target in the target_list using
     the specified protocol ICMP, ARP, TCP
 
@@ -103,17 +108,19 @@ def is_target_alive(target_list=None, iface='', proto='icmp', port=None, debug=F
         proto (str): The protocol to use for the check. Options are 'icmp', 'arp', or 'tcp'.
         port (int): The port number to use for the TCP check. Only applicable if proto is 'tcp'.
         debug (bool): If True, print debug information during the check.
+        policy (str): The policy to use for the check. Options are 'any-available' or 'all-available'.
 
     Returns:
-        bool: True if all targets are reachable, False otherwise.
+        bool: True if all targets are reachable according to the policy, False otherwise.
 
     Example:
-        % is_target_alive(['192.0.2.1', '192.0.2.5'], 'eth1', proto='arp')
+        % is_target_alive(['192.0.2.1', '192.0.2.5'], 'eth1', proto='arp', policy='all-available')
         True
     """
     if iface != '':
         iface = f'-I {iface}'
 
+    num_reachable_targets = 0
     for target in target_list:
         match proto:
             case 'icmp':
@@ -121,25 +128,34 @@ def is_target_alive(target_list=None, iface='', proto='icmp', port=None, debug=F
                 rc, response = rc_cmd(command)
                 if debug:
                     print(f'    [ CHECK-TARGET ]: [{command}] -- return-code [RC: {rc}]')
-                if rc != 0:
-                    return False
+                if rc == 0:
+                    num_reachable_targets += 1
+                    if policy == 'any-available':
+                        return True
 
             case 'arp':
                 command = f'/usr/bin/arping -b -c 2 -f -w 1 -i 1 {iface} {target}'
                 rc, response = rc_cmd(command)
                 if debug:
                     print(f'    [ CHECK-TARGET ]: [{command}] -- return-code [RC: {rc}]')
-                if rc != 0:
-                    return False
+                if rc == 0:
+                    num_reachable_targets += 1
+                    if policy == 'any-available':
+                        return True
 
             case _ if proto == 'tcp' and port is not None:
-                if not is_port_open(target, port):
-                    return False
+                if is_port_open(target, port):
+                    num_reachable_targets += 1
+                    if policy == 'any-available':
+                        return True
 
             case _:
                 return False
 
-    return True
+        if policy == 'all-available' and num_reachable_targets == len(target_list):
+            return True
+
+    return False
 
 
 if __name__ == '__main__':
@@ -178,6 +194,7 @@ if __name__ == '__main__':
                 conf_metric = int(nexthop_config.get('metric'))
                 port = nexthop_config.get('check').get('port')
                 port_opt = f'port {port}' if port else ''
+                policy = nexthop_config.get('check').get('policy')
                 proto = nexthop_config.get('check').get('type')
                 target = nexthop_config.get('check').get('target')
                 timeout = nexthop_config.get('check').get('timeout')
@@ -186,7 +203,7 @@ if __name__ == '__main__':
                 if not is_route_exists(route, next_hop, conf_iface, conf_metric):
                     if debug: print(f"    [NEW_ROUTE_DETECTED] route: [{route}]")
                     # Add route if check-target alive
-                    if is_target_alive(target, conf_iface, proto, port, debug=debug):
+                    if is_target_alive(target, conf_iface, proto, port, debug=debug, policy=policy):
                         if debug: print(f'    [ ADD ] -- ip route add {route} via {next_hop} dev {conf_iface} '
                                         f'metric {conf_metric} proto failover\n###')
                         rc, command = rc_cmd(f'ip route add {route} via {next_hop} dev {conf_iface} '
@@ -205,7 +222,7 @@ if __name__ == '__main__':
 
                 # Route was added, check if the target is alive
                 # We should delete route if check fails only if route exists in the routing table
-                if not is_target_alive(target, conf_iface, proto, port, debug=debug) and \
+                if not is_target_alive(target, conf_iface, proto, port, debug=debug, policy=policy) and \
                         is_route_exists(route, next_hop, conf_iface, conf_metric):
                     if debug:
                         print(f'Nexh_hop {next_hop} fail, target not response')
