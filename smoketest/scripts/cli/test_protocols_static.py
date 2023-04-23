@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -95,6 +95,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestProtocolsStatic, cls).setUpClass()
+        cls.cli_delete(cls, ['vrf'])
         cls.cli_set(cls, ['vrf', 'name', 'black', 'table', '43210'])
 
     @classmethod
