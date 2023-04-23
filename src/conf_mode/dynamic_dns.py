@@ -29,20 +29,14 @@ airbag.enable()
 
 config_file = r'/run/ddclient/ddclient.conf'
 
-# Mapping of service name to service protocol
-default_service_protocol = {
-    'afraid': 'freedns',
-    'changeip': 'changeip',
-    'cloudflare': 'cloudflare',
-    'dnspark': 'dnspark',
-    'dslreports': 'dslreports1',
-    'dyndns': 'dyndns2',
-    'easydns': 'easydns',
-    'namecheap': 'namecheap',
-    'noip': 'noip',
-    'sitelutions': 'sitelutions',
-    'zoneedit': 'zoneedit1'
-}
+# Protocols that require zone
+zone_allowed = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+
+# Protocols that do not require username
+username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla']
+
+# Protocols that support both IPv4 and IPv6
+dualstack_supported = ['cloudflare', 'dyndns2', 'freedns', 'njalla']
 
 def get_config(config=None):
     if config:
@@ -56,24 +50,13 @@ def get_config(config=None):
 
     dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'), get_first_key=True)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    for interface in dyndns['interface']:
-        if 'service' in dyndns['interface'][interface]:
-            # 'Autodetect' protocol used by DynDNS service
-            for service in dyndns['interface'][interface]['service']:
-                if service in default_service_protocol:
-                    dyndns['interface'][interface]['service'][service].update(
-                        {'protocol' : default_service_protocol.get(service)})
-                else:
-                    dyndns['interface'][interface]['service'][service].update(
-                        {'custom': ''})
-
-        if 'rfc2136' in dyndns['interface'][interface]:
-            default_values = defaults(base_level + ['interface', 'rfc2136'])
-            for rfc2136 in dyndns['interface'][interface]['rfc2136']:
-                dyndns['interface'][interface]['rfc2136'][rfc2136] = dict_merge(
-                    default_values, dyndns['interface'][interface]['rfc2136'][rfc2136])
+    for address in dyndns['address']:
+        # Apply service specific defaults (stype = ['rfc2136', 'service'])
+        for svc_type in dyndns['address'][address]:
+            default_values = defaults(base_level + ['address', svc_type])
+            for svc_cfg in dyndns['address'][address][svc_type]:
+                dyndns['address'][address][svc_type][svc_cfg] = dict_merge(
+                    default_values, dyndns['address'][address][svc_type][svc_cfg])
 
     return dyndns
 
@@ -82,48 +65,37 @@ def verify(dyndns):
     if not dyndns:
         return None
 
-    # A 'node' corresponds to an interface
-    if 'interface' not in dyndns:
-        return None
-
-    for interface in dyndns['interface']:
+    for address in dyndns['address']:
         # RFC2136 - configuration validation
-        if 'rfc2136' in dyndns['interface'][interface]:
-            for rfc2136, config in dyndns['interface'][interface]['rfc2136'].items():
+        if 'rfc2136' in dyndns['address'][address]:
+            for config in dyndns['address'][address]['rfc2136'].values():
+                for field in ['host_name', 'zone', 'server', 'key']:
+                    if field not in config:
+                        raise ConfigError(f'"{field.replace("_", "-")}" is required for RFC2136 '
+                                          f'based Dynamic DNS service on "{address}"')
 
-                for tmp in ['record', 'zone', 'server', 'key']:
-                    if tmp not in config:
-                        raise ConfigError(f'"{tmp}" required for rfc2136 based '
-                                          f'DynDNS service on "{interface}"')
+        # Dynamic DNS service provider - configuration validation
+        if 'service' in dyndns['address'][address]:
+            for service, config in dyndns['address'][address]['service'].items():
+                error_msg = f'is required for Dynamic DNS service "{service}" on "{address}"'
 
-                if not os.path.isfile(config['key']):
-                    raise ConfigError(f'"key"-file not found for rfc2136 based '
-                                      f'DynDNS service on "{interface}"')
+                for field in ['host_name', 'password', 'protocol']:
+                    if field not in config:
+                        raise ConfigError(f'"{field.replace("_", "-")}" {error_msg}')
 
-        # DynDNS service provider - configuration validation
-        if 'service' in dyndns['interface'][interface]:
-            for service, config in dyndns['interface'][interface]['service'].items():
-                error_msg = f'required for DynDNS service "{service}" on "{interface}"'
-                if 'host_name' not in config:
-                    raise ConfigError(f'"host-name" {error_msg}')
+                if config['protocol'] in zone_allowed and 'zone' not in config:
+                        raise ConfigError(f'"zone" {error_msg}')
 
-                if 'login' not in config:
-                    if service != 'cloudflare' and ('protocol' not in config or config['protocol'] != 'cloudflare'):
-                        raise ConfigError(f'"login" (username) {error_msg}, unless using CloudFlare')
+                if config['protocol'] not in zone_allowed and 'zone' in config:
+                        raise ConfigError(f'"{config["protocol"]}" does not support "zone"')
 
-                if 'password' not in config:
-                    raise ConfigError(f'"password" {error_msg}')
+                if config['protocol'] not in username_unnecessary:
+                    if 'username' not in config:
+                        raise ConfigError(f'"username" {error_msg}')
 
-                if 'zone' in config:
-                    if service != 'cloudflare' and ('protocol' not in config or config['protocol'] != 'cloudflare'):
-                        raise ConfigError(f'"zone" option only supported with CloudFlare')
-
-                if 'custom' in config:
-                    if 'protocol' not in config:
-                        raise ConfigError(f'"protocol" {error_msg}')
-
-                    if 'server' not in config:
-                        raise ConfigError(f'"server" {error_msg}')
+                if (config['protocol'] not in dualstack_supported
+                        and config['ip_version'] == 'both'):
+                    raise ConfigError(f'"{config["protocol"]}" does not support IPv4 and IPv6 at the same time')
 
     return None
 
