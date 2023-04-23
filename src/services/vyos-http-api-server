@@ -283,7 +283,7 @@ class MultipartRequest(Request):
         return self._headers
 
     async def form(self) -> FormData:
-        if not hasattr(self, "_form"):
+        if self._form is None:
             assert (
                 parse_options_header is not None
             ), "The `python-multipart` library must be installed to use form parsing."
