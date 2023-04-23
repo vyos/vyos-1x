@@ -35,12 +35,11 @@ def get_config(config=None):
         vrf_name = argv[1]
 
     base = ['vrf', 'name', vrf_name]
-    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=False)
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               no_tag_node_value_mangle=True, get_first_key=True)
     if not tmp:
         return None
-    vrf = { 'name' : conf.get_config_dict(base, key_mangling=('-', '_'),
-                                          get_first_key=False) }
-
+    vrf = { 'name' : tmp }
     return vrf
 
 def verify(vrf):
