@@ -13,12 +13,17 @@
        <tagNode name="source">
          <properties>
            <help>Use source for BFD session</help>
-           <valueHelp>
+          <valueHelp>
              <format>ipv4</format>
-             <description>IPv4 source</description>
+             <description>IPv4 source address</description>
+           </valueHelp>
+           <valueHelp>
+             <format>ipv6</format>
+             <description>IPv6 source address</description>
            </valueHelp>
            <constraint>
              <validator name="ipv4-address"/>
+             <validator name="ipv6-address"/>
            </constraint>
          </properties>
          <children>
