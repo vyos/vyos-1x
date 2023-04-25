@@ -39,7 +39,7 @@ def get_config(config=None):
                                no_tag_node_value_mangle=True, get_first_key=True)
     if not tmp:
         return None
-    vrf = { 'name' : tmp }
+    vrf = {'name': {vrf_name: tmp}}
     return vrf
 
 def verify(vrf):
