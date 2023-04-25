@@ -71,16 +71,12 @@ def _merge(dict1, dict2):
             continue
         if isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
             dict1[k] = _merge(dict1[k], dict2[k])
-        elif isinstance(dict1[k], dict) and isinstance(dict2[k], dict):
+        elif isinstance(dict1[k], list) and isinstance(dict2[k], list):
             dict1[k].extend(dict2[k])
         elif dict1[k] == dict2[k]:
-            # A definition shared between multiple files
-            if k in (kw.valueless, kw.multi, kw.hidden, kw.node, kw.summary, kw.owner, kw.priority):
-                continue
-            _fatal()
-            raise RuntimeError('parsing issue - undefined leaf?')
+            continue
         else:
-            raise RuntimeError('parsing issue - we messed up?')
+            dict1[k] = dict2[k]
     return dict1
 
 
@@ -131,7 +127,7 @@ def _format_nodes(inside, conf, xml):
                 name = node.pop('@name')
                 into = inside + [name]
                 if name in r:
-                    r[name].update(_format_node(into, node, xml))
+                    _merge(r[name], _format_node(into, node, xml))
                 else:
                     r[name] = _format_node(into, node, xml)
                 r[name][kw.node] = nodename
@@ -141,7 +137,7 @@ def _format_nodes(inside, conf, xml):
             name = node.pop('@name')
             into = inside + [name]
             if name in r:
-                r[name].update(_format_node(inside + [name], node, xml))
+                _merge(r[name], _format_node(inside + [name], node, xml))
             else:
                 r[name] = _format_node(inside + [name], node, xml)
             r[name][kw.node] = nodename
@@ -180,10 +176,10 @@ def _format_node(inside, conf, xml):
 
             if isinstance(conf, list):
                 for child in children:
-                    r = _safe_update(r, _format_nodes(inside, child, xml))
+                    _merge(r, _format_nodes(inside, child, xml))
             else:
                 child = children
-                r = _safe_update(r, _format_nodes(inside, child, xml))
+                _merge(r, _format_nodes(inside, child, xml))
 
         elif 'properties' in keys:
             properties = conf.pop('properties')
