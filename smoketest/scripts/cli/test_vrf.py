@@ -61,7 +61,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             self.assertNotIn(vrf, interfaces())
 
     def test_vrf_vni_and_table_id(self):
-        table = '1000'
+        base_table = '1000'
+        table = base_table
         for vrf in vrfs:
             base = base_path + ['name', vrf]
             description = f'VyOS-VRF-{vrf}'
@@ -82,7 +83,7 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
-        table = '1000'
+        table = base_table
         iproute2_config = read_file('/etc/iproute2/rt_tables.d/vyos-vrf.conf')
         for vrf in vrfs:
             description = f'VyOS-VRF-{vrf}'
@@ -196,7 +197,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             self.cli_delete(['interfaces', section, interface, 'vrf'])
 
     def test_vrf_static_route(self):
-        table = '100'
+        base_table = '100'
+        table = base_table
         for vrf in vrfs:
             next_hop = f'192.0.{table}.1'
             prefix = f'10.0.{table}.0/24'
@@ -217,13 +219,12 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify VRF configuration
-        table = '100'
+        table = base_table
         for vrf in vrfs:
             next_hop = f'192.0.{table}.1'
             prefix = f'10.0.{table}.0/24'
 
             self.assertTrue(vrf in interfaces())
-            vrf_if = Interface(vrf)
 
             frrconfig = self.getFRRconfig(f'vrf {vrf}')
             self.assertIn(f' vni {table}', frrconfig)
@@ -368,6 +369,99 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
                     protocol = 'ospf6'
                 route_map = f'route-map-{vrf}-{protocol}'
                 self.assertIn(f' ipv6 protocol {protocol} route-map {route_map}', frrconfig)
+
+    def test_vrf_vni_duplicates(self):
+        base_table = '6300'
+        table = base_table
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', str(table)])
+            self.cli_set(base + ['vni', '100'])
+            table = str(int(table) + 1)
+
+        # L3VNIs can only be used once
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        table = base_table
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['vni', str(table)])
+            table = str(int(table) + 1)
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = base_table
+        for vrf in vrfs:
+            self.assertTrue(vrf in interfaces())
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+            # Increment table ID for the next run
+            table = str(int(table) + 1)
+
+    def test_vrf_vni_add_change_remove(self):
+        base_table = '6300'
+        table = base_table
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['table', str(table)])
+            self.cli_set(base + ['vni', str(table)])
+            table = str(int(table) + 1)
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = base_table
+        for vrf in vrfs:
+            self.assertTrue(vrf in interfaces())
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+            # Increment table ID for the next run
+            table = str(int(table) + 1)
+
+        # Now change all L3VNIs (increment 2)
+        # We must also change the base_table number as we probably could get
+        # duplicate VNI's during the test as VNIs are applied 1:1 to FRR
+        base_table = '5000'
+        table = base_table
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_set(base + ['vni', str(table)])
+            table = str(int(table) + 2)
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify VRF configuration
+        table = base_table
+        for vrf in vrfs:
+            self.assertTrue(vrf in interfaces())
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertIn(f' vni {table}', frrconfig)
+            # Increment table ID for the next run
+            table = str(int(table) + 2)
+
+        # Now delete all the VNIs
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_delete(base + ['vni'])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify no VNI is defined
+        for vrf in vrfs:
+            self.assertTrue(vrf in interfaces())
+
+            frrconfig = self.getFRRconfig(f'vrf {vrf}')
+            self.assertNotIn('vni', frrconfig)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
