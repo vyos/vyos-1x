@@ -50,15 +50,23 @@ def get_config(config=None):
     bgp = conf.get_config_dict(base, key_mangling=('-', '_'),
                                get_first_key=True, no_tag_node_value_mangle=True)
 
-    # Assign the name of our VRF context. This MUST be done before the return
-    # statement below, else on deletion we will delete the default instance
-    # instead of the VRF instance.
-    if vrf: bgp.update({'vrf' : vrf})
-
     bgp['dependent_vrfs'] = conf.get_config_dict(['vrf', 'name'],
                                                  key_mangling=('-', '_'),
                                                  get_first_key=True,
                                                  no_tag_node_value_mangle=True)
+
+    # Assign the name of our VRF context. This MUST be done before the return
+    # statement below, else on deletion we will delete the default instance
+    # instead of the VRF instance.
+    if vrf:
+        bgp.update({'vrf' : vrf})
+        # We can not delete the BGP VRF instance if there is a L3VNI configured
+        tmp = ['vrf', 'name', vrf, 'vni']
+        if conf.exists(tmp):
+            bgp.update({'vni' : conf.return_value(tmp)})
+        # We can safely delete ourself from the dependent vrf list
+        if vrf in bgp['dependent_vrfs']:
+            del bgp['dependent_vrfs'][vrf]
 
     bgp['dependent_vrfs'].update({'default': {'protocols': {
         'bgp': conf.get_config_dict(base_path, key_mangling=('-', '_'),
@@ -202,9 +210,13 @@ def verify(bgp):
         if 'vrf' in bgp:
             # Cannot delete vrf if it exists in import vrf list in other vrfs
             for tmp_afi in ['ipv4_unicast', 'ipv6_unicast']:
-                if verify_vrf_as_import(bgp['vrf'],tmp_afi,bgp['dependent_vrfs']):
-                    raise ConfigError(f'Cannot delete vrf {bgp["vrf"]} instance, ' \
-                                      'Please unconfigure import vrf commands!')
+                if verify_vrf_as_import(bgp['vrf'], tmp_afi, bgp['dependent_vrfs']):
+                    raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
+                                      'unconfigure "import vrf" commands!')
+            # We can not delete the BGP instance if a L3VNI instance exists
+            if 'vni' in bgp:
+                raise ConfigError(f'Cannot delete VRF instance "{bgp["vrf"]}", ' \
+                                  f'unconfigure VNI "{bgp["vni"]}" first!')
         else:
             # We are running in the default VRF context, thus we can not delete
             # our main BGP instance if there are dependent BGP VRF instances.
