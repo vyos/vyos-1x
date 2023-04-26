@@ -33,12 +33,13 @@ def get_config(config=None):
     vrf_name = None
     if len(argv) > 1:
         vrf_name = argv[1]
+    else:
+        return None
 
     base = ['vrf', 'name', vrf_name]
     tmp = conf.get_config_dict(base, key_mangling=('-', '_'),
                                no_tag_node_value_mangle=True, get_first_key=True)
-    if not tmp:
-        return None
+
     vrf = {'name': {vrf_name: tmp}}
     return vrf
 
