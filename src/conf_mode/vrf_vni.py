@@ -84,7 +84,7 @@ def apply(vrf):
     frr_cfg = frr.FRRConfig()
     frr_cfg.load_configuration(frr_daemon)
     # There is only one VRF inside the dict as we read only one in get_config()
-    if vrf and 'name' in vrf:
+    if vrf and 'only_vrf' in vrf:
         vrf_name = vrf['only_vrf']
         frr_cfg.modify_section(f'^vrf {vrf_name}', stop_pattern='^exit-vrf', remove_stop_mark=True)
     if vrf and 'new_frr_config' in vrf:
