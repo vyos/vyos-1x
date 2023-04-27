@@ -419,7 +419,7 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
    rd {{ vni_config.rd }}
 {%                 endif %}
 {%                 if vni_config.route_target.both is vyos_defined %}
-{%                     for route_target in vni_config.route_target.export %}
+{%                     for route_target in vni_config.route_target.both %}
    route-target both {{ route_target }}
 {%                     endfor %}
 {%                 endif %}
