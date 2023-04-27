@@ -441,7 +441,6 @@ def verify(bgp):
                                          f'{afi} administrative distance {key}!')
 
             if afi in ['ipv4_unicast', 'ipv6_unicast']:
-
                 vrf_name = bgp['vrf'] if dict_search('vrf', bgp) else 'default'
                 # Verify if currant VRF contains rd and route-target options
                 # and does not exist in import list in other VRFs
@@ -489,6 +488,15 @@ def verify(bgp):
                 for export_import in ['export', 'import']:
                     tmp = dict_search(f'route_map.vpn.{export_import}', afi_config)
                     if tmp: verify_route_map(tmp, bgp)
+
+            # Checks only required for L2VPN EVPN
+            if afi in ['l2vpn_evpn']:
+                if 'vni' in afi_config:
+                    for vni, vni_config in afi_config['vni'].items():
+                        if 'rd' in vni_config and 'advertise_all_vni' not in afi_config:
+                            raise ConfigError('BGP EVPN "rd" requires "advertise-all-vni" to be set!')
+                        if 'route_target' in vni_config and 'advertise_all_vni' not in afi_config:
+                            raise ConfigError('BGP EVPN "route-target" requires "advertise-all-vni" to be set!')
 
     return None
 
