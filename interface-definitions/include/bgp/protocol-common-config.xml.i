@@ -810,6 +810,12 @@
             </node>
           </children>
         </node>
+        <leafNode name="advertise-all-vni">
+          <properties>
+            <help>Advertise All local VNIs</help>
+            <valueless/>
+          </properties>
+        </leafNode>
         #include <include/bgp/afi-l2vpn-common.xml.i>
         <leafNode name="advertise-pip">
           <properties>
