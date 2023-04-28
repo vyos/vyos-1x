@@ -11,13 +11,13 @@
                 <path>interfaces vxlan</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=vxlan</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=vxlan</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified VXLAN interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=vxlan</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=vxlan</command>
               </leafNode>
             </children>
           </tagNode>
@@ -25,13 +25,13 @@
             <properties>
               <help>Show VXLAN interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=vxlan</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=vxlan</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed VXLAN interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=vxlan</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=vxlan</command>
               </leafNode>
             </children>
           </node>

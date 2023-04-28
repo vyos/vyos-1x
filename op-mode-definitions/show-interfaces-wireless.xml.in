@@ -8,13 +8,13 @@
             <properties>
               <help>Show Wireless (WLAN) interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=wireless</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=wireless</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed wireless interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=wireless</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=wireless</command>
               </leafNode>
               <leafNode name="info">
                 <properties>
@@ -31,13 +31,13 @@
                 <script>${vyos_completion_dir}/list_interfaces --type wireless</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wireless</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wireless</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified wireless interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=wireless</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=wireless</command>
               </leafNode>
               <node name="scan">
                 <properties>
@@ -63,13 +63,13 @@
                 <properties>
                   <help>Show specified virtual network interface (vif) information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4.$6" --intf_type=wireless</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4.$6" --intf-type=wireless</command>
                 <children>
                   <leafNode name="brief">
                     <properties>
                       <help>Show summary of specified virtual network interface (vif) information</help>
                     </properties>
-                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4.$6" --intf_type=wireless</command>
+                    <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4.$6" --intf-type=wireless</command>
                   </leafNode>
                 </children>
               </tagNode>

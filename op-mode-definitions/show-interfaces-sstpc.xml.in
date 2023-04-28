@@ -11,7 +11,7 @@
                 <path>interfaces sstpc</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=sstpc</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=sstpc</command>
             <children>
               <leafNode name="log">
                 <properties>
@@ -34,13 +34,13 @@
             <properties>
               <help>Show SSTP client interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=sstpc</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=sstpc</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed SSTP client interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=sstpc</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=sstpc</command>
               </leafNode>
             </children>
           </node>

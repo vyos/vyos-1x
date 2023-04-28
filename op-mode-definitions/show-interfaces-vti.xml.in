@@ -11,13 +11,13 @@
                 <path>interfaces vti</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=vti</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=vti</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified vti interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=vti</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=vti</command>
               </leafNode>
             </children>
           </tagNode>
@@ -25,13 +25,13 @@
             <properties>
               <help>Show VTI interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=vti</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=vti</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed vti interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=vti</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=vti</command>
               </leafNode>
             </children>
           </node>

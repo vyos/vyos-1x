@@ -11,13 +11,13 @@
                 <path>interfaces virtual-ethernet</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=virtual-ethernet</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=virtual-ethernet</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified virtual-ethernet interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=virtual-ethernet</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=virtual-ethernet</command>
               </leafNode>
             </children>
           </tagNode>
@@ -25,13 +25,13 @@
             <properties>
               <help>Show virtual-ethernet interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=virtual-ethernet</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=virtual-ethernet</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed virtual-ethernet interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=virtual-ethernet</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=virtual-ethernet</command>
               </leafNode>
             </children>
           </node>

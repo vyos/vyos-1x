@@ -37,13 +37,13 @@
             <properties>
               <help>Show OpenVPN interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=openvpn</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=openvpn</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed OpenVPN interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=openvpn</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=openvpn</command>
               </leafNode>
             </children>
           </node>
@@ -54,7 +54,7 @@
                 <script>sudo ${vyos_completion_dir}/list_interfaces --type openvpn</script>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name=$4</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name=$4</command>
             <children>
               <tagNode name="user">
                 <properties>
@@ -95,7 +95,7 @@
                 <properties>
                   <help>Show summary of specified OpenVPN interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4"</command>
               </leafNode>
             </children>
           </tagNode>

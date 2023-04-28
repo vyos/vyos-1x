@@ -209,6 +209,11 @@ def run(module):
         for opt in type_hints:
             th = type_hints[opt]
 
+            # Function argument names use underscores as separators
+            # but command-line options should use hyphens
+            # Without this, we'd get options like "--foo_bar"
+            opt = re.sub(r'_', '-', opt)
+
             if _get_arg_type(th) == bool:
                 subparser.add_argument(f"--{opt}", action='store_true')
             else:

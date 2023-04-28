@@ -11,13 +11,13 @@
                 <path>interfaces l2tpv3</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=l2tpv3</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=l2tpv3</command>
             <children>
               <leafNode name="brief">
                 <properties>
                   <help>Show summary of the specified L2TPv3 interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_name="$4" --intf_type=l2tpv3</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=l2tpv3</command>
               </leafNode>
             </children>
           </tagNode>
@@ -25,13 +25,13 @@
             <properties>
               <help>Show L2TPv3 interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=l2tpv3</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=l2tpv3</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed L2TPv3 interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=l2tpv3</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=l2tpv3</command>
               </leafNode>
             </children>
           </node>
