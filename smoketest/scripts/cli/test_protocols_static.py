@@ -69,6 +69,8 @@ routes = {
             '2001:db8::1' : { 'distance' : '10' },
             '2001:db8::2' : { 'distance' : '20', 'interface' : 'eth0' },
             '2001:db8::3' : { 'distance' : '30', 'disable' : '' },
+            '2001:db8::4' : { 'bfd' : '' },
+            '2001:db8::5' : { 'bfd_source' : '2001:db8::ffff' },
         },
         'interface' : {
             'eth0'  : { 'distance' : '40', 'vrf' : 'black' },
