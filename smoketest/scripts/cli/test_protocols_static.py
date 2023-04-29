@@ -139,7 +139,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'bfd' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', bfd_profile ])
                     if 'bfd_source' in next_hop_config:
-                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop','source', next_hop_config['bfd_source'], 'profile', bfd_profile])
+                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source', next_hop_config['bfd_source'], 'profile', bfd_profile])
 
 
             if 'interface' in route_config:
@@ -197,7 +197,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                     if 'bfd' in next_hop_config:
                         tmp += ' bfd profile ' + bfd_profile
                     if 'bfd_source' in next_hop_config:
-                        tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + 'profile' + bfd_profile
+                        tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + ' profile ' + bfd_profile
 
                     if 'disable' in next_hop_config:
                         self.assertNotIn(tmp, frrconfig)
