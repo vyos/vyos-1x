@@ -49,6 +49,19 @@
               </leafNode>
             </children>
           </node>
+          <node name="static">
+            <properties>
+              <help>Show route Routing Table</help>
+            </properties>
+            <children>
+              <leafNode name="routes">
+                <properties>
+                  <help>Showing BFD monitored static routes</help>
+                </properties>
+                <command>vtysh -c "show bfd static route"</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

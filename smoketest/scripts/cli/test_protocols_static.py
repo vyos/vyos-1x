@@ -31,6 +31,8 @@ routes = {
             '192.0.2.100' : { 'distance' : '100' },
             '192.0.2.110' : { 'distance' : '110', 'interface' : 'eth0' },
             '192.0.2.120' : { 'distance' : '120', 'disable' : '' },
+            '192.0.2.130' : { 'bfd' : '' },
+            '192.0.2.140' : { 'bfd_source' : '192.0.2.10' },
         },
         'interface' : {
             'eth0'  : { 'distance' : '130' },
@@ -67,6 +69,8 @@ routes = {
             '2001:db8::1' : { 'distance' : '10' },
             '2001:db8::2' : { 'distance' : '20', 'interface' : 'eth0' },
             '2001:db8::3' : { 'distance' : '30', 'disable' : '' },
+            '2001:db8::4' : { 'bfd' : '' },
+            '2001:db8::5' : { 'bfd_source' : '2001:db8::ffff' },
         },
         'interface' : {
             'eth0'  : { 'distance' : '40', 'vrf' : 'black' },
@@ -117,6 +121,7 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_01_static(self):
+        bfd_profile = 'vyos-test'
         for route, route_config in routes.items():
             route_type = 'route'
             if is_ipv6(route):
@@ -133,6 +138,10 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(base + ['next-hop', next_hop, 'interface', next_hop_config['interface']])
                     if 'vrf' in next_hop_config:
                         self.cli_set(base + ['next-hop', next_hop, 'vrf', next_hop_config['vrf']])
+                    if 'bfd' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'profile', bfd_profile ])
+                    if 'bfd_source' in next_hop_config:
+                        self.cli_set(base + ['next-hop', next_hop, 'bfd', 'multi-hop', 'source', next_hop_config['bfd_source'], 'profile', bfd_profile])
 
 
             if 'interface' in route_config:
@@ -187,6 +196,10 @@ class TestProtocolsStatic(VyOSUnitTestSHIM.TestCase):
                         tmp += ' ' + next_hop_config['distance']
                     if 'vrf' in next_hop_config:
                         tmp += ' nexthop-vrf ' + next_hop_config['vrf']
+                    if 'bfd' in next_hop_config:
+                        tmp += ' bfd profile ' + bfd_profile
+                    if 'bfd_source' in next_hop_config:
+                        tmp += ' bfd multi-hop source ' + next_hop_config['bfd_source'] + ' profile ' + bfd_profile
 
                     if 'disable' in next_hop_config:
                         self.assertNotIn(tmp, frrconfig)
