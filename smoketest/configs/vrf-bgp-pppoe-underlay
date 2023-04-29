@@ -1,0 +1,531 @@
+interfaces {
+    bridge br50 {
+        address 192.168.0.1/24
+        member {
+            interface eth0.50 {
+            }
+            interface eth2 {
+            }
+            interface eth3 {
+            }
+        }
+    }
+    dummy dum0 {
+        address 100.64.51.252/32
+        address 2001:db8:200:ffff::1/128
+        vrf vyos-test-01
+    }
+    ethernet eth0 {
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+        ring-buffer {
+            rx 4096
+            tx 4096
+        }
+        vif 5 {
+            address 2001:db8:200:f0::114/64
+            address 100.64.50.121/28
+            vrf vyos-test-01
+        }
+        vif 10 {
+            address 2001:db8:200:10::ffff/64
+            address 2001:db8:200::ffff/64
+            address 100.64.50.62/26
+            vrf vyos-test-01
+        }
+        vif 15 {
+            address 100.64.50.78/28
+            address 2001:db8:200:15::ffff/64
+            vrf vyos-test-01
+        }
+        vif 50 {
+            description "Member of bridge br50"
+        }
+        vif 110 {
+            address 100.64.51.190/27
+            address 100.64.51.158/28
+            address 2001:db8:200:101::ffff/64
+            vrf vyos-test-01
+        }
+        vif 410 {
+            address 100.64.51.206/28
+            address 2001:db8:200:104::ffff/64
+            vrf vyos-test-01
+        }
+        vif 500 {
+            address 100.64.51.238/28
+            address 2001:db8:200:50::ffff/64
+            vrf vyos-test-01
+        }
+        vif 520 {
+            address 100.64.50.190/28
+            address 2001:db8:200:520::ffff/64
+            vrf vyos-test-01
+        }
+        vif 666 {
+            address 2001:db8:200:ff::101:1/112
+            address 100.64.51.223/31
+            vrf vyos-test-01
+        }
+        vif 800 {
+            address 2001:db8:200:ff::104:1/112
+            address 100.64.51.212/31
+            vrf vyos-test-01
+        }
+        vif 810 {
+            address 100.64.51.30/27
+            address 2001:db8:200:102::ffff/64
+            vrf vyos-test-01
+        }
+    }
+    ethernet eth1 {
+        offload {
+            gro
+            gso
+            rps
+            sg
+            tso
+        }
+        ring-buffer {
+            rx 4096
+            tx 4096
+        }
+    }
+    ethernet eth2 {
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+    }
+    ethernet eth3 {
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+    }
+    loopback lo {
+    }
+    pppoe pppoe7 {
+        authentication {
+            password vyos
+            username vyos
+        }
+        dhcpv6-options {
+            pd 0 {
+                interface br50 {
+                    address 1
+                }
+                length 56
+            }
+        }
+        ip {
+            adjust-mss 1452
+        }
+        ipv6 {
+            address {
+                autoconf
+            }
+            adjust-mss 1432
+        }
+        mtu 1492
+        no-peer-dns
+        source-interface eth1
+    }
+    virtual-ethernet veth0 {
+        address 100.64.51.220/31
+        address 2001:db8:200:ff::105:1/112
+        description "Core: connect vyos-test-01 and default VRF"
+        peer-name veth1
+    }
+    virtual-ethernet veth1 {
+        address 100.64.51.221/31
+        address 2001:db8:200:ff::105:2/112
+        description "Core: connect vyos-test-01 and default VRF"
+        peer-name veth0
+        vrf vyos-test-01
+    }
+    wireguard wg500 {
+        address 100.64.51.209/31
+        mtu 1500
+        peer A {
+            address 192.0.2.1
+            allowed-ips 0.0.0.0/0
+            port 5500
+            public-key KGSXF4QckzGe7f7CT+r6VZ5brOD/pVYk8yvrxOQ+X0Y=
+        }
+        port 5500
+        private-key iLJh6Me6AdPJtNv3dgGhUbtyFxExxmNU4v0Fs6YE2Xc=
+        vrf vyos-test-01
+    }
+    wireguard wg501 {
+        address 2001:db8:200:ff::102:2/112
+        mtu 1500
+        peer A {
+            address 2001:db8:300::1
+            allowed-ips ::/0
+            port 5501
+            public-key OF+1OJ+VfQ0Yw1mgVtQ2ion4CnAdy8Bvx7yEiO4+Pn8=
+        }
+        port 5501
+        private-key 0MP5X0PW58O4q2LDpuIXgZ0ySyAoWH8/kdpvQccCbUU=
+        vrf vyos-test-01
+    }
+    wireguard wg666 {
+        address 172.29.0.0/31
+        mtu 1500
+        peer B {
+            allowed-ips 0.0.0.0/0
+            public-key 2HT+RfwcqJMYNYzdmtmpem8Ht0dL37o31APHVwmh024=
+        }
+        port 50666
+        private-key zvPnp2MLAoX7SotuHLFLDyy4sdlD7ttbD1xNEqA3mkU=
+    }
+    wireless wlan0 {
+        disable
+        physical-device phy0
+    }
+}
+nat {
+    source {
+        rule 100 {
+            outbound-interface pppoe7
+            source {
+                address 192.168.0.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+    }
+}
+policy {
+    prefix-list AS100-origin-v4 {
+        rule 10 {
+            action permit
+            prefix 100.64.0.0/12
+        }
+        rule 100 {
+            action permit
+            prefix 0.0.0.0/0
+        }
+    }
+    prefix-list AS200-origin-v4 {
+        rule 10 {
+            action permit
+            prefix 10.0.0.0/8
+        }
+        rule 20 {
+            action permit
+            prefix 172.16.0.0/12
+        }
+
+    }
+    prefix-list6 AS100-origin-v6 {
+        rule 10 {
+            action permit
+            prefix 2001:db8:200::/40
+        }
+    }
+    prefix-list6 AS200-origin-v6 {
+        rule 10 {
+            action permit
+            prefix 2001:db8:100::/40
+        }
+    }
+}
+protocols {
+    static {
+        route 192.0.2.255/32 {
+            interface pppoe7 {
+            }
+        }
+        route 100.64.50.0/23 {
+            next-hop 100.64.51.221 {
+            }
+        }
+        route6 2001:db8:ffff:ffff:ffff:ffff:ffff:ffff/128 {
+            interface pppoe7 {
+            }
+        }
+    }
+}
+qos {
+    interface pppoe7 {
+        egress isp-out
+    }
+    policy {
+        shaper isp-out {
+            bandwidth 38mbit
+            default {
+                bandwidth 100%
+                burst 15k
+                queue-limit 1000
+                queue-type fq-codel
+            }
+        }
+    }
+}
+service {
+    router-advert {
+        interface br50 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+        interface eth0.500 {
+            default-preference high
+            name-server 2001:db8:200::1
+            name-server 2001:db8:200::2
+            prefix 2001:db8:200:50::/64 {
+                valid-lifetime infinity
+            }
+        }
+        interface eth0.520 {
+            default-preference high
+            name-server 2001:db8:200::1
+            name-server 2001:db8:200::2
+            prefix 2001:db8:200:520::/64 {
+                valid-lifetime infinity
+            }
+        }
+    }
+    ssh {
+        disable-host-validation
+        dynamic-protection {
+            allow-from 100.64.0.0/10
+            allow-from 2001:db8:200::/40
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    conntrack {
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sip
+            sqlnet
+            tftp
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 192.168.0.1
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+vrf {
+    bind-to-all
+    name vyos-test-01 {
+        protocols {
+            bgp {
+                address-family {
+                    ipv4-unicast {
+                        network 100.64.50.0/23 {
+                        }
+                    }
+                    ipv6-unicast {
+                        network 2001:db8:200:ffff::1/128 {
+                        }
+                    }
+                }
+                neighbor 100.64.51.208 {
+                    peer-group AS100v4
+                }
+                neighbor 100.64.51.222 {
+                    address-family {
+                        ipv4-unicast {
+                            default-originate {
+                            }
+                            maximum-prefix 10
+                            prefix-list {
+                                export AS100-origin-v4
+                                import AS200-origin-v4
+                            }
+                            soft-reconfiguration {
+                                inbound
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as 200
+                }
+                neighbor 100.64.51.251 {
+                    peer-group AS100v4
+                    shutdown
+                }
+                neighbor 100.64.51.254 {
+                    peer-group AS100v4
+                    shutdown
+                }
+                neighbor 2001:db8:200:ffff::2 {
+                    peer-group AS100v6
+                    shutdown
+                }
+                neighbor 2001:db8:200:ffff::a {
+                    peer-group AS100v6
+                }
+                neighbor 2001:db8:200:ff::101:2 {
+                    address-family {
+                        ipv6-unicast {
+                            maximum-prefix 10
+                            prefix-list {
+                                export AS100-origin-v6
+                                import AS200-origin-v6
+                            }
+                            soft-reconfiguration {
+                                inbound
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as 200
+                }
+                peer-group AS100v4 {
+                    address-family {
+                        ipv4-unicast {
+                            nexthop-self {
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as internal
+                    update-source dum0
+                }
+                peer-group AS100v6 {
+                    address-family {
+                        ipv6-unicast {
+                            nexthop-self {
+                            }
+                        }
+                    }
+                    capability {
+                        dynamic
+                    }
+                    remote-as internal
+                    update-source dum0
+                }
+                system-as 100
+            }
+            ospf {
+                area 0 {
+                    area-type {
+                        normal
+                    }
+                    authentication md5
+                }
+                interface wg500 {
+                    area 0
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key vyosospf01
+                            }
+                        }
+                    }
+                    network point-to-point
+                    passive {
+                        disable
+                    }
+                }
+                log-adjacency-changes {
+                    detail
+                }
+                parameters {
+                    abr-type cisco
+                    router-id 100.64.51.252
+                }
+                passive-interface default
+                redistribute {
+                    connected {
+                    }
+                    static {
+                    }
+                }
+            }
+            ospfv3 {
+                interface wg501 {
+                    area 0
+                    network point-to-point
+                }
+                log-adjacency-changes {
+                    detail
+                }
+                parameters {
+                    router-id 100.64.51.252
+                }
+                redistribute {
+                    connected {
+                    }
+                    static {
+                    }
+                }
+            }
+            static {
+                route 192.168.0.0/24 {
+                    next-hop 100.64.51.220 {
+                    }
+                }
+                route 100.64.50.0/23 {
+                    blackhole {
+                    }
+                }
+                route 100.64.51.32/27 {
+                    next-hop 100.64.51.5 {
+                    }
+                }
+                route6 2001:db8:2fe:ffff::/64 {
+                    next-hop 2001:db8:200:102::5 {
+                    }
+                }
+            }
+        }
+        table 1000
+    }
+}
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "bgp@3:broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@9:flow-accounting@1:https@4:ids@1:interfaces@28:ipoe-server@1:ipsec@12:isis@2:l2tp@4:lldp@1:mdns@1:monitoring@1:nat@5:nat66@1:ntp@2:openconnect@2:ospf@1:policy@5:pppoe-server@6:pptp@2:qos@2:quagga@10:rpki@1:salt@1:snmp@3:ssh@2:sstp@4:system@25:vrf@3:vrrp@3:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2"
+// Release version: 1.4-rolling-202303160317
