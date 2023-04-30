@@ -24,8 +24,8 @@ interfaces {
             tso
         }
         ring-buffer {
-            rx 4096
-            tx 4096
+            rx 256
+            tx 256
         }
         vif 5 {
             address 2001:db8:200:f0::114/64
@@ -92,8 +92,8 @@ interfaces {
             tso
         }
         ring-buffer {
-            rx 4096
-            tx 4096
+            rx 256
+            tx 256
         }
     }
     ethernet eth2 {
