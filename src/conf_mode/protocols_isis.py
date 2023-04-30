@@ -129,7 +129,7 @@ def verify(isis):
             vrf = isis['vrf']
             tmp = get_interface_config(interface)
             if 'master' not in tmp or tmp['master'] != vrf:
-                raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
+                raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
 
     # If md5 and plaintext-password set at the same time
     for password in ['area_password', 'domain_password']:

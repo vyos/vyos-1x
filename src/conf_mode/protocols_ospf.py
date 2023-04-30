@@ -196,7 +196,7 @@ def verify(ospf):
                 vrf = ospf['vrf']
                 tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
-                    raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
+                    raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
 
     # Segment routing checks
     if dict_search('segment_routing.global_block', ospf):

@@ -138,7 +138,7 @@ def verify(ospfv3):
                 vrf = ospfv3['vrf']
                 tmp = get_interface_config(interface)
                 if 'master' not in tmp or tmp['master'] != vrf:
-                    raise ConfigError(f'Interface {interface} is not a member of VRF {vrf}!')
+                    raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
 
     return None
 
