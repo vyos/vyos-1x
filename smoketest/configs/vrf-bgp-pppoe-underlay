@@ -445,60 +445,6 @@ vrf {
                 }
                 system-as 100
             }
-            ospf {
-                area 0 {
-                    area-type {
-                        normal
-                    }
-                    authentication md5
-                }
-                interface wg500 {
-                    area 0
-                    authentication {
-                        md5 {
-                            key-id 10 {
-                                md5-key vyosospf01
-                            }
-                        }
-                    }
-                    network point-to-point
-                    passive {
-                        disable
-                    }
-                }
-                log-adjacency-changes {
-                    detail
-                }
-                parameters {
-                    abr-type cisco
-                    router-id 100.64.51.252
-                }
-                passive-interface default
-                redistribute {
-                    connected {
-                    }
-                    static {
-                    }
-                }
-            }
-            ospfv3 {
-                interface wg501 {
-                    area 0
-                    network point-to-point
-                }
-                log-adjacency-changes {
-                    detail
-                }
-                parameters {
-                    router-id 100.64.51.252
-                }
-                redistribute {
-                    connected {
-                    }
-                    static {
-                    }
-                }
-            }
             static {
                 route 192.168.0.0/24 {
                     next-hop 100.64.51.220 {
