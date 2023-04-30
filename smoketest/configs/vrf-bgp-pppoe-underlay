@@ -189,10 +189,6 @@ interfaces {
         port 50666
         private-key zvPnp2MLAoX7SotuHLFLDyy4sdlD7ttbD1xNEqA3mkU=
     }
-    wireless wlan0 {
-        disable
-        physical-device phy0
-    }
 }
 nat {
     source {
