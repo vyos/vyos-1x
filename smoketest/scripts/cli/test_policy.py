@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -1071,6 +1071,22 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                     },
                 },
             },
+            'match-protocol' : {
+                'rule' : {
+                    '10' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'protocol'  : 'static',
+                        },
+                    },
+                    '20' : {
+                        'action' : 'permit',
+                        'match' : {
+                            'protocol'   : 'bgp',
+                        },
+                    },
+                },
+            },
             'relative-metric' : {
                 'rule' : {
                     '10' : {
@@ -1202,6 +1218,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.cli_set(path + ['rule', rule, 'match', 'rpki', 'notfound'])
                     if 'rpki-valid' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'rpki', 'valid'])
+                    if 'protocol' in rule_config['match']:
+                        self.cli_set(path + ['rule', rule, 'match', 'protocol', rule_config['match']['protocol']])
                     if 'tag' in rule_config['match']:
                         self.cli_set(path + ['rule', rule, 'match', 'tag', rule_config['match']['tag']])
 
@@ -1367,6 +1385,9 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                         self.assertIn(tmp, config)
                     if 'peer' in rule_config['match']:
                         tmp = f'match peer {rule_config["match"]["peer"]}'
+                        self.assertIn(tmp, config)
+                    if 'protocol' in rule_config['match']:
+                        tmp = f'match source-protocol {rule_config["match"]["protocol"]}'
                         self.assertIn(tmp, config)
                     if 'rpki-invalid' in rule_config['match']:
                         tmp = f'match rpki invalid'

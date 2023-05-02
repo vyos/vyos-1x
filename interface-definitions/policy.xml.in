@@ -971,6 +971,65 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>Match protocol via which the route was learnt</help>
+                      <completionHelp>
+                        <list>babel bgp connected isis kernel ospf ospfv3 rip ripng static table vnc</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>babel</format>
+                        <description>Babel routing protocol (Babel)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>bgp</format>
+                        <description>Border Gateway Protocol (BGP)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>connected</format>
+                        <description>Connected routes (directly attached subnet or host)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>isis</format>
+                        <description>Intermediate System to Intermediate System (IS-IS)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>kernel</format>
+                        <description>Kernel routes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ospf</format>
+                        <description>Open Shortest Path First (OSPFv2)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ospfv3</format>
+                        <description>Open Shortest Path First (IPv6) (OSPFv3)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>rip</format>
+                        <description>Routing Information Protocol (RIP)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ripng</format>
+                        <description>Routing Information Protocol next-generation (IPv6) (RIPng)</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>static</format>
+                        <description>Statically configured routes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>table</format>
+                        <description>Non-main Kernel Routing Table</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>vnc</format>
+                        <description>Virtual Network Control (VNC)</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(babel|bgp|connected|isis|kernel|ospf|ospfv3|rip|ripng|static|table|vnc)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <leafNode name="rpki">
                     <properties>
                       <help>Match RPKI validation result</help>
