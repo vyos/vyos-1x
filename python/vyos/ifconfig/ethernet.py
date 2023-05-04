@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -14,9 +14,10 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
 from glob import glob
+
+from vyos.base import Warning
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import run
@@ -118,7 +119,7 @@ class EthernetIf(Interface):
             cmd = f'ethtool --pause {ifname} autoneg {enable} tx {enable} rx {enable}'
             output, code = self._popen(cmd)
             if code:
-                print(f'Could not set flowcontrol for {ifname}')
+                Warning(f'could not change "{ifname}" flow control setting!')
             return output
         return None
 
@@ -134,6 +135,7 @@ class EthernetIf(Interface):
         >>> i = EthernetIf('eth0')
         >>> i.set_speed_duplex('auto', 'auto')
         """
+        ifname = self.config['ifname']
 
         if speed not in ['auto', '10', '100', '1000', '2500', '5000', '10000',
                          '25000', '40000', '50000', '100000', '400000']:
@@ -143,7 +145,11 @@ class EthernetIf(Interface):
             raise ValueError("Value out of range (duplex)")
 
         if not self.ethtool.check_speed_duplex(speed, duplex):
-            self._debug_msg(f'NIC driver does not support changing speed/duplex settings!')
+            Warning(f'changing speed/duplex setting on "{ifname}" is unsupported!')
+            return
+
+        if not self.ethtool.check_auto_negotiation_supported():
+            Warning(f'changing auto-negotiation setting on "{ifname}" is unsupported!')
             return
 
         # Get current speed and duplex settings:

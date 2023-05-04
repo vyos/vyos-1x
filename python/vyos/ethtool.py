@@ -51,6 +51,7 @@ class Ethtool:
     _ring_buffers_max = { }
     _driver_name = None
     _auto_negotiation = False
+    _auto_negotiation_supported = None
     _flow_control = False
     _flow_control_enabled = None
 
@@ -80,7 +81,13 @@ class Ethtool:
                             self._speed_duplex.update({ speed : {}})
                         if duplex not in self._speed_duplex[speed]:
                             self._speed_duplex[speed].update({ duplex : ''})
-            if 'Auto-negotiation:' in line:
+            if 'Supports auto-negotiation:':
+                # Split the following string: Auto-negotiation: off
+                # we are only interested in off or on
+                tmp = line.split()[-1]
+                self._auto_negotiation_supported = bool(tmp == 'Yes')
+            # Only read in if Auto-negotiation is supported
+            if self._auto_negotiation_supported and 'Auto-negotiation:' in line:
                 # Split the following string: Auto-negotiation: off
                 # we are only interested in off or on
                 tmp = line.split()[-1]
@@ -132,8 +139,12 @@ class Ethtool:
             # ['Autonegotiate:', 'on']
             self._flow_control_enabled = out.splitlines()[1].split()[-1]
 
+    def check_auto_negotiation_supported(self):
+        """ Check if the NIC supports changing auto-negotiation """
+        return self._auto_negotiation_supported
+
     def get_auto_negotiation(self):
-        return self._auto_negotiation
+        return self._auto_negotiation_supported and self._auto_negotiation
 
     def get_driver_name(self):
         return self._driver_name
