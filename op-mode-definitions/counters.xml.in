@@ -19,7 +19,7 @@
                 <properties>
                   <help>Clear all bonding interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -35,7 +35,7 @@
                 <properties>
                   <help>Clear interface counters for a given bonding interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -48,7 +48,7 @@
                 <properties>
                   <help>Clear all bridge interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -64,7 +64,7 @@
                 <properties>
                   <help>Clear interface counters for a given bridge interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -77,7 +77,7 @@
                 <properties>
                   <help>Clear all dummy interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -93,7 +93,7 @@
                 <properties>
                   <help>Clear interface counters for a given dummy interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -106,7 +106,7 @@
                 <properties>
                   <help>Clear all ethernet interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -122,7 +122,7 @@
                 <properties>
                   <help>Clear interface counters for a given ethernet interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -135,7 +135,7 @@
                 <properties>
                   <help>Clear all GENEVE interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -151,7 +151,7 @@
                 <properties>
                   <help>Clear interface counters for a given GENEVE interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -164,7 +164,7 @@
                 <properties>
                   <help>Clear all Input interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -180,7 +180,7 @@
                 <properties>
                   <help>Clear interface counters for a given Input interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -193,7 +193,7 @@
                 <properties>
                   <help>Clear all L2TPv3 interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -209,7 +209,7 @@
                 <properties>
                   <help>Clear interface counters for a given L2TPv3 interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -222,7 +222,7 @@
                 <properties>
                   <help>Clear all loopback interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -238,7 +238,7 @@
                 <properties>
                   <help>Clear interface counters for a given loopback interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -251,7 +251,7 @@
                 <properties>
                   <help>Clear all MACsec interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -267,7 +267,7 @@
                 <properties>
                   <help>Clear interface counters for a given MACsec interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -280,7 +280,7 @@
                 <properties>
                   <help>Clear all OpenVPN interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -296,7 +296,7 @@
                 <properties>
                   <help>Clear interface counters for a given OpenVPN interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -309,7 +309,7 @@
                 <properties>
                   <help>Clear all PPPoE interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -325,7 +325,7 @@
                 <properties>
                   <help>Clear interface counters for a given PPPoE interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -338,7 +338,7 @@
                 <properties>
                   <help>Clear all Pseudo-Ethernet interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -354,7 +354,7 @@
                 <properties>
                   <help>Clear interface counters for a given Pseudo-Ethernet interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -367,7 +367,7 @@
                 <properties>
                   <help>Clear all SSTP interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -383,7 +383,7 @@
                 <properties>
                   <help>Clear interface counters for a given SSTP interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -396,7 +396,7 @@
                 <properties>
                   <help>Clear all tunnel interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -412,7 +412,7 @@
                 <properties>
                   <help>Clear interface counters for a given tunnel interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -425,7 +425,7 @@
                 <properties>
                   <help>Clear all virtual-ethernet interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -441,7 +441,7 @@
                 <properties>
                   <help>Clear interface counters for a given virtual-ethernet interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -454,7 +454,7 @@
                 <properties>
                   <help>Clear all VTI interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -470,7 +470,7 @@
                 <properties>
                   <help>Clear interface counters for a given VTI interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -483,7 +483,7 @@
                 <properties>
                   <help>Clear all VXLAN interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -499,7 +499,7 @@
                 <properties>
                   <help>Clear interface counters for a given VXLAN interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -512,7 +512,7 @@
                 <properties>
                   <help>Clear all Wireguard interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </node>
             </children>
           </node>
@@ -528,7 +528,7 @@
                 <properties>
                   <help>Clear interface counters for a given Wireguard interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -541,7 +541,7 @@
                 <properties>
                   <help>Clear all wireless interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </leafNode>
             </children>
           </node>
@@ -557,7 +557,7 @@
                 <properties>
                   <help>Clear counters for a given wireless interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>
@@ -570,7 +570,7 @@
                 <properties>
                   <help>Clear all WWAN interface counters</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_type "$3"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-type "$3"</command>
               </leafNode>
             </children>
           </node>
@@ -586,7 +586,7 @@
                 <properties>
                   <help>Clear counters for a given WWAN interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf_name "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces.py clear_counters --intf-name "$4"</command>
               </leafNode>
             </children>
           </tagNode>

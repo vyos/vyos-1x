@@ -21,7 +21,7 @@
                     <properties>
                       <help>Show QAT information for a given acceleration device</help>
                       <completionHelp>
-                        <script>${vyos_op_scripts_dir}/show_acceleration.py --dev_list</script>
+                        <script>${vyos_op_scripts_dir}/show_acceleration.py --dev-list</script>
                       </completionHelp>
                     </properties>
                     <children>

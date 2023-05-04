@@ -25,7 +25,7 @@
             <list>&lt;Minutes&gt;</list>
           </completionHelp>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot_in $3 $4</command>
+        <command>sudo ${vyos_op_scripts_dir}/powerctrl.py --yes --reboot-in $3 $4</command>
       </tagNode>
       <tagNode name="at">
         <properties>

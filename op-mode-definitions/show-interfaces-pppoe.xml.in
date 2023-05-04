@@ -11,7 +11,7 @@
                 <path>interfaces pppoe</path>
               </completionHelp>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=pppoe</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pppoe</command>
             <children>
               <leafNode name="log">
                 <properties>
@@ -34,13 +34,13 @@
             <properties>
               <help>Show PPPoE interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=pppoe</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=pppoe</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed PPPoE interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=pppoe</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=pppoe</command>
               </leafNode>
             </children>
           </node>

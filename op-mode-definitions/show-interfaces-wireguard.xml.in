@@ -11,7 +11,7 @@
                 <script>${vyos_completion_dir}/list_interfaces --type wireguard</script>
               </completionHelp>
             </properties>
-	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf_name="$4" --intf_type=wireguard</command>
+	        <command>${vyos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=wireguard</command>
             <children>
               <leafNode name="allowed-ips">
                 <properties>
@@ -49,13 +49,13 @@
             <properties>
               <help>Show WireGuard interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf_type=wireguard</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=wireguard</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed Wireguard interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf_type=wireguard</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=wireguard</command>
               </leafNode>
             </children>
           </node>

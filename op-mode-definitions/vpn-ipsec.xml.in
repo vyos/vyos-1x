@@ -35,7 +35,7 @@
                             <list>&lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_dst --profile="$5" --tunnel="$7" --nbma_dst="$9"</command>
+                        <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_dst --profile="$5" --tunnel="$7" --nbma-dst="$9"</command>
                       </tagNode>
                     </children>
                     <command>sudo ${vyos_op_scripts_dir}/ipsec.py reset_profile_all --profile="$5" --tunnel="$7"</command>
@@ -219,7 +219,7 @@
                     <properties>
                       <help>Show detail active IKEv2 RA sessions by connection-id</help>
                     </properties>
-                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --conn_id="$6"; else echo "IPsec process not running" ; fi</command>
+                    <command>if systemctl is-active --quiet strongswan ; then sudo ${vyos_op_scripts_dir}/ipsec.py show_ra_detail --conn-id="$6"; else echo "IPsec process not running" ; fi</command>
                   </tagNode>
                   <node name="summary">
                     <properties>
