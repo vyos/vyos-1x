@@ -1,4 +1,4 @@
-# Copyright 2018-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -41,7 +41,6 @@ class BaseWarning:
                 isfirstmessage = False
                 initial_indent = self.standardindent
             print(f'{mes}')
-        print('')
 
 
 class Warning():
