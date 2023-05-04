@@ -3,6 +3,7 @@
   <node name="load-balancing">
     <properties>
       <help>Configure load-balancing</help>
+      <priority>900</priority>
     </properties>
     <children>
       <node name="wan" owner="${vyos_conf_scripts_dir}/load-balancing-wan.py">
@@ -59,6 +60,7 @@
                     <validator name="numeric" argument="--range 1-10"/>
                   </constraint>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <leafNode name="nexthop">
                 <properties>
@@ -91,6 +93,7 @@
                     <validator name="numeric" argument="--range 1-10"/>
                   </constraint>
                 </properties>
+                <defaultValue>1</defaultValue>
               </leafNode>
               <tagNode name="test">
                 <properties>
@@ -115,6 +118,7 @@
                         <validator name="numeric" argument="--range 1-30"/>
                       </constraint>
                     </properties>
+                    <defaultValue>5</defaultValue>
                   </leafNode>
                   <leafNode name="target">
                     <properties>
@@ -151,6 +155,7 @@
                         <validator name="numeric" argument="--range 1-254"/>
                       </constraint>
                     </properties>
+                    <defaultValue>1</defaultValue>
                   </leafNode>
                   <leafNode name="type">
                     <properties>
@@ -242,6 +247,7 @@
                       </constraint>
                       <constraintErrorMessage>Weight must be between 1 and 255</constraintErrorMessage>
                     </properties>
+                    <defaultValue>1</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>
@@ -261,6 +267,7 @@
                         <validator name="numeric" argument="--range 0-4294967295"/>
                       </constraint>
                     </properties>
+                    <defaultValue>5</defaultValue>
                   </leafNode>
                   <leafNode name="period">
                     <properties>
@@ -284,6 +291,7 @@
                         <regex>(hour|minute|second)</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>second</defaultValue>
                   </leafNode>
                   <leafNode name="rate">
                     <properties>
@@ -296,6 +304,7 @@
                         <validator name="numeric" argument="--range 0-4294967295"/>
                       </constraint>
                     </properties>
+                    <defaultValue>5</defaultValue>
                   </leafNode>
                   <leafNode name="threshold">
                     <properties>
@@ -315,6 +324,7 @@
                         <regex>(above|below)</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>below</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -355,6 +365,7 @@
                     <validator name="ip-protocol"/>
                   </constraint>
                 </properties>
+                <defaultValue>all</defaultValue>
               </leafNode>
               <node name="source">
                 <properties>
