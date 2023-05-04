@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,101 +15,133 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Purpose:
-#    Displays bgp neighbors information.
-#    Used by the "show bgp (vrf <tag>) ipv4|ipv6 neighbors" commands.
+#    Displays BGP neighbors and tables information.
 
 import re
 import sys
 import typing
 
-import jmespath
 from jinja2 import Template
-from humps import decamelize
-
-from vyos.configquery import ConfigTreeQuery
 
 import vyos.opmode
 
-ArgFamily = typing.Literal['inet', 'inet6']
-
 frr_command_template = Template("""
-{% if family %}
-    show bgp
-        {{ 'vrf ' ~ vrf if vrf else '' }}
-        {{ 'ipv6' if family == 'inet6' else 'ipv4'}}
-        {{ 'neighbor ' ~ peer if peer else 'summary' }}
+show bgp
+
+{## VRF and family modifiers that may precede any options ##}
+
+{% if vrf %}
+    vrf {{vrf}}
 {% endif %}
+
+{% if family == "inet" %}
+    ipv4
+{% elif family == "inet6" %}
+    ipv6
+{% elif family == "l2vpn" %}
+    l2vpn evpn
+{% endif %}
+
+{% if family_modifier == "unicast" %}
+    unicast
+{% elif family_modifier == "multicast" %}
+    multicast
+{% elif family_modifier == "flowspec" %}
+    flowspec
+{% elif family_modifier == "vpn" %}
+    vpn
+{% endif %}
+
+{## Mutually exclusive query parameters ##}
+
+{# Network prefix #}
+{% if prefix %}
+    {{prefix}}
+
+    {% if longer_prefixes %}
+      longer-prefixes
+    {% elif best_path %}
+      bestpath
+    {% endif %}
+{% endif %}
+
+{# Regex #}
+{% if regex %}
+    regex {{regex}}
+{% endif %}
+
+{## Raw modifier ##}
 
 {% if raw %}
     json
 {% endif %}
 """)
 
+ArgFamily = typing.Literal['inet', 'inet6', 'l2vpn']
+ArgFamilyModifier = typing.Literal['unicast', 'labeled_unicast', 'multicast', 'vpn', 'flowspec']
 
-def _verify(func):
-    """Decorator checks if BGP config exists
-    BGP configuration can be present under vrf <tag>
-    If we do npt get arg 'peer' then it can be 'bgp summary'
-    """
-    from functools import wraps
-
-    @wraps(func)
-    def _wrapper(*args, **kwargs):
-        config = ConfigTreeQuery()
-        afi = 'ipv6' if kwargs.get('family') == 'inet6' else 'ipv4'
-        global_vrfs = ['all', 'default']
-        peer = kwargs.get('peer')
-        vrf = kwargs.get('vrf')
-        unconf_message = f'BGP or neighbor is not configured'
-        # Add option to check the specific neighbor if we have arg 'peer'
-        peer_opt = f'neighbor {peer} address-family {afi}-unicast' if peer else ''
-        vrf_opt = ''
-        if vrf and vrf not in global_vrfs:
-            vrf_opt = f'vrf name {vrf}'
-        # Check if config does not exist
-        if not config.exists(f'{vrf_opt} protocols bgp {peer_opt}'):
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
-        return func(*args, **kwargs)
-
-    return _wrapper
-
-
-@_verify
-def show_neighbors(raw: bool,
-                   family: ArgFamily,
-                   peer: typing.Optional[str],
-                   vrf: typing.Optional[str]):
-    kwargs = dict(locals())
-    frr_command = frr_command_template.render(kwargs)
-    frr_command = re.sub(r'\s+', ' ', frr_command)
-
+def show_summary(raw: bool):
     from vyos.util import cmd
-    output = cmd(f"vtysh -c '{frr_command}'")
 
     if raw:
         from json import loads
-        data = loads(output)
-        # Get list of the peers
-        peers = jmespath.search('*.peers | [0]', data)
-        if peers:
-            # Create new dict, delete old key 'peers'
-            # add key 'peers' neighbors to the list
-            list_peers = []
-            new_dict = jmespath.search('* | [0]', data)
-            if 'peers' in new_dict:
-                new_dict.pop('peers')
 
-                for neighbor, neighbor_options in peers.items():
-                    neighbor_options['neighbor'] = neighbor
-                    list_peers.append(neighbor_options)
-                new_dict['peers'] = list_peers
-            return decamelize(new_dict)
-        data = jmespath.search('* | [0]', data)
-        return decamelize(data)
+        output = cmd(f"vtysh -c 'show bgp summary json'").strip()
 
+        # FRR 8.5 correctly returns an empty object when BGP is not running,
+        # we don't need to do anything special here
+        return loads(output)
     else:
+        output = cmd(f"vtysh -c 'show bgp summary'")
         return output
 
+def show_neighbors(raw: bool):
+    from vyos.util import cmd
+    from vyos.utils.dict import dict_to_list
+
+    if raw:
+        from json import loads
+
+        output = cmd(f"vtysh -c 'show bgp neighbors json'").strip()
+        d = loads(output)
+        return dict_to_list(d, save_key_to="neighbor")
+    else:
+        output = cmd(f"vtysh -c 'show bgp neighbors'")
+        return output
+
+def show(raw: bool,
+         family: ArgFamily,
+         family_modifier: ArgFamilyModifier,
+         prefix: typing.Optional[str],
+         longer_prefixes: typing.Optional[bool],
+         best_path: typing.Optional[bool],
+         regex: typing.Optional[str],
+         vrf: typing.Optional[str]):
+    from vyos.utils.dict import dict_to_list
+
+    if (longer_prefixes or best_path) and (prefix is None):
+        raise ValueError("longer_prefixes and best_path can only be used when prefix is given")
+    elif (family == "l2vpn") and (family_modifier is not None):
+        raise ValueError("l2vpn family does not accept any modifiers")
+    else:
+        kwargs = dict(locals())
+
+        frr_command = frr_command_template.render(kwargs)
+        frr_command = re.sub(r'\s+', ' ', frr_command)
+
+        from vyos.util import cmd
+        output = cmd(f"vtysh -c '{frr_command}'")
+
+        if raw:
+            from json import loads
+            d = loads(output)
+            if not ("routes" in d):
+                raise vyos.opmode.InternalError("FRR returned a BGP table with no routes field")
+            d = d["routes"]
+            routes = dict_to_list(d, save_key_to="route_key")
+            return routes
+        else:
+            return output
 
 if __name__ == '__main__':
     try:
