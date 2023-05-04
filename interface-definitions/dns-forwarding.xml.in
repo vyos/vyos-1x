@@ -277,6 +277,34 @@
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
+                      <tagNode name="ns">
+                        <properties>
+                          <help>NS record</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>A DNS name relative to the root record</description>
+                          </valueHelp>
+                          <constraint>
+                            <regex>([-_a-zA-Z0-9.]{1,63}|@)(?&lt;!\.)</regex>
+                          </constraint>
+                        </properties>
+                        <children>
+                          <leafNode name="target">
+                            <properties>
+                              <help>Target DNS server authoritative for subdomain</help>
+                              <valueHelp>
+                                <format>nsXX.example.com</format>
+                                <description>Absolute DNS name</description>
+                              </valueHelp>
+                              <constraint>
+                                <regex>[-_a-zA-Z0-9.]{1,63}(?&lt;!\.)</regex>
+                              </constraint>
+                            </properties>
+                          </leafNode>
+                          #include <include/dns/time-to-live.xml.i>
+                          #include <include/generic-disable-node.xml.i>
+                        </children>
+                      </tagNode>
                       <tagNode name="ptr">
                         <properties>
                           <help>PTR record</help>

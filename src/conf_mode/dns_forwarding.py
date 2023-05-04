@@ -99,7 +99,7 @@ def get_config(config=None):
 
             recorddata = zonedata['records']
 
-            for rtype in [ 'a', 'aaaa', 'cname', 'mx', 'ptr', 'txt', 'spf', 'srv', 'naptr' ]:
+            for rtype in [ 'a', 'aaaa', 'cname', 'mx', 'ns', 'ptr', 'txt', 'spf', 'srv', 'naptr' ]:
                 if rtype not in recorddata:
                     continue
                 for subnode in recorddata[rtype]:
@@ -126,7 +126,7 @@ def get_config(config=None):
                                 'ttl': rdata['ttl'],
                                 'value': address
                             })
-                    elif rtype in ['cname', 'ptr']:
+                    elif rtype in ['cname', 'ptr', 'ns']:
                         rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
                         rdata = dict_merge(rdefaults, rdata)
 
