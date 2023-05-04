@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,6 +17,7 @@
 import argparse
 
 from sys import exit
+from vyos.configquery import ConfigTreeQuery
 from vyos.util import cmd
 
 parser = argparse.ArgumentParser()
@@ -48,6 +49,11 @@ def qmi_cmd(device, command, silent=False):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    tmp = ConfigTreeQuery()
+    if not tmp.exists(['interfaces', 'wwan', args.interface]):
+        print(f'Interface "{args.interface}" unconfigured!')
+        exit(1)
 
     # remove the WWAN prefix from the interface, required for the CDC interface
     if_num = args.interface.replace('wwan','')

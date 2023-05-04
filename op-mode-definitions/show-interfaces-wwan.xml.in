@@ -72,7 +72,7 @@
                 <properties>
                   <help>Show WWAN module detailed information summary</help>
                 </properties>
-                <command>mmcli --modem ${4#wwan}</command>
+                <command>if cli-shell-api existsActive interfaces wwan $4; then mmcli --modem ${4#wwan}; else echo "Interface \"$4\" unconfigured!"; fi</command>
               </leafNode>
               <leafNode name="log">
                 <properties>
