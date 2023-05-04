@@ -113,7 +113,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'address' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: at least one address is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one address is required')
                             continue
 
                         if subnode == 'any':
@@ -131,7 +131,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'target' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: target is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: target is required')
                             continue
 
                         zone['records'].append({
@@ -146,7 +146,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'server' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: at least one server is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one server is required')
                             continue
 
                         for servername in rdata['server']:
@@ -164,7 +164,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'value' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: at least one value is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one value is required')
                             continue
 
                         for value in rdata['value']:
@@ -179,7 +179,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'value' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: value is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: value is required')
                             continue
 
                         zone['records'].append({
@@ -194,7 +194,7 @@ def get_config(config=None):
                         rdata = dict_merge(rdefaults, rdata)
 
                         if not 'entry' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: at least one entry is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one entry is required')
                             continue
 
                         for entryno in rdata['entry']:
@@ -203,11 +203,11 @@ def get_config(config=None):
                             entrydata = dict_merge(entrydefaults, entrydata)
 
                             if not 'hostname' in entrydata:
-                                dns['authoritative_zone_errors'].append('{}.{}: hostname is required for entry {}'.format(subnode, node, entryno))
+                                dns['authoritative_zone_errors'].append(f'{subnode}.{node}: hostname is required for entry {entryno}')
                                 continue
 
                             if not 'port' in entrydata:
-                                dns['authoritative_zone_errors'].append('{}.{}: port is required for entry {}'.format(subnode, node, entryno))
+                                dns['authoritative_zone_errors'].append(f'{subnode}.{node}: port is required for entry {entryno}')
                                 continue
 
                             zone['records'].append({
@@ -223,7 +223,7 @@ def get_config(config=None):
 
 
                         if not 'rule' in rdata:
-                            dns['authoritative_zone_errors'].append('{}.{}: at least one rule is required'.format(subnode, node))
+                            dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one rule is required')
                             continue
 
                         for ruleno in rdata['rule']:
