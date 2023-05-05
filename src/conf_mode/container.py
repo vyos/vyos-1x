@@ -361,7 +361,7 @@ def generate(container):
                 'name' : network,
                 'plugins' : [{
                     'type': 'bridge',
-                    'bridge': f'cni-{network}',
+                    'bridge': f'pod-{network}',
                     'isGateway': True,
                     'ipMasq': False,
                     'hairpinMode': False,
