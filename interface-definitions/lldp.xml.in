@@ -20,7 +20,7 @@
                 <description>Location data for a specific interface</description>
               </valueHelp>
               <completionHelp>
-                <script>${vyatta_sbindir}/vyatta-interfaces.pl --show all</script>
+                <script>${vyos_completion_dir}/list_interfaces</script>
                 <list>all</list>
               </completionHelp>
             </properties>
