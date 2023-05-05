@@ -11,9 +11,12 @@
           <tagNode name="user">
             <properties>
               <help>Logging to specific terminal of given user</help>
+              <completionHelp>
+                <path>system login user</path>
+              </completionHelp>
               <valueHelp>
                 <format>txt</format>
-                <description>user login name</description>
+                <description>Local user account</description>
               </valueHelp>
               <constraint>
                 #include <include/constraint/login-username.xml.i>
@@ -26,7 +29,7 @@
           </tagNode>
           <tagNode name="host">
             <properties>
-              <help>Logging to a remote host</help>
+              <help>Logging to remote host</help>
               <constraint>
                 <validator name="ip-address"/>
                 <validator name="fqdn"/>
@@ -35,6 +38,10 @@
               <valueHelp>
                 <format>ipv4</format>
                 <description>Remote syslog server IPv4 address</description>
+              </valueHelp>
+              <valueHelp>
+                <format>ipv6</format>
+                <description>Remote syslog server IPv6 address</description>
               </valueHelp>
               <valueHelp>
                 <format>hostname</format>
