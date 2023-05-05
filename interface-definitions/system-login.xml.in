@@ -12,7 +12,7 @@
             <properties>
               <help>Local user account information</help>
               <constraint>
-                <regex>[-_a-zA-Z0-9.]{1,100}</regex>
+                #include <include/constraint/login-username.xml.i>
               </constraint>
               <constraintErrorMessage>Username contains illegal characters or\nexceeds 100 character limitation.</constraintErrorMessage>
             </properties>

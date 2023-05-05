@@ -11,14 +11,14 @@
           <tagNode name="user">
             <properties>
               <help>Logging to specific terminal of given user</help>
-              <constraint>
-                <regex>[a-z_][a-z0-9_-]{1,31}[$]?</regex>
-              </constraint>
-              <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
               <valueHelp>
-                <format>username</format>
+                <format>txt</format>
                 <description>user login name</description>
               </valueHelp>
+              <constraint>
+                #include <include/constraint/login-username.xml.i>
+              </constraint>
+              <constraintErrorMessage>illegal characters in user</constraintErrorMessage>
             </properties>
             <children>
               <tagNode name="facility">
