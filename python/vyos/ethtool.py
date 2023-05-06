@@ -81,7 +81,7 @@ class Ethtool:
                             self._speed_duplex.update({ speed : {}})
                         if duplex not in self._speed_duplex[speed]:
                             self._speed_duplex[speed].update({ duplex : ''})
-            if 'Supports auto-negotiation:':
+            if 'Supports auto-negotiation:' in line:
                 # Split the following string: Auto-negotiation: off
                 # we are only interested in off or on
                 tmp = line.split()[-1]
