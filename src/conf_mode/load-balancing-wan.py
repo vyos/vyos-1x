@@ -31,6 +31,7 @@ airbag.enable()
 
 load_balancing_dir = '/run/load-balance'
 load_balancing_conf_file = f'{load_balancing_dir}/wlb.conf'
+systemd_service = 'vyos-wan-load-balance.service'
 
 
 def get_config(config=None):
@@ -158,13 +159,13 @@ def generate(lb):
 def apply(lb):
     if not lb:
         try:
-            cmd('sudo /opt/vyatta/sbin/vyatta-wanloadbalance.init stop')
+            cmd(f'systemctl stop {systemd_service}')
         except Exception as e:
             print(f"Error message: {e}")
 
     else:
         cmd('sudo sysctl -w net.netfilter.nf_conntrack_acct=1')
-        cmd(f'sudo /opt/vyatta/sbin/vyatta-wanloadbalance.init restart {load_balancing_conf_file}')
+        cmd(f'systemctl restart {systemd_service}')
 
     return None
 

@@ -1,0 +1,15 @@
+[Unit]
+Description=VyOS WAN load-balancing service
+After=vyos-router.service
+
+[Service]
+ExecStart=/opt/vyatta/sbin/wan_lb -f /run/load-balance/wlb.conf -d -i /var/run/vyatta/wlb.pid
+ExecReload=/bin/kill -s SIGTERM $MAINPID && sleep 5 && /opt/vyatta/sbin/wan_lb -f /run/load-balance/wlb.conf -d -i /var/run/vyatta/wlb.pid
+ExecStop=/bin/kill -s SIGTERM $MAINPID
+PIDFile=/var/run/vyatta/wlb.pid
+KillMode=process
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
