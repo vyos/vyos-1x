@@ -6,7 +6,7 @@ etc/netplug
 etc/opennhrp
 etc/modprobe.d
 etc/ppp
-etc/rsyslog.d
+etc/rsyslog.conf
 etc/securetty
 etc/security
 etc/sudoers.d

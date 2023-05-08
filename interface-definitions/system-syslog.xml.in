@@ -50,6 +50,10 @@
             </properties>
             <children>
               #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>514</defaultValue>
+              </leafNode>
+              #include <include/protocol-tcp-udp.xml.i>
               #include <include/syslog-facility.xml.i>
               <node name="format">
                 <properties>
@@ -79,11 +83,12 @@
                 <children>
                   <leafNode name="interval">
                     <properties>
-                      <help>time interval how often a mark message is being sent in seconds (default: 1200)</help>
+                      <help>time interval how often a mark message is being sent in seconds</help>
                       <constraint>
                         <validator name="numeric" argument="--positive"/>
                       </constraint>
                     </properties>
+                    <defaultValue>1200</defaultValue>
                   </leafNode>
                 </children>
               </node>
@@ -111,21 +116,23 @@
                 <children>
                   <leafNode name="file">
                     <properties>
-                      <help>Number of saved files (default is 5)</help>
+                      <help>Number of saved files</help>
                       <constraint>
                         <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in number of files</constraintErrorMessage>
                     </properties>
+                    <defaultValue>5</defaultValue>
                   </leafNode>
                   <leafNode name="size">
                     <properties>
-                      <help>Size of log files (in kbytes, default is 256)</help>
+                      <help>Size of log files in kbytes</help>
                       <constraint>
                         <regex>[0-9]+</regex>
                       </constraint>
                       <constraintErrorMessage>illegal characters in size</constraintErrorMessage>
                     </properties>
+                    <defaultValue>256</defaultValue>
                   </leafNode>
                 </children>
               </node>

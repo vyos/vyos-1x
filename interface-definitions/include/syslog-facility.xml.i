@@ -3,10 +3,10 @@
   <properties>
     <help>Facility for logging</help>
     <completionHelp>
-      <list>auth authpriv cron daemon kern lpr mail mark news protocols security syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
+      <list>auth authpriv cron daemon kern lpr mail mark news syslog user uucp local0 local1 local2 local3 local4 local5 local6 local7 all</list>
     </completionHelp>
     <constraint>
-      <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|protocols|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
+      <regex>(auth|authpriv|cron|daemon|kern|lpr|mail|mark|news|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7|all)</regex>
     </constraint>
     <constraintErrorMessage>Invalid facility type</constraintErrorMessage>
     <valueHelp>
@@ -48,14 +48,6 @@
     <valueHelp>
       <format>news</format>
       <description>USENET subsystem</description>
-    </valueHelp>
-    <valueHelp>
-      <format>protocols</format>
-      <description>depricated will be set to local7</description>
-    </valueHelp>
-    <valueHelp>
-      <format>security</format>
-      <description>depricated will be set to auth</description>
     </valueHelp>
     <valueHelp>
       <format>syslog</format>
@@ -109,10 +101,6 @@
         <completionHelp>
           <list>emerg alert crit err warning notice info debug all</list>
         </completionHelp>
-        <constraint>
-          <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
-        </constraint>
-        <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
         <valueHelp>
           <format>emerg</format>
           <description>Emergency messages</description>
@@ -149,7 +137,12 @@
           <format>all</format>
           <description>Log everything</description>
         </valueHelp>
+        <constraint>
+          <regex>(emerg|alert|crit|err|warning|notice|info|debug|all)</regex>
+        </constraint>
+        <constraintErrorMessage>Invalid loglevel</constraintErrorMessage>
       </properties>
+      <defaultValue>err</defaultValue>
     </leafNode>
   </children>
 </tagNode>

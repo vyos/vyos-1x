@@ -127,14 +127,40 @@ system {
     }
     name-server 192.168.0.1
     syslog {
-        global {
-            archive {
-                file 5
-                size 512
+        console {
+            facility all {
+                level emerg
             }
+            facility mail {
+                level info
+            }
+        }
+        global {
             facility all {
                 level info
             }
+            facility protocols {
+                level debug
+            }
+            facility security {
+                level info
+            }
+            preserve-fqdn
+        }
+        host syslog.vyos.net {
+            facility local7 {
+                level notice
+            }
+            facility protocols {
+                level alert
+            }
+            facility security {
+                level warning
+            }
+            format {
+                octet-counted
+            }
+            port 8000
         }
     }
     time-zone Europe/Berlin
