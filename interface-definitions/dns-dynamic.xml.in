@@ -135,19 +135,19 @@
                       <leafNode name="host-name">
                         <properties>
                           <help>Hostname to register with Dynamic DNS service</help>
+                          <constraint>
+                            #include <include/constraint/host-name.xml.i>
+                          </constraint>
+                          <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
                           <multi/>
                         </properties>
                       </leafNode>
                       <leafNode name="login">
                         <properties>
-                          <help>Login for Dynamic DNS service (not used by all protocols, or referred as api-token in some cases)</help>
+                          <help>Login/Username for Dynamic DNS service</help>
                         </properties>
                       </leafNode>
-                      <leafNode name="password">
-                        <properties>
-                          <help>Password for Dynamic DNS service (referred as api-token, global-token or api-secret in some cases)</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-password.xml.i>
                       <leafNode name="protocol">
                         <properties>
                           <help>ddclient protocol used for Dynamic DNS service</help>
@@ -163,25 +163,29 @@
                       <leafNode name="zone">
                         <properties>
                           <help>DNS zone to update (not used by all protocols)</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Name of DNS zone</description>
+                          </valueHelp>
                         </properties>
                       </leafNode>
                     </children>
                   </tagNode>
                   <node name="use-web">
                     <properties>
-                      <help>Use http(s) web request to obtain the external IP address instead of the IP address associated with the interface</help>
+                      <help>Use HTTP(S) web request to obtain external IP address instead of the IP address associated with the interface</help>
                     </properties>
                     <children>
                       <leafNode name="skip">
                         <properties>
-                          <help>Text pattern to skip from the respose of the given URL to extract the external IP address</help>
+                          <help>Pattern to skip from the respose</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Pattern to skip from the respose of the given URL to extract the external IP address</description>
+                          </valueHelp>
                         </properties>
                       </leafNode>
-                      <leafNode name="url">
-                        <properties>
-                          <help>Custom URL to obtain the current external IP address over http(s) web request, overriding ddclient default</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/url.xml.i>
                     </children>
                   </node>
                   <leafNode name="ipv6-enable">
