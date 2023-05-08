@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,8 +20,11 @@ import re
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdict import is_node_changed
+from vyos.configverify import verify_vrf
 from vyos import ConfigError
 from vyos.util import run
+from vyos.util import call
 from vyos.template import render
 
 from vyos import airbag
@@ -38,9 +41,9 @@ def get_config(config=None):
 
     config_data = {
         'files': {},
-      'console': {},
-      'hosts': {},
-      'user': {}
+        'console': {},
+        'hosts': {},
+        'user': {}
     }
 
     #
@@ -80,7 +83,6 @@ def get_config(config=None):
     #
     # set system syslog file
     #
-
     if c.exists('file'):
         filenames = c.list_nodes('file')
         for filename in filenames:
@@ -164,6 +166,9 @@ def get_config(config=None):
                 }
             )
 
+    if c.exists('vrf'):
+        config_data.update({'vrf' : c.return_value('vrf')})
+
     return config_data
 
 
@@ -210,6 +215,11 @@ def generate(c):
     conf = '/etc/logrotate.d/vyos-rsyslog'
     render(conf, 'syslog/logrotate.tmpl', c)
 
+    conf = r'/etc/systemd/system/rsyslog.service.d/override.conf'
+    render(conf, 'syslog/override.conf.tmpl', c)
+
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
 
 def verify(c):
     if c == None:
@@ -221,8 +231,11 @@ def verify(c):
     #
     if not os.path.islink('/etc/rsyslog.conf'):
         os.remove('/etc/rsyslog.conf')
-        os.symlink(
-            '/usr/share/vyos/templates/rsyslog/rsyslog.conf', '/etc/rsyslog.conf')
+        os.symlink('/usr/share/vyos/templates/rsyslog/rsyslog.conf',
+                   '/etc/rsyslog.conf')
+
+
+    verify_vrf(c)
 
     # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
     # is a chance that someone still needs it, so I don't automatically remove
@@ -240,6 +253,8 @@ def verify(c):
 
     for conf in c:
         if c[conf]:
+            if conf == 'vrf':
+                continue
             for item in c[conf]:
                 for s in c[conf][item]['selectors'].split(";"):
                     f = re.sub("\..*$", "", s)
