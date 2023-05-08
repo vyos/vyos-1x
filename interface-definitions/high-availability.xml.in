@@ -6,6 +6,7 @@
       <help>High availability settings</help>
     </properties>
     <children>
+      #include <include/generic-disable-node.xml.i>
       <node name="vrrp">
         <properties>
           <help>Virtual Router Redundancy Protocol settings</help>

@@ -86,7 +86,7 @@ def get_config(config=None):
     return ha
 
 def verify(ha):
-    if not ha:
+    if not ha or 'disable' in ha:
         return None
 
     used_vrid_if = []
@@ -175,7 +175,7 @@ def verify(ha):
 
 
 def generate(ha):
-    if not ha:
+    if not ha or 'disable' in ha:
         return None
 
     render(VRRP.location['config'], 'high-availability/keepalived.conf.j2', ha)
@@ -183,7 +183,7 @@ def generate(ha):
 
 def apply(ha):
     service_name = 'keepalived.service'
-    if not ha:
+    if not ha or 'disable' in ha:
         call(f'systemctl stop {service_name}')
         return None
 
