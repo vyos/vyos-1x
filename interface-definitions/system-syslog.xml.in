@@ -147,6 +147,7 @@
               #include <include/syslog-facility.xml.i>
             </children>
           </node>
+          #include <include/interface/vrf.xml.i>
         </children>
       </node>
     </children>

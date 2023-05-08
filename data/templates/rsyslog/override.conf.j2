@@ -1,0 +1,11 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+[Unit]
+StartLimitIntervalSec=0
+
+[Service]
+ExecStart=
+ExecStart={{ vrf_command }}/usr/sbin/rsyslogd -n -iNONE
+Restart=always
+RestartPreventExitStatus=
+RestartSec=10
+RuntimeDirectoryPreserve=yes

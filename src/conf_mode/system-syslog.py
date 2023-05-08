@@ -20,6 +20,8 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import is_node_changed
+from vyos.configverify import verify_vrf
 from vyos.util import call
 from vyos.template import render
 from vyos.xml import defaults
@@ -29,6 +31,7 @@ airbag.enable()
 
 rsyslog_conf = '/etc/rsyslog.d/00-vyos.conf'
 logrotate_conf = '/etc/logrotate.d/vyos-rsyslog'
+systemd_override = r'/run/systemd/system/rsyslog.service.d/override.conf'
 
 def get_config(config=None):
     if config:
@@ -43,6 +46,8 @@ def get_config(config=None):
                                   get_first_key=True, no_tag_node_value_mangle=True)
 
     syslog.update({ 'logrotate' : logrotate_conf })
+    tmp = is_node_changed(conf, base + ['vrf'])
+    if tmp: syslog.update({'restart_required': {}})
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
@@ -101,6 +106,8 @@ def verify(syslog):
     if not syslog:
         return None
 
+    verify_vrf(syslog)
+
 def generate(syslog):
     if not syslog:
         if os.path.exists(rsyslog_conf):
@@ -111,7 +118,12 @@ def generate(syslog):
         return None
 
     render(rsyslog_conf, 'rsyslog/rsyslog.conf.j2', syslog)
+    render(systemd_override, 'rsyslog/override.conf.j2', syslog)
     render(logrotate_conf, 'rsyslog/logrotate.j2', syslog)
+
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+    return None
 
 def apply(syslog):
     systemd_service = 'syslog.service'
@@ -119,7 +131,13 @@ def apply(syslog):
         call(f'systemctl stop {systemd_service}')
         return None
 
-    call(f'systemctl reload-or-restart {systemd_service}')
+    # we need to restart the service if e.g. the VRF name changed
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in syslog:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {systemd_service}')
+    return None
 
 if __name__ == '__main__':
     try:
