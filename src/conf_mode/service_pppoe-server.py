@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -71,8 +71,9 @@ def verify(pppoe):
 
     # local ippool and gateway settings config checks
     if not (dict_search('client_ip_pool.subnet', pppoe) or
+           (dict_search('client_ip_pool.name', pppoe) or
            (dict_search('client_ip_pool.start', pppoe) and
-            dict_search('client_ip_pool.stop', pppoe))):
+            dict_search('client_ip_pool.stop', pppoe)))):
         print('Warning: No PPPoE client pool defined')
 
     if dict_search('authentication.radius.dynamic_author.server', pppoe):

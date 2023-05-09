@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -243,9 +243,11 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
     def test_accel_radius_authentication(self):
         radius_called_sid = 'ifname:mac'
         radius_acct_interim_jitter = '9'
+        radius_acct_interim_interval = '60'
 
         self.set(['authentication', 'radius', 'called-sid-format', radius_called_sid])
         self.set(['authentication', 'radius', 'acct-interim-jitter', radius_acct_interim_jitter])
+        self.set(['authentication', 'radius', 'accounting-interim-interval', radius_acct_interim_interval])
 
         # run common tests
         super().test_accel_radius_authentication()
@@ -257,6 +259,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         # Validate configuration
         self.assertEqual(conf['pppoe']['called-sid'], radius_called_sid)
         self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
+        self.assertEqual(conf['radius']['acct-interim-interval'], radius_acct_interim_interval)
 
 
     def test_pppoe_server_vlan(self):
