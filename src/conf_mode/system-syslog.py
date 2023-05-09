@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,253 +15,129 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 
-from pathlib import Path
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
-from vyos.util import run
+from vyos.configdict import dict_merge
+from vyos.configdict import is_node_changed
+from vyos.configverify import verify_vrf
+from vyos.util import call
 from vyos.template import render
-
+from vyos.xml import defaults
+from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
+rsyslog_conf = '/etc/rsyslog.d/00-vyos.conf'
+logrotate_conf = '/etc/logrotate.d/vyos-rsyslog'
+systemd_override = r'/run/systemd/system/rsyslog.service.d/override.conf'
+
 def get_config(config=None):
     if config:
-        c = config
+        conf = config
     else:
-        c = Config()
-    if not c.exists('system syslog'):
-        return None
-    c.set_level('system syslog')
-
-    config_data = {
-        'files': {},
-      'console': {},
-      'hosts': {},
-      'user': {}
-    }
-
-    #
-    # /etc/rsyslog.d/vyos-rsyslog.conf
-    # 'set system syslog global'
-    #
-    config_data['files'].update(
-        {
-            'global': {
-                'log-file': '/var/log/messages',
-                'selectors': '*.notice;local7.debug',
-                'max-files': '5',
-                'preserver_fqdn': False
-            }
-        }
-    )
-
-    if c.exists('global marker'):
-        config_data['files']['global']['marker'] = True
-        if c.exists('global marker interval'):
-            config_data['files']['global'][
-                'marker-interval'] = c.return_value('global marker interval')
-    if c.exists('global facility'):
-        config_data['files']['global'][
-            'selectors'] = generate_selectors(c, 'global facility')
-    if c.exists('global archive size'):
-        config_data['files']['global']['max-size'] = int(
-            c.return_value('global archive size')) * 1024
-    if c.exists('global archive file'):
-        config_data['files']['global'][
-            'max-files'] = c.return_value('global archive file')
-    if c.exists('global preserve-fqdn'):
-        config_data['files']['global']['preserver_fqdn'] = True
-
-    #
-    # set system syslog file
-    #
-
-    if c.exists('file'):
-        filenames = c.list_nodes('file')
-        for filename in filenames:
-            config_data['files'].update(
-                {
-                    filename: {
-                        'log-file': '/var/log/user/' + filename,
-                        'max-files': '5',
-                        'action-on-max-size': '/usr/sbin/logrotate /etc/logrotate.d/vyos-rsyslog-generated-' + filename,
-                        'selectors': '*.err',
-                        'max-size': 262144
-                    }
-                }
-            )
-
-            if c.exists('file ' + filename + ' facility'):
-                config_data['files'][filename]['selectors'] = generate_selectors(
-                    c, 'file ' + filename + ' facility')
-            if c.exists('file ' + filename + ' archive size'):
-                config_data['files'][filename]['max-size'] = int(
-                    c.return_value('file ' + filename + ' archive size')) * 1024
-            if c.exists('file ' + filename + ' archive files'):
-                config_data['files'][filename]['max-files'] = c.return_value(
-                    'file ' + filename + ' archive files')
-
-    # set system syslog console
-    if c.exists('console'):
-        config_data['console'] = {
-            '/dev/console': {
-                'selectors': '*.err'
-            }
-        }
-
-    for f in c.list_nodes('console facility'):
-        if c.exists('console facility ' + f + ' level'):
-            config_data['console'] = {
-                '/dev/console': {
-                    'selectors': generate_selectors(c, 'console facility')
-                }
-            }
-
-    # set system syslog host
-    if c.exists('host'):
-        rhosts = c.list_nodes('host')
-        proto = 'udp'
-        for rhost in rhosts:
-            for fac in c.list_nodes('host ' + rhost + ' facility'):
-                if c.exists('host ' + rhost + ' facility ' + fac + ' protocol'):
-                    proto = c.return_value(
-                        'host ' + rhost + ' facility ' + fac + ' protocol')
-                else:
-                    proto = 'udp'
-
-            config_data['hosts'].update(
-                {
-                    rhost: {
-                        'selectors': generate_selectors(c, 'host ' + rhost + ' facility'),
-                        'proto': proto
-                    }
-                }
-            )
-            if c.exists('host ' + rhost + ' port'):
-                config_data['hosts'][rhost][
-                    'port'] = c.return_value(['host', rhost, 'port'])
-
-            # set system syslog host x.x.x.x format octet-counted
-            if c.exists('host ' + rhost + ' format octet-counted'):
-                config_data['hosts'][rhost]['oct_count'] = True
-            else:
-                config_data['hosts'][rhost]['oct_count'] = False
-
-    # set system syslog user
-    if c.exists('user'):
-        usrs = c.list_nodes('user')
-        for usr in usrs:
-            config_data['user'].update(
-                {
-                    usr: {
-                        'selectors': generate_selectors(c, 'user ' + usr + ' facility')
-                    }
-                }
-            )
-
-    return config_data
-
-
-def generate_selectors(c, config_node):
-# protocols and security are being mapped here
-# for backward compatibility with old configs
-# security and protocol mappings can be removed later
-    nodes = c.list_nodes(config_node)
-    selectors = ""
-    for node in nodes:
-        lvl = c.return_value(config_node + ' ' + node + ' level')
-        if lvl == None:
-            lvl = "err"
-        if lvl == 'all':
-            lvl = '*'
-        if node == 'all' and node != nodes[-1]:
-            selectors += "*." + lvl + ";"
-        elif node == 'all':
-            selectors += "*." + lvl
-        elif node != nodes[-1]:
-            if node == 'protocols':
-                node = 'local7'
-            if node == 'security':
-                node = 'auth'
-            selectors += node + "." + lvl + ";"
-        else:
-            if node == 'protocols':
-                node = 'local7'
-            if node == 'security':
-                node = 'auth'
-            selectors += node + "." + lvl
-    return selectors
-
-
-def generate(c):
-    if c == None:
+        conf = Config()
+    base = ['system', 'syslog']
+    if not conf.exists(base):
         return None
 
-    conf = '/etc/rsyslog.d/vyos-rsyslog.conf'
-    render(conf, 'syslog/rsyslog.conf.j2', c)
+    syslog = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  get_first_key=True, no_tag_node_value_mangle=True)
 
-    # cleanup current logrotate config files
-    logrotate_files = Path('/etc/logrotate.d/').glob('vyos-rsyslog-generated-*')
-    for file in logrotate_files:
-        file.unlink()
+    syslog.update({ 'logrotate' : logrotate_conf })
+    tmp = is_node_changed(conf, base + ['vrf'])
+    if tmp: syslog.update({'restart_required': {}})
 
-    # eventually write for each file its own logrotate file, since size is
-    # defined it shouldn't matter
-    for filename, fileconfig in c.get('files', {}).items():
-        if fileconfig['log-file'].startswith('/var/log/user/'):
-            conf = '/etc/logrotate.d/vyos-rsyslog-generated-' + filename
-            render(conf, 'syslog/logrotate.j2', { 'config_render': fileconfig })
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = defaults(base)
+    # XXX: some syslog default values can not be merged here (originating from
+    # a tagNode - remove and add them later per individual tagNode instance
+    if 'console' in default_values:
+        del default_values['console']
+    for entity in ['global', 'user', 'host', 'file']:
+        if entity in default_values:
+            del default_values[entity]
 
+    syslog = dict_merge(default_values, syslog)
 
-def verify(c):
-    if c == None:
+    # XXX: add defaults for "console" tree
+    if 'console' in syslog and 'facility' in syslog['console']:
+        default_values = defaults(base + ['console', 'facility'])
+        for facility in syslog['console']['facility']:
+            syslog['console']['facility'][facility] = dict_merge(default_values,
+                                                                syslog['console']['facility'][facility])
+
+    # XXX: add defaults for "host" tree
+    if 'host' in syslog:
+        default_values_host = defaults(base + ['host'])
+        if 'facility' in default_values_host:
+            del default_values_host['facility']
+        default_values_facility = defaults(base + ['host', 'facility'])
+
+        for host, host_config in syslog['host'].items():
+            syslog['host'][host] = dict_merge(default_values_host, syslog['host'][host])
+            if 'facility' in host_config:
+                for facility in host_config['facility']:
+                    syslog['host'][host]['facility'][facility] = dict_merge(default_values_facility,
+                                                                        syslog['host'][host]['facility'][facility])
+
+    # XXX: add defaults for "user" tree
+    if 'user' in syslog:
+        default_values = defaults(base + ['user', 'facility'])
+        for user, user_config in syslog['user'].items():
+            if 'facility' in user_config:
+                for facility in user_config['facility']:
+                    syslog['user'][user]['facility'][facility] = dict_merge(default_values,
+                                                                        syslog['user'][user]['facility'][facility])
+
+    # XXX: add defaults for "file" tree
+    if 'file' in syslog:
+        default_values = defaults(base + ['file'])
+        for file, file_config in syslog['file'].items():
+            for facility in file_config['facility']:
+                syslog['file'][file]['facility'][facility] = dict_merge(default_values,
+                                                                        syslog['file'][file]['facility'][facility])
+
+    return syslog
+
+def verify(syslog):
+    if not syslog:
         return None
 
-    # may be obsolete
-    # /etc/rsyslog.conf is generated somewhere and copied over the original (exists in /opt/vyatta/etc/rsyslog.conf)
-    # it interferes with the global logging, to make sure we are using a single base, template is enforced here
-    #
-    if not os.path.islink('/etc/rsyslog.conf'):
-        os.remove('/etc/rsyslog.conf')
-        os.symlink(
-            '/usr/share/vyos/templates/rsyslog/rsyslog.conf', '/etc/rsyslog.conf')
+    verify_vrf(syslog)
 
-    # /var/log/vyos-rsyslog were the old files, we may want to clean those up, but currently there
-    # is a chance that someone still needs it, so I don't automatically remove
-    # them
-    #
+def generate(syslog):
+    if not syslog:
+        if os.path.exists(rsyslog_conf):
+            os.path.unlink(rsyslog_conf)
+        if os.path.exists(logrotate_conf):
+            os.path.unlink(logrotate_conf)
 
-    if c == None:
         return None
 
-    fac = [
-        '*', 'auth', 'authpriv', 'cron', 'daemon', 'kern', 'lpr', 'mail', 'mark', 'news', 'protocols', 'security',
-          'syslog', 'user', 'uucp', 'local0', 'local1', 'local2', 'local3', 'local4', 'local5', 'local6', 'local7']
-    lvl = ['emerg', 'alert', 'crit', 'err',
-           'warning', 'notice', 'info', 'debug', '*']
+    render(rsyslog_conf, 'rsyslog/rsyslog.conf.j2', syslog)
+    render(systemd_override, 'rsyslog/override.conf.j2', syslog)
+    render(logrotate_conf, 'rsyslog/logrotate.j2', syslog)
 
-    for conf in c:
-        if c[conf]:
-            for item in c[conf]:
-                for s in c[conf][item]['selectors'].split(";"):
-                    f = re.sub("\..*$", "", s)
-                    if f not in fac:
-                        raise ConfigError(
-                            'Invalid facility ' + s + ' set in ' + conf + ' ' + item)
-                    l = re.sub("^.+\.", "", s)
-                    if l not in lvl:
-                        raise ConfigError(
-                            'Invalid logging level ' + s + ' set in ' + conf + ' ' + item)
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+    return None
 
+def apply(syslog):
+    systemd_service = 'syslog.service'
+    if not syslog:
+        call(f'systemctl stop {systemd_service}')
+        return None
 
-def apply(c):
-    if not c:
-        return run('systemctl stop syslog.service')
-    return run('systemctl restart syslog.service')
+    # we need to restart the service if e.g. the VRF name changed
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in syslog:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {systemd_service}')
+    return None
 
 if __name__ == '__main__':
     try:
