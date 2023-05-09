@@ -122,5 +122,8 @@ if test -f /etc/pam.d/frr; then
     fi
 fi
 
+# Enable Cloud-init pre-configuration service
+systemctl enable vyos-config-cloud-init.service
+
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py

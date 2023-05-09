@@ -1,0 +1,19 @@
+[Unit]
+Description=Pre-configure Cloud-init
+DefaultDependencies=no
+Requires=systemd-remount-fs.service
+Requires=systemd-udevd.service
+Wants=network-pre.target
+After=systemd-remount-fs.service
+After=systemd-udevd.service
+Before=cloud-init-local.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/vyos/system/vyos-config-cloud-init.py
+TimeoutSec=120
+KillMode=process
+StandardOutput=journal+console
+
+[Install]
+WantedBy=cloud-init-local.service
