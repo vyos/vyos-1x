@@ -106,6 +106,13 @@ def verify(ha):
                 if not {'password', 'type'} <= set(group_config['authentication']):
                     raise ConfigError(f'Authentication requires both type and passwortd to be set in VRRP group "{group}"')
 
+            if 'health_check' in group_config:
+                from vyos.utils.dict import check_mutually_exclusive_options
+                try:
+                    check_mutually_exclusive_options(group_config["health_check"], ["script", "ping"], required=True)
+                except ValueError as e:
+                    raise ConfigError(f'Health check config is incorrect in VRRP group "{group}": {e}')
+
             # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
             # We also need to make sure VRID is not used twice on the same interface with the
             # same address family.
