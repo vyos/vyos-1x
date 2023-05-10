@@ -233,3 +233,24 @@ def dict_to_list(d, save_key_to=None):
             collect.append(item)
 
     return collect
+
+def check_mutually_exclusive_options(d, keys, required=False):
+    """ Checks if a dict has at most one or only one of
+    mutually exclusive keys.
+    """
+    present_keys = []
+
+    for k in d:
+        if k in keys:
+            present_keys.append(k)
+
+    # Un-mangle the keys to make them match CLI option syntax
+    from re import sub
+    orig_keys = list(map(lambda s: sub(r'_', '-', s), keys))
+    orig_present_keys = list(map(lambda s: sub(r'_', '-', s), present_keys))
+
+    if len(present_keys) > 1:
+        raise ValueError(f"Options {orig_keys} are mutually-exclusive but more than one of them is present: {orig_present_keys}")
+
+    if required and (len(present_keys) < 1):
+        raise ValueError(f"At least one of the following options is required: {orig_present_keys}")

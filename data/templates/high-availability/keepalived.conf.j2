@@ -32,9 +32,13 @@ global_defs {
 
 {% if vrrp.group is vyos_defined %}
 {%     for name, group_config in vrrp.group.items() if group_config.disable is not vyos_defined %}
-{%         if group_config.health_check.script is vyos_defined %}
+{%         if group_config.health_check is vyos_defined %}
 vrrp_script healthcheck_{{ name }} {
+{%             if group_config.health_check.script is vyos_defined %}
     script "{{ group_config.health_check.script }}"
+{%             elif group_config.health_check.ping is vyos_defined %}
+    script "/usr/bin/ping -c1 {{ group_config.health_check.ping }}"
+{%             endif %}
     interval {{ group_config.health_check.interval }}
     fall {{ group_config.health_check.failure_count }}
     rise 1
@@ -121,7 +125,7 @@ vrrp_instance {{ name }} {
 {%             endfor %}
     }
 {%         endif %}
-{%         if group_config.health_check.script is vyos_defined %}
+{%         if group_config.health_check is vyos_defined %}
     track_script {
         healthcheck_{{ name }}
     }

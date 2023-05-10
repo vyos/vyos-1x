@@ -96,7 +96,7 @@
               #include <include/generic-disable-node.xml.i>
               <node name="health-check">
                 <properties>
-                  <help>Health check script</help>
+                  <help>Health check</help>
                 </properties>
                 <children>
                   <leafNode name="failure-count">
@@ -116,6 +116,23 @@
                       </constraint>
                     </properties>
                     <defaultValue>60</defaultValue>
+                  </leafNode>
+                  <leafNode name="ping">
+                    <properties>
+                      <help>ICMP ping health check</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 ping target address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 ping target address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv4-address"/>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                    </properties>
                   </leafNode>
                   <leafNode name="script">
                     <properties>
