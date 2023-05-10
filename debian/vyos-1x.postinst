@@ -42,3 +42,6 @@ for file in $DELETE; do
         rm -f ${file}
     fi
 done
+
+# Enable Cloud-init pre-configuration service
+systemctl enable vyos-config-cloud-init.service
