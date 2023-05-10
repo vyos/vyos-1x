@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -63,6 +63,7 @@ default_config_data = {
     'ppp_ipv6_peer_intf_id': None,
     'radius_server': [],
     'radius_acct_inter_jitter': '',
+    'radius_acct_interim_interval': None,
     'radius_acct_tmo': '3',
     'radius_max_try': '3',
     'radius_timeout': '3',
@@ -189,6 +190,9 @@ def get_config(config=None):
         #
         # advanced radius-setting
         conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['accounting-interim-interval']):
+            l2tp['radius_acct_interim_interval'] = conf.return_value(['accounting-interim-interval'])
 
         if conf.exists(['acct-interim-jitter']):
             l2tp['radius_acct_inter_jitter'] = conf.return_value(['acct-interim-jitter'])
