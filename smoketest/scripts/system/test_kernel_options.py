@@ -63,6 +63,19 @@ class TestKernelModules(unittest.TestCase):
             self.assertIn(option, config_data,
                           f"Option {option} is not present in /proc/config.gz")
 
+    def test_synproxy_enabled(self):
+        options_to_check = [
+            'CONFIG_NFT_SYNPROXY',
+            'CONFIG_IP_NF_TARGET_SYNPROXY'
+        ]
+        if not os.path.isfile(CONFIG):
+            call('sudo modprobe configs')
+        with gzip.open(CONFIG, 'rt') as f:
+            config_data = f.read()
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', config_data)
+            self.assertTrue(tmp)
+
     def test_qemu_support(self):
         # The bond/lacp interface must be enabled in the OS Kernel
         for option in ['CONFIG_VIRTIO_BLK', 'CONFIG_SCSI_VIRTIO',
