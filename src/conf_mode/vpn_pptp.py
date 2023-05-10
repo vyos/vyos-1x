@@ -37,6 +37,7 @@ default_pptp = {
     'local_users' : [],
     'radius_server' : [],
     'radius_acct_inter_jitter': '',
+    'radius_acct_interim_interval': None,
     'radius_acct_tmo' : '30',
     'radius_max_try' : '3',
     'radius_timeout' : '30',
@@ -144,6 +145,9 @@ def get_config(config=None):
         #
         # advanced radius-setting
         conf.set_level(base_path + ['authentication', 'radius'])
+
+        if conf.exists(['accounting-interim-interval']):
+            pptp['radius_acct_interim_interval'] = conf.return_value(['accounting-interim-interval'])
 
         if conf.exists(['acct-interim-jitter']):
             pptp['radius_acct_inter_jitter'] = conf.return_value(['acct-interim-jitter'])

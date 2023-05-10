@@ -70,6 +70,9 @@ verbose=1
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
 {%     endfor %}
 
+{%     if radius_acct_interim_interval is vyos_defined %}
+acct-interim-interval={{ radius_acct_interim_interval }}
+{%     endif %}
 {%     if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
 {%     endif %}
