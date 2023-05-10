@@ -91,6 +91,9 @@ server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_por
 {%     if radius_dynamic_author.server is vyos_defined %}
 dae-server={{ radius_dynamic_author.server }}:{{ radius_dynamic_author.port }},{{ radius_dynamic_author.key }}
 {%     endif %}
+{%     if radius_acct_interim_interval is vyos_defined %}
+acct-interim-interval={{ radius_acct_interim_interval }}
+{%     endif %}
 {%     if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
 {%     endif %}
