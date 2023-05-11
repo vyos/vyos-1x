@@ -21,6 +21,7 @@ from ipaddress import ip_interface
 from ipaddress import IPv4Interface
 from ipaddress import IPv6Interface
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.ifconfig.vrrp import VRRP
@@ -107,11 +108,16 @@ def verify(ha):
                     raise ConfigError(f'Authentication requires both type and passwortd to be set in VRRP group "{group}"')
 
             if 'health_check' in group_config:
+                health_check_types = ["script", "ping"]
                 from vyos.utils.dict import check_mutually_exclusive_options
                 try:
-                    check_mutually_exclusive_options(group_config["health_check"], ["script", "ping"], required=True)
+                    check_mutually_exclusive_options(group_config["health_check"], health_check_types, required=True)
                 except ValueError as e:
-                    raise ConfigError(f'Health check config is incorrect in VRRP group "{group}": {e}')
+                    Warning(f'Health check configuration for VRRP group "{group}" will remain unused ' \
+                            f'until it has one of the following options: {health_check_types}')
+                    # XXX: health check has default options so we need to remove it
+                    # to avoid generating useless config statements in keepalived.conf
+                    del group_config["health_check"]
 
             # Keepalived doesn't allow mixing IPv4 and IPv6 in one group, so we mirror that restriction
             # We also need to make sure VRID is not used twice on the same interface with the
