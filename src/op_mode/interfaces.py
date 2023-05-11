@@ -277,6 +277,10 @@ def _get_counter_data(ifname: typing.Optional[str],
         res_intf['rx_bytes'] = _get_counter_val(cache['rx_bytes'], stats['rx_bytes'])
         res_intf['tx_packets'] = _get_counter_val(cache['tx_packets'], stats['tx_packets'])
         res_intf['tx_bytes'] = _get_counter_val(cache['tx_bytes'], stats['tx_bytes'])
+        res_intf['rx_dropped'] = _get_counter_val(cache['rx_dropped'], stats['rx_dropped'])
+        res_intf['tx_dropped'] = _get_counter_val(cache['tx_dropped'], stats['tx_dropped'])
+        res_intf['rx_over_errors'] = _get_counter_val(cache['rx_over_errors'], stats['rx_over_errors'])
+        res_intf['tx_carrier_errors'] = _get_counter_val(cache['tx_carrier_errors'], stats['tx_carrier_errors'])
 
         ret.append(res_intf)
 
@@ -368,19 +372,23 @@ def _format_show_summary(data):
 
 @catch_broken_pipe
 def _format_show_counters(data: list):
-    formatting = '%-12s %10s %10s %10s %10s'
-    print(formatting % ('Interface', 'Rx Packets', 'Rx Bytes', 'Tx Packets', 'Tx Bytes'))
-
-    for intf in data:
-        print(formatting % (
-            intf['ifname'],
-            intf['rx_packets'],
-            intf['rx_bytes'],
-            intf['tx_packets'],
-            intf['tx_bytes']
-        ))
-
-    return 0
+    data_entries = []
+    for entry in data:
+            interface = entry.get('ifname')
+            rx_packets = entry.get('rx_packets')
+            rx_bytes = entry.get('rx_bytes')
+            tx_packets = entry.get('tx_packets')
+            tx_bytes = entry.get('tx_bytes')
+            rx_dropped = entry.get('rx_dropped')
+            tx_dropped = entry.get('tx_dropped')
+            rx_errors = entry.get('rx_over_errors')
+            tx_errors = entry.get('tx_carrier_errors')
+            data_entries.append([interface, rx_packets, rx_bytes, tx_packets, tx_bytes, rx_dropped, tx_dropped, rx_errors, tx_errors])
+    
+    headers = ['Interface', 'Rx Packets', 'Rx Bytes', 'Tx Packets', 'Tx Bytes', 'Rx Dropped', 'Tx Dropped', 'Rx Errors', 'Tx Errors']
+    output = tabulate(data_entries, headers, numalign="left")
+    print (output)
+    return output
 
 def show(raw: bool, intf_name: typing.Optional[str],
                     intf_type: typing.Optional[str],
