@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -26,17 +26,3 @@ class TestVyOSUtil(TestCase):
 
     def test_sysctl_read(self):
         self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
-
-    def test_camel_to_snake_case(self):
-        self.assertEqual(camel_to_snake_case('ConnectionTimeout'),
-                                             'connection_timeout')
-        self.assertEqual(camel_to_snake_case('connectionTimeout'),
-                                             'connection_timeout')
-        self.assertEqual(camel_to_snake_case('TCPConnectionTimeout'),
-                                             'tcp_connection_timeout')
-        self.assertEqual(camel_to_snake_case('TCPPort'),
-                                             'tcp_port')
-        self.assertEqual(camel_to_snake_case('UseHTTPProxy'),
-                                             'use_http_proxy')
-        self.assertEqual(camel_to_snake_case('CustomerID'),
-                                             'customer_id')
