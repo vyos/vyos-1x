@@ -179,6 +179,7 @@
                         <regex>(ping|ttl|user-defined)</regex>
                       </constraint>
                     </properties>
+                    <defaultValue>ping</defaultValue>
                   </leafNode>
                 </children>
               </tagNode>
