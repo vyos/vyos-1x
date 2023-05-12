@@ -253,4 +253,4 @@ def check_mutually_exclusive_options(d, keys, required=False):
         raise ValueError(f"Options {orig_keys} are mutually-exclusive but more than one of them is present: {orig_present_keys}")
 
     if required and (len(present_keys) < 1):
-        raise ValueError(f"At least one of the following options is required: {orig_present_keys}")
+        raise ValueError(f"At least one of the following options is required: {orig_keys}")
