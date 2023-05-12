@@ -45,22 +45,32 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_dyndns_service(self):
+        from itertools import product
         ddns = ['interface', interface, 'service']
+        users = [None, 'vyos_user']
         services = ['cloudflare', 'afraid', 'dyndns', 'zoneedit']
 
-        for service in services:
-            user = 'vyos_user'
+        for user, service in product(users, services):
             password = 'vyos_pass'
             zone = 'vyos.io'
             self.cli_delete(base_path)
             self.cli_set(base_path + ddns + [service, 'host-name', hostname])
-            self.cli_set(base_path + ddns + [service, 'login', user])
+            if user is not None:
+                self.cli_set(base_path + ddns + [service, 'login', user])
             self.cli_set(base_path + ddns + [service, 'password', password])
             self.cli_set(base_path + ddns + [service, 'zone', zone])
 
             # commit changes
             if service == 'cloudflare':
                 self.cli_commit()
+            elif user is None:
+                # not set user is only allowed for cloudflare
+                with self.assertRaises(ConfigSessionError):
+                    # remove zone to test not set user
+                    self.cli_delete(base_path + ddns + [service, 'zone', 'vyos.io'])
+                    self.cli_commit()
+                # this case is fininshed, user not set is not allowed when service isn't cloudflare
+                continue
             else:
                 # zone option only works on cloudflare, an exception is raised
                 # for all others
@@ -72,7 +82,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
             # we can only read the configuration file when we operate as 'root'
             protocol = get_config_value('protocol')
-            login = get_config_value('login')
+            login = None if user is None else get_config_value('login')
             pwd = get_config_value('password')
 
             # some services need special treatment

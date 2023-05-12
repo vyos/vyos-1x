@@ -34,7 +34,9 @@ zone={{ config.zone }}
 # DynDNS provider configuration for {{ service }}, {{ dns_record }}
 protocol={{ config.protocol }},
 max-interval=28d,
+{%                     if config.login is vyos_defined %}
 login={{ config.login }},
+{%                     endif %}
 password='{{ config.password }}',
 {%                     if config.server is vyos_defined %}
 server={{ config.server }},
