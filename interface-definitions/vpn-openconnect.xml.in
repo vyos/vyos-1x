@@ -71,7 +71,58 @@
                   </leafNode>
                 </children>
               </node>
-              #include <include/openconnect-identity-based-config.xml.i>
+              <node name="identity-based-config">
+                <properties>
+                  <help>Include configuration file by username or RADIUS group attribute</help>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Select per user or per group configuration file - ignored if authentication group is configured</help>
+                      <completionHelp>
+                        <list>user group</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>user</format>
+                        <description>Match configuration file on username</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>group</format>
+                        <description>Match RADIUS response class attribute as file name</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(user|group)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Invalid mode, must be either user or group</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="directory">
+                    <properties>
+                      <help>Directory to containing configuration files</help>
+                      <valueHelp>
+                        <format>path</format>
+                        <description>Path to configuration directory, must be under /config/auth</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="file-path" argument="--directory --parent-dir /config/auth --strict"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="default-config">
+                    <properties>
+                      <help>Default configuration if discrete config could not be found</help>
+                      <valueHelp>
+                        <format>filename</format>
+                        <description>Default configuration filename, must be under /config/auth</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="file-path" argument="--file --parent-dir /config/auth --strict"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
               <leafNode name="group">
                 <properties>
                   <help>Group that a client is allowed to select (from a list). Maps to RADIUS Class attribute.</help>

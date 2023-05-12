@@ -17,6 +17,7 @@
 import os
 from sys import exit
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.pki import wrap_certificate
@@ -173,9 +174,11 @@ def verify(ocserv):
                                 users_wo_pswd.append(user)
                         if users_wo_pswd:
                             raise ConfigError(f'password required for users:\n{users_wo_pswd}')
+
             # Validate that if identity-based-config is configured all child config nodes are set
             if 'identity_based_config' in ocserv["authentication"]:
                 if 'disabled' not in ocserv["authentication"]["identity_based_config"]:
+                    Warning("Identity based configuration files is a 3rd party addition. Use at your own risk, this might break the ocserv daemon!")
                     if 'mode' not in ocserv["authentication"]["identity_based_config"]:
                         raise ConfigError('OpenConnect radius identity-based-config enabled but mode not selected')
                     elif 'group' in ocserv["authentication"]["identity_based_config"]["mode"] and "radius" not in ocserv["authentication"]["mode"]:
