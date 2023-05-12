@@ -49,7 +49,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {%             set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
 {%         endfor %}
 {%         if host_options.protocol is vyos_defined('tcp') %}
-{%             if host_options.oct_count is vyos_defined %}
+{%             if host_options.format.octet_counted is vyos_defined %}
 {{ tmp | join(';') }} @@(o){{ host_name | bracketize_ipv6 }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
 {%             else %}
 {{ tmp | join(';') }} @@{{ host_name | bracketize_ipv6 }}:{{ host_options.port }}
