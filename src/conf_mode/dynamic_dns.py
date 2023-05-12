@@ -108,7 +108,8 @@ def verify(dyndns):
                     raise ConfigError(f'"host-name" {error_msg}')
 
                 if 'login' not in config:
-                    raise ConfigError(f'"login" (username) {error_msg}')
+                    if service != 'cloudflare' and ('protocol' not in config or config['protocol'] != 'cloudflare'):
+                        raise ConfigError(f'"login" (username) {error_msg}, unless using CloudFlare')
 
                 if 'password' not in config:
                     raise ConfigError(f'"password" {error_msg}')
