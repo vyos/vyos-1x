@@ -16,6 +16,14 @@ acct = "radius [config=/run/ocserv/radiusclient.conf]"
 
 {% if "radius" in authentication.mode %}
 auth = "radius [config=/run/ocserv/radiusclient.conf{{ ',groupconfig=true' if authentication.radius.groupconfig is vyos_defined else '' }}]"
+{%     if "identity_based_config" in authentication %}
+{%         if authentication.identity_based_config.disabled is not vyos_defined %}
+{%             if "group" in authentication.identity_based_config.mode %}
+config-per-group = {{ authentication.identity_based_config.directory }}
+default-group-config = {{ authentication.identity_based_config.default_config }}
+{%             endif %}
+{%         endif %}
+{%     endif %}
 {% elif "local" in authentication.mode %}
 {%     if authentication.mode.local == "password-otp" %}
 auth = "plain[passwd=/run/ocserv/ocpasswd,otp=/run/ocserv/users.oath]"
@@ -26,6 +34,13 @@ auth = "plain[/run/ocserv/ocpasswd]"
 {%     endif %}
 {% else %}
 auth = "plain[/run/ocserv/ocpasswd]"
+{% endif %}
+
+{% if "identity_based_config" in authentication %}
+{%     if "user" in authentication.identity_based_config.mode %}
+config-per-user = {{ authentication.identity_based_config.directory }}
+default-user-config = {{ authentication.identity_based_config.default_config }}
+{%     endif %}
 {% endif %}
 
 {% if ssl.certificate is vyos_defined %}
