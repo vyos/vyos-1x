@@ -22,6 +22,7 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_eapol
@@ -66,10 +67,16 @@ def get_config(config=None):
                                get_first_key=True, no_tag_node_value_mangle=True)
 
     base = ['interfaces', 'ethernet']
-    _, ethernet = get_interface_dict(conf, base)
+    ifname, ethernet = get_interface_dict(conf, base)
 
     if 'deleted' not in ethernet:
        if pki: ethernet['pki'] = pki
+
+    tmp = is_node_changed(conf, base + [ifname, 'speed'])
+    if tmp: ethernet.update({'speed_duplex_changed': {}})
+
+    tmp = is_node_changed(conf, base + [ifname, 'duplex'])
+    if tmp: ethernet.update({'speed_duplex_changed': {}})
 
     return ethernet
 

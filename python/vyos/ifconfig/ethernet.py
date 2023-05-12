@@ -374,10 +374,11 @@ class EthernetIf(Interface):
         self.set_tso(dict_search('offload.tso', config) != None)
 
         # Set physical interface speed and duplex
-        if {'speed', 'duplex'} <= set(config):
-            speed = config.get('speed')
-            duplex = config.get('duplex')
-            self.set_speed_duplex(speed, duplex)
+        if 'speed_duplex_changed' in config:
+            if {'speed', 'duplex'} <= set(config):
+                speed = config.get('speed')
+                duplex = config.get('duplex')
+                self.set_speed_duplex(speed, duplex)
 
         # Set interface ring buffer
         if 'ring_buffer' in config:
