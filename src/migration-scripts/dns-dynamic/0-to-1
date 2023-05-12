@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5144:
+# - migrate "service dns dynamic interface ..."
+#        to "service dns dynamic address ..."
+# - migrate "service dns dynamic interface <interface> use-web ..."
+#        to "service dns dynamic address <address> web-options ..."
+# - migrate "service dns dynamic interface <interface> rfc2136 <config> record ..."
+#        to "service dns dynamic address <address> rfc2136 <config> host-name ..."
+# - migrate "service dns dynamic interface <interface> service <config> login ..."
+#        to "service dns dynamic address <address> service <config> username ..."
+# - apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
+# - apply service protocol mapping upfront, they are not 'auto-detected' anymore
+
+import sys
+from vyos.configtree import ConfigTree
+
+service_protocol_mapping = {
+    'afraid': 'freedns',
+    'changeip': 'changeip',
+    'cloudflare': 'cloudflare',
+    'dnspark': 'dnspark',
+    'dslreports': 'dslreports1',
+    'dyndns': 'dyndns2',
+    'easydns': 'easydns',
+    'namecheap': 'namecheap',
+    'noip': 'noip',
+    'sitelutions': 'sitelutions',
+    'zoneedit': 'zoneedit1'
+}
+
+if (len(sys.argv) < 1):
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+old_base_path = ['service', 'dns', 'dynamic', 'interface']
+new_base_path = ['service', 'dns', 'dynamic', 'address']
+
+if not config.exists(old_base_path):
+    # Nothing to do
+    sys.exit(0)
+
+# Migrate "service dns dynamic interface"
+#      to "service dns dynamic address"
+config.rename(old_base_path, new_base_path[-1])
+
+for address in config.list_nodes(new_base_path):
+    # Migrate "service dns dynamic interface <interface> rfc2136 <config> record"
+    #      to "service dns dynamic address <address> rfc2136 <config> host-name"
+    if config.exists(new_base_path + [address, 'rfc2136']):
+        for rfc_cfg in config.list_nodes(new_base_path + [address, 'rfc2136']):
+            if config.exists(new_base_path + [address, 'rfc2136', rfc_cfg, 'record']):
+                config.rename(new_base_path + [address, 'rfc2136', rfc_cfg, 'record'], 'host-name')
+
+    # Migrate "service dns dynamic interface <interface> service <config> login"
+    #      to "service dns dynamic address <address> service <config> username"
+    if config.exists(new_base_path + [address, 'service']):
+        for svc_cfg in config.list_nodes(new_base_path + [address, 'service']):
+            if config.exists(new_base_path + [address, 'service', svc_cfg, 'login']):
+                config.rename(new_base_path + [address, 'service', svc_cfg, 'login'], 'username')
+            # Apply global 'ipv6-enable' to per <config> 'ip-version: ipv6'
+            if config.exists(new_base_path + [address, 'ipv6-enable']):
+                config.set(new_base_path + [address, 'service', svc_cfg, 'ip-version'],
+                           value='ipv6', replace=False)
+                config.delete(new_base_path + [address, 'ipv6-enable'])
+            # Apply service protocol mapping upfront, they are not 'auto-detected' anymore
+            if svc_cfg in service_protocol_mapping:
+                config.set(new_base_path + [address, 'service', svc_cfg, 'protocol'],
+                           value=service_protocol_mapping.get(svc_cfg), replace=False)
+
+    # Migrate "service dns dynamic interface <interface> use-web"
+    #      to "service dns dynamic address <address> web-options"
+    # Also, rename <address> to 'web' literal for backward compatibility
+    if config.exists(new_base_path + [address, 'use-web']):
+        config.rename(new_base_path + [address], 'web')
+        config.rename(new_base_path + ['web', 'use-web'], 'web-options')
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)

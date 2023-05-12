@@ -10,6 +10,7 @@
   #include <include/version/dhcp-relay-version.xml.i>
   #include <include/version/dhcp-server-version.xml.i>
   #include <include/version/dhcpv6-server-version.xml.i>
+  #include <include/version/dns-dynamic-version.xml.i>
   #include <include/version/dns-forwarding-version.xml.i>
   #include <include/version/firewall-version.xml.i>
   #include <include/version/flow-accounting-version.xml.i>
