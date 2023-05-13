@@ -7,7 +7,7 @@
           <help>Domain Name System related services</help>
         </properties>
         <children>
-          <node name="dynamic" owner="${vyos_conf_scripts_dir}/dynamic_dns.py">
+          <node name="dynamic" owner="${vyos_conf_scripts_dir}/dns_dynamic.py">
             <properties>
               <help>Dynamic DNS</help>
             </properties>

@@ -107,7 +107,7 @@ def generate(dyndns):
     if not dyndns:
         return None
 
-    render(config_file, 'dynamic-dns/ddclient.conf.j2', dyndns)
+    render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns)
     return None
 
 def apply(dyndns):
