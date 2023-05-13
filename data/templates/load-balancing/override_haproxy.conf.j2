@@ -1,0 +1,14 @@
+{% set haproxy_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+[Unit]
+StartLimitIntervalSec=0
+After=vyos-router.service
+ConditionPathExists=/run/haproxy/haproxy.cfg
+
+[Service]
+EnvironmentFile=
+Environment=
+Environment="CONFIG=/run/haproxy/haproxy.cfg" "PIDFILE=/run/haproxy.pid" "EXTRAOPTS=-S /run/haproxy-master.sock"
+ExecStart=
+ExecStart={{ haproxy_command }}/usr/sbin/haproxy -Ws -f /run/haproxy/haproxy.cfg -p /run/haproxy.pid -S /run/haproxy-master.sock
+Restart=always
+RestartSec=10

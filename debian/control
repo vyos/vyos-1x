@@ -65,6 +65,7 @@ Depends:
   fuse-overlayfs,
   libpam-google-authenticator,
   grc,
+  haproxy,
   hostapd,
   hsflowd,
   hvinfo,
