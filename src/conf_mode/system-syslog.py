@@ -111,9 +111,9 @@ def verify(syslog):
 def generate(syslog):
     if not syslog:
         if os.path.exists(rsyslog_conf):
-            os.path.unlink(rsyslog_conf)
+            os.unlink(rsyslog_conf)
         if os.path.exists(logrotate_conf):
-            os.path.unlink(logrotate_conf)
+            os.unlink(logrotate_conf)
 
         return None
 
@@ -126,9 +126,10 @@ def generate(syslog):
     return None
 
 def apply(syslog):
+    systemd_socket = 'syslog.socket'
     systemd_service = 'syslog.service'
     if not syslog:
-        call(f'systemctl stop {systemd_service}')
+        call(f'systemctl stop {systemd_service} {systemd_socket}')
         return None
 
     # we need to restart the service if e.g. the VRF name changed
