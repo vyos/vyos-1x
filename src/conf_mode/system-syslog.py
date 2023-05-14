@@ -126,9 +126,10 @@ def generate(syslog):
     return None
 
 def apply(syslog):
+    systemd_socket = 'syslog.socket'
     systemd_service = 'syslog.service'
     if not syslog:
-        call(f'systemctl stop {systemd_service}')
+        call(f'systemctl stop {systemd_service} {systemd_socket}')
         return None
 
     # we need to restart the service if e.g. the VRF name changed
