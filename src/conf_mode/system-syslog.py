@@ -111,9 +111,9 @@ def verify(syslog):
 def generate(syslog):
     if not syslog:
         if os.path.exists(rsyslog_conf):
-            os.path.unlink(rsyslog_conf)
+            os.unlink(rsyslog_conf)
         if os.path.exists(logrotate_conf):
-            os.path.unlink(logrotate_conf)
+            os.unlink(logrotate_conf)
 
         return None
 
