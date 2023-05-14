@@ -532,7 +532,7 @@ class Interface(Control):
             return None
 
         # As a PoC we only allow 'dummy' interfaces
-        if not ('dum' in self.ifname or 'veth' in self.ifname):
+        if 'dum' not in self.ifname:
             return None
 
         # Check if interface realy exists in namespace
