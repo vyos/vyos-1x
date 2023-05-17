@@ -12,6 +12,10 @@
     <leafNode name="host-name">
       <properties>
         <help>Override system host-name sent to DHCP server</help>
+        <constraint>
+          #include <include/constraint/host-name.xml.i>
+        </constraint>
+        <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
       </properties>
     </leafNode>
     <leafNode name="mtu">
