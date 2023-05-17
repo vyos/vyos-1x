@@ -11,7 +11,7 @@
             <properties>
               <help>Frontend name</help>
               <constraint>
-                <regex>[-_a-zA-Z0-9]+</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
               </constraint>
               <constraintErrorMessage>Server name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
             </properties>
@@ -20,7 +20,7 @@
                 <properties>
                   <help>Backend member</help>
                   <constraint>
-                    <regex>[-_a-zA-Z0-9]+</regex>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
                   </constraint>
                   <constraintErrorMessage>Backend name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
                   <valueHelp>
@@ -58,7 +58,7 @@
             <properties>
               <help>Backend name</help>
               <constraint>
-                <regex>[-_a-zA-Z0-9]+</regex>
+                #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
               </constraint>
               <constraintErrorMessage>Backend name must be alphanumeric and can contain hyphen and underscores</constraintErrorMessage>
             </properties>
@@ -206,8 +206,7 @@
                         <description>dhe-rsa-aes256-gcm-sha384</description>
                       </valueHelp>
                       <constraint>
-                        <regex>(ecdhe-ecdsa-aes128-gcm-sha256|ecdhe-rsa-aes128-gcm-sha256|ecdhe-ecdsa-aes256-gcm-sha384|ecdhe-rsa-aes256-gcm-sha384|ecdhe-ecdsa-chacha20-poly1305|ecdhe-rsa-chacha20-poly1305|dhe-rsa-aes128-gcm-sha256|dhe-rsa-aes256-gcm-sha384)
-                        </regex>
+                        <regex>(ecdhe-ecdsa-aes128-gcm-sha256|ecdhe-rsa-aes128-gcm-sha256|ecdhe-ecdsa-aes256-gcm-sha384|ecdhe-rsa-aes256-gcm-sha384|ecdhe-ecdsa-chacha20-poly1305|ecdhe-rsa-chacha20-poly1305|dhe-rsa-aes128-gcm-sha256|dhe-rsa-aes256-gcm-sha384)</regex>
                       </constraint>
                       <multi/>
                     </properties>
