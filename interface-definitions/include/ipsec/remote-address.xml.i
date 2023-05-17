@@ -19,8 +19,7 @@
       <description>Allow any IP address of the remote peer</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
       <validator name="fqdn"/>
       <regex>(any)</regex>
     </constraint>

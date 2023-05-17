@@ -15,8 +15,7 @@
     </valueHelp>
     <multi/>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
       <validator name="ipv6-link-local"/>
     </constraint>
   </properties>
