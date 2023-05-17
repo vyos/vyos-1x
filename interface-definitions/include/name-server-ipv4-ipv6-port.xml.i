@@ -11,8 +11,7 @@
       <description>Domain Name Server (DNS) IPv6 address</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
     </constraint>
   </properties>
   <children>

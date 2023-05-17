@@ -940,8 +940,7 @@
       <description>Interface name</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
       #include <include/constraint/interface-name.xml.i>
     </constraint>
   </properties>

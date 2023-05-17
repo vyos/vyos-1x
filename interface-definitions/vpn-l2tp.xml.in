@@ -38,8 +38,9 @@
                     <properties>
                       <help>Sent to the client (LAC) in the Host-Name attribute</help>
                       <constraint>
-                        <regex>[A-Za-z0-9][-.A-Za-z0-9]*[A-Za-z0-9]</regex>
+                        #include <include/constraint/host-name.xml.i>
                       </constraint>
+                      <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
                     </properties>
                   </leafNode>
                 </children>

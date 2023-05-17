@@ -30,8 +30,7 @@
                 <properties>
                   <help>Source address or interface for archive server connections</help>
                   <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ipv6-address"/>
+                    <validator name="ip-address"/>
                     #include <include/constraint/interface-name.xml.i>
                   </constraint>
                 </properties>

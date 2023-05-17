@@ -25,8 +25,7 @@
                 <description>sFlow IPv6 agent address</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
-                <validator name="ipv6-address"/>
+                <validator name="ip-address"/>
                 <validator name="ipv6-link-local"/>
               </constraint>
             </properties>
@@ -97,8 +96,7 @@
                 <description>IPv6 server to export sFlow</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
-                <validator name="ipv6-address"/>
+                <validator name="ip-address"/>
               </constraint>
             </properties>
             <children>

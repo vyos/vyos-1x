@@ -23,8 +23,7 @@
                 <description>Fully qualified domain name of RPKI server</description>
               </valueHelp>
               <constraint>
-                <validator name="ipv4-address"/>
-                <validator name="ipv6-address"/>
+                <validator name="ip-address"/>
                 <validator name="fqdn"/>
               </constraint>
             </properties>

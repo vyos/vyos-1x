@@ -19,8 +19,7 @@
       <description>Allow any IPv4 address present on the system to be used for VPN</description>
     </valueHelp>
     <constraint>
-      <validator name="ipv4-address"/>
-      <validator name="ipv6-address"/>
+      <validator name="ip-address"/>
       <regex>(any)</regex>
     </constraint>
   </properties>
