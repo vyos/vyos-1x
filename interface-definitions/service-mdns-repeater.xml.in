@@ -15,6 +15,32 @@
             <children>
               #include <include/generic-disable-node.xml.i>
               #include <include/generic-interface-multi.xml.i>
+              <leafNode name="browse-domain">
+                <properties>
+                  <help>mDNS browsing domains in addition to the default one</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>mDNS browsing domain</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="fqdn"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="allow-service">
+                <properties>
+                  <help>Allowed mDNS services to be repeated</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>mDNS service</description>
+                  </valueHelp>
+                  <constraint>
+                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
               <leafNode name="vrrp-disable">
                 <properties>
                   <help>Disables mDNS repeater on VRRP interfaces not in MASTER state</help>
