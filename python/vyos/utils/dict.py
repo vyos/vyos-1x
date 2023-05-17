@@ -65,7 +65,7 @@ def colon_separated_to_dict(data_string, uniquekeys=False):
 
     return data
 
-def _mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_mangle=False, mod=0):
+def mangle_dict_keys(data, regex, replacement, abs_path=None, no_tag_node_value_mangle=False):
     """ Mangles dict keys according to a regex and replacement character.
     Some libraries like Jinja2 do not like certain characters in dict keys.
     This function can be used for replacing all offending characters
@@ -73,43 +73,38 @@ def _mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_m
 
     Args:
         data (dict): Original dict to mangle
+        regex, replacement (str): arguments to re.sub(regex, replacement, ...)
+        abs_path (list): if data is a config dict and no_tag_node_value_mangle is True
+                         then abs_path should be the absolute config path to the first
+                         keys of data, non-inclusive
+        no_tag_node_value_mangle (bool): do not mangle keys of tag node values
 
     Returns: dict
     """
-    from vyos.xml import is_tag
+    import re
+    from vyos.xml_ref import is_tag_value
+
+    if abs_path is None:
+        abs_path = []
 
     new_dict = {}
 
-    for key in data.keys():
-        save_mod = mod
-        save_path = abs_path[:]
-
-        abs_path.append(key)
-
-        if not is_tag(abs_path):
-            new_key = re.sub(regex, replacement, key)
+    for k in data.keys():
+        if no_tag_node_value_mangle and is_tag_value(abs_path + [k]):
+            new_key = k
         else:
-            if mod%2:
-                new_key = key
-            else:
-                new_key = re.sub(regex, replacement, key)
-            if no_tag_node_value_mangle:
-                mod += 1
+            new_key = re.sub(regex, replacement, k)
 
-        value = data[key]
+        value = data[k]
 
         if isinstance(value, dict):
-            new_dict[new_key] = _mangle_dict_keys(value, regex, replacement, abs_path=abs_path, mod=mod, no_tag_node_value_mangle=no_tag_node_value_mangle)
+            new_dict[new_key] = mangle_dict_keys(value, regex, replacement,
+                                                 abs_path=abs_path + [k],
+                                                 no_tag_node_value_mangle=no_tag_node_value_mangle)
         else:
             new_dict[new_key] = value
 
-        mod = save_mod
-        abs_path = save_path[:]
-
     return new_dict
-
-def mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_mangle=False):
-    return _mangle_dict_keys(data, regex, replacement, abs_path=abs_path, no_tag_node_value_mangle=no_tag_node_value_mangle, mod=0)
 
 def _get_sub_dict(d, lpath):
     k = lpath[0]
