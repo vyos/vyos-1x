@@ -2,6 +2,9 @@
 use-ipv4=yes
 use-ipv6=yes
 allow-interfaces={{ interface | join(', ') }}
+{% if browse_domain is vyos_defined and browse_domain | length %}
+browse-domains={{ browse_domain | join(', ') }}
+{% endif %}
 disallow-other-stacks=no
 
 [wide-area]
@@ -16,3 +19,6 @@ publish-workstation=no
 
 [reflector]
 enable-reflector=yes
+{% if allow_service is vyos_defined and allow_service | length %}
+reflect-filters={{ allow_service | join(', ') }}
+{% endif %}
