@@ -86,13 +86,13 @@
             <properties>
               <help>Show Wireless Modem (WWAN) interface information</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=wirelessmodem</command>
+            <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-type=wwan</command>
             <children>
               <leafNode name="detail">
                 <properties>
                   <help>Show detailed Wireless Modem (WWAN( interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=wirelessmodem</command>
+                <command>${vyos_op_scripts_dir}/interfaces.py show --intf-type=wwan</command>
               </leafNode>
             </children>
           </node>
