@@ -36,7 +36,7 @@
                     <description>mDNS service</description>
                   </valueHelp>
                   <constraint>
-                    #include <include/constraint/alpha-numeric-hyphen-underscore.xml.i>
+                    <regex>[-_.a-zA-Z0-9]+</regex>
                   </constraint>
                   <multi/>
                 </properties>
