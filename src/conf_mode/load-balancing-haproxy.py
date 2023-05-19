@@ -95,6 +95,8 @@ def verify(lb):
             if 'address' not in bk_server_conf or 'port' not in bk_server_conf:
                 raise ConfigError(f'"backend {back} server {bk_server} address and port" must be configured!')
 
+            if {'send_proxy', 'send_proxy_v2'} <= set(bk_server_conf):
+                raise ConfigError(f'Cannot use both "send-proxy" and "send-proxy-v2" for server "{bk_server}"')
 
 def generate(lb):
     if not lb:

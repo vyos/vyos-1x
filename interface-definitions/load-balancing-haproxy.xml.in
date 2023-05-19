@@ -131,6 +131,18 @@
                     </properties>
                   </leafNode>
                   #include <include/port-number.xml.i>
+                  <leafNode name="send-proxy">
+                    <properties>
+                      <help>Send a Proxy Protocol version 1 header (text format)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="send-proxy-v2">
+                    <properties>
+                      <help>Send a Proxy Protocol version 2 header (binary format)</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
               <node name="ssl">
