@@ -74,15 +74,12 @@ def verify(lb):
     if not lb:
         return None
 
-    if 'backend' not in lb or 'server' not in lb:
-        raise ConfigError(f'"server" and "backend" must be configured!')
+    if 'backend' not in lb or 'service' not in lb:
+        raise ConfigError(f'"service" and "backend" must be configured!')
 
-    for front, front_config in lb['server'].items():
+    for front, front_config in lb['service'].items():
         if 'port' not in front_config:
-            raise ConfigError(f'"{front} server port" must be configured!')
-        # We can use redirect to HTTPS without backend section
-        if 'backend' not in front_config and 'redirect_http_to_https' not in front_config:
-           raise ConfigError(f'"{front} backend" must be configured!')
+            raise ConfigError(f'"{front} service port" must be configured!')
 
         # Check if bind address:port are used by another service
         tmp_address = front_config.get('address', '0.0.0.0')
@@ -117,7 +114,7 @@ def generate(lb):
         os.mkdir(load_balancing_dir)
 
     # SSL Certificates for frontend
-    for front, front_config in lb['server'].items():
+    for front, front_config in lb['service'].items():
         if 'ssl' in front_config:
             cert_file_path = os.path.join(load_balancing_dir, 'cert.pem')
             cert_key_path = os.path.join(load_balancing_dir, 'cert.pem.key')

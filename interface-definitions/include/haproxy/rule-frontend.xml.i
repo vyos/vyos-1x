@@ -22,6 +22,7 @@
         <constraint>
           <validator name="fqdn"/>
         </constraint>
+        <multi/>
       </properties>
     </leafNode>
     <node name="set">
@@ -42,9 +43,9 @@
             <constraintErrorMessage>Incorrect URL format</constraintErrorMessage>
           </properties>
         </leafNode>
-        <leafNode name="server">
+        <leafNode name="backend">
           <properties>
-            <help>Server name</help>
+            <help>Backend name</help>
             <constraint>
               <regex>[-_a-zA-Z0-9]+</regex>
             </constraint>
