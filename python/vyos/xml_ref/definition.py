@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Optional, Any
+from typing import Union, Any
 from vyos.configdict import dict_merge
 
 class Xml:
@@ -102,7 +102,7 @@ class Xml:
         if rpath and rpath[-1] in list(conf):
             raise ValueError('rpath should be disjoint from conf keys')
 
-        res = {}
+        res: Any = {}
 
         for k in list(conf):
             d = self._get_ref_path(rpath + [k])
@@ -119,7 +119,7 @@ class Xml:
     def _get_default_value(self, node: dict):
         return self._get_ref_node_data(node, "default_value")
 
-    def get_defaults(self, path: list, get_first_key=False) -> dict:
+    def get_defaults(self, path: list, get_first_key=False, recursive=False) -> dict:
         """Return dict containing default values below path
 
         Note that descent below path will not proceed beyond an encountered
@@ -127,24 +127,27 @@ class Xml:
         to an existing config dict containing tag node values, see function:
         'relative_defaults'
         """
-        res: Any = {}
+        res: dict = {}
         d = self._get_ref_path(path)
-        if self._is_leaf_node(d):
-            default_value = self._get_default_value(d)
-            if default_value is not None:
-                res = default_value
-                if self._is_multi_node(d) and not isinstance(res, list):
-                    res = [res]
-        elif self.is_tag(path):
-            # tag node defaults are used as suggestion, not default value;
-            # should this change, append to path and continue recursion
-            pass
-        else:
-            for k in list(d):
-                if k in ('node_data', 'component_version') :
-                    continue
-                pos = self.get_defaults(path + [k])
-                res |= pos
+        for k in list(d):
+            if k in ('node_data', 'component_version') :
+                continue
+            d_k = d[k]
+            if self._is_leaf_node(d_k):
+                default_value = self._get_default_value(d_k)
+                if default_value is not None:
+                    pos = default_value
+                    if self._is_multi_node(d_k) and not isinstance(pos, list):
+                        pos = [pos]
+                    res |= {k: pos}
+            elif self.is_tag(path + [k]):
+                # tag node defaults are used as suggestion, not default value;
+                # should this change, append to path and continue if recursive
+                pass
+            else:
+                if recursive:
+                    pos = self.get_defaults(path + [k], recursive=True)
+                    res |= pos
         if res:
             if get_first_key or not path:
                 if not isinstance(res, dict):
@@ -154,56 +157,17 @@ class Xml:
 
         return {}
 
-    def _relative_defaults(self, rpath: list, conf: Optional[dict] = None,
-                          get_first_key=False) -> dict:
-        # Return dict containing defaults along paths of a config dict
-
-        # Note that for conf argument {} or None, this function returns the
-        # same result as 'get_defaults' above; for clarity, the functions
-        # are individually defined.
-
-        if conf is None:
-            conf = {}
-        if rpath and rpath[-1] in list(conf):
-            raise ValueError('rpath should be disjoint from conf keys')
-        res: Any = {}
-        d = self._get_ref_path(rpath)
-        if self._is_leaf_node(d):
-            default_value = self._get_default_value(d)
-            if default_value is not None:
-                res = default_value
-                if self._is_multi_node(d) and not isinstance(res, list):
-                    res = [res]
-        elif self.is_tag(rpath):
-            for k in list(conf):
-                pos = self._relative_defaults(rpath + [k], conf[k])
-                res |= pos
-        else:
-            for k in list(d):
-                if k in ('node_data', 'component_version') :
-                    continue
-                pos = self._relative_defaults(rpath + [k], conf.get(k, {}))
-                res |= pos
-        if res:
-            if get_first_key or not rpath:
-                if not isinstance(res, dict):
-                    raise TypeError("Cannot get_first_key as data under node is not of type dict")
-                return res
-            return {rpath[-1]: res}
-
-        return {}
-
-    def _defines_config_path(self, path: list, conf: dict) -> bool:
+    def _well_defined(self, path: list, conf: dict) -> bool:
         # test disjoint path + conf for sensible config paths
-        def walk(c):
+        def step(c):
             return [next(iter(c.keys()))] if c else []
         try:
-            tmp = walk(conf)
+            tmp = step(conf)
             if self.is_tag_value(path + tmp):
                 c = conf[tmp[0]]
                 if not isinstance(c, dict):
                     raise ValueError
-                tmp = tmp + walk(c)
+                tmp = tmp + step(c)
                 self._get_ref_path(path + tmp)
             else:
                 self._get_ref_path(path + tmp)
@@ -211,24 +175,57 @@ class Xml:
             return False
         return True
 
+    def relative_defaults(self, rpath: list, conf: dict, get_first_key=False,
+                          recursive=False) -> dict:
+        """Return dict containing defaults along paths of a config dict
+        """
+        if not conf:
+            return self.get_defaults(rpath, get_first_key=get_first_key,
+                                     recursive=recursive)
+        if rpath and rpath[-1] in list(conf):
+            conf = conf[rpath[-1]]
+            if not isinstance(conf, dict):
+                raise TypeError('conf at path is not of type dict')
+
+        if not self._well_defined(rpath, conf):
+            print('path to config dict does not define full config paths')
+            return {}
+
+        res: dict = {}
+        for k in list(conf):
+            pos = self.get_defaults(rpath + [k], recursive=recursive)
+            res |= pos
+
+            if isinstance(conf[k], dict):
+                step = self.relative_defaults(rpath + [k], conf=conf[k],
+                                              recursive=recursive)
+                res |= step
+
+        if res:
+            if get_first_key:
+                return res
+            return {rpath[-1]: res} if rpath else res
+
+        return {}
+
     def merge_defaults(self, path: list, conf: dict) -> dict:
         """Return config dict with defaults non-destructively merged
+
+        This merges non-recursive defaults relative to the config dict.
         """
-        if not path:
-            path = [next(iter(conf.keys()))]
         if path[-1] in list(conf):
             config = conf[path[-1]]
             if not isinstance(config, dict):
-                raise ValueError('conf at path is not of type dict')
-            first = False
+                raise TypeError('conf at path is not of type dict')
+            shift = False
         else:
             config = conf
-            first = True
+            shift = True
 
-        if not self._defines_config_path(path, config):
-            print('path + conf do not define config paths; conf returned unchanged')
+        if not self._well_defined(path, config):
+            print('path to config dict does not define config paths; conf returned unchanged')
             return conf
 
-        d = self._relative_defaults(path, conf=config, get_first_key=first)
+        d = self.relative_defaults(path, conf=config, get_first_key=shift)
         d = dict_merge(d, conf)
         return d
