@@ -51,7 +51,13 @@ defaults
 {%     for front, front_config in service.items() %}
 frontend {{ front }}
 {%         set ssl_front =  'ssl crt /run/haproxy/' ~ front_config.ssl.certificate ~ '.pem' if front_config.ssl.certificate is vyos_defined else '' %}
-    bind {{ front_config.listen_address if front_config.listen_address if vyos_defined else '*' }}:{{ front_config.port }} {{ ssl_front }}
+{%         if front_config.listen_address is vyos_defined %}
+{%             for address in front_config.listen_address %}
+    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_front }}
+{%             endfor %}
+{%         else %}
+    bind :::{{ front_config.port }} v4v6 {{ ssl_front }}
+{%         endif %}
 {%         if front_config.redirect_http_to_https is vyos_defined %}
     http-request redirect scheme https unless { ssl_fc }
 {%         endif %}
@@ -140,7 +146,7 @@ backend {{ back }}
 {%         if back_config.server is vyos_defined %}
 {%             set ssl_back =  'ssl ca-file /run/haproxy/' ~ back_config.ssl.ca_certificate ~ '.pem' if back_config.ssl.ca_certificate is vyos_defined else '' %}
 {%             for server, server_config in back_config.server.items() %}
-    server {{ server }} {{ server_config.address }}:{{ server_config.port }} {{ 'check' if server_config.check is vyos_defined }} {{ ssl_back }}
+    server {{ server }} {{ server_config.address }}:{{ server_config.port }}{{ ' check' if server_config.check is vyos_defined }}{{ ' send-proxy' if server_config.send_proxy is vyos_defined }}{{ ' send-proxy-v2' if server_config.send_proxy_v2 is vyos_defined }} {{ ssl_back }}
 {%             endfor %}
 {%         endif %}
 {%         if back_config.timeout.check is vyos_defined %}
