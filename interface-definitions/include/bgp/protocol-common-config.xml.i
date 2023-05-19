@@ -1016,6 +1016,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="enforce-first-as">
+      <properties>
+        <help>Ensure the first AS in the AS path matches the peer AS</help>
+        <valueless/>
+      </properties>
+    </leafNode>
     <leafNode name="strict-capability-match">
       <properties>
         <help>Enable strict capability negotiation</help>
