@@ -19,12 +19,12 @@ global
     ca-base /etc/ssl/certs
     crt-base /etc/ssl/private
 
-{%     if global_parameters.tls.ssl_bind_ciphers is vyos_defined %}
+{%     if global_parameters.ssl_bind_ciphers is vyos_defined %}
     # https://ssl-config.mozilla.org/#server=haproxy&version=2.6.12-1&config=intermediate&openssl=3.0.8-1&guideline=5.6
-    ssl-default-bind-ciphers {{ global_parameters.tls.ssl_bind_ciphers | join(':') | upper }}
+    ssl-default-bind-ciphers {{ global_parameters.ssl_bind_ciphers | join(':') | upper }}
 {%     endif %}
     ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
-{%     if global_parameters.tls.tls_version_min is vyos_defined('1.3') %}
+{%     if global_parameters.tls_version_min is vyos_defined('1.3') %}
     ssl-default-bind-options force-tlsv13
 {%     else %}
     ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
@@ -47,8 +47,8 @@ defaults
     errorfile 504 /etc/haproxy/errors/504.http
 
 # Frontend
-{% if server is vyos_defined %}
-{%     for front, front_config in server.items() %}
+{% if service is vyos_defined %}
+{%     for front, front_config in service.items() %}
 frontend {{ front }}
 {%         set ssl_front =  'ssl crt /run/haproxy/' ~ front_config.ssl.certificate ~ '.pem' if front_config.ssl.certificate is vyos_defined else '' %}
     bind {{ front_config.listen_address if front_config.listen_address if vyos_defined else '*' }}:{{ front_config.port }} {{ ssl_front }}
@@ -61,14 +61,16 @@ frontend {{ front }}
 {%         if front_config.rule is vyos_defined %}
 {%             for rule, rule_config in front_config.rule.items() %}
     # rule {{ rule }}
-{%                 if rule_config.domain_name is vyos_defined and rule_config.set.server is vyos_defined %}
+{%                 if rule_config.domain_name is vyos_defined and rule_config.set.backend is vyos_defined %}
 {%                     set rule_options = 'hdr(host)' %}
 {%                     if rule_config.ssl is vyos_defined %}
 {%                         set ssl_rule_translate = {'req-ssl-sni': 'req_ssl_sni', 'ssl-fc-sni': 'ssl_fc_sni', 'ssl-fc-sni-end': 'ssl_fc_sni_end'} %}
 {%                         set rule_options = ssl_rule_translate[rule_config.ssl] %}
 {%                     endif %}
-    acl {{ rule }} {{ rule_options }} -i {{ rule_config.domain_name }}
-    use_backend {{ rule_config.set.server }} if {{ rule }}
+{%                     for domain in rule_config.domain_name %}
+    acl {{ rule }} {{ rule_options }} -i {{ domain }}
+{%                     endfor %}
+    use_backend {{ rule_config.set.backend }} if {{ rule }}
 {%                 endif %}
 {# path url #}
 {%                 if rule_config.url_path is vyos_defined and rule_config.set.redirect_location is vyos_defined %}
@@ -117,7 +119,9 @@ backend {{ back }}
 {%                         set ssl_rule_translate = {'req-ssl-sni': 'req_ssl_sni', 'ssl-fc-sni': 'ssl_fc_sni', 'ssl-fc-sni-end': 'ssl_fc_sni_end'} %}
 {%                         set rule_options = ssl_rule_translate[rule_config.ssl] %}
 {%                     endif %}
-    acl {{ rule }} {{ rule_options }} -i {{ rule_config.domain_name }}
+{%                     for domain in rule_config.domain_name %}
+    acl {{ rule }} {{ rule_options }} -i {{ domain }}
+{%                     endfor %}
     use-server {{ rule_config.set.server }} if {{ rule }}
 {%                 endif %}
 {# path url #}
