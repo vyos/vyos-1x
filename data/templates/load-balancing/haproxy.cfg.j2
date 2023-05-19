@@ -51,7 +51,13 @@ defaults
 {%     for front, front_config in service.items() %}
 frontend {{ front }}
 {%         set ssl_front =  'ssl crt /run/haproxy/' ~ front_config.ssl.certificate ~ '.pem' if front_config.ssl.certificate is vyos_defined else '' %}
-    bind {{ front_config.listen_address if front_config.listen_address if vyos_defined else '*' }}:{{ front_config.port }} {{ ssl_front }}
+{%         if front_config.listen_address is vyos_defined %}
+{%             for address in front_config.listen_address %}
+    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_front }}
+{%             endfor %}
+{%         else %}
+    bind :::{{ front_config.port }} v4v6 {{ ssl_front }}
+{%         endif %}
 {%         if front_config.redirect_http_to_https is vyos_defined %}
     http-request redirect scheme https unless { ssl_fc }
 {%         endif %}
