@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <tagNode name="vrf">
+        <properties>
+          <help>Execute shell in given VRF instance</help>
+          <completionHelp>
+            <path>vrf name</path>
+          </completionHelp>
+        </properties>
+        <command>sudo ip vrf exec $3 su - $(whoami)</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
