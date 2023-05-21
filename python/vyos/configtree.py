@@ -373,6 +373,19 @@ def union(left, right, libpath=LIBPATH):
 
     return tree
 
+def reference_tree_to_json(from_dir, to_file, libpath=LIBPATH):
+    __lib = cdll.LoadLibrary(libpath)
+    __reference_tree_to_json = __lib.reference_tree_to_json
+    __reference_tree_to_json.argtypes = [c_char_p, c_char_p]
+    __get_error = __lib.get_error
+    __get_error.argtypes = []
+    __get_error.restype = c_char_p
+
+    res = __reference_tree_to_json(from_dir.encode(), to_file.encode())
+    if res == 1:
+        msg = __get_error().decode()
+        raise ConfigTreeError(msg)
+
 class DiffTree:
     def __init__(self, left, right, path=[], libpath=LIBPATH):
         if left is None:
