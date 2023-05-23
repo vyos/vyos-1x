@@ -23,6 +23,7 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
@@ -36,6 +37,7 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
+from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -95,19 +97,22 @@ def geoip_updated(conf, firewall):
     updated = False
 
     for key, path in dict_search_recursive(firewall, 'geoip'):
-        set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
-        if path[0] == 'name':
+        set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
+        if path[1] == 'ipv6_name':
+            set_name = f'GEOIP_CC_name6_{path[2]}_{path[4]}'
+
+        if (path[0] == 'ip') and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
             out['name'].append(set_name)
-        elif path[0] == 'ipv6_name':
+        elif (path[0] == 'ipv6') and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name' ):
             out['ipv6_name'].append(set_name)
         updated = True
 
     if 'delete' in node_diff:
         for key, path in dict_search_recursive(node_diff['delete'], 'geoip'):
-            set_name = f'GEOIP_CC_{path[1]}_{path[3]}'
-            if path[0] == 'name':
+            set_name = f'GEOIP_CC_{path[2]}_{path[4]}'
+            if path[1] == 'name':
                 out['deleted_name'].append(set_name)
-            elif path[0] == 'ipv6-name':
+            elif path[1] == 'ipv6-name':
                 out['deleted_ipv6_name'].append(set_name)
             updated = True
 
@@ -128,13 +133,14 @@ def get_config(config=None):
                                     get_first_key=True,
                                     with_recursive_defaults=True)
 
-    firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
 
+    firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     if firewall['group_resync']:
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)
 
-    if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
+    #if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
+    if 'config_trap' in firewall and firewall['global_options']['config_trap'] == 'enable':
         diff = get_config_diff(conf)
         firewall['trap_diff'] = diff.get_child_nodes_diff_str(base)
         firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
@@ -159,10 +165,10 @@ def verify_rule(firewall, rule_conf, ipv6):
             raise ConfigError('jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
         if not ipv6:
-            if target not in dict_search_args(firewall, 'name'):
+            if target not in dict_search_args(firewall, 'ip', 'name'):
                 raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
         else:
-            if target not in dict_search_args(firewall, 'ipv6_name'):
+            if target not in dict_search_args(firewall, 'ipv6', 'ipv6_name'):
                 raise ConfigError(f'Invalid jump-target. Firewall ipv6-name {target} does not exist on the system')
 
     if 'queue_options' in rule_conf:
@@ -291,114 +297,51 @@ def verify(firewall):
                 for group_name, group in groups.items():
                     verify_nested_group(group_name, group, groups, [])
 
-    for name in ['name', 'ipv6_name']:
-        if name in firewall:
-            for name_id, name_conf in firewall[name].items():
-                if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
-                    raise ConfigError('default-action set to jump, but no default-jump-target specified')
-                if 'default_jump_target' in name_conf:
-                    target = name_conf['default_jump_target']
-                    if 'jump' not in name_conf['default_action']:
-                        raise ConfigError('default-jump-target defined,but default-action jump needed and it is not defined')
-                    if name_conf['default_jump_target'] == name_id:
-                        raise ConfigError(f'Loop detected on default-jump-target.')
-                    ## Now need to check that default-jump-target exists (other firewall chain/name)
-                    if target not in dict_search_args(firewall, name):
-                        raise ConfigError(f'Invalid jump-target. Firewall {name} {target} does not exist on the system')
+    if 'ip' in firewall:
+        for name in ['name','forward','input','output']:
+            if name in firewall['ip']:
+                for name_id, name_conf in firewall['ip'][name].items():
+                    if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
+                        raise ConfigError('default-action set to jump, but no default-jump-target specified')
+                    if 'default_jump_target' in name_conf:
+                        target = name_conf['default_jump_target']
+                        if 'jump' not in name_conf['default_action']:
+                            raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
+                        if name_conf['default_jump_target'] == name_id:
+                            raise ConfigError(f'Loop detected on default-jump-target.')
+                        ## Now need to check that default-jump-target exists (other firewall chain/name)
+                        if target not in dict_search_args(firewall['ip'], 'name'):
+                            raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
 
-                if 'rule' in name_conf:
-                    for rule_id, rule_conf in name_conf['rule'].items():
-                        verify_rule(firewall, rule_conf, name == 'ipv6_name')
+                    if 'rule' in name_conf:
+                        for rule_id, rule_conf in name_conf['rule'].items():
+                            verify_rule(firewall, rule_conf, False)
 
-    if 'interface' in firewall:
-        for ifname, if_firewall in firewall['interface'].items():
-            # verify ifname needs to be disabled, dynamic devices come up later
-            # verify_interface_exists(ifname)
+    if 'ipv6' in firewall:
+        for name in ['ipv6_name','forward','input','output']:
+            if name in firewall['ipv6']:
+                for name_id, name_conf in firewall['ipv6'][name].items():
+                    if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
+                        raise ConfigError('default-action set to jump, but no default-jump-target specified')
+                    if 'default_jump_target' in name_conf:
+                        target = name_conf['default_jump_target']
+                        if 'jump' not in name_conf['default_action']:
+                            raise ConfigError('default-jump-target defined, but default-action jump needed and it is not defined')
+                        if name_conf['default_jump_target'] == name_id:
+                            raise ConfigError(f'Loop detected on default-jump-target.')
+                        ## Now need to check that default-jump-target exists (other firewall chain/name)
+                        if target not in dict_search_args(firewall['ipv6'], 'ipv6_name'):
+                            raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
 
-            for direction in ['in', 'out', 'local']:
-                name = dict_search_args(if_firewall, direction, 'name')
-                ipv6_name = dict_search_args(if_firewall, direction, 'ipv6_name')
-
-                if name and dict_search_args(firewall, 'name', name) == None:
-                    raise ConfigError(f'Invalid firewall name "{name}" referenced on interface {ifname}')
-
-                if ipv6_name and dict_search_args(firewall, 'ipv6_name', ipv6_name) == None:
-                    raise ConfigError(f'Invalid firewall ipv6-name "{ipv6_name}" referenced on interface {ifname}')
-
-    local_zone = False
-    zone_interfaces = []
-
-    if 'zone' in firewall:
-        for zone, zone_conf in firewall['zone'].items():
-            if 'local_zone' not in zone_conf and 'interface' not in zone_conf:
-                raise ConfigError(f'Zone "{zone}" has no interfaces and is not the local zone')
-
-            if 'local_zone' in zone_conf:
-                if local_zone:
-                    raise ConfigError('There cannot be multiple local zones')
-                if 'interface' in zone_conf:
-                    raise ConfigError('Local zone cannot have interfaces assigned')
-                if 'intra_zone_filtering' in zone_conf:
-                    raise ConfigError('Local zone cannot use intra-zone-filtering')
-                local_zone = True
-
-            if 'interface' in zone_conf:
-                found_duplicates = [intf for intf in zone_conf['interface'] if intf in zone_interfaces]
-
-                if found_duplicates:
-                    raise ConfigError(f'Interfaces cannot be assigned to multiple zones')
-
-                zone_interfaces += zone_conf['interface']
-
-            if 'intra_zone_filtering' in zone_conf:
-                intra_zone = zone_conf['intra_zone_filtering']
-
-                if len(intra_zone) > 1:
-                    raise ConfigError('Only one intra-zone-filtering action must be specified')
-
-                if 'firewall' in intra_zone:
-                    v4_name = dict_search_args(intra_zone, 'firewall', 'name')
-                    if v4_name and not dict_search_args(firewall, 'name', v4_name):
-                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
-
-                    v6_name = dict_search_args(intra_zone, 'firewall', 'ipv6_name')
-                    if v6_name and not dict_search_args(firewall, 'ipv6_name', v6_name):
-                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
-
-                    if not v4_name and not v6_name:
-                        raise ConfigError('No firewall names specified for intra-zone-filtering')
-
-            if 'from' in zone_conf:
-                for from_zone, from_conf in zone_conf['from'].items():
-                    if from_zone not in firewall['zone']:
-                        raise ConfigError(f'Zone "{zone}" refers to a non-existent or deleted zone "{from_zone}"')
-
-                    v4_name = dict_search_args(from_conf, 'firewall', 'name')
-                    if v4_name and not dict_search_args(firewall, 'name', v4_name):
-                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
-
-                    v6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
-                    if v6_name and not dict_search_args(firewall, 'ipv6_name', v6_name):
-                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+                    if 'rule' in name_conf:
+                        for rule_id, rule_conf in name_conf['rule'].items():
+                            verify_rule(firewall, rule_conf, True)
 
     return None
 
 def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
-
-    if 'zone' in firewall:
-        for local_zone, local_zone_conf in firewall['zone'].items():
-            if 'local_zone' not in local_zone_conf:
-                continue
-
-            local_zone_conf['from_local'] = {}
-
-            for zone, zone_conf in firewall['zone'].items():
-                if zone == local_zone or 'from' not in zone_conf:
-                    continue
-                if local_zone in zone_conf['from']:
-                    local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
@@ -408,9 +351,8 @@ def apply_sysfs(firewall):
         paths = glob(conf['sysfs'])
         value = None
 
-        if name in firewall:
-            conf_value = firewall[name]
-
+        if name in firewall['global_options']:
+            conf_value = firewall['global_options'][name]
             if conf_value in conf:
                 value = conf[conf_value]
             elif conf_value == 'enable':
@@ -427,7 +369,7 @@ def post_apply_trap(firewall):
     if 'first_install' in firewall:
         return None
 
-    if 'config_trap' not in firewall or firewall['config_trap'] != 'enable':
+    if 'config_trap' not in firewall['global_options'] or firewall['global_options']['config_trap'] != 'enable':
         return None
 
     if not process_named_running('snmpd'):

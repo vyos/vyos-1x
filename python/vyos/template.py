@@ -44,7 +44,6 @@ def _get_environment(location=None):
         loader=loc_loader,
         trim_blocks=True,
         undefined=ChainableUndefined,
-        extensions=['jinja2.ext.loopcontrols']
     )
     env.filters.update(_FILTERS)
     env.tests.update(_TESTS)
@@ -574,9 +573,9 @@ def nft_action(vyos_action):
     return vyos_action
 
 @register_filter('nft_rule')
-def nft_rule(rule_conf, fw_name, rule_id, ip_name='ip'):
+def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip'):
     from vyos.firewall import parse_rule
-    return parse_rule(rule_conf, fw_name, rule_id, ip_name)
+    return parse_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name)
 
 @register_filter('nft_default_rule')
 def nft_default_rule(fw_conf, fw_name, ipv6=False):
@@ -587,7 +586,8 @@ def nft_default_rule(fw_conf, fw_name, ipv6=False):
         action_suffix = default_action[:1].upper()
         output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}]"')
 
-    output.append(nft_action(default_action))
+    #output.append(nft_action(default_action))
+    output.append(f'{default_action}')
     if 'default_jump_target' in fw_conf:
         target = fw_conf['default_jump_target']
         def_suffix = '6' if ipv6 else ''
