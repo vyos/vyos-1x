@@ -18,6 +18,7 @@
 "openconnect.py",
 "openvpn.py",
 "reset_vpn.py",
+"reverseproxy.py",
 "route.py",
 "system.py",
 "ipsec.py",
