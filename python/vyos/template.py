@@ -44,6 +44,7 @@ def _get_environment(location=None):
         loader=loc_loader,
         trim_blocks=True,
         undefined=ChainableUndefined,
+        extensions=['jinja2.ext.loopcontrols']
     )
     env.filters.update(_FILTERS)
     env.tests.update(_TESTS)
