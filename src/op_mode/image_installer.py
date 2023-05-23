@@ -415,11 +415,7 @@ def install_image() -> None:
         chown(target_config_dir, group='vyattacfg')
         chmod_2775(target_config_dir)
         # copy config
-        if migrate_config():
-            copy('/opt/vyatta/etc/config/config.boot', target_config_dir)
-        else:
-            copy('/opt/vyatta/etc/config.boot.default',
-                 f'{target_config_dir}/config.boot')
+        copy('/opt/vyatta/etc/config/config.boot', target_config_dir)
         configure_authentication(f'{target_config_dir}/config.boot',
                                  user_password)
         Path(f'{target_config_dir}/.vyatta_config').touch()
