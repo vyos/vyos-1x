@@ -92,6 +92,31 @@ class Xml:
         d = self._get_ref_path(path)
         return self._is_leaf_node(d)
 
+    @staticmethod
+    def _dict_get(d: dict, path: list) -> dict:
+        for i in path:
+            d = d.get(i, {})
+            if not isinstance(d, dict):
+                return {}
+            if not d:
+                break
+        return d
+
+    def _dict_find(self, d: dict, key: str, non_local=False) -> bool:
+        for k in list(d):
+            if k in ('node_data', 'component_version'):
+                continue
+            if k == key:
+                return True
+            if non_local and isinstance(d[k], dict):
+                if self._dict_find(d[k], key):
+                    return True
+        return False
+
+    def cli_defined(self, path: list, node: str, non_local=False) -> bool:
+        d = self._dict_get(self.ref, path)
+        return self._dict_find(d, node, non_local=non_local)
+
     def component_version(self) -> dict:
         d = {}
         for k, v in self.ref['component_version']:
