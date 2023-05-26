@@ -35,6 +35,7 @@ from vyos.util import process_named_running
 from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
+from vyos.xml_ref import cli_defined
 
 def is_mirrored_to(interface, mirror_if, qdisc):
     """
@@ -81,6 +82,11 @@ class BasicInterfaceTest:
         @classmethod
         def setUpClass(cls):
             super(BasicInterfaceTest.TestCase, cls).setUpClass()
+
+            # XXX the case of test_vif_8021q_mtu_limits, below, shows that
+            # we should extend cli_defined to support more complex queries
+            cls._test_vlan = cli_defined(cls._base_path, 'vif')
+            cls._test_qinq = cli_defined(cls._base_path, 'vif-s')
 
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
             for span in cls._mirror_interfaces:
