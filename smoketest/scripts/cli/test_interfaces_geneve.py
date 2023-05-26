@@ -24,8 +24,6 @@ from base_interfaces_test import BasicInterfaceTest
 class GeneveInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_ip = True
-        cls._test_ipv6 = True
         cls._base_path = ['interfaces', 'geneve']
         cls._options = {
             'gnv0': ['vni 10', 'remote 127.0.1.1'],

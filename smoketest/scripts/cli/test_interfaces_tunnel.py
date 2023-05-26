@@ -30,9 +30,6 @@ mtu = 1476
 class TunnelInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_ip = True
-        cls._test_ipv6 = True
-        cls._test_mtu = True
         cls._base_path = ['interfaces', 'tunnel']
         cls.local_v4 = '192.0.2.1'
         cls.local_v6 = '2001:db8::1'
