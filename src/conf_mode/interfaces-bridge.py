@@ -131,11 +131,11 @@ def verify(bridge):
                 raise ConfigError('Loopback interface "lo" can not be added to a bridge')
 
             if 'is_bridge_member' in interface_config:
-                tmp = interface_config['is_bridge_member']
+                tmp = next(iter(interface_config['is_bridge_member']))
                 raise ConfigError(error_msg + f'it is already a member of bridge "{tmp}"!')
 
             if 'is_bond_member' in interface_config:
-                tmp = interface_config['is_bond_member']
+                tmp = next(iter(interface_config['is_bond_member']))
                 raise ConfigError(error_msg + f'it is already a member of bond "{tmp}"!')
 
             if 'is_source_interface' in interface_config:
