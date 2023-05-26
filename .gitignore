@@ -138,3 +138,5 @@ debian/*.substvars
 
 # vyos-1x JSON version
 data/component-versions.json
+# vyos-1x XML cache
+python/vyos/xml_ref/cache.py
