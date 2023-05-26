@@ -26,6 +26,10 @@ Standards-Version: 3.9.6
 
 Package: vyos-1x
 Architecture: amd64 arm64
+Pre-Depends:
+  libnss-tacplus (>= 1.0.4),
+  libpam-tacplus (>= 1.4.3),
+  libpam-radius-auth (>= 1.5.0)
 Depends:
   ${python3:Depends} (>= 3.10),
   aardvark-dns,
@@ -83,7 +87,6 @@ Depends:
   libndp-tools,
   libnetfilter-conntrack3,
   libnfnetlink0,
-  libpam-radius-auth (>= 1.5.0),
   libqmi-utils,
   libstrongswan-extra-plugins (>=5.9),
   libstrongswan-standard-plugins (>=5.9),
