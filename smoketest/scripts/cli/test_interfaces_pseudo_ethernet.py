@@ -23,14 +23,6 @@ from base_interfaces_test import BasicInterfaceTest
 class PEthInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_dhcp = True
-        cls._test_ip = True
-        cls._test_ipv6 = True
-        cls._test_ipv6_pd = True
-        cls._test_ipv6_dhcpc6 = True
-        cls._test_mtu = True
-        cls._test_vlan = True
-        cls._test_qinq = True
         cls._base_path = ['interfaces', 'pseudo-ethernet']
 
         cls._options = {}

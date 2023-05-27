@@ -45,6 +45,9 @@ def is_valueless(path: list) -> bool:
 def is_leaf(path: list) -> bool:
     return load_reference().is_leaf(path)
 
+def cli_defined(path: list, node: str, non_local=False) -> bool:
+    return load_reference().cli_defined(path, node, non_local=non_local)
+
 def component_version() -> dict:
     return load_reference().component_version()
 

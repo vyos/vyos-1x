@@ -27,7 +27,6 @@ class InputInterfaceTest(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(InputInterfaceTest, cls).setUpClass()
-
         cls._interfaces = ['ifb10', 'ifb20', 'ifb30']
 
     def tearDown(self):

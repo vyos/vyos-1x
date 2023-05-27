@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,9 +21,6 @@ from base_interfaces_test import BasicInterfaceTest
 class VTIInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_ip = True
-        cls._test_ipv6 = True
-        cls._test_mtu = True
         cls._base_path = ['interfaces', 'vti']
         cls._interfaces = ['vti10', 'vti20', 'vti30']
 
