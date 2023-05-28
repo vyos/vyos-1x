@@ -729,7 +729,7 @@ def _get_formatted_output_ra_summary(ra_output_list: list):
             sa_remotehost = sa['remote-host'] if 'remote-host' in sa else ''
             sa_remoteid = sa['remote-id'] if 'remote-id' in sa else ''
             sa_ike_proposal = _get_formatted_ike_proposal(sa)
-            sa_tunnel_ip = sa['remote-vips']
+            sa_tunnel_ip = sa['remote-vips'][0]
             child_sa_key = _get_last_installed_childsa(sa)
             if child_sa_key:
                 child_sa = sa['child-sas'][child_sa_key]
