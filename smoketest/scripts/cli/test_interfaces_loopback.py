@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,6 +31,9 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
         # call base-classes classmethod
         super(LoopbackInterfaceTest, cls).setUpClass()
 
+    # we need to override tearDown() as loopback interfaces are ephemeral and
+    # will always be present on the system - the base class check will fail as
+    # the loopback interface will still exist.
     def tearDown(self):
         self.cli_delete(self._base_path)
         self.cli_commit()

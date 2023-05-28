@@ -42,9 +42,6 @@ def get_cipher(interface):
 class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_dhcp = True
-        cls._test_ip = True
-        cls._test_ipv6 = True
         cls._base_path = ['interfaces', 'macsec']
         cls._options = { 'macsec0': ['source-interface eth0', 'security cipher gcm-aes-128'] }
 

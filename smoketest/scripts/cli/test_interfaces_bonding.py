@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,14 +28,6 @@ from vyos.util import read_file
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_dhcp = True
-        cls._test_ip = True
-        cls._test_ipv6 = True
-        cls._test_ipv6_pd = True
-        cls._test_ipv6_dhcpc6 = True
-        cls._test_mtu = True
-        cls._test_vlan = True
-        cls._test_qinq = True
         cls._base_path = ['interfaces', 'bonding']
         cls._mirror_interfaces = ['dum21354']
         cls._members = []
@@ -251,4 +243,4 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 self.assertIn(member, slaves)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)

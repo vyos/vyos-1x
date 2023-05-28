@@ -24,8 +24,6 @@ from vyos.util import cmd
 class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_ip = True
-        cls._test_ipv6 = True
         cls._base_path = ['interfaces', 'l2tpv3']
         cls._options = {
             'l2tpeth10': ['source-address 127.0.0.1', 'remote 127.10.10.10',

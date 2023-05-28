@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,7 +34,6 @@ def get_config_value(interface, key):
 class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._test_ip = True
         cls._base_path = ['interfaces', 'wireless']
         cls._options = {
             'wlan0':  ['physical-device phy0', 'ssid VyOS-WIFI-0',
