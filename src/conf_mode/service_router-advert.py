@@ -93,6 +93,10 @@ def verify(rtradv):
                 if not (int(valid_lifetime) >= int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then or equal to preferred-lifetime')
 
+        if 'name_server' in interface_config:
+            if len(interface_config['name_server']) > 3:
+                raise ConfigError('No more then 3 IPv6 name-servers supported!')
+
         if 'name_server_lifetime' in interface_config:
             # man page states:
             # The maximum duration how long the RDNSS entries are used for name
