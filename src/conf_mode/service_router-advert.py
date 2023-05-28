@@ -95,6 +95,10 @@ def verify(rtradv):
                 if not (int(valid_lifetime) >= int(preferred_lifetime)):
                     raise ConfigError('Prefix valid-lifetime must be greater then or equal to preferred-lifetime')
 
+        if 'name_server' in interface:
+            if len(interface['name_server']) > 3:
+                raise ConfigError('No more then 3 IPv6 name-servers supported!')
+
     return None
 
 def generate(rtradv):
