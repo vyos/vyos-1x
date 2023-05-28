@@ -903,14 +903,16 @@ def get_bridge_fdb(interface):
     tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
     return tmp
 
-def get_interface_config(interface):
+def get_interface_config(interface, netns=None):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
     """
-    if not os.path.exists(f'/sys/class/net/{interface}'):
+    from vyos.util import run
+    netns_exec = f'ip netns exec {netns}' if netns else ''
+    if run(f'{netns_exec} test -e /sys/class/net/{interface}') != 0:
         return None
     from json import loads
-    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    tmp = loads(cmd(f'{netns_exec} ip -d -j link show {interface}'))[0]
     return tmp
 
 def get_interface_address(interface):

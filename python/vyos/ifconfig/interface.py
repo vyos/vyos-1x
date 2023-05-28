@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -56,6 +56,35 @@ from vyos.ifconfig import Section
 
 from netaddr import EUI
 from netaddr import mac_unix_expanded
+
+def _interface_exists_in_netns(interface_name, netns):
+    from vyos.util import rc_cmd
+    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
+    if rc == 0:
+        return True
+    return False
+
+def _is_intf_addr_assigned(ifname, addr, netns=None):
+    import json
+    import jmespath
+    from vyos.util import rc_cmd
+    from ipaddress import ip_interface
+
+    within_netns = f'ip netns exec {netns}' if netns else ''
+    rc, out = rc_cmd(f'{within_netns} ip --json address show dev {ifname}')
+    if rc == 0:
+        json_out = json.loads(out)
+        addresses = jmespath.search("[].addr_info[].{family: family, address: local, prefixlen: prefixlen}", json_out)
+        for address_info in addresses:
+            family = address_info['family']
+            address = address_info['address']
+            prefixlen = address_info['prefixlen']
+            interface = ip_interface(f"{address}/{prefixlen}")
+            if ip_interface(addr) == interface or address == addr:
+                return True
+
+    return False
+
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -280,7 +309,7 @@ class Interface(Control):
         """
         return deepcopy(cls.default)
 
-    def __init__(self, ifname, **kargs):
+    def __init__(self, ifname, netns=None, **kargs):
         """
         This is the base interface class which supports basic IP/MAC address
         operations as well as DHCP(v6). Other interface which represent e.g.
@@ -301,6 +330,7 @@ class Interface(Control):
         """
         self.config = deepcopy(kargs)
         self.config['ifname'] = self.ifname = ifname
+        self.config['netns'] = self.netns = netns
 
         self._admin_state_down_cnt = 0
 
@@ -336,8 +366,26 @@ class Interface(Control):
         self.operational = self.OperationalClass(ifname)
         self.vrrp = VRRP(ifname)
 
+    def get_interface_within_netns(self, key):
+        if self.netns:
+            return f"ip netns exec {self.netns} {self._command_get[key]['shellcmd'].format(**self.config)}"
+        else:
+            return self._command_get[key]['shellcmd'].format(**self.config)
+
+    def set_interface_within_netns(self, key, value):
+        if self.netns:
+            cmd = f"ip netns exec {self.netns} {self._command_set[key]['shellcmd'].format(**self.config, value=value)}"
+        else:
+            cmd = self._command_set[key]['shellcmd'].format(**self.config, value=value)
+        self._cmd(cmd)
+
     def _create(self):
-        cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
+        # Do not create interface that already exist or exists in netns
+        if self.exists(f'{self.ifname}') or get_interface_namespace(self.config['ifname']):
+            return
+        cmd = f'ip netns exec {self.netns} ' if self.netns else ''
+        cmd += 'ip link add dev {ifname} type {type}'.format(**self.config)
+
         self._cmd(cmd)
 
     def remove(self):
@@ -371,7 +419,10 @@ class Interface(Control):
         # NOTE (Improvement):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
-        cmd = 'ip link del dev {ifname}'.format(**self.config)
+        netns = get_interface_namespace(self.config['ifname'])
+        netns_exec = f'ip netns exec {netns} ' if netns else ''
+        cmd = netns_exec
+        cmd += 'ip link del dev {ifname}'.format(**self.config)
         return self._cmd(cmd)
 
     def _set_vrf_ct_zone(self, vrf):
@@ -379,6 +430,10 @@ class Interface(Control):
         Add/Remove rules in nftables to associate traffic in VRF to an
         individual conntack zone
         """
+        # Don't allow for netns yet
+        if self.netns:
+            return None
+
         if vrf:
             # Get routing table ID for VRF
             vrf_table_id = get_interface_config(vrf).get('linkinfo', {}).get(
@@ -403,7 +458,9 @@ class Interface(Control):
         >>> Interface('eth0').get_min_mtu()
         '60'
         """
-        return int(self.get_interface('min_mtu'))
+        cmd = self.get_interface_within_netns('min_mtu')
+        output = self._cmd(cmd)
+        return int(self._command_get['min_mtu'].get('format', lambda _: _)(output))
 
     def get_max_mtu(self):
         """
@@ -414,7 +471,9 @@ class Interface(Control):
         >>> Interface('eth0').get_max_mtu()
         '9000'
         """
-        return int(self.get_interface('max_mtu'))
+        cmd = self.get_interface_within_netns('max_mtu')
+        output = self._cmd(cmd)
+        return int(self._command_get['max_mtu'].get('format', lambda _: _)(output))
 
     def get_mtu(self):
         """
@@ -425,7 +484,9 @@ class Interface(Control):
         >>> Interface('eth0').get_mtu()
         '1500'
         """
-        return int(self.get_interface('mtu'))
+        cmd = self.get_interface_within_netns('mtu')
+        output = self._cmd(cmd)
+        return int(self._command_get['mtu'].get('format', lambda _: _)(output))
 
     def set_mtu(self, mtu):
         """
@@ -437,10 +498,10 @@ class Interface(Control):
         >>> Interface('eth0').get_mtu()
         '1400'
         """
-        tmp = self.get_interface('mtu')
+        tmp = self.get_interface_within_netns('mtu')
         if str(tmp) == mtu:
             return None
-        return self.set_interface('mtu', mtu)
+        return self.set_interface_within_netns('mtu', mtu)
 
     def get_mac(self):
         """
@@ -451,7 +512,9 @@ class Interface(Control):
         >>> Interface('eth0').get_mac()
         '00:50:ab:cd:ef:00'
         """
-        return self.get_interface('mac')
+        cmd = self.get_interface_within_netns('mac')
+        output = self._cmd(cmd)
+        return self._command_get['mac'].get('format', lambda _: _)(output)
 
     def get_mac_synthetic(self):
         """
@@ -549,6 +612,9 @@ class Interface(Control):
         >>> Interface('dum0').set_netns('foo')
         """
 
+        # Check if interface realy exists in namespace
+        if get_interface_namespace(self.ifname) != None:
+            return
         self.set_interface('netns', netns)
 
     def set_vrf(self, vrf):
@@ -561,6 +627,9 @@ class Interface(Control):
         >>> Interface('eth0').set_vrf()
         """
 
+        # Don't allow VRF in netns yet
+        if self.netns:
+            return None
         tmp = self.get_interface('vrf')
         if tmp == vrf:
             return None
@@ -584,6 +653,10 @@ class Interface(Control):
         return self.set_interface('arp_cache_tmo', tmo)
 
     def _cleanup_mss_rules(self, table, ifname):
+        # Don't allow for netns yet
+        if self.netns:
+            return None
+
         commands = []
         results = self._cmd(f'nft -a list chain {table} VYOS_TCP_MSS').split("\n")
         for line in results:
@@ -737,6 +810,10 @@ class Interface(Control):
 
         As per RFC3074.
         """
+        # Don't allow for netns yet
+        if self.netns:
+            return None
+
         if value == 'strict':
             value = 1
         elif value == 'loose':
@@ -795,6 +872,10 @@ class Interface(Control):
         Calculate the EUI64 from the interface's MAC, then assign it
         with the given prefix to the interface.
         """
+        # Don't allow in netns yet
+        if self.netns:
+            return None
+
         # T2863: only add a link-local IPv6 address if the interface returns
         # a MAC address. This is not the case on e.g. WireGuard interfaces.
         mac = self.get_mac()
@@ -886,7 +967,9 @@ class Interface(Control):
         >>> Interface('eth0').get_alias()
         'interface description as set by user'
         """
-        return self.get_interface('alias')
+        cmd = self.get_interface_within_netns('alias')
+        output = self._cmd(cmd)
+        return self._command_get['alias'].get('format', lambda _: _)(output)
 
     def set_alias(self, ifalias=''):
         """
@@ -900,10 +983,7 @@ class Interface(Control):
 
         >>> Interface('eth0').set_ifalias('')
         """
-        tmp = self.get_interface('alias')
-        if tmp == ifalias:
-            return None
-        self.set_interface('alias', ifalias)
+        self.set_interface_within_netns('alias', ifalias)
 
     def get_admin_state(self):
         """
@@ -914,7 +994,9 @@ class Interface(Control):
         >>> Interface('eth0').get_admin_state()
         'up'
         """
-        return self.get_interface('admin_state')
+        cmd = self.get_interface_within_netns('admin_state')
+        output = self._cmd(cmd)
+        return self._command_get['admin_state'].get('format', lambda _: _)(output)
 
     def set_admin_state(self, state):
         """
@@ -929,10 +1011,10 @@ class Interface(Control):
         if state == 'up':
             self._admin_state_down_cnt -= 1
             if self._admin_state_down_cnt < 1:
-                return self.set_interface('admin_state', state)
+                return self.set_interface_within_netns('admin_state', state)
         else:
             self._admin_state_down_cnt += 1
-            return self.set_interface('admin_state', state)
+            return self.set_interface_within_netns('admin_state', state)
 
     def set_path_cost(self, cost):
         """
@@ -1099,8 +1181,9 @@ class Interface(Control):
             self.set_dhcp(True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True)
-        elif not is_intf_addr_assigned(self.ifname, addr):
-            tmp = f'ip addr add {addr} dev {self.ifname}'
+        elif not _is_intf_addr_assigned(self.ifname, addr, self.netns):
+            within_netns = f'ip netns exec {self.netns}' if self.netns else ''
+            tmp = f'{within_netns} ip addr add {addr} dev {self.ifname}'
             # Add broadcast address for IPv4
             if is_ipv4(addr): tmp += ' brd +'
 
@@ -1166,8 +1249,12 @@ class Interface(Control):
         self.set_dhcp(False)
         self.set_dhcpv6(False)
 
+        netns = get_interface_namespace(self.config['ifname'])
+        netns_exec = f'ip netns exec {netns} ' if netns else ''
+        cmd = netns_exec
+        cmd += f'ip addr flush dev {self.ifname}'
         # flush all addresses
-        self._cmd(f'ip addr flush dev "{self.ifname}"')
+        self._cmd(cmd)
 
     def add_to_bridge(self, bridge_dict):
         """
@@ -1306,6 +1393,11 @@ class Interface(Control):
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
+
+        # Don't allow for netns yet
+        if self.netns:
+            return None
+
         source_if = self._config['ifname']
 
         mirror_config = None
@@ -1362,6 +1454,10 @@ class Interface(Control):
         >>> i = Interface('eth0')
         >>> i.set_xdp(True)
         """
+        # Don't allow for netns yet
+        if self.netns:
+            return None
+
         if not isinstance(state, bool):
             raise ValueError("Value out of range")
 
@@ -1405,13 +1501,10 @@ class Interface(Control):
             if mac:
                 self.set_mac(mac)
 
-        # If interface is connected to NETNS we don't have to check all other
-        # settings like MTU/IPv6/sysctl values, etc.
-        # Since the interface is pushed onto a separate logical stack
-        # Configure NETNS
+        # Set interface to netns if required
         if dict_search('netns', config) != None:
-            self.set_netns(config.get('netns', ''))
-            return
+            if not _interface_exists_in_netns(config['ifname'], config['netns']):
+                self.set_netns(config.get('netns', ''))
         else:
             self.del_netns(config.get('netns', ''))
 
