@@ -116,9 +116,15 @@ class BasicInterfaceTest:
             for intf in self._interfaces:
                 self.assertNotIn(intf, interfaces())
 
-            # No daemon that was started during a test should remain running
+            # No daemon started during tests should remain running
             for daemon in ['dhcp6c', 'dhclient']:
-                self.assertFalse(process_named_running(daemon))
+                # if _interface list is populated do a more fine grained search
+                # by also checking the cmd arguments passed to the daemon
+                if self._interfaces:
+                    for tmp in self._interfaces:
+                        self.assertFalse(process_named_running(daemon, tmp))
+                else:
+                    self.assertFalse(process_named_running(daemon))
 
         def test_dhcp_disable_interface(self):
             if not self._test_dhcp:
@@ -816,7 +822,14 @@ class BasicInterfaceTest:
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
 
+            # Create delegatee interfaces first to avoid any confusion by dhcpc6
+            # this is mainly an "issue" with virtual-ethernet interfaces
             delegatees = ['dum2340', 'dum2341', 'dum2342', 'dum2343', 'dum2344']
+            for delegatee in delegatees:
+                section = Section.section(delegatee)
+                self.cli_set(['interfaces', section, delegatee])
+
+            self.cli_commit()
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -829,8 +842,6 @@ class BasicInterfaceTest:
                 self.cli_set(pd_base + ['length', prefix_len])
 
                 for delegatee in delegatees:
-                    section = Section.section(delegatee)
-                    self.cli_set(['interfaces', section, delegatee])
                     self.cli_set(pd_base + ['interface', delegatee, 'address', address])
                     # increment interface address
                     address = str(int(address) + 1)
@@ -872,7 +883,14 @@ class BasicInterfaceTest:
             prefix_len = '56'
             sla_len = str(64 - int(prefix_len))
 
+            # Create delegatee interfaces first to avoid any confusion by dhcpc6
+            # this is mainly an "issue" with virtual-ethernet interfaces
             delegatees = ['dum3340', 'dum3341', 'dum3342', 'dum3343', 'dum3344']
+            for delegatee in delegatees:
+                section = Section.section(delegatee)
+                self.cli_set(['interfaces', section, delegatee])
+
+            self.cli_commit()
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -886,8 +904,6 @@ class BasicInterfaceTest:
                 self.cli_set(pd_base + ['length', prefix_len])
 
                 for delegatee in delegatees:
-                    section = Section.section(delegatee)
-                    self.cli_set(['interfaces', section, delegatee])
                     self.cli_set(pd_base + ['interface', delegatee, 'address', address])
                     self.cli_set(pd_base + ['interface', delegatee, 'sla-id', sla_id])
 
@@ -917,8 +933,8 @@ class BasicInterfaceTest:
                     # increment interface address
                     address = str(int(address) + 1)
 
-            # Check for running process
-            self.assertTrue(process_named_running('dhcp6c'))
+                # Check for running process
+                self.assertTrue(process_named_running('dhcp6c', interface))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
