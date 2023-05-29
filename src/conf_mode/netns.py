@@ -82,7 +82,8 @@ def verify(netns):
 
     if 'name' in netns:
         for name, config in netns['name'].items():
-            print(name)
+            # no tests (yet)
+            pass
 
     return None
 
