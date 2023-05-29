@@ -41,7 +41,7 @@ vif = '100'
 esp_group = 'MyESPGroup'
 ike_group = 'MyIKEGroup'
 secret = 'MYSECRETKEY'
-PROCESS_NAME = 'charon'
+PROCESS_NAME = 'charon-systemd'
 regex_uuid4 = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
 
 ca_pem = """

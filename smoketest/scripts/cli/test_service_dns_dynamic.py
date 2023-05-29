@@ -22,11 +22,11 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
-from vyos.util import process_named_running
+from vyos.util import process_running
 from vyos.util import read_file
 
-PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
+DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 
 base_path = ['service', 'dns', 'dynamic']
 hostname = 'test.ddns.vyos.io'
@@ -40,9 +40,15 @@ def get_config_value(key):
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_running(DDCLIENT_PID))
+
         # Delete DDNS configuration
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # PID file must no londer exist after process exited
+        self.assertFalse(os.path.exists(DDCLIENT_PID))
 
     def test_dyndns_service(self):
         from itertools import product
@@ -101,9 +107,6 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(login == user)
             self.assertTrue(pwd == "'" + password + "'")
 
-            # Check for running process
-            self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
         ddns = ['interface', interface, 'rfc2136', 'vyos']
@@ -131,9 +134,6 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # TODO: inspect generated configuration file
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
     def test_dyndns_ipv6(self):
         ddns = ['interface', interface, 'service', 'dynv6']
         proto = 'dyndns2'
@@ -150,9 +150,6 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # commit changes
         self.cli_commit()
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
         protocol = get_config_value('protocol')
         login = get_config_value('login')
