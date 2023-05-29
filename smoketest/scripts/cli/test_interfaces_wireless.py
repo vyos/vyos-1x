@@ -49,6 +49,10 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         # call base-classes classmethod
         super(WirelessInterfaceTest, cls).setUpClass()
 
+        # T5245 - currently testcases are disabled
+        cls._test_ipv6 = False
+        cls._test_vlan = False
+
     def test_wireless_add_single_ip_address(self):
         # derived method to check if member interfaces are enslaved properly
         super().test_add_single_ip_address()
