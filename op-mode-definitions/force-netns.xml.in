@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <tagNode name="netns">
+        <properties>
+          <help>Execute shell in given Network Namespace</help>
+          <completionHelp>
+            <path>netns name</path>
+          </completionHelp>
+        </properties>
+        <command>sudo ip netns exec $3 su - $(whoami)</command>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>
