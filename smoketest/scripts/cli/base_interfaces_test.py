@@ -378,7 +378,7 @@ class BasicInterfaceTest:
             # is the Wireless test will first load the wifi kernel hwsim module
             # which creates a wlan0 and wlan1 interface which will fail the
             # tearDown() test in the end that no interface is allowed to survive!
-            if not self._test_vlan:
+            if not self._test_vlan or not self._test_mtu:
                 self.skipTest('not supported')
 
             mtu_1500 = '1500'
