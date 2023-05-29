@@ -57,6 +57,8 @@ from vyos.ifconfig import Section
 from netaddr import EUI
 from netaddr import mac_unix_expanded
 
+link_local_prefix = 'fe80::/64'
+
 class Interface(Control):
     # This is the class which will be used to create
     # self.operational, it allows subclasses, such as
@@ -1444,7 +1446,7 @@ class Interface(Control):
                 # we will delete all interface specific IP addresses if they are not
                 # explicitly configured on the CLI
                 if is_ipv6_link_local(addr):
-                    eui64 = mac2eui64(self.get_mac(), 'fe80::/64')
+                    eui64 = mac2eui64(self.get_mac(), link_local_prefix)
                     if addr != f'{eui64}/64':
                         self.del_addr(addr)
                 else:
@@ -1571,9 +1573,9 @@ class Interface(Control):
 
         # Manage IPv6 link-local addresses
         if dict_search('ipv6.address.no_default_link_local', config) != None:
-            self.del_ipv6_eui64_address('fe80::/64')
+            self.del_ipv6_eui64_address(link_local_prefix)
         else:
-            self.add_ipv6_eui64_address('fe80::/64')
+            self.add_ipv6_eui64_address(link_local_prefix)
 
         # Add IPv6 EUI-based addresses
         tmp = dict_search('ipv6.address.eui64', config)

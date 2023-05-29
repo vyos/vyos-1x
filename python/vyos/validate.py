@@ -62,7 +62,7 @@ def is_intf_addr_assigned(intf, address) -> bool:
     # 10: [{'addr': 'fe80::a00:27ff:fed9:5b04%eth0', 'netmask': 'ffff:ffff:ffff:ffff::'}]
     # }
     try:
-        ifaces = ifaddresses(intf)
+        addresses = ifaddresses(intf)
     except ValueError as e:
         print(e)
         return False
@@ -74,7 +74,7 @@ def is_intf_addr_assigned(intf, address) -> bool:
     netmask = None
     if '/' in address:
         address, netmask = address.split('/')
-    for ip in ifaces.get(addr_type,[]):
+    for ip in addresses.get(addr_type, []):
         # ip can have the interface name in the 'addr' field, we need to remove it
         # {'addr': 'fe80::a00:27ff:fec5:f821%eth2', 'netmask': 'ffff:ffff:ffff:ffff::'}
         ip_addr = ip['addr'].split('%')[0]
