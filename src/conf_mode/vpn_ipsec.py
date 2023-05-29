@@ -455,7 +455,7 @@ def verify(ipsec):
 
                 if dict_search('options.disable_route_autoinstall',
                                ipsec) == None:
-                    Warning('It\'s recommended to use ipsec vty with the next command\n[set vpn ipsec option disable-route-autoinstall]')
+                    Warning('It\'s recommended to use ipsec vti with the next command\n[set vpn ipsec option disable-route-autoinstall]')
 
                 if 'bind' in peer_conf['vti']:
                     vti_interface = peer_conf['vti']['bind']
