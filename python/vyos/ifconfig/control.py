@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -49,6 +49,18 @@ class Control(Section):
         return popen(command, self.debug)
 
     def _cmd(self, command):
+        import re
+        if 'netns' in self.config:
+            # This command must be executed from default netns 'ip link set dev X netns X'
+            # exclude set netns cmd from netns to avoid:
+            # failed to run command: ip netns exec ns01 ip link set dev veth20 netns ns01
+            pattern = r'ip link set dev (\S+) netns (\S+)'
+            matches = re.search(pattern, command)
+            if matches and matches.group(2) == self.config['netns']:
+                # Command already includes netns and matches desired namespace:
+                command = command
+            else:
+                command = f'ip netns exec {self.config["netns"]} {command}'
         return cmd(command, self.debug)
 
     def _get_command(self, config, name):
