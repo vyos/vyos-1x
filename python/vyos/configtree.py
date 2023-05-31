@@ -201,7 +201,9 @@ class ConfigTree(object):
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
 
-        self.__delete(self.__config, path_str)
+        res = self.__delete(self.__config, path_str)
+        if (res != 0):
+            raise ConfigTreeError(f"Path doesn't exist: {path}")
 
         if self.__migration:
             print(f"- op: delete path: {path}")
@@ -210,7 +212,14 @@ class ConfigTree(object):
         check_path(path)
         path_str = " ".join(map(str, path)).encode()
 
-        self.__delete_value(self.__config, path_str, value.encode())
+        res = self.__delete_value(self.__config, path_str, value.encode())
+        if (res != 0):
+            if res == 1:
+                raise ConfigTreeError(f"Path doesn't exist: {path}")
+            elif res == 2:
+                raise ConfigTreeError(f"Value doesn't exist: '{value}'")
+            else:
+                raise ConfigTreeError()
 
         if self.__migration:
             print(f"- op: delete_value path: {path} value: {value}")
