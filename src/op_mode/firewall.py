@@ -211,19 +211,32 @@ def show_firewall_group(name=None):
 
     def find_references(group_type, group_name):
         out = []
-        for name_type in ['name', 'ipv6_name']:
-            if name_type not in firewall:
-                continue
-            for name, name_conf in firewall[name_type].items():
-                if 'rule' not in name_conf:
+        family = []
+        if group_type in ['address_group', 'network_group']:
+            family = ['ipv4']
+        elif group_type == 'ipv6_address_group':
+            family = ['ipv6']
+            group_type = 'address_group'
+        elif group_type == 'ipv6_network_group':
+            family = ['ipv6']
+            group_type = 'network_group'
+        else:
+            family = ['ipv4', 'ipv6']
+
+        for item in family:
+            for name_type in ['name', 'ipv6_name', 'forward', 'input', 'output']:
+                if name_type not in firewall[item]:
                     continue
-                for rule_id, rule_conf in name_conf['rule'].items():
-                    source_group = dict_search_args(rule_conf, 'source', 'group', group_type)
-                    dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
-                    if source_group and group_name == source_group:
-                        out.append(f'{name}-{rule_id}')
-                    elif dest_group and group_name == dest_group:
-                        out.append(f'{name}-{rule_id}')
+                for name, name_conf in firewall[item][name_type].items():
+                    if 'rule' not in name_conf:
+                        continue
+                    for rule_id, rule_conf in name_conf['rule'].items():
+                        source_group = dict_search_args(rule_conf, 'source', 'group', group_type)
+                        dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
+                        if source_group and group_name == source_group:
+                            out.append(f'{name}-{rule_id}')
+                        elif dest_group and group_name == dest_group:
+                            out.append(f'{name}-{rule_id}')
         return out
 
     header = ['Name', 'Type', 'References', 'Members']
