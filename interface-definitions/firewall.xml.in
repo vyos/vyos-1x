@@ -284,7 +284,7 @@
           </tagNode>
         </children>
       </node>
-      <node name="ip">
+      <node name="ipv4">
         <properties>
           <help>IPv4 firewall</help>
         </properties>

@@ -27,7 +27,7 @@ from vyos.utils.dict import dict_search_args
 def get_config_firewall(conf, hook=None, priority=None, ipv6=False, interfaces=True):
     config_path = ['firewall']
     if hook:
-        config_path += ['ipv6' if ipv6 else 'ip', hook]
+        config_path += ['ipv6' if ipv6 else 'ipv4', hook]
         if priority:
             config_path += [priority]
 
@@ -160,9 +160,9 @@ def show_firewall():
     if not firewall:
         return
 
-    if 'ip' in firewall:
-        for hook, hook_conf in firewall['ip'].items():
-            for prior, prior_conf in firewall['ip'][hook].items():
+    if 'ipv4' in firewall:
+        for hook, hook_conf in firewall['ipv4'].items():
+            for prior, prior_conf in firewall['ipv4'][hook].items():
                 output_firewall_name(hook, prior, prior_conf, ipv6=False)
 
     if 'ipv6' in firewall:
@@ -265,9 +265,9 @@ def show_summary():
     v4_out = []
     v6_out = []
 
-    if 'ip' in firewall:
-        for hook, hook_conf in firewall['ip'].items():
-            for prior, prior_conf in firewall['ip'][hook].items():
+    if 'ipv4' in firewall:
+        for hook, hook_conf in firewall['ipv4'].items():
+            for prior, prior_conf in firewall['ipv4'][hook].items():
                 description = prior_conf.get('description', '')
                 v4_out.append([hook, prior, description])
 
@@ -296,9 +296,9 @@ def show_statistics():
     if not firewall:
         return
 
-    if 'ip' in firewall:
-        for hook, hook_conf in firewall['ip'].items():
-            for prior, prior_conf in firewall['ip'][hook].items():
+    if 'ipv4' in firewall:
+        for hook, hook_conf in firewall['ipv4'].items():
+            for prior, prior_conf in firewall['ipv4'][hook].items():
                 output_firewall_name_statistics(hook,prior, prior_conf, ipv6=False)
 
     if 'ipv6' in firewall:

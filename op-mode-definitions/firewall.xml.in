@@ -231,7 +231,7 @@
             </children>
             <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_family --family $3</command>
           </node>
-          <node name="ip">
+          <node name="ipv4">
             <properties>
               <help>Show IPv4 firewall</help>
             </properties>
@@ -250,7 +250,7 @@
                         <properties>
                           <help>Show summary of IPv4 forward filter firewall rules</help>
                           <completionHelp>
-                            <path>firewall ip forward filter rule</path>
+                            <path>firewall ipv4 forward filter rule</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
@@ -274,7 +274,7 @@
                         <properties>
                           <help>Show summary of IPv4 input filter firewall rules</help>
                           <completionHelp>
-                            <path>firewall ip input filter rule</path>
+                            <path>firewall ipv4 input filter rule</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
@@ -298,7 +298,7 @@
                         <properties>
                           <help>Show summary of IPv4 output filter firewall rules</help>
                           <completionHelp>
-                            <path>firewall ip output filter rule</path>
+                            <path>firewall ipv4 output filter rule</path>
                           </completionHelp>
                         </properties>
                         <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
@@ -312,7 +312,7 @@
                 <properties>
                   <help>Show IPv4 custom firewall chains</help>
                   <completionHelp>
-                    <path>firewall ip name</path>
+                    <path>firewall ipv4 name</path>
                   </completionHelp>
                 </properties>
                 <children>
@@ -320,7 +320,7 @@
                     <properties>
                       <help>Show summary of IPv4 custom firewall ruleset</help>
                       <completionHelp>
-                        <path>firewall ip name ${COMP_WORDS[6]} rule</path>
+                        <path>firewall ipv4 name ${COMP_WORDS[6]} rule</path>
                       </completionHelp>
                     </properties>
                     <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>

@@ -13,7 +13,7 @@
         #include <include/generic-description.xml.i>
         <tagNode name="rule">
           <properties>
-            <help>IP Firewall input filter rule number</help>
+            <help>IPv4 Firewall input filter rule number</help>
             <valueHelp>
               <format>u32:1-999999</format>
               <description>Number for this firewall rule</description>
@@ -30,7 +30,7 @@
               <properties>
                 <help>Set jump target. Action jump must be defined to use this setting</help>
                 <completionHelp>
-                  <path>firewall ip name</path>
+                  <path>firewall ipv4 name</path>
                 </completionHelp>
               </properties>
             </leafNode>

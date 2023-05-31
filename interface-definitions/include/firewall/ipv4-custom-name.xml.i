@@ -14,13 +14,13 @@
       <properties>
         <help>Set jump target. Action jump must be defined in default-action to use this setting</help>
         <completionHelp>
-          <path>firewall ip name</path>
+          <path>firewall ipv4 name</path>
         </completionHelp>
       </properties>
     </leafNode>
     <tagNode name="rule">
       <properties>
-        <help>IP Firewall custom rule number</help>
+        <help>IPv4 Firewall custom rule number</help>
         <valueHelp>
           <format>u32:1-999999</format>
           <description>Number for this firewall rule</description>
@@ -38,7 +38,7 @@
           <properties>
             <help>Set jump target. Action jump must be defined to use this setting</help>
             <completionHelp>
-              <path>firewall ip name</path>
+              <path>firewall ipv4 name</path>
             </completionHelp>
           </properties>
         </leafNode>

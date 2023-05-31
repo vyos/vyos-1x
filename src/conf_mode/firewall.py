@@ -101,7 +101,7 @@ def geoip_updated(conf, firewall):
         if path[1] == 'ipv6_name':
             set_name = f'GEOIP_CC_name6_{path[2]}_{path[4]}'
 
-        if (path[0] == 'ip') and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
+        if (path[0] == 'ipv4') and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
             out['name'].append(set_name)
         elif (path[0] == 'ipv6') and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name' ):
             out['ipv6_name'].append(set_name)
@@ -133,6 +133,47 @@ def get_config(config=None):
                                     get_first_key=True,
                                     with_recursive_defaults=True)
 
+    # We have gathered the dict representation of the CLI, but there are
+    # default options which we need to update into the dictionary retrived.
+    # XXX: T2665: we currently have no nice way for defaults under tag
+    # nodes, thus we load the defaults "by hand"
+    default_values = defaults(base)
+
+    for family in ['ipv4', 'ipv6']:
+        for tmp in ['name', 'ipv6_name', 'forward', 'input', 'output', 'prerouting']:
+            if tmp in default_values[family]:
+                del default_values[family][tmp]
+
+
+    firewall = dict_merge(default_values, firewall)
+
+    # Merge in defaults for IPv4 ruleset
+    if 'name' in firewall['ipv4']:
+        default_values = defaults(base + ['ipv4'] + ['name'])
+        for name in firewall['ipv4']['name']:
+            firewall['ipv4']['name'][name] = dict_merge(default_values,
+                                                firewall['ipv4']['name'][name])
+    for hook in ['forward', 'input', 'output', 'prerouting']:
+        if hook in firewall['ipv4']:
+            for priority in ['filter', 'mangle', 'raw']:
+                if priority in firewall['ipv4'][hook]:
+                    default_values = defaults(base + ['ipv4'] + [hook] + [priority])
+                    firewall['ipv4'][hook][priority] = dict_merge(default_values,
+                                                        firewall['ipv4'][hook][priority])
+
+    # Merge in defaults for IPv6 ruleset
+    if 'ipv6_name' in firewall['ipv6']:
+        default_values = defaults(base + ['ipv6'] + ['ipv6-name'])
+        for ipv6_name in firewall['ipv6']['ipv6_name']:
+            firewall['ipv6']['ipv6_name'][ipv6_name] = dict_merge(default_values,
+                                                          firewall['ipv6']['ipv6_name'][ipv6_name])
+    for hook in ['forward', 'input', 'output', 'prerouting']:
+        if hook in firewall['ipv6']:
+            for priority in ['filter', 'mangle', 'raw']:
+                if priority in firewall['ipv6'][hook]:
+                    default_values = defaults(base + ['ipv6'] + [hook] + [priority])
+                    firewall['ipv6'][hook][priority] = dict_merge(default_values,
+                                                        firewall['ipv6'][hook][priority])
 
     firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     if firewall['group_resync']:
@@ -165,7 +206,7 @@ def verify_rule(firewall, rule_conf, ipv6):
             raise ConfigError('jump-target defined, but action jump needed and it is not defined')
         target = rule_conf['jump_target']
         if not ipv6:
-            if target not in dict_search_args(firewall, 'ip', 'name'):
+            if target not in dict_search_args(firewall, 'ipv4', 'name'):
                 raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
         else:
             if target not in dict_search_args(firewall, 'ipv6', 'ipv6_name'):
@@ -297,10 +338,10 @@ def verify(firewall):
                 for group_name, group in groups.items():
                     verify_nested_group(group_name, group, groups, [])
 
-    if 'ip' in firewall:
+    if 'ipv4' in firewall:
         for name in ['name','forward','input','output']:
-            if name in firewall['ip']:
-                for name_id, name_conf in firewall['ip'][name].items():
+            if name in firewall['ipv4']:
+                for name_id, name_conf in firewall['ipv4'][name].items():
                     if 'jump' in name_conf['default_action'] and 'default_jump_target' not in name_conf:
                         raise ConfigError('default-action set to jump, but no default-jump-target specified')
                     if 'default_jump_target' in name_conf:
@@ -310,7 +351,7 @@ def verify(firewall):
                         if name_conf['default_jump_target'] == name_id:
                             raise ConfigError(f'Loop detected on default-jump-target.')
                         ## Now need to check that default-jump-target exists (other firewall chain/name)
-                        if target not in dict_search_args(firewall['ip'], 'name'):
+                        if target not in dict_search_args(firewall['ipv4'], 'name'):
                             raise ConfigError(f'Invalid jump-target. Firewall name {target} does not exist on the system')
 
                     if 'rule' in name_conf:

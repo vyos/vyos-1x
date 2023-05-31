@@ -1,16 +1,15 @@
 #!/usr/sbin/nft -f
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
-{% import 'firewall/nftables-zone.j2' as zone_tmpl %}
 
 {% if first_install is not vyos_defined %}
 delete table ip vyos_filter
 {% endif %}
 table ip vyos_filter {
-{% if ip is vyos_defined %}
-{%     if ip.forward is vyos_defined %}
+{% if ipv4 is vyos_defined %}
+{%     if ipv4.forward is vyos_defined %}
 {%         set ns = namespace(sets=[]) %}
-{%         for prior, conf in ip.forward.items() %}
+{%         for prior, conf in ipv4.forward.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_FORWARD_{{ prior }} {
         type filter hook forward priority {{ prior }}; policy {{ def_action }};
@@ -33,9 +32,9 @@ table ip vyos_filter {
 {%         endfor %}
 {%     endif %}
 
-{%     if ip.input is vyos_defined %}
+{%     if ipv4.input is vyos_defined %}
 {%         set ns = namespace(sets=[]) %}
-{%         for prior, conf in ip.input.items() %}
+{%         for prior, conf in ipv4.input.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_INPUT_{{ prior }} {
         type filter hook input priority {{ prior }}; policy {{ def_action }};
@@ -58,9 +57,9 @@ table ip vyos_filter {
 {%         endfor %}
 {%     endif %}
 
-{%     if ip.output is vyos_defined %}
+{%     if ipv4.output is vyos_defined %}
 {%         set ns = namespace(sets=[]) %}
-{%         for prior, conf in ip.output.items() %}
+{%         for prior, conf in ipv4.output.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_OUTPUT_{{ prior }} {
         type filter hook output priority {{ prior }}; policy {{ def_action }};
@@ -87,9 +86,9 @@ table ip vyos_filter {
         type filter hook prerouting priority -450; policy accept;
         ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
     }
-{%     if ip.prerouting is vyos_defined %}
+{%     if ipv4.prerouting is vyos_defined %}
 {%         set ns = namespace(sets=[]) %}
-{%         for prior, conf in ip.prerouting.items() %}
+{%         for prior, conf in ipv4.prerouting.items() %}
     chain VYOS_PREROUTING_{{ prior }} {
         type filter hook prerouting priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
@@ -112,9 +111,9 @@ table ip vyos_filter {
     }
 {%         endfor %}
 {%     endif %}
-{%     if ip.name is vyos_defined %}
+{%     if ipv4.name is vyos_defined %}
 {%         set ns = namespace(sets=[]) %}
-{%         for name_text, conf in ip.name.items() %}
+{%         for name_text, conf in ipv4.name.items() %}
     chain NAME_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
@@ -152,10 +151,6 @@ table ip vyos_filter {
 {% endif %}
 
 {{ group_tmpl.groups(group, False) }}
-
-{% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, False) }}
-{% endif %}
 }
 
 {% if first_install is not vyos_defined %}
@@ -283,7 +278,4 @@ table ip6 vyos_filter {
 
 {{ group_tmpl.groups(group, True) }}
 
-{% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, state_policy is vyos_defined, True) }}
-{% endif %}
 }
