@@ -274,8 +274,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name2 = 'smoketest-adv2'
         interface = 'eth0'
 
-        self.cli_set(['firewall', 'ip4', 'name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ip4', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'enable-default-log'])
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'packet-length', '64'])

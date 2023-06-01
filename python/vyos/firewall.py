@@ -521,12 +521,12 @@ def geoip_update(firewall, force=False):
             set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
             if path[1] == 'ipv6_name':
                 set_name = f'GEOIP_CC_name6_{path[2]}_{path[4]}'
-                if ( path[0] == 'ipv4' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
-                    for code in codes:
-                        ipv4_codes.setdefault(code, []).append(set_name)
-                elif ( path[0] == 'ipv6' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name' ):
-                    for code in codes:
-                        ipv6_codes.setdefault(code, []).append(set_name)
+            if ( path[0] == 'ipv4' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
+                for code in codes:
+                    ipv4_codes.setdefault(code, []).append(set_name)
+            elif ( path[0] == 'ipv6' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name' ):
+                for code in codes:
+                    ipv6_codes.setdefault(code, []).append(set_name)
 
         if not ipv4_codes and not ipv6_codes:
             if force:
