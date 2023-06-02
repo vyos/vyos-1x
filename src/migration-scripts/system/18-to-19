@@ -92,9 +92,6 @@ else:
     for intf in dhcp_interfaces:
         config.set(base + ['name-servers-dhcp'], value=intf, replace=False)
 
-    # delete old node
-    config.delete(base + ['disable-dhcp-nameservers'])
-
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
