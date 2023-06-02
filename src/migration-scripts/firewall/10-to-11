@@ -263,6 +263,7 @@ if config.exists(base + ['zone']):
             config.set(base + ['ipv4', 'forward', 'filter', 'rule', fwd_ipv4_rule, 'outbound-interface', 'interface-group'], value=group_name)
             config.set(base + ['ipv4', 'forward', 'filter', 'rule', fwd_ipv4_rule, 'inbound-interface', 'interface-group'], value=group_name)
             config.set(base + ['ipv4', 'forward', 'filter', 'rule', fwd_ipv4_rule, 'action'], value=intra_zone_ipv4_action)
+            config.set(base + ['ipv6', 'forward', 'filter', 'rule'])
             config.set_tag(base + ['ipv6', 'forward', 'filter', 'rule'])
             config.set(base + ['ipv6', 'forward', 'filter', 'rule', fwd_ipv6_rule, 'outbound-interface', 'interface-group'], value=group_name)
             config.set(base + ['ipv6', 'forward', 'filter', 'rule', fwd_ipv6_rule, 'inbound-interface', 'interface-group'], value=group_name)

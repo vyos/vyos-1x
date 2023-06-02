@@ -7,8 +7,8 @@ delete table ip vyos_filter
 {% endif %}
 table ip vyos_filter {
 {% if ipv4 is vyos_defined %}
+{%     set ns = namespace(sets=[]) %}
 {%     if ipv4.forward is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv4.forward.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_FORWARD_{{ prior }} {
@@ -23,17 +23,9 @@ table ip vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT_{{ set_name }} {
-        type ipv4_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
 
 {%     if ipv4.input is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv4.input.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_INPUT_{{ prior }} {
@@ -48,17 +40,9 @@ table ip vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT_{{ set_name }} {
-        type ipv4_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
 
 {%     if ipv4.output is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv4.output.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_OUTPUT_{{ prior }} {
@@ -73,24 +57,16 @@ table ip vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT_{{ set_name }} {
-        type ipv4_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
-
     chain VYOS_FRAG_MARK {
         type filter hook prerouting priority -450; policy accept;
         ip frag-off & 0x3fff != 0 meta mark set 0xffff1 return
     }
 {%     if ipv4.prerouting is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv4.prerouting.items() %}
+{%             set def_action = conf.default_action %}
     chain VYOS_PREROUTING_{{ prior }} {
-        type filter hook prerouting priority {{ prior }}; policy accept;
+        type filter hook prerouting priority {{ prior }}; policy {{ def_action }};
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('PRE', prior, rule_id) }}
@@ -100,19 +76,11 @@ table ip vyos_filter {
 {%                 endfor %}
 {%             endif %}
         {{ conf | nft_default_rule(prior) }}
-        # jump VYOS_POST_FW
-    }
-{%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT_{{ set_name }} {
-        type ipv4_addr
-        size 65535
-        flags dynamic
     }
 {%         endfor %}
 {%     endif %}
+
 {%     if ipv4.name is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for name_text, conf in ipv4.name.items() %}
     chain NAME_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
@@ -126,30 +94,30 @@ table ip vyos_filter {
         {{ conf | nft_default_rule(name_text) }}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
+{%     endif %}
+
+{%     for set_name in ns.sets %}
     set RECENT_{{ set_name }} {
         type ipv4_addr
         size 65535
         flags dynamic
     }
-{%         endfor %}
-{%         for set_name in ip_fqdn %}
+{%     endfor %}
+{%     for set_name in ip_fqdn %}
     set FQDN_{{ set_name }} {
         type ipv4_addr
         flags interval
     }
-{%         endfor %}
-{%         if geoip_updated.name is vyos_defined %}
-{%             for setname in geoip_updated.name %}
+{%     endfor %}
+{%     if geoip_updated.name is vyos_defined %}
+{%         for setname in geoip_updated.name %}
     set {{ setname }} {
         type ipv4_addr
         flags interval
     }
-{%             endfor %}
-{%         endif %}
+{%         endfor %}
 {%     endif %}
 {% endif %}
-
 {{ group_tmpl.groups(group, False) }}
 }
 
@@ -158,8 +126,8 @@ delete table ip6 vyos_filter
 {% endif %}
 table ip6 vyos_filter {
 {% if ipv6 is vyos_defined %}
+{%     set ns = namespace(sets=[]) %}
 {%     if ipv6.forward is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv6.forward.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_IPV6_FORWARD_{{ prior }} {
@@ -174,17 +142,9 @@ table ip6 vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT6_{{ set_name }} {
-        type ipv6_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
 
 {%     if ipv6.input is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv6.input.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_IPV6_INPUT_{{ prior }} {
@@ -199,17 +159,9 @@ table ip6 vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT6_{{ set_name }} {
-        type ipv6_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
 
 {%     if ipv6.output is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for prior, conf in ipv6.output.items() %}
 {%             set def_action = conf.default_action %}
     chain VYOS_IPV6_OUTPUT_{{ prior }} {
@@ -224,21 +176,14 @@ table ip6 vyos_filter {
 {%             endif %}
     }
 {%         endfor %}
-{%         for set_name in ns.sets %}
-    set RECENT6_{{ set_name }} {
-        type ipv6_addr
-        size 65535
-        flags dynamic
-    }
-{%         endfor %}
 {%     endif %}
+
     chain VYOS_FRAG6_MARK {
         type filter hook prerouting priority -450; policy accept;
         exthdr frag exists meta mark set 0xffff1 return
     }
 
 {%     if ipv6.ipv6_name is vyos_defined %}
-{%         set ns = namespace(sets=[]) %}
 {%         for name_text, conf in ipv6.ipv6_name.items() %}
     chain NAME6_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
@@ -252,30 +197,29 @@ table ip6 vyos_filter {
         {{ conf | nft_default_rule(name_text, ipv6=True) }}
     }
 {%         endfor %}
-{%         for set_name in ip6_fqdn %}
-    set FQDN_{{ set_name }} {
-        type ipv6_addr
-        flags interval
-    }
-{%         endfor %}
-{%         for set_name in ns.sets %}
+{%     endif %}
+
+{%     for set_name in ns.sets %}
     set RECENT6_{{ set_name }} {
         type ipv6_addr
         size 65535
         flags dynamic
     }
-{%         endfor %}
-{%         if geoip_updated.ipv6_name is vyos_defined %}
-{%             for setname in geoip_updated.ipv6_name %}
+{%     endfor %}
+{%     for set_name in ip6_fqdn %}
+    set FQDN_{{ set_name }} {
+        type ipv6_addr
+        flags interval
+    }
+{%     endfor %}
+{%     if geoip_updated.ipv6_name is vyos_defined %}
+{%         for setname in geoip_updated.ipv6_name %}
     set {{ setname }} {
         type ipv6_addr
         flags interval
     }
-{%             endfor %}
-{%         endif %}
+{%         endfor %}
 {%     endif %}
 {% endif %}
-
 {{ group_tmpl.groups(group, True) }}
-
 }
