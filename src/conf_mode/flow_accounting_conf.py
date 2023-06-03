@@ -211,7 +211,7 @@ def verify(flow_config):
             if not is_addr_assigned(tmp, sflow_vrf):
                 raise ConfigError(f'Configured "sflow agent-address {tmp}" does not exist in the system!')
 
-        # Check if configured netflow source-address exist in the system
+        # Check if configured sflow source-address exist in the system
         if 'source_address' in flow_config['sflow']:
             if not is_addr_assigned(flow_config['sflow']['source_address'], sflow_vrf):
                 tmp = flow_config['sflow']['source_address']
@@ -219,13 +219,18 @@ def verify(flow_config):
 
     # check NetFlow configuration
     if 'netflow' in flow_config:
+        # check if vrf is defined for netflow
+        netflow_vrf = None
+        if 'vrf' in flow_config:
+            netflow_vrf = flow_config['vrf']
+            
         # check if at least one NetFlow collector is configured if NetFlow configuration is presented
         if 'server' not in flow_config['netflow']:
             raise ConfigError('You need to configure at least one NetFlow server!')
 
         # Check if configured netflow source-address exist in the system
         if 'source_address' in flow_config['netflow']:
-            if not is_addr_assigned(flow_config['netflow']['source_address']):
+            if not is_addr_assigned(flow_config['netflow']['source_address'], netflow_vrf):
                 tmp = flow_config['netflow']['source_address']
                 raise ConfigError(f'Configured "netflow source-address {tmp}" does not exist on the system!')
 
