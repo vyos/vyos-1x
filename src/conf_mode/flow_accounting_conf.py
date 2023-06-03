@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,15 +18,12 @@ import os
 import re
 
 from sys import exit
-import ipaddress
-
 from ipaddress import ip_address
 
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.ifconfig import Section
-from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.util import call
 from vyos.util import cmd
@@ -223,7 +220,7 @@ def verify(flow_config):
         netflow_vrf = None
         if 'vrf' in flow_config:
             netflow_vrf = flow_config['vrf']
-            
+
         # check if at least one NetFlow collector is configured if NetFlow configuration is presented
         if 'server' not in flow_config['netflow']:
             raise ConfigError('You need to configure at least one NetFlow server!')
