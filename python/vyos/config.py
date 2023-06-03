@@ -68,7 +68,7 @@ import json
 from copy import deepcopy
 
 import vyos.configtree
-from vyos.xml_ref import multi_to_list, merge_defaults
+from vyos.xml_ref import multi_to_list, merge_defaults, relative_defaults
 from vyos.utils.dict import get_sub_dict, mangle_dict_keys
 from vyos.configsource import ConfigSource, ConfigSourceSession
 
@@ -266,6 +266,31 @@ class Config(object):
         conf_dict = mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1], abs_path=rpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
 
         return conf_dict
+
+    def get_config_defaults(self, path=[], effective=False, key_mangling=None,
+                            no_tag_node_value_mangle=False, get_first_key=False,
+                            recursive=False) -> dict:
+        lpath = self._make_path(path)
+        root_dict = self.get_cached_root_dict(effective)
+        conf_dict = get_sub_dict(root_dict, lpath, get_first_key)
+
+        defaults = relative_defaults(lpath, conf_dict,
+                                     get_first_key=get_first_key,
+                                     recursive=recursive)
+        if key_mangling is None:
+            return defaults
+
+        rpath = lpath if get_first_key else lpath[:-1]
+
+        if not (isinstance(key_mangling, tuple) and \
+                (len(key_mangling) == 2) and \
+                isinstance(key_mangling[0], str) and \
+                isinstance(key_mangling[1], str)):
+            raise ValueError("key_mangling must be a tuple of two strings")
+
+        defaults = mangle_dict_keys(defaults, key_mangling[0], key_mangling[1], abs_path=rpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
+
+        return defaults
 
     def is_multi(self, path):
         """
