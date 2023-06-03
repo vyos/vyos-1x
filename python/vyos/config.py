@@ -1,4 +1,4 @@
-# Copyright 2017, 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017, 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -67,9 +67,9 @@ import re
 import json
 from copy import deepcopy
 
-import vyos.xml
-import vyos.util
 import vyos.configtree
+from vyos.xml_ref import multi_to_list, merge_defaults
+from vyos.utils.dict import get_sub_dict, mangle_dict_keys
 from vyos.configsource import ConfigSource, ConfigSourceSession
 
 class Config(object):
@@ -225,7 +225,8 @@ class Config(object):
 
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
                         get_first_key=False, no_multi_convert=False,
-                        no_tag_node_value_mangle=False):
+                        no_tag_node_value_mangle=False,
+                        with_defaults=False, with_recursive_defaults=False):
         """
         Args:
             path (str list): Configuration tree path, can be empty
@@ -238,19 +239,23 @@ class Config(object):
         """
         lpath = self._make_path(path)
         root_dict = self.get_cached_root_dict(effective)
-        conf_dict = vyos.util.get_sub_dict(root_dict, lpath, get_first_key)
+        conf_dict = get_sub_dict(root_dict, lpath, get_first_key)
 
-        if not key_mangling and no_multi_convert:
+        if key_mangling is None and no_multi_convert and not with_defaults:
             return deepcopy(conf_dict)
 
-        xmlpath = lpath if get_first_key else lpath[:-1]
+        rpath = lpath if get_first_key else lpath[:-1]
 
-        if not key_mangling:
-            conf_dict = vyos.xml.multi_to_list(xmlpath, conf_dict)
+        if not no_multi_convert:
+            conf_dict = multi_to_list(rpath, conf_dict)
+
+        if with_defaults or with_recursive_defaults:
+            conf_dict = merge_defaults(lpath, conf_dict,
+                                       get_first_key=get_first_key,
+                                       recursive=with_recursive_defaults)
+
+        if key_mangling is None:
             return conf_dict
-
-        if no_multi_convert is False:
-            conf_dict = vyos.xml.multi_to_list(xmlpath, conf_dict)
 
         if not (isinstance(key_mangling, tuple) and \
                 (len(key_mangling) == 2) and \
@@ -258,7 +263,7 @@ class Config(object):
                 isinstance(key_mangling[1], str)):
             raise ValueError("key_mangling must be a tuple of two strings")
 
-        conf_dict = vyos.util.mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1], abs_path=xmlpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
+        conf_dict = mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1], abs_path=rpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
 
         return conf_dict
 
