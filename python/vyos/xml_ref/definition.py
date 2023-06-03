@@ -14,7 +14,6 @@
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Optional, Union, Any
-from vyos.configdict import dict_merge
 
 class Xml:
     def __init__(self):
@@ -186,6 +185,20 @@ class Xml:
             return False
         return True
 
+    # use local copy of function in module configdict, to avoid circular
+    # import
+    def _dict_merge(self, source, destination):
+        from copy import deepcopy
+        tmp = deepcopy(destination)
+
+        for key, value in source.items():
+            if key not in tmp:
+                tmp[key] = value
+            elif isinstance(source[key], dict):
+                tmp[key] = self._dict_merge(source[key], tmp[key])
+
+        return tmp
+
     def _relative_defaults(self, rpath: list, conf: dict, recursive=False) -> dict:
         res: dict = {}
         res = self.get_defaults(rpath, recursive=recursive,
@@ -234,5 +247,5 @@ class Xml:
         """
         d = self.relative_defaults(path, conf, get_first_key=get_first_key,
                                    recursive=recursive)
-        d = dict_merge(d, conf)
+        d = self._dict_merge(d, conf)
         return d
