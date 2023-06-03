@@ -3,7 +3,7 @@
   <properties>
     <help>Network namespace name</help>
     <valueHelp>
-      <format>text</format>
+      <format>txt</format>
       <description>Network namespace name</description>
     </valueHelp>
     <completionHelp>
