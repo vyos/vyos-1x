@@ -23,6 +23,7 @@ from ipaddress import ip_address
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.util import call
@@ -191,6 +192,7 @@ def verify(flow_config):
                 sflow_collector_ipver = ip_address(server).version
 
         # check if vrf is defined for Sflow
+        verify_vrf(flow_config)
         sflow_vrf = None
         if 'vrf' in flow_config:
             sflow_vrf = flow_config['vrf']
