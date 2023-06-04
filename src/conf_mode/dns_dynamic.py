@@ -58,6 +58,7 @@ def get_config(config=None):
                 dyndns['address'][address][svc_type][svc_cfg] = dict_merge(
                     default_values, dyndns['address'][address][svc_type][svc_cfg])
 
+    dyndns['config_file'] = config_file
     return dyndns
 
 def verify(dyndns):

@@ -26,6 +26,8 @@ if{{ ipv }}={{ address }}, \
 daemon=1m
 syslog=yes
 ssl=yes
+pid={{ config_file | replace('.conf', '.pid') }}
+cache={{ config_file | replace('.conf', '.cache') }}
 
 {% if address is vyos_defined %}
 {%     for address, service_cfg in address.items() %}
