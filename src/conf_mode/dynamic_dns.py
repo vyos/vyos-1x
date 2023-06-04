@@ -93,9 +93,12 @@ def verify(dyndns):
                     if 'username' not in config:
                         raise ConfigError(f'"username" {error_msg}')
 
-                if (config['protocol'] not in dualstack_supported
-                        and config['ip_version'] == 'both'):
-                    raise ConfigError(f'"{config["protocol"]}" does not support IPv4 and IPv6 at the same time')
+                if config['ip_version'] == 'both':
+                    if config['protocol'] not in dualstack_supported:
+                        raise ConfigError(f'"{config["protocol"]}" does not support IPv4 and IPv6 at the same time')
+                    # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
+                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] != 'members.dyndns.org':
+                        raise ConfigError(f'"{config["protocol"]}" for "{config["server"]}" does not support IPv4 and IPv6 at the same time')
 
     return None
 
