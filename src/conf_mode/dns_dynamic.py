@@ -28,6 +28,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = r'/run/ddclient/ddclient.conf'
+systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 
 # Protocols that require zone
 zone_allowed = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
@@ -109,6 +110,7 @@ def generate(dyndns):
         return None
 
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns)
+    render(systemd_override, 'dns-dynamic/override.conf.j2', dyndns)
     return None
 
 def apply(dyndns):
