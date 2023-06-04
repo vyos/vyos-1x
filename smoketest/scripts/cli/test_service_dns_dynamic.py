@@ -17,6 +17,7 @@
 import re
 import os
 import unittest
+import tempfile
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -89,21 +90,30 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     def test_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
         ddns = ['address', interface, 'rfc2136', 'vyos']
-        ddns_key_file = '/config/auth/my.key'
+        srv = 'ns1.vyos.io'
+        zone = 'vyos.io'
+        ttl = '300'
 
-        with open(ddns_key_file, 'w') as f:
-            f.write('S3cretKey')
+        with tempfile.NamedTemporaryFile(prefix='/config/auth/') as key_file:
+            key_file.write(b'S3cretKey')
 
-        self.cli_set(base_path + ddns + ['key', ddns_key_file])
-        self.cli_set(base_path + ddns + ['host-name', 'test.ddns.vyos.io'])
-        self.cli_set(base_path + ddns + ['server', 'ns1.vyos.io'])
-        self.cli_set(base_path + ddns + ['ttl', '300'])
-        self.cli_set(base_path + ddns + ['zone', 'vyos.io'])
+            self.cli_set(base_path + ddns + ['key', key_file.name])
+            self.cli_set(base_path + ddns + ['host-name', hostname])
+            self.cli_set(base_path + ddns + ['server', srv])
+            self.cli_set(base_path + ddns + ['ttl', ttl])
+            self.cli_set(base_path + ddns + ['zone', zone])
 
-        # commit changes
-        self.cli_commit()
+            # commit changes
+            self.cli_commit()
 
-        # TODO: inspect generated configuration file
+            # Check some generating config parameters
+            self.assertEqual(get_config_value('protocol'), 'nsupdate')
+            self.assertTrue(get_config_value('password') == key_file.name)
+            self.assertTrue(get_config_value('server') == srv)
+            self.assertTrue(get_config_value('zone') == zone)
+            self.assertTrue(get_config_value('ttl') == ttl)
+            self.assertEqual(get_config_value('use'), 'if')
+            self.assertEqual(get_config_value('if'), interface)
 
     def test_dyndns_dual(self):
         ddns = ['address', interface, 'service']
@@ -123,6 +133,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             # commit changes
             self.cli_commit()
 
+            # Check some generating config parameters
             for opt in details.keys():
                 if opt == 'username':
                     self.assertTrue(get_config_value('login') == details[opt])
@@ -152,18 +163,12 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        protocol = get_config_value('protocol')
-        login = get_config_value('login')
-        pwd = get_config_value('password')
-        server = get_config_value('server')
-        usev6 = get_config_value('usev6')
-
         # Check some generating config parameters
-        self.assertEqual(protocol, proto)
-        self.assertEqual(login, user)
-        self.assertEqual(pwd, password)
-        self.assertEqual(server, srv)
-        self.assertEqual(usev6, 'ifv6')
+        self.assertEqual(get_config_value('protocol'), proto)
+        self.assertEqual(get_config_value('login'), user)
+        self.assertEqual(get_config_value('password'), password)
+        self.assertEqual(get_config_value('server'), srv)
+        self.assertEqual(get_config_value('usev6'), 'ifv6')
         self.assertEqual(get_config_value('ifv6'), interface)
 
 if __name__ == '__main__':
