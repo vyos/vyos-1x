@@ -7,146 +7,99 @@
           <help>Domain Name System related services</help>
         </properties>
         <children>
-          <node name="dynamic" owner="${vyos_conf_scripts_dir}/dynamic_dns.py">
+          <node name="dynamic" owner="${vyos_conf_scripts_dir}/dns_dynamic.py">
             <properties>
               <help>Dynamic DNS</help>
             </properties>
             <children>
-              <tagNode name="interface">
+              <tagNode name="address">
                 <properties>
-                  <help>Interface to send Dynamic DNS updates for</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces</script>
-                  </completionHelp>
+                  <help>Obtain IP address to send Dynamic DNS update for</help>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Interface name</description>
+                    <description>Use interface to obtain the IP address</description>
                   </valueHelp>
+                  <valueHelp>
+                    <format>web</format>
+                    <description>Use HTTP(S) web request to obtain the IP address</description>
+                  </valueHelp>
+                  <completionHelp>
+                    <script>${vyos_completion_dir}/list_interfaces</script>
+                    <list>web</list>
+                  </completionHelp>
                   <constraint>
                     #include <include/constraint/interface-name.xml.i>
+                    <regex>web</regex>
                   </constraint>
                 </properties>
                 <children>
-                  <tagNode name="rfc2136">
+                  <node name="web-options">
                     <properties>
-                      <help>RFC2136 Update name</help>
+                      <help>Options when using HTTP(S) web request to obtain the IP address</help>
                     </properties>
                     <children>
+                      #include <include/url.xml.i>
+                      <leafNode name="skip">
+                        <properties>
+                          <help>Pattern to skip from the HTTP(S) respose</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>Pattern to skip from the HTTP(S) respose to extract the external IP address</description>
+                          </valueHelp>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </node>
+                  <tagNode name="rfc2136">
+                    <properties>
+                      <help>RFC2136 nsupdate configuration</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>RFC2136 nsupdate service name</description>
+                      </valueHelp>
+                    </properties>
+                    <children>
+                      #include <include/generic-description.xml.i>
+                      #include <include/dns/dynamic-service-host-name-server.xml.i>
                       <leafNode name="key">
                         <properties>
-                          <help>File containing the secret key shared with remote DNS server</help>
+                          <help>File containing the TSIG secret key shared with remote DNS server</help>
                           <valueHelp>
                             <format>filename</format>
                             <description>File in /config/auth directory</description>
                           </valueHelp>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="record">
-                        <properties>
-                          <help>Record to be updated</help>
-                          <multi/>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="server">
-                        <properties>
-                          <help>Server to be updated</help>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="ttl">
-                        <properties>
-                          <help>Time To Live (default: 600)</help>
-                          <valueHelp>
-                            <format>u32:1-86400</format>
-                            <description>DNS forwarding cache size</description>
-                          </valueHelp>
                           <constraint>
-                            <validator name="numeric" argument="--range 1-86400"/>
+                            <validator name="file-path" argument="--strict --parent-dir /config/auth"/>
                           </constraint>
                         </properties>
-                        <defaultValue>600</defaultValue>
                       </leafNode>
+                      #include <include/dns/time-to-live.xml.i>
                       <leafNode name="zone">
                         <properties>
-                          <help>Zone to be updated</help>
+                          <help>Forwarding zone to be updated</help>
+                          <valueHelp>
+                            <format>txt</format>
+                            <description>RFC2136 Zone to be updated</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="fqdn"/>
+                          </constraint>
                         </properties>
                       </leafNode>
                     </children>
                   </tagNode>
                   <tagNode name="service">
                     <properties>
-                      <help>Service being used for Dynamic DNS</help>
-                      <completionHelp>
-                        <list>afraid changeip cloudflare dnspark dslreports dyndns easydns namecheap noip sitelutions zoneedit</list>
-                      </completionHelp>
+                      <help>Dynamic DNS configuration</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>Dynanmic DNS service with a custom name</description>
+                        <description>Dynamic DNS service name</description>
                       </valueHelp>
-                      <valueHelp>
-                        <format>afraid</format>
-                        <description>afraid.org Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>changeip</format>
-                        <description>changeip.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>cloudflare</format>
-                        <description>cloudflare.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>dnspark</format>
-                        <description>dnspark.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>dslreports</format>
-                        <description>dslreports.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>dyndns</format>
-                        <description>dyndns.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>easydns</format>
-                        <description>easydns.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>namecheap</format>
-                        <description>namecheap.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>noip</format>
-                        <description>noip.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>sitelutions</format>
-                        <description>sitelutions.com Services</description>
-                      </valueHelp>
-                      <valueHelp>
-                        <format>zoneedit</format>
-                        <description>zoneedit.com Services</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>(custom|afraid|changeip|cloudflare|dnspark|dslreports|dyndns|easydns|namecheap|noip|sitelutions|zoneedit|\w+)</regex>
-                      </constraint>
-                      <constraintErrorMessage>You can use only predefined list of services or word characters (_, a-z, A-Z, 0-9) as service name</constraintErrorMessage>
                     </properties>
                     <children>
-                      <leafNode name="host-name">
-                        <properties>
-                          <help>Hostname to register with Dynamic DNS service</help>
-                          <constraint>
-                            #include <include/constraint/host-name.xml.i>
-                          </constraint>
-                          <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
-                          <multi/>
-                        </properties>
-                      </leafNode>
-                      <leafNode name="login">
-                        <properties>
-                          <help>Login/Username for Dynamic DNS service</help>
-                        </properties>
-                      </leafNode>
+                      #include <include/generic-description.xml.i>
+                      #include <include/dns/dynamic-service-host-name-server.xml.i>
+                      #include <include/generic-username.xml.i>
                       #include <include/generic-password.xml.i>
                       <leafNode name="protocol">
                         <properties>
@@ -159,7 +112,6 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      #include <include/server-ipv4-fqdn.xml.i>
                       <leafNode name="zone">
                         <properties>
                           <help>DNS zone to update (not used by all protocols)</help>
@@ -169,31 +121,33 @@
                           </valueHelp>
                         </properties>
                       </leafNode>
+                      <leafNode name="ip-version">
+                        <properties>
+                          <help>IP address version to use</help>
+                          <valueHelp>
+                            <format>_ipv4</format>
+                            <description>Use only IPv4 address</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>_ipv6</format>
+                            <description>Use only IPv6 address</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>both</format>
+                            <description>Use both IPv4 and IPv6 address</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <list>ipv4 ipv6 both</list>
+                          </completionHelp>
+                          <constraint>
+                            <regex>(ipv[46]|both)</regex>
+                          </constraint>
+                          <constraintErrorMessage>IP Version must be literal 'ipv4', 'ipv6' or 'both'</constraintErrorMessage>
+                        </properties>
+                        <defaultValue>ipv4</defaultValue>
+                      </leafNode>
                     </children>
                   </tagNode>
-                  <node name="use-web">
-                    <properties>
-                      <help>Use HTTP(S) web request to obtain external IP address instead of the IP address associated with the interface</help>
-                    </properties>
-                    <children>
-                      <leafNode name="skip">
-                        <properties>
-                          <help>Pattern to skip from the respose</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Pattern to skip from the respose of the given URL to extract the external IP address</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
-                      #include <include/url.xml.i>
-                    </children>
-                  </node>
-                  <leafNode name="ipv6-enable">
-                    <properties>
-                      <help>Explicitly use IPv6 address instead of IPv4 address to update the Dynamic DNS IP address</help>
-                      <valueless/>
-                    </properties>
-                  </leafNode>
                 </children>
               </tagNode>
             </children>

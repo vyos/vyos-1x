@@ -17,13 +17,13 @@
 import re
 import os
 import unittest
+import tempfile
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
 from vyos.util import process_running
-from vyos.util import read_file
 
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 DDCLIENT_PID = '/run/ddclient/ddclient.pid'
@@ -35,7 +35,7 @@ interface = 'eth0'
 def get_config_value(key):
     tmp = cmd(f'sudo cat {DDCLIENT_CONF}')
     tmp = re.findall(r'\n?{}=+(.*)'.format(key), tmp)
-    tmp = tmp[0].rstrip(',')
+    tmp = tmp[0].rstrip(', \\')
     return tmp
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
@@ -51,118 +51,125 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(os.path.exists(DDCLIENT_PID))
 
     def test_dyndns_service(self):
-        from itertools import product
-        ddns = ['interface', interface, 'service']
-        users = [None, 'vyos_user']
-        services = ['cloudflare', 'afraid', 'dyndns', 'zoneedit']
+        ddns = ['address', interface, 'service']
+        services = {'cloudflare': {'protocol': 'cloudflare', 'zone': 'vyos.io'},
+                    'freedns': {'protocol': 'freedns', 'username': 'vyos_user'},
+                    'zoneedit': {'protocol': 'zoneedit1', 'username': 'vyos_user'}}
+        password = 'vyos_pass'
+        zone = 'vyos.io'
 
-        for user, service in product(users, services):
-            password = 'vyos_pass'
-            zone = 'vyos.io'
+        for svc, details in services.items():
             self.cli_delete(base_path)
-            self.cli_set(base_path + ddns + [service, 'host-name', hostname])
-            if user is not None:
-                self.cli_set(base_path + ddns + [service, 'login', user])
-            self.cli_set(base_path + ddns + [service, 'password', password])
-            self.cli_set(base_path + ddns + [service, 'zone', zone])
+            self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
+            for opt, value in details.items():
+                self.cli_set(base_path + ddns + [svc, opt, value])
+            self.cli_set(base_path + ddns + [svc, 'password', password])
+            self.cli_set(base_path + ddns + [svc, 'zone', zone])
 
             # commit changes
-            if service == 'cloudflare':
+            if details['protocol'] == 'cloudflare':
                 self.cli_commit()
-            elif user is None:
-                # not set user is only allowed for cloudflare
-                with self.assertRaises(ConfigSessionError):
-                    # remove zone to test not set user
-                    self.cli_delete(base_path + ddns + [service, 'zone', 'vyos.io'])
-                    self.cli_commit()
-                # this case is fininshed, user not set is not allowed when service isn't cloudflare
-                continue
             else:
-                # zone option only works on cloudflare, an exception is raised
-                # for all others
+                # zone option does not work on all protocols, an exception is
+                # raised for all others
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
-                self.cli_delete(base_path + ddns + [service, 'zone', 'vyos.io'])
+                self.cli_delete(base_path + ddns + [svc, 'zone', zone])
                 # commit changes again - now it should work
                 self.cli_commit()
 
-            # we can only read the configuration file when we operate as 'root'
-            protocol = get_config_value('protocol')
-            login = None if user is None else get_config_value('login')
-            pwd = get_config_value('password')
+            for opt in details.keys():
+                if opt == 'username':
+                    self.assertTrue(get_config_value('login') == details[opt])
+                else:
+                    self.assertTrue(get_config_value(opt) == details[opt])
 
-            # some services need special treatment
-            protoname = service
-            if service == 'cloudflare':
-                tmp = get_config_value('zone')
-                self.assertTrue(tmp == zone)
-            elif service == 'afraid':
-                protoname = 'freedns'
-            elif service == 'dyndns':
-                protoname = 'dyndns2'
-            elif service == 'zoneedit':
-                protoname = 'zoneedit1'
-
-            self.assertTrue(protocol == protoname)
-            self.assertTrue(login == user)
-            self.assertTrue(pwd == "'" + password + "'")
+            self.assertTrue(get_config_value('use') == 'if')
+            self.assertTrue(get_config_value('if') == interface)
 
     def test_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
-        ddns = ['interface', interface, 'rfc2136', 'vyos']
-        ddns_key_file = '/config/auth/my.key'
+        ddns = ['address', interface, 'rfc2136', 'vyos']
+        srv = 'ns1.vyos.io'
+        zone = 'vyos.io'
+        ttl = '300'
 
-        self.cli_set(base_path + ddns + ['key', ddns_key_file])
-        self.cli_set(base_path + ddns + ['record', 'test.ddns.vyos.io'])
-        self.cli_set(base_path + ddns + ['server', 'ns1.vyos.io'])
-        self.cli_set(base_path + ddns + ['ttl', '300'])
-        self.cli_set(base_path + ddns + ['zone', 'vyos.io'])
+        with tempfile.NamedTemporaryFile(prefix='/config/auth/') as key_file:
+            key_file.write(b'S3cretKey')
 
-        # ensure an exception will be raised as no key is present
-        if os.path.exists(ddns_key_file):
-            os.unlink(ddns_key_file)
+            self.cli_set(base_path + ddns + ['key', key_file.name])
+            self.cli_set(base_path + ddns + ['host-name', hostname])
+            self.cli_set(base_path + ddns + ['server', srv])
+            self.cli_set(base_path + ddns + ['ttl', ttl])
+            self.cli_set(base_path + ddns + ['zone', zone])
 
-        # check validate() - the key file does not exist yet
-        with self.assertRaises(ConfigSessionError):
+            # commit changes
             self.cli_commit()
 
-        with open(ddns_key_file, 'w') as f:
-            f.write('S3cretKey')
+            # Check some generating config parameters
+            self.assertEqual(get_config_value('protocol'), 'nsupdate')
+            self.assertTrue(get_config_value('password') == key_file.name)
+            self.assertTrue(get_config_value('server') == srv)
+            self.assertTrue(get_config_value('zone') == zone)
+            self.assertTrue(get_config_value('ttl') == ttl)
+            self.assertEqual(get_config_value('use'), 'if')
+            self.assertEqual(get_config_value('if'), interface)
 
-        # commit changes
-        self.cli_commit()
+    def test_dyndns_dual(self):
+        ddns = ['address', interface, 'service']
+        services = {'cloudflare': {'protocol': 'cloudflare', 'zone': 'vyos.io'},
+                    'freedns': {'protocol': 'freedns', 'username': 'vyos_user'}}
+        password = 'vyos_pass'
+        ip_version = 'both'
 
-        # TODO: inspect generated configuration file
+        for svc, details in services.items():
+            self.cli_delete(base_path)
+            self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
+            for opt, value in details.items():
+                self.cli_set(base_path + ddns + [svc, opt, value])
+            self.cli_set(base_path + ddns + [svc, 'password', password])
+            self.cli_set(base_path + ddns + [svc, 'ip-version', ip_version])
+
+            # commit changes
+            self.cli_commit()
+
+            # Check some generating config parameters
+            for opt in details.keys():
+                if opt == 'username':
+                    self.assertTrue(get_config_value('login') == details[opt])
+                else:
+                    self.assertTrue(get_config_value(opt) == details[opt])
+
+            self.assertTrue(get_config_value('usev4') == 'ifv4')
+            self.assertTrue(get_config_value('usev6') == 'ifv6')
+            self.assertTrue(get_config_value('ifv4') == interface)
+            self.assertTrue(get_config_value('ifv6') == interface)
 
     def test_dyndns_ipv6(self):
-        ddns = ['interface', interface, 'service', 'dynv6']
+        ddns = ['address', interface, 'service', 'dynv6']
         proto = 'dyndns2'
         user = 'none'
         password = 'paSS_4ord'
         srv = 'ddns.vyos.io'
+        ip_version = 'ipv6'
 
-        self.cli_set(base_path + ['interface', interface, 'ipv6-enable'])
         self.cli_set(base_path + ddns + ['host-name', hostname])
-        self.cli_set(base_path + ddns + ['login', user])
+        self.cli_set(base_path + ddns + ['username', user])
         self.cli_set(base_path + ddns + ['password', password])
         self.cli_set(base_path + ddns + ['protocol', proto])
         self.cli_set(base_path + ddns + ['server', srv])
+        self.cli_set(base_path + ddns + ['ip-version', ip_version])
 
         # commit changes
         self.cli_commit()
 
-        protocol = get_config_value('protocol')
-        login = get_config_value('login')
-        pwd = get_config_value('password')
-        server = get_config_value('server')
-        usev6 = get_config_value('usev6')
-
         # Check some generating config parameters
-        self.assertEqual(protocol, proto)
-        self.assertEqual(login, user)
-        self.assertEqual(pwd, f"'{password}'")
-        self.assertEqual(server, srv)
-        self.assertEqual(usev6, f"ifv6, if={interface}")
+        self.assertEqual(get_config_value('protocol'), proto)
+        self.assertEqual(get_config_value('login'), user)
+        self.assertEqual(get_config_value('password'), password)
+        self.assertEqual(get_config_value('server'), srv)
+        self.assertEqual(get_config_value('usev6'), 'ifv6')
+        self.assertEqual(get_config_value('ifv6'), interface)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

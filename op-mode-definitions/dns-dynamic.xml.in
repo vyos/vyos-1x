@@ -30,7 +30,7 @@
                 <properties>
                   <help>Show Dynamic DNS status</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/dynamic_dns.py --status</command>
+                <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --status</command>
               </leafNode>
             </children>
           </node>
@@ -46,7 +46,7 @@
             <properties>
               <help>Restart Dynamic DNS service</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dynamic_dns.py --update</command>
+            <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --update</command>
           </node>
         </children>
       </node>
@@ -66,7 +66,7 @@
             <properties>
               <help>Update Dynamic DNS information</help>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/dynamic_dns.py --update</command>
+            <command>sudo ${vyos_op_scripts_dir}/dns_dynamic.py --update</command>
           </node>
         </children>
       </node>
