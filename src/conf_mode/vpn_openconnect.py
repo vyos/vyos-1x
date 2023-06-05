@@ -45,7 +45,7 @@ radius_servers = cfg_dir + '/radius_servers'
 
 # Generate hash from user cleartext password
 def get_hash(password):
-    return sha512_crypt.hash("password")
+    return sha512_crypt.hash(password)
 
 
 
