@@ -30,7 +30,7 @@ from vyos.util import is_listen_port_bind_service
 from vyos.util import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
-from crypt import crypt, mksalt, METHOD_SHA512
+from passlib.hash import sha512_crypt
 from time import sleep
 
 from vyos import airbag
@@ -45,7 +45,8 @@ radius_servers = cfg_dir + '/radius_servers'
 
 # Generate hash from user cleartext password
 def get_hash(password):
-    return crypt(password, mksalt(METHOD_SHA512))
+    return sha512_crypt.hash(password)
+
 
 
 def _default_dict_cleanup(origin: dict, default_values: dict) -> dict:
