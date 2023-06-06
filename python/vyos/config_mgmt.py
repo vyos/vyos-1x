@@ -26,6 +26,7 @@ from tabulate import tabulate
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
 from vyos.defaults import directories
+from vyos.version import get_full_version_data
 from vyos.util import is_systemd_service_active, ask_yes_no, rc_cmd
 
 SAVE_CONFIG = '/opt/vyatta/sbin/vyatta-save-config.pl'
@@ -55,6 +56,21 @@ ch = logging.StreamHandler()
 formatter = logging.Formatter('%(funcName)s: %(levelname)s:%(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
+
+def save_config(target):
+    cmd = f'{SAVE_CONFIG} {target}'
+    rc, out = rc_cmd(cmd)
+    if rc != 0:
+        logger.critical(f'save config failed: {out}')
+
+def unsaved_commits() -> bool:
+    if get_full_version_data()['boot_via'] == 'livecd':
+        return False
+    tmp_save = '/tmp/config.running'
+    save_config(tmp_save)
+    ret = not cmp(tmp_save, config_file, shallow=False)
+    os.unlink(tmp_save)
+    return ret
 
 class ConfigMgmtError(Exception):
     pass
@@ -98,20 +114,6 @@ class ConfigMgmt:
         self.active_config = config._running_config
         self.working_config = config._session_config
 
-    @staticmethod
-    def save_config(target):
-        cmd = f'{SAVE_CONFIG} {target}'
-        rc, out = rc_cmd(cmd)
-        if rc != 0:
-            logger.critical(f'save config failed: {out}')
-
-    def _unsaved_commits(self) -> bool:
-        tmp_save = '/tmp/config.boot.check-save'
-        self.save_config(tmp_save)
-        ret = not cmp(tmp_save, config_file, shallow=False)
-        os.unlink(tmp_save)
-        return ret
-
     # Console script functions
     #
     def commit_confirm(self, minutes: int=DEFAULT_TIME_MINUTES,
@@ -123,7 +125,7 @@ class ConfigMgmt:
             msg = 'Another confirm is pending'
             return msg, 1
 
-        if self._unsaved_commits():
+        if unsaved_commits():
             W = '\nYou should save previous commits before commit-confirm !\n'
         else:
             W = ''
@@ -450,7 +452,7 @@ Proceed ?'''
 
         ext = os.getpid()
         tmp_save = f'/tmp/config.boot.{ext}'
-        self.save_config(tmp_save)
+        save_config(tmp_save)
 
         try:
             if cmp(tmp_save, archive_config_file, shallow=False):
