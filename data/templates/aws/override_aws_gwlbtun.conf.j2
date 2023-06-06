@@ -1,0 +1,12 @@
+[Unit]
+StartLimitIntervalSec=0
+After=vyos-router.service
+ConditionPathExists=/run/aws/gwlbtun.conf
+
+[Service]
+EnvironmentFile=
+ExecStart=
+ExecStart=/usr/bin/gwlbtun -c /usr/libexec/vyos/vyos-aws-gwlbtun.py  -r /usr/libexec/vyos/vyos-aws-gwlbtun.py {{ '-t ' ~ timeout if timeout is vyos_defined }} {{ '-p ' ~ status.port if status.port is vyos_defined }}
+CapabilityBoundingSet=CAP_NET_ADMIN
+Restart=always
+RestartSec=10
