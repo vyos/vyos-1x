@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -51,20 +51,21 @@ def get_config(config=None):
 
     dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'), get_first_key=True)
 
-    for address in dyndns['address']:
-        # Apply service specific defaults (stype = ['rfc2136', 'service'])
-        for svc_type in dyndns['address'][address]:
-            default_values = defaults(base_level + ['address', svc_type])
-            for svc_cfg in dyndns['address'][address][svc_type]:
-                dyndns['address'][address][svc_type][svc_cfg] = dict_merge(
-                    default_values, dyndns['address'][address][svc_type][svc_cfg])
+    if 'address' in dyndns:
+        for address in dyndns['address']:
+            # Apply service specific defaults (svc_type = ['rfc2136', 'service'])
+            for svc_type in dyndns['address'][address]:
+                default_values = defaults(base_level + ['address', svc_type])
+                for svc_cfg in dyndns['address'][address][svc_type]:
+                    dyndns['address'][address][svc_type][svc_cfg] = dict_merge(
+                        default_values, dyndns['address'][address][svc_type][svc_cfg])
 
     dyndns['config_file'] = config_file
     return dyndns
 
 def verify(dyndns):
     # bail out early - looks like removal from running config
-    if not dyndns:
+    if not dyndns or 'address' not in dyndns:
         return None
 
     for address in dyndns['address']:
@@ -97,16 +98,18 @@ def verify(dyndns):
 
                 if config['ip_version'] == 'both':
                     if config['protocol'] not in dualstack_supported:
-                        raise ConfigError(f'"{config["protocol"]}" does not support IPv4 and IPv6 at the same time')
+                        raise ConfigError(f'"{config["protocol"]}" does not support '
+                                          f'both IPv4 and IPv6 at the same time')
                     # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
                     if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] != 'members.dyndns.org':
-                        raise ConfigError(f'"{config["protocol"]}" for "{config["server"]}" does not support IPv4 and IPv6 at the same time')
+                        raise ConfigError(f'"{config["protocol"]}" does not support '
+                                          f'both IPv4 and IPv6 at the same time for "{config["server"]}"')
 
     return None
 
 def generate(dyndns):
     # bail out early - looks like removal from running config
-    if not dyndns:
+    if not dyndns or 'address' not in dyndns:
         return None
 
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns)
@@ -114,7 +117,8 @@ def generate(dyndns):
     return None
 
 def apply(dyndns):
-    if not dyndns:
+    # bail out early - looks like removal from running config
+    if not dyndns or 'address' not in dyndns:
         call('systemctl stop ddclient.service')
         if os.path.exists(config_file):
             os.unlink(config_file)
