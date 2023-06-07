@@ -38,6 +38,7 @@
                   <constraint>
                     <regex>[-_.a-zA-Z0-9]+</regex>
                   </constraint>
+                  <constraintErrorMessage>Service name must be alphanumeric and can contain hyphens and underscores</constraintErrorMessage>
                   <multi/>
                 </properties>
               </leafNode>
