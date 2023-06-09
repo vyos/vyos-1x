@@ -17,6 +17,7 @@ def notify(interval):
 if __name__ == "__main__":
     # Must be run as root to call wall(1) without a banner.
     if len(sys.argv) != 2 or os.getuid() != 0:
+        print('This script requires superuser privileges.', file=sys.stderr)
         exit(1)
     minutes = int(sys.argv[1])
     # Drop the argument from the list so that the notification
