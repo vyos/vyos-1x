@@ -117,13 +117,17 @@ def generate(dyndns):
     return None
 
 def apply(dyndns):
+    systemd_service = 'ddclient.service'
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     # bail out early - looks like removal from running config
     if not dyndns or 'address' not in dyndns:
-        call('systemctl stop ddclient.service')
+        call(f'systemctl stop {systemd_service}')
         if os.path.exists(config_file):
             os.unlink(config_file)
     else:
-        call('systemctl restart ddclient.service')
+        call(f'systemctl reload-or-restart {systemd_service}')
 
     return None
 
