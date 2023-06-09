@@ -4,7 +4,6 @@ ConditionPathExists={{ config_file }}
 After=vyos-router.service
 
 [Service]
-PIDFile=
 PIDFile={{ config_file | replace('.conf', '.pid') }}
 EnvironmentFile=
 ExecStart=
