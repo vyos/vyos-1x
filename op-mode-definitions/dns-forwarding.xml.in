@@ -6,7 +6,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Monitor last lines of Domain Name Service (DNS)</help>
+              <help>Monitor last lines of Domain Name System (DNS) related services</help>
             </properties>
             <children>
               <node name="forwarding">
@@ -27,7 +27,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Show log for Domain Name Service (DNS)</help>
+              <help>Show log for Domain Name System (DNS) related services</help>
             </properties>
             <children>
               <node name="forwarding">
@@ -42,7 +42,7 @@
       </node>
       <node name="dns">
         <properties>
-          <help>Show DNS information</help>
+          <help>Show Domain Name System (DNS) related information</help>
         </properties>
         <children>
           <node name="forwarding">
@@ -66,7 +66,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Restart specific DNS service</help>
+          <help>Restart specific Domain Name System (DNS) related service</help>
         </properties>
         <children>
           <leafNode name="forwarding">
@@ -83,7 +83,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Reset a DNS service state</help>
+          <help>Reset Domain Name System (DNS) related service state</help>
         </properties>
         <children>
           <node name="forwarding">
