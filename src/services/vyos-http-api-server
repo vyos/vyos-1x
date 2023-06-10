@@ -91,10 +91,9 @@ def success(data):
 class ApiModel(BaseModel):
     key: StrictStr
 
-class BaseConfigureModel(BaseModel):
+class BasePathModel(BaseModel):
     op: StrictStr
     path: List[StrictStr]
-    value: StrictStr = None
 
     @validator("path")
     def check_non_empty(cls, path):
@@ -102,17 +101,10 @@ class BaseConfigureModel(BaseModel):
             raise ValueError('path must be non-empty')
         return path
 
-class ConfigureModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
+class BaseConfigureModel(BasePathModel):
     value: StrictStr = None
 
-    @validator("path")
-    def check_non_empty(cls, path):
-        if not len(path) > 0:
-            raise ValueError('path must be non-empty')
-        return path
-
+class ConfigureModel(ApiModel, BaseConfigureModel):
     class Config:
         schema_extra = {
             "example": {
