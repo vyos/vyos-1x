@@ -441,12 +441,12 @@ async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
                 session.set(path, value=value)
             elif op == 'delete':
                 if app.state.vyos_strict and not config.exists(cfg_path):
-                    raise ConfigSessionError("Cannot delete [{0}]: path/value does not exist".format(cfg_path))
+                    raise ConfigSessionError(f"Cannot delete [{cfg_path}]: path/value does not exist")
                 session.delete(path, value=value)
             elif op == 'comment':
                 session.comment(path, value=value)
             else:
-                raise ConfigSessionError("\"{0}\" is not a valid operation".format(op))
+                raise ConfigSessionError(f"'{op}' is not a valid operation")
         # end for
         session.commit()
         logger.info(f"Configuration modified via HTTP API using key '{app.state.vyos_id}'")
@@ -502,9 +502,9 @@ async def retrieve_op(data: RetrieveModel):
             elif config_format == 'raw':
                 pass
             else:
-                return error(400, "\"{0}\" is not a valid config format".format(config_format))
+                return error(400, f"'{config_format}' is not a valid config format")
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -534,7 +534,7 @@ def config_file_op(data: ConfigFileModel):
             res = session.migrate_and_load_config(path)
             res = session.commit()
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -563,7 +563,7 @@ def image_op(data: ImageModel):
                 return error(400, "Missing required field \"name\"")
             res = session.remove_image(name)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -594,7 +594,7 @@ def image_op(data: ContainerImageModel):
         elif op == 'show':
             res = session.show_container_image()
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -614,7 +614,7 @@ def generate_op(data: GenerateModel):
         if op == 'generate':
             res = session.generate(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -634,7 +634,7 @@ def show_op(data: ShowModel):
         if op == 'show':
             res = session.show(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -654,7 +654,7 @@ def reset_op(data: ResetModel):
         if op == 'reset':
             res = session.reset(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
