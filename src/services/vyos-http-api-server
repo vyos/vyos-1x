@@ -96,9 +96,10 @@ class BaseConfigureModel(BaseModel):
     path: List[StrictStr]
     value: StrictStr = None
 
-    @validator("path", pre=True, always=True)
+    @validator("path")
     def check_non_empty(cls, path):
-        assert len(path) > 0
+        if not len(path) > 0:
+            raise ValueError('path must be non-empty')
         return path
 
 class ConfigureModel(ApiModel):
@@ -106,9 +107,10 @@ class ConfigureModel(ApiModel):
     path: List[StrictStr]
     value: StrictStr = None
 
-    @validator("path", pre=True, always=True)
+    @validator("path")
     def check_non_empty(cls, path):
-        assert len(path) > 0
+        if not len(path) > 0:
+            raise ValueError('path must be non-empty')
         return path
 
     class Config:
