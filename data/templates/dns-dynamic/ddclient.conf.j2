@@ -28,6 +28,9 @@ syslog=yes
 ssl=yes
 pid={{ config_file | replace('.conf', '.pid') }}
 cache={{ config_file | replace('.conf', '.cache') }}
+{# Explicitly override global options for reliability #}
+web=googledomains {# ddclient default ('dyndns') doesn't support ssl and results in process lockup #}
+use=no            {# ddclient default ('ip') results in confusing warning message in log #}
 
 {% if address is vyos_defined %}
 {%     for address, service_cfg in address.items() %}
@@ -58,9 +61,9 @@ cache={{ config_file | replace('.conf', '.cache') }}
 {%                     set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
                                                       else (['v6'] if config.ip_version == 'ipv6' else ['']) %}
 # Web service dynamic DNS configuration for {{ name }}: [{{ config.protocol }}, {{ host }}]
-{# For ipv4 only setup, don't append 'new-style' compliant suffix ('usev4', 'ifv4', 'webv4' etc.)
-   to the properties and instead live through the deprecation warnings for better compatibility
-   with most ddclient protocols. #}
+{# For ipv4 only setup or legacy ipv6 setup, don't append 'new-style' compliant suffix
+   ('usev4', 'ifv4', 'webv4' etc.) to the properties and instead live through the
+   deprecation warnings for better compatibility with most ddclient protocols. #}
 {{ render_config(host, address, service_cfg.web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
                  login=config.username, password=config.password) }}
