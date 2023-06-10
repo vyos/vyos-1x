@@ -1,6 +1,6 @@
 #!/usr/share/vyos-http-api-tools/bin/python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -124,6 +124,15 @@ class ConfigureListModel(ApiModel):
                 "commands": "list of commands",
             }
         }
+
+class BaseConfigSectionModel(BasePathModel):
+    section: Dict
+
+class ConfigSectionModel(ApiModel, BaseConfigSectionModel):
+    pass
+
+class ConfigSectionListModel(ApiModel):
+    commands: List[BaseConfigSectionModel]
 
 class RetrieveModel(ApiModel):
     op: StrictStr
@@ -350,6 +359,13 @@ class MultipartRequest(Request):
                         if 'value' in c and not isinstance(c['value'], str):
                             self.form_err = (400,
                             f"Malformed command '{c}': 'value' field must be a string")
+                    if endpoint in ('/configure-section'):
+                        if 'section' not in c:
+                            self.form_err = (400,
+                            f"Malformed command '{c}': missing 'section' field")
+                        elif not isinstance(c['section'], dict):
+                            self.form_err = (400,
+                            f"Malformed command '{c}': 'section' field must be JSON of dict")
 
                 if 'key' not in forms and 'key' not in merge:
                     self.form_err = (401, "Valid API key is required")
@@ -394,7 +410,8 @@ app.router.route_class = MultipartRoute
 async def validation_exception_handler(request, exc):
     return error(400, str(exc.errors()[0]))
 
-def _configure_op(data: Union[ConfigureModel, ConfigureListModel],
+def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
+                              ConfigSectionModel, ConfigSectionListModel],
                   request: Request):
     session = app.state.vyos_session
     env = session.get_session_env()
@@ -421,27 +438,37 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel],
             op = c.op
             path = c.path
 
-            if c.value:
-                value = c.value
-            else:
-                value = ""
+            if isinstance(c, BaseConfigureModel):
+                if c.value:
+                    value = c.value
+                else:
+                    value = ""
+                # For vyos.configsession calls that have no separate value arguments,
+                # and for type checking too
+                cfg_path = " ".join(path + [value]).strip()
 
-            # For vyos.configsession calls that have no separate value arguments,
-            # and for type checking too
-            cfg_path = " ".join(path + [value]).strip()
+            elif isinstance(c, BaseConfigSectionModel):
+                section = c.section
 
-            if op == 'set':
-                # XXX: it would be nice to do a strict check for "path already exists",
-                # but there's probably no way to do that
-                session.set(path, value=value)
-            elif op == 'delete':
-                if app.state.vyos_strict and not config.exists(cfg_path):
-                    raise ConfigSessionError(f"Cannot delete [{cfg_path}]: path/value does not exist")
-                session.delete(path, value=value)
-            elif op == 'comment':
-                session.comment(path, value=value)
-            else:
-                raise ConfigSessionError(f"'{op}' is not a valid operation")
+            if isinstance(c, BaseConfigureModel):
+                if op == 'set':
+                    session.set(path, value=value)
+                elif op == 'delete':
+                    if app.state.vyos_strict and not config.exists(cfg_path):
+                        raise ConfigSessionError(f"Cannot delete [{cfg_path}]: path/value does not exist")
+                    session.delete(path, value=value)
+                elif op == 'comment':
+                    session.comment(path, value=value)
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
+
+            elif isinstance(c, BaseConfigSectionModel):
+                if op == 'set':
+                    session.set_section(path, section)
+                elif op == 'load':
+                    session.load_section(path, section)
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
         # end for
         session.commit()
         logger.info(f"Configuration modified via HTTP API using key '{app.state.vyos_id}'")
@@ -470,6 +497,12 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel],
 async def configure_op(data: Union[ConfigureModel,
                                    ConfigureListModel],
                        request: Request):
+    return _configure_op(data, request)
+
+@app.post('/configure-section')
+async def configure_section_op(data: Union[ConfigSectionModel,
+                                           ConfigSectionListModel],
+                               request: Request):
     return _configure_op(data, request)
 
 @app.post("/retrieve")
