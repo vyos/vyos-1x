@@ -15,6 +15,6 @@ EnvironmentFile=/run/dhcp-relay/dhcrelay6.conf
 PIDFile=/run/dhcp-relay/dhcrelay6.pid
 ExecStart=/usr/sbin/dhcrelay -6 -pf /run/dhcp-relay/dhcrelay6.pid $OPTIONS
 Restart=always
-RestartSec=5
+RestartSec=10
 [Install]
 WantedBy=multi-user.target
