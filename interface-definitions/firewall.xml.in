@@ -914,8 +914,13 @@
                 <format>txt</format>
                 <description>Interface associated with zone</description>
               </valueHelp>
+              <valueHelp>
+                <format>vrf</format>
+                <description>VRF associated with zone</description>
+              </valueHelp>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_interfaces</script>
+                <path>vrf name</path>
               </completionHelp>
               <multi/>
             </properties>
