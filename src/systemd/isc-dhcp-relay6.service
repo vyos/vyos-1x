@@ -5,7 +5,7 @@ Wants=network-online.target
 RequiresMountsFor=/run
 ConditionPathExists=/run/dhcp-relay/dhcrelay6.conf
 After=vyos-router.service
-
+StartLimitIntervalSec=0
 [Service]
 Type=forking
 WorkingDirectory=/run/dhcp-relay
@@ -15,6 +15,6 @@ EnvironmentFile=/run/dhcp-relay/dhcrelay6.conf
 PIDFile=/run/dhcp-relay/dhcrelay6.pid
 ExecStart=/usr/sbin/dhcrelay -6 -pf /run/dhcp-relay/dhcrelay6.pid $OPTIONS
 Restart=always
-
+RestartSec=10
 [Install]
 WantedBy=multi-user.target
