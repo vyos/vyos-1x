@@ -402,11 +402,13 @@ app.router.route_class = MultipartRoute
 async def validation_exception_handler(request, exc):
     return error(400, str(exc.errors()[0]))
 
-@app.post('/configure')
-async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
+def _configure_op(data: Union[ConfigureModel, ConfigureListModel],
+                  request: Request):
     session = app.state.vyos_session
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
+
+    endpoint = request.url.path
 
     # Allow users to pass just one command
     if not isinstance(data, ConfigureListModel):
@@ -420,6 +422,7 @@ async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
     lock.acquire()
 
     status = 200
+    msg = None
     error_msg = None
     try:
         for c in data:
@@ -469,7 +472,13 @@ async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
     if status != 200:
         return error(status, error_msg)
 
-    return success(None)
+    return success(msg)
+
+@app.post('/configure')
+async def configure_op(data: Union[ConfigureModel,
+                                   ConfigureListModel],
+                       request: Request):
+    return _configure_op(data, request)
 
 @app.post("/retrieve")
 async def retrieve_op(data: RetrieveModel):
