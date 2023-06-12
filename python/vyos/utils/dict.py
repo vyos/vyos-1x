@@ -234,6 +234,27 @@ def dict_to_list(d, save_key_to=None):
 
     return collect
 
+def dict_to_paths(d: dict) -> list:
+    """ Generator to return list of paths from dict of list[str]|str
+    """
+    def func(d, path):
+        if isinstance(d, dict):
+            if not d:
+                yield path
+            for k, v in d.items():
+                for r in func(v, path + [k]):
+                    yield r
+        elif isinstance(d, list):
+            for i in d:
+                for r in func(i, path):
+                    yield r
+        elif isinstance(d, str):
+            yield path + [d]
+        else:
+            raise ValueError('object is not a dict of strings/list of strings')
+    for r in func(d, []):
+        yield r
+
 def check_mutually_exclusive_options(d, keys, required=False):
     """ Checks if a dict has at most one or only one of
     mutually exclusive keys.

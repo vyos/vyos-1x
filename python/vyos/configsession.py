@@ -1,5 +1,5 @@
 # configsession -- the write API for the VyOS running config
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -18,6 +18,7 @@ import sys
 import subprocess
 
 from vyos.util import is_systemd_service_running
+from vyos.utils.dict import dict_to_paths
 
 CLI_SHELL_API = '/bin/cli-shell-api'
 SET = '/opt/vyatta/sbin/my_set'
@@ -148,12 +149,27 @@ class ConfigSession(object):
             value = [value]
         self.__run_command([SET] + path + value)
 
+    def set_section(self, path: list, d: dict):
+        try:
+            for p in dict_to_paths(d):
+                self.set(path + p)
+        except (ValueError, ConfigSessionError) as e:
+            raise ConfigSessionError(e)
+
     def delete(self, path, value=None):
         if not value:
             value = []
         else:
             value = [value]
         self.__run_command([DELETE] + path + value)
+
+    def load_section(self, path: list, d: dict):
+        try:
+            self.delete(path)
+            for p in dict_to_paths(d):
+                self.set(path + p)
+        except (ValueError, ConfigSessionError) as e:
+            raise ConfigSessionError(e)
 
     def comment(self, path, value=None):
         if not value:

@@ -1,6 +1,6 @@
 #!/usr/share/vyos-http-api-tools/bin/python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -91,26 +91,20 @@ def success(data):
 class ApiModel(BaseModel):
     key: StrictStr
 
-class BaseConfigureModel(BaseModel):
+class BasePathModel(BaseModel):
     op: StrictStr
     path: List[StrictStr]
-    value: StrictStr = None
 
-    @validator("path", pre=True, always=True)
+    @validator("path")
     def check_non_empty(cls, path):
-        assert len(path) > 0
+        if not len(path) > 0:
+            raise ValueError('path must be non-empty')
         return path
 
-class ConfigureModel(ApiModel):
-    op: StrictStr
-    path: List[StrictStr]
+class BaseConfigureModel(BasePathModel):
     value: StrictStr = None
 
-    @validator("path", pre=True, always=True)
-    def check_non_empty(cls, path):
-        assert len(path) > 0
-        return path
-
+class ConfigureModel(ApiModel, BaseConfigureModel):
     class Config:
         schema_extra = {
             "example": {
@@ -130,6 +124,15 @@ class ConfigureListModel(ApiModel):
                 "commands": "list of commands",
             }
         }
+
+class BaseConfigSectionModel(BasePathModel):
+    section: Dict
+
+class ConfigSectionModel(ApiModel, BaseConfigSectionModel):
+    pass
+
+class ConfigSectionListModel(ApiModel):
+    commands: List[BaseConfigSectionModel]
 
 class RetrieveModel(ApiModel):
     op: StrictStr
@@ -258,18 +261,15 @@ def auth_required(data: ApiModel):
 # the explicit validation may be dropped, if desired, in favor of native
 # validation by FastAPI/Pydantic, as is used for application/json requests
 class MultipartRequest(Request):
-    ERR_MISSING_KEY = False
-    ERR_MISSING_DATA = False
-    ERR_NOT_JSON = False
-    ERR_NOT_DICT = False
-    ERR_NO_OP = False
-    ERR_NO_PATH = False
-    ERR_EMPTY_PATH = False
-    ERR_PATH_NOT_LIST = False
-    ERR_VALUE_NOT_STRING = False
-    ERR_PATH_NOT_LIST_OF_STR = False
-    offending_command = {}
-    exception = None
+    _form_err = ()
+    @property
+    def form_err(self):
+        return self._form_err
+
+    @form_err.setter
+    def form_err(self, val):
+        if not self._form_err:
+            self._form_err = val
 
     @property
     def orig_headers(self):
@@ -308,19 +308,20 @@ class MultipartRequest(Request):
 
             form_data = await self.form()
             if form_data:
+                endpoint = self.url.path
                 logger.debug("processing form data")
                 for k, v in form_data.multi_items():
                     forms[k] = v
 
                 if 'data' not in forms:
-                    self.ERR_MISSING_DATA = True
+                    self.form_err = (422, "Non-empty data field is required")
+                    return self._body
                 else:
                     try:
                         tmp = json.loads(forms['data'])
                     except json.JSONDecodeError as e:
-                        self.ERR_NOT_JSON = True
-                        self.exception = e
-                        tmp = {}
+                        self.form_err = (400, f'Failed to parse JSON: {e}')
+                        return self._body
                     if isinstance(tmp, list):
                         merge['commands'] = tmp
                     else:
@@ -334,29 +335,40 @@ class MultipartRequest(Request):
 
                 for c in cmds:
                     if not isinstance(c, dict):
-                        self.ERR_NOT_DICT = True
-                        self.offending_command = c
-                    elif 'op' not in c:
-                        self.ERR_NO_OP = True
-                        self.offending_command = c
-                    elif 'path' not in c:
-                        self.ERR_NO_PATH = True
-                        self.offending_command = c
-                    elif not c['path']:
-                        self.ERR_EMPTY_PATH = True
-                        self.offending_command = c
-                    elif not isinstance(c['path'], list):
-                        self.ERR_PATH_NOT_LIST = True
-                        self.offending_command = c
-                    elif not all(isinstance(el, str) for el in c['path']):
-                        self.ERR_PATH_NOT_LIST_OF_STR = True
-                        self.offending_command = c
-                    elif 'value' in c and not isinstance(c['value'], str):
-                        self.ERR_VALUE_NOT_STRING = True
-                        self.offending_command = c
+                        self.form_err = (400,
+                        f"Malformed command '{c}': any command must be JSON of dict")
+                        return self._body
+                    if 'op' not in c:
+                        self.form_err = (400,
+                        f"Malformed command '{c}': missing 'op' field")
+                    if endpoint not in ('/config-file', '/container-image',
+                                        '/image'):
+                        if 'path' not in c:
+                            self.form_err = (400,
+                            f"Malformed command '{c}': missing 'path' field")
+                        elif not isinstance(c['path'], list):
+                            self.form_err = (400,
+                            f"Malformed command '{c}': 'path' field must be a list")
+                        elif not all(isinstance(el, str) for el in c['path']):
+                            self.form_err = (400,
+                            f"Malformed command '{0}': 'path' field must be a list of strings")
+                    if endpoint in ('/configure'):
+                        if not c['path']:
+                            self.form_err = (400,
+                            f"Malformed command '{c}': 'path' list must be non-empty")
+                        if 'value' in c and not isinstance(c['value'], str):
+                            self.form_err = (400,
+                            f"Malformed command '{c}': 'value' field must be a string")
+                    if endpoint in ('/configure-section'):
+                        if 'section' not in c:
+                            self.form_err = (400,
+                            f"Malformed command '{c}': missing 'section' field")
+                        elif not isinstance(c['section'], dict):
+                            self.form_err = (400,
+                            f"Malformed command '{c}': 'section' field must be JSON of dict")
 
                 if 'key' not in forms and 'key' not in merge:
-                    self.ERR_MISSING_KEY = True
+                    self.form_err = (401, "Valid API key is required")
                 if 'key' in forms and 'key' not in merge:
                     merge['key'] = forms['key']
 
@@ -372,40 +384,14 @@ class MultipartRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             request = MultipartRequest(request.scope, request.receive)
-            endpoint = request.url.path
             try:
                 response: Response = await original_route_handler(request)
             except HTTPException as e:
                 return error(e.status_code, e.detail)
             except Exception as e:
-                if request.ERR_MISSING_KEY:
-                    return error(401, "Valid API key is required")
-                if request.ERR_MISSING_DATA:
-                    return error(422, "Non-empty data field is required")
-                if request.ERR_NOT_JSON:
-                    return error(400, "Failed to parse JSON: {0}".format(request.exception))
-                if endpoint == '/configure':
-                    if request.ERR_NOT_DICT:
-                        return error(400, "Malformed command \"{0}\": any command must be a dict".format(json.dumps(request.offending_command)))
-                    if request.ERR_NO_OP:
-                        return error(400, "Malformed command \"{0}\": missing \"op\" field".format(json.dumps(request.offending_command)))
-                    if request.ERR_NO_PATH:
-                        return error(400, "Malformed command \"{0}\": missing \"path\" field".format(json.dumps(request.offending_command)))
-                    if request.ERR_EMPTY_PATH:
-                        return error(400, "Malformed command \"{0}\": empty path".format(json.dumps(request.offending_command)))
-                    if request.ERR_PATH_NOT_LIST:
-                        return error(400, "Malformed command \"{0}\": \"path\" field must be a list".format(json.dumps(request.offending_command)))
-                    if request.ERR_VALUE_NOT_STRING:
-                        return error(400, "Malformed command \"{0}\": \"value\" field must be a string".format(json.dumps(request.offending_command)))
-                    if request.ERR_PATH_NOT_LIST_OF_STR:
-                        return error(400, "Malformed command \"{0}\": \"path\" field must be a list of strings".format(json.dumps(request.offending_command)))
-                if endpoint in ('/retrieve','/generate','/show','/reset'):
-                    if request.ERR_NO_OP or request.ERR_NO_PATH:
-                        return error(400, "Missing required field. \"op\" and \"path\" fields are required")
-                if endpoint in ('/config-file', '/image', '/container-image'):
-                    if request.ERR_NO_OP:
-                        return error(400, "Missing required field \"op\"")
-
+                form_err = request.form_err
+                if form_err:
+                    return error(*form_err)
                 raise e
 
             return response
@@ -424,11 +410,14 @@ app.router.route_class = MultipartRoute
 async def validation_exception_handler(request, exc):
     return error(400, str(exc.errors()[0]))
 
-@app.post('/configure')
-async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
+def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
+                              ConfigSectionModel, ConfigSectionListModel],
+                  request: Request):
     session = app.state.vyos_session
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
+
+    endpoint = request.url.path
 
     # Allow users to pass just one command
     if not isinstance(data, ConfigureListModel):
@@ -442,33 +431,44 @@ async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
     lock.acquire()
 
     status = 200
+    msg = None
     error_msg = None
     try:
         for c in data:
             op = c.op
             path = c.path
 
-            if c.value:
-                value = c.value
-            else:
-                value = ""
+            if isinstance(c, BaseConfigureModel):
+                if c.value:
+                    value = c.value
+                else:
+                    value = ""
+                # For vyos.configsession calls that have no separate value arguments,
+                # and for type checking too
+                cfg_path = " ".join(path + [value]).strip()
 
-            # For vyos.configsession calls that have no separate value arguments,
-            # and for type checking too
-            cfg_path = " ".join(path + [value]).strip()
+            elif isinstance(c, BaseConfigSectionModel):
+                section = c.section
 
-            if op == 'set':
-                # XXX: it would be nice to do a strict check for "path already exists",
-                # but there's probably no way to do that
-                session.set(path, value=value)
-            elif op == 'delete':
-                if app.state.vyos_strict and not config.exists(cfg_path):
-                    raise ConfigSessionError("Cannot delete [{0}]: path/value does not exist".format(cfg_path))
-                session.delete(path, value=value)
-            elif op == 'comment':
-                session.comment(path, value=value)
-            else:
-                raise ConfigSessionError("\"{0}\" is not a valid operation".format(op))
+            if isinstance(c, BaseConfigureModel):
+                if op == 'set':
+                    session.set(path, value=value)
+                elif op == 'delete':
+                    if app.state.vyos_strict and not config.exists(cfg_path):
+                        raise ConfigSessionError(f"Cannot delete [{cfg_path}]: path/value does not exist")
+                    session.delete(path, value=value)
+                elif op == 'comment':
+                    session.comment(path, value=value)
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
+
+            elif isinstance(c, BaseConfigSectionModel):
+                if op == 'set':
+                    session.set_section(path, section)
+                elif op == 'load':
+                    session.load_section(path, section)
+                else:
+                    raise ConfigSessionError(f"'{op}' is not a valid operation")
         # end for
         session.commit()
         logger.info(f"Configuration modified via HTTP API using key '{app.state.vyos_id}'")
@@ -491,7 +491,19 @@ async def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
     if status != 200:
         return error(status, error_msg)
 
-    return success(None)
+    return success(msg)
+
+@app.post('/configure')
+async def configure_op(data: Union[ConfigureModel,
+                                   ConfigureListModel],
+                       request: Request):
+    return _configure_op(data, request)
+
+@app.post('/configure-section')
+async def configure_section_op(data: Union[ConfigSectionModel,
+                                           ConfigSectionListModel],
+                               request: Request):
+    return _configure_op(data, request)
 
 @app.post("/retrieve")
 async def retrieve_op(data: RetrieveModel):
@@ -524,9 +536,9 @@ async def retrieve_op(data: RetrieveModel):
             elif config_format == 'raw':
                 pass
             else:
-                return error(400, "\"{0}\" is not a valid config format".format(config_format))
+                return error(400, f"'{config_format}' is not a valid config format")
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -556,7 +568,7 @@ def config_file_op(data: ConfigFileModel):
             res = session.migrate_and_load_config(path)
             res = session.commit()
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -585,7 +597,7 @@ def image_op(data: ImageModel):
                 return error(400, "Missing required field \"name\"")
             res = session.remove_image(name)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -616,7 +628,7 @@ def image_op(data: ContainerImageModel):
         elif op == 'show':
             res = session.show_container_image()
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -636,7 +648,7 @@ def generate_op(data: GenerateModel):
         if op == 'generate':
             res = session.generate(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -656,7 +668,7 @@ def show_op(data: ShowModel):
         if op == 'show':
             res = session.show(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
@@ -676,7 +688,7 @@ def reset_op(data: ResetModel):
         if op == 'reset':
             res = session.reset(path)
         else:
-            return error(400, "\"{0}\" is not a valid operation".format(op))
+            return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
         return error(400, str(e))
     except Exception as e:
