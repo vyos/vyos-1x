@@ -8,8 +8,9 @@
     </valueHelp>
     <constraint>
       <validator name="ipv4-prefix"/>
+      <validator name="ipv4-host"/>
     </constraint>
-    <constraintErrorMessage>Not a valid CIDR formatted prefix</constraintErrorMessage>
+    <constraintErrorMessage>Not a valid IP address or prefix</constraintErrorMessage>
   </properties>
 </leafNode>
 <!-- include end -->
