@@ -3,7 +3,6 @@ OP_TMPL_DIR := templates-op
 BUILD_DIR := build
 DATA_DIR := data
 SHIM_DIR := src/shim
-XDP_DIR := src/xdp
 LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
@@ -81,10 +80,6 @@ op_mode_definitions: $(op_xml_obj)
 vyshim:
 	$(MAKE) -C $(SHIM_DIR)
 
-.PHONY: vyxdp
-vyxdp:
-	$(MAKE) -C $(XDP_DIR)
-
 .PHONY: all
 all: clean interface_definitions op_mode_definitions check test j2lint vyshim
 
@@ -105,7 +100,6 @@ clean:
 	rm -rf $(TMPL_DIR)
 	rm -rf $(OP_TMPL_DIR)
 	$(MAKE) -C $(SHIM_DIR) clean
-	$(MAKE) -C $(XDP_DIR) clean
 
 .PHONY: test
 test:
