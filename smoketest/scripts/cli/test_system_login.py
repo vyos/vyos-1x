@@ -20,8 +20,6 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from distutils.version import LooseVersion
-from platform import release as kernel_version
 from subprocess import Popen, PIPE
 from pwd import getpwall
 
@@ -149,9 +147,6 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         # T2886 - RADIUS authentication - check for statically compiled options
         options = ['CONFIG_AUDIT', 'CONFIG_AUDITSYSCALL', 'CONFIG_AUDIT_ARCH']
-        if LooseVersion(kernel_version()) < LooseVersion('5.0'):
-            options.append('CONFIG_AUDIT_WATCH')
-            options.append('CONFIG_AUDIT_TREE')
 
         for option in options:
             self.assertIn(f'{option}=y', kernel_config)
