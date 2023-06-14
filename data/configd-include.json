@@ -14,7 +14,6 @@
 "flow_accounting_conf.py",
 "high-availability.py",
 "host_name.py",
-"https.py",
 "igmp_proxy.py",
 "intel_qat.py",
 "interfaces-bonding.py",
