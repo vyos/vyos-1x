@@ -21,7 +21,7 @@ from vyos.util import popen
 # These drivers do not support using ethtool to change the speed, duplex, or
 # flow control settings
 _drivers_without_speed_duplex_flow = ['vmxnet3', 'virtio_net', 'xen_netfront',
-                                      'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth']
+                                      'iavf', 'ice', 'i40e', 'hv_netvsc', 'veth', 'ixgbevf']
 
 class Ethtool:
     """
