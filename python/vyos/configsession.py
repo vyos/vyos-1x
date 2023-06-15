@@ -166,8 +166,9 @@ class ConfigSession(object):
     def load_section(self, path: list, d: dict):
         try:
             self.delete(path)
-            for p in dict_to_paths(d):
-                self.set(path + p)
+            if d:
+                for p in dict_to_paths(d):
+                    self.set(path + p)
         except (ValueError, ConfigSessionError) as e:
             raise ConfigSessionError(e)
 
