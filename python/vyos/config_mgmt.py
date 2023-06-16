@@ -72,6 +72,29 @@ def unsaved_commits() -> bool:
     os.unlink(tmp_save)
     return ret
 
+def get_file_revision(rev: int):
+    revision = os.path.join(archive_dir, f'config.boot.{rev}.gz')
+    try:
+        with gzip.open(revision) as f:
+            r = f.read().decode()
+    except FileNotFoundError:
+        logger.warning(f'commit revision {rev} not available')
+        return ''
+    return r
+
+def get_config_tree_revision(rev: int):
+    c = get_file_revision(rev)
+    return ConfigTree(c)
+
+def is_node_revised(path: list = [], rev1: int = 1, rev2: int = 0) -> bool:
+    from vyos.configtree import DiffTree
+    left = get_config_tree_revision(rev1)
+    right = get_config_tree_revision(rev2)
+    diff_tree = DiffTree(left, right)
+    if diff_tree.add.exists(path) or diff_tree.sub.exists(path):
+        return True
+    return False
+
 class ConfigMgmtError(Exception):
     pass
 
