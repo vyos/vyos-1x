@@ -20,6 +20,9 @@ from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import read_file
 
+from vyos.utils.network import get_protocol_by_name
+
+
 class QoSBase:
     _debug = False
     _direction = ['egress']
@@ -197,7 +200,9 @@ class QoSBase:
                                 if tmp: filter_cmd += f' match {tc_af} dport {tmp} 0xffff'
 
                                 tmp = dict_search(f'{af}.protocol', match_config)
-                                if tmp: filter_cmd += f' match {tc_af} protocol {tmp} 0xff'
+                                if tmp:
+                                    tmp = get_protocol_by_name(tmp)
+                                    filter_cmd += f' match {tc_af} protocol {tmp} 0xff'
 
                                 # Will match against total length of an IPv4 packet and
                                 # payload length of an IPv6 packet.
