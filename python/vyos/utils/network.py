@@ -13,4 +13,18 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.utils import network
+import os
+
+
+def get_protocol_by_name(protocol_name):
+    """Get protocol number by protocol name
+
+       % get_protocol_by_name('tcp')
+       % 6
+    """
+    import socket
+    try:
+        protocol_number = socket.getprotobyname(protocol_name)
+        return protocol_number
+    except socket.error:
+        return protocol_name
