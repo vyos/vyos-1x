@@ -27,6 +27,40 @@ class QoSBase:
     _debug = False
     _direction = ['egress']
     _parent = 0xffff
+    _dsfields = {
+        "default": 0x0,
+        "lowdelay": 0x10,
+        "throughput": 0x08,
+        "reliability": 0x04,
+        "mincost": 0x02,
+        "priority": 0x20,
+        "immediate": 0x40,
+        "flash": 0x60,
+        "flash-override": 0x80,
+        "critical": 0x0A,
+        "internet": 0xC0,
+        "network": 0xE0,
+        "AF11": 0x28,
+        "AF12": 0x30,
+        "AF13": 0x38,
+        "AF21": 0x48,
+        "AF22": 0x50,
+        "AF23": 0x58,
+        "AF31": 0x68,
+        "AF32": 0x70,
+        "AF33": 0x78,
+        "AF41": 0x88,
+        "AF42": 0x90,
+        "AF43": 0x98,
+        "CS1": 0x20,
+        "CS2": 0x40,
+        "CS3": 0x60,
+        "CS4": 0x80,
+        "CS5": 0xA0,
+        "CS6": 0xC0,
+        "CS7": 0xE0,
+        "EF": 0xB8
+    }
 
     def __init__(self, interface):
         if os.path.exists('/tmp/vyos.qos.debug'):
@@ -47,6 +81,12 @@ class QoSBase:
             tmp.sort(key=lambda ii: int(ii))
             return tmp[-1]
         return None
+
+    def _get_dsfield(self, value):
+        if value in self._dsfields:
+            return self._dsfields[value]
+        else:
+            return value
 
     def _build_base_qdisc(self, config : dict, cls_id : int):
         """
@@ -203,6 +243,14 @@ class QoSBase:
                                 if tmp:
                                     tmp = get_protocol_by_name(tmp)
                                     filter_cmd += f' match {tc_af} protocol {tmp} 0xff'
+
+                                tmp = dict_search(f'{af}.dscp', match_config)
+                                if tmp:
+                                    tmp = self._get_dsfield(tmp)
+                                    if af == 'ip':
+                                        filter_cmd += f' match {tc_af} dsfield {tmp} 0xff'
+                                    elif af == 'ipv6':
+                                        filter_cmd += f' match u16 {tmp} 0x0ff0 at 0'
 
                                 # Will match against total length of an IPv4 packet and
                                 # payload length of an IPv6 packet.
