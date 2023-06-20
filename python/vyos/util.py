@@ -1063,9 +1063,13 @@ def check_port_availability(ipaddress, port, protocol):
         if protocol == 'udp':
             server = UDPServer((ipaddress, port), None, bind_and_activate=True)
         server.server_close()
-        return True
-    except:
-        return False
+    except Exception as e:
+        # errno.h:
+        #define EADDRINUSE  98  /* Address already in use */
+        if e.errno == 98:
+            return False
+
+    return True
 
 def install_into_config(conf, config_paths, override_prompt=True):
     # Allows op-mode scripts to install values if called from an active config session
