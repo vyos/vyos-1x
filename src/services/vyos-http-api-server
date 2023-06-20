@@ -494,13 +494,13 @@ def _configure_op(data: Union[ConfigureModel, ConfigureListModel,
     return success(msg)
 
 @app.post('/configure')
-async def configure_op(data: Union[ConfigureModel,
+def configure_op(data: Union[ConfigureModel,
                                    ConfigureListModel],
                        request: Request):
     return _configure_op(data, request)
 
 @app.post('/configure-section')
-async def configure_section_op(data: Union[ConfigSectionModel,
+def configure_section_op(data: Union[ConfigSectionModel,
                                            ConfigSectionListModel],
                                request: Request):
     return _configure_op(data, request)
