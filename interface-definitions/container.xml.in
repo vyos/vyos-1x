@@ -334,6 +334,42 @@
                 </properties>
                 <defaultValue>rw</defaultValue>
               </leafNode>
+              <leafNode name="propagation">
+                <properties>
+                  <help>Volume bind propagation</help>
+                  <completionHelp>
+                    <list>shared slave private rshared rslave rprivate</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>shared</format>
+                    <description>Sub-mounts of the original mount are exposed to replica mounts</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>slave</format>
+                    <description>Allow replica mount to see sub-mount from the original mount but not vice versa</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>private</format>
+                    <description>Sub-mounts within a mount are not visible to replica mounts or the original mount</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rshared</format>
+                    <description>Allows sharing of mount points and their nested mount points between both the original and replica mounts</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rslave</format>
+                    <description>Allows mount point and their nested mount points between original an replica mounts</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>rprivate</format>
+                    <description>No mount points within original or replica mounts in any direction</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(shared|slave|private|rshared|rslave|rprivate)</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>rprivate</defaultValue>
+              </leafNode>
             </children>
           </tagNode>
         </children>

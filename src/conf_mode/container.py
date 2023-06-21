@@ -321,7 +321,8 @@ def generate_run_arguments(name, container_config):
             svol = vol_config['source']
             dvol = vol_config['destination']
             mode = vol_config['mode']
-            volume += f' --volume {svol}:{dvol}:{mode}'
+            prop = vol_config['propagation']
+            volume += f' --volume {svol}:{dvol}:{mode},{prop}'
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
