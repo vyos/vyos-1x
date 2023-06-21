@@ -29,10 +29,14 @@ do
     sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
+if ! grep -q '^aaa' /etc/group; then
+    addgroup --firstgid 1000 --quiet aaa
+fi
+
 # Add RADIUS operator user for RADIUS authenticated users to map to
 if ! grep -q '^radius_user' /etc/passwd; then
     adduser --quiet --firstuid 1000 --disabled-login --ingroup vyattaop \
-        --no-create-home --gecos "radius user" \
+        --no-create-home --gecos "RADIUS mapped user at privilege level operator" \
         --shell /sbin/radius_shell radius_user
     adduser --quiet radius_user frrvty
     adduser --quiet radius_user vyattaop
@@ -40,12 +44,13 @@ if ! grep -q '^radius_user' /etc/passwd; then
     adduser --quiet radius_user adm
     adduser --quiet radius_user dip
     adduser --quiet radius_user users
+    adduser --quiet radius_user aaa
 fi
 
 # Add RADIUS admin user for RADIUS authenticated users to map to
 if ! grep -q '^radius_priv_user' /etc/passwd; then
     adduser --quiet --firstuid 1000 --disabled-login --ingroup vyattacfg \
-        --no-create-home --gecos "radius privileged user" \
+        --no-create-home --gecos "RADIUS mapped user at privilege level admin" \
         --shell /sbin/radius_shell radius_priv_user
     adduser --quiet radius_priv_user frrvty
     adduser --quiet radius_priv_user vyattacfg
@@ -55,6 +60,7 @@ if ! grep -q '^radius_priv_user' /etc/passwd; then
     adduser --quiet radius_priv_user disk
     adduser --quiet radius_priv_user users
     adduser --quiet radius_priv_user frr
+    adduser --quiet radius_priv_user aaa
 fi
 
 # add hostsd group for vyos-hostsd
