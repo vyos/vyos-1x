@@ -29,6 +29,52 @@ do
     sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
+# Remove TACACS user added by base package - we use our own UID range and group
+# assignments - see below
+if grep -q '^tacacs' /etc/passwd; then
+    if [ $(id -u tacacs0) -ge 1000 ]; then
+        level=0
+        vyos_group=vyattaop
+        while [ $level -lt 16 ]; do
+            userdel tacacs${level} || true
+            level=$(( level+1 ))
+        done 2>&1
+    fi
+fi
+
+# Add TACACS system users required for TACACS based system authentication
+if ! grep -q '^tacacs' /etc/passwd; then
+    # Add the tacacs group and all 16 possible tacacs privilege-level users to
+    # the password file, home directories, etc. The accounts are not enabled
+    # for local login, since they are only used to provide uid/gid/homedir for
+    # the mapped TACACS+ logins (and lookups against them). The tacacs15 user
+    # is also added to the sudo group, and vyattacfg group rather than vyattaop
+    # (used for tacacs0-14).
+    level=0
+    vyos_group=vyattaop
+    while [ $level -lt 16 ]; do
+        adduser --quiet --system --firstuid 900 --disabled-login --ingroup ${vyos_group} \
+            --no-create-home --gecos "TACACS+ mapped user at privilege level ${level}" \
+            --shell /bin/vbash tacacs${level}
+        adduser --quiet tacacs${level} frrvty
+        adduser --quiet tacacs${level} adm
+        adduser --quiet tacacs${level} dip
+        adduser --quiet tacacs${level} users
+        adduser --quiet tacacs${level} aaa
+        if [ $level -lt 15 ]; then
+            adduser --quiet tacacs${level} vyattaop
+            adduser --quiet tacacs${level} operator
+        else
+            adduser --quiet tacacs${level} vyattacfg
+            adduser --quiet tacacs${level} sudo
+            adduser --quiet tacacs${level} disk
+            adduser --quiet tacacs${level} frr
+        fi
+        level=$(( level+1 ))
+    done 2>&1 | grep -v 'User tacacs${level} already exists'
+fi
+
+
 if ! grep -q '^aaa' /etc/group; then
     addgroup --firstgid 1000 --quiet aaa
 fi

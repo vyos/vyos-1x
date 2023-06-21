@@ -30,7 +30,8 @@ from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.util import cmd
-from vyos.util import call, rc_cmd
+from vyos.util import call
+from vyos.util import rc_cmd
 from vyos.util import run
 from vyos.util import DEVNULL
 from vyos.util import dict_search
@@ -42,20 +43,34 @@ airbag.enable()
 autologout_file = "/etc/profile.d/autologout.sh"
 limits_file = "/etc/security/limits.d/10-vyos.conf"
 radius_config_file = "/etc/pam_radius_auth.conf"
+tacacs_pam_config_file = "/etc/tacplus_servers"
+tacacs_nss_config_file = "/etc/tacplus_nss.conf"
+nss_config_file = "/etc/nsswitch.conf"
 
+# Minimum UID used when adding system users
+MIN_USER_UID: int = 1000
 # LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
 MAX_RADIUS_COUNT: int = 25
+# Maximum number of supported TACACS servers
+MAX_TACACS_COUNT: int = 8
+
+# List of local user accounts that must be preserved
+SYSTEM_USER_SKIP_LIST: list = ['radius_user', 'radius_priv_user', 'tacacs0', 'tacacs1',
+                              'tacacs2', 'tacacs3', 'tacacs4', 'tacacs5', 'tacacs6',
+                              'tacacs7', 'tacacs8', 'tacacs9', 'tacacs10',' tacacs11',
+                              'tacacs12', 'tacacs13', 'tacacs14', 'tacacs15']
 
 def get_local_users():
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
     for s_user in getpwall():
-        uid = getpwnam(s_user.pw_name).pw_uid
-        if uid in range(1000, 29999):
-            if s_user.pw_name not in ['radius_user', 'radius_priv_user']:
-                local_users.append(s_user.pw_name)
+        if getpwnam(s_user.pw_name).pw_uid < MIN_USER_UID:
+            continue
+        if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
+            continue
+        local_users.append(s_user.pw_name)
 
     return local_users
 
@@ -88,12 +103,21 @@ def get_config(config=None):
         for user in login['user']:
             login['user'][user] = dict_merge(default_values, login['user'][user])
 
+    # Add TACACS global defaults
+    if 'tacacs' in login:
+        default_values = defaults(base + ['tacacs'])
+        if 'server' in default_values:
+            del default_values['server']
+        login['tacacs'] = dict_merge(default_values, login['tacacs'])
+
     # XXX: T2665: we can not safely rely on the defaults() when there are
     # tagNodes in place, it is better to blend in the defaults manually.
-    default_values = defaults(base + ['radius', 'server'])
-    for server in dict_search('radius.server', login) or []:
-        login['radius']['server'][server] = dict_merge(default_values,
-            login['radius']['server'][server])
+    for backend in ['radius', 'tacacs']:
+        default_values = defaults(base + [backend, 'server'])
+        for server in dict_search(f'{backend}.server', login) or []:
+            login[backend]['server'][server] = dict_merge(default_values,
+                login[backend]['server'][server])
+
 
     # create a list of all users, cli and users
     all_users = list(set(local_users + cli_users))
@@ -121,7 +145,7 @@ def verify(login):
             # Linux system users range up until UID 1000, we can not create a
             # VyOS CLI user which already exists as system user
             for s_user in system_users:
-                if s_user.pw_name == user and s_user.pw_uid < 1000:
+                if s_user.pw_name == user and s_user.pw_uid < MIN_USER_UID:
                     raise ConfigError(f'User "{user}" can not be created, conflict with local system account!')
 
             for pubkey, pubkey_options in (dict_search('authentication.public_keys', user_config) or {}).items():
@@ -129,6 +153,9 @@ def verify(login):
                     raise ConfigError(f'Missing type for public-key "{pubkey}"!')
                 if 'key' not in pubkey_options:
                     raise ConfigError(f'Missing key for public-key "{pubkey}"!')
+
+    if {'radius', 'tacacs'} <= set(login):
+        raise ConfigError('Using both RADIUS and TACACS at the same time is not supported!')
 
     # At lease one RADIUS server must not be disabled
     if 'radius' in login:
@@ -149,7 +176,7 @@ def verify(login):
             raise ConfigError('All RADIUS servers are disabled')
 
         if radius_servers_count > MAX_RADIUS_COUNT:
-            raise ConfigError('Number of RADIUS servers more than 25 ')
+            raise ConfigError(f'Number of RADIUS servers exceeded maximum of {MAX_RADIUS_COUNT}!')
 
         if sum_timeout > MAX_RADIUS_TIMEOUT:
             raise ConfigError('Sum of RADIUS servers timeouts '
@@ -168,6 +195,24 @@ def verify(login):
                 raise ConfigError('Only one IPv4 source-address can be set!')
             if ipv6_count > 1:
                 raise ConfigError('Only one IPv6 source-address can be set!')
+
+    if 'tacacs' in login:
+        tacacs_servers_count: int = 0
+        fail = True
+        for server, server_config in dict_search('tacacs.server', login).items():
+            if 'key' not in server_config:
+                raise ConfigError(f'TACACS server "{server}" requires key!')
+            if 'disable' not in server_config:
+                tacacs_servers_count += 1
+                fail = False
+
+        if fail:
+            raise ConfigError('All RADIUS servers are disabled')
+
+        if tacacs_servers_count > MAX_TACACS_COUNT:
+            raise ConfigError(f'Number of TACACS servers exceeded maximum of {MAX_TACACS_COUNT}!')
+
+        verify_vrf(login['tacacs'])
 
     if 'max_login_session' in login and 'timeout' not in login:
         raise ConfigError('"login timeout" must be configured!')
@@ -190,8 +235,8 @@ def generate(login):
                 env['vyos_libexec_dir'] = directories['base']
 
                 # Set default commands for re-adding user with encrypted password
-                del_user_plain = f"system login user '{user}' authentication plaintext-password"
-                add_user_encrypt = f"system login user '{user}' authentication encrypted-password '{encrypted_password}'"
+                del_user_plain = f"system login user {user} authentication plaintext-password"
+                add_user_encrypt = f"system login user {user} authentication encrypted-password '{encrypted_password}'"
 
                 lvl = env['VYATTA_EDIT_LEVEL']
                 # We're in config edit level, for example "edit system login"
@@ -210,10 +255,10 @@ def generate(login):
                     add_user_encrypt = add_user_encrypt[len(lvl):]
                     add_user_encrypt = " ".join(add_user_encrypt)
 
-                call(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
+                ret, out = rc_cmd(f"/opt/vyatta/sbin/my_delete {del_user_plain}", env=env)
+                if ret: raise ConfigError(out)
                 ret, out = rc_cmd(f"/opt/vyatta/sbin/my_set {add_user_encrypt}", env=env)
-                if ret:
-                    raise ConfigError(out)
+                if ret: raise ConfigError(out)
             else:
                 try:
                     if get_shadow_password(user) == dict_search('authentication.encrypted_password', user_config):
@@ -227,12 +272,31 @@ def generate(login):
                 except:
                     pass
 
+    ### RADIUS based user authentication
     if 'radius' in login:
         render(radius_config_file, 'login/pam_radius_auth.conf.j2', login,
                    permission=0o600, user='root', group='root')
     else:
         if os.path.isfile(radius_config_file):
             os.unlink(radius_config_file)
+
+    ### TACACS+ based user authentication
+    if 'tacacs' in login:
+        render(tacacs_pam_config_file, 'login/tacplus_servers.j2', login,
+                   permission=0o644, user='root', group='root')
+        render(tacacs_nss_config_file, 'login/tacplus_nss.conf.j2', login,
+                   permission=0o644, user='root', group='root')
+    else:
+        if os.path.isfile(tacacs_pam_config_file):
+            os.unlink(tacacs_pam_config_file)
+        if os.path.isfile(tacacs_nss_config_file):
+            os.unlink(tacacs_nss_config_file)
+
+
+
+    # NSS must always be present on the system
+    render(nss_config_file, 'login/nsswitch.conf.j2', login,
+               permission=0o644, user='root', group='root')
 
     # /etc/security/limits.d/10-vyos.conf
     if 'max_login_session' in login:
@@ -257,7 +321,7 @@ def apply(login):
         for user, user_config in login['user'].items():
             # make new user using vyatta shell and make home directory (-m),
             # default group of 100 (users)
-            command = 'useradd --create-home --no-user-group'
+            command = 'useradd --create-home --no-user-group '
             # check if user already exists:
             if user in get_local_users():
                 # update existing account
@@ -327,38 +391,17 @@ def apply(login):
             except Exception as e:
                 raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
 
-    #
-    # RADIUS configuration
-    #
-    env = os.environ.copy()
-    env['DEBIAN_FRONTEND'] = 'noninteractive'
-    try:
-        if 'radius' in login:
-            # Enable RADIUS in PAM
-            cmd('pam-auth-update --package --enable radius', env=env)
-            # Make NSS system aware of RADIUS
-            # This fancy snipped was copied from old Vyatta code
-            command = "sed -i -e \'/\smapname/b\' \
-                          -e \'/^passwd:/s/\s\s*/&mapuid /\' \
-                          -e \'/^passwd:.*#/s/#.*/mapname &/\' \
-                          -e \'/^passwd:[^#]*$/s/$/ mapname &/\' \
-                          -e \'/^group:.*#/s/#.*/ mapname &/\' \
-                          -e \'/^group:[^#]*$/s/: */&mapname /\' \
-                          /etc/nsswitch.conf"
-        else:
-            # Disable RADIUS in PAM
-            cmd('pam-auth-update --package --remove radius', env=env)
-            # Drop RADIUS from NSS NSS system
-            # This fancy snipped was copied from old Vyatta code
-            command = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
-                   -e \'/^passwd:.*[ \t]mapname/s/[ \t]mapname//\' \
-                   -e \'/^group:.*[ \t]mapname/s/[ \t]mapname//\' \
-                   -e \'s/[ \t]*$//\' \
-                   /etc/nsswitch.conf"
+    # Enable RADIUS in PAM configuration
+    pam_cmd = '--remove'
+    if 'radius' in login:
+        pam_cmd = '--enable'
+    cmd(f'pam-auth-update --package {pam_cmd} radius')
 
-        cmd(command)
-    except Exception as e:
-        raise ConfigError(f'RADIUS configuration failed: {e}')
+    # Enable/Disable TACACS in PAM configuration
+    pam_cmd = '--remove'
+    if 'tacacs' in login:
+        pam_cmd = '--enable'
+    cmd(f'pam-auth-update --package {pam_cmd} tacplus')
 
     return None
 
