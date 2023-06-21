@@ -107,9 +107,13 @@ def get_config(config=None):
 
 def verify(login):
     if 'rm_users' in login:
-        cur_user = os.environ['SUDO_USER']
-        if cur_user in login['rm_users']:
-            raise ConfigError(f'Attempting to delete current user: {cur_user}')
+        # This check is required as the script is also executed from vyos-router
+        # init script and there is no SUDO_USER environment variable available
+        # during system boot.
+        if 'SUDO_USER' in os.environ:
+            cur_user = os.environ['SUDO_USER']
+            if cur_user in login['rm_users']:
+                raise ConfigError(f'Attempting to delete current user: {cur_user}')
 
     if 'user' in login:
         system_users = getpwall()
