@@ -1,0 +1,74 @@
+#%NSS_TACPLUS-1.0
+# Install this file as /etc/tacplus_nss.conf
+# Edit /etc/nsswitch.conf to add tacplus to the passwd lookup, similar to this
+# where tacplus precede compat (or files), and depending on local policy can
+# follow or precede ldap, nis, etc.
+#    passwd: tacplus compat
+#
+#  Servers are tried in the order listed, and once a server
+#  replies, no other servers are attempted in a given process instantiation
+#
+#  This configuration is similar to the libpam_tacplus configuration, but
+#  is maintained as a configuration file, since nsswitch.conf doesn't
+#  support passing parameters.  Parameters must start in the first
+#  column, and parsing stops at the first whitespace
+
+# if set, errors and other issues are logged with syslog
+#debug=1
+
+# min_uid is the minimum uid to lookup via tacacs.  Setting this to 0
+# means uid 0 (root) is never looked up, good for robustness and performance
+# Cumulus Linux ships with it set to 1001, so we never lookup our standard
+# local users, including the cumulus uid of 1000.  Should not be greater
+# than the local tacacs{0..15} uids
+min_uid=900
+
+# This is a comma separated list of usernames that are never sent to
+# a tacacs server, they cause an early not found return.
+#
+# "*" is not a wild card.  While it's not a legal username, it turns out
+# that during pathname completion, bash can do an NSS lookup on "*"
+# To avoid server round trip delays, or worse, unreachable server delays
+# on filename completion, we include "*" in the exclusion list.
+exclude_users=root,telegraf,radvd,strongswan,tftp,conservr,frr,ocserv,pdns,_chrony,_lldpd,sshd,openvpn,radius_user,radius_priv_user,*{{ ',' + user | join(',') if user is vyos_defined }}
+
+# The include keyword allows centralizing the tacacs+ server information
+# including the IP address and shared secret
+# include=/etc/tacplus_servers
+
+#  The server IP address can be optionally followed by a ':' and a port
+#  number (server=1.1.1.1:49).  It is strongly recommended that you NOT
+#  add secret keys to this file, because it is world readable.
+{% if tacacs.server is vyos_defined %}
+{%     for server, server_config in tacacs.server.items() %}
+secret={{ server_config.key }}
+server={{ server }}:{{ server_config.port }}
+
+{%     endfor %}
+{% endif %}
+
+{% if tacacs.vrf is vyos_defined %}
+# If the management network is in a vrf, set this variable to the vrf name.
+# This would usually be "mgmt". When this variable is set, the connection to the
+# TACACS+ accounting servers will be made through the named vrf.
+vrf={{ tacacs.vrf }}
+{% endif %}
+
+{% if tacacs.source_address is vyos_defined %}
+# Sets the IPv4 address used as the source IP address when communicating with
+# the TACACS+ server. IPv6 addresses are not supported, nor are hostnames.
+# The address must work when passsed to the bind() system call, that is, it must
+# be valid for the interface being used.
+source_ip={{ tacacs.source_address }}
+{% endif %}
+
+# The connection timeout for an NSS library should be short, since it is
+# invoked for many programs and daemons, and a failure is usually not
+# catastrophic.  Not set or set to a negative value disables use of poll().
+# This follows the include of tacplus_servers, so it can override any
+# timeout value set in that file.
+# It's important to have this set in this file, even if the same value
+# as in tacplus_servers, since tacplus_servers should not be readable
+# by users other than root.
+timeout={{ tacacs.timeout }}
+

@@ -17,13 +17,13 @@
 import re
 import platform
 import unittest
+import paramiko
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from distutils.version import LooseVersion
-from platform import release as kernel_version
 from subprocess import Popen, PIPE
 from pwd import getpwall
+from time import sleep
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
@@ -53,11 +53,15 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration which will break this test
         cls.cli_delete(cls, base_path + ['radius'])
+        cls.cli_delete(cls, base_path + ['tacacs'])
 
     def tearDown(self):
         # Delete individual users from configuration
         for user in users:
             self.cli_delete(base_path + ['user', user])
+
+        self.cli_delete(base_path + ['radius'])
+        self.cli_delete(base_path + ['tacacs'])
 
         self.cli_commit()
 
@@ -149,9 +153,6 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
 
         # T2886 - RADIUS authentication - check for statically compiled options
         options = ['CONFIG_AUDIT', 'CONFIG_AUDITSYSCALL', 'CONFIG_AUDIT_ARCH']
-        if LooseVersion(kernel_version()) < LooseVersion('5.0'):
-            options.append('CONFIG_AUDIT_WATCH')
-            options.append('CONFIG_AUDIT_TREE')
 
         for option in options:
             self.assertIn(f'{option}=y', kernel_config)
@@ -284,6 +285,41 @@ class TestSystemLogin(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + ['timeout'])
         self.cli_delete(base_path + ['max-login-session'])
 
+    def test_system_login_tacacs(self):
+        tacacs_secret = 'tac_plus_key'
+        tacacs_servers = ['100.64.0.11', '100.64.0.12']
+
+        # Enable TACACS
+        for server in tacacs_servers:
+            self.cli_set(base_path + ['tacacs', 'server', server, 'key', tacacs_secret])
+
+        self.cli_commit()
+
+        # NSS
+        nsswitch_conf = read_file('/etc/nsswitch.conf')
+        tmp = re.findall(r'passwd:\s+tacplus\s+files', nsswitch_conf)
+        self.assertTrue(tmp)
+
+        tmp = re.findall(r'group:\s+tacplus\s+files', nsswitch_conf)
+        self.assertTrue(tmp)
+
+        # PAM TACACS configuration
+        pam_tacacs_conf = read_file('/etc/tacplus_servers')
+        # NSS TACACS configuration
+        nss_tacacs_conf = read_file('/etc/tacplus_nss.conf')
+        # Users have individual home directories
+        self.assertIn('user_homedir=1', pam_tacacs_conf)
+
+        # specify services
+        self.assertIn('service=shell', pam_tacacs_conf)
+        self.assertIn('protocol=ssh', pam_tacacs_conf)
+
+        for server in tacacs_servers:
+            self.assertIn(f'secret={tacacs_secret}', pam_tacacs_conf)
+            self.assertIn(f'server={server}', pam_tacacs_conf)
+
+            self.assertIn(f'secret={tacacs_secret}', nss_tacacs_conf)
+            self.assertIn(f'server={server}', nss_tacacs_conf)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

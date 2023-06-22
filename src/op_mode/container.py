@@ -83,7 +83,7 @@ def restart(name: str):
     if rc != 0:
         print(output)
         return None
-    print(f'Container name "{name}" restarted!')
+    print(f'Container "{name}" restarted!')
     return output
 
 
