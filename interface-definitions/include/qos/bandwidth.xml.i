@@ -27,7 +27,7 @@
       <description>Terabits per second</description>
     </valueHelp>
     <valueHelp>
-      <format>&lt;number&gt;%</format>
+      <format>&lt;number&gt;%%</format>
       <description>Percentage of interface link speed</description>
     </valueHelp>
     <constraint>
