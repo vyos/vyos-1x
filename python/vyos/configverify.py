@@ -322,7 +322,7 @@ def verify_dhcpv6(config):
 
         # It is not allowed to have duplicate SLA-IDs as those identify an
         # assigned IPv6 subnet from a delegated prefix
-        for pd in dict_search('dhcpv6_options.pd', config):
+        for pd in (dict_search('dhcpv6_options.pd', config) or []):
             sla_ids = []
             interfaces = dict_search(f'dhcpv6_options.pd.{pd}.interface', config)
 
