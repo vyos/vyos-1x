@@ -58,12 +58,15 @@ def get_defaults(path: list, get_first_key=False, recursive=False) -> dict:
     return load_reference().get_defaults(path, get_first_key=get_first_key,
                                          recursive=recursive)
 
-def get_config_defaults(rpath: list, conf: dict, get_first_key=False,
-                        recursive=False) -> dict:
+def relative_defaults(rpath: list, conf: dict, get_first_key=False,
+                      recursive=False) -> dict:
 
-    return load_reference().relative_defaults(rpath, conf=conf,
+    return load_reference().relative_defaults(rpath, conf,
                                               get_first_key=get_first_key,
                                               recursive=recursive)
 
-def merge_defaults(path: list, conf: dict) -> dict:
-    return load_reference().merge_defaults(path, conf)
+def merge_defaults(path: list, conf: dict, get_first_key=False,
+                   recursive=False) -> dict:
+    return load_reference().merge_defaults(path, conf,
+                                           get_first_key=get_first_key,
+                                           recursive=recursive)
