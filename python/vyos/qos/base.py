@@ -331,13 +331,15 @@ class QoSBase:
                 #     burst = cls_config['burst']
                 #     filter_cmd += f' burst {burst}'
 
+        if 'default' in config:
+            default_cls_id = 1
+            if 'class' in config:
+                class_id_max = self._get_class_max_id(config)
+                default_cls_id = int(class_id_max) +1
+            self._build_base_qdisc(config['default'], default_cls_id)
+
         if self.qostype == 'limiter':
             if 'default' in config:
-                if 'class' in config:
-                    class_id_max = self._get_class_max_id(config)
-                    default_cls_id = int(class_id_max) + 1
-                    self._build_base_qdisc(config['default'], default_cls_id)
-
                 filter_cmd = f'tc filter replace dev {self._interface} parent {self._parent:x}: '
                 filter_cmd += 'prio 255 protocol all basic'
 
