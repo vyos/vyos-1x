@@ -88,13 +88,13 @@ class VyOSUnitTestSHIM:
                 pprint.pprint(out)
             return out
 
+        @staticmethod
         def ssh_send_cmd(command, username, password, hostname='localhost'):
             """ SSH command execution helper """
             # Try to login via SSH
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_client.connect(hostname=hostname, username=username, password=password)
-            print(host, username, password)
             _, stdout, stderr = ssh_client.exec_command(command)
             output = stdout.read().decode().strip()
             error = stderr.read().decode().strip()
