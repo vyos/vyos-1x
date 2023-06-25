@@ -98,7 +98,7 @@ def is_intf_addr_assigned(intf, address) -> bool:
     return False
 
 def is_addr_assigned(ip_address, vrf=None) -> bool:
-    """ Verify if the given IPv4/IPv6 address is assigned to any interfac """
+    """ Verify if the given IPv4/IPv6 address is assigned to any interface """
     from netifaces import interfaces
     from vyos.util import get_interface_config
     from vyos.util import dict_search
@@ -114,6 +114,24 @@ def is_addr_assigned(ip_address, vrf=None) -> bool:
             return True
 
     return False
+
+def is_afi_configured(interface, afi):
+    """ Check if given address family is configured, or in other words - an IP
+    address is assigned to the interface. """
+    from netifaces import ifaddresses
+    from netifaces import AF_INET
+    from netifaces import AF_INET6
+
+    if afi not in [AF_INET, AF_INET6]:
+        raise ValueError('Address family must be in [AF_INET, AF_INET6]')
+
+    try:
+        addresses = ifaddresses(interface)
+    except ValueError as e:
+        print(e)
+        return False
+
+    return afi in addresses
 
 def is_loopback_addr(addr):
     """ Check if supplied IPv4/IPv6 address is a loopback address """
