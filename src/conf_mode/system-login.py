@@ -49,6 +49,8 @@ nss_config_file = "/etc/nsswitch.conf"
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
+# Maximim UID used when adding system users
+MAX_USER_UID: int = 59999
 # LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
@@ -67,6 +69,8 @@ def get_local_users():
     local_users = []
     for s_user in getpwall():
         if getpwnam(s_user.pw_name).pw_uid < MIN_USER_UID:
+            continue
+        if getpwnam(s_user.pw_name).pw_uid > MAX_USER_UID:
             continue
         if s_user.pw_name in SYSTEM_USER_SKIP_LIST:
             continue
