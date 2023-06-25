@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2017-2020 VyOS maintainers and contributors
+# Copyright (C) 2017-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -17,12 +17,14 @@
 import os
 
 from glob import glob
-from netifaces import interfaces
+from netifaces import AF_INET
 from sys import exit
 
 from vyos.config import Config
-from vyos.util import call
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
+from vyos.util import call
+from vyos.validate import is_afi_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -52,16 +54,14 @@ def verify(relay):
         if 'port' not in config:
             raise ConfigError(f'Port number mandatory for udp broadcast relay "{instance}"')
 
-        # if only oone interface is given it's a string -> move to list
-        if isinstance(config.get('interface', []), str):
-            config['interface'] = [ config['interface'] ]
         # Relaying data without two interface is kinda senseless ...
         if len(config.get('interface', [])) < 2:
             raise ConfigError('At least two interfaces are required for udp broadcast relay "{instance}"')
 
         for interface in config.get('interface', []):
-            if interface not in interfaces():
-                raise ConfigError('Interface "{interface}" does not exist!')
+            verify_interface_exists(interface)
+            if not is_afi_configured(interface, AF_INET):
+                raise ConfigError(f'Interface "{interface}" has no IPv4 address configured!')
 
     return None
 

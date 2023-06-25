@@ -111,6 +111,24 @@ def is_addr_assigned(addr):
 
     return False
 
+def is_afi_configured(interface, afi):
+    """ Check if given address family is configured, or in other words - an IP
+    address is assigned to the interface. """
+    from netifaces import ifaddresses
+    from netifaces import AF_INET
+    from netifaces import AF_INET6
+
+    if afi not in [AF_INET, AF_INET6]:
+        raise ValueError('Address family must be in [AF_INET, AF_INET6]')
+
+    try:
+        addresses = ifaddresses(interface)
+    except ValueError as e:
+        print(e)
+        return False
+
+    return afi in addresses
+
 def is_loopback_addr(addr):
     """ Check if supplied IPv4/IPv6 address is a loopback address """
     from ipaddress import ip_address
