@@ -31,15 +31,12 @@
               <leafNode name="version">
                 <properties>
                   <help>Default VRRP version to use, IPv6 always uses VRRP version 3</help>
-                  <completionHelp>
-                    <list>2 3</list>
-                  </completionHelp>
                   <valueHelp>
-                    <format>u32:2</format>
+                    <format>2</format>
                     <description>VRRP version 2</description>
                   </valueHelp>
                   <valueHelp>
-                    <format>u32:3</format>
+                    <format>3</format>
                     <description>VRRP version 3</description>
                   </valueHelp>
                   <constraint>
