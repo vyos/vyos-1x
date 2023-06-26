@@ -25,6 +25,9 @@ global_defs {
 {%     if vrrp.global_parameters.garp.master_repeat is vyos_defined %}
     vrrp_garp_master_repeat {{ vrrp.global_parameters.garp.master_repeat }}
 {%     endif %}
+{%     if vrrp.global_parameters.version is vyos_defined %}
+    vrrp_version {{ vrrp.global_parameters.version }}
+{%     endif %}
 {% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py
