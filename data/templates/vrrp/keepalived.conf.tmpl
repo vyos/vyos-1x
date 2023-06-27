@@ -9,6 +9,9 @@ global_defs {
 {%     if global_parameters.startup_delay is defined %}
     vrrp_startup_delay {{ global_parameters.startup_delay }}
 {%     endif %}
+{%     if global_parameters.version is defined %}
+    vrrp_version {{ global_parameters.version }}
+{%     endif %}
 {% endif %}
     notify_fifo /run/keepalived/keepalived_notify_fifo
     notify_fifo_script /usr/libexec/vyos/system/keepalived-fifo.py

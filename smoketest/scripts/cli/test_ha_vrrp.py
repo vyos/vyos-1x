@@ -88,6 +88,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         priority = '123'
         preempt_delay = '400'
         startup_delay = '120'
+        vrrp_version = '3'
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
@@ -114,6 +115,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
 
             # Global parameters
             self.cli_set(global_param_base + ['startup-delay', f'{startup_delay}'])
+            self.cli_set(global_param_base + ['version', vrrp_version])
 
         # commit changes
         self.cli_commit()
@@ -121,6 +123,7 @@ class TestVRRP(VyOSUnitTestSHIM.TestCase):
         # Check Global parameters
         config = getConfig(f'global_defs')
         self.assertIn(f'vrrp_startup_delay {startup_delay}', config)
+        self.assertIn(f'vrrp_version {vrrp_version}', config)
 
         for group in groups:
             vlan_id = group.lstrip('VLAN')
