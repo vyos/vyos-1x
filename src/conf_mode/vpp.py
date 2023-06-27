@@ -28,8 +28,8 @@ from vyos.template import render
 from vyos.xml import defaults
 
 from vyos import ConfigError
-from vyos import vpp
 from vyos import airbag
+from vyos.vpp import VPPControl
 
 airbag.enable()
 
@@ -124,10 +124,11 @@ def apply(config):
     call('systemctl daemon-reload')
 
     call('sudo sysctl -w vm.nr_hugepages=4096')
+    vpp_control = VPPControl()
     for iface, _ in config['interface'].items():
         # Create lcp
         if iface not in Section.interfaces():
-            vpp.lcp_create_host_interface(iface)
+            vpp_control.lcp_pair_add(iface, iface)
 
         # update interface config
         #e = EthernetIf(iface)

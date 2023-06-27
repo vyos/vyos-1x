@@ -140,6 +140,7 @@ Depends:
   python3-tabulate,
   python3-vici (>= 5.7.2),
   python3-voluptuous,
+  python3-vpp-api,
   python3-xmltodict,
   python3-zmq,
   qrencode,
