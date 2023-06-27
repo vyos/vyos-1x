@@ -16,6 +16,7 @@
 
 
 from pathlib import Path
+from re import search as re_search, MULTILINE as re_M
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
@@ -38,14 +39,26 @@ service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
 
 
-def _get_pci_address_by_interface(iface):
+def _get_pci_address_by_interface(iface) -> str:
     from vyos.util import rc_cmd
     rc, out = rc_cmd(f'ethtool -i {iface}')
-    if rc == 0:
-        output_lines = out.split('\n')
-        for line in output_lines:
-            if 'bus-info' in line:
-                return line.split(None, 1)[1].strip()
+    # if ethtool command was successful
+    if rc == 0 and out:
+        regex_filter = r'^bus-info: (?P<address>\w+:\w+:\w+\.\w+)$'
+        re_obj = re_search(regex_filter, out, re_M)
+        # if bus-info with PCI address found
+        if re_obj:
+            address = re_obj.groupdict().get('address', '')
+            return address
+    # use VPP - maybe interface already attached to it
+    vpp_control = VPPControl()
+    pci_addr = vpp_control.get_pci_addr(iface)
+    vpp_control.disconnect()
+    if pci_addr:
+        return pci_addr
+    # return empty string if address was not found
+    return ''
+
 
 
 def get_config(config=None):

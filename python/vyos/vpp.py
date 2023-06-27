@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from re import search as re_search, MULTILINE as re_M
+
 from vpp_papi import VPPApiClient
 
 
@@ -27,17 +29,29 @@ class VPPControl:
         self.vpp_api_client.connect('vpp-vyos')
 
     def __del__(self) -> None:
+        """Disconnect from VPP API (destructor)
+        """
+        self.disconnect()
+
+    def disconnect(self) -> None:
         """Disconnect from VPP API
         """
         self.vpp_api_client.disconnect()
 
-    def cli_cmd(self, command: str) -> None:
+    def cli_cmd(self, command: str, return_output: bool = False) -> str:
         """Send raw CLI command
 
         Args:
             command (str): command to send
+            return_output (bool, optional): Return command output. Defaults to False.
+
+        Returns:
+            str: output of the command, only if it was successful
         """
-        self.vpp_api_client.api.cli_inband(cmd=command)
+        cli_answer = self.vpp_api_client.api.cli_inband(cmd=command)
+        if return_output and cli_answer.retval == 0:
+            return cli_answer.reply
+        return ''
 
     def get_mac(self, ifname: str) -> str:
         """Find MAC address by interface name in VPP
@@ -112,3 +126,25 @@ class VPPControl:
         iface_index = self.get_sw_if_index(iface_name)
         self.vpp_api_client.api.sw_interface_set_rx_mode(
             sw_if_index=iface_index, mode=modes_dict[rx_mode])
+
+    def get_pci_addr(self, ifname: str) -> str:
+        """Find PCI address of interface by interface name in VPP
+
+        Args:
+            ifname (str): interface name inside VPP
+
+        Returns:
+            str: PCI address
+        """
+        hw_info = self.cli_cmd(f'show hardware-interfaces {ifname}',
+                               return_output=True)
+
+        regex_filter = r'^\s+pci: device (?P<device>\w+:\w+) subsystem (?P<subsystem>\w+:\w+) address (?P<address>\w+:\w+:\w+\.\w+) numa (?P<numa>\w+)$'
+        re_obj = re_search(regex_filter, hw_info, re_M)
+
+        # return empty string if no interface or no PCI info was found
+        if not hw_info or not re_obj:
+            return ''
+
+        address = re_obj.groupdict().get('address', '')
+        return address
