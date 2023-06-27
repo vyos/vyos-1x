@@ -104,8 +104,9 @@ def cancel_shutdown():
 
 def check_unsaved_config():
     from vyos.config_mgmt import unsaved_commits
+    from vyos.util import boot_configuration_success
 
-    if unsaved_commits():
+    if unsaved_commits() and boot_configuration_success():
         print("Warning: there are unsaved configuration changes!")
         print("Run 'save' command if you do not want to lose those changes after reboot/shutdown.")
     else:
