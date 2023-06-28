@@ -16,9 +16,11 @@
 
 
 from pathlib import Path
+from re import search as re_search, MULTILINE as re_M
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.ifconfig import Section
 from vyos.ifconfig import EthernetIf
 from vyos.ifconfig import interface
@@ -30,6 +32,7 @@ from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 from vyos.vpp import VPPControl
+from vyos.vpp import HostControl
 
 airbag.enable()
 
@@ -38,14 +41,25 @@ service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
 
 
-def _get_pci_address_by_interface(iface):
+def _get_pci_address_by_interface(iface) -> str:
     from vyos.util import rc_cmd
     rc, out = rc_cmd(f'ethtool -i {iface}')
-    if rc == 0:
-        output_lines = out.split('\n')
-        for line in output_lines:
-            if 'bus-info' in line:
-                return line.split(None, 1)[1].strip()
+    # if ethtool command was successful
+    if rc == 0 and out:
+        regex_filter = r'^bus-info: (?P<address>\w+:\w+:\w+\.\w+)$'
+        re_obj = re_search(regex_filter, out, re_M)
+        # if bus-info with PCI address found
+        if re_obj:
+            address = re_obj.groupdict().get('address', '')
+            return address
+    # use VPP - maybe interface already attached to it
+    vpp_control = VPPControl()
+    pci_addr = vpp_control.get_pci_addr(iface)
+    if pci_addr:
+        return pci_addr
+    # return empty string if address was not found
+    return ''
+
 
 
 def get_config(config=None):
@@ -56,8 +70,20 @@ def get_config(config=None):
 
     base = ['vpp']
     base_ethernet = ['interfaces', 'ethernet']
+
+    # find interfaces removed from VPP
+    removed_ifaces = []
+    tmp = node_changed(conf, base + ['interface'])
+    if tmp:
+        for removed_iface in tmp:
+            pci_address: str = _get_pci_address_by_interface(removed_iface)
+            removed_ifaces.append({
+                'iface_name': removed_iface,
+                'iface_pci_addr': pci_address
+            })
+
     if not conf.exists(base):
-        return None
+        return {'removed_ifaces': removed_ifaces}
 
     config = conf.get_config_dict(base,
                                   get_first_key=True,
@@ -84,12 +110,15 @@ def get_config(config=None):
     config['other_interfaces'] = conf.get_config_dict(base_ethernet, key_mangling=('-', '_'),
                                      get_first_key=True, no_tag_node_value_mangle=True)
 
+    if removed_ifaces:
+        config['removed_ifaces'] = removed_ifaces
+
     return config
 
 
 def verify(config):
     # bail out early - looks like removal from running config
-    if not config:
+    if not config or (len(config) == 1 and 'removed_ifaces' in config):
         return None
 
     if 'interface' not in config:
@@ -101,7 +130,7 @@ def verify(config):
 
 
 def generate(config):
-    if not config:
+    if not config or (len(config) == 1 and 'removed_ifaces' in config):
         # Remove old config and return
         service_conf.unlink(missing_ok=True)
         return None
@@ -113,22 +142,24 @@ def generate(config):
 
 
 def apply(config):
-    if not config:
-        print(f'systemctl stop {service_name}.service')
+    if not config or (len(config) == 1 and 'removed_ifaces' in config):
         call(f'systemctl stop {service_name}.service')
-        return
     else:
-        print(f'systemctl restart {service_name}.service')
+        call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')
 
-    call('systemctl daemon-reload')
+    for iface in config.get('removed_ifaces', []):
+        HostControl().pci_rescan(iface['iface_pci_addr'])
 
-    call('sudo sysctl -w vm.nr_hugepages=4096')
-    vpp_control = VPPControl()
-    for iface, _ in config['interface'].items():
-        # Create lcp
-        if iface not in Section.interfaces():
-            vpp_control.lcp_pair_add(iface, iface)
+    if 'interface' in config:
+        # connect to VPP
+        # must be performed multiple attempts because API is not available
+        # immediately after the service restart
+        vpp_control = VPPControl(attempts=20, interval=500)
+        for iface, _ in config['interface'].items():
+            # Create lcp
+            if iface not in Section.interfaces():
+                vpp_control.lcp_pair_add(iface, iface)
 
         # update interface config
         #e = EthernetIf(iface)
