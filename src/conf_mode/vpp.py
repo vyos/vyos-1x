@@ -53,12 +53,12 @@ def _get_pci_address_by_interface(iface) -> str:
             address = re_obj.groupdict().get('address', '')
             return address
     # use VPP - maybe interface already attached to it
-    vpp_control = VPPControl()
+    vpp_control = VPPControl(attempts=20, interval=500)
     pci_addr = vpp_control.get_pci_addr(iface)
     if pci_addr:
         return pci_addr
-    # return empty string if address was not found
-    return ''
+    # raise error if PCI address was not found
+    raise ConfigError(f'Cannot find PCI address for interface {iface}')
 
 
 
@@ -148,8 +148,14 @@ def apply(config):
         call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')
 
+    # Initialize interfaces removed from VPP
     for iface in config.get('removed_ifaces', []):
-        HostControl().pci_rescan(iface['iface_pci_addr'])
+        host_control = HostControl()
+        # rescan PCI to use a proper driver
+        host_control.pci_rescan(iface['iface_pci_addr'])
+        # rename to the proper name
+        iface_new_name: str = host_control.get_eth_name(iface['iface_pci_addr'])
+        host_control.rename_iface(iface_new_name, iface['iface_name'])
 
     if 'interface' in config:
         # connect to VPP
