@@ -179,3 +179,12 @@ systemctl enable vyos-config-cloud-init.service
 
 # Generate API GraphQL schema
 /usr/libexec/vyos/services/api/graphql/generate/generate_schema.py
+
+# T1797: disable VPP support for rolling release, should be used by developers
+# only (in the initial phase). If you wan't to enable VPP use the below command
+# on your VyOS installation:
+#
+# sudo mv /opt/vyatta/share/vyatta-cfg/vpp /opt/vyatta/share/vyatta-cfg/templates/vpp
+if [ -d /opt/vyatta/share/vyatta-cfg/templates/vpp ]; then
+    mv /opt/vyatta/share/vyatta-cfg/templates/vpp /opt/vyatta/share/vyatta-cfg/vpp
+fi
