@@ -569,8 +569,6 @@ def snmp_auth_oid(type):
 
 @register_filter('nft_action')
 def nft_action(vyos_action):
-    if vyos_action == 'accept':
-        return 'return'
     return vyos_action
 
 @register_filter('nft_rule')
@@ -624,13 +622,11 @@ def nft_intra_zone_action(zone_conf, ipv6=False):
         name_prefix = 'NAME6_' if ipv6 else 'NAME_'
 
         if 'action' in intra_zone:
-            if intra_zone['action'] == 'accept':
-                return 'return'
             return intra_zone['action']
         elif dict_search_args(intra_zone, 'firewall', fw_name):
             name = dict_search_args(intra_zone, 'firewall', fw_name)
             return f'jump {name_prefix}{name}'
-    return 'return'
+    return 'accept'
 
 @register_filter('nft_nested_group')
 def nft_nested_group(out_list, includes, groups, key):

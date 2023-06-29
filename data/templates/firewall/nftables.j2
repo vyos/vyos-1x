@@ -22,7 +22,6 @@ table ip vyos_filter {
 {%         endif %}
 {%     endfor %}
 {% endif %}
-        jump VYOS_POST_FW
     }
     chain VYOS_FW_LOCAL {
         type filter hook input priority 0; policy accept;
@@ -36,17 +35,12 @@ table ip vyos_filter {
 {%         endif %}
 {%     endfor %}
 {% endif %}
-        jump VYOS_POST_FW
     }
     chain VYOS_FW_OUTPUT {
         type filter hook output priority 0; policy accept;
 {% if state_policy is vyos_defined %}
         jump VYOS_STATE_POLICY
 {% endif %}
-        jump VYOS_POST_FW
-    }
-    chain VYOS_POST_FW {
-        return
     }
     chain VYOS_FRAG_MARK {
         type filter hook prerouting priority -450; policy accept;
@@ -131,7 +125,6 @@ table ip6 vyos_filter {
 {%         endif %}
 {%     endfor %}
 {% endif %}
-        jump VYOS_POST_FW6
     }
     chain VYOS_FW6_LOCAL {
         type filter hook input priority 0; policy accept;
@@ -145,17 +138,12 @@ table ip6 vyos_filter {
 {%         endif %}
 {%     endfor %}
 {% endif %}
-        jump VYOS_POST_FW6
     }
     chain VYOS_FW6_OUTPUT {
         type filter hook output priority 0; policy accept;
 {% if state_policy is vyos_defined %}
         jump VYOS_STATE_POLICY6
 {% endif %}
-        jump VYOS_POST_FW6
-    }
-    chain VYOS_POST_FW6 {
-        return
     }
     chain VYOS_FRAG6_MARK {
         type filter hook prerouting priority -450; policy accept;

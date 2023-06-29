@@ -45,7 +45,7 @@ def fqdn_config_parse(firewall):
         rule = path[3] # rule id
         suffix = path[4][0] # source/destination (1 char)
         set_name = f'{fw_name}_{rule}_{suffix}'
-            
+
         if path[0] == 'name':
             firewall['ip_fqdn'][set_name] = domain
         elif path[0] == 'ipv6_name':
@@ -76,8 +76,6 @@ def remove_nftables_rule(table, chain, handle):
 # Functions below used by template generation
 
 def nft_action(vyos_action):
-    if vyos_action == 'accept':
-        return 'return'
     return vyos_action
 
 def parse_rule(rule_conf, fw_name, rule_id, ip_name):

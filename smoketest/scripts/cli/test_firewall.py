@@ -102,7 +102,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['ip saddr @GEOIP_CC_smoketest_1', 'drop'],
-            ['ip saddr != @GEOIP_CC_smoketest_2', 'return']
+            ['ip saddr != @GEOIP_CC_smoketest_2', 'accept']
         ]
 
         # -t prevents 1000+ GeoIP elements being returned
@@ -147,16 +147,16 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'return'],
+            ['ip saddr @N_smoketest_network', 'ip daddr 172.16.10.10', 'th dport @P_smoketest_port', 'accept'],
             ['elements = { 172.16.99.0/24 }'],
             ['elements = { 53, 123 }'],
-            ['ether saddr @M_smoketest_mac', 'return'],
+            ['ether saddr @M_smoketest_mac', 'accept'],
             ['elements = { 00:01:02:03:04:05 }'],
             ['set D_smoketest_domain'],
             ['elements = { 192.0.2.5, 192.0.2.8,'],
             ['192.0.2.10, 192.0.2.11 }'],
-            ['ip saddr @D_smoketest_domain', 'return'],
-            ['oifname @I_smoketest_interface', 'return']
+            ['ip saddr @D_smoketest_domain', 'accept'],
+            ['oifname @I_smoketest_interface', 'accept']
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
@@ -188,7 +188,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['ip saddr @N_smoketest_network1', 'th dport @P_smoketest_port1', 'return'],
+            ['ip saddr @N_smoketest_network1', 'th dport @P_smoketest_port1', 'accept'],
             ['elements = { 172.16.99.0/24, 172.16.101.0/24 }'],
             ['elements = { 53, 123 }']
         ]
@@ -250,9 +250,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
             [f'iifname "{interface_wc}"', f'jump NAME_{name}'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'return'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
-            ['tcp dport 22', 'limit rate 5/minute', 'return'],
+            ['tcp dport 22', 'limit rate 5/minute', 'accept'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop'],
             ['tcp dport 22', 'add @RECENT_smoketest_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
             ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"', 'meta pkttype broadcast'],
@@ -308,8 +308,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME_{name}'],
-            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'return'],
-            ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'return'],
+            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
+            ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'accept'],
             [f'log prefix "[{name}-default-D]"', 'drop'],
             ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
             [f'log prefix "[{name2}-default-J]"', f'jump NAME_{name}'],
@@ -381,7 +381,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             [f'iifname "{interface}"', f'jump NAME6_{name}'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" log level crit', 'return'],
+            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" log level crit', 'accept'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', f'iifname "{interface}"', 'reject'],
             ['meta l4proto gre', f'oifname "{interface}"', 'return'],
             ['smoketest default-action', f'log prefix "[{name}-default-D]"', 'drop']
