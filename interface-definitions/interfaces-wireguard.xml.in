@@ -5,7 +5,7 @@
       <tagNode name="wireguard" owner="${vyos_conf_scripts_dir}/interfaces-wireguard.py">
         <properties>
           <help>WireGuard Interface</help>
-          <priority>381</priority>
+          <priority>379</priority>
           <constraint>
             <regex>wg[0-9]+</regex>
           </constraint>
