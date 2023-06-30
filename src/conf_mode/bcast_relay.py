@@ -52,11 +52,11 @@ def verify(relay):
 
         # we certainly require a UDP port to listen to
         if 'port' not in config:
-            raise ConfigError(f'Port number mandatory for udp broadcast relay "{instance}"')
+            raise ConfigError(f'Port number is mandatory for UDP broadcast relay "{instance}"')
 
         # Relaying data without two interface is kinda senseless ...
         if len(config.get('interface', [])) < 2:
-            raise ConfigError('At least two interfaces are required for udp broadcast relay "{instance}"')
+            raise ConfigError('At least two interfaces are required for UDP broadcast relay "{instance}"')
 
         for interface in config.get('interface', []):
             verify_interface_exists(interface)
