@@ -3,7 +3,7 @@
   <node name="vpp" owner="${vyos_conf_scripts_dir}/vpp.py">
     <properties>
       <help>Accelerated data-plane</help>
-      <priority>1280</priority>
+      <priority>295</priority>
     </properties>
     <children>
       <node name="cpu">

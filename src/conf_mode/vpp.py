@@ -21,13 +21,11 @@ from pathlib import Path
 from re import search as re_search, MULTILINE as re_M
 
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.ifconfig import Section
-from vyos.ifconfig import EthernetIf
-from vyos.ifconfig import interface
-from vyos.util import call
-from vyos.util import rc_cmd
+from vyos.util import call, rc_cmd, boot_configuration_complete
 from vyos.template import render
 from vyos.xml import defaults
 
@@ -48,7 +46,6 @@ MIN_TOTAL_MEMORY = 6
 
 
 def _get_pci_address_by_interface(iface) -> str:
-    from vyos.util import rc_cmd
     rc, out = rc_cmd(f'ethtool -i {iface}')
     # if ethtool command was successful
     if rc == 0 and out:
@@ -87,6 +84,9 @@ def get_config(config=None):
                 'iface_name': removed_iface,
                 'iface_pci_addr': pci_address
             })
+            # add an interface to a list of interfaces that need
+            # to be reinitialized after the commit
+            set_dependents('ethernet', conf, removed_iface)
 
     if not conf.exists(base):
         return {'removed_ifaces': removed_ifaces}
@@ -107,6 +107,9 @@ def get_config(config=None):
         for iface, iface_config in config['interface'].items():
             default_values_iface = defaults(base + ['interface'])
             config['interface'][iface] = dict_merge(default_values_iface, config['interface'][iface])
+            # add an interface to a list of interfaces that need
+            # to be reinitialized after the commit
+            set_dependents('ethernet', conf, iface)
 
         # Get PCI address auto
         for iface, iface_config in config['interface'].items():
@@ -186,9 +189,9 @@ def apply(config):
             if iface not in Section.interfaces():
                 vpp_control.lcp_pair_add(iface, iface)
 
-        # update interface config
-        #e = EthernetIf(iface)
-        #e.update(config['other_interfaces'][iface])
+    # reinitialize interfaces, but not during the first boot
+    if boot_configuration_complete():
+        call_dependents()
 
 
 if __name__ == '__main__':
