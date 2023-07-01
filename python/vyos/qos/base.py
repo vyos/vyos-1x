@@ -204,18 +204,20 @@ class QoSBase:
                 self._build_base_qdisc(cls_config, int(cls))
 
                 # every match criteria has it's tc instance
-                filter_cmd = f'tc filter replace dev {self._interface} parent {self._parent:x}:'
+                filter_cmd_base = f'tc filter add dev {self._interface} parent {self._parent:x}:'
 
                 if priority:
-                    filter_cmd += f' prio {cls}'
+                    filter_cmd_base += f' prio {cls}'
                 elif 'priority' in cls_config:
                     prio = cls_config['priority']
-                    filter_cmd += f' prio {prio}'
+                    filter_cmd_base += f' prio {prio}'
 
-                filter_cmd += ' protocol all'
+                filter_cmd_base += ' protocol all'
 
                 if 'match' in cls_config:
-                    for match, match_config in cls_config['match'].items():
+                    for index, (match, match_config) in enumerate(cls_config['match'].items(), start=1):
+                        filter_cmd = filter_cmd_base
+                        filter_cmd += f' prio {index}'
                         if 'mark' in match_config:
                             mark = match_config['mark']
                             filter_cmd += f' handle {mark} fw'
@@ -290,9 +292,18 @@ class QoSBase:
                                     elif af == 'ipv6':
                                         filter_cmd += f' match u8 {mask} {mask} at 53'
 
+                                cls = int(cls)
+                                filter_cmd += f' flowid {self._parent:x}:{cls:x}'
+                                self._cmd(filter_cmd)
+
                 else:
 
                     filter_cmd += ' basic'
+
+                    cls = int(cls)
+                    filter_cmd += f' flowid {self._parent:x}:{cls:x}'
+                    self._cmd(filter_cmd)
+
 
                 # The police block allows limiting of the byte or packet rate of
                 # traffic matched by the filter it is attached to.
@@ -318,10 +329,6 @@ class QoSBase:
                 # if 'burst' in cls_config:
                 #     burst = cls_config['burst']
                 #     filter_cmd += f' burst {burst}'
-
-                cls = int(cls)
-                filter_cmd += f' flowid {self._parent:x}:{cls:x}'
-                self._cmd(filter_cmd)
 
         if self.qostype == 'limiter':
             if 'default' in config:
