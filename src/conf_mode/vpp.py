@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import psutil
 
 from pathlib import Path
 from re import search as re_search, MULTILINE as re_M
@@ -39,6 +41,10 @@ airbag.enable()
 service_name = 'vpp'
 service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
+sysctl_vpp = '/etc/sysctl.d/80-vpp.conf'
+
+# Min memory 6GB (2GB reserved for vpp)
+MIN_TOTAL_MEMORY = 6
 
 
 def _get_pci_address_by_interface(iface) -> str:
@@ -128,15 +134,26 @@ def verify(config):
         if 'corelist_workers' in config['cpu'] and 'main_core' not in config['cpu']:
             raise ConfigError(f'"cpu main-core" is required but not set!')
 
+    memory = psutil.virtual_memory()
+    memory_total = round(memory.total / (1024 ** 3), 2)
+    if memory_total < MIN_TOTAL_MEMORY:
+        raise ConfigError(
+            f'Not enough installed memory {memory_total}GB! '
+            f'The minimum required memory is {MIN_TOTAL_MEMORY}GB.'
+        )
+
 
 def generate(config):
     if not config or (len(config) == 1 and 'removed_ifaces' in config):
         # Remove old config and return
         service_conf.unlink(missing_ok=True)
+        if os.path.isfile(sysctl_vpp):
+            os.unlink(sysctl_vpp)
         return None
 
     render(service_conf, 'vpp/startup.conf.j2', config)
     render(systemd_override, 'vpp/override.conf.j2', config)
+    render(sysctl_vpp, 'vpp/sysctl.conf.j2', config)
 
     return None
 
@@ -147,6 +164,8 @@ def apply(config):
     else:
         call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')
+
+    call(f'sysctl -qp {sysctl_vpp}')
 
     # Initialize interfaces removed from VPP
     for iface in config.get('removed_ifaces', []):
