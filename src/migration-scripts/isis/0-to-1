@@ -37,12 +37,9 @@ if not config.exists(base):
     # Nothing to do
     exit(0)
 
-# Only one IS-IS process is supported, thus this operation is save
-isis_base = base + config.list_nodes(base)
-
 # We need a temporary copy of the config
 tmp_base = ['protocols', 'isis2']
-config.copy(isis_base, tmp_base)
+config.copy(base, tmp_base)
 
 # Now it's save to delete the old configuration
 config.delete(base)
