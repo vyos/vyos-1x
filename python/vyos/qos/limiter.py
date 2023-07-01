@@ -17,6 +17,7 @@ from vyos.qos.base import QoSBase
 
 class Limiter(QoSBase):
     _direction = ['ingress']
+    qostype = 'limiter'
 
     def update(self, config, direction):
         tmp = f'tc qdisc add dev {self._interface} handle {self._parent:x}: {direction}'
