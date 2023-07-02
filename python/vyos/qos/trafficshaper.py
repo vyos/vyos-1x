@@ -22,6 +22,7 @@ MINQUANTUM = 1000
 
 class TrafficShaper(QoSBase):
     _parent = 1
+    qostype = 'shaper'
 
     # https://man7.org/linux/man-pages/man8/tc-htb.8.html
     def update(self, config, direction):

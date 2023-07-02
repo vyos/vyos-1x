@@ -217,7 +217,8 @@ class QoSBase:
                 if 'match' in cls_config:
                     for index, (match, match_config) in enumerate(cls_config['match'].items(), start=1):
                         filter_cmd = filter_cmd_base
-                        filter_cmd += f' prio {index}'
+                        if self.qostype == 'shaper':
+                            filter_cmd += f' prio {index}'
                         if 'mark' in match_config:
                             mark = match_config['mark']
                             filter_cmd += f' handle {mark} fw'
