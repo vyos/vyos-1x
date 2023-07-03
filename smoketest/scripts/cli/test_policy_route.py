@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -100,7 +100,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"','jump VYOS_PBR_UD_smoketest'],
             ['ip daddr @N_smoketest_network1', 'ip saddr @N_smoketest_network'],
         ]
 
@@ -119,7 +119,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         mark_hex = "{0:#010x}".format(int(mark))
 
         nftables_search = [
-            [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"','jump VYOS_PBR_UD_smoketest'],
             ['ip daddr 172.16.10.10', 'ip saddr 172.16.20.10', 'meta mark set ' + mark_hex],
         ]
 
@@ -138,7 +138,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         mark_hex_set = "{0:#010x}".format(int(conn_mark_set))
 
         nftables_search = [
-            [f'iifname "{interface}"','jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"','jump VYOS_PBR_UD_smoketest'],
             ['ip daddr 172.16.10.10', 'ip saddr 172.16.20.10', 'ct mark ' + mark_hex, 'ct mark set ' + mark_hex_set],
         ]
 
@@ -164,7 +164,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # IPv4
 
         nftables_search = [
-            [f'iifname "{interface}"', 'jump VYOS_PBR_smoketest'],
+            [f'iifname "{interface}"', 'jump VYOS_PBR_UD_smoketest'],
             ['tcp flags syn / syn,ack', 'tcp dport 8888', 'meta mark set ' + mark_hex]
         ]
 
@@ -173,7 +173,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # IPv6
 
         nftables6_search = [
-            [f'iifname "{interface}"', 'jump VYOS_PBR6_smoketest'],
+            [f'iifname "{interface}"', 'jump VYOS_PBR6_UD_smoketest'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', 'meta mark set ' + mark_hex]
         ]
 
@@ -246,7 +246,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         # IPv4
         nftables_search = [
-            ['iifname { "' + interface + '", "' + interface_wc + '" }', 'jump VYOS_PBR_smoketest'],
+            ['iifname { "' + interface + '", "' + interface_wc + '" }', 'jump VYOS_PBR_UD_smoketest'],
             ['meta l4proto udp', 'drop'],
             ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
@@ -258,7 +258,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
 
         # IPv6
         nftables6_search = [
-            [f'iifname "{interface_wc}"', 'jump VYOS_PBR6_smoketest'],
+            [f'iifname "{interface_wc}"', 'jump VYOS_PBR6_UD_smoketest'],
             ['meta l4proto udp', 'drop'],
             ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
             ['ct state new', 'tcp dport 22', 'ip6 saddr 2001:db8::/64', 'ip6 hoplimit > 2', 'meta mark set ' + mark_hex],
