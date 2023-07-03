@@ -51,8 +51,8 @@ def fqdn_config_parse(firewall):
             
         if (path[0] == 'ipv4') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
             firewall['ip_fqdn'][set_name] = domain
-        elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name'):
-            if path[1] == 'ipv6_name':
+        elif (path[0] == 'ipv6') and (path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name'):
+            if path[1] == 'name':
                 set_name = f'name6_{priority}_{rule}_{suffix}'
             firewall['ip6_fqdn'][set_name] = domain
 
@@ -160,8 +160,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if hook == 'OUT':
                     hook_name = 'output'
                 if hook == 'NAM':
-                    hook_name = f'name{def_suffix}'
-                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC_{hook_name}_{fw_name}_{rule_id}')
+                    hook_name = f'name'
+                output.append(f'{ip_name} {prefix}addr {operator} @GEOIP_CC{def_suffix}_{hook_name}_{fw_name}_{rule_id}')
 
             if 'mac_address' in side_conf:
                 suffix = side_conf["mac_address"]
@@ -519,12 +519,11 @@ def geoip_update(firewall, force=False):
         # Map country codes to set names
         for codes, path in dict_search_recursive(firewall, 'country_code'):
             set_name = f'GEOIP_CC_{path[1]}_{path[2]}_{path[4]}'
-            if path[1] == 'ipv6_name':
-                set_name = f'GEOIP_CC_name6_{path[2]}_{path[4]}'
-            if ( path[0] == 'ipv4' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'name' ):
+            if ( path[0] == 'ipv4'):
                 for code in codes:
                     ipv4_codes.setdefault(code, []).append(set_name)
-            elif ( path[0] == 'ipv6' ) and ( path[1] == 'forward' or path[1] == 'input' or path[1] == 'output' or path[1] == 'ipv6_name' ):
+            elif ( path[0] == 'ipv6' ):
+                set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
                 for code in codes:
                     ipv6_codes.setdefault(code, []).append(set_name)
 

@@ -30,7 +30,7 @@
               <properties>
                 <help>Set jump target. Action jump must be defined to use this setting</help>
                 <completionHelp>
-                  <path>firewall ipv6 ipv6-name</path>
+                  <path>firewall ipv6 name</path>
                 </completionHelp>
               </properties>
             </leafNode>

@@ -362,14 +362,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name = 'v6-smoketest'
         interface = 'eth0'
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'source', 'address', '2002::1'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'log', 'enable'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'log-options', 'level', 'crit'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'source', 'address', '2002::1'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'default-action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'action', 'reject'])
@@ -411,15 +411,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name2 = 'v6-smoketest-adv2'
         interface = 'eth0'
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'packet-length', '65'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'packet-length', '513'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'packet-length', '1025'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'dscp', '18'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'dscp', '53'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'packet-length', '65'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'packet-length', '513'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'packet-length', '1025'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'dscp', '18'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'dscp', '53'])
 
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '4', 'packet-length', '1-1999'])
@@ -454,20 +454,20 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'group', 'ipv6-address-group', 'mask_group', 'address', '::beef'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'default-action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'destination', 'address', '::1111:2222:3333:4444'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '1', 'destination', 'address-mask', '::ffff:ffff:ffff:ffff'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address', '::1111:2222:3333:4444'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address-mask', '::ffff:ffff:ffff:ffff'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '2', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '2', 'source', 'address', '!::aaaa:bbbb:cccc:dddd'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '2', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '2', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '2', 'source', 'address', '!::aaaa:bbbb:cccc:dddd'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '2', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
 
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'action', 'drop'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'source', 'group', 'address-group', 'mask_group'])
-        self.cli_set(['firewall', 'ipv6', 'ipv6-name', name, 'rule', '3', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'source', 'group', 'address-group', 'mask_group'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '3', 'source', 'address-mask', '::ffff:ffff:ffff:ffff'])
 
         self.cli_commit()
 

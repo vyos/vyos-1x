@@ -21,7 +21,7 @@
 #  set firewall ipv6-name <name> ...
 #  To
 #  set firewall ipv4 name <name> 
-#  set firewall ipv6 ipv6-name <name> 
+#  set firewall ipv6 name <name> 
 
 ## Also from 'firewall interface' removed.
 ## in and out:
@@ -97,11 +97,11 @@ if config.exists(base + ['name']):
     config.delete(base + ['name'])
 
 if config.exists(base + ['ipv6-name']):
-    config.set(['firewall', 'ipv6', 'ipv6-name'])
-    config.set_tag(['firewall', 'ipv6', 'ipv6-name'])
+    config.set(['firewall', 'ipv6', 'name'])
+    config.set_tag(['firewall', 'ipv6', 'name'])
 
     for ipv6name in config.list_nodes(base + ['ipv6-name']):
-        config.copy(base + ['ipv6-name', ipv6name], base + ['ipv6', 'ipv6-name', ipv6name])
+        config.copy(base + ['ipv6-name', ipv6name], base + ['ipv6', 'name', ipv6name])
     config.delete(base + ['ipv6-name'])
 
 ### Migration of firewall interface

@@ -1,5 +1,5 @@
 <!-- include start from firewall/ipv6-custom-name.xml.i -->
-<tagNode name="ipv6-name">
+<tagNode name="name">
   <properties>
     <help>IPv6 custom firewall</help>
     <constraint>
@@ -14,7 +14,7 @@
       <properties>
         <help>Set jump target. Action jump must be defined in default-action to use this setting</help>
         <completionHelp>
-          <path>firewall ipv6 ipv6-name</path>
+          <path>firewall ipv6 name</path>
         </completionHelp>
       </properties>
     </leafNode>
@@ -38,7 +38,7 @@
           <properties>
             <help>Set jump target. Action jump must be defined to use this setting</help>
             <completionHelp>
-              <path>firewall ipv6 ipv6-name</path>
+              <path>firewall ipv6 name</path>
             </completionHelp>
           </properties>
         </leafNode>

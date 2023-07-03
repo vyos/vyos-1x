@@ -183,8 +183,8 @@ table ip6 vyos_filter {
         exthdr frag exists meta mark set 0xffff1 return
     }
 
-{%     if ipv6.ipv6_name is vyos_defined %}
-{%         for name_text, conf in ipv6.ipv6_name.items() %}
+{%     if ipv6.name is vyos_defined %}
+{%         for name_text, conf in ipv6.name.items() %}
     chain NAME6_{{ name_text }} {
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
