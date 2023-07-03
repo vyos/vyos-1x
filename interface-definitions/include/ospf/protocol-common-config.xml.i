@@ -1,4 +1,24 @@
 <!-- include start from ospf/protocol-common-config.xml.i -->
+<node name="aggregation">
+  <properties>
+    <help>External route aggregation</help>
+  </properties>
+  <children>
+    <leafNode name="timer">
+      <properties>
+        <help>Delay timer</help>
+        <valueHelp>
+          <format>u32:5-1800</format>
+          <description>Timer interval in seconds</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 5-1800"/>
+        </constraint>
+      </properties>
+      <defaultValue>5</defaultValue>
+    </leafNode>
+  </children>
+</node>
 <tagNode name="access-list">
   <properties>
     <help>Access list to filter networks in routing updates</help>
@@ -816,6 +836,38 @@
     </leafNode>
   </children>
 </node>
+<tagNode name="summary-address">
+  <properties>
+    <help>External summary address</help>
+    <valueHelp>
+      <format>ipv4net</format>
+      <description>OSPF area number in dotted decimal notation</description>
+    </valueHelp>
+    <constraint>
+      <validator name="ipv4-prefix"/>
+    </constraint>
+  </properties>
+  <children>
+    <leafNode name="no-advertise">
+      <properties>
+        <help>Don not advertise summary route</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+    <leafNode name="tag">
+      <properties>
+        <help>Router tag</help>
+        <valueHelp>
+          <format>u32:1-4294967295</format>
+          <description>Router tag value</description>
+        </valueHelp>
+        <constraint>
+          <validator name="numeric" argument="--range 1-4294967295"/>
+        </constraint>
+      </properties>
+    </leafNode>
+  </children>
+</tagNode>
 <node name="timers">
   <properties>
     <help>Adjust routing timers</help>

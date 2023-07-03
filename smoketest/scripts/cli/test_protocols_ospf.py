@@ -159,6 +159,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         on_startup = '30'
         on_shutdown = '60'
         refresh = '50'
+        aggregation_timer = '100'
+        summary_nets = {
+            '10.0.1.0/24' : {},
+            '10.0.2.0/24' : {'tag' : '50'},
+            '10.0.3.0/24' : {'no_advertise' : {}},
+         }
 
         self.cli_set(base_path + ['distance', 'global', global_distance])
         self.cli_set(base_path + ['distance', 'ospf', 'external', external])
@@ -169,6 +175,15 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(base_path + ['mpls-te', 'enable'])
         self.cli_set(base_path + ['refresh', 'timers', refresh])
+
+        self.cli_set(base_path + ['aggregation', 'timer', aggregation_timer])
+
+        for summary, summary_options in summary_nets.items():
+            self.cli_set(base_path + ['summary-address', summary])
+            if 'tag' in summary_options:
+                self.cli_set(base_path + ['summary-address', summary, 'tag', summary_options['tag']])
+            if 'no_advertise' in summary_options:
+                self.cli_set(base_path + ['summary-address', summary, 'no-advertise'])
 
         # commit changes
         self.cli_commit()
@@ -184,6 +199,14 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' max-metric router-lsa on-shutdown {on_shutdown}', frrconfig)
         self.assertIn(f' refresh timer {refresh}', frrconfig)
 
+        self.assertIn(f' aggregation timer {aggregation_timer}', frrconfig)
+        for summary, summary_options in summary_nets.items():
+            self.assertIn(f' summary-address {summary}', frrconfig)
+            if 'tag' in summary_options:
+                tag = summary_options['tag']
+                self.assertIn(f' summary-address {summary} tag {tag}', frrconfig)
+            if 'no_advertise' in summary_options:
+                self.assertIn(f' summary-address {summary} no-advertise', frrconfig)
 
         # enable inter-area
         self.cli_set(base_path + ['distance', 'ospf', 'inter-area', inter_area])

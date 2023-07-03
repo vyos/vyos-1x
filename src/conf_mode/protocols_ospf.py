@@ -250,6 +250,13 @@ def verify(ospf):
                     raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
                                       f'and no-php-flag configured at the same time.')
 
+    # Check route summarisation
+    if 'summary_address' in ospf:
+        for prefix, prefix_options in ospf['summary_address'].items():
+            if {'tag', 'no_advertise'} <= set(prefix_options):
+                raise ConfigError(f'Can not set both "tag" and "no-advertise" for Type-5 '\
+                                  f'and Type-7 route summarisation of "{prefix}"!')
+
     return None
 
 def generate(ospf):

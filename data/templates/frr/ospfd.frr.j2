@@ -72,6 +72,9 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         endfor %}
 {%     endfor %}
 {% endif %}
+{% if aggregation.timer is vyos_defined %}
+ aggregation timer {{ aggregation.timer }}
+{% endif %}
 {% if area is vyos_defined %}
 {%     for area_id, area_config in area.items() %}
 {%         if area_config.area_type is vyos_defined %}
@@ -199,6 +202,11 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% endif %}
 {% if refresh.timers is vyos_defined %}
  refresh timer {{ refresh.timers }}
+{% endif %}
+{% if summary_address is vyos_defined %}
+{%     for prefix, prefix_options in summary_address.items() %}
+ summary-address {{ prefix }} {{ 'tag ' + prefix_options.tag if prefix_options.tag is vyos_defined }}{{ 'no-advertise' if prefix_options.no_advertise is vyos_defined }}
+{%     endfor %}
 {% endif %}
 {% if segment_routing is vyos_defined %}
 {%     if segment_routing.maximum_label_depth is vyos_defined %}
