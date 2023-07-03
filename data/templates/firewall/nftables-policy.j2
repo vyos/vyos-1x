@@ -11,7 +11,7 @@ table ip vyos_mangle {
         type filter hook prerouting priority -150; policy accept;
 {% if route is vyos_defined %}
 {%     for route_text, conf in route.items() if conf.interface is vyos_defined %}
-        iifname { {{ conf.interface | join(",") }} } counter jump VYOS_PBR_{{ route_text }}
+        iifname { {{ conf.interface | join(",") }} } counter jump VYOS_PBR_UD_{{ route_text }}
 {%     endfor %}
 {% endif %}
     }
@@ -22,7 +22,7 @@ table ip vyos_mangle {
 
 {% if route is vyos_defined %}
 {%     for route_text, conf in route.items() %}
-    chain VYOS_PBR_{{ route_text }} {
+    chain VYOS_PBR_UD_{{ route_text }} {
 {%         if conf.rule is vyos_defined %}
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
@@ -40,7 +40,7 @@ table ip6 vyos_mangle {
         type filter hook prerouting priority -150; policy accept;
 {% if route6 is vyos_defined %}
 {%     for route_text, conf in route6.items() if conf.interface is vyos_defined %}
-        iifname { {{ ",".join(conf.interface) }} } counter jump VYOS_PBR6_{{ route_text }}
+        iifname { {{ ",".join(conf.interface) }} } counter jump VYOS_PBR6_UD_{{ route_text }}
 {%     endfor %}
 {% endif %}
     }
@@ -51,7 +51,7 @@ table ip6 vyos_mangle {
 
 {% if route6 is vyos_defined %}
 {%     for route_text, conf in route6.items() %}
-    chain VYOS_PBR6_{{ route_text }} {
+    chain VYOS_PBR6_UD_{{ route_text }} {
 {%         if conf.rule is vyos_defined %}
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
