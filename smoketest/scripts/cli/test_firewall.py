@@ -254,7 +254,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp dport 22', 'limit rate 5/minute', 'accept'],
             ['tcp dport 22', 'add @RECENT_FWD_filter_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
             ['chain VYOS_INPUT_filter'],
-            ['type filter hook input priority filter; policy drop;'],
+            ['type filter hook input priority filter; policy accept;'],
             ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"', 'meta pkttype broadcast', 'accept'],
             ['meta l4proto gre', f'ct mark {mark_hex}', 'return'],
             ['chain VYOS_OUTPUT_filter'],
@@ -294,7 +294,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '7', 'dscp', '3-11'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '7', 'dscp-exclude', '21-25'])
 
-        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'source', 'address', '198.51.100.1'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', name])
@@ -312,10 +312,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy accept;'],
+            ['type filter hook forward priority filter; policy drop;'],
             ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
             ['chain VYOS_INPUT_filter'],
-            ['type filter hook input priority filter; policy drop;'],
+            ['type filter hook input priority filter; policy accept;'],
             [f'meta l4proto tcp','queue to 3'],
             [f'meta l4proto udp','queue flags bypass,fanout to 0-15'],
             [f'chain NAME_{name}'],
@@ -394,7 +394,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['type filter hook forward priority filter; policy accept;'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', f'iifname "{interface}"', 'reject'],
             ['chain VYOS_IPV6_INPUT_filter'],
-            ['type filter hook input priority filter; policy drop;'],
+            ['type filter hook input priority filter; policy accept;'],
             ['meta l4proto udp', 'ip6 saddr 2002::1:2', f'iifname "{interface}"', 'accept'],
             ['chain VYOS_IPV6_OUTPUT_filter'],
             ['type filter hook output priority filter; policy drop;'],
@@ -436,7 +436,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_IPV6_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy drop;'],
+            ['type filter hook forward priority filter; policy accept;'],
             ['ip6 length 1-1999', 'ip6 length != 60000-65535', 'ip6 dscp 0x04-0x0e', 'ip6 dscp != 0x1f-0x23', 'accept'],
             ['chain VYOS_IPV6_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
