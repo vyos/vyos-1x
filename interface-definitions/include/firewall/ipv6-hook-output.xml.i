@@ -26,14 +26,6 @@
           <children>
             #include <include/firewall/common-rule-ipv6.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
-            <leafNode name="jump-target">
-              <properties>
-                <help>Set jump target. Action jump must be defined to use this setting</help>
-                <completionHelp>
-                  <path>firewall ipv6 name</path>
-                </completionHelp>
-              </properties>
-            </leafNode>
           </children>
         </tagNode>
       </children>

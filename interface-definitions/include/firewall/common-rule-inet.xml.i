@@ -1,23 +1,10 @@
-<!-- include start from firewall/common-rule-ipv4-raw.xml.i -->
-#include <include/firewall/action-and-notrack.xml.i>
+<!-- include start from firewall/common-rule-inet.xml.i -->
+#include <include/firewall/action.xml.i>
 #include <include/generic-description.xml.i>
 #include <include/firewall/dscp.xml.i>
-#include <include/firewall/ttl.xml.i>
+#include <include/firewall/packet-options.xml.i>
+#include <include/firewall/connection-mark.xml.i>
 #include <include/firewall/nft-queue.xml.i>
-<node name="destination">
-  <properties>
-    <help>Destination parameters</help>
-  </properties>
-  <children>
-    #include <include/firewall/address.xml.i>
-    #include <include/firewall/address-mask.xml.i>
-    #include <include/firewall/fqdn.xml.i>
-    #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/mac-address.xml.i>
-    #include <include/firewall/port.xml.i>
-    #include <include/firewall/source-destination-group.xml.i>
-  </children>
-</node>
 <leafNode name="disable">
   <properties>
     <help>Option to disable firewall rule</help>
@@ -41,38 +28,6 @@
         <valueless/>
       </properties>
     </leafNode>
-  </children>
-</node>
-<node name="icmp">
-  <properties>
-    <help>ICMP type and code information</help>
-  </properties>
-  <children>
-    <leafNode name="code">
-      <properties>
-        <help>ICMP code</help>
-        <valueHelp>
-          <format>u32:0-255</format>
-          <description>ICMP code (0-255)</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-255"/>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="type">
-      <properties>
-        <help>ICMP type</help>
-        <valueHelp>
-          <format>u32:0-255</format>
-          <description>ICMP type (0-255)</description>
-        </valueHelp>
-        <constraint>
-          <validator name="numeric" argument="--range 0-255"/>
-        </constraint>
-      </properties>
-    </leafNode>
-    #include <include/firewall/icmp-type-name.xml.i>
   </children>
 </node>
 <node name="ipsec">
@@ -125,6 +80,25 @@
     </leafNode>
   </children>
 </node>
+<leafNode name="log">
+  <properties>
+    <help>Option to log packets matching rule</help>
+    <completionHelp>
+      <list>enable disable</list>
+    </completionHelp>
+    <valueHelp>
+      <format>enable</format>
+      <description>Enable log</description>
+    </valueHelp>
+    <valueHelp>
+      <format>disable</format>
+      <description>Disable log</description>
+    </valueHelp>
+    <constraint>
+      <regex>(enable|disable)</regex>
+    </constraint>
+  </properties>
+</leafNode>
 <leafNode name="log">
   <properties>
     <help>Option to log packets matching rule</help>
@@ -245,18 +219,87 @@
     </leafNode>
   </children>
 </node>
-<node name="source">
+<node name="state">
   <properties>
-    <help>Source parameters</help>
+    <help>Session state</help>
   </properties>
   <children>
-    #include <include/firewall/address.xml.i>
-    #include <include/firewall/address-mask.xml.i>
-    #include <include/firewall/fqdn.xml.i>
-    #include <include/firewall/geoip.xml.i>
-    #include <include/firewall/mac-address.xml.i>
-    #include <include/firewall/port.xml.i>
-    #include <include/firewall/source-destination-group.xml.i>
+    <leafNode name="established">
+      <properties>
+        <help>Established state</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="invalid">
+      <properties>
+        <help>Invalid state</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="new">
+      <properties>
+        <help>New state</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="related">
+      <properties>
+        <help>Related state</help>
+        <completionHelp>
+          <list>enable disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>enable</format>
+          <description>Enable</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>Disable</description>
+        </valueHelp>
+        <constraint>
+          <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+    </leafNode>
   </children>
 </node>
 #include <include/firewall/tcp-flags.xml.i>
