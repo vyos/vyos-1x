@@ -48,6 +48,9 @@ def is_leaf(path: list) -> bool:
 def cli_defined(path: list, node: str, non_local=False) -> bool:
     return load_reference().cli_defined(path, node, non_local=non_local)
 
+def from_source(d: dict, path: list) -> bool:
+    return load_reference().from_source(d, path)
+
 def component_version() -> dict:
     return load_reference().component_version()
 
