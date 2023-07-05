@@ -68,9 +68,15 @@ import json
 from copy import deepcopy
 
 import vyos.configtree
-from vyos.xml_ref import multi_to_list, merge_defaults, relative_defaults
+from vyos.xml_ref import multi_to_list, from_source
+from vyos.xml_ref import merge_defaults, relative_defaults
 from vyos.utils.dict import get_sub_dict, mangle_dict_keys
 from vyos.configsource import ConfigSource, ConfigSourceSession
+
+class ConfigDict(dict):
+    _from_defaults = {}
+    def from_defaults(self, path: list[str]):
+        return from_source(self._from_defaults, path)
 
 class Config(object):
     """
@@ -250,6 +256,7 @@ class Config(object):
             conf_dict = multi_to_list(rpath, conf_dict)
 
         if with_defaults or with_recursive_defaults:
+            conf_dict = ConfigDict(conf_dict)
             conf_dict = merge_defaults(lpath, conf_dict,
                                        get_first_key=get_first_key,
                                        recursive=with_recursive_defaults)
@@ -263,7 +270,17 @@ class Config(object):
                 isinstance(key_mangling[1], str)):
             raise ValueError("key_mangling must be a tuple of two strings")
 
-        conf_dict = mangle_dict_keys(conf_dict, key_mangling[0], key_mangling[1], abs_path=rpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
+        def mangle(obj):
+            return mangle_dict_keys(obj, key_mangling[0], key_mangling[1],
+                                    abs_path=rpath,
+                                    no_tag_node_value_mangle=no_tag_node_value_mangle)
+
+        if isinstance(conf_dict, ConfigDict):
+            from_defaults = mangle(conf_dict._from_defaults)
+            conf_dict = mangle(conf_dict)
+            conf_dict._from_defaults = from_defaults
+        else:
+            conf_dict = mangle(conf_dict)
 
         return conf_dict
 
