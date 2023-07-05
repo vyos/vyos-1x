@@ -87,7 +87,7 @@ def mangle_dict_keys(data, regex, replacement, abs_path=None, no_tag_node_value_
     if abs_path is None:
         abs_path = []
 
-    new_dict = {}
+    new_dict = type(data)()
 
     for k in data.keys():
         if no_tag_node_value_mangle and is_tag_value(abs_path + [k]):
