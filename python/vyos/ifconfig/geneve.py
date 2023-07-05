@@ -45,6 +45,7 @@ class GeneveIf(Interface):
             'parameters.ip.df'           : 'df',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',
+            'parameters.ip.innerproto'   : 'innerprotoinherit',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
         }
 
