@@ -147,8 +147,8 @@ class Xml:
         default = self._get_default_value(node)
         if default is None:
             return None
-        if self._is_multi_node(node) and not isinstance(default, list):
-            return [default]
+        if self._is_multi_node(node):
+            return default.split()
         return default
 
     def get_defaults(self, path: list, get_first_key=False, recursive=False) -> dict:
