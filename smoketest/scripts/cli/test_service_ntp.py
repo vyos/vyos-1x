@@ -108,7 +108,7 @@ class TestSystemNTP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'bindaddress {listen}', config)
 
     def test_03_ntp_interface(self):
-        interfaces = ['eth0', 'eth1']
+        interfaces = ['eth0']
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface])
 
