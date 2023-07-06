@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import psutil
+from psutil import virtual_memory
 
 from pathlib import Path
 from re import search as re_search, MULTILINE as re_M
@@ -26,6 +26,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.ifconfig import Section
 from vyos.util import call, rc_cmd, boot_configuration_complete
+from vyos.utils.system import sysctl_read, sysctl_apply
 from vyos.template import render
 from vyos.xml import defaults
 
@@ -39,10 +40,10 @@ airbag.enable()
 service_name = 'vpp'
 service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
-sysctl_vpp = '/etc/sysctl.d/80-vpp.conf'
 
-# Min memory 6GB (2GB reserved for vpp)
-MIN_TOTAL_MEMORY = 6
+# Free memory required for VPP
+# 2 GB for hugepages + 1 GB for other services
+MIN_AVAILABLE_MEMORY: int = 3 * 1024**3
 
 
 def _get_pci_address_by_interface(iface) -> str:
@@ -62,7 +63,6 @@ def _get_pci_address_by_interface(iface) -> str:
         return pci_addr
     # raise error if PCI address was not found
     raise ConfigError(f'Cannot find PCI address for interface {iface}')
-
 
 
 def get_config(config=None):
@@ -131,32 +131,45 @@ def verify(config):
         return None
 
     if 'interface' not in config:
-        raise ConfigError(f'"interface" is required but not set!')
+        raise ConfigError('"interface" is required but not set!')
 
     if 'cpu' in config:
-        if 'corelist_workers' in config['cpu'] and 'main_core' not in config['cpu']:
-            raise ConfigError(f'"cpu main-core" is required but not set!')
+        if 'corelist_workers' in config['cpu'] and 'main_core' not in config[
+                'cpu']:
+            raise ConfigError('"cpu main-core" is required but not set!')
 
-    memory = psutil.virtual_memory()
-    memory_total = round(memory.total / (1024 ** 3), 2)
-    if memory_total < MIN_TOTAL_MEMORY:
+    memory_available: int = virtual_memory().available
+    if memory_available < MIN_AVAILABLE_MEMORY:
         raise ConfigError(
-            f'Not enough installed memory {memory_total}GB! '
-            f'The minimum required memory is {MIN_TOTAL_MEMORY}GB.'
-        )
+            'Not enough free memory to start VPP:\n'
+            f'available: {round(memory_available / 1024**3, 1)}GB\n'
+            f'required: {round(MIN_AVAILABLE_MEMORY / 1024**3, 1)}GB')
 
 
 def generate(config):
     if not config or (len(config) == 1 and 'removed_ifaces' in config):
         # Remove old config and return
         service_conf.unlink(missing_ok=True)
-        if os.path.isfile(sysctl_vpp):
-            os.unlink(sysctl_vpp)
         return None
 
     render(service_conf, 'vpp/startup.conf.j2', config)
     render(systemd_override, 'vpp/override.conf.j2', config)
-    render(sysctl_vpp, 'vpp/sysctl.conf.j2', config)
+
+    # apply default sysctl values from
+    # https://github.com/FDio/vpp/blob/v23.06/src/vpp/conf/80-vpp.conf
+    sysctl_config: dict[str, str] = {
+        'vm.nr_hugepages': '1024',
+        'vm.max_map_count': '3096',
+        'vm.hugetlb_shm_group': '0',
+        'kernel.shmmax': '2147483648'
+    }
+    # we do not want to reduce `kernel.shmmax`
+    kernel_shmnax_current: str = sysctl_read('kernel.shmmax')
+    if int(kernel_shmnax_current) > int(sysctl_config['kernel.shmmax']):
+        sysctl_config['kernel.shmmax'] = kernel_shmnax_current
+
+    if not sysctl_apply(sysctl_config):
+        raise ConfigError('Cannot configure sysctl parameters for VPP')
 
     return None
 
@@ -167,8 +180,6 @@ def apply(config):
     else:
         call('systemctl daemon-reload')
         call(f'systemctl restart {service_name}.service')
-
-    call(f'sysctl -qp {sysctl_vpp}')
 
     # Initialize interfaces removed from VPP
     for iface in config.get('removed_ifaces', []):
