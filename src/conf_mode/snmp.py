@@ -161,8 +161,12 @@ def verify(snmp):
         for address in snmp['listen_address']:
             # We only wan't to configure addresses that exist on the system.
             # Hint the user if they don't exist
-            if not is_addr_assigned(address):
-                Warning(f'SNMP listen address "{address}" not configured!')
+            if 'vrf' in snmp:
+                vrf_name = snmp['vrf']
+                if not is_addr_assigned(address, vrf_name) and address not in ['::1','127.0.0.1']:
+                    raise ConfigError(f'SNMP listen address "{address}" not configured in vrf "{vrf_name}"!')
+            elif not is_addr_assigned(address):
+                raise ConfigError(f'SNMP listen address "{address}" not configured in default vrf!')
 
     if 'trap_target' in snmp:
         for trap, trap_config in snmp['trap_target'].items():
