@@ -913,7 +913,7 @@ def get_interface_config(interface):
     if not os.path.exists(f'/sys/class/net/{interface}'):
         return None
     from json import loads
-    tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
+    tmp = loads(cmd(f'ip --detail --json link show dev {interface}'))[0]
     return tmp
 
 def get_interface_address(interface):
@@ -923,7 +923,7 @@ def get_interface_address(interface):
     if not os.path.exists(f'/sys/class/net/{interface}'):
         return None
     from json import loads
-    tmp = loads(cmd(f'ip -d -j addr show {interface}'))[0]
+    tmp = loads(cmd(f'ip --detail --json addr show dev {interface}'))[0]
     return tmp
 
 def get_interface_namespace(iface):
@@ -937,17 +937,17 @@ def get_interface_namespace(iface):
         return None
 
     for ns in tmp:
-        namespace = f'{ns["name"]}'
+        netns = f'{ns["name"]}'
         # Search interface in each netns
-        data = loads(cmd(f'ip netns exec {namespace} ip -j link show'))
-        for compare in data:
-            if iface == compare["ifname"]:
-                return namespace
+        data = loads(cmd(f'ip netns exec {netns} ip --json link show'))
+        for tmp in data:
+            if iface == tmp["ifname"]:
+                return netns
 
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads
-    tmp = loads(cmd('ip -j vrf list'))
+    tmp = loads(cmd('ip --json vrf list'))
     # Result is of type [{"name":"red","table":1000},{"name":"blue","table":2000}]
     # so we will re-arrange it to a more nicer representation:
     # {'red': {'table': 1000}, 'blue': {'table': 2000}}
