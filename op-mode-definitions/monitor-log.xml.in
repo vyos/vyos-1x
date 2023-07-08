@@ -232,19 +232,19 @@
           </node>
           <leafNode name="router-advert">
             <properties>
-              <help>Monitor last lines of Router Advertisement Daemon (radvd)</help>
+              <help>Monitor last lines of Router Advertisement Daemon (radvd) log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit radvd.service</command>
           </leafNode>
           <leafNode name="snmp">
             <properties>
-              <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP)</help>
+              <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP) log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit snmpd.service</command>
           </leafNode>
           <leafNode name="ssh">
             <properties>
-              <help>Monitor last lines of Secure Shell (SSH)</help>
+              <help>Monitor last lines of Secure Shell (SSH) log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
@@ -278,31 +278,31 @@
               </leafNode>
               <leafNode name="ipsec">
                 <properties>
-                  <help>Monitor last lines of IPsec</help>
+                  <help>Monitor last lines of IPsec log</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit strongswan.service</command>
               </leafNode>
               <leafNode name="l2tp">
                 <properties>
-                  <help>Monitor last lines of L2TP</help>
+                  <help>Monitor last lines of L2TP log</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
               </leafNode>
               <leafNode name="openconnect">
                 <properties>
-                  <help>Monitor last lines of OpenConnect</help>
+                  <help>Monitor last lines of OpenConnect log</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit ocserv.service</command>
               </leafNode>
               <leafNode name="pptp">
                 <properties>
-                  <help>Monitor last lines of PPTP</help>
+                  <help>Monitor last lines of PPTP log</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pptp.service</command>
               </leafNode>
               <leafNode name="sstp">
                 <properties>
-                  <help>Monitor last lines of SSTP</help>
+                  <help>Monitor last lines of SSTP log</help>
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit accel-ppp@sstp.service</command>
               </leafNode>
