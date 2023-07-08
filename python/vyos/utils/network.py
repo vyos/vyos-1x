@@ -15,7 +15,6 @@
 
 import os
 
-
 def get_protocol_by_name(protocol_name):
     """Get protocol number by protocol name
 
@@ -28,3 +27,10 @@ def get_protocol_by_name(protocol_name):
         return protocol_number
     except socket.error:
         return protocol_name
+
+def interface_exists_in_netns(interface_name, netns):
+    from vyos.util import rc_cmd
+    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
+    if rc == 0:
+        return True
+    return False
