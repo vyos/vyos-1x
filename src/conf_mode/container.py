@@ -153,10 +153,11 @@ def verify(container):
             # on upgrade. This is the "cheapest" and fastest solution in terms
             # of image upgrade and deletion.
             image = container_config['image']
-            if run(f'podman image exists {image}') != 0:
+            if run(f'podman image exists {image}') != 0 and 'auto_pull' not in container_config:
                 Warning(f'Image "{image}" used in container "{name}" does not exist '\
                         f'locally. Please use "add container image {image}" to add it '\
-                        f'to the system! Container "{name}" will not be started!')
+                        f'to the system or add auto-pull in container "{name}"! '\
+                        f'Container "{name}" will not be started!')
 
             if 'network' in container_config:
                 if len(container_config['network']) > 1:
@@ -452,9 +453,9 @@ def apply(container):
         for name, container_config in container['name'].items():
             image = container_config['image']
 
-            if run(f'podman image exists {image}') != 0:
+            if run(f'podman image exists {image}') != 0 and 'auto_pull' not in container_config:
                 # container image does not exist locally - user already got
-                # informed by a WARNING in verfiy() - bail out early
+                # informed by a WARNING in verify() - bail out early
                 continue
 
             if 'disable' in container_config:

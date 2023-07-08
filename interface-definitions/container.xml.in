@@ -21,6 +21,12 @@
               <valueless/>
             </properties>
           </leafNode>
+          <leafNode name="auto-pull">
+            <properties>
+              <help>Container image will automatically be pulled</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="cap-add">
             <properties>
               <help>Container capabilities/permissions</help>
