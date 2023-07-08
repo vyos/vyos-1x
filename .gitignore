@@ -133,6 +133,10 @@ debian/*.substvars
 *.vpwhist
 *.vtg
 
+# VS Code
+.vscode/*
+!.vscode/settings.json
+
 # VIM
 *.swp
 
