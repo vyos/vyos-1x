@@ -83,7 +83,7 @@
         <children>
           <tagNode name="container">
             <properties>
-              <help>Monitor last lines of container logs</help>
+              <help>Monitor last lines of container log</help>
               <completionHelp>
                 <path>container name</path>
               </completionHelp>

@@ -6,7 +6,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Monitor last lines of Domain Name System (DNS) related services</help>
+              <help>Monitor last lines of Domain Name System related services</help>
             </properties>
             <children>
               <node name="dynamic">
@@ -27,7 +27,7 @@
         <children>
           <node name="dns">
             <properties>
-              <help>Show log for Domain Name System (DNS) related services</help>
+              <help>Show log for Domain Name System related services</help>
             </properties>
             <children>
               <node name="dynamic">
@@ -42,7 +42,7 @@
       </node>
       <node name="dns">
         <properties>
-          <help>Show Domain Name System (DNS) related information</help>
+          <help>Show Domain Name System related information</help>
         </properties>
         <children>
           <node name="dynamic">
@@ -66,7 +66,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Restart specific Domain Name System (DNS) related service</help>
+          <help>Restart specific Domain Name System related service</help>
         </properties>
         <children>
           <node name="dynamic">
@@ -86,7 +86,7 @@
     <children>
       <node name="dns">
         <properties>
-          <help>Update Domain Name System (DNS) related information</help>
+          <help>Update Domain Name System related information</help>
         </properties>
         <children>
           <node name="dynamic">

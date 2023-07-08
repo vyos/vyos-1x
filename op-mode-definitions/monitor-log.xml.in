@@ -16,7 +16,7 @@
           </node>
           <node name="ids">
             <properties>
-              <help>Monitor log for Intrusion Detection System</help>
+              <help>Monitor Intrusion Detection System log</help>
             </properties>
             <children>
               <leafNode name="ddos-protection">
@@ -29,18 +29,18 @@
           </node>
           <node name="dhcp">
             <properties>
-              <help>Monitor last lines of Dynamic Host Control Protocol (DHCP)</help>
+              <help>Monitor last lines of Dynamic Host Control Protocol log</help>
             </properties>
             <children>
               <node name="server">
                 <properties>
-                  <help>Monitor last lines of DHCP server</help>
+                  <help>Monitor last lines of DHCP server log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server.service</command>
               </node>
               <node name="client">
                 <properties>
-                  <help>Monitor last lines of DHCP client</help>
+                  <help>Monitor last lines of DHCP client log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit "dhclient@*.service"</command>
                 <children>
@@ -59,18 +59,18 @@
           </node>
           <node name="dhcpv6">
             <properties>
-              <help>Monitor last lines of Dynamic Host Control Protocol IPv6 (DHCPv6)</help>
+              <help>Monitor last lines of Dynamic Host Control Protocol IPv6 log</help>
             </properties>
             <children>
               <node name="server">
                 <properties>
-                  <help>Monitor last lines of DHCPv6 server</help>
+                  <help>Monitor last lines of DHCPv6 server log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit isc-dhcp-server6.service</command>
               </node>
               <node name="client">
                 <properties>
-                  <help>Monitor last lines of DHCPv6 client</help>
+                  <help>Monitor last lines of DHCPv6 client log</help>
                 </properties>
                 <command>journalctl --no-hostname --follow --boot --unit "dhcp6c@*.service"</command>
                 <children>
@@ -95,7 +95,7 @@
           </leafNode>
           <leafNode name="ipoe-server">
             <properties>
-              <help>Monitor last lines of IPoE server log</help>
+              <help>Monitor last lines of IP over Ethernet server log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit accel-ppp@ipoe.service</command>
           </leafNode>
@@ -107,13 +107,13 @@
           </leafNode>
           <leafNode name="nhrp">
             <properties>
-              <help>Monitor last lines of Next Hop Resolution Protocol (NHRP) log</help>
+              <help>Monitor last lines of Next Hop Resolution Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit opennhrp.service</command>
           </leafNode>
           <leafNode name="ntp">
             <properties>
-              <help>Monitor last lines of Network Time Protocol (NTP) log</help>
+              <help>Monitor last lines of Network Time Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit chrony.service</command>
           </leafNode>
@@ -142,7 +142,7 @@
           </leafNode>
           <node name="protocol">
             <properties>
-              <help>Monitor log for Routing Protocol</help>
+              <help>Monitor routing protocol logs</help>
             </properties>
             <children>
               <leafNode name="ospf">
@@ -232,25 +232,25 @@
           </node>
           <leafNode name="router-advert">
             <properties>
-              <help>Monitor last lines of Router Advertisement Daemon (radvd) log</help>
+              <help>Monitor last lines of Router Advertisement Daemon log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit radvd.service</command>
           </leafNode>
           <leafNode name="snmp">
             <properties>
-              <help>Monitor last lines of Simple Network Monitoring Protocol (SNMP) log</help>
+              <help>Monitor last lines of Simple Network Monitoring Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit snmpd.service</command>
           </leafNode>
           <leafNode name="ssh">
             <properties>
-              <help>Monitor last lines of Secure Shell (SSH) log</help>
+              <help>Monitor last lines of Secure Shell log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
           <node name="sstpc">
             <properties>
-              <help>Monitor last lines of SSTP client log</help>
+              <help>Monitor last lines of Secure Socket Tunneling Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit "ppp@sstpc*.service"</command>
             <children>
@@ -267,7 +267,7 @@
           </node>
           <node name="vpn">
             <properties>
-              <help>Monitor Virtual Private Network (VPN) services</help>
+              <help>Monitor Virtual Private Network services</help>
             </properties>
             <children>
               <leafNode name="all">
@@ -310,13 +310,13 @@
           </node>
           <leafNode name="vpp">
             <properties>
-              <help>Monitor last lines of Vector Packet Processor (VPP) log</help>
+              <help>Monitor last lines of Vector Packet Processor log</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit vpp.service</command>
           </leafNode>
           <leafNode name="vrrp">
             <properties>
-              <help>Monitor last lines of Virtual Router Redundancy Protocol (VRRP) log</help>
+              <help>Monitor last lines of Virtual Router Redundancy Protocol log</help>
             </properties>
             <command>journalctl --no-hostname --boot --unit keepalived.service</command>
           </leafNode>
