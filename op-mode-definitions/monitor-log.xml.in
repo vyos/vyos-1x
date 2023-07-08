@@ -308,6 +308,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="vpp">
+            <properties>
+              <help>Monitor last lines of Vector Packet Processor (VPP) log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit vpp.service</command>
+          </leafNode>
         </children>
       </node>
     </children>
