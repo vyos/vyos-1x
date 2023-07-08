@@ -1545,7 +1545,9 @@
       </properties>
       <children>
         #include <include/bgp/neighbor-afi-ipv4-unicast.xml.i>
+        #include <include/bgp/neighbor-afi-ipv4-vpn.xml.i>
         #include <include/bgp/neighbor-afi-ipv6-unicast.xml.i>
+        #include <include/bgp/neighbor-afi-ipv6-vpn.xml.i>
         #include <include/bgp/neighbor-afi-l2vpn-evpn.xml.i>
       </children>
     </node>
