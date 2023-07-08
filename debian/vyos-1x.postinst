@@ -186,5 +186,8 @@ systemctl enable vyos-config-cloud-init.service
 #
 # sudo mv /opt/vyatta/share/vyatta-cfg/vpp /opt/vyatta/share/vyatta-cfg/templates/vpp
 if [ -d /opt/vyatta/share/vyatta-cfg/templates/vpp ]; then
+    if [ -d /opt/vyatta/share/vyatta-cfg/vpp ]; then
+        rm -rf /opt/vyatta/share/vyatta-cfg/vpp
+    fi
     mv /opt/vyatta/share/vyatta-cfg/templates/vpp /opt/vyatta/share/vyatta-cfg/vpp
 fi
