@@ -6,335 +6,524 @@
       <priority>295</priority>
     </properties>
     <children>
-      <node name="cpu">
+      <node name='interfaces'>
         <properties>
-          <help>CPU settings</help>
+          <help>Network interfaces</help>
         </properties>
         <children>
-          <leafNode name="corelist-workers">
+          <tagNode name="bonding">
             <properties>
-              <help>List of cores worker threads</help>
-              <valueHelp>
-                <format>&lt;id&gt;</format>
-                <description>CPU core id</description>
-              </valueHelp>
-              <valueHelp>
-                <format>&lt;idN&gt;-&lt;idM&gt;</format>
-                <description>CPU core id range (use '-' as delimiter)</description>
-              </valueHelp>
+              <help>Bonding Interface/Link Aggregation</help>
               <constraint>
-                <validator name="numeric" argument="--allow-range --range 0-512"/>
+                <regex>bond[0-9]+</regex>
               </constraint>
-              <constraintErrorMessage>not a valid CPU core value or range</constraintErrorMessage>
-              <multi/>
+              <constraintErrorMessage>Bonding interface must be named bondN</constraintErrorMessage>
+              <valueHelp>
+                <format>bondN</format>
+                <description>Bonding interface name</description>
+              </valueHelp>
             </properties>
-          </leafNode>
-          <leafNode name="main-core">
+            <children>
+              #include <include/interface/address-ipv4-ipv6-dhcp.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              <leafNode name="hash-policy">
+                <properties>
+                  <help>Bonding transmit hash policy</help>
+                  <completionHelp>
+                    <list>layer2 layer2+3 layer3+4</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>layer2</format>
+                    <description>use MAC addresses to generate the hash</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>layer2+3</format>
+                    <description>combine MAC address and IP address to make hash</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>layer3+4</format>
+                    <description>combine IP address and port to make hash</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(layer2\+3|layer3\+4|layer2)</regex>
+                  </constraint>
+                  <constraintErrorMessage>hash-policy must be layer2 layer2+3 layer3+4</constraintErrorMessage>
+                </properties>
+              </leafNode>
+              #include <include/interface/mac.xml.i>
+              <leafNode name="mode">
+                <properties>
+                  <help>Bonding mode</help>
+                  <completionHelp>
+                    <list>802.3ad active-backup broadcast round-robin xor-hash</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>802.3ad</format>
+                    <description>IEEE 802.3ad Dynamic link aggregation</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>active-backup</format>
+                    <description>Fault tolerant: only one slave in the bond is active</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>broadcast</format>
+                    <description>Fault tolerant: transmits everything on all slave interfaces</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>round-robin</format>
+                    <description>Load balance: transmit packets in sequential order</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>xor-hash</format>
+                    <description>Distribute based on MAC address</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(802.3ad|active-backup|broadcast|round-robin|xor-hash)</regex>
+                  </constraint>
+                  <constraintErrorMessage>mode must be 802.3ad, active-backup, broadcast, round-robin, or xor</constraintErrorMessage>
+                </properties>
+                <defaultValue>802.3ad</defaultValue>
+              </leafNode>
+              <node name="member">
+                <properties>
+                  <help>Bridge member interfaces</help>
+                </properties>
+                <children>
+                  <leafNode name="interface">
+                    <properties>
+                      <help>Member interface name</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --bondable</script>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Interface name</description>
+                      </valueHelp>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/interface/mtu-68-16000.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="geneve">
             <properties>
-              <help>Main core</help>
-              <valueHelp>
-                <format>u32:0-512</format>
-                <description>Assign main thread to specific core</description>
-              </valueHelp>
+              <help>Generic Network Virtualization Encapsulation (GENEVE) Interface</help>
               <constraint>
-                <validator name="numeric" argument="--range 0-512"/>
+                <regex>geneve[0-9]+</regex>
               </constraint>
+              <constraintErrorMessage>GENEVE interface must be named geneveN</constraintErrorMessage>
+              <valueHelp>
+                <format>geneveN</format>
+                <description>GENEVE interface name</description>
+              </valueHelp>
             </properties>
-          </leafNode>
-          <leafNode name="skip-cores">
+            <children>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/interface/mtu-1200-16000.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/vni.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="gre">
             <properties>
-              <help>Skip cores</help>
-              <valueHelp>
-                <format>u32:0-512</format>
-                <description>Skip cores</description>
-              </valueHelp>
+              <help>Generic Network Encapsulation (GRE) Interface</help>
               <constraint>
-                <validator name="numeric" argument="--range 0-512"/>
+                <regex>gre[0-9]+</regex>
               </constraint>
+              <constraintErrorMessage>GRE interface must be named greN</constraintErrorMessage>
+              <valueHelp>
+                <format>greN</format>
+                <description>GRE interface name</description>
+              </valueHelp>
             </properties>
-          </leafNode>
-          <leafNode name="workers">
+            <children>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/interface/mtu-1200-16000.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+            </children>
+          </tagNode>
+          <tagNode name="vxlan">
             <properties>
-              <help>Create worker threads</help>
-              <valueHelp>
-                <format>u32:0-4294967295</format>
-                <description>Worker threads</description>
-              </valueHelp>
+              <help>Virtual Extensible LAN (VXLAN) Interface</help>
               <constraint>
-                <validator name="numeric" argument="--range 0-512"/>
+                <regex>vxlan[0-9]+</regex>
               </constraint>
+              <constraintErrorMessage>VXLAN interface must be named vxlanN</constraintErrorMessage>
+              <valueHelp>
+                <format>vxlanN</format>
+                <description>VXLAN interface name</description>
+              </valueHelp>
             </properties>
-          </leafNode>
+            <children>
+              #include <include/interface/address-ipv4-ipv6.xml.i>
+              #include <include/generic-description.xml.i>
+              #include <include/interface/disable.xml.i>
+              #include <include/interface/mtu-1200-16000.xml.i>
+              #include <include/port-number.xml.i>
+              #include <include/source-address-ipv4-ipv6.xml.i>
+              #include <include/interface/tunnel-remote.xml.i>
+              #include <include/vni.xml.i>
+            </children>
+          </tagNode>
         </children>
       </node>
-      <tagNode name="interface">
+      <node name="settings">
         <properties>
-          <help>Interface</help>
-          <valueHelp>
-            <format>ethN</format>
-            <description>Interface name</description>
-          </valueHelp>
-          <constraint>
-            <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)</regex>
-          </constraint>
-          <constraintErrorMessage>Invalid interface name</constraintErrorMessage>
+          <help>VPP settings</help>
         </properties>
         <children>
-          <leafNode name="num-rx-desc">
+          <node name="cpu">
             <properties>
-              <help>Number of receive ring descriptors</help>
+              <help>CPU settings</help>
+            </properties>
+            <children>
+              <leafNode name="corelist-workers">
+                <properties>
+                  <help>List of cores worker threads</help>
+                  <valueHelp>
+                    <format>&lt;id&gt;</format>
+                    <description>CPU core id</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;idN&gt;-&lt;idM&gt;</format>
+                    <description>CPU core id range (use '-' as delimiter)</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--allow-range --range 0-512"/>
+                  </constraint>
+                  <constraintErrorMessage>not a valid CPU core value or range</constraintErrorMessage>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <leafNode name="main-core">
+                <properties>
+                  <help>Main core</help>
+                  <valueHelp>
+                    <format>u32:0-512</format>
+                    <description>Assign main thread to specific core</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="skip-cores">
+                <properties>
+                  <help>Skip cores</help>
+                  <valueHelp>
+                    <format>u32:0-512</format>
+                    <description>Skip cores</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="workers">
+                <properties>
+                  <help>Create worker threads</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Worker threads</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-512"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <tagNode name="interface">
+            <properties>
+              <help>Interface</help>
               <valueHelp>
-                <format>u32:256-8192</format>
-                <description>Number of receive ring descriptors</description>
+                <format>ethN</format>
+                <description>Interface name</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 256-8192"/>
+                <regex>((eth|lan)[0-9]+|(eno|ens|enp|enx).+)</regex>
               </constraint>
+              <constraintErrorMessage>Invalid interface name</constraintErrorMessage>
             </properties>
-          </leafNode>
-          <leafNode name="num-tx-desc">
+            <children>
+              <leafNode name="num-rx-desc">
+                <properties>
+                  <help>Number of receive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-8192</format>
+                    <description>Number of receive ring descriptors</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="num-tx-desc">
+                <properties>
+                  <help>Number of tranceive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-8192</format>
+                    <description>Number of tranceive ring descriptors</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="num-rx-queues">
+                <properties>
+                  <help>Number of receive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-8192</format>
+                    <description>Number of receive queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="num-tx-queues">
+                <properties>
+                  <help>Number of tranceive ring descriptors</help>
+                  <valueHelp>
+                    <format>u32:256-8192</format>
+                    <description>Number of tranceive queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 256-8192"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name='pci'>
+                <properties>
+                  <help>PCI address allocation</help>
+                  <valueHelp>
+                    <format>auto</format>
+                    <description>Auto detect PCI address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;xxxx:xx:xx.x&gt;</format>
+                    <description>Set Peripheral Component Interconnect (PCI) address</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(auto|[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F])</regex>
+                  </constraint>
+                </properties>
+                <defaultValue>auto</defaultValue>
+              </leafNode>
+              <leafNode name="rx-mode">
+                <properties>
+                  <help>Receive packet processing mode</help>
+                  <completionHelp>
+                    <list>polling interrupt adaptive</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>polling</format>
+                    <description>Constantly check for new data</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>interrupt</format>
+                    <description>Interrupt mode</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>adaptive</format>
+                    <description>Adaptive mode</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(polling|interrupt|adaptive)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
+          <node name="ip">
             <properties>
-              <help>Number of tranceive ring descriptors</help>
-              <valueHelp>
-                <format>u32:256-8192</format>
-                <description>Number of tranceive ring descriptors</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 256-8192"/>
-              </constraint>
+              <help>IP settings</help>
             </properties>
-          </leafNode>
-          <leafNode name="num-rx-queues">
+            <children>
+              <leafNode name="heap-size">
+                <properties>
+                  <help>IPv4 heap size</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Amount of memory (in Mbytes) dedicated to the destination IP lookup table</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>32</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="ip6">
             <properties>
-              <help>Number of receive ring descriptors</help>
-              <valueHelp>
-                <format>u32:256-8192</format>
-                <description>Number of receive queues</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 256-8192"/>
-              </constraint>
+              <help>IPv6 settings</help>
             </properties>
-          </leafNode>
-          <leafNode name="num-tx-queues">
+            <children>
+              <leafNode name="heap-size">
+                <properties>
+                  <help>IPv6 heap size</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Amount of memory (in Mbytes) dedicated to the destination IP lookup table</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>32</defaultValue>
+              </leafNode>
+              <leafNode name="hash-buckets">
+                <properties>
+                  <help>IPv6 forwarding table hash buckets</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>IPv6 forwarding table hash buckets</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>65536</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="l2learn">
             <properties>
-              <help>Number of tranceive ring descriptors</help>
-              <valueHelp>
-                <format>u32:256-8192</format>
-                <description>Number of tranceive queues</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 256-8192"/>
-              </constraint>
+              <help>Level 2 MAC address learning settings</help>
             </properties>
-          </leafNode>
-          <leafNode name='pci'>
+            <children>
+              <leafNode name="limit">
+                <properties>
+                  <help>Number of MAC addresses in the L2 FIB</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Number of concurent entries</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>4194304</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+          <node name="lcp">
             <properties>
-              <help>PCI address allocation</help>
-              <valueHelp>
-                <format>auto</format>
-                <description>Auto detect PCI address</description>
-              </valueHelp>
-              <valueHelp>
-                <format>&lt;xxxx:xx:xx.x&gt;</format>
-                <description>Set Peripheral Component Interconnect (PCI) address</description>
-              </valueHelp>
-              <constraint>
-                <regex>(auto|[0-9a-fA-F]{4}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F])</regex>
-              </constraint>
+              <help>Linux control plane setting</help>
             </properties>
-            <defaultValue>auto</defaultValue>
-          </leafNode>
-          <leafNode name="rx-mode">
+            <children>
+              <leafNode name="route-no-paths">
+                <properties>
+                  <help>Route no paths</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="logging">
             <properties>
-              <help>Receive packet processing mode</help>
-              <completionHelp>
-                <list>polling interrupt adaptive</list>
-              </completionHelp>
-              <valueHelp>
-                <format>polling</format>
-                <description>Constantly check for new data</description>
-              </valueHelp>
-              <valueHelp>
-                <format>interrupt</format>
-                <description>Interrupt mode</description>
-              </valueHelp>
-              <valueHelp>
-                <format>adaptive</format>
-                <description>Adaptive mode</description>
-              </valueHelp>
-              <constraint>
-                <regex>(polling|interrupt|adaptive)</regex>
-              </constraint>
+              <help>Loggint settings</help>
             </properties>
-          </leafNode>
-        </children>
-      </tagNode>
-      <node name="ip">
-        <properties>
-          <help>IP settings</help>
-        </properties>
-        <children>
-          <leafNode name="heap-size">
+            <children>
+              <leafNode name="default-log-level">
+                <properties>
+                  <help>default-log-level</help>
+                  <completionHelp>
+                    <list>alert crit debug disabled emerg err info notice warn</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>alert</format>
+                    <description>Alert</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>crit</format>
+                    <description>Critical</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>debug</format>
+                    <description>Debug</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>disabled</format>
+                    <description>Disabled</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>emerg</format>
+                    <description>Emergency</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>err</format>
+                    <description>Error</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>info</format>
+                    <description>Informational</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>notice</format>
+                    <description>Notice</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>warn</format>
+                    <description>Warning</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(alert|crit|debug|disabled|emerg|err|info|notice|warn)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="physmem">
             <properties>
-              <help>IPv4 heap size</help>
-              <valueHelp>
-                <format>u32:0-4294967295</format>
-                <description>Amount of memory (in Mbytes) dedicated to the destination IP lookup table</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
-              </constraint>
+              <help>Memory settings</help>
             </properties>
-            <defaultValue>32</defaultValue>
-          </leafNode>
-        </children>
-      </node>
-      <node name="ip6">
-        <properties>
-          <help>IPv6 settings</help>
-        </properties>
-        <children>
-          <leafNode name="heap-size">
+            <children>
+              <leafNode name="max-size">
+                <properties>
+                  <help>Set memory size for protectable memory allocator (pmalloc) memory space</help>
+                  <valueHelp>
+                    <format>&lt;number&gt;m</format>
+                    <description>Megabyte</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>&lt;number&gt;g</format>
+                    <description>Gigabyte</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
+          <node name="unix">
             <properties>
-              <help>IPv6 heap size</help>
-              <valueHelp>
-                <format>u32:0-4294967295</format>
-                <description>Amount of memory (in Mbytes) dedicated to the destination IP lookup table</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
-              </constraint>
+              <help>Unix settings</help>
             </properties>
-            <defaultValue>32</defaultValue>
-          </leafNode>
-          <leafNode name="hash-buckets">
-            <properties>
-              <help>IPv6 forwarding table hash buckets</help>
-              <valueHelp>
-                <format>u32:1-4294967295</format>
-                <description>IPv6 forwarding table hash buckets</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
-              </constraint>
-            </properties>
-            <defaultValue>65536</defaultValue>
-          </leafNode>
-        </children>
-      </node>
-      <node name="l2learn">
-        <properties>
-          <help>Level 2 MAC address learning settings</help>
-        </properties>
-        <children>
-          <leafNode name="limit">
-            <properties>
-              <help>Number of MAC addresses in the L2 FIB</help>
-              <valueHelp>
-                <format>u32:1-4294967295</format>
-                <description>Number of concurent entries</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 1-4294967295"/>
-              </constraint>
-            </properties>
-            <defaultValue>4194304</defaultValue>
-          </leafNode>
-        </children>
-      </node>
-      <node name="logging">
-        <properties>
-          <help>Loggint settings</help>
-        </properties>
-        <children>
-          <leafNode name="default-log-level">
-            <properties>
-              <help>default-log-level</help>
-              <completionHelp>
-                <list>alert crit debug disabled emerg err info notice warn</list>
-              </completionHelp>
-              <valueHelp>
-                <format>alert</format>
-                <description>Alert</description>
-              </valueHelp>
-              <valueHelp>
-                <format>crit</format>
-                <description>Critical</description>
-              </valueHelp>
-              <valueHelp>
-                <format>debug</format>
-                <description>Debug</description>
-              </valueHelp>
-              <valueHelp>
-                <format>disabled</format>
-                <description>Disabled</description>
-              </valueHelp>
-              <valueHelp>
-                <format>emerg</format>
-                <description>Emergency</description>
-              </valueHelp>
-              <valueHelp>
-                <format>err</format>
-                <description>Error</description>
-              </valueHelp>
-              <valueHelp>
-                <format>info</format>
-                <description>Informational</description>
-              </valueHelp>
-              <valueHelp>
-                <format>notice</format>
-                <description>Notice</description>
-              </valueHelp>
-              <valueHelp>
-                <format>warn</format>
-                <description>Warning</description>
-              </valueHelp>
-              <constraint>
-                <regex>(alert|crit|debug|disabled|emerg|err|info|notice|warn)</regex>
-              </constraint>
-            </properties>
-          </leafNode>
-        </children>
-      </node>
-      <node name="physmem">
-        <properties>
-          <help>Memory settings</help>
-        </properties>
-        <children>
-          <leafNode name="max-size">
-            <properties>
-              <help>Set memory size for protectable memory allocator (pmalloc) memory space</help>
-              <valueHelp>
-                <format>&lt;number&gt;m</format>
-                <description>Megabyte</description>
-              </valueHelp>
-              <valueHelp>
-                <format>&lt;number&gt;g</format>
-                <description>Gigabyte</description>
-              </valueHelp>
-            </properties>
-          </leafNode>
-        </children>
-      </node>
-      <node name="unix">
-        <properties>
-          <help>Unix settings</help>
-        </properties>
-        <children>
-          <leafNode name="poll-sleep-usec">
-            <properties>
-              <help>Add a fixed-sleep between main loop poll</help>
-              <valueHelp>
-                <format>u32:0-4294967295</format>
-                <description>Number of receive queues</description>
-              </valueHelp>
-              <constraint>
-                <validator name="numeric" argument="--range 0-4294967295"/>
-              </constraint>
-            </properties>
-            <defaultValue>0</defaultValue>
-          </leafNode>
+            <children>
+              <leafNode name="poll-sleep-usec">
+                <properties>
+                  <help>Add a fixed-sleep between main loop poll</help>
+                  <valueHelp>
+                    <format>u32:0-4294967295</format>
+                    <description>Number of receive queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 0-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>0</defaultValue>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
     </children>

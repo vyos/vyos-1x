@@ -80,18 +80,17 @@ plugins {
     path /usr/lib/x86_64-linux-gnu/vpp_plugins/
     plugin default { disable }
     plugin dpdk_plugin.so { enable }
-    plugin dhcp_plugin.so { enable }
     plugin lacp_plugin.so { enable }
     plugin linux_cp_plugin.so { enable }
     plugin linux_nl_plugin.so { enable }
-    # NAT
-    plugin cnat_plugin.so { enable }
-    plugin nat_plugin.so { enable }
-    plugin nat44_plugin.so { enable }
-    plugin nat44_ei_plugin.so { enable }
-    plugin nat64_plugin.so { enable }
-    plugin nat66_plugin.so { enable }
-    plugin pnat_plugin.so { enable }
+    # NAT uncomment if needed
+    # plugin cnat_plugin.so { enable }
+    # plugin nat_plugin.so { enable }
+    # plugin nat44_plugin.so { enable }
+    # plugin nat44_ei_plugin.so { enable }
+    # plugin nat64_plugin.so { enable }
+    # plugin nat66_plugin.so { enable }
+    # plugin pnat_plugin.so { enable }
     # Tunnels
     plugin geneve_plugin.so { enable }
     plugin gre_plugin.so { enable }

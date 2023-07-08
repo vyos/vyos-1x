@@ -72,11 +72,11 @@ def get_config(config=None):
         conf = Config()
 
     base = ['vpp']
-    base_ethernet = ['interfaces', 'ethernet']
+    base_settings = ['vpp', 'settings']
 
     # find interfaces removed from VPP
     removed_ifaces = []
-    tmp = node_changed(conf, base + ['interface'])
+    tmp = node_changed(conf, base_settings + ['interface'])
     if tmp:
         for removed_iface in tmp:
             pci_address: str = _get_pci_address_by_interface(removed_iface)
@@ -99,25 +99,23 @@ def get_config(config=None):
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
     default_values = defaults(base)
-    if 'interface' in default_values:
-        del default_values['interface']
+    if 'settings' in default_values:
+        del default_values['settings']
     config = dict_merge(default_values, config)
 
-    if 'interface' in config:
-        for iface, iface_config in config['interface'].items():
-            default_values_iface = defaults(base + ['interface'])
-            config['interface'][iface] = dict_merge(default_values_iface, config['interface'][iface])
-            # add an interface to a list of interfaces that need
-            # to be reinitialized after the commit
-            set_dependents('ethernet', conf, iface)
+    if 'settings' in config:
+        if 'interface' in config['settings']:
+            for iface, iface_config in config['settings']['interface'].items():
+                default_values_iface = defaults(base_settings + ['interface'])
+                config['settings']['interface'][iface] = dict_merge(default_values_iface, config['settings']['interface'][iface])
+                # add an interface to a list of interfaces that need
+                # to be reinitialized after the commit
+                set_dependents('ethernet', conf, iface)
 
-        # Get PCI address auto
-        for iface, iface_config in config['interface'].items():
-            if iface_config['pci'] == 'auto':
-                config['interface'][iface]['pci'] = _get_pci_address_by_interface(iface)
-
-    config['other_interfaces'] = conf.get_config_dict(base_ethernet, key_mangling=('-', '_'),
-                                     get_first_key=True, no_tag_node_value_mangle=True)
+            # Get PCI address auto
+            for iface, iface_config in config['settings']['interface'].items():
+                if iface_config['pci'] == 'auto':
+                    config['settings']['interface'][iface]['pci'] = _get_pci_address_by_interface(iface)
 
     if removed_ifaces:
         config['removed_ifaces'] = removed_ifaces
@@ -130,12 +128,15 @@ def verify(config):
     if not config or (len(config) == 1 and 'removed_ifaces' in config):
         return None
 
-    if 'interface' not in config:
-        raise ConfigError('"interface" is required but not set!')
+    if 'settings' not in config:
+        raise ConfigError('"settings interface" is required but not set!')
 
-    if 'cpu' in config:
-        if 'corelist_workers' in config['cpu'] and 'main_core' not in config[
-                'cpu']:
+    if 'interface' not in config['settings']:
+        raise ConfigError('"settings interface" is required but not set!')
+
+    if 'cpu' in config['settings']:
+        if ('corelist_workers' in config['settings']['cpu'] and
+            'main_core' not in config['settings']['cpu']):
             raise ConfigError('"cpu main-core" is required but not set!')
 
     memory_available: int = virtual_memory().available
@@ -152,7 +153,7 @@ def generate(config):
         service_conf.unlink(missing_ok=True)
         return None
 
-    render(service_conf, 'vpp/startup.conf.j2', config)
+    render(service_conf, 'vpp/startup.conf.j2', config['settings'])
     render(systemd_override, 'vpp/override.conf.j2', config)
 
     # apply default sysctl values from
@@ -190,12 +191,12 @@ def apply(config):
         iface_new_name: str = host_control.get_eth_name(iface['iface_pci_addr'])
         host_control.rename_iface(iface_new_name, iface['iface_name'])
 
-    if 'interface' in config:
+    if 'settings' in config and 'interface' in config.get('settings'):
         # connect to VPP
         # must be performed multiple attempts because API is not available
         # immediately after the service restart
         vpp_control = VPPControl(attempts=20, interval=500)
-        for iface, _ in config['interface'].items():
+        for iface, _ in config['settings']['interface'].items():
             # Create lcp
             if iface not in Section.interfaces():
                 vpp_control.lcp_pair_add(iface, iface)
