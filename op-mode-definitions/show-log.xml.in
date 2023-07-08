@@ -2,9 +2,18 @@
 <interfaceDefinition>
   <node name="show">
     <children>
+      <tagNode name="log">
+        <properties>
+          <help>Show last number of messages in master logging buffer</help>
+          <completionHelp>
+            <list>&lt;1-9999&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>if ${vyos_validators_dir}/numeric --range 1-9999 "$3"; then journalctl --no-hostname --boot --lines "$3"; fi</command>
+      </tagNode>
       <node name="log">
         <properties>
-          <help>Show contents of current master log file</help>
+          <help>Show contents of current master logging buffer</help>
         </properties>
         <command>journalctl --no-hostname --boot</command>
         <children>
