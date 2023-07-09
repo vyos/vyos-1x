@@ -24,6 +24,7 @@ import logging
 from typing import Optional, List, Union, Dict, Any
 
 from vyos.config import Config
+from vyos.template import bracketize_ipv6
 
 
 CONFIG_FILE = '/run/config_sync_conf.conf'
@@ -175,6 +176,7 @@ if __name__ == '__main__':
 
     mode = config.get('mode')
     secondary_address = config.get('secondary', {}).get('address')
+    secondary_address = bracketize_ipv6(secondary_address)
     secondary_key = config.get('secondary', {}).get('key')
     sections = config.get('section')
     timeout = int(config.get('secondary', {}).get('timeout'))
