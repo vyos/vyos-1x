@@ -51,6 +51,10 @@ override_dh_auto_install:
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/op_mode
 	cp -r src/op_mode/* $(DIR)/$(VYOS_LIBEXEC_DIR)/op_mode
 
+	# Install op mode scripts
+	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/init
+	cp -r src/init/* $(DIR)/$(VYOS_LIBEXEC_DIR)/init
+
 	# Install validators
 	mkdir -p $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
 	cp -r src/validators/* $(DIR)/$(VYOS_LIBEXEC_DIR)/validators
@@ -123,3 +127,7 @@ override_dh_auto_install:
 	# Install udev script
 	mkdir -p $(DIR)/usr/lib/udev
 	cp src/helpers/vyos_net_name $(DIR)/usr/lib/udev
+
+override_dh_installsystemd:
+	dh_installsystemd -pvyos-1x --name vyos-router vyos-router.service
+	dh_installsystemd -pvyos-1x --name vyos vyos.target

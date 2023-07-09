@@ -1,0 +1,421 @@
+#!/bin/bash
+# Copyright (C) 2021 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+. /lib/lsb/init-functions
+
+: ${vyatta_env:=/etc/default/vyatta}
+source $vyatta_env
+
+declare progname=${0##*/}
+declare action=$1; shift
+
+declare -x BOOTFILE=$vyatta_sysconfdir/config/config.boot
+
+# If vyos-config= boot option is present, use that file instead
+for x in $(cat /proc/cmdline); do
+    [[ $x = vyos-config=* ]] || continue
+    VYOS_CONFIG="${x#vyos-config=}"
+done
+
+if [ ! -z "$VYOS_CONFIG" ]; then
+    if [ -r "$VYOS_CONFIG" ]; then
+        echo "Config selected manually: $VYOS_CONFIG"
+        declare -x BOOTFILE="$VYOS_CONFIG"
+    else
+        echo "WARNING: Could not read selected config file, using default!"
+    fi
+fi
+
+declare -a subinit
+declare -a all_subinits=( firewall )
+
+if [ $# -gt 0 ] ; then
+    for s in $@ ; do
+        [ -x ${vyatta_sbindir}/${s}.init ] && subinit[${#subinit}]=$s
+    done
+else
+    for s in ${all_subinits[@]} ; do
+        [ -x ${vyatta_sbindir}/${s}.init ] && subinit[${#subinit}]=$s
+    done
+fi
+
+GROUP=vyattacfg
+
+# easy way to make empty file without any command
+empty()
+{
+    >$1
+}
+
+# check if bootup of this portion is disabled
+disabled () {
+    grep -q -w no-vyos-$1 /proc/cmdline
+}
+
+# if necessary, provide initial config
+init_bootfile () {
+    if [ ! -r $BOOTFILE ] ; then
+        if [ -f $vyatta_sysconfdir/config.boot.default ]; then
+            cp $vyatta_sysconfdir/config.boot.default $BOOTFILE
+        else
+            $vyos_libexec_dir/system-versions-foot.py > $BOOTFILE
+        fi
+        chgrp ${GROUP} $BOOTFILE
+        chmod 660 $BOOTFILE
+    fi
+}
+
+# if necessary, migrate initial config
+migrate_bootfile ()
+{
+    if [ -x $vyos_libexec_dir/run-config-migration.py ]; then
+        log_progress_msg migrate
+        sg ${GROUP} -c "$vyos_libexec_dir/run-config-migration.py $BOOTFILE"
+    fi
+}
+
+# load the initial config
+load_bootfile ()
+{
+    log_progress_msg configure
+    (
+        if [ -f /etc/default/vyatta-load-boot ]; then
+            # build-specific environment for boot-time config loading
+            source /etc/default/vyatta-load-boot
+        fi
+        if [ -x $vyos_libexec_dir/vyos-boot-config-loader.py ]; then
+            sg ${GROUP} -c "$vyos_libexec_dir/vyos-boot-config-loader.py $BOOTFILE"
+        fi
+    )
+}
+
+# execute the pre-config script
+run_preconfig_script ()
+{
+    if [ -x $vyatta_sysconfdir/config/scripts/vyos-preconfig-bootup.script ]; then
+        $vyatta_sysconfdir/config/scripts/vyos-preconfig-bootup.script
+    fi
+}
+
+# execute the post-config scripts
+run_postconfig_scripts ()
+{
+    if [ -x $vyatta_sysconfdir/config/scripts/vyatta-postconfig-bootup.script ]; then
+        $vyatta_sysconfdir/config/scripts/vyatta-postconfig-bootup.script
+    fi
+    if [ -x $vyatta_sysconfdir/config/scripts/vyos-postconfig-bootup.script ]; then
+        $vyatta_sysconfdir/config/scripts/vyos-postconfig-bootup.script
+    fi
+}
+
+run_postupgrade_script ()
+{
+    if [ -f $vyatta_sysconfdir/config/.upgraded ]; then
+        # Run the system script
+        /usr/libexec/vyos/system/post-upgrade
+
+        # Run user scripts
+        if [ -d $vyatta_sysconfdir/config/scripts/post-upgrade.d ]; then
+            run-parts $vyatta_sysconfdir/config/scripts/post-upgrade.d
+        fi
+        rm -f $vyatta_sysconfdir/config/.upgraded
+    fi
+}
+
+#
+# On image booted machines, we need to mount /boot from the image-specific
+# boot directory so that kernel package installation will put the
+# files in the right place.  We also have to mount /boot/grub from the
+# system-wide grub directory so that tools that edit the grub.cfg
+# file will find it in the expected location.
+#
+bind_mount_boot ()
+{
+    persist_path=$(/opt/vyatta/sbin/vyos-persistpath)
+    if [ $? == 0 ]; then
+        if [ -e $persist_path/boot ]; then
+            image_name=$(cat /proc/cmdline | sed -e s+^.*vyos-union=/boot/++ | sed -e 's/ .*$//')
+
+            if [ -n "$image_name" ]; then
+                mount --bind $persist_path/boot/$image_name /boot
+                if [ $? -ne 0 ]; then
+                    echo "Couldn't bind mount /boot"
+                fi
+
+                if [ ! -d /boot/grub ]; then
+                    mkdir /boot/grub
+                fi
+
+                mount --bind $persist_path/boot/grub /boot/grub
+                if [ $? -ne 0 ]; then
+                    echo "Couldn't bind mount /boot/grub"
+                fi
+            fi
+        fi
+    fi
+}
+
+clear_or_override_config_files ()
+{
+    for conf in snmp/snmpd.conf snmp/snmptrapd.conf snmp/snmp.conf \
+        keepalived/keepalived.conf cron.d/vyos-crontab \
+        ipvsadm.rules default/ipvsadm resolv.conf
+    do
+    if [ -s /etc/$conf ] ; then
+        empty /etc/$conf
+        chmod 0644 /etc/$conf
+    fi
+    done
+}
+
+update_interface_config ()
+{
+    if [ -d /run/udev/vyos ]; then
+        $vyos_libexec_dir/vyos-interface-rescan.py $BOOTFILE
+    fi
+}
+
+cleanup_post_commit_hooks () {
+    # Remove links from the post-commit hooks directory.
+    # note that this approach only supports hooks that are "configured",
+    # i.e., it does not support hooks that need to always be present.
+    cpostdir=$(cli-shell-api getPostCommitHookDir)
+    # exclude commits hooks from vyatta-cfg
+    excluded="10vyatta-log-commit.pl 99vyos-user-postcommit-hooks"
+    if [ -d "$cpostdir" ]; then
+	    for f in $cpostdir/*; do
+	        if [[ ! $excluded =~ $(basename $f) ]]; then
+		        rm -f $cpostdir/$(basename $f)
+	        fi
+	    done
+    fi
+}
+
+# These are all the default security setting which are later
+# overridden when configuration is read. These are the values the
+# system defaults.
+security_reset ()
+{
+    # restore PAM back to virgin state (no radius/tacacs services)
+    pam-auth-update --package --remove radius
+    rm -f /etc/pam_radius_auth.conf
+    pam-auth-update --package --remove tacplus
+    rm -f /etc/tacplus_nss.conf /etc/tacplus_servers
+
+    # Certain configuration files are re-generated by the configuration
+    # subsystem and must reside under /etc and can not easily be moved to /run.
+    # So on every boot we simply delete any remaining files and let the CLI
+    # regenearte them.
+
+    # PPPoE
+    rm -f /etc/ppp/peers/pppoe* /etc/ppp/peers/wlm*
+
+    # IPSec
+    rm -rf /etc/ipsec.conf /etc/ipsec.secrets
+    find /etc/swanctl -type f | xargs rm -f
+
+    # limit cleanup
+    rm -f /etc/security/limits.d/10-vyos.conf
+
+    # iproute2 cleanup
+    rm -f /etc/iproute2/rt_tables.d/vyos-*.conf
+
+    # Container
+    rm -f /etc/containers/storage.conf /etc/containers/registries.conf /etc/containers/containers.conf
+    # Clean all networks and re-create them from our CLI
+    rm -f /etc/containers/networks/*
+
+    # System Options (SSH/cURL)
+    rm -f /etc/ssh/ssh_config.d/*vyos*.conf
+    rm -f /etc/curlrc
+}
+
+# XXX: T3885 - generate persistend DHCPv6 DUID (Type4 - UUID based)
+gen_duid ()
+{
+    DUID_FILE="/var/lib/dhcpv6/dhcp6c_duid"
+    UUID_FILE="/sys/class/dmi/id/product_uuid"
+    UUID_FILE_ALT="/sys/class/dmi/id/product_serial"
+    if [ ! -f ${UUID_FILE} ] && [ ! -f ${UUID_FILE_ALT} ]; then
+        return 1
+    fi
+
+    # DUID is based on the BIOS/EFI UUID. We omit additional - characters
+    if [ -f ${UUID_FILE} ]; then
+        UUID=$(cat ${UUID_FILE} | tr -d -)
+    fi
+    if [ -z ${UUID} ]; then
+        UUID=$(uuidgen --sha1 --namespace @dns --name $(cat ${UUID_FILE_ALT}) | tr -d -)
+    fi
+    # Add DUID type4 (UUID) information
+    DUID_TYPE="0004"
+
+    # The length-information (as per RFC6355 UUID is 128 bits long) is in big-endian
+    # format - beware when porting to ARM64. The length field consists out of the
+    # UUID (128 bit + 16 bits DUID type) resulting in hex 12.
+    DUID_LEN="0012"
+    if [ "$(echo -n I | od -to2 | head -n1 | cut -f2 -d" " | cut -c6 )" -eq 1 ]; then
+        # true on little-endian (x86) systems
+        DUID_LEN="1200"
+    fi
+
+    for i in $(echo -n ${DUID_LEN}${DUID_TYPE}${UUID} | sed 's/../& /g'); do
+        echo -ne "\x$i"
+    done > ${DUID_FILE}
+}
+
+start ()
+{
+    # reset and clean config files
+    security_reset || log_failure_msg "security reset failed"
+
+    # some legacy directories migrated over from old rl-system.init
+    mkdir -p /var/run/vyatta /var/log/vyatta
+    chgrp vyattacfg /var/run/vyatta /var/log/vyatta
+    chmod 775 /var/run/vyatta /var/log/vyatta
+
+    log_daemon_msg "Waiting for NICs to settle down"
+    # On boot time udev migth take a long time to reorder nic's, this will ensure that
+    # all udev activity is completed and all nics presented at boot-time will have their
+    # final name before continuing with vyos-router initialization.
+    SECONDS=0
+    udevadm settle
+    STATUS=$?
+    log_progress_msg "settled in ${SECONDS}sec."
+    log_end_msg ${STATUS}
+
+    # mountpoint for bpf maps required by xdp
+    mount -t bpf none /sys/fs/bpf
+
+    # Clear out Debian APT source config file
+    empty /etc/apt/sources.list
+
+    # Generate DHCPv6 DUID
+    gen_duid || log_failure_msg "could not generate DUID"
+
+    # Mount a temporary filesystem for container networks.
+    # Configuration should be loaded from VyOS cli.
+    cni_dir="/etc/cni/net.d"
+    [ ! -d ${cni_dir} ] && mkdir -p ${cni_dir}
+    mount -t tmpfs none ${cni_dir}
+
+    # Init firewall
+    nfct helper add rpc inet tcp
+    nfct helper add rpc inet udp
+    nfct helper add tns inet tcp
+    nft -f /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
+
+    rm -f /etc/hostname
+    ${vyos_conf_scripts_dir}/host_name.py || log_failure_msg "could not reset host-name"
+    systemctl start frr.service
+
+    # As VyOS does not execute commands that are not present in the CLI we call
+    # the script by hand to have a single source for the login banner and MOTD
+    ${vyos_conf_scripts_dir}/system_console.py || log_failure_msg "could not reset serial console"
+    ${vyos_conf_scripts_dir}/system-login.py || log_failure_msg "could not reset system login"
+    ${vyos_conf_scripts_dir}/system-login-banner.py || log_failure_msg "could not reset motd and issue files"
+    ${vyos_conf_scripts_dir}/system-option.py || log_failure_msg "could not reset system option files"
+    ${vyos_conf_scripts_dir}/conntrack.py || log_failure_msg "could not reset conntrack subsystem"
+    ${vyos_conf_scripts_dir}/container.py || log_failure_msg "could not reset container subsystem"
+
+    clear_or_override_config_files || log_failure_msg "could not reset config files"
+
+    # enable some debugging before loading the configuration
+    if grep -q vyos-debug /proc/cmdline; then
+        log_action_begin_msg "Enable runtime debugging options"
+        touch /tmp/vyos.container.debug
+        touch /tmp/vyos.ifconfig.debug
+        touch /tmp/vyos.frr.debug
+        touch /tmp/vyos.container.debug
+    fi
+
+    log_action_begin_msg "Mounting VyOS Config"
+    # ensure the vyatta_configdir supports a large number of inodes since
+    # the config hierarchy is often inode-bound (instead of size).
+    # impose a minimum and then scale up dynamically with the actual size
+    # of the system memory.
+    local tmem=$(sed -n 's/^MemTotal: \+\([0-9]\+\) kB$/\1/p' /proc/meminfo)
+    local tpages
+    local tmpfs_opts="nosuid,nodev,mode=775,nr_inodes=0" #automatically allocate inodes
+    mount -o $tmpfs_opts -t tmpfs none ${vyatta_configdir} \
+      && chgrp ${GROUP} ${vyatta_configdir}
+    log_action_end_msg $?
+
+    disabled bootfile || init_bootfile
+
+    cleanup_post_commit_hooks
+
+    log_daemon_msg "Starting VyOS router"
+    disabled migrate || migrate_bootfile
+
+    run_preconfig_script
+
+    run_postupgrade_script
+
+    update_interface_config
+
+    for s in ${subinit[@]} ; do
+    if ! disabled $s; then
+        log_progress_msg $s
+        if ! ${vyatta_sbindir}/${s}.init start
+        then log_failure_msg
+         exit 1
+        fi
+    fi
+    done
+
+    bind_mount_boot
+
+    disabled configure || load_bootfile
+    log_end_msg $?
+
+    telinit q
+    chmod g-w,o-w /
+
+    run_postconfig_scripts
+}
+
+stop()
+{
+    local -i status=0
+    log_daemon_msg "Stopping VyOS router"
+    for ((i=${#sub_inits[@]} - 1; i >= 0; i--)) ; do
+    s=${subinit[$i]}
+    log_progress_msg $s
+    ${vyatta_sbindir}/${s}.init stop
+    let status\|=$?
+    done
+    log_end_msg $status
+    log_action_begin_msg "Un-mounting VyOS Config"
+    umount ${vyatta_configdir}
+    log_action_end_msg $?
+
+    systemctl stop frr.service
+}
+
+case "$action" in
+    start) start ;;
+    stop)  stop ;;
+    restart|force-reload) stop && start ;;
+    *)  log_failure_msg "usage: $progname [ start|stop|restart ] [ subinit ... ]" ;
+    false ;;
+esac
+
+exit $?
+
+# Local Variables:
+# mode: shell-script
+# sh-indentation: 4
+# End:

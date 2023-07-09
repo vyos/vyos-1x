@@ -30,6 +30,7 @@ usr/bin/vyos-hostsd-client
 usr/lib
 usr/libexec/vyos/completion
 usr/libexec/vyos/conf_mode
+usr/libexec/vyos/init
 usr/libexec/vyos/op_mode
 usr/libexec/vyos/services
 usr/libexec/vyos/system

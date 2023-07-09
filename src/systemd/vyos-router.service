@@ -1,0 +1,19 @@
+[Unit]
+Description=VyOS Router
+After=systemd-journald-dev-log.socket time-sync.target local-fs.target cloud-config.service
+Requires=frr.service
+Conflicts=shutdown.target
+Before=systemd-user-sessions.service
+
+[Service]
+Type=simple
+Restart=no
+TimeoutSec=20min
+KillMode=process
+RemainAfterExit=yes
+ExecStart=/usr/libexec/vyos/init/vyos-router start
+ExecStop=/usr/libexec/vyos/init/vyos-router stop
+StandardOutput=journal+console
+
+[Install]
+WantedBy=vyos.target

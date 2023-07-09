@@ -1,0 +1,94 @@
+#!/bin/sh
+set -f
+
+LOG=""
+DEBUG_LEVEL=1
+LOG_D="/run/vyos-router"
+ENABLE="enabled"
+DISABLE="disabled"
+FOUND="found"
+NOTFOUND="notfound"
+RUN_ENABLED_FILE="$LOG_D/$ENABLE"
+VYOS_SYSTEM_TARGET="/lib/systemd/system/vyos.target"
+VYOS_TARGET_NAME="vyos.target"
+
+debug() {
+    local lvl="$1"
+    shift
+    [ "$lvl" -gt "$DEBUG_LEVEL" ] && return
+    if [ -z "$LOG" ]; then
+        local log="$LOG_D/${0##*/}.log"
+        { [ -d "$LOG_D" ] || mkdir -p "$LOG_D"; } &&
+            { : > "$log"; } >/dev/null 2>&1 && LOG="$log" ||
+            LOG="/dev/kmsg"
+    fi
+    echo "$@" >> "$LOG"
+}
+
+default() {
+    _RET="$ENABLE"
+}
+
+main() {
+    local normal_d="$1" early_d="$2" late_d="$3"
+    local target_name="multi-user.target" gen_d="$early_d"
+    local link_path="$gen_d/${target_name}.wants/${VYOS_TARGET_NAME}"
+    local ds="$NOTFOUND"
+
+    debug 1 "$0 normal=$normal_d early=$early_d late=$late_d"
+    debug 2 "$0 $*"
+
+    local search result="error" ret=""
+    for search in default; do
+        if $search; then
+            debug 1 "$search found $_RET"
+            [ "$_RET" = "$ENABLE" -o "$_RET" = "$DISABLE" ] &&
+                result=$_RET && break
+        else
+            ret=$?
+            debug 0 "search $search returned $ret"
+        fi
+    done
+
+    # enable AND ds=found == enable
+    # enable AND ds=notfound == disable
+    # disable || <any> == disabled
+    if [ "$result" = "$ENABLE" ]; then
+        if [ -e "$link_path" ]; then
+                debug 1 "already enabled: no change needed"
+        else
+            [ -d "${link_path%/*}" ] || mkdir -p "${link_path%/*}" ||
+                debug 0 "failed to make dir $link_path"
+            if ln -snf "$VYOS_SYSTEM_TARGET" "$link_path"; then
+                debug 1 "enabled via $link_path -> $VYOS_SYSTEM_TARGET"
+            else
+                ret=$?
+                debug 0 "[$ret] enable failed:" \
+                    "ln $VYOS_SYSTEM_TARGET $link_path"
+            fi
+        fi
+        : > "$RUN_ENABLED_FILE"
+    elif [ "$result" = "$DISABLE" ]; then
+        if [ -f "$link_path" ]; then
+            if rm -f "$link_path"; then
+                debug 1 "disabled. removed existing $link_path"
+            else
+                ret=$?
+                debug 0 "[$ret] disable failed, remove $link_path"
+            fi
+        else
+            debug 1 "already disabled: no change needed [no $link_path]"
+        fi
+        if [ -e "$RUN_ENABLED_FILE" ]; then
+            rm -f "$RUN_ENABLED_FILE"
+        fi
+    else
+        debug 0 "unexpected result '$result' 'ds=$ds'"
+        ret=3
+    fi
+    return $ret
+}
+
+main "$@"
+
+# vi: ts=4 expandtab
