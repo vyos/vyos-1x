@@ -123,9 +123,6 @@ class Xml:
         return d
 
     def multi_to_list(self, rpath: list, conf: dict) -> dict:
-        if rpath and rpath[-1] in list(conf):
-            raise ValueError('rpath should be disjoint from conf keys')
-
         res: Any = {}
 
         for k in list(conf):
@@ -246,10 +243,6 @@ class Xml:
         if not conf:
             return self.get_defaults(path, get_first_key=get_first_key,
                                      recursive=recursive)
-        if path and path[-1] in list(conf):
-            conf = conf[path[-1]]
-            conf = {} if not isinstance(conf, dict) else conf
-
         if not self._well_defined(path, conf):
             print('path to config dict does not define full config paths')
             return {}
