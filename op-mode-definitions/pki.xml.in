@@ -505,6 +505,14 @@
               </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 CA certificate in PEM format</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --ca "$4" --pem</command>
+              </leafNode>
+            </children>
           </tagNode>
           <leafNode name="certificate">
             <properties>
@@ -520,6 +528,14 @@
               </completionHelp>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 certificate in PEM format</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4" --pem</command>
+              </leafNode>
+            </children>
           </tagNode>
           <leafNode name="crl">
             <properties>
@@ -527,6 +543,23 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "all"</command>
           </leafNode>
+          <tagNode name="crl">
+            <properties>
+              <help>Show x509 certificate revocation lists by CA name</help>
+              <completionHelp>
+                <path>pki ca</path>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "$4"</command>
+            <children>
+              <leafNode name="pem">
+                <properties>
+                  <help>Show x509 certificate revocation lists by CA name in PEM format</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --crl "$4" --pem</command>
+              </leafNode>
+            </children>
+          </tagNode>
         </children>
         <command>sudo ${vyos_op_scripts_dir}/pki.py --action show</command>
       </node>

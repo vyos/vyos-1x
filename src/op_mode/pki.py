@@ -840,7 +840,7 @@ def import_openvpn_secret(name, path):
     install_openvpn_key(name, key_data, key_version)
 
 # Show functions
-def show_certificate_authority(name=None):
+def show_certificate_authority(name=None, pem=False):
     headers = ['Name', 'Subject', 'Issuer CN', 'Issued', 'Expiry', 'Private Key', 'Parent']
     data = []
     certs = get_config_ca_certificate()
@@ -852,6 +852,11 @@ def show_certificate_authority(name=None):
                 continue
 
             cert = load_certificate(cert_dict['certificate'])
+
+            if name and pem:
+                print(encode_certificate(cert))
+                return
+
             parent_ca_name = get_certificate_ca(cert, certs)
             cert_issuer_cn = cert.issuer.rfc4514_string().split(",")[0]
 
@@ -867,7 +872,7 @@ def show_certificate_authority(name=None):
     print("Certificate Authorities:")
     print(tabulate.tabulate(data, headers))
 
-def show_certificate(name=None):
+def show_certificate(name=None, pem=False):
     headers = ['Name', 'Type', 'Subject CN', 'Issuer CN', 'Issued', 'Expiry', 'Revoked', 'Private Key', 'CA Present']
     data = []
     certs = get_config_certificate()
@@ -884,6 +889,10 @@ def show_certificate(name=None):
 
             if not cert:
                 continue
+
+            if name and pem:
+                print(encode_certificate(cert))
+                return
 
             ca_name = get_certificate_ca(cert, ca_certs)
             cert_subject_cn = cert.subject.rfc4514_string().split(",")[0]
@@ -906,7 +915,7 @@ def show_certificate(name=None):
     print("Certificates:")
     print(tabulate.tabulate(data, headers))
 
-def show_crl(name=None):
+def show_crl(name=None, pem=False):
     headers = ['CA Name', 'Updated', 'Revokes']
     data = []
     certs = get_config_ca_certificate()
@@ -927,8 +936,15 @@ def show_crl(name=None):
                 if not crl:
                     continue
 
+                if name and pem:
+                    print(encode_certificate(crl))
+                    continue
+
                 certs = get_revoked_by_serial_numbers([revoked.serial_number for revoked in crl])
                 data.append([cert_name, crl.last_update, ", ".join(certs)])
+
+    if name and pem:
+        return
 
     print("Certificate Revocation Lists:")
     print(tabulate.tabulate(data, headers))
@@ -943,6 +959,7 @@ if __name__ == '__main__':
     parser.add_argument('--crl', help='Certificate Revocation List', required=False)
     parser.add_argument('--sign', help='Sign certificate with specified CA', required=False)
     parser.add_argument('--self-sign', help='Self-sign the certificate', action='store_true')
+    parser.add_argument('--pem', help='Output using PEM encoding', action='store_true')
 
     # SSH
     parser.add_argument('--ssh', help='SSH Key', required=False)
@@ -1032,16 +1049,16 @@ if __name__ == '__main__':
                     if not conf.exists(['pki', 'ca', ca_name]):
                         print(f'CA "{ca_name}" does not exist!')
                         exit(1)
-                show_certificate_authority(ca_name)
+                show_certificate_authority(ca_name, args.pem)
             elif args.certificate:
                 cert_name = None if args.certificate == 'all' else args.certificate
                 if cert_name:
                     if not conf.exists(['pki', 'certificate', cert_name]):
                         print(f'Certificate "{cert_name}" does not exist!')
                         exit(1)
-                show_certificate(None if args.certificate == 'all' else args.certificate)
+                show_certificate(None if args.certificate == 'all' else args.certificate, args.pem)
             elif args.crl:
-                show_crl(None if args.crl == 'all' else args.crl)
+                show_crl(None if args.crl == 'all' else args.crl, args.pem)
             else:
                 show_certificate_authority()
                 show_certificate()
