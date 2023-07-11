@@ -21,6 +21,8 @@ import logging
 from typing import Optional, Tuple, Union
 from filecmp import cmp
 from datetime import datetime
+from textwrap import dedent
+from pathlib import Path
 from tabulate import tabulate
 
 from vyos.config import Config
@@ -456,19 +458,18 @@ Proceed ?'''
         return ConfigTree(c)
 
     def _add_logrotate_conf(self):
-        conf = f"""{archive_config_file} {{
-    su root vyattacfg
-    rotate {self.max_revisions}
-    start 0
-    compress
-    copy
-}}"""
-        mask = os.umask(0o133)
-
-        with open(logrotate_conf, 'w') as f:
-            f.write(conf)
-
-        os.umask(mask)
+        conf: str = dedent(f"""\
+        {archive_config_file} {{
+            su root vyattacfg
+            rotate {self.max_revisions}
+            start 0
+            compress
+            copy
+        }}
+        """)
+        conf_file = Path(logrotate_conf)
+        conf_file.write_text(conf)
+        conf_file.chmod(0o644)
 
     def _archive_active_config(self) -> bool:
         mask = os.umask(0o113)
