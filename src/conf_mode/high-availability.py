@@ -175,6 +175,11 @@ def verify(ha):
     # Virtual-server
     if 'virtual_server' in ha:
         for vs, vs_config in ha['virtual_server'].items():
+
+            if 'address' not in vs_config and 'fwmark' not in vs_config:
+                raise ConfigError('Either address or fwmark is required '
+                                  f'but not set for virtual-server "{vs}"')
+
             if 'port' not in vs_config and 'fwmark' not in vs_config:
                 raise ConfigError(f'Port or fwmark is required but not set for virtual-server "{vs}"')
             if 'port' in vs_config and 'fwmark' in vs_config:

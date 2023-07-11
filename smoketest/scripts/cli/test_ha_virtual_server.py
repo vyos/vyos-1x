@@ -47,6 +47,7 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
         delay = '10'
         method = 'nat'
         persistence_timeout = '600'
+        vs = 'serv-one'
         vip = '203.0.113.111'
         vport = '2222'
         rservers = ['192.0.2.21', '192.0.2.22', '192.0.2.23']
@@ -56,21 +57,23 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
 
         vserver_base = base_path + ['virtual-server']
 
-        self.cli_set(vserver_base + [vip, 'algorithm', algo])
-        self.cli_set(vserver_base + [vip, 'delay-loop', delay])
-        self.cli_set(vserver_base + [vip, 'forward-method', method])
-        self.cli_set(vserver_base + [vip, 'persistence-timeout', persistence_timeout])
-        self.cli_set(vserver_base + [vip, 'port', vport])
-        self.cli_set(vserver_base + [vip, 'protocol', proto])
+        self.cli_set(vserver_base + [vs, 'address', vip])
+        self.cli_set(vserver_base + [vs, 'algorithm', algo])
+        self.cli_set(vserver_base + [vs, 'delay-loop', delay])
+        self.cli_set(vserver_base + [vs, 'forward-method', method])
+        self.cli_set(vserver_base + [vs, 'persistence-timeout', persistence_timeout])
+        self.cli_set(vserver_base + [vs, 'port', vport])
+        self.cli_set(vserver_base + [vs, 'protocol', proto])
         for rs in rservers:
-            self.cli_set(vserver_base + [vip, 'real-server', rs, 'connection-timeout', connection_timeout])
-            self.cli_set(vserver_base + [vip, 'real-server', rs, 'port', rport])
+            self.cli_set(vserver_base + [vs, 'real-server', rs, 'connection-timeout', connection_timeout])
+            self.cli_set(vserver_base + [vs, 'real-server', rs, 'port', rport])
 
         # commit changes
         self.cli_commit()
 
         config = read_file(KEEPALIVED_CONF)
 
+        self.assertIn(f'virtual_server {vip} {vport}', config)
         self.assertIn(f'delay_loop {delay}', config)
         self.assertIn(f'lb_algo lc', config)
         self.assertIn(f'lb_kind {method.upper()}', config)
@@ -86,6 +89,7 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
         delay = '15'
         method = 'nat'
         persistence_timeout = '300'
+        vs = 'serv-two'
         vip = '203.0.113.222'
         vport = '22322'
         rservers = ['192.0.2.11', '192.0.2.12']
@@ -107,15 +111,16 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
         self.cli_set(vrrp_base + [group, 'vrid', vrid])
 
         # Virtual-server config
-        self.cli_set(vserver_base + [vip, 'algorithm', algo])
-        self.cli_set(vserver_base + [vip, 'delay-loop', delay])
-        self.cli_set(vserver_base + [vip, 'forward-method', method])
-        self.cli_set(vserver_base + [vip, 'persistence-timeout', persistence_timeout])
-        self.cli_set(vserver_base + [vip, 'port', vport])
-        self.cli_set(vserver_base + [vip, 'protocol', proto])
+        self.cli_set(vserver_base + [vs, 'address', vip])
+        self.cli_set(vserver_base + [vs, 'algorithm', algo])
+        self.cli_set(vserver_base + [vs, 'delay-loop', delay])
+        self.cli_set(vserver_base + [vs, 'forward-method', method])
+        self.cli_set(vserver_base + [vs, 'persistence-timeout', persistence_timeout])
+        self.cli_set(vserver_base + [vs, 'port', vport])
+        self.cli_set(vserver_base + [vs, 'protocol', proto])
         for rs in rservers:
-            self.cli_set(vserver_base + [vip, 'real-server', rs, 'connection-timeout', connection_timeout])
-            self.cli_set(vserver_base + [vip, 'real-server', rs, 'port', rport])
+            self.cli_set(vserver_base + [vs, 'real-server', rs, 'connection-timeout', connection_timeout])
+            self.cli_set(vserver_base + [vs, 'real-server', rs, 'port', rport])
 
         # commit changes
         self.cli_commit()
@@ -131,6 +136,7 @@ class TestHAVirtualServer(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'preempt_delay 0', config) # default value
 
         # Keepalived virtual-server
+        self.assertIn(f'virtual_server {vip} {vport}', config)
         self.assertIn(f'delay_loop {delay}', config)
         self.assertIn(f'lb_algo lc', config)
         self.assertIn(f'lb_kind {method.upper()}', config)

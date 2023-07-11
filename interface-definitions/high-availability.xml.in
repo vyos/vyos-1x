@@ -336,9 +336,10 @@
       </node>
       <tagNode name="virtual-server">
         <properties>
-          <help>Load-balancing virtual server address</help>
+          <help>Load-balancing virtual server alias</help>
         </properties>
         <children>
+          #include <include/address-ipv4-ipv6-single.xml.i>
           <leafNode name="algorithm">
             <properties>
               <help>Schedule algorithm (default - least-connection)</help>

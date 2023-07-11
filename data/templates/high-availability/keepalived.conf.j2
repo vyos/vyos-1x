@@ -173,7 +173,7 @@ vrrp_sync_group {{ name }} {
 {%     for vserver, vserver_config in virtual_server.items() %}
 # Vserver {{ vserver }}
 {%         if vserver_config.port is vyos_defined %}
-virtual_server {{ vserver }} {{ vserver_config.port }} {
+virtual_server {{ vserver_config.address }} {{ vserver_config.port }} {
 {%         else %}
 virtual_server fwmark {{ vserver_config.fwmark }} {
 {%         endif %}
