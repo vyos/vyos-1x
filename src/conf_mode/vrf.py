@@ -32,7 +32,7 @@ from vyos.util import dict_search
 from vyos.util import get_interface_config
 from vyos.util import popen
 from vyos.util import run
-from vyos.util import sysctl_write
+from vyos.utils.system import sysctl_write
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag

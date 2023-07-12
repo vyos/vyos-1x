@@ -23,7 +23,7 @@ from vyos.config import Config
 from vyos.template import render_to_string
 from vyos.util import dict_search
 from vyos.util import read_file
-from vyos.util import sysctl_write
+from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists
 from vyos import ConfigError
 from vyos import frr

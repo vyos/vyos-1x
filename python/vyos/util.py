@@ -1130,20 +1130,6 @@ def is_wwan_connected(interface):
     # return True/False if interface is in connected state
     return dict_search('modem.generic.state', tmp) == 'connected'
 
-def sysctl_read(name):
-    """ Read and return current value of sysctl() option """
-    tmp = cmd(f'sysctl {name}')
-    return tmp.split()[-1]
-
-def sysctl_write(name, value):
-    """ Change value via sysctl() - return True if changed, False otherwise """
-    tmp = cmd(f'sysctl {name}')
-    # last list index contains the actual value - only write if value differs
-    if sysctl_read(name) != str(value):
-        call(f'sysctl -wq {name}={value}')
-        return True
-    return False
-
 def load_as_module(name: str, path: str):
     import importlib.util
 

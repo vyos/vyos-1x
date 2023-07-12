@@ -15,14 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from vyos.util import *
 
 class TestVyOSUtil(TestCase):
     def test_key_mangline(self):
+        from vyos.util import mangle_dict_keys
         data = {"foo-bar": {"baz-quux": None}}
         expected_data = {"foo_bar": {"baz_quux": None}}
         new_data = mangle_dict_keys(data, '-', '_')
         self.assertEqual(new_data, expected_data)
 
     def test_sysctl_read(self):
+        from vyos.utils.system import sysctl_read
         self.assertEqual(sysctl_read('net.ipv4.conf.lo.forwarding'), '1')
