@@ -355,15 +355,7 @@
             <help>Apply local policy routing to interface</help>
           </properties>
           <children>
-            <leafNode name="interface">
-              <properties>
-                <help>Interface</help>
-                <completionHelp>
-                  <script>${vyos_completion_dir}/list_interfaces</script>
-                </completionHelp>
-                <multi/>
-              </properties>
-            </leafNode>
+            #include <include/generic-interface-multi.xml.i>
           </children>
         </node>
       </children>
@@ -386,18 +378,7 @@
           </properties>
           <children>
             #include <include/bgp/route-distinguisher.xml.i>
-            <leafNode name="label">
-              <properties>
-                <help>MPLS label value assigned to route</help>
-                <valueHelp>
-                  <format>u32:0-1048575</format>
-                  <description>MPLS label value</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 0-1048575"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/afi-vpn-label.xml.i>
           </children>
         </tagNode>
       </children>
@@ -766,18 +747,7 @@
           </properties>
           <children>
             #include <include/bgp/route-distinguisher.xml.i>
-            <leafNode name="label">
-              <properties>
-                <help>MPLS label value assigned to route</help>
-                <valueHelp>
-                  <format>u32:0-1048575</format>
-                  <description>MPLS label value</description>
-                </valueHelp>
-                <constraint>
-                  <validator name="numeric" argument="--range 0-1048575"/>
-                </constraint>
-              </properties>
-            </leafNode>
+            #include <include/bgp/afi-vpn-label.xml.i>
           </children>
         </tagNode>
       </children>
@@ -840,12 +810,7 @@
             <help>Specify handling for BUM packets</help>
           </properties>
           <children>
-            <leafNode name="disable">
-              <properties>
-                <help>Do not flood any BUM packets</help>
-                <valueless/>
-              </properties>
-            </leafNode>
+            #include <include/generic-disable-node.xml.i>
             <leafNode name="head-end-replication">
               <properties>
                 <help>Flood BUM packets using head-end replication</help>
