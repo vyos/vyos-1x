@@ -13,7 +13,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, TYPE_CHECKING
+
+# https://peps.python.org/pep-0484/#forward-references
+# for type 'ConfigDict'
+if TYPE_CHECKING:
+    from vyos.config import ConfigDict
 
 class Xml:
     def __init__(self):
@@ -207,19 +212,42 @@ class Xml:
             return False
         return True
 
+    def _set_source_recursive(self, o: Union[dict, str, list], b: bool):
+        d = {}
+        if not isinstance(o, dict):
+            d = {'_source': b}
+        else:
+            for k, v in o.items():
+                d[k] = self._set_source_recursive(v, b)
+            d |= {'_source': b}
+        return d
+
     # use local copy of function in module configdict, to avoid circular
     # import
+    #
+    # extend dict_merge to keep track of keys only in source
     def _dict_merge(self, source, destination):
         from copy import deepcopy
-        tmp = deepcopy(destination)
+        dest = deepcopy(destination)
+        from_source = {}
 
         for key, value in source.items():
-            if key not in tmp:
-                tmp[key] = value
+            if key not in dest:
+                dest[key] = value
+                from_source[key] = self._set_source_recursive(value, True)
             elif isinstance(source[key], dict):
-                tmp[key] = self._dict_merge(source[key], tmp[key])
+                dest[key], f = self._dict_merge(source[key], dest[key])
+                f |= {'_source': False}
+                from_source[key] = f
 
-        return tmp
+        return dest, from_source
+
+    def from_source(self, d: dict, path: list) -> bool:
+        for key in path:
+            d  = d[key] if key in d else {}
+            if not d or not isinstance(d, dict):
+                return False
+        return d.get('_source', False)
 
     def _relative_defaults(self, rpath: list, conf: dict, recursive=False) -> dict:
         res: dict = {}
@@ -257,13 +285,16 @@ class Xml:
 
         return res
 
-    def merge_defaults(self, path: list, conf: dict, get_first_key=False,
-                       recursive=False) -> dict:
+    def merge_defaults(self, path: list, conf: Union[dict, 'ConfigDict'],
+                       get_first_key=False, recursive=False) -> dict:
         """Return config dict with defaults non-destructively merged
 
         This merges non-recursive defaults relative to the config dict.
         """
         d = self.relative_defaults(path, conf, get_first_key=get_first_key,
                                    recursive=recursive)
-        d = self._dict_merge(d, conf)
+        d, f = self._dict_merge(d, conf)
+        d = type(conf)(d)
+        if hasattr(d, '_from_defaults'):
+            setattr(d, '_from_defaults', f)
         return d
