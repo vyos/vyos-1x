@@ -1130,28 +1130,6 @@ def is_wwan_connected(interface):
     # return True/False if interface is in connected state
     return dict_search('modem.generic.state', tmp) == 'connected'
 
-def boot_configuration_complete() -> bool:
-    """ Check if the boot config loader has completed
-    """
-    from vyos.defaults import config_status
-
-    if os.path.isfile(config_status):
-        return True
-    return False
-
-def boot_configuration_success() -> bool:
-    from vyos.defaults import config_status
-
-    try:
-        with open(config_status) as f:
-            res = f.read().strip()
-    except FileNotFoundError:
-        return False
-
-    if int(res) == 0:
-        return True
-    return False
-
 def sysctl_read(name):
     """ Read and return current value of sysctl() option """
     tmp = cmd(f'sysctl {name}')

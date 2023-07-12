@@ -25,7 +25,8 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.ifconfig import Section
-from vyos.util import call, rc_cmd, boot_configuration_complete
+from vyos.util import call, rc_cmd
+from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.system import sysctl_read, sysctl_apply
 from vyos.template import render
 from vyos.xml import defaults
