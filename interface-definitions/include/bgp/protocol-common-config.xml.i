@@ -873,6 +873,36 @@
     </node>
   </children>
 </node>
+<tagNode name="interface">
+  <properties>
+    <help>Enable MPLS on Interface</help>
+    <completionHelp>
+      <script>${vyos_completion_dir}/list_interfaces</script>
+    </completionHelp>
+    <valueHelp>
+      <format>txt</format>
+      <description>Interface name</description>
+    </valueHelp>
+    <constraint>
+      #include <include/constraint/interface-name.xml.i>
+    </constraint>
+  </properties>
+  <children>
+    <node name="mpls">
+      <properties>
+        <help> MPLS options</help>
+      </properties>
+      <children>
+        <leafNode name="forwarding">
+          <properties>
+            <help> Enable MPLS forwarding for eBGP directly connected peers</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+  </children>
+</tagNode>
 <node name="listen">
   <properties>
     <help>Listen for and accept BGP dynamic neighbors from range</help>

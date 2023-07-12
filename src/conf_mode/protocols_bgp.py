@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,6 +20,7 @@ from sys import argv
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import node_changed
 from vyos.configverify import verify_prefix_list
 from vyos.configverify import verify_route_map
 from vyos.configverify import verify_vrf
@@ -27,6 +28,7 @@ from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
 from vyos.util import dict_search
+from vyos.util import get_interface_config
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 from vyos import frr
@@ -54,6 +56,20 @@ def get_config(config=None):
                                                  key_mangling=('-', '_'),
                                                  get_first_key=True,
                                                  no_tag_node_value_mangle=True)
+    # if config removed
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        bgp['interface_removed'] = list(interfaces_removed)
+    # Add vrf mapping in <bgp interface ifname>
+    if 'interface' in bgp:
+        for interface in bgp['interface']:
+            tmp = get_interface_config(interface)
+            if dict_search('linkinfo.info_slave_kind', tmp) and \
+                    tmp['linkinfo']['info_slave_kind'] == 'vrf':
+                if 'master' in tmp:
+                    bgp['interface'][interface]['applied_vrf'] = tmp['master']
+            else:
+                bgp['interface'][interface]['applied_vrf'] = 'default'
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -230,6 +246,23 @@ def verify(bgp):
 
     if 'system_as' not in bgp:
         raise ConfigError('BGP system-as number must be defined!')
+
+    # Verify vrf on interface and bgp section
+    if 'interface' in bgp:
+        for interface in dict_search('interface', bgp):
+            if dict_search(f'interface.{interface}.mpls', bgp):
+                if 'forwarding' in bgp['interface'][interface]['mpls']:
+                    if 'vrf' in bgp:
+                        if bgp['interface'][interface]['applied_vrf'] != bgp['vrf']:
+                            raise ConfigError(
+                                f'Can not set mpls forwarding. Interface {interface} in different vrf')
+                    else:
+                        if bgp['interface'][interface]['applied_vrf'] != 'default':
+                            raise ConfigError(
+                                f'Can not set mpls forwarding. Interface {interface} in different vrf')
+            else:
+                raise ConfigError(
+                    f'<protocols bgp interface {interface}> command should have options')
 
     # Common verification for both peer-group and neighbor statements
     for neighbor in ['neighbor', 'peer_group']:
@@ -520,6 +553,14 @@ def apply(bgp):
         vrf = ' vrf ' + bgp['vrf']
 
     frr_cfg.load_configuration(bgp_daemon)
+
+    #If bgp interface config removed
+    for key in ['interface', 'interface_removed']:
+        if key not in bgp:
+            continue
+        for interface in bgp[key]:
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
+
     frr_cfg.modify_section(f'^router bgp \d+{vrf}', stop_pattern='^exit', remove_stop_mark=True)
     if 'frr_bgpd_config' in bgp:
         frr_cfg.add_before(frr.default_add_before, bgp['frr_bgpd_config'])

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,6 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
+from vyos.ifconfig import Section
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
 from vyos.util import process_named_running
@@ -1071,6 +1072,39 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                          'test'])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
+
+    def test_bgp_22_interface_mpls_forwarding(self):
+        interfaces = Section.interfaces('ethernet')
+        self.cli_set(base_path + ['system-as', ASN])
+        for interface in interfaces:
+            self.cli_set(
+                base_path + ['interface', interface, 'mpls', 'forwarding'])
+        self.cli_commit()
+
+        for interface in interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', frrconfig)
+            self.assertIn(f' mpls bgp forwarding', frrconfig)
+
+    def test_bgp_23_vrf_interface_mpls_forwarding(self):
+        self.create_bgp_instances_for_import_test()
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            self.cli_set(
+                ['interfaces', 'ethernet', interface, 'vrf', import_vrf])
+            self.cli_set(
+                import_vrf_base + [import_vrf] + base_path + ['interface',
+                                                              interface,
+                                                              'mpls',
+                                                              'forwarding'])
+        self.cli_commit()
+
+        for interface in interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}')
+            self.assertIn(f'interface {interface}', frrconfig)
+            self.assertIn(f' mpls bgp forwarding', frrconfig)
+            self.cli_delete(['interfaces', 'ethernet', interface, 'vrf'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
