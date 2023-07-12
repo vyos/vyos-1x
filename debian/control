@@ -93,6 +93,7 @@ Depends:
   libstrongswan-standard-plugins (>=5.9),
   libvppinfra,
   libvyosconfig0,
+  linux-cpupower,
   lldpd,
   lm-sensors,
   lsscsi,
