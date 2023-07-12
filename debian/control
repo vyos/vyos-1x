@@ -72,6 +72,7 @@ Depends:
   iperf,
   iperf3,
   iproute2 (>= 6.0.0),
+  iptables,
   iputils-arping,
   isc-dhcp-client,
   isc-dhcp-relay,
