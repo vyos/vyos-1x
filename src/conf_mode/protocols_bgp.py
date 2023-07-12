@@ -28,7 +28,7 @@ from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
 from vyos.util import dict_search
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_vrf
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError
 from vyos import frr
@@ -56,20 +56,12 @@ def get_config(config=None):
                                                  key_mangling=('-', '_'),
                                                  get_first_key=True,
                                                  no_tag_node_value_mangle=True)
-    # if config removed
+
+    # Remove per interface MPLS configuration - get a list if changed
+    # nodes under the interface tagNode
     interfaces_removed = node_changed(conf, base + ['interface'])
     if interfaces_removed:
         bgp['interface_removed'] = list(interfaces_removed)
-    # Add vrf mapping in <bgp interface ifname>
-    if 'interface' in bgp:
-        for interface in bgp['interface']:
-            tmp = get_interface_config(interface)
-            if dict_search('linkinfo.info_slave_kind', tmp) and \
-                    tmp['linkinfo']['info_slave_kind'] == 'vrf':
-                if 'master' in tmp:
-                    bgp['interface'][interface]['applied_vrf'] = tmp['master']
-            else:
-                bgp['interface'][interface]['applied_vrf'] = 'default'
 
     # Assign the name of our VRF context. This MUST be done before the return
     # statement below, else on deletion we will delete the default instance
@@ -249,20 +241,10 @@ def verify(bgp):
 
     # Verify vrf on interface and bgp section
     if 'interface' in bgp:
-        for interface in dict_search('interface', bgp):
-            if dict_search(f'interface.{interface}.mpls', bgp):
-                if 'forwarding' in bgp['interface'][interface]['mpls']:
-                    if 'vrf' in bgp:
-                        if bgp['interface'][interface]['applied_vrf'] != bgp['vrf']:
-                            raise ConfigError(
-                                f'Can not set mpls forwarding. Interface {interface} in different vrf')
-                    else:
-                        if bgp['interface'][interface]['applied_vrf'] != 'default':
-                            raise ConfigError(
-                                f'Can not set mpls forwarding. Interface {interface} in different vrf')
-            else:
-                raise ConfigError(
-                    f'<protocols bgp interface {interface}> command should have options')
+        for interface in bgp['interface']:
+            tmp = get_interface_vrf(interface)
+            if ('vrf' in bgp and bgp['vrf'] != tmp) or tmp != 'default':
+                raise ConfigError(f'Interface "{interface}" belongs to different VRF instance!')
 
     # Common verification for both peer-group and neighbor statements
     for neighbor in ['neighbor', 'peer_group']:
@@ -554,7 +536,7 @@ def apply(bgp):
 
     frr_cfg.load_configuration(bgp_daemon)
 
-    #If bgp interface config removed
+    # Remove interface specific config
     for key in ['interface', 'interface_removed']:
         if key not in bgp:
             continue

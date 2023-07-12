@@ -840,7 +840,7 @@
 </node>
 <tagNode name="interface">
   <properties>
-    <help>Enable MPLS on Interface</help>
+    <help>Configure interface related parameters, e.g. MPLS</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces</script>
     </completionHelp>
@@ -855,12 +855,12 @@
   <children>
     <node name="mpls">
       <properties>
-        <help> MPLS options</help>
+        <help>MPLS options</help>
       </properties>
       <children>
         <leafNode name="forwarding">
           <properties>
-            <help> Enable MPLS forwarding for eBGP directly connected peers</help>
+            <help>Enable MPLS forwarding for eBGP directly connected peers</help>
             <valueless/>
           </properties>
         </leafNode>

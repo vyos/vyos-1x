@@ -565,13 +565,14 @@ bgp route-reflector allow-outbound-policy
  timers bgp {{ timers.keepalive }} {{ timers.holdtime }}
 {% endif %}
 exit
+!
 {% if interface is vyos_defined %}
 {%     for iface, iface_config in interface.items() %}
- interface {{ iface }}
+interface {{ iface }}
 {%         if iface_config.mpls.forwarding is vyos_defined %}
  mpls bgp forwarding
 {%         endif %}
- exit
- !
+exit
+!
 {%     endfor %}
 {% endif %}

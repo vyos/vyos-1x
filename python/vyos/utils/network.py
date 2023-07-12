@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 def get_protocol_by_name(protocol_name):
     """Get protocol number by protocol name
 
@@ -34,3 +32,12 @@ def interface_exists_in_netns(interface_name, netns):
     if rc == 0:
         return True
     return False
+
+def get_interface_vrf(interface):
+    """ Returns VRF of given interface """
+    from vyos.util import dict_search
+    from vyos.util import get_interface_config
+    tmp = get_interface_config(interface)
+    if dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':
+        return tmp['master']
+    return 'default'
