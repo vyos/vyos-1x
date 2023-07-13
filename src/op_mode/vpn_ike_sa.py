@@ -39,8 +39,6 @@ def ike_sa(peer, nat):
     peers = []
     for conn in sas:
         for name, sa in conn.items():
-            if peer and not name.startswith('peer_' + peer):
-                continue
             if name.startswith('peer_') and name in peers:
                 continue
             if nat and 'nat-local' not in sa:
@@ -70,7 +68,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if not process_named_running('charon'):
+    if not process_named_running('charon-systemd'):
         print("IPsec Process NOT Running")
         sys.exit(0)
 
