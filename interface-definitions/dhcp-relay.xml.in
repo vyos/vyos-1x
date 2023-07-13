@@ -9,6 +9,7 @@
           <priority>910</priority>
         </properties>
         <children>
+          #include <include/generic-disable-node.xml.i>
           #include <include/generic-interface-multi-broadcast.xml.i>
           <leafNode name="listen-interface">
             <properties>

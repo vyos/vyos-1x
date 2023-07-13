@@ -51,7 +51,7 @@ def get_config(config=None):
 
 def verify(relay):
     # bail out early - looks like removal from running config
-    if not relay:
+    if not relay or 'disable' in relay:
         return None
 
     if 'lo' in (dict_search('interface', relay) or []):
@@ -78,7 +78,7 @@ def verify(relay):
 
 def generate(relay):
     # bail out early - looks like removal from running config
-    if not relay:
+    if not relay or 'disable' in relay:
         return None
 
     render(config_file, 'dhcp-relay/dhcrelay.conf.j2', relay)
@@ -87,7 +87,7 @@ def generate(relay):
 def apply(relay):
     # bail out early - looks like removal from running config
     service_name = 'isc-dhcp-relay.service'
-    if not relay:
+    if not relay or 'disable' in relay:
         call(f'systemctl stop {service_name}')
         if os.path.exists(config_file):
             os.unlink(config_file)
