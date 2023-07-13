@@ -51,7 +51,7 @@ def community_migrate(config: ConfigTree, rule: list[str]) -> bool:
     :rtype: bool
     """
     community_list = list((config.return_value(rule)).split(" "))
-    config.delete(rule)
+
     if 'none' in community_list:
         config.set(rule + ['none'])
         return False
@@ -61,8 +61,10 @@ def community_migrate(config: ConfigTree, rule: list[str]) -> bool:
             community_action = 'add'
             community_list.remove('additive')
         for community in community_list:
-            config.set(rule + [community_action], value=community,
-                       replace=False)
+            if len(community):
+                config.set(rule + [community_action], value=community,
+                        replace=False)
+                config.delete(rule)
         if community_action == 'replace':
             return False
         else:
