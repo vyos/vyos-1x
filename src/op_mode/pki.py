@@ -35,7 +35,8 @@ from vyos.pki import load_certificate, load_certificate_request, load_private_ke
 from vyos.pki import load_crl, load_dh_parameters, load_public_key
 from vyos.pki import verify_certificate
 from vyos.xml import defaults
-from vyos.util import ask_input, ask_yes_no
+from vyos.utils.io import ask_input
+from vyos.utils.io import ask_yes_no
 from vyos.utils.process import cmd
 from vyos.util import install_into_config
 

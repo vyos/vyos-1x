@@ -16,7 +16,7 @@
 
 import sys
 
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 from vyos.utils.process import cmd
 from vyos.utils.process import DEVNULL
 

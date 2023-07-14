@@ -28,7 +28,8 @@ import tabulate
 import vyos.config
 import vyos.opmode
 
-from vyos.util import bytes_to_human, print_error
+from vyos.util import bytes_to_human
+from vyos.utils.io import print_error
 
 def _is_configured():
     """Check if IGMP proxy is configured"""

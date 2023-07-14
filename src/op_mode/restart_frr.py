@@ -23,7 +23,7 @@ from logging.handlers import SysLogHandler
 from shutil import rmtree
 
 from vyos.base import Warning
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 from vyos.utils.file import makedir
 from vyos.utils.process import call
 from vyos.utils.process import process_named_running

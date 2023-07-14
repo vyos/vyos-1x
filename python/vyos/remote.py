@@ -32,12 +32,12 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3 import PoolManager
 
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 from vyos.util import begin
 from vyos.utils.process import cmd
-from vyos.util import make_incremental_progressbar
-from vyos.util import make_progressbar
-from vyos.util import print_error
+from vyos.utils.io import make_incremental_progressbar
+from vyos.utils.io import make_progressbar
+from vyos.utils.io import print_error
 from vyos.version import get_version
 
 

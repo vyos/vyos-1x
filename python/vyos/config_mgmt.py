@@ -30,7 +30,7 @@ from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 

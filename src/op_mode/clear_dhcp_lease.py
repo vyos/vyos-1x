@@ -7,7 +7,7 @@ from isc_dhcp_leases import Lease
 from isc_dhcp_leases import IscDhcpLeases
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
 from vyos.utils.commit import commit_in_progress
 

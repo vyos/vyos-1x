@@ -254,45 +254,6 @@ def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_i
     wait_for_inotify(file_path,
       event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
 
-def ask_input(question, default='', numeric_only=False, valid_responses=[]):
-    question_out = question
-    if default:
-        question_out += f' (Default: {default})'
-    response = ''
-    while True:
-        response = input(question_out + ' ').strip()
-        if not response and default:
-            return default
-        if numeric_only:
-            if not response.isnumeric():
-                print("Invalid value, try again.")
-                continue
-            response = int(response)
-        if valid_responses and response not in valid_responses:
-            print("Invalid value, try again.")
-            continue
-        break
-    return response
-
-def ask_yes_no(question, default=False) -> bool:
-    """Ask a yes/no question via input() and return their answer."""
-    from sys import stdout
-    default_msg = "[Y/n]" if default else "[y/N]"
-    while True:
-        try:
-            stdout.write("%s %s " % (question, default_msg))
-            c = input().lower()
-            if c == '':
-                return default
-            elif c in ("y", "ye", "yes"):
-                return True
-            elif c in ("n", "no"):
-                return False
-            else:
-                stdout.write("Please respond with yes/y or no/n\n")
-        except EOFError:
-            stdout.write("\nPlease respond with yes/y or no/n\n")
-
 def is_admin() -> bool:
     """Look if current user is in sudo group"""
     from getpass import getuser
@@ -384,55 +345,6 @@ def convert_data(data):
             dict_tmp[key] = convert_data(value)
         return dict_tmp
 
-def print_error(str='', end='\n'):
-    """
-    Print `str` to stderr, terminated with `end`.
-    Used for warnings and out-of-band messages to avoid mangling precious
-     stdout output.
-    """
-    sys.stderr.write(str)
-    sys.stderr.write(end)
-    sys.stderr.flush()
-
-def make_progressbar():
-    """
-    Make a procedure that takes two arguments `done` and `total` and prints a
-     progressbar based on the ratio thereof, whose length is determined by the
-     width of the terminal.
-    """
-    import shutil, math
-    col, _ = shutil.get_terminal_size()
-    col = max(col - 15, 20)
-    def print_progressbar(done, total):
-        if done <= total:
-            increment = total / col
-            length = math.ceil(done / increment)
-            percentage = str(math.ceil(100 * done / total)).rjust(3)
-            print_error(f'[{length * "#"}{(col - length) * "_"}] {percentage}%', '\r')
-            # Print a newline so that the subsequent prints don't overwrite the full bar.
-        if done == total:
-            print_error()
-    return print_progressbar
-
-def make_incremental_progressbar(increment: float):
-    """
-    Make a generator that displays a progressbar that grows monotonically with
-     every iteration.
-    First call displays it at 0% and every subsequent iteration displays it
-     at `increment` increments where 0.0 < `increment` < 1.0.
-    Intended for FTP and HTTP transfers with stateless callbacks.
-    """
-    print_progressbar = make_progressbar()
-    total = 0.0
-    while total < 1.0:
-        print_progressbar(total, 1.0)
-        yield
-        total += increment
-    print_progressbar(1, 1)
-    # Ignore further calls.
-    while True:
-        yield
-
 def begin(*args):
     """
     Evaluate arguments in order and return the result of the *last* argument.
@@ -451,18 +363,17 @@ def install_into_config(conf, config_paths, override_prompt=True):
     # Allows op-mode scripts to install values if called from an active config session
     # config_paths: dict of config paths
     # override_prompt: if True, user will be prompted before existing nodes are overwritten
-
     if not config_paths:
         return None
 
     from vyos.config import Config
+    from vyos.utils.io import ask_yes_no
+    from vyos.utils.process import cmd
     if not Config().in_session():
         print('You are not in configure mode, commands to install manually from configure mode:')
         for path in config_paths:
             print(f'set {path}')
         return None
-
-    from vyos.utils.process import cmd
 
     count = 0
     failed = []
