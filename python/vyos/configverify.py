@@ -22,8 +22,8 @@
 # makes use of it!
 
 from vyos import ConfigError
-from vyos.util import dict_search
-from vyos.util import dict_search_recursive
+from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_recursive
 
 def verify_mtu(config):
     """
@@ -314,8 +314,6 @@ def verify_dhcpv6(config):
     recurring validation of DHCPv6 options which are mutually exclusive.
     """
     if 'dhcpv6_options' in config:
-        from vyos.util import dict_search
-
         if {'parameters_only', 'temporary'} <= set(config['dhcpv6_options']):
             raise ConfigError('DHCPv6 temporary and parameters-only options '
                               'are mutually exclusive!')

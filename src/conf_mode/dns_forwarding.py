@@ -27,7 +27,7 @@ from vyos.template import render
 from vyos.template import bracketize_ipv6
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 
 from vyos import ConfigError

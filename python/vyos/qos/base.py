@@ -17,7 +17,7 @@ import os
 
 from vyos.base import Warning
 from vyos.utils.process import cmd
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 
 from vyos.utils.network import get_protocol_by_name

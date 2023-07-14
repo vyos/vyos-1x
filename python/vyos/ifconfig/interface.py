@@ -33,7 +33,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
 from vyos.template import render
 from vyos.util import mac2eui64
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.util import get_interface_config
 from vyos.util import get_interface_namespace

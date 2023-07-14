@@ -22,7 +22,7 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.template import render
-from vyos.util import dict_search_args
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos import ConfigError

@@ -50,8 +50,8 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.util import dict_search
-from vyos.util import dict_search_args
+from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
 from vyos.util import is_list_equal
 from vyos.utils.file import makedir
 from vyos.utils.file import read_file

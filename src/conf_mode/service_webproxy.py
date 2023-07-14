@@ -24,7 +24,7 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults

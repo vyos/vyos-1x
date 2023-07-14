@@ -24,7 +24,7 @@ from vyos.configdict import dict_merge
 from vyos.firewall import find_nftables_rule
 from vyos.firewall import remove_nftables_rule
 from vyos.utils.process import process_named_running
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.template import render

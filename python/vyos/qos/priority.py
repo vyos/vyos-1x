@@ -14,7 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.qos.base import QoSBase
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 class Priority(QoSBase):
     _parent = 1

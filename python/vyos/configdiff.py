@@ -19,8 +19,9 @@ from vyos.config import Config
 from vyos.configtree import DiffTree
 from vyos.configdict import dict_merge
 from vyos.configdict import list_diff
-from vyos.util import get_sub_dict, mangle_dict_keys
-from vyos.util import dict_search_args
+from vyos.utils.dict import get_sub_dict
+from vyos.util import mangle_dict_keys
+from vyos.utils.dict import dict_search_args
 from vyos.xml import defaults
 
 class ConfigDiffError(Exception):

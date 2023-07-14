@@ -17,7 +17,7 @@
 # https://community.hetzner.com/tutorials/linux-setup-gre-tunnel
 
 from vyos.ifconfig.interface import Interface
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.validate import assert_list
 
 def enable_to_on(value):

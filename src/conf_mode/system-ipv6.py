@@ -21,7 +21,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_route_map
 from vyos.template import render_to_string
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.system import sysctl_write
 from vyos.utils.file import write_file
 from vyos.xml import defaults

@@ -34,7 +34,7 @@ from vyos.ifconfig import MACsecIf
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag

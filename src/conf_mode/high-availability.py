@@ -29,7 +29,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.utils.process import call
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

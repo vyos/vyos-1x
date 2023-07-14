@@ -15,7 +15,7 @@
 
 from vyos import ConfigError
 from vyos.ifconfig import Interface
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 @Interface.register
 class VXLANIf(Interface):

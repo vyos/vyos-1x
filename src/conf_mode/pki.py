@@ -26,8 +26,8 @@ from vyos.pki import load_public_key
 from vyos.pki import load_private_key
 from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
-from vyos.util import dict_search_args
-from vyos.util import dict_search_recursive
+from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

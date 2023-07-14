@@ -29,8 +29,8 @@ from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import is_ip_network
 from vyos.util import check_kmod
-from vyos.util import dict_search
-from vyos.util import dict_search_args
+from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.validate import is_addr_assigned

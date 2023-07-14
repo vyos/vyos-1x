@@ -26,7 +26,7 @@ from signal import signal, SIGTERM, SIGINT
 from sys import exit
 from systemd import journal
 
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import run
 
 # Identify this script

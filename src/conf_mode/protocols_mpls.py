@@ -21,7 +21,7 @@ from sys import exit
 from glob import glob
 from vyos.config import Config
 from vyos.template import render_to_string
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.system import sysctl_write
 from vyos.configverify import verify_interface_exists

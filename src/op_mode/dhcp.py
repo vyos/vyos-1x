@@ -28,7 +28,7 @@ from vyos.base import Warning
 from vyos.configquery import ConfigTreeQuery
 
 from vyos.utils.process import cmd
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import is_systemd_service_running
 
 config = ConfigTreeQuery()

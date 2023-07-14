@@ -19,7 +19,7 @@ A library for retrieving value dicts from VyOS configs in a declarative fashion.
 import os
 import json
 
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos.utils.process import cmd
 

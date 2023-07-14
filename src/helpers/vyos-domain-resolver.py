@@ -23,7 +23,7 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import fqdn_resolve
 from vyos.util import commit_in_progress
-from vyos.util import dict_search_args
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.xml import defaults

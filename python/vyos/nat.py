@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.template import is_ip_network
-from vyos.util import dict_search_args
+from vyos.utils.dict import dict_search_args
 from vyos.template import bracketize_ipv6
 
 

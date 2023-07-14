@@ -33,8 +33,8 @@ from vyos.firewall import geoip_update
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import cmd
-from vyos.util import dict_search_args
-from vyos.util import dict_search_recursive
+from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
 from vyos.xml import defaults

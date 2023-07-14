@@ -20,7 +20,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import call

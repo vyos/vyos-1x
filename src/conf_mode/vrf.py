@@ -26,7 +26,7 @@ from vyos.configverify import verify_route_map
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import render_to_string
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.util import get_interface_config
 from vyos.utils.process import call
 from vyos.utils.process import cmd

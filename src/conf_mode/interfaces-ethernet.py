@@ -41,7 +41,7 @@ from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag

@@ -27,7 +27,7 @@ from vyos.utils.process import call
 from vyos.util import check_port_availability
 from vyos.utils.process import is_systemd_service_running
 from vyos.util import is_listen_port_bind_service
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from passlib.hash import sha512_crypt

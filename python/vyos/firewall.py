@@ -28,8 +28,8 @@ from time import strftime
 from vyos.remote import download
 from vyos.template import is_ipv4
 from vyos.template import render
-from vyos.util import dict_search_args
-from vyos.util import dict_search_recursive
+from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run

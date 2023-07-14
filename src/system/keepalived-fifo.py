@@ -29,7 +29,7 @@ from logging.handlers import SysLogHandler
 from vyos.ifconfig.vrrp import VRRP
 from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import cmd
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.util import commit_in_progress
 
 # configure logging

@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.template import render
 from vyos.template import is_ipv6
 from vyos.utils.process import call
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.validate import is_subnet_connected
 from vyos import ConfigError
 from vyos import airbag

@@ -24,7 +24,7 @@ from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos.template import render_to_string
 from vyos import ConfigError

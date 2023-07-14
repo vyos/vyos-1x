@@ -35,7 +35,7 @@ def interface_exists_in_netns(interface_name, netns):
 
 def get_interface_vrf(interface):
     """ Returns VRF of given interface """
-    from vyos.util import dict_search
+    from vyos.utils.dict import dict_search
     from vyos.util import get_interface_config
     tmp = get_interface_config(interface)
     if dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':

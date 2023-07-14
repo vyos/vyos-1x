@@ -24,7 +24,7 @@ from tabulate import tabulate
 
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 import vyos.opmode
 

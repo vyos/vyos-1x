@@ -29,7 +29,7 @@ from vyos.configverify import verify_vrf
 from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
