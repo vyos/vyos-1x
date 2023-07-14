@@ -26,7 +26,7 @@ from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.util import check_port_availability
+from vyos.utils.network import check_port_availability
 from vyos.utils.dict import dict_search
 from vyos.util import is_listen_port_bind_service
 from vyos.utils.file import write_file

@@ -100,7 +100,7 @@ def is_intf_addr_assigned(intf, address) -> bool:
 def is_addr_assigned(ip_address, vrf=None) -> bool:
     """ Verify if the given IPv4/IPv6 address is assigned to any interface """
     from netifaces import interfaces
-    from vyos.util import get_interface_config
+    from vyos.utils.network import get_interface_config
     from vyos.utils.dict import dict_search
     for interface in interfaces():
         # Check if interface belongs to the requested VRF, if this is not the

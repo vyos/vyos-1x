@@ -22,7 +22,7 @@ from shutil import rmtree
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.utils.process import call
-from vyos.util import check_port_availability
+from vyos.utils.network import check_port_availability
 from vyos.util import is_listen_port_bind_service
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key

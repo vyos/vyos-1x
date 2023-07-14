@@ -24,7 +24,7 @@ from vyos.configdict import node_changed
 from vyos.ifconfig import Interface
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

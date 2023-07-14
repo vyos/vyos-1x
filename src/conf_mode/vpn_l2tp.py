@@ -28,7 +28,7 @@ from vyos.template import is_ipv4
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.util import get_half_cpus
-from vyos.util import check_port_availability
+from vyos.utils.network import check_port_availability
 from vyos.util import is_listen_port_bind_service
 from vyos import ConfigError
 

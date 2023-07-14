@@ -25,7 +25,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'wpa_supplicant'

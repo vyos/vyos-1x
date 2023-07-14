@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv6
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 
 base_path = ['protocols', 'static']
 vrf_path =  ['protocols', 'vrf']

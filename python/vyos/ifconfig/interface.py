@@ -32,11 +32,11 @@ from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
 from vyos.template import render
-from vyos.util import mac2eui64
+from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
-from vyos.util import get_interface_config
-from vyos.util import get_interface_namespace
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_interface_namespace
 from vyos.utils.process import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6

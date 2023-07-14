@@ -28,7 +28,7 @@ from vyos.ifconfig import Section
 from vyos.template import is_ipv4
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 base_path = ['vrf']

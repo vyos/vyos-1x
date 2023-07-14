@@ -18,8 +18,8 @@ import unittest
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
-from vyos.util import get_bridge_fdb
-from vyos.util import get_interface_config
+from vyos.utils.network import get_bridge_fdb
+from vyos.utils.network import get_interface_config
 from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 

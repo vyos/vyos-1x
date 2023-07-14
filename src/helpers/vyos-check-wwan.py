@@ -17,7 +17,7 @@
 from vyos.configquery import VbashOpRun
 from vyos.configquery import ConfigTreeQuery
 
-from vyos.util import is_wwan_connected
+from vyos.utils.network import is_wwan_connected
 
 conf = ConfigTreeQuery()
 dict = conf.get_config_dict(['interfaces', 'wwan'], key_mangling=('-', '_'),

@@ -26,7 +26,7 @@ from netifaces import interfaces
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
 from vyos.utils.file import read_file
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 
 class BridgeInterfaceTest(BasicInterfaceTest.TestCase):

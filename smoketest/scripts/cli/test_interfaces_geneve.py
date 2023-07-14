@@ -17,7 +17,7 @@
 import unittest
 
 from vyos.ifconfig import Interface
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 
 from base_interfaces_test import BasicInterfaceTest
 
