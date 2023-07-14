@@ -19,7 +19,7 @@ import re
 import sys
 import vici
 
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 ike_sa_peer_prefix = """\
 Peer ID / IP                            Local ID / IP               

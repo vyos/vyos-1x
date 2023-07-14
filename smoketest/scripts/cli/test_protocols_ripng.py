@@ -19,7 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.ifconfig import Section
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'ripngd'
 acl_in = '198'

@@ -23,7 +23,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 base_path = ['netns']
 namespaces = ['mgmt', 'front', 'back', 'ams-ix']

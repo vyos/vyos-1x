@@ -18,7 +18,7 @@ import os
 import sys
 import socket
 import ipaddress
-from vyos.util import get_all_vrfs
+from vyos.utils.network import get_all_vrfs
 from vyos.ifconfig import Section
 
 

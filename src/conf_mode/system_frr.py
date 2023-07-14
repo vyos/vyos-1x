@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -22,7 +22,9 @@ from vyos import airbag
 from vyos.config import Config
 from vyos.logger import syslog
 from vyos.template import render_to_string
-from vyos.util import read_file, write_file, run
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
+from vyos.utils.process import run
 airbag.enable()
 
 # path to daemons config and config status files

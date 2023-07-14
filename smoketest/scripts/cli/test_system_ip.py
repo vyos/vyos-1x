@@ -18,7 +18,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 base_path = ['system', 'ip']
 

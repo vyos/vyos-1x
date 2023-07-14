@@ -13,10 +13,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import typing
 
-from vyos.util import run
+from vyos.utils.process import run
 
 import vyos.opmode
 
@@ -28,7 +29,6 @@ cmd_dict = {
         'sstp': 2005
     }
 }
-
 
 def reset_conn(protocol: str, username: typing.Optional[str] = None,
                interface: typing.Optional[str] = None):

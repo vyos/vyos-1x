@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,7 +20,7 @@ import sys
 import typing
 
 from tabulate import tabulate
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 import vyos.opmode
 

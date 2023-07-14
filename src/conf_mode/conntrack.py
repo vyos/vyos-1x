@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,10 +23,10 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.firewall import find_nftables_rule
 from vyos.firewall import remove_nftables_rule
-from vyos.util import cmd
-from vyos.util import run
-from vyos.util import process_named_running
-from vyos.util import dict_search
+from vyos.utils.process import process_named_running
+from vyos.utils.dict import dict_search
+from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError

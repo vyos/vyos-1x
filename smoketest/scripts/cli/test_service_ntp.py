@@ -19,8 +19,8 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
-from vyos.util import process_named_running
+from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'chronyd'
 NTP_CONF = '/run/chrony/chrony.conf'

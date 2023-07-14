@@ -4,7 +4,7 @@ import json
 import re
 import time
 
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 
 def get_nft_filter_chains():

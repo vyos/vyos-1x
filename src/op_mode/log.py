@@ -21,7 +21,7 @@ import typing
 
 from jinja2 import Template
 
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 import vyos.opmode
 

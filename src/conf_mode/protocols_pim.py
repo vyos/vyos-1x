@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,7 +21,8 @@ from sys import exit
 
 from vyos.config import Config
 from vyos import ConfigError
-from vyos.util import call, process_named_running
+from vyos.utils.process import process_named_running
+from vyos.utils.process import call
 from vyos.template import render
 from signal import SIGTERM
 

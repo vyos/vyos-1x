@@ -57,7 +57,7 @@ frr_command_template = Template("""
 ArgFamily = typing.Literal['inet', 'inet6']
 
 def show_summary(raw: bool, family: ArgFamily, table: typing.Optional[int], vrf: typing.Optional[str]):
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
 
     if family == 'inet':
         family_cmd = 'ip'
@@ -119,7 +119,7 @@ def show(raw: bool,
         frr_command = frr_command_template.render(kwargs)
         frr_command = re.sub(r'\s+', ' ', frr_command)
 
-        from vyos.util import cmd
+        from vyos.utils.process import cmd
         output = cmd(f"vtysh -c '{frr_command}'")
 
         if raw:

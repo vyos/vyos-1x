@@ -27,8 +27,8 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
-from vyos.util import cmd
-from vyos.util import call
+from vyos.utils.process import cmd
+from vyos.utils.process import call
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

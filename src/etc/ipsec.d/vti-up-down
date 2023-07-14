@@ -25,9 +25,9 @@ from syslog import LOG_PID
 from syslog import LOG_INFO
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import call
-from vyos.util import get_interface_config
-from vyos.util import get_interface_address
+from vyos.utils.process import call
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_interface_address
 
 if __name__ == '__main__':
     verb = os.getenv('PLUTO_VERB')

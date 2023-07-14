@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -20,9 +20,9 @@ from pathlib import Path
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.util import call
-from vyos.util import read_file
-from vyos.util import write_file
+from vyos.utils.process import call
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError

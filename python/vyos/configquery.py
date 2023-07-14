@@ -19,9 +19,10 @@ settings from op mode, and execution of arbitrary op mode commands.
 '''
 
 import os
-from subprocess import STDOUT
 
-from vyos.util import popen
+from vyos.utils.process import STDOUT
+from vyos.utils.process import popen
+
 from vyos.utils.boot import boot_configuration_complete
 from vyos.config import Config
 from vyos.configsource import ConfigSourceSession, ConfigSourceString

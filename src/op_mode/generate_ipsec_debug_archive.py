@@ -20,7 +20,7 @@ from shutil import rmtree
 from socket import gethostname
 from sys import exit
 from tarfile import open as tar_open
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 # define a list of commands that needs to be executed
 CMD_LIST: list[str] = [

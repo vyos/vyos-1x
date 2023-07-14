@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,11 +20,12 @@ import os
 import tempfile
 import vyos.defaults
 import vyos.remote
+
 from vyos.config import Config
 from vyos.configtree import ConfigTree
 from vyos.migrator import Migrator, VirtualMigrator
-from vyos.util import cmd, DEVNULL
-
+from vyos.utils.process import cmd
+from vyos.utils.process import DEVNULL
 
 if (len(sys.argv) < 2):
     print("Need config file name to merge.")

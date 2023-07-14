@@ -24,8 +24,8 @@ from vyos.configdict import dict_merge
 from vyos.validate import is_addr_assigned
 from vyos.validate import is_loopback_addr
 from vyos.version import get_version_data
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.utils.process import call
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos.template import render
 from vyos import ConfigError

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@ import os
 import sys
 import shlex
 
-import vyos.util
+from vyos.utils.file import file_is_persistent
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         sys.exit(f'File {script} is not an executable file')
 
     # File outside the config dir is just a warning
-    if not vyos.util.file_is_persistent(script):
+    if not file_is_persistent(script):
         sys.exit(0)(
             f'Warning: file {script} is outside the "/config" directory\n'
             'It will not be automatically migrated to a new image on system update'

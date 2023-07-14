@@ -21,7 +21,7 @@ import vyos.accel_ppp
 import vyos.opmode
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 
 accel_dict = {

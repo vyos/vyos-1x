@@ -24,7 +24,7 @@ from cryptography.x509.oid import NameOID
 from vyos.configquery import ConfigTreeQuery
 from vyos.pki import load_certificate
 from vyos.template import render_to_string
-from vyos.util import ask_input
+from vyos.utils.io import ask_input
 
 # Apple profiles only support one IKE/ESP encryption cipher and hash, whereas
 # VyOS comes with a multitude of different proposals for a connection.

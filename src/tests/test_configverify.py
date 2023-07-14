@@ -16,7 +16,7 @@
 
 from unittest import TestCase
 from vyos.configverify import verify_diffie_hellman_length
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 dh_file = '/tmp/dh.pem'
 

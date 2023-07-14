@@ -15,7 +15,7 @@
 
 from vyos.ifconfig.interface import Interface
 from vyos.validate import assert_range
-from vyos.util import get_interface_config
+from vyos.utils.network import get_interface_config
 
 @Interface.register
 class PPPoEIf(Interface):

@@ -25,9 +25,9 @@ from vyos.configdict import dict_merge
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.template import render
 from vyos.template import bracketize_ipv6
-from vyos.util import call
-from vyos.util import chown
-from vyos.util import dict_search
+from vyos.utils.process import call
+from vyos.utils.permission import chown
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 
 from vyos import ConfigError

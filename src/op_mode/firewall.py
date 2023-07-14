@@ -21,8 +21,8 @@ import re
 import tabulate
 
 from vyos.config import Config
-from vyos.util import cmd
-from vyos.util import dict_search_args
+from vyos.utils.process import cmd
+from vyos.utils.dict import dict_search_args
 
 def get_firewall_interfaces(firewall, name=None, ipv6=False):
     directions = ['in', 'out', 'local']

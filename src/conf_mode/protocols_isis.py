@@ -25,8 +25,8 @@ from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_interface_exists
 from vyos.ifconfig import Interface
-from vyos.util import dict_search
-from vyos.util import get_interface_config
+from vyos.utils.dict import dict_search
+from vyos.utils.network import get_interface_config
 from vyos.template import render_to_string
 from vyos.xml import defaults
 from vyos import ConfigError

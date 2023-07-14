@@ -67,9 +67,13 @@ Apply the new configuration:
 
 import tempfile
 import re
+
 from vyos import util
-from vyos.util import chown
-from vyos.util import cmd
+from vyos.utils.permission import chown
+from vyos.utils.process import cmd
+from vyos.utils.process import popen
+from vyos.utils.process import STDOUT
+
 import logging
 from logging.handlers import SysLogHandler
 import os
@@ -144,7 +148,7 @@ def get_configuration(daemon=None, marked=False):
     if daemon:
         cmd += f' -d {daemon}'
 
-    output, code = util.popen(cmd, stderr=util.STDOUT)
+    output, code = popen(cmd, stderr=STDOUT)
     if code:
         raise OSError(code, output)
 
@@ -166,7 +170,7 @@ def mark_configuration(config):
     config:  The configuration string to mark/test
     return:  The marked configuration from FRR
     """
-    output, code = util.popen(f"{path_vtysh} -m -f -", stderr=util.STDOUT, input=config)
+    output, code = popen(f"{path_vtysh} -m -f -", stderr=STDOUT, input=config)
 
     if code == 2:
         raise ConfigurationNotValid(str(output))
@@ -206,7 +210,7 @@ def reload_configuration(config, daemon=None):
     cmd += f' {f.name}'
 
     LOG.debug(f'reload_configuration: Executing command against frr-reload: "{cmd}"')
-    output, code = util.popen(cmd, stderr=util.STDOUT)
+    output, code = popen(cmd, stderr=STDOUT)
     f.close()
     for i, e in enumerate(output.split('\n')):
         LOG.debug(f'frr-reload output: {i:3} {e}')
@@ -235,7 +239,7 @@ def execute(command):
 
     cmd = f"{path_vtysh} -c '{command}'"
 
-    output, code = util.popen(cmd, stderr=util.STDOUT)
+    output, code = popen(cmd, stderr=STDOUT)
     if code:
         raise OSError(code, output)
 
@@ -267,7 +271,7 @@ def configure(lines, daemon=False):
     for x in lines:
         cmd += f" -c '{x}'"
 
-    output, code = util.popen(cmd, stderr=util.STDOUT)
+    output, code = popen(cmd, stderr=STDOUT)
     if code == 1:
         raise ConfigurationNotValid(f'Configuration FRR failed: {repr(output)}')
     elif code:

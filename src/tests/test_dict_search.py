@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from vyos.util import dict_search
-from vyos.util import dict_search_recursive
+from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_recursive
 
 data = {
     'string': 'fooo',

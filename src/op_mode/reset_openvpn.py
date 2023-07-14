@@ -16,8 +16,8 @@
 
 import os
 from sys import argv, exit
-from vyos.util import call
-from vyos.util import commit_in_progress
+from vyos.utils.process import call
+from vyos.utils.commit import commit_in_progress
 
 if __name__ == '__main__':
     if (len(argv) < 1):

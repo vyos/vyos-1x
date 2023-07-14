@@ -24,7 +24,7 @@ from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import leaf_node_changed
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

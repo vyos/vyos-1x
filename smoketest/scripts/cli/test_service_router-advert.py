@@ -20,8 +20,8 @@ import unittest
 from vyos.configsession import ConfigSessionError
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.util import read_file
-from vyos.util import process_named_running
+from vyos.utils.file import read_file
+from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'radvd'
 RADVD_CONF = '/run/radvd/radvd.conf'

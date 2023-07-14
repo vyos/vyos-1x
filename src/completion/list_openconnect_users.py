@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.config import Config
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 def get_user_from_ocserv():
     config = Config()

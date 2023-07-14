@@ -20,9 +20,9 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig.vrrp import VRRP
-from vyos.util import cmd
-from vyos.util import process_named_running
-from vyos.util import read_file
+from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
+from vyos.utils.file import read_file
 from vyos.template import inc_ip
 
 PROCESS_NAME = 'keepalived'

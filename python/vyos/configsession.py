@@ -17,7 +17,7 @@ import re
 import sys
 import subprocess
 
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.dict import dict_to_paths
 
 CLI_SHELL_API = '/bin/cli-shell-api'

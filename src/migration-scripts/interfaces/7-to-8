@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,7 +21,8 @@ import os
 
 from sys import exit, argv
 from vyos.configtree import ConfigTree
-from vyos.util import chown, chmod_750
+from vyos.utils.permission import chown
+from vyos.utils.permission import chmod_750
 
 def migrate_default_keys():
     kdir = r'/config/auth/wireguard'

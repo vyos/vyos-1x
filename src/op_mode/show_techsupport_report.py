@@ -17,7 +17,7 @@
 import os
 
 from typing import List
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 

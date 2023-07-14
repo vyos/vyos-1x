@@ -20,7 +20,7 @@ import logging
 
 import vyos.defaults
 import vyos.component_version as component_version
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 log_file = os.path.join(vyos.defaults.directories['config'], 'vyos-migrate.log')
 

@@ -18,7 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'bfdd'
 base_path = ['protocols', 'bfd']

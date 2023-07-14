@@ -40,10 +40,10 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
 from vyos.validate import is_ipv6_link_local
-from vyos.util import call
-from vyos.util import dict_search
-from vyos.util import dict_search_args
-from vyos.util import run
+from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
+from vyos.utils.process import call
+from vyos.utils.process import run
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

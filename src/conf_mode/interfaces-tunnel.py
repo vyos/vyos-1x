@@ -33,8 +33,8 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.ifconfig import TunnelIf
-from vyos.util import get_interface_config
-from vyos.util import dict_search
+from vyos.utils.network import get_interface_config
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

@@ -36,8 +36,8 @@ from vyos.qos import RateLimiter
 from vyos.qos import RoundRobin
 from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
-from vyos.util import call
-from vyos.util import dict_search_recursive
+from vyos.utils.process import call
+from vyos.utils.dict import dict_search_recursive
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

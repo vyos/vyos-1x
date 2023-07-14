@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -41,7 +41,7 @@ def interface_exists(interface):
 
 def get_raw_data(family, interface=None, state=None):
     from json import loads
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
 
     if interface:
         if not interface_exists(interface):
@@ -102,7 +102,7 @@ def show(raw: bool, family: ArgFamily, interface: typing.Optional[str],
         return format_neighbors(data, interface)
 
 def reset(family: ArgFamily, interface: typing.Optional[str], address: typing.Optional[str]):
-    from vyos.util import run
+    from vyos.utils.process import run
 
     if address and interface:
         raise ValueError("interface and address parameters are mutually exclusive")
@@ -113,7 +113,6 @@ def reset(family: ArgFamily, interface: typing.Optional[str], address: typing.Op
     else:
         # Flush an entire neighbor table
         run(f"""ip --family {family} neighbor flush""")
-
 
 if __name__ == '__main__':
     try:

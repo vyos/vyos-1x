@@ -24,8 +24,8 @@ from vyos.configdict import get_accel_dict
 from vyos.configverify import verify_accel_ppp_base_service
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.utils.process import call
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

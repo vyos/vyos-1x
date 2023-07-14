@@ -1,4 +1,4 @@
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,8 +23,8 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos import ConfigError
 from vyos.defaults import commit_lock
-from vyos.util import cmd
-from vyos.util import run
+from vyos.utils.process import cmd
+from vyos.utils.process import run
 
 save_config = '/tmp/vyos-smoketest-save'
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,8 +21,8 @@ from urllib3.exceptions import InsecureRequestWarning
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import ignore_warning
-from vyos.util import read_file
-from vyos.util import run
+from vyos.utils.file import read_file
+from vyos.utils.process import run
 
 base_path = ['service', 'https']
 pki_base = ['pki']

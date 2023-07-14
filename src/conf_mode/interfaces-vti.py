@@ -21,7 +21,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import VTIIf
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

@@ -18,7 +18,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdict import node_changed
-from vyos.util import call
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

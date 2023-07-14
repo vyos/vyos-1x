@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,7 +21,7 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
-from vyos.util import popen
+from vyos.utils.process import popen
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--scan", help="Scan for Wireless APs on given interface, e.g. 'wlan0'")

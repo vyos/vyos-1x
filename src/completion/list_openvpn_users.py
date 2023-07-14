@@ -19,7 +19,7 @@ import sys
 import argparse
 
 from vyos.config import Config
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 def get_user_from_interface(interface):
     config = Config()

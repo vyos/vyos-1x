@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -23,10 +23,10 @@ from logging.handlers import SysLogHandler
 from shutil import rmtree
 
 from vyos.base import Warning
-from vyos.util import call
-from vyos.util import ask_yes_no
-from vyos.util import process_named_running
-from vyos.util import makedir
+from vyos.utils.io import ask_yes_no
+from vyos.utils.file import makedir
+from vyos.utils.process import call
+from vyos.utils.process import process_named_running
 
 # some default values
 watchfrr = '/usr/lib/frr/watchfrr.sh'

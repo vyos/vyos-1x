@@ -23,8 +23,8 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.utils.process import call
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

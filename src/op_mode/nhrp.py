@@ -18,9 +18,9 @@ import sys
 import tabulate
 import vyos.opmode
 
-from vyos.util import cmd
-from vyos.util import process_named_running
-from vyos.util import colon_separated_to_dict
+from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
+from vyos.utils.dict import colon_separated_to_dict
 
 
 def _get_formatted_output(output_dict: dict) -> str:

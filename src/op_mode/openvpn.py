@@ -24,9 +24,9 @@ from tabulate import tabulate
 
 import vyos.opmode
 from vyos.util import bytes_to_human
-from vyos.util import commit_in_progress
-from vyos.util import call
-from vyos.util import rc_cmd
+from vyos.utils.commit import commit_in_progress
+from vyos.utils.process import call
+from vyos.utils.process import rc_cmd
 from vyos.config import Config
 
 ArgMode = typing.Literal['client', 'server', 'site_to_site']

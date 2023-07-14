@@ -16,7 +16,7 @@
 import os
 import re
 
-from vyos.util import popen
+from vyos.utils.process import popen
 
 # These drivers do not support using ethtool to change the speed, duplex, or
 # flow control settings

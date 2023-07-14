@@ -20,13 +20,12 @@ import os
 import platform
 import unittest
 
-from vyos.util import call
-from vyos.util import read_file
+from vyos.utils.process import call
+from vyos.utils.file import read_file
 
 kernel = platform.release()
 config = read_file(f'/boot/config-{kernel}')
 CONFIG = '/proc/config.gz'
-
 
 class TestKernelModules(unittest.TestCase):
     """ VyOS makes use of a lot of Kernel drivers, modules and features. The

@@ -16,7 +16,7 @@
 
 import unittest
 
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.ifconfig import Interface
 from base_vyostest_shim import VyOSUnitTestSHIM
 

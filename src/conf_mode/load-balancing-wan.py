@@ -22,7 +22,7 @@ from shutil import rmtree
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError

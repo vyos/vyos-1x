@@ -22,9 +22,9 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.template import bracketize_ipv6
 from vyos.template import is_ipv6
-from vyos.util import cmd
-from vyos.util import process_named_running
-from vyos.util import read_file
+from vyos.utils.process import cmd
+from vyos.utils.process import process_named_running
+from vyos.utils.file import read_file
 
 PROCESS_NAME = 'uacctd'
 base_path = ['system', 'flow-accounting']

@@ -19,8 +19,8 @@ import vyos.opmode
 
 import tabulate
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import dict_search_args
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search
 
 
 def get_config_zone(conf, name=None):

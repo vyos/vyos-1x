@@ -27,12 +27,12 @@ from vyos.configverify import verify_interface_exists
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import WWANIf
-from vyos.util import cmd
-from vyos.util import call
-from vyos.util import dict_search
-from vyos.util import DEVNULL
-from vyos.util import is_systemd_service_active
-from vyos.util import write_file
+from vyos.utils.dict import dict_search
+from vyos.utils.process import cmd
+from vyos.utils.process import call
+from vyos.utils.process import DEVNULL
+from vyos.utils.process import is_systemd_service_active
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

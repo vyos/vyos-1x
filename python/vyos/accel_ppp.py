@@ -18,7 +18,7 @@
 import sys
 
 import vyos.opmode
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 
 def get_server_statistics(accel_statistics, pattern, sep=':') -> dict:

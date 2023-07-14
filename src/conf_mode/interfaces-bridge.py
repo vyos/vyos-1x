@@ -34,8 +34,8 @@ from vyos.validate import has_address_configured
 from vyos.validate import has_vrf_configured
 from vyos.xml import defaults
 
-from vyos.util import cmd
-from vyos.util import dict_search
+from vyos.utils.process import cmd
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 
 from vyos import airbag

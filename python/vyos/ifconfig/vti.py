@@ -14,7 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 
 @Interface.register
 class VTIIf(Interface):

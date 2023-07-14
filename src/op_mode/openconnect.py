@@ -19,7 +19,7 @@ import json
 
 from tabulate import tabulate
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 
 import vyos.opmode
 

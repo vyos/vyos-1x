@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,18 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import sys
 import argparse
 import re
 import ipaddress
 import os.path
+
 from tabulate import tabulate
 from json import loads
-from vyos.util import cmd
-from vyos.util import commit_in_progress
-from vyos.util import run
+from vyos.utils.commit import commit_in_progress
+from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.logger import syslog
 
 # some default values

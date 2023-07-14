@@ -19,7 +19,7 @@ import sys
 
 from sys import exit
 
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 import vyos.opmode
 
@@ -36,14 +36,14 @@ def _get_raw_data(command: str) -> list:
     return data
 
 def add_image(name: str):
-    from vyos.util import rc_cmd
+    from vyos.utils.process import rc_cmd
 
     rc, output = rc_cmd(f'podman image pull {name}')
     if rc != 0:
         raise vyos.opmode.InternalError(output)
 
 def delete_image(name: str):
-    from vyos.util import rc_cmd
+    from vyos.utils.process import rc_cmd
 
     rc, output = rc_cmd(f'podman image rm --force {name}')
     if rc != 0:
@@ -77,7 +77,7 @@ def show_network(raw: bool):
 
 
 def restart(name: str):
-    from vyos.util import rc_cmd
+    from vyos.utils.process import rc_cmd
 
     rc, output = rc_cmd(f'systemctl restart vyos-container-{name}.service')
     if rc != 0:

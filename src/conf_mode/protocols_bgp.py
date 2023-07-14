@@ -27,7 +27,7 @@ from vyos.configverify import verify_vrf
 from vyos.template import is_ip
 from vyos.template import is_interface
 from vyos.template import render_to_string
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
 from vyos.validate import is_addr_assigned
 from vyos import ConfigError

@@ -22,8 +22,8 @@ import typing
 from tabulate import tabulate
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import cmd
-from vyos.util import dict_search
+from vyos.utils.process import cmd
+from vyos.utils.dict import dict_search
 
 import vyos.opmode
 unconf_message = 'LLDP is not configured'

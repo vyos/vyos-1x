@@ -20,10 +20,10 @@ from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from jinja2 import ChainableUndefined
 from vyos.defaults import directories
-from vyos.util import chmod
-from vyos.util import chown
-from vyos.util import dict_search_args
-from vyos.util import makedir
+from vyos.utils.dict import dict_search_args
+from vyos.utils.file import makedir
+from vyos.utils.permission import chmod
+from vyos.utils.permission import chown
 
 # Holds template filters registered via register_filter()
 _FILTERS = {}
@@ -424,7 +424,7 @@ def get_dhcp_router(interface):
     if not os.path.exists(lease_file):
         return None
 
-    from vyos.util import read_file
+    from vyos.utils.file import read_file
     for line in read_file(lease_file).splitlines():
         if 'option routers' in line:
             (_, _, address) = line.split()

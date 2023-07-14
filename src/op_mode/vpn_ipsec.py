@@ -17,7 +17,7 @@
 import re
 import argparse
 
-from vyos.util import call
+from vyos.utils.process import call
 
 SWANCTL_CONF = '/etc/swanctl/swanctl.conf'
 

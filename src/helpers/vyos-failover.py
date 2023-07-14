@@ -20,7 +20,7 @@ import subprocess
 import socket
 import time
 
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 from pathlib import Path
 from systemd import journal
 

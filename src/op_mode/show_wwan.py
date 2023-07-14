@@ -18,7 +18,7 @@ import argparse
 
 from sys import exit
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", help="Get module model", action="store_true")

@@ -81,7 +81,7 @@ ArgFamily = typing.Literal['inet', 'inet6', 'l2vpn']
 ArgFamilyModifier = typing.Literal['unicast', 'labeled_unicast', 'multicast', 'vpn', 'flowspec']
 
 def show_summary(raw: bool):
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
 
     if raw:
         from json import loads
@@ -96,7 +96,7 @@ def show_summary(raw: bool):
         return output
 
 def show_neighbors(raw: bool):
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
     from vyos.utils.dict import dict_to_list
 
     if raw:
@@ -129,7 +129,7 @@ def show(raw: bool,
         frr_command = frr_command_template.render(kwargs)
         frr_command = re.sub(r'\s+', ' ', frr_command)
 
-        from vyos.util import cmd
+        from vyos.utils.process import cmd
         output = cmd(f"vtysh -c '{frr_command}'")
 
         if raw:

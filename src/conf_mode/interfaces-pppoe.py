@@ -32,8 +32,8 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.ifconfig import PPPoEIf
 from vyos.template import render
-from vyos.util import call
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

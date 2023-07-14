@@ -28,9 +28,9 @@ from logging.handlers import SysLogHandler
 
 from vyos.ifconfig.vrrp import VRRP
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import cmd
-from vyos.util import dict_search
-from vyos.util import commit_in_progress
+from vyos.utils.process import cmd
+from vyos.utils.dict import dict_search
+from vyos.utils.commit import commit_in_progress
 
 # configure logging
 logger = logging.getLogger(__name__)

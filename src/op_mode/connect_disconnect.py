@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,10 +19,10 @@ import argparse
 
 from psutil import process_iter
 
-from vyos.util import call
-from vyos.util import commit_in_progress
-from vyos.util import DEVNULL
-from vyos.util import is_wwan_connected
+from vyos.utils.process import call
+from vyos.utils.commit import commit_in_progress
+from vyos.utils.network import is_wwan_connected
+from vyos.utils.process import DEVNULL
 
 def check_ppp_interface(interface):
     if not os.path.isfile(f'/etc/ppp/peers/{interface}'):

@@ -31,7 +31,7 @@ from inspect import signature, getsource
 
 from vyos.defaults import directories
 from vyos.version import get_version
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 # Defaults
 

@@ -24,8 +24,8 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_source_interface
 from vyos.template import render
-from vyos.util import cmd
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import cmd
+from vyos.utils.process import is_systemd_service_running
 from vyos.validate import is_addr_assigned
 from vyos.validate import is_intf_addr_assigned
 from vyos.xml import defaults

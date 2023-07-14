@@ -23,7 +23,7 @@ from sys import exit
 from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.validate import is_afi_configured
 from vyos import ConfigError
 from vyos import airbag

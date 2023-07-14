@@ -23,8 +23,8 @@ from vyos.configdict import dict_merge
 from vyos.ifconfig import Interface
 from vyos.template import render
 from vyos.template import is_ipv6
-from vyos.util import call
-from vyos.util import dict_search
+from vyos.utils.process import call
+from vyos.utils.dict import dict_search
 from vyos.validate import is_ipv6_link_local
 from vyos.xml import defaults
 from vyos import ConfigError

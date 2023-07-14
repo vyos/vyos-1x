@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from sys import exit
-from vyos.util import ask_yes_no
-from vyos.util import cmd
-from vyos.util import commit_in_progress
+from vyos.utils.io import ask_yes_no
+from vyos.utils.process import cmd
+from vyos.utils.commit import commit_in_progress
 
 if not ask_yes_no('Do you really want to remove the existing SSH host keys?'):
     exit(0)

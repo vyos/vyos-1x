@@ -22,7 +22,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.logger import syslog
 from vyos.template import render
-from vyos.util import dict_search
+from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 airbag.enable()
 

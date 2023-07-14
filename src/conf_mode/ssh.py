@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.template import render
 from vyos.xml import defaults
 from vyos import ConfigError

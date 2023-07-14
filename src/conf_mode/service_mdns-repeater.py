@@ -23,7 +23,7 @@ from netifaces import ifaddresses, interfaces, AF_INET
 from vyos.config import Config
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
