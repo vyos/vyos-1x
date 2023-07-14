@@ -22,6 +22,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.ifconfig import Interface
 from vyos.template import render
+from vyos.template import is_ipv6
 from vyos.util import call
 from vyos.util import dict_search
 from vyos.validate import is_ipv6_link_local
@@ -51,7 +52,7 @@ def get_config(config=None):
 
 def verify(relay):
     # bail out early - looks like removal from running config
-    if not relay:
+    if not relay or 'disable' in relay:
         return None
 
     if 'upstream_interface' not in relay:
@@ -69,7 +70,7 @@ def verify(relay):
     for interface in relay['listen_interface']:
         has_global = False
         for addr in Interface(interface).get_addr():
-            if not is_ipv6_link_local(addr):
+            if is_ipv6(addr) and not is_ipv6_link_local(addr):
                 has_global = True
         if not has_global:
             raise ConfigError(f'Interface {interface} does not have global '\
@@ -79,7 +80,7 @@ def verify(relay):
 
 def generate(relay):
     # bail out early - looks like removal from running config
-    if not relay:
+    if not relay or 'disable' in relay:
         return None
 
     render(config_file, 'dhcp-relay/dhcrelay6.conf.j2', relay)
@@ -88,7 +89,7 @@ def generate(relay):
 def apply(relay):
     # bail out early - looks like removal from running config
     service_name = 'isc-dhcp-relay6.service'
-    if not relay:
+    if not relay or 'disable' in relay:
         # DHCPv6 relay support is removed in the commit
         call(f'systemctl stop {service_name}')
         if os.path.exists(config_file):

@@ -9,6 +9,7 @@
           <priority>900</priority>
         </properties>
         <children>
+          #include <include/generic-disable-node.xml.i>
           <tagNode name="listen-interface">
             <properties>
               <help>Interface for DHCPv6 Relay Agent to listen for requests</help>
