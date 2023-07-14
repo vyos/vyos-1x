@@ -19,7 +19,7 @@ import unittest
 from socket import gethostname
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 

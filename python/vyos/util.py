@@ -114,28 +114,6 @@ def get_sub_dict(source, lpath, get_first_key=False):
 
     return ret
 
-def process_running(pid_file):
-    """ Checks if a process with PID in pid_file is running """
-    from psutil import pid_exists
-    if not os.path.isfile(pid_file):
-        return False
-    with open(pid_file, 'r') as f:
-        pid = f.read().strip()
-    return pid_exists(int(pid))
-
-def process_named_running(name, cmdline: str=None):
-    """ Checks if process with given name is running and returns its PID.
-    If Process is not running, return None
-    """
-    from psutil import process_iter
-    for p in process_iter(['name', 'pid', 'cmdline']):
-        if cmdline:
-            if p.info['name'] == name and cmdline in p.info['cmdline']:
-                return p.info['pid']
-        elif p.info['name'] == name:
-            return p.info['pid']
-    return None
-
 def is_list_equal(first: list, second: list) -> bool:
     """ Check if 2 lists are equal and list not empty """
     if len(first) != len(second) or len(first) == 0:
@@ -684,20 +662,6 @@ def begin0(*args):
     For combining multiple expressions in one statement. Useful for lambdas.
     """
     return args[0]
-
-def is_systemd_service_active(service):
-    """ Test is a specified systemd service is activated.
-    Returns True if service is active, false otherwise.
-    Copied from: https://unix.stackexchange.com/a/435317 """
-    tmp = cmd(f'systemctl show --value -p ActiveState {service}')
-    return bool((tmp == 'active'))
-
-def is_systemd_service_running(service):
-    """ Test is a specified systemd service is actually running.
-    Returns True if service is running, false otherwise.
-    Copied from: https://unix.stackexchange.com/a/435317 """
-    tmp = cmd(f'systemctl show --value -p SubState {service}')
-    return bool((tmp == 'running'))
 
 def check_port_availability(ipaddress, port, protocol):
     """

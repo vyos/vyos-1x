@@ -22,7 +22,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
 from vyos.util import get_half_cpus
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.process import cmd
 
 class BasicAccelPPPTest:

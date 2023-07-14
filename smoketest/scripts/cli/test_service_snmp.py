@@ -25,7 +25,7 @@ from vyos.template import address_from_cidr
 from vyos.utils.process import call
 from vyos.util import DEVNULL
 from vyos.utils.file import read_file
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.version import get_version_data
 
 PROCESS_NAME = 'snmpd'

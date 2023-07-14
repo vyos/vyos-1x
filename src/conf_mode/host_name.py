@@ -27,7 +27,7 @@ from vyos.ifconfig import Section
 from vyos.template import is_ip
 from vyos.utils.process import cmd
 from vyos.utils.process import call
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

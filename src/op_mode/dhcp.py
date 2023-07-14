@@ -29,7 +29,7 @@ from vyos.configquery import ConfigTreeQuery
 
 from vyos.utils.process import cmd
 from vyos.util import dict_search
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import is_systemd_service_running
 
 config = ConfigTreeQuery()
 lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']

@@ -25,7 +25,7 @@ from shutil import rmtree
 from vyos.base import Warning
 from vyos.utils.process import call
 from vyos.util import ask_yes_no
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.util import makedir
 
 # some default values

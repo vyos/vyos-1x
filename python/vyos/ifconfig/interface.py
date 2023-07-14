@@ -37,7 +37,7 @@ from vyos.util import dict_search
 from vyos.utils.file import read_file
 from vyos.util import get_interface_config
 from vyos.util import get_interface_namespace
-from vyos.util import is_systemd_service_active
+from vyos.utils.process import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.validate import is_intf_addr_assigned

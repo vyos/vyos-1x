@@ -21,7 +21,7 @@ from sys import exit
 
 from vyos import ConfigError
 from vyos.config import Config
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.process import call
 from vyos.template import render
 from signal import SIGTERM

@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'igmpproxy'
 IGMP_PROXY_CONF = '/etc/igmpproxy.conf'

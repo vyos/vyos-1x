@@ -17,7 +17,7 @@
 import unittest
 from time import sleep
 
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import is_systemd_service_running
 from vyos.utils.process import cmd
 
 class TestConfigdInit(unittest.TestCase):

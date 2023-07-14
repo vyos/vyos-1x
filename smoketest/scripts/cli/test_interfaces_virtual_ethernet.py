@@ -19,7 +19,7 @@ import unittest
 from netifaces import interfaces
 
 from vyos.ifconfig import Section
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from base_interfaces_test import BasicInterfaceTest
 
 class VEthInterfaceTest(BasicInterfaceTest.TestCase):

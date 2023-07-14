@@ -22,8 +22,8 @@ import tempfile
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import process_running
 from vyos.utils.process import cmd
+from vyos.utils.process import process_running
 
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 DDCLIENT_PID = '/run/ddclient/ddclient.pid'

@@ -29,7 +29,7 @@ from vyos.ifconfig import Section
 from vyos.pki import CERT_BEGIN
 from vyos.template import is_ipv6
 from vyos.utils.process import cmd
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 from vyos.validate import is_ipv6_link_local
 

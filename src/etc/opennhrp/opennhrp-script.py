@@ -24,7 +24,7 @@ from pathlib import Path
 
 from vyos.logger import getLogger
 from vyos.utils.process import cmd
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 NHRP_CONFIG: str = '/run/opennhrp/opennhrp.conf'
 

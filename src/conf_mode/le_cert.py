@@ -22,7 +22,7 @@ from vyos.config import Config
 from vyos import ConfigError
 from vyos.utils.process import cmd
 from vyos.utils.process import call
-from vyos.util import is_systemd_service_running
+from vyos.utils.process import is_systemd_service_running
 
 from vyos import airbag
 airbag.enable()

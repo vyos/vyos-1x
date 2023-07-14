@@ -22,7 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from glob import glob
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.util import check_kmod
 from vyos.utils.file import read_file
 

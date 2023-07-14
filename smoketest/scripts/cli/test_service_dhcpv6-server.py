@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import inc_ip
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
 
 PROCESS_NAME = 'dhcpd'

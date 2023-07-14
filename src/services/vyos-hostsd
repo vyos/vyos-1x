@@ -244,8 +244,9 @@ import zmq
 
 from voluptuous import Schema, MultipleInvalid, Required, Any
 from collections import OrderedDict
-from vyos.util import makedir, process_named_running
+from vyos.util import makedir
 from vyos.utils.process import popen
+from vyos.utils.process import process_named_running
 from vyos.utils.permission import chown
 from vyos.utils.permission import chmod_755
 from vyos.template import render

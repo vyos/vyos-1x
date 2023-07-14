@@ -19,7 +19,7 @@ import tabulate
 import vyos.opmode
 
 from vyos.utils.process import cmd
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 from vyos.utils.dict import colon_separated_to_dict
 
 

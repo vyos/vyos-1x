@@ -31,7 +31,7 @@ from vyos.utils.process import cmd
 from vyos.utils.process import call
 from vyos.util import dict_search
 from vyos.util import DEVNULL
-from vyos.util import is_systemd_service_active
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag

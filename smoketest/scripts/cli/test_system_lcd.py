@@ -19,7 +19,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from configparser import ConfigParser
 
-from vyos.util import process_named_running
+from vyos.utils.process import process_named_running
 
 config_file = '/run/LCDd/LCDd.conf'
 base_path = ['system', 'lcd']
