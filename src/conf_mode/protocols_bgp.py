@@ -242,9 +242,14 @@ def verify(bgp):
     # Verify vrf on interface and bgp section
     if 'interface' in bgp:
         for interface in bgp['interface']:
+            error_msg = f'Interface "{interface}" belongs to different VRF instance'
             tmp = get_interface_vrf(interface)
-            if ('vrf' in bgp and bgp['vrf'] != tmp) or tmp != 'default':
-                raise ConfigError(f'Interface "{interface}" belongs to different VRF instance!')
+            if 'vrf' in bgp:
+                if bgp['vrf'] != tmp:
+                    vrf = bgp['vrf']
+                    raise ConfigError(f'{error_msg} "{vrf}"!')
+            elif tmp != 'default':
+                raise ConfigError(f'{error_msg} "{tmp}"!')
 
     # Common verification for both peer-group and neighbor statements
     for neighbor in ['neighbor', 'peer_group']:
