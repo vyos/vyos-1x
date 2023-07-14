@@ -14,7 +14,19 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from vyos.utils.permission import chown
 
+def makedir(path, user=None, group=None):
+    if os.path.exists(path):
+        return
+    os.makedirs(path, mode=0o755)
+    chown(path, user, group)
+
+def file_is_persistent(path):
+    import re
+    location = r'^(/config|/opt/vyatta/etc/config)'
+    absolute = os.path.abspath(os.path.dirname(path))
+    return re.match(location,absolute)
 
 def read_file(fname, defaultonfailure=None):
     """

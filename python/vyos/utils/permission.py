@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 def chown(path, user, group):
     """ change file/directory owner """
     from pwd import getpwnam
@@ -38,7 +40,6 @@ def chmod(path, bitmask):
         return
     os.chmod(path, bitmask)
 
-
 def chmod_600(path):
     """ make file only read/writable by owner """
     from stat import S_IRUSR, S_IWUSR
@@ -46,14 +47,12 @@ def chmod_600(path):
     bitmask = S_IRUSR | S_IWUSR
     chmod(path, bitmask)
 
-
 def chmod_750(path):
     """ make file/directory only executable to user and group """
     from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
 
     bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
     chmod(path, bitmask)
-
 
 def chmod_755(path):
     """ make file executable by all """

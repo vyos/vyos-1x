@@ -23,7 +23,7 @@ from datetime import datetime
 from vyos.util import ask_yes_no
 from vyos.utils.process import call
 from vyos.utils.process import cmd
-from vyos.util import DEVNULL
+from vyos.utils.process import DEVNULL
 
 def list_disks():
     disks = set()

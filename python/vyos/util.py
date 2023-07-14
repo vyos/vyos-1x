@@ -22,11 +22,6 @@ import sys
 # where it is used so it is as local as possible to the execution
 #
 
-def makedir(path, user=None, group=None):
-    if os.path.exists(path):
-        return
-    os.makedirs(path, mode=0o755)
-    chown(path, user, group)
 
 def _mangle_dict_keys(data, regex, replacement, abs_path=[], no_tag_node_value_mangle=False, mod=0):
     """ Mangles dict keys according to a regex and replacement character.
@@ -258,13 +253,6 @@ def get_cfg_group_id():
     group_data = getgrnam(cfg_group)
     return group_data.gr_gid
 
-
-def file_is_persistent(path):
-    import re
-    location = r'^(/config|/opt/vyatta/etc/config)'
-    absolute = os.path.abspath(os.path.dirname(path))
-    return re.match(location,absolute)
-
 def wait_for_inotify(file_path, pre_hook=None, event_type=None, timeout=None, sleep_interval=0.1):
     """ Waits for an inotify event to occur """
     if not os.path.dirname(file_path):
@@ -433,6 +421,7 @@ def get_half_cpus():
 def check_kmod(k_mod):
     """ Common utility function to load required kernel modules on demand """
     from vyos import ConfigError
+    from vyos.utils.process import call
     if isinstance(k_mod, str):
         k_mod = k_mod.split()
     for module in k_mod:
