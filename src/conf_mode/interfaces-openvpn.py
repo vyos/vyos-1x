@@ -51,7 +51,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.utils.process import call
-from vyos.util import chown
+from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.util import dict_search
 from vyos.util import dict_search_args

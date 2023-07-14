@@ -68,7 +68,7 @@ Apply the new configuration:
 import tempfile
 import re
 from vyos import util
-from vyos.util import chown
+from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 import logging
 from logging.handlers import SysLogHandler

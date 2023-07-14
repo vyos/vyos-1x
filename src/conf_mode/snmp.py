@@ -27,7 +27,7 @@ from vyos.snmpv3_hashgen import plaintext_to_sha1
 from vyos.snmpv3_hashgen import random
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.util import chmod_755
+from vyos.utils.permission import chmod_755
 from vyos.util import dict_search
 from vyos.validate import is_addr_assigned
 from vyos.version import get_version_data

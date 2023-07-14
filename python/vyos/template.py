@@ -20,8 +20,8 @@ from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from jinja2 import ChainableUndefined
 from vyos.defaults import directories
-from vyos.util import chmod
-from vyos.util import chown
+from vyos.utils.permission import chmod
+from vyos.utils.permission import chown
 from vyos.util import dict_search_args
 from vyos.util import makedir
 

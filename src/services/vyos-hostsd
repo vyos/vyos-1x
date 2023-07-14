@@ -241,10 +241,13 @@ import traceback
 import re
 import logging
 import zmq
+
 from voluptuous import Schema, MultipleInvalid, Required, Any
 from collections import OrderedDict
-from vyos.util import chown, chmod_755, makedir, process_named_running
+from vyos.util import makedir, process_named_running
 from vyos.utils.process import popen
+from vyos.utils.permission import chown
+from vyos.utils.permission import chmod_755
 from vyos.template import render
 
 debug = True

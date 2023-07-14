@@ -19,5 +19,6 @@ from vyos.utils import dict
 from vyos.utils import file
 from vyos.utils import io
 from vyos.utils import network
+from vyos.utils import permission
 from vyos.utils import process
 from vyos.utils import system

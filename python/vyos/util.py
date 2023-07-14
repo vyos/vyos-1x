@@ -22,58 +22,6 @@ import sys
 # where it is used so it is as local as possible to the execution
 #
 
-def chown(path, user, group):
-    """ change file/directory owner """
-    from pwd import getpwnam
-    from grp import getgrnam
-
-    if user is None or group is None:
-        return False
-
-    # path may also be an open file descriptor
-    if not isinstance(path, int) and not os.path.exists(path):
-        return False
-
-    uid = getpwnam(user).pw_uid
-    gid = getgrnam(group).gr_gid
-    os.chown(path, uid, gid)
-    return True
-
-
-def chmod(path, bitmask):
-    # path may also be an open file descriptor
-    if not isinstance(path, int) and not os.path.exists(path):
-        return
-    if bitmask is None:
-        return
-    os.chmod(path, bitmask)
-
-
-def chmod_600(path):
-    """ make file only read/writable by owner """
-    from stat import S_IRUSR, S_IWUSR
-
-    bitmask = S_IRUSR | S_IWUSR
-    chmod(path, bitmask)
-
-
-def chmod_750(path):
-    """ make file/directory only executable to user and group """
-    from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP
-
-    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP
-    chmod(path, bitmask)
-
-
-def chmod_755(path):
-    """ make file executable by all """
-    from stat import S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH
-
-    bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
-              S_IROTH | S_IXOTH
-    chmod(path, bitmask)
-
-
 def makedir(path, user=None, group=None):
     if os.path.exists(path):
         return
