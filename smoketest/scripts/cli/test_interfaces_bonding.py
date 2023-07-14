@@ -23,7 +23,7 @@ from vyos.ifconfig import Section
 from vyos.ifconfig.interface import Interface
 from vyos.configsession import ConfigSessionError
 from vyos.util import get_interface_config
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 class BondingInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod

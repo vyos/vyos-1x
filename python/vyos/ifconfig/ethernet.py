@@ -21,7 +21,7 @@ from vyos.base import Warning
 from vyos.ethtool import Ethtool
 from vyos.ifconfig.interface import Interface
 from vyos.util import dict_search
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.utils.process import run
 from vyos.validate import assert_list
 

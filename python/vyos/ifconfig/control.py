@@ -21,8 +21,8 @@ from inspect import _empty
 from vyos.ifconfig.section import Section
 from vyos.utils.process import popen
 from vyos.utils.process import cmd
-from vyos.util import read_file
-from vyos.util import write_file
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos import debug
 
 class Control(Section):

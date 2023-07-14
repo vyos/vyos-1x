@@ -17,7 +17,7 @@
 import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 pki_path = ['pki']
 

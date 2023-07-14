@@ -22,62 +22,6 @@ import sys
 # where it is used so it is as local as possible to the execution
 #
 
-def read_file(fname, defaultonfailure=None):
-    """
-    read the content of a file, stripping any end characters (space, newlines)
-    should defaultonfailure be not None, it is returned on failure to read
-    """
-    try:
-        """ Read a file to string """
-        with open(fname, 'r') as f:
-            data = f.read().strip()
-        return data
-    except Exception as e:
-        if defaultonfailure is not None:
-            return defaultonfailure
-        raise e
-
-def write_file(fname, data, defaultonfailure=None, user=None, group=None, mode=None, append=False):
-    """
-    Write content of data to given fname, should defaultonfailure be not None,
-    it is returned on failure to read.
-
-    If directory of file is not present, it is auto-created.
-    """
-    dirname = os.path.dirname(fname)
-    if not os.path.isdir(dirname):
-        os.makedirs(dirname, mode=0o755, exist_ok=False)
-        chown(dirname, user, group)
-
-    try:
-        """ Write a file to string """
-        bytes = 0
-        with open(fname, 'w' if not append else 'a') as f:
-            bytes = f.write(data)
-        chown(fname, user, group)
-        chmod(fname, mode)
-        return bytes
-    except Exception as e:
-        if defaultonfailure is not None:
-            return defaultonfailure
-        raise e
-
-def read_json(fname, defaultonfailure=None):
-    """
-    read and json decode the content of a file
-    should defaultonfailure be not None, it is returned on failure to read
-    """
-    import json
-    try:
-        with open(fname, 'r') as f:
-            data = json.load(f)
-        return data
-    except Exception as e:
-        if defaultonfailure is not None:
-            return defaultonfailure
-        raise e
-
-
 def chown(path, user, group):
     """ change file/directory owner """
     from pwd import getpwnam

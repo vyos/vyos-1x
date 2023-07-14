@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.util import get_interface_config
 from vyos.validate import is_intf_addr_assigned
 

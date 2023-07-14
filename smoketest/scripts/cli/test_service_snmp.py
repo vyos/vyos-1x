@@ -24,7 +24,7 @@ from vyos.template import is_ipv4
 from vyos.template import address_from_cidr
 from vyos.utils.process import call
 from vyos.util import DEVNULL
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.util import process_named_running
 from vyos.version import get_version_data
 

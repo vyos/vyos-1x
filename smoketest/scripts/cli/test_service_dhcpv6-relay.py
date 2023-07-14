@@ -22,7 +22,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.template import address_from_cidr
 from vyos.util import process_named_running
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 PROCESS_NAME = 'dhcrelay'
 RELAY_CONF = '/run/dhcp-relay/dhcrelay6.conf'

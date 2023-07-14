@@ -28,7 +28,7 @@ from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import get_interface_config

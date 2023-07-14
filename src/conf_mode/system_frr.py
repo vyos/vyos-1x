@@ -22,7 +22,8 @@ from vyos import airbag
 from vyos.config import Config
 from vyos.logger import syslog
 from vyos.template import render_to_string
-from vyos.util import read_file, write_file
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.utils.process import run
 airbag.enable()
 

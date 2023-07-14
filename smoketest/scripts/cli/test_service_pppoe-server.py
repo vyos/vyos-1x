@@ -19,7 +19,7 @@ import unittest
 from base_accel_ppp_test import BasicAccelPPPTest
 
 from configparser import ConfigParser
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.template import range_to_regex
 
 local_if = ['interfaces', 'dummy', 'dum667']

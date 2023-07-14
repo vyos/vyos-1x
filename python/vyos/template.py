@@ -424,7 +424,7 @@ def get_dhcp_router(interface):
     if not os.path.exists(lease_file):
         return None
 
-    from vyos.util import read_file
+    from vyos.utils.file import read_file
     for line in read_file(lease_file).splitlines():
         if 'option routers' in line:
             (_, _, address) = line.split()

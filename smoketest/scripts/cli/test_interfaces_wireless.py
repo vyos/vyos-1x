@@ -24,7 +24,7 @@ from glob import glob
 from vyos.configsession import ConfigSessionError
 from vyos.util import process_named_running
 from vyos.util import check_kmod
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 def get_config_value(interface, key):
     tmp = read_file(f'/run/hostapd/{interface}.conf')

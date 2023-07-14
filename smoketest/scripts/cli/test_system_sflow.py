@@ -22,7 +22,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
 from vyos.util import process_named_running
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 PROCESS_NAME = 'hsflowd'
 base_path = ['system', 'sflow']

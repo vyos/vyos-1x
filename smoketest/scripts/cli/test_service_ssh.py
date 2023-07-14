@@ -27,7 +27,7 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
 from vyos.util import is_systemd_service_running
 from vyos.util import process_named_running
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 PROCESS_NAME = 'sshd'
 SSHD_CONF = '/run/sshd/sshd_config'

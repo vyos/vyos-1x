@@ -21,7 +21,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import ignore_warning
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.utils.process import run
 
 base_path = ['service', 'https']

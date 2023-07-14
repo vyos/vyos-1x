@@ -34,7 +34,7 @@ from vyos.configdict import get_vlan_ids
 from vyos.template import render
 from vyos.util import mac2eui64
 from vyos.util import dict_search
-from vyos.util import read_file
+from vyos.utils.file import read_file
 from vyos.util import get_interface_config
 from vyos.util import get_interface_namespace
 from vyos.util import is_systemd_service_active

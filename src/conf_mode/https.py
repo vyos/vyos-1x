@@ -31,7 +31,7 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.util import check_port_availability
 from vyos.util import is_listen_port_bind_service
-from vyos.util import write_file
+from vyos.utils.file import write_file
 
 from vyos import airbag
 airbag.enable()

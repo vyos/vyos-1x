@@ -18,7 +18,7 @@ from sys import exit
 from copy import deepcopy
 
 from vyos.config import Config
-from vyos.util import write_file
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

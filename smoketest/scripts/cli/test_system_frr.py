@@ -17,7 +17,7 @@
 import re
 import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 config_file = '/etc/frr/daemons'
 base_path = ['system', 'frr']

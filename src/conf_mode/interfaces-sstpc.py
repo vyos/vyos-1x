@@ -30,7 +30,7 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.util import dict_search
 from vyos.util import is_systemd_service_running
-from vyos.util import write_file
+from vyos.utils.file import write_file
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

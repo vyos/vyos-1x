@@ -22,7 +22,7 @@ from vyos.configverify import verify_route_map
 from vyos.template import render_to_string
 from vyos.utils.process import call
 from vyos.util import dict_search
-from vyos.util import write_file
+from vyos.utils.file import write_file
 from vyos.utils.system import sysctl_write
 from vyos.xml import defaults
 from vyos import ConfigError

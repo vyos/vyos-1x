@@ -1,4 +1,4 @@
-# Copyright 2017-2020 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2017-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -34,8 +34,8 @@ import json
 import requests
 import vyos.defaults
 
-from vyos.util import read_file
-from vyos.util import read_json
+from vyos.utils.file import read_file
+from vyos.utils.file import read_json
 from vyos.utils.process import popen
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL

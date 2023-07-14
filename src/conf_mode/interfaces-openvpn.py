@@ -57,8 +57,8 @@ from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import is_list_equal
 from vyos.util import makedir
-from vyos.util import read_file
-from vyos.util import write_file
+from vyos.utils.file import read_file
+from vyos.utils.file import write_file
 from vyos.validate import is_addr_assigned
 
 from vyos import ConfigError

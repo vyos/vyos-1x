@@ -18,7 +18,7 @@ from sys import argv,exit
 
 from vyos.base import Warning
 from vyos.configtree import ConfigTree
-from vyos.util import read_file
+from vyos.utils.file import read_file
 
 def bandwidth_percent_to_val(interface, percent) -> int:
     speed = read_file(f'/sys/class/net/{interface}/speed')
