@@ -22,7 +22,7 @@ import os.path
 
 from tabulate import tabulate
 from json import loads
-from vyos.util import commit_in_progress
+from vyos.utils.commit import commit_in_progress
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.logger import syslog

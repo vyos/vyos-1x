@@ -24,7 +24,7 @@ import os
 
 import vyos.config
 from vyos.utils.process import call
-from vyos.util import commit_in_progress
+from vyos.utils.commit import commit_in_progress
 
 
 parser = argparse.ArgumentParser()

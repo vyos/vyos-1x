@@ -20,7 +20,7 @@ import argparse
 from psutil import process_iter
 
 from vyos.utils.process import call
-from vyos.util import commit_in_progress
+from vyos.utils.commit import commit_in_progress
 from vyos.utils.network import is_wwan_connected
 from vyos.utils.process import DEVNULL
 

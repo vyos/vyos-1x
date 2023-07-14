@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.utils import boot
+from vyos.utils import commit
 from vyos.utils import convert
 from vyos.utils import dict
 from vyos.utils import file

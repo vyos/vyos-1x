@@ -24,7 +24,7 @@ import vyos.opmode
 from argparse import ArgumentParser
 from vyos.configquery import CliShellApiConfigQuery
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import commit_in_progress
+from vyos.utils.commit import commit_in_progress
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run

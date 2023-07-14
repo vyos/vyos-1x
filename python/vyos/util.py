@@ -254,52 +254,6 @@ def wait_for_file_write_complete(file_path, pre_hook=None, timeout=None, sleep_i
     wait_for_inotify(file_path,
       event_type='IN_CLOSE_WRITE', pre_hook=pre_hook, timeout=timeout, sleep_interval=sleep_interval)
 
-def commit_in_progress():
-    """ Not to be used in normal op mode scripts! """
-
-    # The CStore backend locks the config by opening a file
-    # The file is not removed after commit, so just checking
-    # if it exists is insufficient, we need to know if it's open by anyone
-
-    # There are two ways to check if any other process keeps a file open.
-    # The first one is to try opening it and see if the OS objects.
-    # That's faster but prone to race conditions and can be intrusive.
-    # The other one is to actually check if any process keeps it open.
-    # It's non-intrusive but needs root permissions, else you can't check
-    # processes of other users.
-    #
-    # Since this will be used in scripts that modify the config outside of the CLI
-    # framework, those knowingly have root permissions.
-    # For everything else, we add a safeguard.
-    from psutil import process_iter
-    from psutil import NoSuchProcess
-    from getpass import getuser
-    from vyos.defaults import commit_lock
-
-    if getuser() != 'root':
-        raise OSError('This functions needs to be run as root to return correct results!')
-
-    for proc in process_iter():
-        try:
-            files = proc.open_files()
-            if files:
-                for f in files:
-                    if f.path == commit_lock:
-                        return True
-        except NoSuchProcess as err:
-            # Process died before we could examine it
-            pass
-    # Default case
-    return False
-
-
-def wait_for_commit_lock():
-    """ Not to be used in normal op mode scripts! """
-    from time import sleep
-    # Very synchronous approach to multiprocessing
-    while commit_in_progress():
-        sleep(1)
-
 def ask_input(question, default='', numeric_only=False, valid_responses=[]):
     question_out = question
     if default:
@@ -346,6 +300,29 @@ def is_admin() -> bool:
     current_user = getuser()
     (_, _, _, admin_group_members) = getgrnam('sudo')
     return current_user in admin_group_members
+
+def mac2eui64(mac, prefix=None):
+    """
+    Convert a MAC address to a EUI64 address or, with prefix provided, a full
+    IPv6 address.
+    Thankfully copied from https://gist.github.com/wido/f5e32576bb57b5cc6f934e177a37a0d3
+    """
+    import re
+    from ipaddress import ip_network
+    # http://tools.ietf.org/html/rfc4291#section-2.5.1
+    eui64 = re.sub(r'[.:-]', '', mac).lower()
+    eui64 = eui64[0:6] + 'fffe' + eui64[6:]
+    eui64 = hex(int(eui64[0:2], 16) ^ 2)[2:].zfill(2) + eui64[2:]
+
+    if prefix is None:
+        return ':'.join(re.findall(r'.{4}', eui64))
+    else:
+        try:
+            net = ip_network(prefix, strict=False)
+            euil = int('0x{0}'.format(eui64), 16)
+            return str(net[euil])
+        except:  # pylint: disable=bare-except
+            return
 
 def get_half_cpus():
     """ return 1/2 of the numbers of available CPUs """
