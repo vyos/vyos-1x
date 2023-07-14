@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,11 +28,11 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.template import is_ip_network
-from vyos.util import cmd
-from vyos.util import run
 from vyos.util import check_kmod
 from vyos.util import dict_search
 from vyos.util import dict_search_args
+from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.validate import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError

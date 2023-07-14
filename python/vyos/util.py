@@ -1,4 +1,4 @@
-# Copyright 2020-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,187 +21,6 @@ import sys
 # NOTE: Do not import full classes here, move your import to the function
 # where it is used so it is as local as possible to the execution
 #
-
-from subprocess import Popen
-from subprocess import PIPE
-from subprocess import STDOUT
-from subprocess import DEVNULL
-
-def popen(command, flag='', shell=None, input=None, timeout=None, env=None,
-          stdout=PIPE, stderr=PIPE, decode='utf-8'):
-    """
-    popen is a wrapper helper aound subprocess.Popen
-    with it default setting it will return a tuple (out, err)
-    out: the output of the program run
-    err: the error code returned by the program
-
-    it can be affected by the following flags:
-    shell:   do not try to auto-detect if a shell is required
-             for example if a pipe (|) or redirection (>, >>) is used
-    input:   data to sent to the child process via STDIN
-             the data should be bytes but string will be converted
-    timeout: time after which the command will be considered to have failed
-    env:     mapping that defines the environment variables for the new process
-    stdout:  define how the output of the program should be handled
-              - PIPE (default), sends stdout to the output
-              - DEVNULL, discard the output
-    stderr:  define how the output of the program should be handled
-              - None (default), send/merge the data to/with stderr
-              - PIPE, popen will append it to output
-              - STDOUT, send the data to be merged with stdout
-              - DEVNULL, discard the output
-    decode:  specify the expected text encoding (utf-8, ascii, ...)
-             the default is explicitely utf-8 which is python's own default
-
-    usage:
-    get both stdout and stderr: popen('command', stdout=PIPE, stderr=STDOUT)
-    discard stdout and get stderr: popen('command', stdout=DEVNUL, stderr=PIPE)
-    """
-
-    # airbag must be left as an import in the function as otherwise we have a
-    # a circual import dependency
-    from vyos import debug
-    from vyos import airbag
-
-    # log if the flag is set, otherwise log if command is set
-    if not debug.enabled(flag):
-        flag = 'command'
-
-    cmd_msg = f"cmd '{command}'"
-    debug.message(cmd_msg, flag)
-
-    use_shell = shell
-    stdin = None
-    if shell is None:
-        use_shell = False
-        if ' ' in command:
-            use_shell = True
-        if env:
-            use_shell = True
-
-    if input:
-        stdin = PIPE
-        input = input.encode() if type(input) is str else input
-
-    p = Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
-              env=env, shell=use_shell)
-
-    pipe = p.communicate(input, timeout)
-
-    pipe_out = b''
-    if stdout == PIPE:
-        pipe_out = pipe[0]
-
-    pipe_err = b''
-    if stderr == PIPE:
-        pipe_err = pipe[1]
-
-    str_out = pipe_out.decode(decode).replace('\r\n', '\n').strip()
-    str_err = pipe_err.decode(decode).replace('\r\n', '\n').strip()
-
-    out_msg = f"returned (out):\n{str_out}"
-    if str_out:
-        debug.message(out_msg, flag)
-
-    if str_err:
-        err_msg = f"returned (err):\n{str_err}"
-        # this message will also be send to syslog via airbag
-        debug.message(err_msg, flag, destination=sys.stderr)
-
-        # should something go wrong, report this too via airbag
-        airbag.noteworthy(cmd_msg)
-        airbag.noteworthy(out_msg)
-        airbag.noteworthy(err_msg)
-
-    return str_out, p.returncode
-
-
-def run(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=DEVNULL, stderr=PIPE, decode='utf-8'):
-    """
-    A wrapper around popen, which discard the stdout and
-    will return the error code of a command
-    """
-    _, code = popen(
-        command, flag,
-        stdout=stdout, stderr=stderr,
-        input=input, timeout=timeout,
-        env=env, shell=shell,
-        decode=decode,
-    )
-    return code
-
-
-def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-        stdout=PIPE, stderr=PIPE, decode='utf-8', raising=None, message='',
-        expect=[0]):
-    """
-    A wrapper around popen, which returns the stdout and
-    will raise the error code of a command
-
-    raising: specify which call should be used when raising
-             the class should only require a string as parameter
-             (default is OSError) with the error code
-    expect:  a list of error codes to consider as normal
-    """
-    decoded, code = popen(
-        command, flag,
-        stdout=stdout, stderr=stderr,
-        input=input, timeout=timeout,
-        env=env, shell=shell,
-        decode=decode,
-    )
-    if code not in expect:
-        feedback = message + '\n' if message else ''
-        feedback += f'failed to run command: {command}\n'
-        feedback += f'returned: {decoded}\n'
-        feedback += f'exit code: {code}'
-        if raising is None:
-            # error code can be recovered with .errno
-            raise OSError(code, feedback)
-        else:
-            raise raising(feedback)
-    return decoded
-
-
-def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
-           stdout=PIPE, stderr=STDOUT, decode='utf-8'):
-    """
-    A wrapper around popen, which returns the return code
-    of a command and stdout
-
-    % rc_cmd('uname')
-    (0, 'Linux')
-    % rc_cmd('ip link show dev eth99')
-    (1, 'Device "eth99" does not exist.')
-    """
-    out, code = popen(
-        command, flag,
-        stdout=stdout, stderr=stderr,
-        input=input, timeout=timeout,
-        env=env, shell=shell,
-        decode=decode,
-    )
-    return code, out
-
-
-def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=PIPE, decode='utf-8'):
-    """
-    A wrapper around popen, which print the stdout and
-    will return the error code of a command
-    """
-    out, code = popen(
-        command, flag,
-        stdout=stdout, stderr=stderr,
-        input=input, timeout=timeout,
-        env=env, shell=shell,
-        decode=decode,
-    )
-    if out:
-        print(out)
-    return code
-
 
 def read_file(fname, defaultonfailure=None):
     """
@@ -903,6 +722,7 @@ def get_bridge_fdb(interface):
     if not os.path.exists(f'/sys/class/net/{interface}'):
         return None
     from json import loads
+    from vyos.utils.process import cmd
     tmp = loads(cmd(f'bridge -j fdb show dev {interface}'))
     return tmp
 
@@ -913,6 +733,7 @@ def get_interface_config(interface):
     if not os.path.exists(f'/sys/class/net/{interface}'):
         return None
     from json import loads
+    from vyos.utils.process import cmd
     tmp = loads(cmd(f'ip --detail --json link show dev {interface}'))[0]
     return tmp
 
@@ -923,6 +744,7 @@ def get_interface_address(interface):
     if not os.path.exists(f'/sys/class/net/{interface}'):
         return None
     from json import loads
+    from vyos.utils.process import cmd
     tmp = loads(cmd(f'ip --detail --json addr show dev {interface}'))[0]
     return tmp
 
@@ -931,6 +753,7 @@ def get_interface_namespace(iface):
        Returns wich netns the interface belongs to
     """
     from json import loads
+    from vyos.utils.process import cmd
     # Check if netns exist
     tmp = loads(cmd(f'ip --json netns ls'))
     if len(tmp) == 0:
@@ -947,6 +770,7 @@ def get_interface_namespace(iface):
 def get_all_vrfs():
     """ Return a dictionary of all system wide known VRF instances """
     from json import loads
+    from vyos.utils.process import cmd
     tmp = loads(cmd('ip --json vrf list'))
     # Result is of type [{"name":"red","table":1000},{"name":"blue","table":2000}]
     # so we will re-arrange it to a more nicer representation:
@@ -1080,12 +904,13 @@ def install_into_config(conf, config_paths, override_prompt=True):
         return None
 
     from vyos.config import Config
-
     if not Config().in_session():
         print('You are not in configure mode, commands to install manually from configure mode:')
         for path in config_paths:
             print(f'set {path}')
         return None
+
+    from vyos.utils.process import cmd
 
     count = 0
     failed = []
@@ -1113,6 +938,7 @@ def is_wwan_connected(interface):
     """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
     carrier network or not """
     import json
+    from vyos.utils.process import cmd
 
     if not interface.startswith('wwan'):
         raise ValueError(f'Specified interface "{interface}" is not a WWAN interface')

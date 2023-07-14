@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import call
+from vyos.utils.process import call
 
 def is_configured():
     """ Check if high-availability virtual-server is configured """

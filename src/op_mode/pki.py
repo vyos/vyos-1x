@@ -36,7 +36,7 @@ from vyos.pki import load_crl, load_dh_parameters, load_public_key
 from vyos.pki import verify_certificate
 from vyos.xml import defaults
 from vyos.util import ask_input, ask_yes_no
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import install_into_config
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'

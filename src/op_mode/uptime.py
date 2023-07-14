@@ -29,7 +29,7 @@ def _get_uptime_seconds():
 
 def _get_load_averages():
     from re import search
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
     from vyos.cpu import get_core_count
 
     data = cmd("uptime")

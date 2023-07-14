@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -18,11 +18,12 @@ import sys
 import argparse
 import json
 
-from vyos.config import Config
-from vyos.util import popen
-from vyos.util import run
-from vyos.util import DEVNULL
 from tabulate import tabulate
+
+from vyos.config import Config
+from vyos.utils.process import popen
+from vyos.utils.process import run
+from vyos.utils.process import DEVNULL
 
 occtl        = '/usr/bin/occtl'
 occtl_socket = '/run/ocserv/occtl.socket'

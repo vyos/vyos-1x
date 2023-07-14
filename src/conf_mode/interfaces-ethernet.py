@@ -40,7 +40,7 @@ from vyos.pki import encode_certificate
 from vyos.pki import load_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import dict_search
 from vyos.util import write_file
 from vyos import ConfigError

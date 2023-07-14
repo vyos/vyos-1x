@@ -22,7 +22,7 @@ from pathlib import Path
 from sys import exit
 from time import sleep
 
-from vyos.util import call
+from vyos.utils.process import call
 
 import vyos.version
 

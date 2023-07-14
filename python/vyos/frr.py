@@ -69,7 +69,7 @@ import tempfile
 import re
 from vyos import util
 from vyos.util import chown
-from vyos.util import cmd
+from vyos.utils.process import cmd
 import logging
 from logging.handlers import SysLogHandler
 import os

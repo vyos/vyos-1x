@@ -22,7 +22,7 @@ from textwrap import fill
 
 from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig import Section
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 
 client_config = """

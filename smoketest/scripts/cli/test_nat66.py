@@ -22,7 +22,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import dict_search
 
 base_path = ['nat66']

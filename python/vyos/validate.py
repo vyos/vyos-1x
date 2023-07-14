@@ -218,7 +218,7 @@ def assert_mtu(mtu, ifname):
     assert_number(mtu)
 
     import json
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
     out = cmd(f'ip -j -d link show dev {ifname}')
     # [{"ifindex":2,"ifname":"eth0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"mtu":1500,"qdisc":"pfifo_fast","operstate":"UP","linkmode":"DEFAULT","group":"default","txqlen":1000,"link_type":"ether","address":"08:00:27:d9:5b:04","broadcast":"ff:ff:ff:ff:ff:ff","promiscuity":0,"min_mtu":46,"max_mtu":16110,"inet6_addr_gen_mode":"none","num_tx_queues":1,"num_rx_queues":1,"gso_max_size":65536,"gso_max_segs":65535}]
     parsed = json.loads(out)[0]

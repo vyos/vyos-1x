@@ -26,8 +26,8 @@ from pwd import getpwall
 from time import sleep
 
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
-from vyos.util import read_file
+from vyos.utils.process import cmd
+from vyos.utils.file import read_file
 from vyos.template import inc_ip
 
 base_path = ['system', 'login']

@@ -22,7 +22,7 @@ from tabulate import tabulate
 
 from vyos.config import Config
 from vyos.template import is_ipv4, is_ipv6
-from vyos.util import call
+from vyos.utils.process import call
 
 cache_file = r'/run/ddclient/ddclient.cache'
 

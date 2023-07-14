@@ -27,7 +27,7 @@ import vyos.opmode
 from vyos.base import Warning
 from vyos.configquery import ConfigTreeQuery
 
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import dict_search
 from vyos.util import is_systemd_service_running
 

@@ -26,7 +26,7 @@ from ipaddress import ip_network
 from vyos.config import Config
 from vyos.template import is_ipv4
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import get_half_cpus
 from vyos.util import check_port_availability
 from vyos.util import is_listen_port_bind_service

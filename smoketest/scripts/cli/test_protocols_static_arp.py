@@ -19,7 +19,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 base_path = ['protocols', 'static', 'arp']
 interface = 'eth0'

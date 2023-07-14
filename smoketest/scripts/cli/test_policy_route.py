@@ -18,7 +18,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 mark = '100'
 conn_mark = '555'

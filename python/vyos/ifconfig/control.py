@@ -19,8 +19,8 @@ from inspect import signature
 from inspect import _empty
 
 from vyos.ifconfig.section import Section
-from vyos.util import popen
-from vyos.util import cmd
+from vyos.utils.process import popen
+from vyos.utils.process import cmd
 from vyos.util import read_file
 from vyos.util import write_file
 from vyos import debug

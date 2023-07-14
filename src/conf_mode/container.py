@@ -28,11 +28,11 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Interface
-from vyos.util import call
-from vyos.util import cmd
-from vyos.util import run
-from vyos.util import rc_cmd
 from vyos.util import write_file
+from vyos.utils.process import call
+from vyos.utils.process import cmd
+from vyos.utils.process import run
+from vyos.utils.process import rc_cmd
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6

@@ -34,7 +34,7 @@ from requests.packages.urllib3 import PoolManager
 
 from vyos.util import ask_yes_no
 from vyos.util import begin
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import make_incremental_progressbar
 from vyos.util import make_progressbar
 from vyos.util import print_error

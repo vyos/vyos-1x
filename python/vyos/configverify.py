@@ -460,7 +460,7 @@ def verify_diffie_hellman_length(file, min_keysize):
     then or equal to min_keysize """
     import os
     import re
-    from vyos.util import cmd
+    from vyos.utils.process import cmd
 
     try:
         keysize = str(min_keysize)

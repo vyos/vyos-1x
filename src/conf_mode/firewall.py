@@ -31,12 +31,12 @@ from vyos.configdep import set_dependents, call_dependents
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
-from vyos.util import call
-from vyos.util import cmd
+from vyos.utils.process import call
+from vyos.utils.process import cmd
 from vyos.util import dict_search_args
 from vyos.util import dict_search_recursive
 from vyos.util import process_named_running
-from vyos.util import rc_cmd
+from vyos.utils.process import rc_cmd
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

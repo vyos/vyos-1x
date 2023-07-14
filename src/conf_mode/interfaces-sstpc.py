@@ -27,7 +27,7 @@ from vyos.pki import encode_certificate
 from vyos.pki import find_chain
 from vyos.pki import load_certificate
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import dict_search
 from vyos.util import is_systemd_service_running
 from vyos.util import write_file

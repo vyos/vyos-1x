@@ -50,9 +50,9 @@ from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import chown
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import dict_search
 from vyos.util import dict_search_args
 from vyos.util import is_list_equal

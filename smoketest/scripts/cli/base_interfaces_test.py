@@ -29,10 +29,10 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.util import read_file
-from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import get_interface_config
+from vyos.utils.process import cmd
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 from vyos.xml_ref import cli_defined

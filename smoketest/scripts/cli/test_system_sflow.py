@@ -20,7 +20,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import process_named_running
 from vyos.util import read_file
 

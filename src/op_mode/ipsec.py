@@ -23,7 +23,7 @@ from tabulate import tabulate
 
 from vyos.util import convert_data
 from vyos.util import seconds_to_human
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.configquery import ConfigTreeQuery
 
 import vyos.opmode

@@ -25,8 +25,8 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.ifconfig import Section
 from vyos.template import is_ip
-from vyos.util import cmd
-from vyos.util import call
+from vyos.utils.process import cmd
+from vyos.utils.process import call
 from vyos.util import process_named_running
 from vyos import ConfigError
 from vyos import airbag

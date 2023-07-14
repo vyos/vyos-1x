@@ -25,7 +25,7 @@ from tabulate import tabulate
 import vyos.opmode
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.util import dict_search
 
 base = 'nat'

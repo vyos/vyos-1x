@@ -20,7 +20,7 @@ from vyos.config import Config
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.configverify import verify_interface_exists
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import chmod_750
 from vyos.util import get_interface_config
 from vyos.template import render

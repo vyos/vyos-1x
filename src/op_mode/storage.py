@@ -18,7 +18,7 @@
 import sys
 
 import vyos.opmode
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 # FIY: As of coreutils from Debian Buster and Bullseye,
 # the outpt looks like this:

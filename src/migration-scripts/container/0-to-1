@@ -21,7 +21,7 @@ import shutil
 import sys
 
 from vyos.configtree import ConfigTree
-from vyos.util import call
+from vyos.utils.process import call
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")

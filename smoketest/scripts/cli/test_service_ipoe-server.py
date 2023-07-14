@@ -19,7 +19,7 @@ import unittest
 
 from base_accel_ppp_test import BasicAccelPPPTest
 from vyos.configsession import ConfigSessionError
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 from configparser import ConfigParser
 

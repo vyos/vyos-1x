@@ -22,7 +22,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
 from vyos.template import address_from_cidr
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import DEVNULL
 from vyos.util import read_file
 from vyos.util import process_named_running

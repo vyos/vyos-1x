@@ -1,4 +1,4 @@
-# Copyright 2019-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,7 +15,8 @@
 
 from time import sleep
 from time import time
-from vyos.util import run
+
+from vyos.utils.process import run
 from vyos.ifconfig.interface import Interface
 
 def wait_for_add_l2tpv3(timeout=10, sleep_interval=1, cmd=None):

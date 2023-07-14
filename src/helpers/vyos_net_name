@@ -24,7 +24,7 @@ from sys import argv
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.utils.boot import boot_configuration_complete
 from vyos.migrator import VirtualMigrator
 

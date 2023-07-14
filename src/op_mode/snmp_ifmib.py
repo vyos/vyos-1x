@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,7 +24,7 @@ import argparse
 import netifaces
 
 from vyos.config import Config
-from vyos.util import popen
+from vyos.utils.process import popen
 
 parser = argparse.ArgumentParser(description='Retrieve SNMP interfaces information')
 parser.add_argument('--ifindex', action='store', nargs='?', const='all', help='Show interface index')

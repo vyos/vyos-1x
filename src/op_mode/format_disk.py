@@ -21,8 +21,8 @@ import re
 from datetime import datetime
 
 from vyos.util import ask_yes_no
-from vyos.util import call
-from vyos.util import cmd
+from vyos.utils.process import call
+from vyos.utils.process import cmd
 from vyos.util import DEVNULL
 
 def list_disks():

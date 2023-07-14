@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -21,9 +21,9 @@ from configparser import ConfigParser
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.template import is_ipv4
-from vyos.util import cmd
 from vyos.util import get_half_cpus
 from vyos.util import process_named_running
+from vyos.utils.process import cmd
 
 class BasicAccelPPPTest:
     class TestCase(VyOSUnitTestSHIM.TestCase):

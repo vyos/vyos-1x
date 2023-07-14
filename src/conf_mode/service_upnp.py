@@ -24,7 +24,7 @@ from ipaddress import IPv6Network
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6

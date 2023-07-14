@@ -20,7 +20,7 @@ import sys
 from tabulate import tabulate
 
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 import vyos.opmode
 

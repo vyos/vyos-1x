@@ -18,7 +18,8 @@ import json
 from pathlib import Path
 
 from vyos.config import Config
-from vyos.util import call, dict_search
+from vyos.util import dict_search
+from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 

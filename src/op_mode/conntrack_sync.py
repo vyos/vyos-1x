@@ -24,10 +24,10 @@ import vyos.opmode
 from argparse import ArgumentParser
 from vyos.configquery import CliShellApiConfigQuery
 from vyos.configquery import ConfigTreeQuery
-from vyos.util import call
 from vyos.util import commit_in_progress
-from vyos.util import cmd
-from vyos.util import run
+from vyos.utils.process import call
+from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.template import render_to_string
 
 conntrackd_bin = '/usr/sbin/conntrackd'

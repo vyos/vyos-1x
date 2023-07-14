@@ -21,7 +21,7 @@ import json
 
 from vyos.util import dict_search
 from vyos.xml import defaults
-from vyos.util import cmd
+from vyos.utils.process import cmd
 
 def retrieve_config(path_hash, base_path, config):
     """

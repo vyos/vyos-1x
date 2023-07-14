@@ -27,9 +27,9 @@ from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
 from vyos.template import render
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import chown
-from vyos.util import cmd
+from vyos.utils.process import cmd
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

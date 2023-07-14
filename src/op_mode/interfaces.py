@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,7 +28,9 @@ import vyos.opmode
 from vyos.ifconfig import Section
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VRRP
-from vyos.util import cmd, rc_cmd, call
+from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
+from vyos.utils.process import call
 
 def catch_broken_pipe(func):
     def wrapped(*args, **kwargs):
@@ -384,7 +386,7 @@ def _format_show_counters(data: list):
             rx_errors = entry.get('rx_over_errors')
             tx_errors = entry.get('tx_carrier_errors')
             data_entries.append([interface, rx_packets, rx_bytes, tx_packets, tx_bytes, rx_dropped, tx_dropped, rx_errors, tx_errors])
-    
+
     headers = ['Interface', 'Rx Packets', 'Rx Bytes', 'Tx Packets', 'Tx Bytes', 'Rx Dropped', 'Tx Dropped', 'Rx Errors', 'Tx Errors']
     output = tabulate(data_entries, headers, numalign="left")
     print (output)

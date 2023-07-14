@@ -18,7 +18,7 @@ import os
 import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
-from vyos.util import call
+from vyos.utils.process import call
 from vyos.util import process_named_running
 from vyos.util import read_file
 
