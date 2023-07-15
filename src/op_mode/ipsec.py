@@ -21,8 +21,8 @@ from hurry import filesize
 from re import split as re_split
 from tabulate import tabulate
 
-from vyos.util import convert_data
-from vyos.util import seconds_to_human
+from vyos.utils.convert import convert_data
+from vyos.utils.convert import seconds_to_human
 from vyos.utils.process import cmd
 from vyos.configquery import ConfigTreeQuery
 

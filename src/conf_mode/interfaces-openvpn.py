@@ -52,7 +52,7 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
-from vyos.util import is_list_equal
+from vyos.utils.list import is_list_equal
 from vyos.utils.file import makedir
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file

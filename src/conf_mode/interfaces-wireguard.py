@@ -27,7 +27,7 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WireGuardIf
-from vyos.util import check_kmod
+from vyos.utils.kernel import check_kmod
 from vyos.utils.network import check_port_availability
 from vyos import ConfigError
 from vyos import airbag

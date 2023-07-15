@@ -20,7 +20,7 @@ from typing import Union, Tuple, Optional
 from humps import decamelize
 
 from vyos.defaults import directories
-from vyos.util import load_as_module
+from vyos.utils.system import load_as_module
 from vyos.opmode import _normalize_field_names
 from vyos.opmode import _is_literal_type, _get_literal_values
 

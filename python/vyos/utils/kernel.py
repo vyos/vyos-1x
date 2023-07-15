@@ -13,16 +13,13 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from vyos.utils import boot
-from vyos.utils import commit
-from vyos.utils import convert
-from vyos.utils import dict
-from vyos.utils import file
-from vyos.utils import io
-from vyos.utils import kernel
-from vyos.utils import list
-from vyos.utils import misc
-from vyos.utils import network
-from vyos.utils import permission
-from vyos.utils import process
-from vyos.utils import system
+def check_kmod(k_mod):
+    """ Common utility function to load required kernel modules on demand """
+    from vyos import ConfigError
+    from vyos.utils.process import call
+    if isinstance(k_mod, str):
+        k_mod = k_mod.split()
+    for module in k_mod:
+        if not os.path.exists(f'/sys/module/{module}'):
+            if call(f'modprobe {module}') != 0:
+                raise ConfigError(f'Loading Kernel module {module} failed')

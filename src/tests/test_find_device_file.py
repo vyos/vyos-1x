@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-from vyos.util import find_device_file
+from vyos.utils.system import find_device_file
 
 class TestDeviceFile(TestCase):
     """ used to find USB devices on target """

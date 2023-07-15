@@ -24,7 +24,7 @@ import netaddr
 
 from vyos.configtree import ConfigTree
 from vyos.defaults import directories
-from vyos.util import get_cfg_group_id
+from vyos.utils.permission import get_cfg_group_id
 
 debug = False
 

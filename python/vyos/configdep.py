@@ -18,7 +18,7 @@ import json
 import typing
 from inspect import stack
 
-from vyos.util import load_as_module
+from vyos.utils.system import load_as_module
 from vyos.defaults import directories
 from vyos.configsource import VyOSError
 from vyos import ConfigError

@@ -54,7 +54,7 @@ def _get_raw_data():
     return mem_data
 
 def _get_formatted_output(mem):
-    from vyos.util import bytes_to_human
+    from vyos.utils.convert import bytes_to_human
 
     # For human-readable outputs, we convert bytes to more convenient units
     # (100M, 1.3G...)

@@ -26,7 +26,7 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.process import is_systemd_service_running
-from vyos.util import is_listen_port_bind_service
+from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.dict import dict_search
 from vyos.xml import defaults
 from vyos import ConfigError

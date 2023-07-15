@@ -20,7 +20,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.utils.process import call
-from vyos.util import find_device_file
+from vyos.utils.system import find_device_file
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag

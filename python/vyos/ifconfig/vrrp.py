@@ -1,4 +1,4 @@
-# Copyright 2019 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,8 +21,11 @@ from time import time
 from time import sleep
 from tabulate import tabulate
 
-from vyos import util
 from vyos.configquery import ConfigTreeQuery
+from vyos.utils.convert import seconds_to_human
+from vyos.utils.file import read_file
+from vyos.utils.file import wait_for_file_write_complete
+from vyos.utils.process import process_running
 
 class VRRPError(Exception):
     pass
@@ -84,21 +87,21 @@ class VRRP(object):
     def is_running(cls):
         if not os.path.exists(cls.location['pid']):
             return False
-        return util.process_running(cls.location['pid'])
+        return process_running(cls.location['pid'])
 
     @classmethod
     def collect(cls, what):
         fname = cls.location[what]
         try:
             # send signal to generate the configuration file
-            pid = util.read_file(cls.location['pid'])
-            util.wait_for_file_write_complete(fname,
+            pid = read_file(cls.location['pid'])
+            wait_for_file_write_complete(fname,
               pre_hook=(lambda: os.kill(int(pid), cls._signal[what])),
               timeout=30)
 
-            return util.read_file(fname)
+            return read_file(fname)
         except OSError:
-            # raised by vyos.util.read_file
+            # raised by vyos.utils.file.read_file
             raise VRRPNoData("VRRP data is not available (wait time exceeded)")
         except FileNotFoundError:
             raise VRRPNoData("VRRP data is not available (process not running or no active groups)")
@@ -145,7 +148,7 @@ class VRRP(object):
             priority = data['effective_priority']
 
             since = int(time() - float(data['last_transition']))
-            last = util.seconds_to_human(since)
+            last = seconds_to_human(since)
 
             groups.append([name, intf, vrid, state, priority, last])
 

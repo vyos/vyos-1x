@@ -18,7 +18,7 @@
 import os
 import sys
 
-from vyos.util import is_admin
+from vyos.utils.permission import is_admin
 
 
 if __name__ == '__main__':

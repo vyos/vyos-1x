@@ -154,7 +154,6 @@ def mac2eui64(mac, prefix=None):
         except:  # pylint: disable=bare-except
             return
 
-
 def check_port_availability(ipaddress, port, protocol):
     """
     Check if port is available and not used by any service
@@ -189,3 +188,26 @@ def check_port_availability(ipaddress, port, protocol):
             return False
 
     return True
+
+def is_listen_port_bind_service(port: int, service: str) -> bool:
+    """Check if listen port bound to expected program name
+    :param port: Bind port
+    :param service: Program name
+    :return: bool
+
+    Example:
+        % is_listen_port_bind_service(443, 'nginx')
+        True
+        % is_listen_port_bind_service(443, 'ocserv-main')
+        False
+    """
+    from psutil import net_connections as connections
+    from psutil import Process as process
+    for connection in connections():
+        addr = connection.laddr
+        pid = connection.pid
+        pid_name = process(pid).name()
+        pid_port = addr.port
+        if service == pid_name and port == pid_port:
+            return True
+    return False

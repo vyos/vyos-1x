@@ -61,3 +61,18 @@ def chmod_755(path):
     bitmask = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | \
               S_IROTH | S_IXOTH
     chmod(path, bitmask)
+
+def is_admin() -> bool:
+    """Look if current user is in sudo group"""
+    from getpass import getuser
+    from grp import getgrnam
+    current_user = getuser()
+    (_, _, _, admin_group_members) = getgrnam('sudo')
+    return current_user in admin_group_members
+
+def get_cfg_group_id():
+    from grp import getgrnam
+    from vyos.defaults import cfg_group
+
+    group_data = getgrnam(cfg_group)
+    return group_data.gr_gid

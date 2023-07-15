@@ -26,7 +26,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import cmd
-from vyos.util import check_kmod
+from vyos.utils.kernel import check_kmod
 from vyos.utils.dict import dict_search
 from vyos.template import is_ipv6
 from vyos.xml import defaults

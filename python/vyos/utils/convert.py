@@ -143,3 +143,33 @@ def mac_to_eui64(mac, prefix=None):
             return str(net[euil])
         except:  # pylint: disable=bare-except
             return
+
+def convert_data(data):
+    """Convert multiple types of data to types usable in CLI
+
+    Args:
+        data (str | bytes | list | OrderedDict): input data
+
+    Returns:
+        str | list | dict: converted data
+    """
+    from base64 import b64encode
+    from collections import OrderedDict
+
+    if isinstance(data, str):
+        return data
+    if isinstance(data, bytes):
+        try:
+            return data.decode()
+        except UnicodeDecodeError:
+            return b64encode(data).decode()
+    if isinstance(data, list):
+        list_tmp = []
+        for item in data:
+            list_tmp.append(convert_data(item))
+        return list_tmp
+    if isinstance(data, OrderedDict):
+        dict_tmp = {}
+        for key, value in data.items():
+            dict_tmp[key] = convert_data(value)
+        return dict_tmp

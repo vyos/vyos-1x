@@ -23,7 +23,7 @@ from glob import glob
 
 from vyos.configsession import ConfigSessionError
 from vyos.utils.process import process_named_running
-from vyos.util import check_kmod
+from vyos.utils.kernel import check_kmod
 from vyos.utils.file import read_file
 
 def get_config_value(interface, key):

@@ -45,7 +45,7 @@ def _get_load_averages():
     return res
 
 def _get_raw_data():
-    from vyos.util import seconds_to_human
+    from vyos.utils.convert import seconds_to_human
 
     res = {}
     res["uptime_seconds"] = _get_uptime_seconds()

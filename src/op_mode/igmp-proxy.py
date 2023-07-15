@@ -28,16 +28,13 @@ import tabulate
 import vyos.config
 import vyos.opmode
 
-from vyos.util import bytes_to_human
+from vyos.utils.convert import bytes_to_human
 from vyos.utils.io import print_error
+from vyos.utils.process import process_named_running
 
 def _is_configured():
     """Check if IGMP proxy is configured"""
     return vyos.config.Config().exists_effective('protocols igmp-proxy')
-
-def _is_running():
-    """Check if IGMP proxy is currently running"""
-    return not vyos.util.run('ps -C igmpproxy')
 
 def _kernel_to_ip(addr):
     """
@@ -85,7 +82,7 @@ def show_interface(raw: bool):
 if not _is_configured():
     print_error('IGMP proxy is not configured.')
     sys.exit(0)
-if not _is_running():
+if not process_named_running('igmpproxy'):
     print_error('IGMP proxy is not running.')
     sys.exit(0)
 

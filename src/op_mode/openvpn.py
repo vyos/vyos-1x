@@ -23,7 +23,7 @@ import typing
 from tabulate import tabulate
 
 import vyos.opmode
-from vyos.util import bytes_to_human
+from vyos.utils.convert import bytes_to_human
 from vyos.utils.commit import commit_in_progress
 from vyos.utils.process import call
 from vyos.utils.process import rc_cmd

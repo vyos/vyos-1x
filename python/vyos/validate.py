@@ -102,6 +102,7 @@ def is_addr_assigned(ip_address, vrf=None) -> bool:
     from netifaces import interfaces
     from vyos.utils.network import get_interface_config
     from vyos.utils.dict import dict_search
+
     for interface in interfaces():
         # Check if interface belongs to the requested VRF, if this is not the
         # case there is no need to proceed with this data set - continue loop

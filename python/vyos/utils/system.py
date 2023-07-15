@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from subprocess import run
-
 
 def sysctl_read(name: str) -> str:
     """Read and return current value of sysctl() option
@@ -27,7 +27,6 @@ def sysctl_read(name: str) -> str:
     """
     tmp = run(['sysctl', '-nb', name], capture_output=True)
     return tmp.stdout.decode()
-
 
 def sysctl_write(name: str, value: str | int) -> bool:
     """Change value via sysctl()
@@ -56,13 +55,12 @@ def sysctl_write(name: str, value: str | int) -> bool:
     # False in other cases
     return False
 
-
 def sysctl_apply(sysctl_dict: dict[str, str], revert: bool = True) -> bool:
     """Apply sysctl values.
 
     Args:
         sysctl_dict (dict[str, str]): dictionary with sysctl keys with values
-        revert (bool, optional): Revert to original values if new were not 
+        revert (bool, optional): Revert to original values if new were not
         applied. Defaults to True.
 
     Returns:
@@ -80,3 +78,30 @@ def sysctl_apply(sysctl_dict: dict[str, str], revert: bool = True) -> bool:
             return False
     # everything applied
     return True
+
+def get_half_cpus():
+    """ return 1/2 of the numbers of available CPUs """
+    cpu = os.cpu_count()
+    if cpu > 1:
+        cpu /= 2
+    return int(cpu)
+
+def find_device_file(device):
+    """ Recurively search /dev for the given device file and return its full path.
+        If no device file was found 'None' is returned """
+    from fnmatch import fnmatch
+
+    for root, dirs, files in os.walk('/dev'):
+        for basename in files:
+            if fnmatch(basename, device):
+                return os.path.join(root, basename)
+
+    return None
+
+def load_as_module(name: str, path: str):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod

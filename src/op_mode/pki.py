@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,11 +34,11 @@ from vyos.pki import create_dh_parameters
 from vyos.pki import load_certificate, load_certificate_request, load_private_key
 from vyos.pki import load_crl, load_dh_parameters, load_public_key
 from vyos.pki import verify_certificate
-from vyos.xml import defaults
 from vyos.utils.io import ask_input
 from vyos.utils.io import ask_yes_no
+from vyos.utils.misc import install_into_config
 from vyos.utils.process import cmd
-from vyos.util import install_into_config
+from vyos.xml import defaults
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
@@ -191,7 +191,7 @@ def install_ssh_key(name, public_key, private_key, passphrase=None):
 
 def install_keypair(name, key_type, private_key=None, public_key=None, passphrase=None, prompt=True):
     # Show/install conf commands for key-pair
-    
+
     config_paths = []
 
     if public_key:

@@ -43,7 +43,7 @@ def _get_system_storage(only_persistent=False):
 
 def _get_raw_data():
     from re import sub as re_sub
-    from vyos.util import human_to_bytes
+    from vyos.utils.convert import human_to_bytes
 
     out =  _get_system_storage(only_persistent=True)
     lines = out.splitlines()
