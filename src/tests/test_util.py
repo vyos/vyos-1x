@@ -18,7 +18,7 @@ from unittest import TestCase
 
 class TestVyOSUtil(TestCase):
     def test_key_mangling(self):
-        from vyos.util import mangle_dict_keys
+        from vyos.utils.dict import mangle_dict_keys
         data = {"foo-bar": {"baz-quux": None}}
         expected_data = {"foo_bar": {"baz_quux": None}}
         new_data = mangle_dict_keys(data, '-', '_')
