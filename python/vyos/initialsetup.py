@@ -1,7 +1,7 @@
 # initialsetup -- functions for setting common values in config file,
 # for use in installation and first boot scripts
 #
-# Copyright (C) 2018 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This library is free software; you can redistribute it and/or modify it under the terms of
 # the GNU Lesser General Public License as published by the Free Software Foundation;
@@ -12,10 +12,12 @@
 # See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along with this library;
-# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+# if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import vyos.configtree
-import vyos.authutils
+
+from vyos.utils.auth import make_password_hash
+from vyos.utils.auth import split_ssh_public_key
 
 def set_interface_address(config, intf, addr, intf_type="ethernet"):
     config.set(["interfaces", intf_type, intf, "address"], value=addr)
@@ -35,8 +37,8 @@ def set_default_gateway(config, gateway):
 
 def set_user_password(config, user, password):
     # Make a password hash
-    hash = vyos.authutils.make_password_hash(password)
- 
+    hash = make_password_hash(password)
+
     config.set(["system", "login", "user", user, "authentication", "encrypted-password"], value=hash)
     config.set(["system", "login", "user", user, "authentication", "plaintext-password"], value="")
 
@@ -48,7 +50,7 @@ def set_user_level(config, user, level):
     config.set(["system", "login", "user", user, "level"], value=level)
 
 def set_user_ssh_key(config, user, key_string):
-    key = vyos.authutils.split_ssh_public_key(key_string, defaultname=user)
+    key = split_ssh_public_key(key_string, defaultname=user)
 
     config.set(["system", "login", "user", user, "authentication", "public-keys", key["name"], "key"], value=key["data"])
     config.set(["system", "login", "user", user, "authentication", "public-keys", key["name"], "type"], value=key["type"])
