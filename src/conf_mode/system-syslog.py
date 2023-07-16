@@ -45,7 +45,6 @@ def get_config(config=None):
     syslog = conf.get_config_dict(base, key_mangling=('-', '_'),
                                   get_first_key=True, no_tag_node_value_mangle=True)
 
-    syslog.update({ 'logrotate' : logrotate_conf })
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: syslog.update({'restart_required': {}})
 
@@ -70,35 +69,22 @@ def get_config(config=None):
                                                                 syslog['console']['facility'][facility])
 
     # XXX: add defaults for "host" tree
-    if 'host' in syslog:
-        default_values_host = defaults(base + ['host'])
+    for syslog_type in ['host', 'user', 'file']:
+        # Bail out early if there is nothing to do
+        if syslog_type not in syslog:
+            continue
+
+        default_values_host = defaults(base + [syslog_type])
         if 'facility' in default_values_host:
             del default_values_host['facility']
-        default_values_facility = defaults(base + ['host', 'facility'])
 
-        for host, host_config in syslog['host'].items():
-            syslog['host'][host] = dict_merge(default_values_host, syslog['host'][host])
-            if 'facility' in host_config:
-                for facility in host_config['facility']:
-                    syslog['host'][host]['facility'][facility] = dict_merge(default_values_facility,
-                                                                        syslog['host'][host]['facility'][facility])
-
-    # XXX: add defaults for "user" tree
-    if 'user' in syslog:
-        default_values = defaults(base + ['user', 'facility'])
-        for user, user_config in syslog['user'].items():
-            if 'facility' in user_config:
-                for facility in user_config['facility']:
-                    syslog['user'][user]['facility'][facility] = dict_merge(default_values,
-                                                                        syslog['user'][user]['facility'][facility])
-
-    # XXX: add defaults for "file" tree
-    if 'file' in syslog:
-        default_values = defaults(base + ['file'])
-        for file, file_config in syslog['file'].items():
-            for facility in file_config['facility']:
-                syslog['file'][file]['facility'][facility] = dict_merge(default_values,
-                                                                        syslog['file'][file]['facility'][facility])
+        for tmp, tmp_config in syslog[syslog_type].items():
+            syslog[syslog_type][tmp] = dict_merge(default_values_host, syslog[syslog_type][tmp])
+            if 'facility' in tmp_config:
+                default_values_facility = defaults(base + [syslog_type, 'facility'])
+                for facility in tmp_config['facility']:
+                    syslog[tmp_config][tmp]['facility'][facility] = dict_merge(default_values_facility,
+                        syslog[tmp_config][tmp]['facility'][facility])
 
     return syslog
 

@@ -23,11 +23,13 @@ $outchannel global,/var/log/messages,262144,/usr/sbin/logrotate {{ logrotate }}
 {% if file is vyos_defined %}
 # File based configuration section
 {%     for file_name, file_options in file.items() %}
-$outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archive.size }},/usr/sbin/logrotate {{ logrotate }}
 {%         set tmp = [] %}
-{%         for facility, facility_options in file_options.facility.items() %}
-{%             set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
-{%         endfor %}
+$outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archive.size }},/usr/sbin/logrotate {{ logrotate }}
+{%         if file_options.facility is vyos_defined %}
+{%             for facility, facility_options in file_options.facility.items() %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%             endfor %}
+{%         endif %}
 {{ tmp | join(';') }} :omfile:${{ file }}
 {%     endfor %}
 {% endif %}
@@ -45,9 +47,11 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 # Remote logging
 {%     for host_name, host_options in host.items() %}
 {%         set tmp = [] %}
-{%         for facility, facility_options in host_options.facility.items() %}
-{%             set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
-{%         endfor %}
+{%         if host_options.facility is vyos_defined %}
+{%             for facility, facility_options in host_options.facility.items() %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%             endfor %}
+{%         endif %}
 {%         if host_options.protocol is vyos_defined('tcp') %}
 {%             if host_options.format.octet_counted is vyos_defined %}
 {{ tmp | join(';') }} @@(o){{ host_name | bracketize_ipv6 }}:{{ host_options.port }};RSYSLOG_SyslogProtocol23Format
@@ -63,9 +67,12 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {% if user is defined and user is not none %}
 # Log to user terminal
 {%     for username, user_options in user.items() %}
-{%         for facility, facility_options in user_options.facility.items() %}
-{%             set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
-{%         endfor %}
+{%         set tmp = [] %}
+{%         if user_options.facility is vyos_defined %}
+{%             for facility, facility_options in user_options.facility.items() %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%             endfor %}
+{%         endif %}
 {{ tmp | join(';') }} :omusrmsg:{{ username }}
 {%     endfor %}
 {% endif %}
