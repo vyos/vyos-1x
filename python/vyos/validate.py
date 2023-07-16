@@ -1,4 +1,4 @@
-# Copyright 2018-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2018-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -302,3 +302,32 @@ def has_vrf_configured(conf, intf):
 
     conf.set_level(old_level)
     return ret
+
+
+def is_bond_member_allowed_option(option: str) -> bool:
+    """
+    Check if ethernet interface option is allowed for changes
+    when interface is a bond member
+    :param option: ethernet interface option
+    :type option: str
+    :return: If option allowed to changes return True else False
+    :rtype: bool
+    """
+    bond_allowed_options = [
+        'description',
+        'disable',
+        'disable_flow_control',
+        'disable_link_detect',
+        'duplex',
+        'eapol',
+        'mirror',
+        'offload',
+        'redirect',
+        'ring-buffer',
+        'speed',
+        'hw_id'
+    ]
+    if option in bond_allowed_options:
+        return True
+    else:
+        return False

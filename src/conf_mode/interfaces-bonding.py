@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -33,14 +33,41 @@ from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
+from vyos.validate import is_bond_member_allowed_option
 from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
-from vyos.validate import has_address_configured
-from vyos.validate import has_vrf_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+
+def get_configured_bond_blocked_options(conf: Config, ifname: str) -> list:
+    """
+    If interface is adding to bond interface,
+    return a list of prohibited options which are configured
+    under ethernet interface.
+    These options must be configured under bond interface.
+
+    :param conf: Config object
+    :type conf: Config
+    :param ifname: Interface name
+    :type ifname: str
+    :return: list of prohibited options
+    :rtype: list
+    """
+    list_blocked_changes = []
+    verify_ethernet_config = conf.get_config_dict(
+        ['interfaces', 'ethernet', ifname],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+        with_defaults=False,
+        with_recursive_defaults=False)
+    for option in verify_ethernet_config:
+        if not is_bond_member_allowed_option(option):
+            list_blocked_changes.append(option)
+    return list_blocked_changes
 
 def get_bond_mode(mode):
     if mode == 'round-robin':
@@ -59,6 +86,7 @@ def get_bond_mode(mode):
         return 'balance-alb'
     else:
         raise ConfigError(f'invalid bond mode "{mode}"')
+
 
 def get_config(config=None):
     """
@@ -144,14 +172,8 @@ def get_config(config=None):
             tmp = is_source_interface(conf, interface)
             if tmp: interface_config['is_source_interface'] = tmp
 
-            # bond members must not have an assigned address
-            tmp = has_address_configured(conf, interface)
-            if tmp: interface_config['has_address'] = {}
-
-            # bond members must not have a VRF attached
-            tmp = has_vrf_configured(conf, interface)
-            if tmp: interface_config['has_vrf'] = {}
-
+            list_blocked_option = get_configured_bond_blocked_options(conf,interface)
+            if list_blocked_option: interface_config['list_blocked_option'] = list_blocked_option
     return bond
 
 
@@ -206,11 +228,9 @@ def verify(bond):
                 tmp = interface_config['is_source_interface']
                 raise ConfigError(error_msg + f'it is the source-interface of "{tmp}"!')
 
-            if 'has_address' in interface_config:
-                raise ConfigError(error_msg + 'it has an address assigned!')
-
-            if 'has_vrf' in interface_config:
-                raise ConfigError(error_msg + 'it has a VRF assigned!')
+            if 'list_blocked_option' in interface_config:
+                for option in interface_config['list_blocked_option']:
+                    raise ConfigError(error_msg + f'it has configured "{option}"!')
 
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:
