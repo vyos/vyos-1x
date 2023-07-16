@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import sys
 import time
@@ -21,12 +20,10 @@ import argparse
 import json
 import tabulate
 
-import vyos.util
-
 from vyos.configquery import ConfigTreeQuery
 from vyos.ifconfig.vrrp import VRRP
-from vyos.ifconfig.vrrp import VRRPError, VRRPNoData
-
+from vyos.ifconfig.vrrp import VRRPError
+from vyos.ifconfig.vrrp import VRRPNoData
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
@@ -44,7 +41,7 @@ def is_configured():
     return True
 
 # Exit early if VRRP is dead or not configured
-if  is_configured() == False:
+if is_configured() == False:
     print('VRRP not configured!')
     exit(0)
 if not VRRP.is_running():

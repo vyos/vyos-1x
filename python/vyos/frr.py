@@ -68,7 +68,6 @@ Apply the new configuration:
 import tempfile
 import re
 
-from vyos import util
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
 from vyos.utils.process import popen
