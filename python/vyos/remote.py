@@ -37,7 +37,7 @@ from vyos.utils.io import make_incremental_progressbar
 from vyos.utils.io import make_progressbar
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
-from vyos.utils.process import cm
+from vyos.utils.process import cmd
 from vyos.version import get_version
 
 CHUNK_SIZE = 8192
