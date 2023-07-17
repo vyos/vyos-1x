@@ -83,8 +83,8 @@ def get_config(config=None):
             if 'facility' in tmp_config:
                 default_values_facility = defaults(base + [syslog_type, 'facility'])
                 for facility in tmp_config['facility']:
-                    syslog[tmp_config][tmp]['facility'][facility] = dict_merge(default_values_facility,
-                        syslog[tmp_config][tmp]['facility'][facility])
+                    syslog[syslog_type][tmp]['facility'][facility] = dict_merge(default_values_facility,
+                        syslog[syslog_type][tmp]['facility'][facility])
 
     return syslog
 
