@@ -45,6 +45,8 @@ def get_config(config=None):
     syslog = conf.get_config_dict(base, key_mangling=('-', '_'),
                                   get_first_key=True, no_tag_node_value_mangle=True)
 
+    syslog.update({ 'logrotate' : logrotate_conf })
+
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: syslog.update({'restart_required': {}})
 
