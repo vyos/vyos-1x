@@ -312,19 +312,19 @@
             <properties>
               <help>Monitor last lines of Vector Packet Processor log</help>
             </properties>
-            <command>journalctl --no-hostname --boot --unit vpp.service</command>
+            <command>journalctl --no-hostname --boot --follow --unit vpp.service</command>
           </leafNode>
           <leafNode name="vrrp">
             <properties>
               <help>Monitor last lines of Virtual Router Redundancy Protocol log</help>
             </properties>
-            <command>journalctl --no-hostname --boot --unit keepalived.service</command>
+            <command>journalctl --no-hostname --boot --follow --unit keepalived.service</command>
           </leafNode>
           <leafNode name="webproxy">
             <properties>
               <help>Monitor last lines of Webproxy log</help>
             </properties>
-            <command>journalctl --no-hostname --boot --unit squid.service</command>
+            <command>journalctl --no-hostname --boot --follow --unit squid.service</command>
           </leafNode>
         </children>
       </node>
