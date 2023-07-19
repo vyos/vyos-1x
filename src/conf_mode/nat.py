@@ -72,6 +72,7 @@ def verify_rule(config, err_msg, groups_dict):
     """ Common verify steps used for both source and destination NAT """
 
     if (dict_search('translation.port', config) != None or
+        dict_search('translation.redirect.port', config) != None or
         dict_search('destination.port', config) != None or
         dict_search('source.port', config)):
 
@@ -221,7 +222,7 @@ def verify(nat):
             elif config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
                 Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
-            if not dict_search('translation.address', config) and not dict_search('translation.port', config):
+            if not dict_search('translation.address', config) and not dict_search('translation.port', config) and not dict_search('translation.redirect.port', config):
                 if 'exclude' not in config:
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
 
