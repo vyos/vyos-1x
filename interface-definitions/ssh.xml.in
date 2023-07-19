@@ -61,6 +61,78 @@
               <valueless/>
             </properties>
           </leafNode>
+          <node name="dynamic-protection">
+            <properties>
+              <help>Allow dynamic protection</help>
+            </properties>
+            <children>
+              <leafNode name="block-time">
+                <properties>
+                  <help>Block source IP in seconds. Subsequent blocks increase by a factor of 1.5</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Time interval in seconds for blocking</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>120</defaultValue>
+              </leafNode>
+              <leafNode name="detect-time">
+                <properties>
+                  <help>Remember source IP in seconds before reset their score</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Time interval in seconds</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>1800</defaultValue>
+              </leafNode>
+              <leafNode name="threshold">
+                <properties>
+                  <help>Block source IP when their cumulative attack score exceeds threshold</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>Threshold score</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+                <defaultValue>30</defaultValue>
+              </leafNode>
+              <leafNode name="allow-from">
+                <properties>
+                  <help>Always allow inbound connections from these systems</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Address to match against</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv4net</format>
+                    <description>IPv4 address and prefix length</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 address to match against</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6net</format>
+                    <description>IPv6 address and prefix length</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ip-address"/>
+                    <validator name="ip-prefix"/>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="key-exchange">
             <properties>
               <help>Allowed key exchange (KEX) algorithms</help>
