@@ -4,7 +4,7 @@ configure system platform VyOS
 configure system description "VyOS {{ version }}"
 {% if interface is vyos_defined %}
 {%     set tmp = [] %}
-{%     for iface, iface_options in interface.items() if not iface_options.disable %}
+{%     for iface, iface_options in interface.items() if iface_options.disable is not vyos_defined %}
 {%         if iface == 'all' %}
 {%             set iface = '*' %}
 {%         endif %}
