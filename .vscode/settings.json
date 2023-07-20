@@ -4,4 +4,13 @@
     "editor.insertSpaces": true,
     "files.insertFinalNewline": true,
     "files.eol": "\n",
+    "files.associations": {
+        "*.xml.i": "xml",
+        "*.xml.in": "xml",
+    },
+    "editor.indentSize": "tabSize",
+    "[jinja]": {
+        "editor.tabSize": 4,
+        "editor.wordBasedSuggestions": false
+    }
 }
