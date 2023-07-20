@@ -272,8 +272,13 @@ class Xml:
             return self.get_defaults(path, get_first_key=get_first_key,
                                      recursive=recursive)
         if not self._well_defined(path, conf):
-            print('path to config dict does not define full config paths')
-            return {}
+            # adjust for possible overlap:
+            if path and path[-1] in list(conf):
+                conf = conf[path[-1]]
+                conf = {} if not isinstance(conf, dict) else conf
+            if not self._well_defined(path, conf):
+                print('path to config dict does not define full config paths')
+                return {}
 
         res = self._relative_defaults(path, conf, recursive=recursive)
 
