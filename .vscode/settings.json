@@ -4,9 +4,11 @@
     "editor.insertSpaces": true,
     "files.insertFinalNewline": true,
     "files.eol": "\n",
+    # https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
     "files.associations": {
         "*.xml.i": "xml",
         "*.xml.in": "xml",
+        "*.j2": "jinja",
     },
     "editor.indentSize": "tabSize",
     "[jinja]": {
