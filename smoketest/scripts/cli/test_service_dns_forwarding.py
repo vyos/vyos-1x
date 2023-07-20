@@ -256,4 +256,4 @@ class TestServicePowerDNS(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp, port)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

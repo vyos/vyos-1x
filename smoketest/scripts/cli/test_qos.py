@@ -544,4 +544,4 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                         self.assertEqual(f'{dport:x}', filter['options']['match']['value'])
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

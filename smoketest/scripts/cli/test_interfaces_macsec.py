@@ -209,5 +209,4 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
-
+    unittest.main(verbosity=2)

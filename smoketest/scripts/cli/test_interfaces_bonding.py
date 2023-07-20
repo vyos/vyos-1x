@@ -243,4 +243,4 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
                 self.assertIn(member, slaves)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)
