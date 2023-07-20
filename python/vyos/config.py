@@ -245,9 +245,9 @@ class Config(object):
         """
         lpath = self._make_path(path)
         root_dict = self.get_cached_root_dict(effective)
-        conf_dict = get_sub_dict(root_dict, lpath, get_first_key)
+        conf_dict = get_sub_dict(root_dict, lpath, get_first_key=get_first_key)
 
-        if key_mangling is None and no_multi_convert and not with_defaults:
+        if key_mangling is None and no_multi_convert and not (with_defaults or with_recursive_defaults):
             return deepcopy(conf_dict)
 
         rpath = lpath if get_first_key else lpath[:-1]
