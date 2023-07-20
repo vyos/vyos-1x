@@ -339,6 +339,21 @@
     </constraint>
   </properties>
 </leafNode>
+#include <include/ospf/graceful-restart.xml.i>
+<node name="graceful-restart">
+  <children>
+    <node name="helper">
+      <children>
+        <leafNode name="no-strict-lsa-checking">
+          <properties>
+            <help>Disable strict LSA check</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+  </children>
+</node>
 <leafNode name="maximum-paths">
   <properties>
     <help>Maximum multiple paths (ECMP)</help>

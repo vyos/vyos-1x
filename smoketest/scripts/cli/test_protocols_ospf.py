@@ -479,5 +479,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip ospf dead-interval 40', config)
             self.assertIn(f' no ip ospf mpls ldp-sync', config)
 
+    def test_ospf_16_graceful_restart(self):
+        period = '300'
+        supported_grace_time = '400'
+        router_ids = ['192.0.2.1', '192.0.2.2']
+
+        self.cli_set(base_path + ['graceful-restart', 'grace-period', period])
+        self.cli_set(base_path + ['graceful-restart', 'helper', 'planned-only'])
+        self.cli_set(base_path + ['graceful-restart', 'helper', 'no-strict-lsa-checking'])
+        self.cli_set(base_path + ['graceful-restart', 'helper', 'supported-grace-time', supported_grace_time])
+        for router_id in router_ids:
+            self.cli_set(base_path + ['graceful-restart', 'helper', 'enable', 'router-id', router_id])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR ospfd configuration
+        frrconfig = self.getFRRconfig('router ospf')
+        self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' graceful-restart grace-period {period}', frrconfig)
+        self.assertIn(f' graceful-restart helper planned-only', frrconfig)
+        self.assertIn(f' no graceful-restart helper strict-lsa-checking', frrconfig)
+        self.assertIn(f' graceful-restart helper supported-grace-time {supported_grace_time}', frrconfig)
+        for router_id in router_ids:
+            self.assertIn(f' graceful-restart helper enable {router_id}', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
