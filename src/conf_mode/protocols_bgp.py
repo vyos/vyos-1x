@@ -203,14 +203,21 @@ def verify_remote_as(peer_config, bgp_config):
     return None
 
 def verify_afi(peer_config, bgp_config):
+    # If address_family configured under neighboor
     if 'address_family' in peer_config:
         return True
 
+    # If address_family configured under peer-group
+    # if neighbor interface configured
+    peer_group_name = ''
+    if dict_search('interface.peer_group', peer_config):
+        peer_group_name = peer_config['interface']['peer_group']
+    # if neighbor IP configured.
     if 'peer_group' in peer_config:
         peer_group_name = peer_config['peer_group']
+    if peer_group_name:
         tmp = dict_search(f'peer_group.{peer_group_name}.address_family', bgp_config)
         if tmp: return True
-
     return False
 
 def verify(bgp):
