@@ -133,6 +133,9 @@ router ospf {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if auto_cost.reference_bandwidth is vyos_defined %}
  auto-cost reference-bandwidth {{ auto_cost.reference_bandwidth }}
 {% endif %}
+{% if capability.opaque is vyos_defined %}
+ capability opaque
+{% endif %}
 {% if default_information.originate is vyos_defined %}
  default-information originate {{ 'always' if default_information.originate.always is vyos_defined }} {{ 'metric ' + default_information.originate.metric if default_information.originate.metric is vyos_defined }} {{ 'metric-type ' + default_information.originate.metric_type if default_information.originate.metric_type is vyos_defined }} {{ 'route-map ' + default_information.originate.route_map if default_information.originate.route_map is vyos_defined }}
 {% endif %}

@@ -326,6 +326,19 @@
   </children>
 </tagNode>
 #include <include/ospf/auto-cost.xml.i>
+<node name="capability">
+  <properties>
+    <help>Enable specific OSPF features</help>
+  </properties>
+  <children>
+    <leafNode name="opaque">
+      <properties>
+        <help>Opaque LSA</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 #include <include/ospf/default-information.xml.i>
 <leafNode name="default-metric">
   <properties>

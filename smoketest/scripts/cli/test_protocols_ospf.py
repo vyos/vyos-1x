@@ -484,6 +484,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         supported_grace_time = '400'
         router_ids = ['192.0.2.1', '192.0.2.2']
 
+        self.cli_set(base_path + ['capability', 'opaque'])
         self.cli_set(base_path + ['graceful-restart', 'grace-period', period])
         self.cli_set(base_path + ['graceful-restart', 'helper', 'planned-only'])
         self.cli_set(base_path + ['graceful-restart', 'helper', 'no-strict-lsa-checking'])
@@ -497,6 +498,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # Verify FRR ospfd configuration
         frrconfig = self.getFRRconfig('router ospf')
         self.assertIn(f'router ospf', frrconfig)
+        self.assertIn(f' capability opaque', frrconfig)
         self.assertIn(f' graceful-restart grace-period {period}', frrconfig)
         self.assertIn(f' graceful-restart helper planned-only', frrconfig)
         self.assertIn(f' no graceful-restart helper strict-lsa-checking', frrconfig)
