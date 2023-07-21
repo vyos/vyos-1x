@@ -70,17 +70,34 @@
                   <multi/>
                 </properties>
               </leafNode>
-              <node name="mode">
+              <leafNode name="mode">
                 <properties>
-                  <help>Traffic capture modes</help>
+                  <help>Traffic capture mode</help>
+                  <completionHelp>
+                    <list>mirror sflow</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>mirror</format>
+                    <description>Listen to mirrored traffic</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sflow</format>
+                    <description>Capture sFlow flows</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(mirror|sflow)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="sflow">
+                <properties>
+                  <help>Sflow settings</help>
                 </properties>
                 <children>
-                  <!-- Future modes "mirror" "netflow" "combine (both)" -->
-                  <leafNode name="mirror">
-                    <properties>
-                      <help>Listen mirrored traffic mode</help>
-                      <valueless/>
-                    </properties>
+                  #include <include/listen-address-ipv4-single.xml.i>
+                  #include <include/port-number.xml.i>
+                  <leafNode name="port">
+                    <defaultValue>6343</defaultValue>
                   </leafNode>
                 </children>
               </node>

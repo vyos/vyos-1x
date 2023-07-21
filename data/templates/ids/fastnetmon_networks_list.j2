@@ -1,4 +1,4 @@
-{% if network is vyos_defined() %}
+{% if network is vyos_defined %}
 {%     for net in network %}
 {{ net }}
 {%     endfor %}
