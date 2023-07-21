@@ -502,6 +502,7 @@
     </tagNode>
   </children>
 </node>
+#include <include/ospf/graceful-restart.xml.i>
 <node name="interface">
   <properties>
     <help>Show IPv4 OSPF interface information</help>
@@ -556,4 +557,3 @@
   </children>
 </node>
 <!-- included end -->
-
