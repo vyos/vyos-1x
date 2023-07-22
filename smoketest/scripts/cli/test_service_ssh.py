@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -202,6 +202,56 @@ class TestServiceSSH(VyOSUnitTestSHIM.TestCase):
         # After deletion the test user is not allowed to remain in /etc/passwd
         usernames = [x[0] for x in getpwall()]
         self.assertNotIn(test_user, usernames)
+
+    def test_ssh_dynamic_protection(self):
+        # check sshguard service
+
+        SSHGUARD_CONFIG = '/etc/sshguard/sshguard.conf'
+        SSHGUARD_WHITELIST = '/etc/sshguard/whitelist'
+        SSHGUARD_PROCESS = 'sshguard'
+        block_time = '123'
+        detect_time = '1804'
+        port = '22'
+        threshold = '10'
+        allow_list = ['192.0.2.0/24', '2001:db8::/48']
+
+        self.cli_set(base_path + ['dynamic-protection', 'block-time', block_time])
+        self.cli_set(base_path + ['dynamic-protection', 'detect-time', detect_time])
+        self.cli_set(base_path + ['dynamic-protection', 'threshold', threshold])
+        for allow in allow_list:
+            self.cli_set(base_path + ['dynamic-protection', 'allow-from', allow])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check configured port
+        tmp = get_config_value('Port')
+        self.assertIn(port, tmp)
+
+        # Check sshgurad service
+        self.assertTrue(process_named_running(SSHGUARD_PROCESS))
+
+        sshguard_lines = [
+            f'THRESHOLD={threshold}',
+            f'BLOCK_TIME={block_time}',
+            f'DETECTION_TIME={detect_time}'
+        ]
+
+        tmp_sshguard_conf = read_file(SSHGUARD_CONFIG)
+        for line in sshguard_lines:
+            self.assertIn(line, tmp_sshguard_conf)
+
+        tmp_whitelist_conf = read_file(SSHGUARD_WHITELIST)
+        for allow in allow_list:
+            self.assertIn(allow, tmp_whitelist_conf)
+
+        # Delete service ssh dynamic-protection
+        # but not service ssh itself
+        self.cli_delete(base_path + ['dynamic-protection'])
+        self.cli_commit()
+
+        self.assertFalse(process_named_running(SSHGUARD_PROCESS))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
