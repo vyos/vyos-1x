@@ -54,28 +54,32 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         translation_str = 'return'
         log_suffix = '-EXCL'
     elif 'translation' in rule_conf:
-        translation_prefix = nat_type[:1]
-        translation_output = [f'{translation_prefix}nat']
         addr = dict_search_args(rule_conf, 'translation', 'address')
         port = dict_search_args(rule_conf, 'translation', 'port')
-
-        if addr and is_ip_network(addr):
-            if not ipv6:
-                map_addr =  dict_search_args(rule_conf, nat_type, 'address')
-                translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
-                ignore_type_addr = True
-            else:
-                translation_output.append(f'prefix to {addr}')
-        elif addr == 'masquerade':
-            if port:
-                addr = f'{addr} to '
-            translation_output = [addr]
-            log_suffix = '-MASQ'
+        redirect_port = dict_search_args(rule_conf, 'translation', 'redirect', 'port')
+        if redirect_port:
+            translation_output = [f'redirect to {redirect_port}']
         else:
-            translation_output.append('to')
-            if addr:
-                addr = bracketize_ipv6(addr)
-                translation_output.append(addr)
+            translation_prefix = nat_type[:1]
+            translation_output = [f'{translation_prefix}nat']
+
+            if addr and is_ip_network(addr):
+                if not ipv6:
+                    map_addr =  dict_search_args(rule_conf, nat_type, 'address')
+                    translation_output.append(f'{ip_prefix} prefix to {ip_prefix} {translation_prefix}addr map {{ {map_addr} : {addr} }}')
+                    ignore_type_addr = True
+                else:
+                    translation_output.append(f'prefix to {addr}')
+            elif addr == 'masquerade':
+                if port:
+                    addr = f'{addr} to '
+                translation_output = [addr]
+                log_suffix = '-MASQ'
+            else:
+                translation_output.append('to')
+                if addr:
+                    addr = bracketize_ipv6(addr)
+                    translation_output.append(addr)
 
         options = []
         addr_mapping = dict_search_args(rule_conf, 'translation', 'options', 'address_mapping')
