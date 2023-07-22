@@ -48,6 +48,10 @@ push "redirect-gateway def1"
 {% if use_lzo_compression is vyos_defined %}
 compress lzo
 {% endif %}
+{% if enable_dco is not vyos_defined %}
+disable-dco
+{% endif %}
+
 
 {% if mode is vyos_defined('client') %}
 #
