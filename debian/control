@@ -116,7 +116,6 @@ Depends:
   openvpn,
   openvpn-auth-ldap,
   openvpn-auth-radius,
-  openvpn-dco,
   openvpn-otp,
   owamp-client,
   owamp-server,
