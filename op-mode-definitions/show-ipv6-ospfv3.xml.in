@@ -41,6 +41,7 @@
               </tagNode>
               #include <include/ospfv3/border-routers.xml.i>
               #include <include/ospfv3/database.xml.i>
+              #include <include/ospf/graceful-restart.xml.i>
               #include <include/ospfv3/interface.xml.i>
               #include <include/ospfv3/linkstate.xml.i>
               #include <include/ospfv3/neighbor.xml.i>
@@ -94,6 +95,7 @@
                   </tagNode>
                   #include <include/ospfv3/border-routers.xml.i>
                   #include <include/ospfv3/database.xml.i>
+                  #include <include/ospf/graceful-restart.xml.i>
                   #include <include/ospfv3/interface.xml.i>
                   #include <include/ospfv3/linkstate.xml.i>
                   #include <include/ospfv3/neighbor.xml.i>

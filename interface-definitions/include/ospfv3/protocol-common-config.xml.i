@@ -107,6 +107,21 @@
     </node>
   </children>
 </node>
+#include <include/ospf/graceful-restart.xml.i>
+<node name="graceful-restart">
+  <children>
+    <node name="helper">
+      <children>
+        <leafNode name="lsa-check-disable">
+          <properties>
+            <help>Disable strict LSA check</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+  </children>
+</node>
 <tagNode name="interface">
   <properties>
     <help>Enable routing on an IPv6 interface</help>

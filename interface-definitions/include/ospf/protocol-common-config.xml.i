@@ -326,6 +326,19 @@
   </children>
 </tagNode>
 #include <include/ospf/auto-cost.xml.i>
+<node name="capability">
+  <properties>
+    <help>Enable specific OSPF features</help>
+  </properties>
+  <children>
+    <leafNode name="opaque">
+      <properties>
+        <help>Opaque LSA</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 #include <include/ospf/default-information.xml.i>
 <leafNode name="default-metric">
   <properties>
@@ -339,6 +352,21 @@
     </constraint>
   </properties>
 </leafNode>
+#include <include/ospf/graceful-restart.xml.i>
+<node name="graceful-restart">
+  <children>
+    <node name="helper">
+      <children>
+        <leafNode name="no-strict-lsa-checking">
+          <properties>
+            <help>Disable strict LSA check</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+      </children>
+    </node>
+  </children>
+</node>
 <leafNode name="maximum-paths">
   <properties>
     <help>Maximum multiple paths (ECMP)</help>

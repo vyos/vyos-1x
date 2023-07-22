@@ -88,6 +88,8 @@ def get_config(config=None):
         del default_values['area']['area_type']['nssa']
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
+    if 'graceful_restart' not in ospf:
+        del default_values['graceful_restart']
 
     for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
         # table is a tagNode thus we need to clean out all occurances for the
