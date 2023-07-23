@@ -1,0 +1,2 @@
+{% set no_release = '-n' if dhcpv6_options.no_release is vyos_defined else '' %}
+DHCP6C_OPTS="-D -k /run/dhcp6c/dhcp6c.{{ ifname }}.sock -c /run/dhcp6c/dhcp6c.{{ ifname }}.conf -p /run/dhcp6c/dhcp6c.{{ ifname }}.pid {{ no_release }} {{ ifname }}"
