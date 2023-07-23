@@ -95,6 +95,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="no-release">
+      <properties>
+        <help>Do not send a release message on client exit</help>
+        <valueless/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
