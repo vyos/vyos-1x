@@ -791,12 +791,16 @@ class BasicInterfaceTest:
 
                 # Enable DHCPv6 client
                 self.cli_set(path + ['address', 'dhcpv6'])
+                self.cli_set(path + ['dhcpv6-options', 'no-release'])
                 self.cli_set(path + ['dhcpv6-options', 'rapid-commit'])
                 self.cli_set(path + ['dhcpv6-options', 'parameters-only'])
                 self.cli_set(path + ['dhcpv6-options', 'duid', duid])
                 duid_base += 1
 
             self.cli_commit()
+
+            dhcp6c_options = read_file(f'/run/dhcp6c/dhcp6c.{interface}.options')
+            self.assertIn(f'-n', dhcp6c_options)
 
             duid_base = 10
             for interface in self._interfaces:
