@@ -47,7 +47,7 @@ def get_config(config=None):
     base_path = ['protocols', 'static']
     # eqivalent of the C foo ? 'a' : 'b' statement
     base = vrf and ['vrf', 'name', vrf, 'protocols', 'static'] or base_path
-    static = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    static = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
 
     # Assign the name of our VRF context
     if vrf: static['vrf'] = vrf
