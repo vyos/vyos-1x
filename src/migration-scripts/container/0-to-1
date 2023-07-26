@@ -22,6 +22,7 @@ import sys
 
 from vyos.configtree import ConfigTree
 from vyos.utils.process import call
+from vyos.utils.process import rc_cmd
 
 if (len(sys.argv) < 1):
     print("Must specify file name!")
@@ -35,15 +36,21 @@ with open(file_name, 'r') as f:
 base = ['container', 'name']
 config = ConfigTree(config_file)
 
-# Check if containers exist and we need to perform image manipulation
+# Check if non-overlay containers exist and we need to perform image manipulation
 if config.exists(base):
     for container in config.list_nodes(base):
+        image_name = config.return_value(base + [container, 'image'])
+        rc, image_type = rc_cmd(f'sudo podman image inspect --format "{{{{ .GraphDriver.Name }}}}" {image_name}')
+
+        # Skip overlay images
+        if image_type == 'overlay':
+            continue
+
         # Stop any given container first
         call(f'sudo systemctl stop vyos-container-{container}.service')
         # Export container image for later re-import to new filesystem. We store
         # the backup on a real disk as a tmpfs (like /tmp) could probably lack
         # memory if a host has too many containers stored.
-        image_name = config.return_value(base + [container, 'image'])
         call(f'sudo podman image save --quiet --output /root/{container}.tar --format oci-archive {image_name}')
 
 # No need to adjust the strage driver online (this is only used for testing and
@@ -63,15 +70,12 @@ for dir in ['libpod', 'vfs', 'vfs-containers', 'vfs-images', 'vfs-layers']:
 # filesystem mode. Time to re-import the images.
 if config.exists(base):
     for container in config.list_nodes(base):
-        # Export container image for later re-import to new filesystem
-        image_name = config.return_value(base + [container, 'image'])
         image_path = f'/root/{container}.tar'
-        call(f'sudo podman image load --quiet --input {image_path}')
+        if os.path.exists(image_path):
+            call(f'sudo podman image load --quiet --input {image_path}')
+
+            # Delete temporary container image
+            os.unlink(image_path)
 
         # Start any given container first
         call(f'sudo systemctl start vyos-container-{container}.service')
-
-        # Delete temporary container image
-        if os.path.exists(image_path):
-            os.unlink(image_path)
-
