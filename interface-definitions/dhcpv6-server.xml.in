@@ -135,6 +135,7 @@
                       </tagNode>
                     </children>
                   </node>
+                  #include <include/dhcp/captive-portal.xml.i>
                   #include <include/dhcp/domain-search.xml.i>
                   <node name="lease-time">
                     <properties>

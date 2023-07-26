@@ -145,6 +145,7 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  #include <include/dhcp/captive-portal.xml.i>
                   <leafNode name="client-prefix-length">
                     <properties>
                       <help>Specifies the clients subnet mask as per RFC 950. If unset, subnet declaration is used.</help>

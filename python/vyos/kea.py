@@ -40,7 +40,8 @@ kea4_options = {
     'bootfile_size': 'boot-size',
     'time_offset': 'time-offset',
     'wpad_url': 'wpad-url',
-    'ipv6_only_preferred': 'v6-only-preferred'
+    'ipv6_only_preferred': 'v6-only-preferred',
+    'captive_portal': 'v4-captive-portal'
 }
 
 kea6_options = {
@@ -51,7 +52,8 @@ kea6_options = {
     'nis_server': 'nis-servers',
     'nisplus_domain': 'nisp-domain-name',
     'nisplus_server': 'nisp-servers',
-    'sntp_server': 'sntp-servers'
+    'sntp_server': 'sntp-servers',
+    'captive_portal': 'v6-captive-portal'
 }
 
 def kea_parse_options(config):
