@@ -18,7 +18,7 @@ if ! ps -C chronyd &>/dev/null; then
 fi
 
 PID=$(pgrep chronyd | head -n1)
-VRF_NAME=$(ip vrf identify )
+VRF_NAME=$(ip vrf identify ${PID})
 
 if [ ! -z ${VRF_NAME} ]; then
     VRF_CMD="sudo ip vrf exec ${VRF_NAME}"
