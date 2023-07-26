@@ -56,6 +56,8 @@ from vyos.utils.list import is_list_equal
 from vyos.utils.file import makedir
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
+from vyos.utils.kernel import check_kmod
+from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
@@ -94,6 +96,8 @@ def get_config(config=None):
     if 'deleted' not in openvpn:
         openvpn['pki'] = tmp_pki
         if is_node_changed(conf, base + [ifname, 'openvpn-option']):
+            openvpn.update({'restart_required': {}})
+        if is_node_changed(conf, base + [ifname, 'enable-dco']):
             openvpn.update({'restart_required': {}})
 
         # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
@@ -678,6 +682,13 @@ def apply(openvpn):
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
             cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
+
+    # dynamically load/unload DCO Kernel extension if requested
+    dco_module = 'ovpn_dco_v2'
+    if 'enable_dco' in openvpn:
+        check_kmod(dco_module)
+    else:
+        unload_kmod(dco_module)
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process

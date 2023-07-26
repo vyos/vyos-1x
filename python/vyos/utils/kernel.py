@@ -25,3 +25,14 @@ def check_kmod(k_mod):
         if not os.path.exists(f'/sys/module/{module}'):
             if call(f'modprobe {module}') != 0:
                 raise ConfigError(f'Loading Kernel module {module} failed')
+
+def unload_kmod(k_mod):
+    """ Common utility function to unload required kernel modules on demand """
+    from vyos import ConfigError
+    from vyos.utils.process import call
+    if isinstance(k_mod, str):
+        k_mod = k_mod.split()
+    for module in k_mod:
+        if os.path.exists(f'/sys/module/{module}'):
+            if call(f'rmmod {module}') != 0:
+                raise ConfigError(f'Unloading Kernel module {module} failed')
