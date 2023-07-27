@@ -88,31 +88,32 @@ def get_config(config=None):
         conf = Config()
     base = ['interfaces', 'openvpn']
 
-    tmp_pki = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
-
     ifname, openvpn = get_interface_dict(conf, base)
-
-    if 'deleted' not in openvpn:
-        openvpn['pki'] = tmp_pki
-        if is_node_changed(conf, base + [ifname, 'openvpn-option']):
-            openvpn.update({'restart_required': {}})
-        if is_node_changed(conf, base + [ifname, 'enable-dco']):
-            openvpn.update({'restart_required': {}})
-
-        # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
-        # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
-        tmp = conf.get_config_dict(base + [openvpn['ifname']], get_first_key=True)
-
-        # We have to cleanup the config dict, as default values could enable features
-        # which are not explicitly enabled on the CLI. Example: server mfa totp
-        # originate comes with defaults, which will enable the
-        # totp plugin, even when not set via CLI so we
-        # need to check this first and drop those keys
-        if dict_search('server.mfa.totp', tmp) == None:
-            del openvpn['server']['mfa']
-
     openvpn['auth_user_pass_file'] = '/run/openvpn/{ifname}.pw'.format(**openvpn)
+
+    if 'deleted' in openvpn:
+        return openvpn
+
+    openvpn['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
+                                        get_first_key=True,
+                                        no_tag_node_value_mangle=True)
+
+    if is_node_changed(conf, base + [ifname, 'openvpn-option']):
+        openvpn.update({'restart_required': {}})
+    if is_node_changed(conf, base + [ifname, 'enable-dco']):
+        openvpn.update({'restart_required': {}})
+
+    # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
+    # as 'get_interface_dict' merges the defaults in, so we can not check for defaults in there.
+    tmp = conf.get_config_dict(base + [openvpn['ifname']], get_first_key=True)
+
+    # We have to cleanup the config dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: server mfa totp
+    # originate comes with defaults, which will enable the
+    # totp plugin, even when not set via CLI so we
+    # need to check this first and drop those keys
+    if dict_search('server.mfa.totp', tmp) == None:
+        del openvpn['server']['mfa']
 
     return openvpn
 
