@@ -475,6 +475,8 @@ def verify(bgp):
                     if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
                         raise ConfigError(
                             'Command "import vrf" conflicts with "rd vpn export" command!')
+                    if not dict_search('parameters.router_id', bgp):
+                        Warning(f'BGP "router-id" is required when using "rd" and "route-target"!')
 
                 if dict_search('route_target.vpn.both', afi_config):
                     if verify_vrf_as_import(vrf_name, afi, bgp['dependent_vrfs']):
