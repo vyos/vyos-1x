@@ -285,6 +285,19 @@
               </constraint>
             </properties>
           </leafNode>
+          <node name="offload">
+            <properties>
+              <help>Configurable offload options</help>
+            </properties>
+            <children>
+              <leafNode name="dco">
+                <properties>
+                  <help>Enable data channel offload on this interface</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="openvpn-option">
             <properties>
               <help>Additional OpenVPN options. You must use the syntax of openvpn.conf in this text-field. Using this without proper knowledge may result in a crashed OpenVPN server. Check system log to look for errors.</help>
@@ -790,12 +803,6 @@
           <leafNode name="use-lzo-compression">
             <properties>
               <help>Use fast LZO compression on this TUN/TAP interface</help>
-              <valueless/>
-            </properties>
-          </leafNode>
-          <leafNode name="enable-dco">
-            <properties>
-              <help>Use to enable OpenVPN data channel offload on this TUN interface</help>
               <valueless/>
             </properties>
           </leafNode>

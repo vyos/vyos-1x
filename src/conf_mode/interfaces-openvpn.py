@@ -115,6 +115,18 @@ def get_config(config=None):
     if dict_search('server.mfa.totp', tmp) == None:
         del openvpn['server']['mfa']
 
+    # OpenVPN Data-Channel-Offload (DCO) is a Kernel module. If loaded it applies to all
+    # OpenVPN interfaces. Check if DCO is used by any other interface instance.
+    tmp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    for interface, interface_config in tmp.items():
+        # If one interface has DCO configured, enable it. No need to further check
+        # all other OpenVPN interfaces. We must use a dedicated key to indicate
+        # the Kernel module must be loaded or not. The per interface "offload.dco"
+        # key is required per OpenVPN interface instance.
+        if dict_search('offload.dco', interface_config) != None:
+            openvpn['module_load_dco'] = {}
+            break
+
     return openvpn
 
 def is_ec_private_key(pki, cert_name):
@@ -675,6 +687,15 @@ def apply(openvpn):
         if interface in interfaces():
             VTunIf(interface).remove()
 
+    # dynamically load/unload DCO Kernel extension if requested
+    dco_module = 'ovpn_dco_v2'
+    if 'module_load_dco' in openvpn:
+        check_kmod(dco_module)
+    else:
+        unload_kmod(dco_module)
+
+    # Now bail out early if interface is disabled or got deleted
+    if 'deleted' in openvpn or 'disable' in openvpn:
         return None
 
     # verify specified IP address is present on any interface on this system
@@ -683,13 +704,6 @@ def apply(openvpn):
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
             cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
-
-    # dynamically load/unload DCO Kernel extension if requested
-    dco_module = 'ovpn_dco_v2'
-    if 'enable_dco' in openvpn:
-        check_kmod(dco_module)
-    else:
-        unload_kmod(dco_module)
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process
