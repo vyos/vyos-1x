@@ -75,7 +75,6 @@ def get_config(config=None):
 
     # We need to know the amount of other WWAN interfaces as ModemManager needs
     # to be started or stopped.
-    conf.set_level(base)
     wwan['other_interfaces'] = conf.get_config_dict([], key_mangling=('-', '_'),
                                                        get_first_key=True,
                                                        no_tag_node_value_mangle=True)
