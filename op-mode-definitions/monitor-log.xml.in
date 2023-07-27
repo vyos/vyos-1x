@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="monitor">
+    <properties>
+      <help>Monitor system information</help>
+    </properties>
     <children>
       <node name="log">
         <properties>
@@ -27,6 +30,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="conntrack-sync">
+            <properties>
+              <help>Monitor last lines of conntrack-sync log</help>
+            </properties>
+            <command>journalctl --no-hostname --follow --boot --unit conntrackd.service</command>
+          </leafNode>
           <node name="dhcp">
             <properties>
               <help>Monitor last lines of Dynamic Host Control Protocol log</help>
@@ -117,6 +126,23 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit chrony.service</command>
           </leafNode>
+          <node name="openvpn">
+            <properties>
+              <help>Monitor last lines of OpenVPN log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit openvpn@*.service</command>
+            <children>
+              <tagNode name="interface">
+                <properties>
+                  <help>Monitor last lines of specific OpenVPN interface log</help>
+                  <completionHelp>
+                    <path>interfaces openvpn</path>
+                  </completionHelp>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit openvpn@$5.service</command>
+              </tagNode>
+            </children>
+          </node>
           <node name="pppoe">
             <properties>
               <help>Monitor last lines of PPPoE interface log</help>
@@ -248,9 +274,45 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
           </leafNode>
+          <leafNode name="vpn">
+            <properties>
+              <help>Monitor last lines of ALL Virtual Private Network services</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="ipsec">
+            <properties>
+              <help>Monitor last lines of IPsec log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit strongswan.service</command>
+          </leafNode>
+          <leafNode name="l2tp">
+            <properties>
+              <help>Monitor last lines of L2TP log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
+          </leafNode>
+          <leafNode name="openconnect">
+            <properties>
+              <help>Monitor last lines of OpenConnect log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="pptp">
+            <properties>
+              <help>Monitor last lines of PPTP log</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pptp.service</command>
+          </leafNode>
+          <leafNode name="sstp">
+            <properties>
+              <help>Monitor last lines of Secure Socket Tunneling Protocol server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --follow --unit accel-ppp@sstp.service</command>
+          </leafNode>
           <node name="sstpc">
             <properties>
-              <help>Monitor last lines of Secure Socket Tunneling Protocol log</help>
+              <help>Monitor last lines of Secure Socket Tunneling Protocol client</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit "ppp@sstpc*.service"</command>
             <children>
@@ -263,49 +325,6 @@
                 </properties>
                 <command>journalctl --no-hostname --boot --follow --unit "ppp@$5.service"</command>
               </tagNode>
-            </children>
-          </node>
-          <node name="vpn">
-            <properties>
-              <help>Monitor Virtual Private Network services</help>
-            </properties>
-            <children>
-              <leafNode name="all">
-                <properties>
-                  <help>Monitor last lines of ALL VPNs</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
-              </leafNode>
-              <leafNode name="ipsec">
-                <properties>
-                  <help>Monitor last lines of IPsec log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit strongswan.service</command>
-              </leafNode>
-              <leafNode name="l2tp">
-                <properties>
-                  <help>Monitor last lines of L2TP log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@l2tp.service</command>
-              </leafNode>
-              <leafNode name="openconnect">
-                <properties>
-                  <help>Monitor last lines of OpenConnect log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit ocserv.service</command>
-              </leafNode>
-              <leafNode name="pptp">
-                <properties>
-                  <help>Monitor last lines of PPTP log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@pptp.service</command>
-              </leafNode>
-              <leafNode name="sstp">
-                <properties>
-                  <help>Monitor last lines of SSTP log</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --follow --unit accel-ppp@sstp.service</command>
-              </leafNode>
             </children>
           </node>
           <leafNode name="vpp">

@@ -61,10 +61,7 @@ op_mode_definitions: $(op_xml_obj)
 	rm -f $(OP_TMPL_DIR)/clear/node.def
 	rm -f $(OP_TMPL_DIR)/delete/node.def
 	rm -f $(OP_TMPL_DIR)/generate/node.def
-	rm -f $(OP_TMPL_DIR)/monitor/node.def
 	rm -f $(OP_TMPL_DIR)/set/node.def
-	rm -f $(OP_TMPL_DIR)/show/node.def
-	rm -f $(OP_TMPL_DIR)/show/system/node.def
 	rm -f $(OP_TMPL_DIR)/show/tech-support/node.def
 
 	# XXX: ping and traceroute must be able to recursivly call itself as the
