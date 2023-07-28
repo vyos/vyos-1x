@@ -125,6 +125,18 @@ def verify_rule(config, err_msg, groups_dict):
                 if config['protocol'] not in ['tcp', 'udp', 'tcp_udp']:
                     raise ConfigError('Protocol must be tcp, udp, or tcp_udp when specifying a port-group')
 
+    if 'balance' in config:
+        for item in ['source-port', 'destination-port']:
+            if item in config['balance']['hash'] and config['protocol'] not in ['tcp', 'udp']:
+                raise ConfigError('Protocol must be tcp or udp when specifying hash ports')
+        count = 0
+        if 'member' in config['balance']:
+            for member in config['balance']['member']:
+                weight = config['balance']['member'][member]['weight']
+                count = count +  int(weight)
+            if count != 100:
+                Warning(f'Sum of weight for nat balance rule is not 100. You may get unexpected behaviour')
+
 def get_config(config=None):
     if config:
         conf = config
@@ -198,7 +210,7 @@ def verify(nat):
                 Warning(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
-                if 'exclude' not in config:
+                if 'exclude' not in config and 'member' not in config['balance']:
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
 
             addr = dict_search('translation.address', config)
@@ -222,7 +234,7 @@ def verify(nat):
                 Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
-                if 'exclude' not in config:
+                if 'exclude' not in config and 'member' not in config['balance']:
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
 
             # common rule verification

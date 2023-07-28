@@ -25,6 +25,15 @@
     </node>
     #include <include/generic-disable-node.xml.i>
     #include <include/nat-exclude.xml.i>
+    <node name="balance">
+      <properties>
+        <help>Apply NAT balance</help>
+      </properties>
+      <children>
+        #include <include/firewall/firewall-hashing-parameters.xml.i>
+        #include <include/firewall/nat-balance.xml.i>
+      </children>
+    </node>
     <leafNode name="log">
       <properties>
         <help>NAT rule logging</help>
