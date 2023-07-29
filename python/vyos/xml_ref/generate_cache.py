@@ -53,9 +53,6 @@ def trim_node_data(cache: dict):
 def non_trivial(s):
     if not s:
         raise ArgumentTypeError("Argument must be non empty string")
-    if s == 'vyos-1x' and basename(getcwd()) != 'vyos-1x':
-        # builds outside of vyos-1x must specify package name
-        raise ArgumentTypeError("Specify package name")
     return s
 
 def main():
