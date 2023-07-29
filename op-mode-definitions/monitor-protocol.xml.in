@@ -12,7 +12,6 @@
               <help>Monitor the Border Gateway Protocol (BGP)</help>
             </properties>
             <children>
-              #include <include/monitor-background.xml.i>
               <node name="disable">
                 <properties>
                   <help>Disable Border Gateway Protocol (BGP) debugging</help>
@@ -266,7 +265,6 @@
               <help>Monitor Open Shortest Path First (OSPF) protocol</help>
             </properties>
             <children>
-              #include <include/monitor-background.xml.i>
               <node name="disable">
                 <properties>
                   <help>Disable Open Shortest Path First (OSPF) debugging</help>
@@ -650,25 +648,6 @@
               <help>Monitor the IPv6 Open Shortest Path First (OSPFv3) protocol</help>
             </properties>
             <children>
-              <node name="background">
-                <properties>
-                  <help>Monitor in background</help>
-                </properties>
-                <children>
-                  <node name="start">
-                    <properties>
-                      <help>Start background monitoring</help>
-                    </properties>
-                    <command>${vyatta_bindir}/vyatta-monitor-background OSPFv3 ospf6</command>
-                  </node>
-                  <node name="stop">
-                    <properties>
-                      <help>Stop background monitoring</help>
-                    </properties>
-                    <command>${vyatta_bindir}/vyatta-monitor-background-stop OSPFv3</command>
-                  </node>
-                </children>
-              </node>
               <node name="disable">
                 <properties>
                   <help>Disable IPv6 Open Shortest Path First (OSPFv3) protocol debugging</help>
@@ -1192,25 +1171,6 @@
               <help>Monitor the Routing Information Base (RIB)</help>
             </properties>
             <children>
-              <node name="background">
-                <properties>
-                  <help>Monitor in background</help>
-                </properties>
-                <children>
-                  <node name="start">
-                    <properties>
-                      <help>Start background monitoring</help>
-                    </properties>
-                    <command>${vyatta_bindir}/vyatta-monitor-background RIB zebra</command>
-                  </node>
-                  <node name="stop">
-                    <properties>
-                      <help>Stop background monitoring</help>
-                    </properties>
-                    <command>${vyatta_bindir}/vyatta-monitor-background-stop RIB</command>
-                  </node>
-                </children>
-              </node>
               <node name="disable">
                 <properties>
                   <help>Disable Route Information Base (RIB) debugging</help>
@@ -1360,7 +1320,6 @@
               <help>Monitor the Routing Information Protocol (RIP)</help>
             </properties>
             <children>
-              #include <include/monitor-background.xml.i>
               <node name="disable">
                 <properties>
                   <help>Disable Routing Information Protocol (RIP) debugging</help>
@@ -1452,7 +1411,6 @@
               <help>Monitor the Routing Information Protocol Next Generation (RIPng) protocol</help>
             </properties>
             <children>
-              #include <include/monitor-background.xml.i>
               <node name="disable">
                 <properties>
                   <help>Disable Routing Information Protocol Next Generation (RIPNG) debugging</help>
