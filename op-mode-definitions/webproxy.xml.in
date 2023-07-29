@@ -14,25 +14,6 @@
             </properties>
             <command>if [ -f /var/log/squid/access.log ]; then sudo tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
           </node>
-          <node name="background">
-            <properties>
-              <help>Monitor Webproxy in the background</help>
-            </properties>
-            <children>
-              <node name="start">
-                <properties>
-                  <help>Start background monitoring of Webproxy</help>
-                </properties>
-                <command>${vyatta_bindir}/vyatta-monitor-background Webproxy squid</command>
-              </node>
-              <node name="stop">
-                <properties>
-                  <help>Stop background monitoring of Webproxy</help>
-                </properties>
-                <command>${vyatta_bindir}/vyatta-monitor-background-stop Webproxy </command>
-              </node>
-            </children>
-          </node>
           <node name="cache-log">
             <properties>
               <help>Monitor the last lines of the squid cache log</help>
