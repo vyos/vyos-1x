@@ -2,23 +2,27 @@
 <interfaceDefinition>
   <node name="monitor">
     <children>
-      <node name="webproxy">
-        <properties>
-          <help>Monitor WebProxy service</help>
-        </properties>
-        <command>${vyatta_bindir}/vyatta-monitor Webproxy squid</command>
+      <node name="log">
         <children>
-          <node name="access-log">
+          <node name="webproxy">
             <properties>
-              <help>Monitor the last lines of the squid access log</help>
+              <help>Monitor last lines of Webproxy log</help>
             </properties>
-            <command>if [ -f /var/log/squid/access.log ]; then sudo tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
-          </node>
-          <node name="cache-log">
-            <properties>
-              <help>Monitor the last lines of the squid cache log</help>
-            </properties>
-            <command>if [ -f /var/log/squid/cache.log ]; then sudo tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+            <command>journalctl --no-hostname --boot --follow --unit squid.service</command>
+            <children>
+              <leafNode name="access-log">
+                <properties>
+                  <help>Monitor the last lines of the Webproxy access log</help>
+                </properties>
+                <command>if [ -f /var/log/squid/access.log ]; then sudo tail --follow=name /var/log/squid/access.log; else echo "WebProxy access-log does not exist"; fi</command>
+              </leafNode>
+              <leafNode name="cache-log">
+                <properties>
+                  <help>Monitor the last lines of the Webproxy cache log</help>
+                </properties>
+                <command>if [ -f /var/log/squid/cache.log ]; then sudo tail --follow=name /var/log/squid/cache.log; else echo "WebProxy cache-log does not exist"; fi</command>
+              </leafNode>
+            </children>
           </node>
         </children>
       </node>

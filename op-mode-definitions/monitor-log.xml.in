@@ -339,12 +339,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit keepalived.service</command>
           </leafNode>
-          <leafNode name="webproxy">
-            <properties>
-              <help>Monitor last lines of Webproxy log</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --follow --unit squid.service</command>
-          </leafNode>
         </children>
       </node>
     </children>
