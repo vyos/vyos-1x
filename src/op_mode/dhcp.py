@@ -34,6 +34,8 @@ from vyos.utils.file import read_file
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 
+time_string = "%a %b %d %H:%M:%S %Z %Y"
+
 config = ConfigTreeQuery()
 lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
 sort_valid_inet = ['end', 'mac', 'hostname', 'ip', 'pool', 'remaining', 'start', 'state']
@@ -291,6 +293,9 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
 
 
 def _get_raw_client_leases(family='inet', interface=None):
+    from time import mktime
+    from datetime import datetime
+
     lease_dir = '/var/lib/dhcp'
     lease_files = []
     lease_data = []
@@ -309,7 +314,11 @@ def _get_raw_client_leases(family='inet', interface=None):
             for line in f.readlines():
                 line = line.rstrip()
                 if 'last_update' not in tmp:
-                    tmp.update({'last_update' : line})
+                    # ISC dhcp client contains least_update timestamp in human readable
+                    # format this makes less sense for an API and also the expiry
+                    # timestamp is provided in UNIX time. Convert string (e.g. Sun Jul
+                    # 30 18:13:44 CEST 2023) to UNIX time (1690733624)
+                    tmp.update({'last_update' : int(mktime(datetime.strptime(line, time_string).timetuple()))})
                     continue
 
                 k, v = line.split('=')
@@ -344,9 +353,10 @@ def _get_formatted_client_leases(lease_data, family):
         if 'new_dhcp_lease_time' in lease:
             data_entries.append(["DHCP Server", lease['new_dhcp_lease_time']])
         if 'last_update' in lease:
-            data_entries.append(["Last Update", lease['last_update']])
+            tmp = strftime(time_string, localtime(int(lease['last_update'])))
+            data_entries.append(["Last Update", tmp])
         if 'new_expiry' in lease:
-            tmp = strftime('%a %b %d %H:%M:%S %Z %Y', localtime(int(lease['new_expiry'])))
+            tmp = strftime(time_string, localtime(int(lease['new_expiry'])))
             data_entries.append(["Expiry", tmp])
 
         # Add empty marker
