@@ -231,6 +231,27 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_static_nat')
 
+    def test_dnat_redirect(self):
+        dst_addr_1 = '10.0.1.1'
+        dest_port = '5122'
+        protocol = 'tcp'
+        redirected_port = '22'
+        ifname = 'eth0'
+
+        self.cli_set(dst_path + ['rule', '10', 'destination', 'address', dst_addr_1])
+        self.cli_set(dst_path + ['rule', '10', 'destination', 'port', dest_port])
+        self.cli_set(dst_path + ['rule', '10', 'protocol', protocol])
+        self.cli_set(dst_path + ['rule', '10', 'inbound-interface', ifname])
+        self.cli_set(dst_path + ['rule', '10', 'translation', 'redirect', 'port', redirected_port])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'iifname "{ifname}"', f'ip daddr {dst_addr_1}', f'{protocol} dport {dest_port}', f'redirect to :{redirected_port}']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
     def test_nat_balance(self):
         ifname = 'eth0'
         member_1 = '198.51.100.1'
@@ -246,17 +267,17 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(dst_path + ['rule', '1', 'inbound-interface', ifname])
         self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', dst_port])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'hash', 'source-address'])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'hash', 'source-port'])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'hash', 'destination-address'])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'hash', 'destination-port'])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'member', member_1, 'weight', weight_1])
-        self.cli_set(dst_path + ['rule', '1', 'balance', 'member', member_2, 'weight', weight_2])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'source-address'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'source-port'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'destination-address'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'destination-port'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_1, 'weight', weight_1])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_2, 'weight', weight_2])
 
         self.cli_set(src_path + ['rule', '1', 'outbound-interface', ifname])
-        self.cli_set(src_path + ['rule', '1', 'balance', 'hash', 'random'])
-        self.cli_set(src_path + ['rule', '1', 'balance', 'member', member_3, 'weight', weight_3])
-        self.cli_set(src_path + ['rule', '1', 'balance', 'member', member_4, 'weight', weight_4])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'hash', 'random'])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_3, 'weight', weight_3])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_4, 'weight', weight_4])
 
         self.cli_commit()
 

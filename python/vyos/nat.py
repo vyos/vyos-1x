@@ -90,12 +90,12 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         if options:
             translation_str += f' {",".join(options)}'
 
-        if 'member' in rule_conf['balance']:
+        if 'backend' in rule_conf['load_balance']:
             hash_input_items = []
             current_prob = 0
             nat_map = []
 
-            for trans_addr, addr in rule_conf['balance']['member'].items():
+            for trans_addr, addr in rule_conf['load_balance']['backend'].items():
                 item_prob = int(addr['weight'])
                 upper_limit = current_prob + item_prob - 1
                 hash_val = str(current_prob) + '-' + str(upper_limit)
@@ -105,10 +105,10 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
 
             elements = ' , '.join(nat_map)
 
-            if 'hash' in rule_conf['balance'] and 'random' in rule_conf['balance']['hash']:
+            if 'hash' in rule_conf['load_balance'] and 'random' in rule_conf['load_balance']['hash']:
                 translation_str += ' numgen random mod 100 map ' + '{ ' + f'{elements}' + ' }'
             else:
-                for input_param in rule_conf['balance']['hash']:
+                for input_param in rule_conf['load_balance']['hash']:
                     if input_param == 'source-address':
                         param = 'ip saddr'
                     elif input_param == 'destination-address':

@@ -25,9 +25,9 @@
     </node>
     #include <include/generic-disable-node.xml.i>
     #include <include/nat-exclude.xml.i>
-    <node name="balance">
+    <node name="load-balance">
       <properties>
-        <help>Apply NAT balance</help>
+        <help>Apply NAT load balance</help>
       </properties>
       <children>
         #include <include/firewall/firewall-hashing-parameters.xml.i>

@@ -1,5 +1,5 @@
 <!-- include start from firewall/nat-balance.xml.i -->
-<tagNode name="member">
+<tagNode name="backend">
   <properties>
     <help>Translated IP address</help>
     <valueHelp>
