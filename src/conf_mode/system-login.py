@@ -54,7 +54,7 @@ MAX_USER_UID: int = 59999
 # LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
 MAX_RADIUS_TIMEOUT: int = 50
 # MAX_RADIUS_TIMEOUT divided by 2 sec (minimum recomended timeout)
-MAX_RADIUS_COUNT: int = 25
+MAX_RADIUS_COUNT: int = 8
 # Maximum number of supported TACACS servers
 MAX_TACACS_COUNT: int = 8
 
