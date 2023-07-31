@@ -7,6 +7,34 @@
           <help>Show Ethernet VPN (EVPN) information</help>
         </properties>
         <children>
+          <node name="access-vlan">
+            <properties>
+              <help>Access VLANs</help>
+            </properties>
+            <children>
+              #include <include/frr-detail.xml.i>
+            </children>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </node>
+          <tagNode name="access-vlan">
+            <properties>
+              <help>Access VLANs interface name</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <node name="node.tag">
+                <properties>
+                  <help>VLAN ID</help>
+                  <completionHelp>
+                    <list>&lt;1-4094&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+            </children>
+          </tagNode>
           <node name="arp-cache">
             <properties>
               <help>ARP and ND cache</help>
