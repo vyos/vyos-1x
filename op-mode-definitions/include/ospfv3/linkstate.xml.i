@@ -4,7 +4,7 @@
     <help>Show OSPFv3 linkstate routing information</help>
   </properties>
   <children>
-    #include <include/ospfv3/detail.xml.i>
+    #include <include/frr-detail.xml.i>
     <tagNode name="network">
       <properties>
         <help>Show linkstate Network information</help>

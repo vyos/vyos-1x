@@ -11,7 +11,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
     <tagNode name="prefix">
@@ -23,7 +23,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         <node name="match">
           <properties>
             <help>Matched interface prefix information</help>
@@ -49,7 +49,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
     <tagNode name="prefix">
@@ -61,7 +61,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         <node name="match">
           <properties>
             <help>Matched interface prefix information</help>

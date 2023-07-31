@@ -11,7 +11,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
     <node name="external-2">
@@ -20,7 +20,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
     <node name="inter-area">
@@ -29,7 +29,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
     <node name="intra-area">
@@ -38,10 +38,10 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
-    #include <include/ospfv3/detail.xml.i>
+    #include <include/frr-detail.xml.i>
     <node name="summary">
       <properties>
         <help>Show route table summary</help>
@@ -71,7 +71,7 @@
       </properties>
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
       </children>
     </node>
   </children>

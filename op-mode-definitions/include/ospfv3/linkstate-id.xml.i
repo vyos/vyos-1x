@@ -7,7 +7,7 @@
     </completionHelp>
   </properties>
   <children>
-    #include <include/ospfv3/detail.xml.i>
+    #include <include/frr-detail.xml.i>
     #include <include/ospfv3/dump.xml.i>
     #include <include/ospfv3/internal.xml.i>
   </children>

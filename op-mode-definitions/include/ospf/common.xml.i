@@ -524,12 +524,7 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
   <children>
-    <node name="detail">
-      <properties>
-        <help>Show detailed IPv4 OSPF neighbor information</help>
-      </properties>
-      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-    </node>
+    #include <include/frr-detail.xml.i>
   </children>
 </node>
 <tagNode name="neighbor">

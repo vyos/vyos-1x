@@ -29,7 +29,7 @@
             </completionHelp>
           </properties>
           <children>
-            #include <include/ospfv3/detail.xml.i>
+            #include <include/frr-detail.xml.i>
             #include <include/ospfv3/dump.xml.i>
             #include <include/ospfv3/internal.xml.i>
           </children>
@@ -45,7 +45,7 @@
       </properties>
       <command>vtysh -c "show ipv6 ospf6 database * $6"</command>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/adv-router-id-node-tag.xml.i>
@@ -67,12 +67,12 @@
           </properties>
           <command>vtysh -c "show ipv6 ospf6 database as-external * $7"</command>
           <children>
-            #include <include/ospfv3/detail.xml.i>
+            #include <include/frr-detail.xml.i>
             #include <include/ospfv3/dump.xml.i>
             #include <include/ospfv3/internal.xml.i>
           </children>
         </tagNode>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -87,14 +87,14 @@
         </completionHelp>
       </properties>
       <children>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/self-originated.xml.i>
         #include <include/ospfv3/adv-router-id-node-tag.xml.i>
       </children>
     </tagNode>
-    #include <include/ospfv3/detail.xml.i>
+    #include <include/frr-detail.xml.i>
     #include <include/ospfv3/internal.xml.i>
     #include <include/ospfv3/linkstate-id.xml.i>
     #include <include/ospfv3/self-originated.xml.i>
@@ -105,7 +105,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -120,7 +120,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -135,7 +135,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -150,7 +150,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -165,7 +165,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -180,7 +180,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -195,7 +195,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -210,7 +210,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
@@ -225,7 +225,7 @@
       <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
       <children>
         #include <include/ospfv3/adv-router.xml.i>
-        #include <include/ospfv3/detail.xml.i>
+        #include <include/frr-detail.xml.i>
         #include <include/ospfv3/dump.xml.i>
         #include <include/ospfv3/internal.xml.i>
         #include <include/ospfv3/linkstate-id.xml.i>
