@@ -42,6 +42,10 @@ airbag.enable()
 
 radius_config_file = "/etc/pam_radius_auth.conf"
 
+# LOGIN_TIMEOUT from /etc/loign.defs minus 10 sec
+MAX_RADIUS_TIMEOUT: int = 50
+MAX_RADIUS_COUNT: int = 8
+
 def get_local_users():
     """Return list of dynamically allocated users (see Debian Policy Manual)"""
     local_users = []
@@ -123,17 +127,28 @@ def verify(login):
     if 'radius' in login:
         if 'server' not in login['radius']:
             raise ConfigError('No RADIUS server defined!')
-
+        sum_timeout: int = 0
+        radius_servers_count: int = 0
         fail = True
         for server, server_config in dict_search('radius.server', login).items():
             if 'key' not in server_config:
                 raise ConfigError(f'RADIUS server "{server}" requires key!')
 
-            if 'disabled' not in server_config:
+            if 'disable' not in server_config:
+                sum_timeout += int(server_config['timeout'])
+                radius_servers_count += 1
                 fail = False
-                continue
+
         if fail:
             raise ConfigError('All RADIUS servers are disabled')
+
+        if radius_servers_count > MAX_RADIUS_COUNT:
+            raise ConfigError(
+                f'Number of RADIUS servers more than {MAX_RADIUS_COUNT}')
+
+        if sum_timeout > MAX_RADIUS_TIMEOUT:
+            raise ConfigError(
+                f'Sum of RADIUS servers timeouts has to be less or eq {MAX_RADIUS_TIMEOUT} sec')
 
         verify_vrf(login['radius'])
 
