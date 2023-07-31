@@ -87,6 +87,17 @@
               <help>Update the webproxy blacklist database</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist</command>
+            <children>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Update webproxy blacklist database via specified VRF</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/webproxy_update_blacklist.sh --update-blacklist --vrf "${5}" </command>
+              </tagNode>
+            </children>
           </node>
         </children>
       </node>
