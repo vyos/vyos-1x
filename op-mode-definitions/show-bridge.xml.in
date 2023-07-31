@@ -7,12 +7,20 @@
           <help>Show bridging information</help>
         </properties>
         <children>
-          <leafNode name="vlan">
+          <node name="vlan">
             <properties>
               <help>View the VLAN filter settings of the bridge</help>
             </properties>
             <command>${vyos_op_scripts_dir}/bridge.py show_vlan</command>
-          </leafNode>
+            <children>
+              <leafNode name="tunnel">
+                <properties>
+                  <help>Show bridge VLAN tunnel mapping</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/bridge.py show_vlan --tunnel</command>
+              </leafNode>
+            </children>
+          </node>
         </children>
       </node>
       <leafNode name="bridge">

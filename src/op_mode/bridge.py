@@ -29,7 +29,6 @@ from vyos.utils.dict import dict_search
 
 import vyos.opmode
 
-
 def _get_json_data():
     """
     Get bridge data format JSON
@@ -46,11 +45,14 @@ def _get_raw_data_summary():
     return data_dict
 
 
-def _get_raw_data_vlan():
+def _get_raw_data_vlan(tunnel:bool=False):
     """
     :returns dict
     """
-    json_data = cmd('bridge --json --compressvlans vlan show')
+    show = 'show'
+    if tunnel:
+        show = 'tunnel'
+    json_data = cmd(f'bridge --json --compressvlans vlan {show}')
     data_dict = json.loads(json_data)
     return data_dict
 
@@ -134,10 +136,34 @@ def _get_formatted_output_vlan(data):
             flags = ', '.join(flags_raw if isinstance(flags_raw,list) else "").lower()
             data_entries.append([interface, vlan, flags])
 
-    headers = ["Interface", "Vlan", "Flags"]
+    headers = ["Interface", "VLAN", "Flags"]
     output = tabulate(data_entries, headers)
     return output
 
+def _get_formatted_output_vlan_tunnel(data):
+    data_entries = []
+    for entry in data:
+        interface = entry.get('ifname')
+        first = True
+        for tunnel_entry in entry.get('tunnels'):
+            vlan = tunnel_entry.get('vlan')
+            vni = tunnel_entry.get('tunid')
+            if first:
+                data_entries.append([interface, vlan, vni])
+                first = False
+            else:
+                # Group by VXLAN interface only - no need to repeat
+                # VXLAN interface name for every VLAN <-> VNI mapping
+                #
+                # Interface      VLAN    VNI
+                # -----------  ------  -----
+                # vxlan0          100    100
+                #                 200    200
+                data_entries.append(['', vlan, vni])
+
+    headers = ["Interface", "VLAN", "VNI"]
+    output = tabulate(data_entries, headers)
+    return output
 
 def _get_formatted_output_fdb(data):
     data_entries = []
@@ -192,12 +218,15 @@ def show(raw: bool):
         return _get_formatted_output_summary(bridge_data)
 
 
-def show_vlan(raw: bool):
-    bridge_vlan = _get_raw_data_vlan()
+def show_vlan(raw: bool, tunnel: typing.Optional[bool]):
+    bridge_vlan = _get_raw_data_vlan(tunnel)
     if raw:
         return bridge_vlan
     else:
-        return _get_formatted_output_vlan(bridge_vlan)
+        if tunnel:
+            return _get_formatted_output_vlan_tunnel(bridge_vlan)
+        else:
+            return _get_formatted_output_vlan(bridge_vlan)
 
 
 def show_fdb(raw: bool, interface: str):
