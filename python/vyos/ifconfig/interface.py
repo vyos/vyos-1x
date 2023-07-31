@@ -1288,9 +1288,11 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        options_file = f'/run/dhcp6c/dhcp6c.{ifname}.options'
         systemd_service = f'dhcp6c@{ifname}.service'
 
         if enable and 'disable' not in self._config:
+            render(options_file, 'dhcp-client/dhcp6c_daemon-options.j2', self._config)
             render(config_file, 'dhcp-client/ipv6.j2', self._config)
 
             # We must ignore any return codes. This is required to enable

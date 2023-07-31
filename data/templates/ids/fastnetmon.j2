@@ -29,9 +29,18 @@ unban_only_if_attack_finished = on
 # For each subnet, list track speed in bps and pps for both directions
 enable_subnet_counters = off
 
-{% if mode.mirror is vyos_defined %}
+{% if mode is vyos_defined('mirror') %}
 mirror_afpacket = on
+{% elif mode is vyos_defined('sflow') %}
+sflow = on
+{%     if sflow.port is vyos_defined %}
+sflow_port = {{ sflow.port }}
+{%     endif %}
+{%     if sflow.listen_address is vyos_defined %}
+sflow_host = {{ sflow.listen_address }}
+{%     endif %}
 {% endif %}
+
 
 process_incoming_traffic = {{ 'on' if direction is vyos_defined and 'in' in direction else 'off' }}
 process_outgoing_traffic = {{ 'on' if direction is vyos_defined and 'out' in direction else 'off' }}

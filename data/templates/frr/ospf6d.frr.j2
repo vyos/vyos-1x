@@ -80,6 +80,27 @@ router ospf6 {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {% if distance.ospfv3 is vyos_defined %}
  distance ospf6 {{ 'intra-area ' ~ distance.ospfv3.intra_area if distance.ospfv3.intra_area is vyos_defined }} {{ 'inter-area ' ~ distance.ospfv3.inter_area if distance.ospfv3.inter_area is vyos_defined }} {{ 'external ' ~ distance.ospfv3.external if distance.ospfv3.external is vyos_defined }}
 {% endif %}
+{% if graceful_restart is vyos_defined %}
+{%     if graceful_restart.grace_period is vyos_defined %}
+ graceful-restart grace-period {{ graceful_restart.grace_period }}
+{%     endif %}
+{%     if graceful_restart.helper.enable.router_id is vyos_defined %}
+{%         for router_id in graceful_restart.helper.enable.router_id %}
+ graceful-restart helper enable {{ router_id }}
+{%         endfor %}
+{%     elif graceful_restart.helper.enable is vyos_defined %}
+ graceful-restart helper enable
+{%     endif %}
+{%     if graceful_restart.helper.planned_only is vyos_defined %}
+ graceful-restart helper planned-only
+{%     endif %}
+{%     if graceful_restart.helper.lsa_check_disable is vyos_defined %}
+ graceful-restart helper lsa-check-disable
+{%     endif %}
+{%     if graceful_restart.helper.supported_grace_time is vyos_defined %}
+ graceful-restart helper supported-grace-time {{ graceful_restart.helper.supported_grace_time }}
+{%     endif %}
+{% endif %}
 {% if log_adjacency_changes is vyos_defined %}
  log-adjacency-changes {{ "detail" if log_adjacency_changes.detail is vyos_defined }}
 {% endif %}

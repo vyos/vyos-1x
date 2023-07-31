@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -30,6 +30,7 @@ airbag.enable()
 config_file = r'/run/fastnetmon/fastnetmon.conf'
 networks_list = r'/run/fastnetmon/networks_list'
 excluded_networks_list = r'/run/fastnetmon/excluded_networks_list'
+attack_dir = '/var/log/fastnetmon_attacks'
 
 def get_config(config=None):
     if config:
@@ -55,8 +56,11 @@ def verify(fastnetmon):
     if 'mode' not in fastnetmon:
         raise ConfigError('Specify operating mode!')
 
-    if 'listen_interface' not in fastnetmon:
-        raise ConfigError('Specify interface(s) for traffic capture')
+    if fastnetmon.get('mode') == 'mirror' and 'listen_interface' not in fastnetmon:
+        raise ConfigError("Incorrect settings for 'mode mirror': must specify interface(s) for traffic mirroring")
+
+    if fastnetmon.get('mode') == 'sflow' and 'listen_address' not in fastnetmon.get('sflow', {}):
+        raise ConfigError("Incorrect settings for 'mode sflow': must specify sFlow 'listen-address'")
 
     if 'alert_script' in fastnetmon:
         if os.path.isfile(fastnetmon['alert_script']):
@@ -73,6 +77,10 @@ def generate(fastnetmon):
                 os.unlink(file)
 
         return None
+
+    # Create dir for log attack details
+    if not os.path.exists(attack_dir):
+        os.mkdir(attack_dir)
 
     render(config_file, 'ids/fastnetmon.j2', fastnetmon)
     render(networks_list, 'ids/fastnetmon_networks_list.j2', fastnetmon)

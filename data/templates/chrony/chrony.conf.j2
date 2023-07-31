@@ -53,8 +53,6 @@ bindaddress {{ address }}
 {%         endfor %}
 {%     endif %}
 {%     if interface is vyos_defined %}
-{%         for ifname in interface %}
-binddevice {{ ifname }}
-{%         endfor %}
+binddevice {{ interface }}
 {%     endif %}
 {% endif %}

@@ -18,10 +18,14 @@
 
 import sys
 import json
-import argparse
+from argparse import ArgumentParser
+from argparse import ArgumentTypeError
+from os import getcwd
+from os import makedirs
 from os.path import join
 from os.path import abspath
 from os.path import dirname
+from os.path import basename
 from xmltodict import parse
 
 _here = dirname(__file__)
@@ -29,9 +33,10 @@ _here = dirname(__file__)
 sys.path.append(join(_here, '..'))
 from configtree import reference_tree_to_json, ConfigTreeError
 
-xml_cache = abspath(join(_here, 'cache.py'))
 xml_cache_json = 'xml_cache.json'
 xml_tmp = join('/tmp', xml_cache_json)
+pkg_cache = abspath(join(_here, 'pkg_cache'))
+ref_cache = abspath(join(_here, 'cache.py'))
 
 node_data_fields = ("node_type", "multi", "valueless", "default_value")
 
@@ -45,16 +50,26 @@ def trim_node_data(cache: dict):
             if isinstance(cache[k], dict):
                 trim_node_data(cache[k])
 
+def non_trivial(s):
+    if not s:
+        raise ArgumentTypeError("Argument must be non empty string")
+    return s
+
 def main():
-    parser = argparse.ArgumentParser(description='generate and save dict from xml defintions')
+    parser = ArgumentParser(description='generate and save dict from xml defintions')
     parser.add_argument('--xml-dir', type=str, required=True,
                         help='transcluded xml interface-definition directory')
-    parser.add_argument('--save-json-dir', type=str,
-                        help='directory to save json cache if needed')
-    args = parser.parse_args()
+    parser.add_argument('--package-name', type=non_trivial, default='vyos-1x',
+                        help='name of current package')
+    parser.add_argument('--output-path', help='path to generated cache')
+    args = vars(parser.parse_args())
 
-    xml_dir = abspath(args.xml_dir)
-    save_dir = abspath(args.save_json_dir) if args.save_json_dir else None
+    xml_dir = abspath(args['xml_dir'])
+    pkg_name = args['package_name'].replace('-','_')
+    cache_name = pkg_name + '_cache.py'
+    out_path = args['output_path']
+    path = out_path if out_path is not None else pkg_cache
+    xml_cache = abspath(join(path, cache_name))
 
     try:
         reference_tree_to_json(xml_dir, xml_tmp)
@@ -67,21 +82,30 @@ def main():
 
     trim_node_data(d)
 
-    if save_dir is not None:
-        save_file = join(save_dir, xml_cache_json)
-        with open(save_file, 'w') as f:
-            f.write(json.dumps(d))
-
     syntax_version = join(xml_dir, 'xml-component-version.xml')
-    with open(syntax_version) as f:
-        content = f.read()
+    try:
+        with open(syntax_version) as f:
+            component = f.read()
+    except FileNotFoundError:
+        if pkg_name != 'vyos_1x':
+            component = ''
+        else:
+            print("\nWARNING: missing xml-component-version.xml\n")
+            sys.exit(1)
 
-    parsed = parse(content)
-    converted = parsed['interfaceDefinition']['syntaxVersion']
+    if component:
+        parsed = parse(component)
+    else:
+        parsed = None
     version = {}
-    for i in converted:
-        tmp = {i['@component']: i['@version']}
-        version |= tmp
+    # addon package definitions may have empty (== 0) version info
+    if parsed is not None and parsed['interfaceDefinition'] is not None:
+        converted = parsed['interfaceDefinition']['syntaxVersion']
+        if not isinstance(converted, list):
+            converted = [converted]
+        for i in converted:
+            tmp = {i['@component']: i['@version']}
+            version |= tmp
 
     version = {"component_version": version}
 
@@ -89,6 +113,8 @@ def main():
 
     with open(xml_cache, 'w') as f:
         f.write(f'reference = {str(d)}')
+
+    print(cache_name)
 
 if __name__ == '__main__':
     main()

@@ -72,6 +72,7 @@ def verify_rule(config, err_msg, groups_dict):
     """ Common verify steps used for both source and destination NAT """
 
     if (dict_search('translation.port', config) != None or
+        dict_search('translation.redirect.port', config) != None or
         dict_search('destination.port', config) != None or
         dict_search('source.port', config)):
 

@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
   <node name="show">
+    <properties>
+      <help>Show system information</help>
+    </properties>
     <children>
       <tagNode name="log">
         <properties>
@@ -395,23 +398,6 @@
             </properties>
             <command>journalctl --no-hostname --boot --unit ssh.service</command>
           </leafNode>
-          <node name="sstpc">
-            <properties>
-              <help>Show log for SSTP client</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --unit "ppp@sstpc*.service"</command>
-            <children>
-              <tagNode name="interface">
-                <properties>
-                  <help>Show SSTP client log on specific interface</help>
-                  <completionHelp>
-                    <path>interfaces sstpc</path>
-                  </completionHelp>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit "ppp@$5.service"</command>
-              </tagNode>
-            </children>
-          </node>
           <tagNode name="tail">
             <properties>
               <help>Show last n changes to messages</help>
@@ -427,47 +413,57 @@
             </properties>
             <command>tail -n 10 /var/log/messages</command>
           </node>
-          <node name="vpn">
+          <leafNode name="vpn">
             <properties>
-              <help>Show log for Virtual Private Network (VPN)</help>
+              <help>Monitor last lines of ALL Virtual Private Network services</help>
             </properties>
+            <command>journalctl --no-hostname --boot --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="ipsec">
+            <properties>
+              <help>Show log for IPsec</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit strongswan.service</command>
+          </leafNode>
+          <leafNode name="l2tp">
+            <properties>
+              <help>Show log for L2TP</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@l2tp.service</command>
+          </leafNode>
+          <leafNode name="openconnect">
+            <properties>
+              <help>Show log for OpenConnect</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit ocserv.service</command>
+          </leafNode>
+          <leafNode name="pptp">
+            <properties>
+              <help>Show log for PPTP</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@pptp.service</command>
+          </leafNode>
+          <leafNode name="sstp">
+            <properties>
+              <help>Show log for Secure Socket Tunneling Protocol (SSTP) server</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit accel-ppp@sstp.service</command>
+          </leafNode>
+          <node name="sstpc">
+            <properties>
+              <help>Show log for Secure Socket Tunneling Protocol (SSTP) client</help>
+            </properties>
+            <command>journalctl --no-hostname --boot --unit "ppp@sstpc*.service"</command>
             <children>
-              <leafNode name="all">
+              <tagNode name="interface">
                 <properties>
-                  <help>Show log for ALL</help>
+                  <help>Show SSTP client log on specific interface</help>
+                  <completionHelp>
+                    <path>interfaces sstpc</path>
+                  </completionHelp>
                 </properties>
-                <command>journalctl --no-hostname --boot --unit strongswan.service --unit accel-ppp@*.service --unit ocserv.service</command>
-              </leafNode>
-              <leafNode name="ipsec">
-                <properties>
-                  <help>Show log for IPsec</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit strongswan.service</command>
-              </leafNode>
-              <leafNode name="l2tp">
-                <properties>
-                  <help>Show log for L2TP</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit accel-ppp@l2tp.service</command>
-              </leafNode>
-              <leafNode name="openconnect">
-                <properties>
-                  <help>Show log for OpenConnect</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit ocserv.service</command>
-              </leafNode>
-              <leafNode name="pptp">
-                <properties>
-                  <help>Show log for PPTP</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit accel-ppp@pptp.service</command>
-              </leafNode>
-              <leafNode name="sstp">
-                <properties>
-                  <help>Show log for SSTP</help>
-                </properties>
-                <command>journalctl --no-hostname --boot --unit accel-ppp@sstp.service</command>
-              </leafNode>
+                <command>journalctl --no-hostname --boot --unit "ppp@$5.service"</command>
+              </tagNode>
             </children>
           </node>
           <leafNode name="vpp">

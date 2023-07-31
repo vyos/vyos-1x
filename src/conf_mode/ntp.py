@@ -24,6 +24,7 @@ from vyos.utils.process import call
 from vyos.utils.permission import chmod_750
 from vyos.utils.network import get_interface_config
 from vyos.template import render
+from vyos.template import is_ipv4
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -62,16 +63,29 @@ def verify(ntp):
 
     if 'interface' in ntp:
         # If ntpd should listen on a given interface, ensure it exists
-        for interface in ntp['interface']:
-            verify_interface_exists(interface)
+        interface = ntp['interface']
+        verify_interface_exists(interface)
 
-            # If we run in a VRF, our interface must belong to this VRF, too
-            if 'vrf' in ntp:
-                tmp = get_interface_config(interface)
-                vrf_name = ntp['vrf']
-                if 'master' not in tmp or tmp['master'] != vrf_name:
-                    raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
-                                      f'does not belong to this VRF!')
+        # If we run in a VRF, our interface must belong to this VRF, too
+        if 'vrf' in ntp:
+            tmp = get_interface_config(interface)
+            vrf_name = ntp['vrf']
+            if 'master' not in tmp or tmp['master'] != vrf_name:
+                raise ConfigError(f'NTP runs in VRF "{vrf_name}" - "{interface}" '\
+                                  f'does not belong to this VRF!')
+
+    if 'listen_address' in ntp:
+        ipv4_addresses = 0
+        ipv6_addresses = 0
+        for address in ntp['listen_address']:
+            if is_ipv4(address):
+                ipv4_addresses += 1
+            else:
+                ipv6_addresses += 1
+        if ipv4_addresses > 1:
+            raise ConfigError(f'NTP Only admits one ipv4 value for listen-address parameter ')
+        if ipv6_addresses > 1:
+            raise ConfigError(f'NTP Only admits one ipv6 value for listen-address parameter ')
 
     return None
 

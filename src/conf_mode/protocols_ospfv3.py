@@ -83,6 +83,8 @@ def get_config(config=None):
     # need to check this first and probably drop that key.
     if dict_search('default_information.originate', ospfv3) is None:
         del default_values['default_information']
+    if 'graceful_restart' not in ospfv3:
+        del default_values['graceful_restart']
 
     # XXX: T2665: we currently have no nice way for defaults under tag nodes,
     # clean them out and add them manually :(

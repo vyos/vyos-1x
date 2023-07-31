@@ -45,6 +45,9 @@ do
     --auto-update-blacklist)
         auto="yes"
         ;;
+    --vrf)
+        vrf="yes"
+        ;;
     (-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
     (*) break;;
     esac
@@ -76,7 +79,11 @@ fi
 
 if [[ -n $update ]] && [[ $update -eq "yes" ]]; then
     tmp_blacklists='/tmp/blacklists.gz'
-    curl -o $tmp_blacklists $blacklist_url
+    if [[ -n $vrf ]] && [[ $vrf -eq "yes" ]]; then
+        sudo ip vrf exec $1 curl -o $tmp_blacklists $blacklist_url
+    else
+        curl -o $tmp_blacklists $blacklist_url
+    fi
     if [ $? -ne 0 ]; then
         echo "Unable to download [$blacklist_url]!"
         exit 1

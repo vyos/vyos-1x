@@ -304,7 +304,7 @@ def parse_rule(rule_conf, fw_name, rule_id, ip_name):
     if 'ipsec' in rule_conf:
         if 'match_ipsec' in rule_conf['ipsec']:
             output.append('meta ipsec == 1')
-        if 'match_non_ipsec' in rule_conf['ipsec']:
+        if 'match_none' in rule_conf['ipsec']:
             output.append('meta ipsec == 0')
 
     if 'fragment' in rule_conf:

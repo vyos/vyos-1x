@@ -44,6 +44,14 @@
                   </leafNode>
                   #include <include/nat-translation-port.xml.i>
                   #include <include/nat-translation-options.xml.i>
+                  <node name="redirect">
+                    <properties>
+                      <help>Redirect to local host</help>
+                    </properties>
+                    <children>
+                      #include <include/nat-translation-port.xml.i>
+                    </children>
+                  </node>
                 </children>
               </node>
             </children>

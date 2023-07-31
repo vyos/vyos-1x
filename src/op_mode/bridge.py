@@ -24,6 +24,7 @@ from tabulate import tabulate
 
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
+from vyos.utils.process	import call
 from vyos.utils.dict import dict_search
 
 import vyos.opmode
@@ -129,7 +130,8 @@ def _get_formatted_output_vlan(data):
             if vlan_entry.get('vlanEnd'):
                 vlan_end = vlan_entry.get('vlanEnd')
                 vlan = f'{vlan}-{vlan_end}'
-            flags = ', '.join(vlan_entry.get('flags')).lower()
+            flags_raw = vlan_entry.get('flags')
+            flags = ', '.join(flags_raw if isinstance(flags_raw,list) else "").lower()
             data_entries.append([interface, vlan, flags])
 
     headers = ["Interface", "Vlan", "Flags"]
@@ -164,6 +166,23 @@ def _get_formatted_output_mdb(data):
     output = tabulate(data_entries, headers)
     return output
 
+def _get_bridge_detail(iface):
+    """Get interface detail statistics"""
+    return call(f'vtysh -c "show interface {iface}"')
+
+def _get_bridge_detail_nexthop_group(iface):
+    """Get interface detail nexthop_group statistics"""
+    return call(f'vtysh -c "show interface {iface} nexthop-group"')
+
+def _get_bridge_detail_nexthop_group_raw(iface):
+    out = cmd(f'vtysh -c "show interface {iface} nexthop-group"')
+    return out
+
+def _get_bridge_detail_raw(iface):
+    """Get interface detail json statistics"""
+    data =  cmd(f'vtysh -c "show interface {iface} json"')
+    data_dict = json.loads(data)
+    return data_dict
 
 def show(raw: bool):
     bridge_data = _get_raw_data_summary()
@@ -196,6 +215,17 @@ def show_mdb(raw: bool, interface: str):
     else:
         return _get_formatted_output_mdb(mdb_data)
 
+def show_detail(raw: bool, nexthop_group: typing.Optional[bool], interface: str):
+    if raw:
+        if nexthop_group:
+            return _get_bridge_detail_nexthop_group_raw(interface)
+        else:
+            return _get_bridge_detail_raw(interface)
+    else:
+        if nexthop_group:
+            return _get_bridge_detail_nexthop_group(interface)
+        else:
+            return _get_bridge_detail(interface)
 
 if __name__ == '__main__':
     try:

@@ -4,14 +4,14 @@
     <children>
       <node name="bridge">
         <properties>
-          <help>Monitoring bridge database generated objects and address changes</help>
+          <help>Monitor bridge database changes</help>
         </properties>
         <command>sudo bridge monitor all</command>
         <children>
           <node name="link">
             <command>sudo bridge monitor link</command>
             <properties>
-              <help>Monitoring bridge database generated connection interface changes</help>
+              <help>Monitor bridge database generated connection interface changes</help>
             </properties>
           </node>
           <node name="fdb">

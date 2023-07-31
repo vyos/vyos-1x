@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import typing
 
 from datetime import datetime
+from glob import glob
 from ipaddress import ip_address
 from isc_dhcp_leases import IscDhcpLeases
 from tabulate import tabulate
@@ -27,9 +29,12 @@ import vyos.opmode
 from vyos.base import Warning
 from vyos.configquery import ConfigTreeQuery
 
-from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
+from vyos.utils.file import read_file
+from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
+
+time_string = "%a %b %d %H:%M:%S %Z %Y"
 
 config = ConfigTreeQuery()
 lease_valid_states = ['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
@@ -286,6 +291,87 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
     else:
         return _get_formatted_server_leases(lease_data, family=family)
 
+
+def _get_raw_client_leases(family='inet', interface=None):
+    from time import mktime
+    from datetime import datetime
+
+    lease_dir = '/var/lib/dhcp'
+    lease_files = []
+    lease_data = []
+
+    if interface:
+        tmp = f'{lease_dir}/dhclient_{interface}.lease'
+        if os.path.exists(tmp):
+            lease_files.append(tmp)
+    else:
+        # All DHCP leases
+        lease_files = glob(f'{lease_dir}/dhclient_*.lease')
+
+    for lease in lease_files:
+        tmp = {}
+        with open(lease, 'r') as f:
+            for line in f.readlines():
+                line = line.rstrip()
+                if 'last_update' not in tmp:
+                    # ISC dhcp client contains least_update timestamp in human readable
+                    # format this makes less sense for an API and also the expiry
+                    # timestamp is provided in UNIX time. Convert string (e.g. Sun Jul
+                    # 30 18:13:44 CEST 2023) to UNIX time (1690733624)
+                    tmp.update({'last_update' : int(mktime(datetime.strptime(line, time_string).timetuple()))})
+                    continue
+
+                k, v = line.split('=')
+                tmp.update({k : v.replace("'", "")})
+
+        lease_data.append(tmp)
+
+    return lease_data
+
+def _get_formatted_client_leases(lease_data, family):
+    from time import localtime
+    from time import strftime
+
+    from vyos.validate import is_intf_addr_assigned
+
+    data_entries = []
+    for lease in lease_data:
+        data_entries.append(["Interface", lease['interface']])
+        if 'new_ip_address' in lease:
+            tmp = '[Active]' if is_intf_addr_assigned(lease['interface'], lease['new_ip_address']) else '[Inactive]'
+            data_entries.append(["IP address", lease['new_ip_address'], tmp])
+        if 'new_subnet_mask' in lease:
+            data_entries.append(["Subnet Mask", lease['new_subnet_mask']])
+        if 'new_domain_name' in lease:
+            data_entries.append(["Domain Name", lease['new_domain_name']])
+        if 'new_routers' in lease:
+            data_entries.append(["Router", lease['new_routers']])
+        if 'new_domain_name_servers' in lease:
+            data_entries.append(["Name Server", lease['new_domain_name_servers']])
+        if 'new_dhcp_server_identifier' in lease:
+            data_entries.append(["DHCP Server", lease['new_dhcp_server_identifier']])
+        if 'new_dhcp_lease_time' in lease:
+            data_entries.append(["DHCP Server", lease['new_dhcp_lease_time']])
+        if 'last_update' in lease:
+            tmp = strftime(time_string, localtime(int(lease['last_update'])))
+            data_entries.append(["Last Update", tmp])
+        if 'new_expiry' in lease:
+            tmp = strftime(time_string, localtime(int(lease['new_expiry'])))
+            data_entries.append(["Expiry", tmp])
+
+        # Add empty marker
+        data_entries.append([''])
+
+    output = tabulate(data_entries, tablefmt='plain')
+
+    return output
+
+def show_client_leases(raw: bool, family: ArgFamily, interface: typing.Optional[str]):
+    lease_data = _get_raw_client_leases(family=family, interface=interface)
+    if raw:
+        return lease_data
+    else:
+        return _get_formatted_client_leases(lease_data, family=family)
 
 if __name__ == '__main__':
     try:

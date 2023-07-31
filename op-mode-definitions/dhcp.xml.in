@@ -7,6 +7,30 @@
           <help>Show DHCP (Dynamic Host Configuration Protocol) information</help>
         </properties>
         <children>
+          <node name="client">
+            <properties>
+              <help>Show DHCP client information</help>
+            </properties>
+            <children>
+              <node name="leases">
+                <properties>
+                  <help>Show DHCP client leases</help>
+                </properties>
+                <children>
+                  <tagNode name="interface">
+                    <properties>
+                      <help> Show DHCP client information for a given interface</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces --broadcast</script>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_client_leases --family inet --interface $6</command>
+                  </tagNode>
+                </children>
+                <command>${vyos_op_scripts_dir}/dhcp.py show_client_leases --family inet</command>
+              </node>
+             </children>
+          </node>
           <node name="server">
             <properties>
               <help>Show DHCP server information</help>

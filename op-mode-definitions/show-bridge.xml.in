@@ -42,6 +42,18 @@
             </properties>
             <command>${vyos_op_scripts_dir}/bridge.py show_fdb --interface=$3</command>
           </leafNode>
+          <leafNode name="detail">
+            <properties>
+              <help>Display bridge interface details</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/bridge.py show_detail --interface=$3</command>
+          </leafNode>
+          <leafNode name="nexthop-group">
+            <properties>
+              <help>Display bridge interface nexthop-group</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/bridge.py show_detail --nexthop_group --interface=$3</command>
+          </leafNode>
         </children>
       </tagNode>
     </children>
