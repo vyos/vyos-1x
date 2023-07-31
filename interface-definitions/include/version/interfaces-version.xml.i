@@ -1,3 +1,3 @@
 <!-- include start from include/version/interfaces-version.xml.i -->
-<syntaxVersion component='interfaces' version='29'></syntaxVersion>
+<syntaxVersion component='interfaces' version='30'></syntaxVersion>
 <!-- include end -->

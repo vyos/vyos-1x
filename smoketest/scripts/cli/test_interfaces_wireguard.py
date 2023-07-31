@@ -100,5 +100,34 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + [interface, 'peer', 'PEER01'])
         self.cli_commit()
 
+    def test_wireguard_same_public_key(self):
+        # T2939: Create WireGuard interfaces with associated peers.
+        # Remove one of the configured peers.
+        # T4774: Test prevention of duplicate peer public keys
+        interface = 'wg0'
+        port = '12345'
+        privkey = 'OOjcXGfgQlAuM6q8Z9aAYduCua7pxf7UKYvIqoUPoGQ='
+        pubkey_fail = 'eiVeYKq66mqKLbrZLzlckSP9voaw8jSFyVNiNTdZDjU='
+        pubkey_ok = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
+
+        self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'private-key', privkey])
+
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'public-key', pubkey_fail])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'port', port])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
+
+        # The same pubkey as the interface wg0
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'public-key', pubkey_ok])
+
+        # Commit peers
+        self.cli_commit()
+
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

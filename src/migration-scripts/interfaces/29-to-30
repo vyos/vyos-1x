@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Deletes Wireguard peers if they have the same public key as the router has.
+import sys
+from vyos.configtree import ConfigTree
+from vyos.validate import is_wireguard_key_pair
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Must specify file name!")
+        sys.exit(1)
+
+    file_name = sys.argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+    base = ['interfaces', 'wireguard']
+    if not config.exists(base):
+        # Nothing to do
+        sys.exit(0)
+    for interface in config.list_nodes(base):
+        private_key = config.return_value(base + [interface, 'private-key'])
+        interface_base = base + [interface]
+        if config.exists(interface_base + ['peer']):
+            for peer in config.list_nodes(interface_base + ['peer']):
+                peer_base = interface_base + ['peer', peer]
+                peer_public_key = config.return_value(peer_base + ['public-key'])
+                if config.exists(peer_base + ['public-key']):
+                    if not config.exists(peer_base + ['disable']) \
+                            and is_wireguard_key_pair(private_key, peer_public_key):
+                        config.set(peer_base + ['disable'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
