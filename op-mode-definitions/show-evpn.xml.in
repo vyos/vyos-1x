@@ -20,7 +20,7 @@
             <properties>
               <help>Access VLANs interface name</help>
               <completionHelp>
-                <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
+                <script>${vyos_completion_dir}/list_interfaces --bridgeable --no-vlan-subinterfaces</script>
               </completionHelp>
             </properties>
             <children>
