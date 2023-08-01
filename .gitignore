@@ -109,7 +109,6 @@ ENV/
 templates-cfg/*
 templates-op/*
 tests/templates/*
-xml_cache/*
 
 # Debian packaging
 debian/files

@@ -3,7 +3,6 @@ OP_TMPL_DIR := templates-op
 BUILD_DIR := build
 DATA_DIR := data
 SHIM_DIR := src/shim
-CACHE_DIR := xml_cache
 LIBS := -lzmq
 CFLAGS :=
 BUILD_ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH)
@@ -24,11 +23,10 @@ op_xml_obj = $(op_xml_src:.xml.in=.xml)
 .ONESHELL:
 interface_definitions: $(config_xml_obj)
 	mkdir -p $(TMPL_DIR)
-	mkdir -p $(CACHE_DIR)
 
 	$(CURDIR)/scripts/override-default $(BUILD_DIR)/interface-definitions
 
-	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions --package-name vyos-1x --output-path $(CACHE_DIR)
+	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions
 
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
 
@@ -98,7 +96,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf $(TMPL_DIR)
 	rm -rf $(OP_TMPL_DIR)
-	rm -rf $(CACHE_DIR)
 	$(MAKE) -C $(SHIM_DIR) clean
 
 .PHONY: test

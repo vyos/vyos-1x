@@ -9,7 +9,6 @@ VYOS_CFG_TMPL_DIR := opt/vyatta/share/vyatta-cfg/templates
 VYOS_OP_TMPL_DIR := opt/vyatta/share/vyatta-op/templates
 VYOS_MIBS_DIR := usr/share/snmp/mibs
 VYOS_LOCALUI_DIR := srv/localui
-VYOS_XML_CACHE_DIR := python/vyos/xml_ref/pkg_cache
 
 MIGRATION_SCRIPTS_DIR := opt/vyatta/etc/config-migrate/migrate
 SYSTEM_SCRIPTS_DIR := usr/libexec/vyos/system
@@ -35,8 +34,6 @@ override_dh_auto_install:
 
 	# convert the XML to dictionaries
 	env PYTHONPATH=python python3 python/vyos/xml/generate.py
-
-	cp xml_cache/vyos_1x_cache.py python/vyos/xml_ref/pkg_cache
 
 	cd python; python3 setup.py install --install-layout=deb --root ../$(DIR); cd ..
 
