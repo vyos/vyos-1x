@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -36,6 +36,11 @@ airbag.enable()
 curlrc_config = r'/etc/curlrc'
 ssh_config = r'/etc/ssh/ssh_config.d/91-vyos-ssh-client-options.conf'
 systemd_action_file = '/lib/systemd/system/ctrl-alt-del.target'
+time_format_to_locale = {
+    '12-hour': 'en_US.UTF-8',
+    '24-hour': 'en_GB.UTF-8'
+}
+
 
 def get_config(config=None):
     if config:
@@ -142,6 +147,11 @@ def apply(options):
       cmd('systemctl enable root-partition-auto-resize.service')
     else:
       cmd('systemctl disable root-partition-auto-resize.service')
+
+    # Time format 12|24-hour
+    if 'time_format' in options:
+        time_format = time_format_to_locale.get(options['time_format'])
+        cmd(f'localectl set-locale LC_TIME={time_format}')
 
 if __name__ == '__main__':
     try:
