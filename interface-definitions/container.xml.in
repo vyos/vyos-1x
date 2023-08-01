@@ -3,7 +3,7 @@
   <node name="container" owner="${vyos_conf_scripts_dir}/container.py">
     <properties>
       <help>Container applications</help>
-      <priority>1280</priority>
+      <priority>450</priority>
     </properties>
     <children>
       <tagNode name="name">
