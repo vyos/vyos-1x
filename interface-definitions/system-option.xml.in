@@ -144,6 +144,26 @@
                <valueless/>
              </properties>
            </leafNode>
+           <leafNode name="time-format">
+            <properties>
+              <help>System time-format</help>
+              <completionHelp>
+                <list>12-hour 24-hour</list>
+              </completionHelp>
+              <valueHelp>
+                <format>12-hour</format>
+                <description>12 hour time format</description>
+              </valueHelp>
+              <valueHelp>
+                <format>24-hour</format>
+                <description>24 hour time format</description>
+              </valueHelp>
+              <constraint>
+                <regex>(12-hour|24-hour)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>12-hour</defaultValue>
+           </leafNode>
         </children>
       </node>
     </children>
