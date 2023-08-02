@@ -24,7 +24,7 @@ from vyos.configtree import ConfigTree
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 
-if (len(sys.argv) < 1):
+if len(sys.argv) < 2:
     print("Must specify file name!")
     sys.exit(1)
 

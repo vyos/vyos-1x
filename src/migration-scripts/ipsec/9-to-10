@@ -24,7 +24,7 @@ from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 
 
-if (len(argv) < 1):
+if len(argv) < 2:
     print("Must specify file name!")
     exit(1)
 

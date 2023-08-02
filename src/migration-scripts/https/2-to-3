@@ -25,7 +25,7 @@ from vyos.pki import create_private_key
 from vyos.pki import encode_certificate
 from vyos.pki import encode_private_key
 
-if (len(sys.argv) < 2):
+if len(sys.argv) < 2:
     print("Must specify file name!")
     sys.exit(1)
 

@@ -31,7 +31,7 @@ from vyos.pki import load_private_key
 from vyos.pki import encode_public_key
 from vyos.pki import encode_private_key
 
-if (len(argv) < 1):
+if len(argv) < 2:
     print("Must specify file name!")
     exit(1)
 

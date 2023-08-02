@@ -28,7 +28,7 @@ def bandwidth_percent_to_val(interface, percent) -> int:
     speed = int(speed) *1000000 # convert to MBit/s
     return speed * int(percent) // 100 # integer division
 
-if (len(argv) < 1):
+if len(argv) < 2:
     print("Must specify file name!")
     exit(1)
 

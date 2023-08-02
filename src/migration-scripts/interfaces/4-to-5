@@ -57,7 +57,7 @@ def migrate_dialer(config, tree, intf):
 
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 1):
+    if len(sys.argv) < 2:
         print("Must specify file name!")
         exit(1)
 
