@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 
 from sys import exit
 from ipaddress import ip_interface
@@ -23,14 +22,11 @@ from ipaddress import IPv6Interface
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.utils.process import call
-from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -42,42 +38,12 @@ def get_config(config=None):
         conf = Config()
 
     base = ['high-availability']
-    base_vrrp = ['high-availability', 'vrrp']
     if not conf.exists(base):
         return None
 
     ha = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    if 'vrrp' in ha:
-        if dict_search('vrrp.global_parameters.garp', ha) != None:
-            default_values = defaults(base_vrrp + ['global-parameters', 'garp'])
-            ha['vrrp']['global_parameters']['garp'] = dict_merge(
-                default_values, ha['vrrp']['global_parameters']['garp'])
-
-        if 'group' in ha['vrrp']:
-            default_values = defaults(base_vrrp + ['group'])
-            default_values_garp = defaults(base_vrrp + ['group', 'garp'])
-
-            # XXX: T2665: we can not safely rely on the defaults() when there are
-            # tagNodes in place, it is better to blend in the defaults manually.
-            if 'garp' in default_values:
-                del default_values['garp']
-            for group in ha['vrrp']['group']:
-                ha['vrrp']['group'][group] = dict_merge(default_values, ha['vrrp']['group'][group])
-
-                # XXX: T2665: we can not safely rely on the defaults() when there are
-                # tagNodes in place, it is better to blend in the defaults manually.
-                if 'garp' in ha['vrrp']['group'][group]:
-                    ha['vrrp']['group'][group]['garp'] = dict_merge(
-                        default_values_garp, ha['vrrp']['group'][group]['garp'])
-
-    # Merge per virtual-server default values
-    if 'virtual_server' in ha:
-        default_values = defaults(base + ['virtual-server'])
-        for vs in ha['virtual_server']:
-            ha['virtual_server'][vs] = dict_merge(default_values, ha['virtual_server'][vs])
+                              no_tag_node_value_mangle=True,
+                              get_first_key=True, with_defaults=True)
 
     ## Get the sync group used for conntrack-sync
     conntrack_path = ['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group']
@@ -112,7 +78,7 @@ def verify(ha):
                 from vyos.utils.dict import check_mutually_exclusive_options
                 try:
                     check_mutually_exclusive_options(group_config["health_check"], health_check_types, required=True)
-                except ValueError as e:
+                except ValueError:
                     Warning(f'Health check configuration for VRRP group "{group}" will remain unused ' \
                             f'until it has one of the following options: {health_check_types}')
                     # XXX: health check has default options so we need to remove it
