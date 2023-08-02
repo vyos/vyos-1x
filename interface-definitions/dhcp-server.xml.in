@@ -129,7 +129,7 @@
                     <properties>
                       <help>Bootstrap file name</help>
                       <constraint>
-                        <regex>[-_a-zA-Z0-9./]+</regex>
+                        <regex>[[:ascii:]]{1,253}</regex>
                       </constraint>
                     </properties>
                   </leafNode>
