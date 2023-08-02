@@ -22,7 +22,7 @@ from sys import exit, argv
 from vyos.configtree import ConfigTree
 
 if __name__ == '__main__':
-    if (len(argv) < 1):
+    if len(argv) < 2:
         print("Must specify file name!")
         exit(1)
 

@@ -21,7 +21,7 @@ import sys
 from vyos.configtree import ConfigTree
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 1):
+    if len(sys.argv) < 2:
         print("Must specify file name!")
         sys.exit(1)
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     if not config.exists(base):
         # Nothing to do
         sys.exit(0)
-    
+
     for interface in config.list_nodes(base):
         mirror_old_base = base + [interface, 'mirror']
         if config.exists(mirror_old_base):
@@ -43,7 +43,7 @@ if __name__ == '__main__':
             if config.exists(mirror_old_base):
                 config.delete(mirror_old_base)
                 config.set(mirror_old_base + ['ingress'],intf[0])
-    
+
     try:
         with open(file_name, 'w') as f:
             f.write(config.to_string())

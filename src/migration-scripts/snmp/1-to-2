@@ -43,7 +43,7 @@ def migrate_keys(config, path):
             config.set(config_path_priv, value=tmp)
 
 if __name__ == '__main__':
-    if (len(argv) < 1):
+    if len(argv) < 2:
         print("Must specify file name!")
         exit(1)
 

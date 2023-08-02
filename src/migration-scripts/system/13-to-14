@@ -15,7 +15,7 @@ from vyos.configtree import ConfigTree
 from vyos.utils.process import cmd
 
 
-if (len(sys.argv) < 1):
+if len(sys.argv) < 2:
     print("Must specify file name!")
     sys.exit(1)
 

@@ -53,7 +53,7 @@ def read_file_for_pki(config_auth_path):
 
     return output
 
-if (len(sys.argv) < 1):
+if len(sys.argv) < 2:
     print("Must specify file name!")
     sys.exit(1)
 

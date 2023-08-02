@@ -20,7 +20,7 @@ from sys import argv
 from sys import exit
 from vyos.configtree import ConfigTree
 
-if (len(argv) < 2):
+if len(argv) < 2:
     print("Must specify file name!")
     exit(1)
 

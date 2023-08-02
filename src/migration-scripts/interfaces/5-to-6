@@ -98,7 +98,7 @@ def copy_rtradv(c, old_base, interface):
                 c.delete(new_base + ['link-mtu'])
 
 if __name__ == '__main__':
-    if (len(sys.argv) < 1):
+    if len(sys.argv) < 2:
         print("Must specify file name!")
         exit(1)
 
