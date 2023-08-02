@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,9 +29,11 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WireGuardIf
 from vyos.utils.kernel import check_kmod
 from vyos.utils.network import check_port_availability
+from vyos.validate import is_wireguard_key_pair
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
 
 def get_config(config=None):
     """
@@ -104,6 +106,9 @@ def verify(wireguard):
 
         if peer['public_key'] in public_keys:
             raise ConfigError(f'Duplicate public-key defined on peer "{tmp}"')
+
+        if 'disable' not in peer and is_wireguard_key_pair(wireguard['private_key'], peer['public_key']):
+            raise ConfigError(f'Peer "{tmp}" has the same public key as the interface "{wireguard["ifname"]}"')
 
         public_keys.append(peer['public_key'])
 
