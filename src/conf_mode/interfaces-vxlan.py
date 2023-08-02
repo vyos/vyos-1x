@@ -87,8 +87,8 @@ def verify(vxlan):
             raise ConfigError('Multicast VXLAN requires an underlaying interface')
         verify_source_interface(vxlan)
 
-    if not any(tmp in ['group', 'remote', 'source_address'] for tmp in vxlan):
-        raise ConfigError('Group, remote or source-address must be configured')
+    if not any(tmp in ['group', 'remote', 'source_address', 'source_interface'] for tmp in vxlan):
+        raise ConfigError('Group, remote, source-address or source-interface must be configured')
 
     if 'vni' not in vxlan and 'external' not in vxlan:
         raise ConfigError(
