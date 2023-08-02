@@ -33,9 +33,11 @@ def get_vici_sas():
         session = vici_session()
     except Exception:
         raise ViciInitiateError("IPsec not initialized")
-    sas = list(session.list_sas())
-    return sas
-
+    try:
+        sas = list(session.list_sas())
+        return sas
+    except Exception:
+        raise ViciCommandError(f'Failed to get SAs')
 
 def get_vici_connections():
     from vici import Session as vici_session
@@ -44,9 +46,11 @@ def get_vici_connections():
         session = vici_session()
     except Exception:
         raise ViciInitiateError("IPsec not initialized")
-    connections = list(session.list_conns())
-    return connections
-
+    try:
+        connections = list(session.list_conns())
+        return connections
+    except Exception:
+        raise ViciCommandError(f'Failed to get connections')
 
 def get_vici_sas_by_name(ike_name: str, tunnel: str) -> list:
     """
