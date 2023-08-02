@@ -119,6 +119,12 @@
             </children>
           </tagNode>
           #include <include/interface/redirect.xml.i>
+          <leafNode name="threaded">
+            <properties>
+              <help>Process traffic from each peer in a dedicated thread</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

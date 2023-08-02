@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -25,6 +25,8 @@ from hurry.filesize import alternative
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
+from vyos.base import Warning
+
 
 class WireGuardOperational(Operational):
     def _dump(self):
@@ -184,7 +186,6 @@ class WireGuardIf(Interface):
 
         base_cmd += f' private-key {tmp_file.name}'
         base_cmd = base_cmd.format(**config)
-
         if 'peer' in config:
             for peer, peer_config in config['peer'].items():
                 # T4702: No need to configure this peer when it was explicitly
@@ -228,6 +229,13 @@ class WireGuardIf(Interface):
                 # PSK key file is not required to be stored persistently as its backed by CLI
                 if psk_file != no_psk_file and os.path.exists(psk_file):
                     os.remove(psk_file)
+
+        try:
+            self._write_sysfs(f'/sys/devices/virtual/net/{self.ifname}/threaded',
+                          '1' if 'threaded' in config else '0')
+        except Exception:
+            Warning(f'Update threaded status on interface "{config["ifname"]}" FAILED.\n'
+                    f'An unexpected error occurred.')
 
         # call base class
         super().update(config)

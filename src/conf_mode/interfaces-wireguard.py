@@ -90,7 +90,7 @@ def verify(wireguard):
 
     # run checks on individual configured WireGuard peer
     public_keys = []
-
+    peer_enabled = False
     for tmp in wireguard['peer']:
         peer = wireguard['peer'][tmp]
 
@@ -110,7 +110,14 @@ def verify(wireguard):
         if 'disable' not in peer and is_wireguard_key_pair(wireguard['private_key'], peer['public_key']):
             raise ConfigError(f'Peer "{tmp}" has the same public key as the interface "{wireguard["ifname"]}"')
 
+        if 'disable' not in peer:
+            peer_enabled = True
+
         public_keys.append(peer['public_key'])
+
+    #Threaded can be enabled only if one enabled peer exists.
+    if not peer_enabled and 'threaded' in wireguard:
+        raise ConfigError(f'Set threaded on interface "{wireguard["ifname"]}" FAILED.\nNo enabled peers are configured')
 
 def apply(wireguard):
     tmp = WireGuardIf(wireguard['ifname'])
