@@ -21,7 +21,7 @@ file(s) history by invoking git log path/to/file.txt.
 
 In a big system, such as VyOS, that is comprised of multiple components, it’s
 impossible to keep track of all the changes and bugs/feature requests in one’s
-head. We use a bugtracker known as Phabricator for it (“issue tracker” would
+head. We use a bugtracker named Phorge (formerly known Phabricator) for it (“issue tracker” would
 be a better term, but this one stuck).
 
 The information is used in three ways:
@@ -35,14 +35,14 @@ The information is used in three ways:
 
 To make this approach work, every change must be associated with a task number
 (prefixed with **T**) and a component. If there is no bug report/feature
-request for the changes you are going to make, you have to create a Phabricator
-task first. Once there is an entry in Phabricator, you should reference its id
+request for the changes you are going to make, you have to create a development portal
+task first. Once there is an entry in the development portal, you should reference its id
 in your commit message, as shown below:
 
 * `ddclient: T1030: auto create runtime directories`
 * `Jenkins: add current Git commit ID to build description`
 
-If there is no [Phabricator](https://vyos.dev) reference in the
+If there is no [development portal](https://vyos.dev) reference in the
 commits of your pull request, we have to ask you to amend the commit message.
 Otherwise we will have to reject it.
 
@@ -57,7 +57,7 @@ development environments.
 
 * A single, short, summary of the commit (recommended 50 characters or less,
   not exceeding 80 characters) containing a prefix of the changed component
-  and the corresponding Phabricator reference e.g. `snmp: T1111:` or
+  and the corresponding development portal reference e.g. `snmp: T1111:` or
   `ethernet: T2222:` - multiple components could be concatenated as in `snmp:
   ethernet: T3333`
 * In some contexts, the first line is treated as the subject of an email and
@@ -126,7 +126,7 @@ also contain information that is helpful for the development team.
 ### Reporting
 
 In order to open up a bug-report/feature request you need to create yourself
-an account on [Phabricator](https://vyos.dev). On the left
+an account in the [development portal](https://vyos.dev). On the left
 side of the specific project (VyOS 1.2 or VyOS 1.3) you will find quick-links
 for opening a bug-report/feature request.
 
@@ -141,7 +141,7 @@ for opening a bug-report/feature request.
 
 You have an idea of how to make VyOS better or you are in need of a specific
 feature which all users of VyOS would benefit from? To send a feature request
-please search [Phabricator](https://vyos.dev) if there is already a
+please search the [development portal](https://vyos.dev) if there is already a
 request pending. You can enhance it or if you don't find one, create a new one
 by use the quick link in the left side under the specific project.
 
