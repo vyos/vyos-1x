@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional, Union
 from vyos.xml_ref import definition
 
 def load_reference(cache=[]):
@@ -53,6 +54,9 @@ def from_source(d: dict, path: list) -> bool:
 
 def component_version() -> dict:
     return load_reference().component_version()
+
+def default_value(path: list) -> Optional[Union[str, list]]:
+    return load_reference().default_value(path)
 
 def multi_to_list(rpath: list, conf: dict) -> dict:
     return load_reference().multi_to_list(rpath, conf)

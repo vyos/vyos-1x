@@ -153,6 +153,15 @@ class Xml:
             return default.split()
         return default
 
+    def default_value(self, path: list) -> Optional[Union[str, list]]:
+        d = self._get_ref_path(path)
+        default = self._get_default_value(d)
+        if default is None:
+            return None
+        if self._is_multi_node(d) or self._is_tag_node(d):
+            return default.split()
+        return default
+
     def get_defaults(self, path: list, get_first_key=False, recursive=False) -> dict:
         """Return dict containing default values below path
 
