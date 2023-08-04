@@ -1,18 +1,13 @@
 [Unit]
 Description=DHCP client on %i
 Documentation=man:dhclient(8)
-ConditionPathExists=/var/lib/dhcp/dhclient_%i.conf
-ConditionPathExists=/var/lib/dhcp/dhclient_%i.options
 StartLimitIntervalSec=0
 After=vyos-router.service
 
 [Service]
-WorkingDirectory=/var/lib/dhcp
 Type=exec
-EnvironmentFile=-/var/lib/dhcp/dhclient_%i.options
-PIDFile=/var/lib/dhcp/dhclient_%i.pid
 ExecStart=/sbin/dhclient -4 -d $DHCLIENT_OPTS
-ExecStop=/sbin/dhclient -4 $DHCLIENT_OPTS -r
+ExecStop=/sbin/dhclient -4 -d $DHCLIENT_OPTS -r
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10

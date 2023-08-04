@@ -1242,40 +1242,44 @@ class Interface(Control):
 
         ifname = self.ifname
         config_base = directories['isc_dhclient_dir'] + '/dhclient'
-        config_file = f'{config_base}_{ifname}.conf'
-        options_file = f'{config_base}_{ifname}.options'
-        pid_file = f'{config_base}_{ifname}.pid'
-        lease_file = f'{config_base}_{ifname}.leases'
+        dhclient_config_file = f'{config_base}_{ifname}.conf'
+        dhclient_lease_file = f'{config_base}_{ifname}.leases'
+        systemd_override_file = f'/run/systemd/system/dhclient@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhclient@{ifname}.service'
+
+        self.config['isc_dhclient_dir'] = directories['isc_dhclient_dir']
 
         # 'up' check is mandatory b/c even if the interface is A/D, as soon as
         # the DHCP client is started the interface will be placed in u/u state.
         # This is not what we intended to do when disabling an interface.
-        if enable and 'disable' not in self._config:
-            if dict_search('dhcp_options.host_name', self._config) == None:
+        if enable and 'disable' not in self.config:
+            if dict_search('dhcp_options.host_name', self.config) == None:
                 # read configured system hostname.
                 # maybe change to vyos hostd client ???
                 hostname = 'vyos'
                 with open('/etc/hostname', 'r') as f:
                     hostname = f.read().rstrip('\n')
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
-                    self._config = dict_merge(tmp, self._config)
+                    self.config = dict_merge(tmp, self.config)
 
-            render(options_file, 'dhcp-client/daemon-options.j2', self._config)
-            render(config_file, 'dhcp-client/ipv4.j2', self._config)
+            render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
+            render(dhclient_config_file, 'dhcp-client/ipv4.j2', self.config)
+
+            # Reload systemd unit definitons as some options are dynamically generated
+            self._cmd('systemctl daemon-reload')
 
             # When the DHCP client is restarted a brief outage will occur, as
             # the old lease is released a new one is acquired (T4203). We will
             # only restart DHCP client if it's option changed, or if it's not
             # running, but it should be running (e.g. on system startup)
-            if 'dhcp_options_changed' in self._config or not is_systemd_service_active(systemd_service):
+            if 'dhcp_options_changed' in self.config or not is_systemd_service_active(systemd_service):
                 return self._cmd(f'systemctl restart {systemd_service}')
             return None
         else:
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
             # cleanup old config files
-            for file in [config_file, options_file, pid_file, lease_file]:
+            for file in [dhclient_config_file, systemd_override_file, dhclient_lease_file]:
                 if os.path.isfile(file):
                     os.remove(file)
 
@@ -1292,9 +1296,9 @@ class Interface(Control):
         options_file = f'/run/dhcp6c/dhcp6c.{ifname}.options'
         systemd_service = f'dhcp6c@{ifname}.service'
 
-        if enable and 'disable' not in self._config:
-            render(options_file, 'dhcp-client/dhcp6c_daemon-options.j2', self._config)
-            render(config_file, 'dhcp-client/ipv6.j2', self._config)
+        if enable and 'disable' not in self.config:
+            render(options_file, 'dhcp-client/dhcp6c_daemon-options.j2', self.config)
+            render(config_file, 'dhcp-client/ipv6.j2', self.config)
 
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.
@@ -1311,20 +1315,20 @@ class Interface(Control):
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
-        source_if = self._config['ifname']
+        source_if = self.config['ifname']
 
         mirror_config = None
-        if 'mirror' in self._config:
-            mirror_config = self._config['mirror']
-        if 'is_mirror_intf' in self._config:
-            source_if = next(iter(self._config['is_mirror_intf']))
-            mirror_config = self._config['is_mirror_intf'][source_if].get('mirror', None)
+        if 'mirror' in self.config:
+            mirror_config = self.config['mirror']
+        if 'is_mirror_intf' in self.config:
+            source_if = next(iter(self.config['is_mirror_intf']))
+            mirror_config = self.config['is_mirror_intf'][source_if].get('mirror', None)
 
         redirect_config = None
 
         # clear existing ingess - ignore errors (e.g. "Error: Cannot find specified
         # qdisc on specified device") - we simply cleanup all stuff here
-        if not 'traffic_policy' in self._config:
+        if not 'traffic_policy' in self.config:
             self._popen(f'tc qdisc del dev {source_if} parent ffff: 2>/dev/null');
             self._popen(f'tc qdisc del dev {source_if} parent 1: 2>/dev/null');
 
@@ -1348,11 +1352,11 @@ class Interface(Control):
                 if err: print('tc qdisc(filter for mirror port failed')
 
         # Apply interface traffic redirection policy
-        elif 'redirect' in self._config:
+        elif 'redirect' in self.config:
             _, err = self._popen(f'tc qdisc add dev {source_if} handle ffff: ingress')
             if err: print(f'tc qdisc add for redirect failed!')
 
-            target_if = self._config['redirect']
+            target_if = self.config['redirect']
             _, err = self._popen(f'tc filter add dev {source_if} parent ffff: protocol '\
                                  f'all prio 10 u32 match u32 0 0 flowid 1:1 action mirred '\
                                  f'egress redirect dev {target_if}')
@@ -1371,7 +1375,7 @@ class Interface(Control):
         # Cache the configuration - it will be reused inside e.g. DHCP handler
         # XXX: maybe pass the option via __init__ in the future and rename this
         # method to apply()?
-        self._config = config
+        self.config = config
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed. Skip if bond member.
