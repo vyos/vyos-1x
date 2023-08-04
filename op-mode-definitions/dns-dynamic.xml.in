@@ -1,5 +1,29 @@
 <?xml version="1.0"?>
 <interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="dns">
+        <properties>
+          <help>Clear Domain Name System</help>
+        </properties>
+        <children>
+          <node name="dynamic">
+            <properties>
+              <help>Clear Dynamic DNS information</help>
+            </properties>
+            <children>
+              <leafNode name="cache">
+                <properties>
+                  <help>Clear Dynamic DNS information cache (ddclient)</help>
+                </properties>
+                <command>sudo rm -f /run/ddclient/ddclient.cache</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
   <node name="monitor">
     <children>
       <node name="log">
