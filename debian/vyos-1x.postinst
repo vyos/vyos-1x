@@ -120,8 +120,23 @@ if ! grep -q '^dhcpd' /etc/passwd; then
     adduser --quiet dhcpd hostsd
 fi
 
-# ensure hte proxy user has a proper shell
+# ensure the proxy user has a proper shell
 chsh -s /bin/sh proxy
+
+# create /opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script
+PRECONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script
+if [ ! -x $PRECONFIG_SCRIPT ]; then
+    mkdir -p $(dirname $PRECONFIG_SCRIPT)
+    touch $PRECONFIG_SCRIPT
+    chmod 755 $PRECONFIG_SCRIPT
+    cat <<EOF >>$PRECONFIG_SCRIPT
+#!/bin/sh
+# This script is executed at boot time before VyOS configuration is applied.
+# Any modifications required to work around unfixed bugs or use
+# services not available through the VyOS CLI system can be placed here.
+
+EOF
+fi
 
 # create /opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script
 POSTCONFIG_SCRIPT=/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script

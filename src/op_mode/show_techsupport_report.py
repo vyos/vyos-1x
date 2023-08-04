@@ -91,7 +91,8 @@ def show_package_repository_config() -> None:
 
 def show_user_startup_scripts() -> None:
     """Prints the user startup scripts."""
-    execute_command('cat /config/scripts/vyos-postconfig-bootup.script', 'User Startup Scripts')
+    execute_command('cat /config/scripts/vyos-preconfig-bootup.script', 'User Startup Scripts (Preconfig)')
+    execute_command('cat /config/scripts/vyos-postconfig-bootup.script', 'User Startup Scripts (Postconfig)')
 
 
 def show_frr_config() -> None:
