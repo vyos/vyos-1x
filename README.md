@@ -56,7 +56,7 @@ The guidelines in a nutshell:
   for the common structure
 * Use the `get_config_dict()` API as much as possible when retrieving values from the CLI
 * Use a template processor when the format is more complex than just one line
-  (Jinja2 and pystache are acceptable options)
+  (our standard is Jinja2)
 
 ## Tests
 
@@ -74,5 +74,3 @@ Runtime tests are executed by the CI system on a running VyOS instance inside
 QEMU. The testcases can be found inside the smoketest subdirectory which will
 be placed into the vyos-1x-smoketest package.
 
-## License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fvyos%2Fvyos-1x?ref=badge_large)
