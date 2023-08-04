@@ -31,6 +31,7 @@ from vyos import ConfigError
 from vyos.configdict import list_diff
 from vyos.configdict import dict_merge
 from vyos.configdict import get_vlan_ids
+from vyos.defaults import directories
 from vyos.template import render
 from vyos.utils.network import mac2eui64
 from vyos.utils.dict import dict_search
@@ -1240,7 +1241,7 @@ class Interface(Control):
             raise ValueError()
 
         ifname = self.ifname
-        config_base = r'/var/lib/dhcp/dhclient'
+        config_base = directories['isc_dhclient_dir'] + '/dhclient'
         config_file = f'{config_base}_{ifname}.conf'
         options_file = f'{config_base}_{ifname}.options'
         pid_file = f'{config_base}_{ifname}.pid'

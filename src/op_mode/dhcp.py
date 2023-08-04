@@ -295,8 +295,9 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
 def _get_raw_client_leases(family='inet', interface=None):
     from time import mktime
     from datetime import datetime
+    from vyos.defaults import directories
 
-    lease_dir = '/var/lib/dhcp'
+    lease_dir = directories['isc_dhclient_dir']
     lease_files = []
     lease_data = []
 

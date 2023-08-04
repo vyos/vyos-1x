@@ -28,6 +28,7 @@ from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.configdict import dict_merge
+from vyos.defaults import directories
 from vyos.ifconfig import Interface
 from vyos.pki import encode_public_key
 from vyos.pki import load_private_key
@@ -69,7 +70,6 @@ KEY_PATH  = f'{swanctl_dir}/private/'
 CA_PATH   = f'{swanctl_dir}/x509ca/'
 CRL_PATH  = f'{swanctl_dir}/x509crl/'
 
-DHCP_BASE = '/var/lib/dhcp/dhclient'
 DHCP_HOOK_IFLIST = '/tmp/ipsec_dhcp_waiting'
 
 def get_config(config=None):
@@ -433,8 +433,9 @@ def verify(ipsec):
                 dhcp_interface = peer_conf['dhcp_interface']
 
                 verify_interface_exists(dhcp_interface)
+                dhcp_base = directories['isc_dhclient_dir']
 
-                if not os.path.exists(f'{DHCP_BASE}_{dhcp_interface}.conf'):
+                if not os.path.exists(f'{dhcp_base}/dhclient_{dhcp_interface}.conf'):
                     raise ConfigError(f"Invalid dhcp-interface on site-to-site peer {peer}")
 
                 address = get_dhcp_address(dhcp_interface)

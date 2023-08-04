@@ -420,7 +420,7 @@ def get_dhcp_router(interface):
     Returns False of no router is found, returns the IP address as string if
     a router is found.
     """
-    lease_file = f'/var/lib/dhcp/dhclient_{interface}.leases'
+    lease_file = directories['isc_dhclient_dir'] + f'/dhclient_{interface}.leases'
     if not os.path.exists(lease_file):
         return None
 
