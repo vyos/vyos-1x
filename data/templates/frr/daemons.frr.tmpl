@@ -41,6 +41,7 @@ pimd_options="  --daemon -A 127.0.0.1"
 ldpd_options="  --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.ldpd is defined %} -M snmp{% endif -%}
 "
+mgmtd_options=" --daemon -A 127.0.0.1"
 nhrpd_options="  --daemon -A 127.0.0.1"
 eigrpd_options="  --daemon -A 127.0.0.1"
 babeld_options="  --daemon -A 127.0.0.1"
