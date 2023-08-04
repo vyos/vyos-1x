@@ -4,7 +4,7 @@
     <children>
       <node name="dhcp-server">
         <properties>
-          <help>clear DHCP server lease</help>
+          <help>Clear DHCP server lease</help>
         </properties>
         <children>
           <tagNode name="lease">
