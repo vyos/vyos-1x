@@ -296,6 +296,7 @@ def _get_raw_client_leases(family='inet', interface=None):
     from time import mktime
     from datetime import datetime
     from vyos.defaults import directories
+    from vyos.utils.network import get_interface_vrf
 
     lease_dir = directories['isc_dhclient_dir']
     lease_files = []
@@ -325,6 +326,10 @@ def _get_raw_client_leases(family='inet', interface=None):
                 k, v = line.split('=')
                 tmp.update({k : v.replace("'", "")})
 
+        if 'interface' in tmp:
+            vrf = get_interface_vrf(tmp['interface'])
+            if vrf: tmp.update({'vrf' : vrf})
+
         lease_data.append(tmp)
 
     return lease_data
@@ -353,6 +358,8 @@ def _get_formatted_client_leases(lease_data, family):
             data_entries.append(["DHCP Server", lease['new_dhcp_server_identifier']])
         if 'new_dhcp_lease_time' in lease:
             data_entries.append(["DHCP Server", lease['new_dhcp_lease_time']])
+        if 'vrf' in lease:
+            data_entries.append(["VRF", lease['vrf']])
         if 'last_update' in lease:
             tmp = strftime(time_string, localtime(int(lease['last_update'])))
             data_entries.append(["Last Update", tmp])
