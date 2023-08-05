@@ -1,17 +1,18 @@
 [Unit]
 Description=WIDE DHCPv6 client on %i
 Documentation=man:dhcp6c(8) man:dhcp6c.conf(5)
-ConditionPathExists=/run/dhcp6c/dhcp6c.%i.conf
-After=vyos-router.service
 StartLimitIntervalSec=0
+After=vyos-router.service
 
 [Service]
-WorkingDirectory=/run/dhcp6c
 Type=forking
+WorkingDirectory=/run/dhcp6c
 PIDFile=/run/dhcp6c/dhcp6c.%i.pid
-ExecStart=/usr/sbin/dhcp6c -D -k /run/dhcp6c/dhcp6c.%i.sock -c /run/dhcp6c/dhcp6c.%i.conf -p /run/dhcp6c/dhcp6c.%i.pid %i
-Restart=on-failure
-RestartSec=20
+ExecStart=/usr/sbin/dhcp6c $DHCP6C_OPTS
+Restart=always
+RestartPreventExitStatus=
+RestartSec=10
+RuntimeDirectoryPreserve=yes
 
 [Install]
 WantedBy=multi-user.target

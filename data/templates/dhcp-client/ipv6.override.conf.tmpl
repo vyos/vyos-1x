@@ -1,0 +1,11 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is defined and vrf is not none else '' %}
+{% set dhcp6c_options = '-D -k /run/dhcp6c/dhcp6c.' ~ ifname ~ '.sock -c /run/dhcp6c/dhcp6c.' ~ ifname ~ '.conf -p /run/dhcp6c/dhcp6c.' ~ ifname ~ '.pid' %}
+
+[Unit]
+ConditionPathExists=/run/dhcp6c/dhcp6c.%i.conf
+
+[Service]
+ExecStart=
+ExecStart={{ vrf_command }}/usr/sbin/dhcp6c {{ dhcp6c_options }} {{ ifname }}
+WorkingDirectory=/run/dhcp6c
+PIDFile=/run/dhcp6c/dhcp6c.%i.pid

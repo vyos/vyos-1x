@@ -1155,7 +1155,7 @@ class Interface(Control):
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
                     self.config = dict_merge(tmp, self.config)
 
-            render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
+            render(systemd_override_file, 'dhcp-client/override.conf.tmpl', self.config)
             render(config_file, 'dhcp-client/ipv4.tmpl', self.config)
 
             # Reload systemd unit definitons as some options are dynamically generated
@@ -1186,11 +1186,15 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{ifname}.service'
 
         if enable and 'disable' not in self.config:
-            render(config_file, 'dhcp-client/ipv6.tmpl',
-                   self.config)
+            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.tmpl', self.config)
+            render(config_file, 'dhcp-client/ipv6.tmpl', self.config)
+
+            # Reload systemd unit definitons as some options are dynamically generated
+            self._cmd('systemctl daemon-reload')
 
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.
