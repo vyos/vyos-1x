@@ -177,24 +177,6 @@ def get_removed_vlans(conf, path, dict):
 
     return dict
 
-def T2665_set_dhcpv6pd_defaults(config_dict):
-    """ Properly configure DHCPv6 default options in the dictionary. If there is
-    no DHCPv6 configured at all, it is safe to remove the entire configuration.
-    """
-    # As this is the same for every interface type it is safe to assume this
-    # for ethernet
-    pd_defaults = defaults(['interfaces', 'ethernet', 'dhcpv6-options', 'pd'])
-
-    # Implant default dictionary for DHCPv6-PD instances
-    if dict_search('dhcpv6_options.pd.length', config_dict):
-        del config_dict['dhcpv6_options']['pd']['length']
-
-    for pd in (dict_search('dhcpv6_options.pd', config_dict) or []):
-        config_dict['dhcpv6_options']['pd'][pd] = dict_merge(pd_defaults,
-            config_dict['dhcpv6_options']['pd'][pd])
-
-    return config_dict
-
 def is_member(conf, interface, intftype=None):
     """
     Checks if passed interface is member of other interface of specified type.
