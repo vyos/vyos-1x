@@ -1247,6 +1247,7 @@ class Interface(Control):
         systemd_override_file = f'/run/systemd/system/dhclient@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhclient@{ifname}.service'
 
+        # Rendered client configuration files require the apsolute config path
         self.config['isc_dhclient_dir'] = directories['isc_dhclient_dir']
 
         # 'up' check is mandatory b/c even if the interface is A/D, as soon as
@@ -1292,13 +1293,20 @@ class Interface(Control):
             raise ValueError()
 
         ifname = self.ifname
-        config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
-        options_file = f'/run/dhcp6c/dhcp6c.{ifname}.options'
+        config_base = directories['dhcp6_client_dir']
+        config_file = f'{config_base}/dhcp6c.{ifname}.conf'
+        systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{ifname}.service'
 
+        # Rendered client configuration files require the apsolute config path
+        self.config['dhcp6_client_dir'] = directories['dhcp6_client_dir']
+
         if enable and 'disable' not in self.config:
-            render(options_file, 'dhcp-client/dhcp6c_daemon-options.j2', self.config)
+            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', self.config)
             render(config_file, 'dhcp-client/ipv6.j2', self.config)
+
+            # Reload systemd unit definitons as some options are dynamically generated
+            self._cmd('systemctl daemon-reload')
 
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.

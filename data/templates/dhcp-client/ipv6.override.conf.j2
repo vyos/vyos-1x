@@ -1,0 +1,12 @@
+{% set vrf_command = 'ip vrf exec ' ~ vrf ~ ' ' if vrf is vyos_defined else '' %}
+{% set no_release = '-n' if dhcpv6_options.no_release is vyos_defined else '' %}
+{% set dhcp6c_options = '-D -k ' ~ dhcp6_client_dir ~ '/dhcp6c.' ~ ifname ~ '.sock -c ' ~ dhcp6_client_dir ~ '/dhcp6c.' ~ ifname ~ '.conf -p ' ~ dhcp6_client_dir ~ '/dhcp6c.' ~ ifname ~ '.pid ' ~ no_release %}
+
+[Unit]
+ConditionPathExists={{ dhcp6_client_dir }}/dhcp6c.%i.conf
+
+[Service]
+ExecStart=
+ExecStart={{ vrf_command }}/usr/sbin/dhcp6c {{ dhcp6c_options }} {{ ifname }}
+WorkingDirectory={{ dhcp6_client_dir }}
+PIDFile={{ dhcp6_client_dir }}/dhcp6c.%i.pid
