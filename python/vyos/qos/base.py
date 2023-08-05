@@ -107,7 +107,8 @@ class QoSBase:
 
             queue_limit = dict_search('queue_limit', config)
             for ii in range(1, 4):
-                tmp = f'tc qdisc replace dev {self._interface} parent {handle:x}:{ii:x} pfifo limit {queue_limit}'
+                tmp = f'tc qdisc replace dev {self._interface} parent {handle:x}:{ii:x} pfifo'
+                if queue_limit: tmp += f' limit {queue_limit}'
                 self._cmd(tmp)
 
         elif queue_type == 'fair-queue':
