@@ -26,6 +26,7 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
+from vyos.defaults import directories
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.file import read_file
@@ -36,6 +37,8 @@ from vyos.utils.process import cmd
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
 from vyos.xml_ref import cli_defined
+
+dhcp6c_base_dir = directories['dhcp6_client_dir']
 
 def is_mirrored_to(interface, mirror_if, qdisc):
     """
@@ -799,13 +802,10 @@ class BasicInterfaceTest:
 
             self.cli_commit()
 
-            dhcp6c_options = read_file(f'/run/dhcp6c/dhcp6c.{interface}.options')
-            self.assertIn(f'-n', dhcp6c_options)
-
             duid_base = 10
             for interface in self._interfaces:
                 duid = '00:01:00:01:27:71:db:f0:00:50:00:00:00:{}'.format(duid_base)
-                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
                 self.assertIn(f'interface {interface} ' + '{', dhcpc6_config)
                 self.assertIn(f'  request domain-name-servers;', dhcpc6_config)
                 self.assertIn(f'  request domain-name;', dhcpc6_config)
@@ -816,8 +816,12 @@ class BasicInterfaceTest:
                 self.assertIn('};', dhcpc6_config)
                 duid_base += 1
 
-            # Check for running process
-            self.assertTrue(process_named_running('dhcp6c'))
+                # Better ask the process about it's commandline in the future
+                pid = process_named_running('dhcp6c', cmdline=interface)
+                self.assertTrue(pid)
+
+                dhcp6c_options = read_file(f'/proc/{pid}/cmdline')
+                self.assertIn('-n', dhcp6c_options)
 
         def test_dhcpv6pd_auto_sla_id(self):
             if not self._test_ipv6_pd:
@@ -853,7 +857,7 @@ class BasicInterfaceTest:
             self.cli_commit()
 
             for interface in self._interfaces:
-                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
 
                 # verify DHCPv6 prefix delegation
                 self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
@@ -871,8 +875,8 @@ class BasicInterfaceTest:
                     # increment interface address
                     address = str(int(address) + 1)
 
-            # Check for running process
-            self.assertTrue(process_named_running('dhcp6c'))
+                # Check for running process
+                self.assertTrue(process_named_running('dhcp6c', cmdline=interface))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
@@ -921,7 +925,7 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 address = '1'
                 sla_id = '1'
-                dhcpc6_config = read_file(f'/run/dhcp6c/dhcp6c.{interface}.conf')
+                dhcpc6_config = read_file(f'{dhcp6c_base_dir}/dhcp6c.{interface}.conf')
 
                 # verify DHCPv6 prefix delegation
                 self.assertIn(f'prefix ::/{prefix_len} infinity;', dhcpc6_config)
@@ -938,7 +942,7 @@ class BasicInterfaceTest:
                     address = str(int(address) + 1)
 
                 # Check for running process
-                self.assertTrue(process_named_running('dhcp6c', interface))
+                self.assertTrue(process_named_running('dhcp6c', cmdline=interface))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
