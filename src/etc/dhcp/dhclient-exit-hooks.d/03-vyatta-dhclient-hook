@@ -28,7 +28,7 @@ if [[ $reason =~ ^(REBOOT6|INIT6|EXPIRE6|RELEASE6|STOP6|INFORM6|BOUND6|REBIND6|D
 fi
 
 if [ "$RUN" = "yes" ]; then
-        LOG=/var/lib/dhcp/dhclient_"$interface"."$proto"lease
+        LOG=/run/dhclient/dhclient_"$interface"."$proto"lease
         echo `date` > $LOG
 
         for i in reason interface new_expiry new_dhcp_lease_time medium \
