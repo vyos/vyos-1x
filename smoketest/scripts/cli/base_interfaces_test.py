@@ -33,12 +33,16 @@ from vyos.utils.file import read_file
 from vyos.utils.dict import dict_search
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_interface_vrf
 from vyos.utils.process import cmd
 from vyos.utils.network import is_intf_addr_assigned
 from vyos.utils.network import is_ipv6_link_local
 from vyos.xml_ref import cli_defined
 
+dhclient_base_dir = directories['isc_dhclient_dir']
+dhclient_process_name = 'dhclient'
 dhcp6c_base_dir = directories['dhcp6_client_dir']
+dhcp6c_process_name = 'dhcp6c'
 
 def is_mirrored_to(interface, mirror_if, qdisc):
     """
@@ -69,6 +73,7 @@ class BasicInterfaceTest:
         _test_ipv6_pd = False
         _test_ipv6_dhcpc6 = False
         _test_mirror = False
+        _test_vrf = False
         _base_path = []
 
         _options = {}
@@ -96,6 +101,7 @@ class BasicInterfaceTest:
             cls._test_ipv6_dhcpc6 = cli_defined(cls._base_path, 'dhcpv6-options')
             cls._test_ipv6_pd = cli_defined(cls._base_path + ['dhcpv6-options'], 'pd')
             cls._test_mtu = cli_defined(cls._base_path, 'mtu')
+            cls._test_vrf = cli_defined(cls._base_path, 'vrf')
 
             # Setup mirror interfaces for SPAN (Switch Port Analyzer)
             for span in cls._mirror_interfaces:
@@ -153,6 +159,99 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 flags = read_file(f'/sys/class/net/{interface}/flags')
                 self.assertEqual(int(flags, 16) & 1, 0)
+
+        def test_dhcp_client_options(self):
+            if not self._test_dhcp or not self._test_vrf:
+                self.skipTest('not supported')
+
+            distance = '100'
+
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'default-route-distance', distance])
+
+            self.cli_commit()
+
+            for interface in self._interfaces:
+                # Check if dhclient process runs
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface)
+                self.assertTrue(dhclient_pid)
+
+                dhclient_config = read_file(f'{dhclient_base_dir}/dhclient_{interface}.conf')
+                self.assertIn('request subnet-mask, broadcast-address, routers, domain-name-servers', dhclient_config)
+                self.assertIn('require subnet-mask;', dhclient_config)
+
+                # and the commandline has the appropriate options
+                cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
+                self.assertIn(f'-e\x00IF_METRIC={distance}', cmdline)
+
+        def test_dhcp_vrf(self):
+            if not self._test_dhcp or not self._test_vrf:
+                self.skipTest('not supported')
+
+            vrf_name = 'purple4'
+            self.cli_set(['vrf', 'name', vrf_name, 'table', '65000'])
+
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
+                self.cli_set(self._base_path + [interface, 'vrf', vrf_name])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf_name)
+
+                # Check if dhclient process runs
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface)
+                self.assertTrue(dhclient_pid)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertIn(str(dhclient_pid), vrf_pids)
+                # and the commandline has the appropriate options
+                cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
+                self.assertIn('-e\x00IF_METRIC=210', cmdline) # 210 is the default value
+
+            self.cli_delete(['vrf', 'name', vrf_name])
+
+        def test_dhcpv6_vrf(self):
+            if not self._test_ipv6_dhcpc6 or not self._test_vrf:
+                self.skipTest('not supported')
+
+            vrf_name = 'purple6'
+            self.cli_set(['vrf', 'name', vrf_name, 'table', '65001'])
+
+            # When interface is configured as admin down, it must be admin down
+            # even when dhcpc starts on the given interface
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'address', 'dhcpv6'])
+                self.cli_set(self._base_path + [interface, 'vrf', vrf_name])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf_name)
+
+                # Check if dhclient process runs
+                tmp = process_named_running(dhcp6c_process_name, cmdline=interface)
+                self.assertTrue(tmp)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertIn(str(tmp), vrf_pids)
+
+            self.cli_delete(['vrf', 'name', vrf_name])
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
@@ -817,7 +916,7 @@ class BasicInterfaceTest:
                 duid_base += 1
 
                 # Better ask the process about it's commandline in the future
-                pid = process_named_running('dhcp6c', cmdline=interface)
+                pid = process_named_running(dhcp6c_process_name, cmdline=interface)
                 self.assertTrue(pid)
 
                 dhcp6c_options = read_file(f'/proc/{pid}/cmdline')
@@ -876,7 +975,7 @@ class BasicInterfaceTest:
                     address = str(int(address) + 1)
 
                 # Check for running process
-                self.assertTrue(process_named_running('dhcp6c', cmdline=interface))
+                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
@@ -942,7 +1041,7 @@ class BasicInterfaceTest:
                     address = str(int(address) + 1)
 
                 # Check for running process
-                self.assertTrue(process_named_running('dhcp6c', cmdline=interface))
+                self.assertTrue(process_named_running(dhcp6c_process_name, cmdline=interface))
 
             for delegatee in delegatees:
                 # we can already cleanup the test delegatee interface here
