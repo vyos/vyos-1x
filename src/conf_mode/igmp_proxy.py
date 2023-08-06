@@ -21,11 +21,9 @@ from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -39,16 +37,9 @@ def get_config(config=None):
         conf = Config()
 
     base = ['protocols', 'igmp-proxy']
-    igmp_proxy = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    if 'interface' in igmp_proxy:
-        # T2665: we must add the tagNode defaults individually until this is
-        # moved to the base class
-        default_values = defaults(base + ['interface'])
-        for interface in igmp_proxy['interface']:
-            igmp_proxy['interface'][interface] = dict_merge(default_values,
-                igmp_proxy['interface'][interface])
-
+    igmp_proxy = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                      get_first_key=True,
+                                      with_defaults=True)
 
     if conf.exists(['protocols', 'igmp']):
         igmp_proxy.update({'igmp_configured': ''})
