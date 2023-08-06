@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os
 import unittest
 import tempfile
@@ -34,13 +33,6 @@ zone = 'vyos.io'
 password = 'paSS_@4ord'
 interface = 'eth0'
 
-
-def get_config_value(key):
-    tmp = cmd(f'sudo cat {DDCLIENT_CONF}')
-    vals = re.findall(r'\n?{}=([.-@_A-Za-z0-9]+),? \\'.format(key), tmp)
-    return vals[0] if vals else ''
-
-
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     def tearDown(self):
         # Check for running process
@@ -54,45 +46,54 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertFalse(os.path.exists(DDCLIENT_PID))
 
     # IPv4 standard DDNS service configuration
-    def test_dyndns_service_standard(self):
+    def test_01_dyndns_service_standard(self):
         ddns = ['address', interface, 'service']
         services = {'cloudflare': {'protocol': 'cloudflare'},
                     'freedns': {'protocol': 'freedns', 'username': 'vyos_user'},
                     'zoneedit': {'protocol': 'zoneedit1', 'username': 'vyos_user'}}
 
         for svc, details in services.items():
+            # Always start with a clean CLI instance
             self.cli_delete(base_path)
+
             self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
-            for opt, value in details.items():
-                self.cli_set(base_path + ddns + [svc, opt, value])
             self.cli_set(base_path + ddns + [svc, 'password', password])
             self.cli_set(base_path + ddns + [svc, 'zone', zone])
+            for opt, value in details.items():
+                self.cli_set(base_path + ddns + [svc, opt, value])
 
             # commit changes
             if details['protocol'] == 'cloudflare':
-                self.cli_commit()
+                pass
             else:
                 # zone option does not work on all protocols, an exception is
                 # raised for all others
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
                 self.cli_delete(base_path + ddns + [svc, 'zone', zone])
-                # commit changes again - now it should work
-                self.cli_commit()
+
+            # commit changes
+            self.cli_commit()
 
             # Check the generating config parameters
-            self.assertEqual(get_config_value('use'), 'if')
-            self.assertEqual(get_config_value('if'), interface)
-            self.assertEqual(get_config_value('password'), password)
+            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            # default value 300 seconds
+            self.assertIn(f'daemon=300', ddclient_conf)
+            self.assertIn(f'use=if', ddclient_conf)
+            self.assertIn(f'if={interface}', ddclient_conf)
+            self.assertIn(f'password={password}', ddclient_conf)
 
             for opt in details.keys():
                 if opt == 'username':
-                    self.assertEqual(get_config_value('login'), details[opt])
+                    login = details[opt]
+                    self.assertIn(f'login={login}', ddclient_conf)
                 else:
-                    self.assertEqual(get_config_value(opt), details[opt])
+                    tmp = details[opt]
+                    self.assertIn(f'{opt}={tmp}', ddclient_conf)
 
     # IPv6 only DDNS service configuration
-    def test_dyndns_service_ipv6(self):
+    def test_02_dyndns_service_ipv6(self):
+        timeout = '60'
         ddns = ['address', interface, 'service', 'dynv6']
         proto = 'dyndns2'
         user = 'none'
@@ -100,6 +101,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         srv = 'ddns.vyos.io'
         ip_version = 'ipv6'
 
+        self.cli_set(base_path + ['timeout', timeout])
         self.cli_set(base_path + ddns + ['ip-version', ip_version])
         self.cli_set(base_path + ddns + ['protocol', proto])
         self.cli_set(base_path + ddns + ['server', srv])
@@ -111,15 +113,17 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check the generating config parameters
-        self.assertEqual(get_config_value('usev6'), 'ifv6')
-        self.assertEqual(get_config_value('ifv6'), interface)
-        self.assertEqual(get_config_value('protocol'), proto)
-        self.assertEqual(get_config_value('server'), srv)
-        self.assertEqual(get_config_value('login'), user)
-        self.assertEqual(get_config_value('password'), password)
+        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        self.assertIn(f'daemon={timeout}', ddclient_conf)
+        self.assertIn(f'usev6=ifv6', ddclient_conf)
+        self.assertIn(f'ifv6={interface}', ddclient_conf)
+        self.assertIn(f'protocol={proto}', ddclient_conf)
+        self.assertIn(f'server={srv}', ddclient_conf)
+        self.assertIn(f'login={user}', ddclient_conf)
+        self.assertIn(f'password={password}', ddclient_conf)
 
     # IPv4+IPv6 dual DDNS service configuration
-    def test_dyndns_service_dual_stack(self):
+    def test_03_dyndns_service_dual_stack(self):
         ddns = ['address', interface, 'service']
         services = {'cloudflare': {'protocol': 'cloudflare', 'zone': 'vyos.io'},
                     'freedns': {'protocol': 'freedns', 'username': 'vyos_user'}}
@@ -127,30 +131,35 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         ip_version = 'both'
 
         for svc, details in services.items():
+            # Always start with a clean CLI instance
             self.cli_delete(base_path)
+
             self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
-            for opt, value in details.items():
-                self.cli_set(base_path + ddns + [svc, opt, value])
             self.cli_set(base_path + ddns + [svc, 'password', password])
             self.cli_set(base_path + ddns + [svc, 'ip-version', ip_version])
+            for opt, value in details.items():
+                self.cli_set(base_path + ddns + [svc, opt, value])
 
             # commit changes
             self.cli_commit()
 
             # Check the generating config parameters
-            self.assertEqual(get_config_value('usev4'), 'ifv4')
-            self.assertEqual(get_config_value('usev6'), 'ifv6')
-            self.assertEqual(get_config_value('ifv4'), interface)
-            self.assertEqual(get_config_value('ifv6'), interface)
-            self.assertEqual(get_config_value('password'), password)
+            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            self.assertIn(f'usev4=ifv4', ddclient_conf)
+            self.assertIn(f'usev6=ifv6', ddclient_conf)
+            self.assertIn(f'ifv4={interface}', ddclient_conf)
+            self.assertIn(f'ifv6={interface}', ddclient_conf)
+            self.assertIn(f'password={password}', ddclient_conf)
 
             for opt in details.keys():
                 if opt == 'username':
-                    self.assertEqual(get_config_value('login'), details[opt])
+                    login = details[opt]
+                    self.assertIn(f'login={login}', ddclient_conf)
                 else:
-                    self.assertEqual(get_config_value(opt), details[opt])
+                    tmp = details[opt]
+                    self.assertIn(f'{opt}={tmp}', ddclient_conf)
 
-    def test_dyndns_rfc2136(self):
+    def test_04_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
         ddns = ['address', interface, 'rfc2136', 'vyos']
         srv = 'ns1.vyos.io'
@@ -170,14 +179,14 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
             # Check some generating config parameters
-            self.assertEqual(get_config_value('use'), 'if')
-            self.assertEqual(get_config_value('if'), interface)
-            self.assertEqual(get_config_value('protocol'), 'nsupdate')
-            self.assertEqual(get_config_value('server'), srv)
-            self.assertEqual(get_config_value('zone'), zone)
-            self.assertEqual(get_config_value('password'), key_file.name)
-            self.assertEqual(get_config_value('ttl'), ttl)
-
+            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            self.assertIn(f'use=if', ddclient_conf)
+            self.assertIn(f'if={interface}', ddclient_conf)
+            self.assertIn(f'protocol=nsupdate', ddclient_conf)
+            self.assertIn(f'server={srv}', ddclient_conf)
+            self.assertIn(f'zone={zone}', ddclient_conf)
+            self.assertIn(f'password={key_file.name}', ddclient_conf)
+            self.assertIn(f'ttl={ttl}', ddclient_conf)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
