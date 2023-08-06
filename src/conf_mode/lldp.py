@@ -20,13 +20,11 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_loopback_addr
 from vyos.version import get_version_data
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos.template import render
 from vyos import ConfigError
 from vyos import airbag
@@ -46,7 +44,9 @@ def get_config(config=None):
         return {}
 
     lldp = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
+                                no_tag_node_value_mangle=True,
+                                get_first_key=True,
+                                with_recursive_defaults=True)
 
     if conf.exists(['service', 'snmp']):
         lldp['system_snmp_enabled'] = ''
@@ -54,27 +54,12 @@ def get_config(config=None):
     version_data = get_version_data()
     lldp['version'] = version_data['version']
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    # location coordinates have a default value
-    if 'interface' in lldp:
-        for interface, interface_config in lldp['interface'].items():
-            default_values = defaults(base + ['interface'])
-            if dict_search('location.coordinate_based', interface_config) == None:
-                # no location specified - no need to add defaults
-                del default_values['location']['coordinate_based']['datum']
-                del default_values['location']['coordinate_based']['altitude']
-
-            # cleanup default_values dictionary from inner to outer
-            # this might feel overkill here, but it does support easy extension
-            # in the future with additional default values
-            if len(default_values['location']['coordinate_based']) == 0:
-                del default_values['location']['coordinate_based']
-            if len(default_values['location']) == 0:
-                del default_values['location']
-
-            lldp['interface'][interface] = dict_merge(default_values,
-                                                   lldp['interface'][interface])
+    # prune location information if not set by user
+    for interface in lldp.get('interface', []):
+        if lldp.from_defaults(['interface', interface, 'location']):
+            del lldp['interface'][interface]['location']
+        elif lldp.from_defaults(['interface', interface, 'location','coordinate_based']):
+            del lldp['interface'][interface]['location']['coordinate_based']
 
     return lldp
 
