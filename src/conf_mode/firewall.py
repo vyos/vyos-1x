@@ -23,7 +23,6 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
@@ -37,7 +36,6 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -125,43 +123,13 @@ def get_config(config=None):
         conf = Config()
     base = ['firewall']
 
-    firewall = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
-
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary retrived.
-    # XXX: T2665: we currently have no nice way for defaults under tag
-    # nodes, thus we load the defaults "by hand"
-    default_values = defaults(base)
-    for tmp in ['name', 'ipv6_name']:
-        if tmp in default_values:
-            del default_values[tmp]
-
-    if 'zone' in default_values:
-        del default_values['zone']
-
-    firewall = dict_merge(default_values, firewall)
-
-    # Merge in defaults for IPv4 ruleset
-    if 'name' in firewall:
-        default_values = defaults(base + ['name'])
-        for name in firewall['name']:
-            firewall['name'][name] = dict_merge(default_values,
-                                                firewall['name'][name])
-
-    # Merge in defaults for IPv6 ruleset
-    if 'ipv6_name' in firewall:
-        default_values = defaults(base + ['ipv6-name'])
-        for ipv6_name in firewall['ipv6_name']:
-            firewall['ipv6_name'][ipv6_name] = dict_merge(default_values,
-                                                          firewall['ipv6_name'][ipv6_name])
-
-    if 'zone' in firewall:
-        default_values = defaults(base + ['zone'])
-        for zone in firewall['zone']:
-            firewall['zone'][zone] = dict_merge(default_values, firewall['zone'][zone])
+    firewall = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                    no_tag_node_value_mangle=True,
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
 
     firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
+
     if firewall['group_resync']:
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)
