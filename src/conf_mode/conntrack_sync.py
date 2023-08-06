@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
 from vyos.utils.dict import dict_search
 from vyos.utils.process import process_named_running
@@ -28,7 +27,6 @@ from vyos.utils.process import run
 from vyos.template import render
 from vyos.template import get_ipv4
 from vyos.utils.network import is_addr_assigned
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -50,11 +48,7 @@ def get_config(config=None):
         return None
 
     conntrack = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    conntrack = dict_merge(default_values, conntrack)
+                                     get_first_key=True, with_defaults=True)
 
     conntrack['hash_size'] = read_file('/sys/module/nf_conntrack/parameters/hashsize')
     conntrack['table_size'] = read_file('/proc/sys/net/netfilter/nf_conntrack_max')
