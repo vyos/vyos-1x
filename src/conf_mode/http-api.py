@@ -24,12 +24,9 @@ from copy import deepcopy
 import vyos.defaults
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
-from vyos.utils.process import cmd
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -72,8 +69,9 @@ def get_config(config=None):
         return None
 
     api_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                          no_tag_node_value_mangle=True,
-                                          get_first_key=True)
+                                    no_tag_node_value_mangle=True,
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
 
     # One needs to 'flatten' the keys dict from the config into the
     # http-api.conf format for api_keys:
@@ -93,8 +91,8 @@ def get_config(config=None):
     if 'api_keys' in api_dict:
         keys_added = True
 
-    if 'graphql' in api_dict:
-        api_dict = dict_merge(defaults(base), api_dict)
+    if api_dict.from_defaults(['graphql']):
+        del api_dict['graphql']
 
     http_api.update(api_dict)
 
