@@ -49,16 +49,9 @@ def get_config(config=None):
     if not conf.exists(base_level):
         return None
 
-    dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'), get_first_key=True)
-
-    if 'address' in dyndns:
-        for address in dyndns['address']:
-            # Apply service specific defaults (svc_type = ['rfc2136', 'service'])
-            for svc_type in dyndns['address'][address]:
-                default_values = defaults(base_level + ['address', svc_type])
-                for svc_cfg in dyndns['address'][address][svc_type]:
-                    dyndns['address'][address][svc_type][svc_cfg] = dict_merge(
-                        default_values, dyndns['address'][address][svc_type][svc_cfg])
+    dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'),
+                                  get_first_key=True, no_tag_node_value_mangle=True,
+                                  with_defaults=True, with_recursive_defaults=True)
 
     dyndns['config_file'] = config_file
     return dyndns
