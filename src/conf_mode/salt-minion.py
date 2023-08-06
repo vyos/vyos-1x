@@ -22,12 +22,10 @@ from urllib3 import PoolManager
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chown
-from vyos.xml import defaults
 from vyos import ConfigError
 
 from vyos import airbag
@@ -55,8 +53,7 @@ def get_config(config=None):
         salt['id'] = gethostname()
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    salt = dict_merge(default_values, salt)
+    salt = conf.merge_defaults(salt, recursive=True)
 
     if not conf.exists(base):
         return None
