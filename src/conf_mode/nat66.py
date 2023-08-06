@@ -23,13 +23,11 @@ from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import cmd
 from vyos.utils.kernel import check_kmod
 from vyos.utils.dict import dict_search
 from vyos.template import is_ipv6
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -59,16 +57,6 @@ def get_config(config=None):
 
     base = ['nat66']
     nat = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    # T2665: we must add the tagNode defaults individually until this is
-    # moved to the base class
-    for direction in ['source', 'destination']:
-        if direction in nat:
-            default_values = defaults(base + [direction, 'rule'])
-            if 'rule' in nat[direction]:
-                for rule in nat[direction]['rule']:
-                    nat[direction]['rule'][rule] = dict_merge(default_values,
-                        nat[direction]['rule'][rule])
 
     # read in current nftable (once) for further processing
     tmp = cmd('nft -j list table ip6 raw')
