@@ -19,10 +19,8 @@ import os
 from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -35,40 +33,9 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['service', 'router-advert']
-    rtradv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_interface_values = defaults(base + ['interface'])
-    # we deal with prefix, route defaults later on
-    if 'prefix' in default_interface_values:
-        del default_interface_values['prefix']
-    if 'route' in default_interface_values:
-        del default_interface_values['route']
-
-    default_prefix_values = defaults(base + ['interface', 'prefix'])
-    default_route_values = defaults(base + ['interface', 'route'])
-
-    if 'interface' in rtradv:
-        for interface in rtradv['interface']:
-            rtradv['interface'][interface] = dict_merge(
-                default_interface_values, rtradv['interface'][interface])
-
-            if 'prefix' in rtradv['interface'][interface]:
-                for prefix in rtradv['interface'][interface]['prefix']:
-                    rtradv['interface'][interface]['prefix'][prefix] = dict_merge(
-                        default_prefix_values, rtradv['interface'][interface]['prefix'][prefix])
-
-            if 'route' in rtradv['interface'][interface]:
-                for route in rtradv['interface'][interface]['route']:
-                    rtradv['interface'][interface]['route'][route] = dict_merge(
-                        default_route_values, rtradv['interface'][interface]['route'][route])
-
-            if 'name_server' in rtradv['interface'][interface]:
-                # always use a list when dealing with nameservers - eases the template generation
-                if isinstance(rtradv['interface'][interface]['name_server'], str):
-                    rtradv['interface'][interface]['name_server'] = [
-                        rtradv['interface'][interface]['name_server']]
+    rtradv = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  get_first_key=True,
+                                  with_recursive_defaults=True)
 
     return rtradv
 
