@@ -18,7 +18,6 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.pki import is_ca_certificate
 from vyos.pki import load_certificate
@@ -28,7 +27,6 @@ from vyos.pki import load_crl
 from vyos.pki import load_dh_parameters
 from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -113,8 +111,7 @@ def get_config(config=None):
 
     # We only merge on the defaults of there is a configuration at all
     if conf.exists(base):
-        default_values = defaults(base)
-        pki = dict_merge(default_values, pki)
+        pki = conf.merge_defaults(pki, recursive=True)
 
     # We need to get the entire system configuration to verify that we are not
     # deleting a certificate that is still referenced somewhere!
