@@ -20,6 +20,7 @@ from sys import exit
 from sys import argv
 
 from vyos.config import Config
+from vyos.config import config_dict_merge
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
@@ -29,7 +30,6 @@ from vyos.configverify import verify_access_list
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -72,10 +72,7 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    # XXX: Note that we can not call defaults(base), as defaults does not work
-    # on an instance of a tag node. As we use the exact same CLI definition for
-    # both the non-vrf and vrf version this is absolutely safe!
-    default_values = defaults(base_path)
+    default_values = conf.get_config_defaults(**ospf.kwargs, recursive=True)
 
     # We have to cleanup the default dict, as default values could enable features
     # which are not explicitly enabled on the CLI. Example: default-information
@@ -84,62 +81,27 @@ def get_config(config=None):
     # need to check this first and probably drop that key.
     if dict_search('default_information.originate', ospf) is None:
         del default_values['default_information']
-    if dict_search('area.area_type.nssa', ospf) is None:
-        del default_values['area']['area_type']['nssa']
     if 'mpls_te' not in ospf:
         del default_values['mpls_te']
     if 'graceful_restart' not in ospf:
         del default_values['graceful_restart']
+    for area_num in default_values.get('area', []):
+        if dict_search(f'area.{area_num}.area_type.nssa', ospf) is None:
+            del default_values['area'][area_num]['area_type']['nssa']
 
-    for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static', 'table']:
-        # table is a tagNode thus we need to clean out all occurances for the
-        # default values and load them in later individually
-        if protocol == 'table':
-            del default_values['redistribute']['table']
-            continue
+    for protocol in ['babel', 'bgp', 'connected', 'isis', 'kernel', 'rip', 'static']:
         if dict_search(f'redistribute.{protocol}', ospf) is None:
             del default_values['redistribute'][protocol]
 
-    # XXX: T2665: we currently have no nice way for defaults under tag nodes,
-    # clean them out and add them manually :(
-    del default_values['neighbor']
-    del default_values['area']['virtual_link']
-    del default_values['interface']
+    for interface in ospf.get('interface', []):
+        # We need to reload the defaults on every pass b/c of
+        # hello-multiplier dependency on dead-interval
+        # If hello-multiplier is set, we need to remove the default from
+        # dead-interval.
+        if 'hello_multiplier' in ospf['interface'][interface]:
+            del default_values['interface'][interface]['dead_interval']
 
-    # merge in remaining default values
-    ospf = dict_merge(default_values, ospf)
-
-    if 'neighbor' in ospf:
-        default_values = defaults(base + ['neighbor'])
-        for neighbor in ospf['neighbor']:
-            ospf['neighbor'][neighbor] = dict_merge(default_values, ospf['neighbor'][neighbor])
-
-    if 'area' in ospf:
-        default_values = defaults(base + ['area', 'virtual-link'])
-        for area, area_config in ospf['area'].items():
-            if 'virtual_link' in area_config:
-                for virtual_link in area_config['virtual_link']:
-                    ospf['area'][area]['virtual_link'][virtual_link] = dict_merge(
-                        default_values, ospf['area'][area]['virtual_link'][virtual_link])
-
-    if 'interface' in ospf:
-        for interface in ospf['interface']:
-            # We need to reload the defaults on every pass b/c of
-            # hello-multiplier dependency on dead-interval
-            default_values = defaults(base + ['interface'])
-            # If hello-multiplier is set, we need to remove the default from
-            # dead-interval.
-            if 'hello_multiplier' in ospf['interface'][interface]:
-                del default_values['dead_interval']
-
-            ospf['interface'][interface] = dict_merge(default_values,
-                ospf['interface'][interface])
-
-    if 'redistribute' in ospf and 'table' in ospf['redistribute']:
-        default_values = defaults(base + ['redistribute', 'table'])
-        for table in ospf['redistribute']['table']:
-            ospf['redistribute']['table'][table] = dict_merge(default_values,
-                ospf['redistribute']['table'][table])
+    ospf = config_dict_merge(default_values, ospf)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
