@@ -19,7 +19,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from netifaces import interfaces
 
-from vyos.validate import is_intf_addr_assigned
+from vyos.utils.network import is_intf_addr_assigned
 
 loopbacks = ['127.0.0.1', '::1']
 

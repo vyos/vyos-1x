@@ -17,8 +17,8 @@ from netifaces import interfaces
 import json
 
 from vyos.ifconfig.interface import Interface
-from vyos.validate import assert_boolean
-from vyos.validate import assert_positive
+from vyos.utils.assertion import assert_boolean
+from vyos.utils.assertion import assert_positive
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 from vyos.configdict import get_vlan_ids

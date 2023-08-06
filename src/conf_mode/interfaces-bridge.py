@@ -30,8 +30,8 @@ from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
-from vyos.validate import has_address_configured
-from vyos.validate import has_vrf_configured
+from vyos.configdict import has_address_configured
+from vyos.configdict import has_vrf_configured
 from vyos.xml import defaults
 
 from vyos.utils.process import cmd

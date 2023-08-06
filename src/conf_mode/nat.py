@@ -33,7 +33,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 

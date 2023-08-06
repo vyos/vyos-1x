@@ -17,7 +17,7 @@
 # Deletes Wireguard peers if they have the same public key as the router has.
 import sys
 from vyos.configtree import ConfigTree
-from vyos.validate import is_wireguard_key_pair
+from vyos.utils.network import is_wireguard_key_pair
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

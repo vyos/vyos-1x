@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.validate import is_afi_configured
+from vyos.utils.network import is_afi_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

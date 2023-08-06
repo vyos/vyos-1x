@@ -36,8 +36,8 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
 from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
-from vyos.validate import has_address_configured
-from vyos.validate import has_vrf_configured
+from vyos.configdict import has_address_configured
+from vyos.configdict import has_vrf_configured
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

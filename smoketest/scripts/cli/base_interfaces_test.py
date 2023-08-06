@@ -34,8 +34,8 @@ from vyos.utils.dict import dict_search
 from vyos.utils.process import process_named_running
 from vyos.utils.network import get_interface_config
 from vyos.utils.process import cmd
-from vyos.validate import is_intf_addr_assigned
-from vyos.validate import is_ipv6_link_local
+from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import is_ipv6_link_local
 from vyos.xml_ref import cli_defined
 
 dhcp6c_base_dir = directories['dhcp6_client_dir']

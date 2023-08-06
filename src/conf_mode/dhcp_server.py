@@ -28,8 +28,8 @@ from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.process import run
-from vyos.validate import is_subnet_connected
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_subnet_connected
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

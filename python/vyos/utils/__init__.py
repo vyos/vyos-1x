@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from vyos.utils import assertion
 from vyos.utils import auth
 from vyos.utils import boot
 from vyos.utils import commit

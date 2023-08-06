@@ -41,14 +41,14 @@ from vyos.utils.network import get_interface_namespace
 from vyos.utils.process import is_systemd_service_active
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.validate import is_intf_addr_assigned
-from vyos.validate import is_ipv6_link_local
-from vyos.validate import assert_boolean
-from vyos.validate import assert_list
-from vyos.validate import assert_mac
-from vyos.validate import assert_mtu
-from vyos.validate import assert_positive
-from vyos.validate import assert_range
+from vyos.utils.network import is_intf_addr_assigned
+from vyos.utils.network import is_ipv6_link_local
+from vyos.utils.assertion import assert_boolean
+from vyos.utils.assertion import assert_list
+from vyos.utils.assertion import assert_mac
+from vyos.utils.assertion import assert_mtu
+from vyos.utils.assertion import assert_positive
+from vyos.utils.assertion import assert_range
 
 from vyos.ifconfig.control import Control
 from vyos.ifconfig.vrrp import VRRP

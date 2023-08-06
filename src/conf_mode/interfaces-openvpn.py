@@ -61,7 +61,7 @@ from vyos.utils.kernel import unload_kmod
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 
 from vyos import ConfigError
 from vyos import airbag

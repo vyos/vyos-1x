@@ -29,7 +29,7 @@ from vyos.template import is_interface
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_vrf
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag

@@ -31,7 +31,7 @@ from vyos.template import is_ipv6
 from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 from vyos.utils.file import read_file
-from vyos.validate import is_ipv6_link_local
+from vyos.utils.network import is_ipv6_link_local
 
 server_ca_root_cert_data = """
 MIIBcTCCARagAwIBAgIUDcAf1oIQV+6WRaW7NPcSnECQ/lUwCgYIKoZIzj0EAwIw

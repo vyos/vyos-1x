@@ -27,7 +27,7 @@ from vyos.utils.process import call
 from vyos.utils.process import run
 from vyos.template import render
 from vyos.template import get_ipv4
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

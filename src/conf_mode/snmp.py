@@ -29,7 +29,7 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
 from vyos.utils.dict import dict_search
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.version import get_version_data
 from vyos.xml import defaults
 from vyos import ConfigError

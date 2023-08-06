@@ -30,7 +30,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

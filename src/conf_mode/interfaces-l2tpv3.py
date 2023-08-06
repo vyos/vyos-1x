@@ -29,7 +29,7 @@ from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import L2TPv3If
 from vyos.utils.kernel import check_kmod
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

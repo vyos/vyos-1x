@@ -25,7 +25,7 @@ from vyos.template import render
 from vyos.template import is_ipv6
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.validate import is_ipv6_link_local
+from vyos.utils.network import is_ipv6_link_local
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

@@ -21,8 +21,8 @@ from sys import exit
 from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import dict_merge
-from vyos.validate import is_addr_assigned
-from vyos.validate import is_loopback_addr
+from vyos.utils.network import is_addr_assigned
+from vyos.utils.network import is_loopback_addr
 from vyos.version import get_version_data
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search

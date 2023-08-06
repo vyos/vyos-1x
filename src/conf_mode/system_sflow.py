@@ -22,7 +22,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag

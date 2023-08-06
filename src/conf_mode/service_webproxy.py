@@ -26,7 +26,7 @@ from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
-from vyos.validate import is_addr_assigned
+from vyos.utils.network import is_addr_assigned
 from vyos.xml import defaults
 from vyos.base import Warning
 from vyos import ConfigError

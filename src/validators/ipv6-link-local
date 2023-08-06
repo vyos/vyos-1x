@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-from vyos.validate import is_ipv6_link_local
+from vyos.utils.network import is_ipv6_link_local
 
 if __name__ == '__main__':
     if len(sys.argv)>1:

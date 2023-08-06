@@ -18,7 +18,7 @@
 
 from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
-from vyos.validate import assert_list
+from vyos.utils.assertion import assert_list
 
 def enable_to_on(value):
     if value == 'enable':

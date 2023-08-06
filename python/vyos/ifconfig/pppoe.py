@@ -14,7 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 from vyos.ifconfig.interface import Interface
-from vyos.validate import assert_range
+from vyos.utils.assertion import assert_range
 from vyos.utils.network import get_interface_config
 
 @Interface.register

@@ -40,7 +40,7 @@ from vyos.template import ip_from_cidr
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
-from vyos.validate import is_ipv6_link_local
+from vyos.utils.network import is_ipv6_link_local
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call

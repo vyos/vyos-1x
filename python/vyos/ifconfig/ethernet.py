@@ -23,7 +23,7 @@ from vyos.ifconfig.interface import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.process import run
-from vyos.validate import assert_list
+from vyos.utils.assertion import assert_list
 
 @Interface.register
 class EthernetIf(Interface):

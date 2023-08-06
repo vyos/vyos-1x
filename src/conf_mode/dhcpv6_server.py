@@ -25,7 +25,7 @@ from vyos.template import render
 from vyos.template import is_ipv6
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search
-from vyos.validate import is_subnet_connected
+from vyos.utils.network import is_subnet_connected
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()

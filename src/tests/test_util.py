@@ -15,8 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from unittest import TestCase
-
-class TestVyOSUtil(TestCase):
+class TestVyOSUtils(TestCase):
     def test_key_mangling(self):
         from vyos.utils.dict import mangle_dict_keys
         data = {"foo-bar": {"baz-quux": None}}

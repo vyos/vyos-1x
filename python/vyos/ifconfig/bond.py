@@ -18,8 +18,8 @@ import os
 from vyos.ifconfig.interface import Interface
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
-from vyos.validate import assert_list
-from vyos.validate import assert_positive
+from vyos.utils.assertion import assert_list
+from vyos.utils.assertion import assert_positive
 
 @Interface.register
 class BondIf(Interface):
