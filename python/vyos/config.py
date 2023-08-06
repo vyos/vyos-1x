@@ -66,17 +66,31 @@ In operational mode, all functions return values from the running config.
 import re
 import json
 from copy import deepcopy
+from typing import Union
 
 import vyos.configtree
-from vyos.xml_ref import multi_to_list, from_source
-from vyos.xml_ref import merge_defaults, relative_defaults
-from vyos.utils.dict import get_sub_dict, mangle_dict_keys
-from vyos.configsource import ConfigSource, ConfigSourceSession
+from vyos.xml_ref import multi_to_list
+from vyos.xml_ref import from_source
+from vyos.xml_ref import ext_dict_merge
+from vyos.xml_ref import relative_defaults
+from vyos.utils.dict import get_sub_dict
+from vyos.utils.dict import mangle_dict_keys
+from vyos.configsource import ConfigSource
+from vyos.configsource import ConfigSourceSession
 
 class ConfigDict(dict):
     _from_defaults = {}
-    def from_defaults(self, path: list[str]):
+    _dict_kwargs = {}
+    def from_defaults(self, path: list[str]) -> bool:
         return from_source(self._from_defaults, path)
+    @property
+    def kwargs(self) -> dict:
+        return self._dict_kwargs
+
+def config_dict_merge(src: dict, dest: Union[dict, ConfigDict]) -> ConfigDict:
+    if not isinstance(dest, ConfigDict):
+        dest = ConfigDict(dest)
+    return ext_dict_merge(src, dest)
 
 class Config(object):
     """
@@ -229,6 +243,13 @@ class Config(object):
 
         return config_dict
 
+    def verify_mangling(self, key_mangling):
+        if not (isinstance(key_mangling, tuple) and \
+                (len(key_mangling) == 2) and \
+                isinstance(key_mangling[0], str) and \
+                isinstance(key_mangling[1], str)):
+            raise ValueError("key_mangling must be a tuple of two strings")
+
     def get_config_dict(self, path=[], effective=False, key_mangling=None,
                         get_first_key=False, no_multi_convert=False,
                         no_tag_node_value_mangle=False,
@@ -243,44 +264,37 @@ class Config(object):
 
         Returns: a dict representation of the config under path
         """
+        kwargs = locals().copy()
+        del kwargs['self']
+        del kwargs['no_multi_convert']
+        del kwargs['with_defaults']
+        del kwargs['with_recursive_defaults']
+
         lpath = self._make_path(path)
         root_dict = self.get_cached_root_dict(effective)
         conf_dict = get_sub_dict(root_dict, lpath, get_first_key=get_first_key)
-
-        if key_mangling is None and no_multi_convert and not (with_defaults or with_recursive_defaults):
-            return deepcopy(conf_dict)
 
         rpath = lpath if get_first_key else lpath[:-1]
 
         if not no_multi_convert:
             conf_dict = multi_to_list(rpath, conf_dict)
 
+        if key_mangling is not None:
+            self.verify_mangling(key_mangling)
+            conf_dict = mangle_dict_keys(conf_dict,
+                                         key_mangling[0], key_mangling[1],
+                                         abs_path=rpath,
+                                         no_tag_node_value_mangle=no_tag_node_value_mangle)
+
         if with_defaults or with_recursive_defaults:
-            conf_dict = ConfigDict(conf_dict)
-            conf_dict = merge_defaults(lpath, conf_dict,
-                                       get_first_key=get_first_key,
-                                       recursive=with_recursive_defaults)
-
-        if key_mangling is None:
-            return conf_dict
-
-        if not (isinstance(key_mangling, tuple) and \
-                (len(key_mangling) == 2) and \
-                isinstance(key_mangling[0], str) and \
-                isinstance(key_mangling[1], str)):
-            raise ValueError("key_mangling must be a tuple of two strings")
-
-        def mangle(obj):
-            return mangle_dict_keys(obj, key_mangling[0], key_mangling[1],
-                                    abs_path=rpath,
-                                    no_tag_node_value_mangle=no_tag_node_value_mangle)
-
-        if isinstance(conf_dict, ConfigDict):
-            from_defaults = mangle(conf_dict._from_defaults)
-            conf_dict = mangle(conf_dict)
-            conf_dict._from_defaults = from_defaults
+            defaults = self.get_config_defaults(**kwargs,
+                                                recursive=with_recursive_defaults)
+            conf_dict = config_dict_merge(defaults, conf_dict)
         else:
-            conf_dict = mangle(conf_dict)
+            conf_dict = ConfigDict(conf_dict)
+
+        # save optional args for a call to get_config_defaults
+        setattr(conf_dict, '_dict_kwargs', kwargs)
 
         return conf_dict
 
@@ -294,20 +308,28 @@ class Config(object):
         defaults = relative_defaults(lpath, conf_dict,
                                      get_first_key=get_first_key,
                                      recursive=recursive)
-        if key_mangling is None:
-            return defaults
 
         rpath = lpath if get_first_key else lpath[:-1]
 
-        if not (isinstance(key_mangling, tuple) and \
-                (len(key_mangling) == 2) and \
-                isinstance(key_mangling[0], str) and \
-                isinstance(key_mangling[1], str)):
-            raise ValueError("key_mangling must be a tuple of two strings")
-
-        defaults = mangle_dict_keys(defaults, key_mangling[0], key_mangling[1], abs_path=rpath, no_tag_node_value_mangle=no_tag_node_value_mangle)
+        if key_mangling is not None:
+            self.verify_mangling(key_mangling)
+            defaults = mangle_dict_keys(defaults,
+                                        key_mangling[0], key_mangling[1],
+                                        abs_path=rpath,
+                                        no_tag_node_value_mangle=no_tag_node_value_mangle)
 
         return defaults
+
+    def merge_defaults(self, config_dict: ConfigDict, recursive=False):
+        if not isinstance(config_dict, ConfigDict):
+            raise TypeError('argument is not of type ConfigDict')
+        if not config_dict.kwargs:
+            raise ValueError('argument missing metadata')
+
+        args = config_dict.kwargs
+        d = self.get_config_defaults(**args, recursive=recursive)
+        config_dict = config_dict_merge(d, config_dict)
+        return config_dict
 
     def is_multi(self, path):
         """

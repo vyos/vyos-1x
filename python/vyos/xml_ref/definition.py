@@ -20,6 +20,45 @@ from typing import Optional, Union, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from vyos.config import ConfigDict
 
+def set_source_recursive(o: Union[dict, str, list], b: bool):
+    d = {}
+    if not isinstance(o, dict):
+        d = {'_source': b}
+    else:
+        for k, v in o.items():
+            d[k] = set_source_recursive(v, b)
+        d |= {'_source': b}
+    return d
+
+def source_dict_merge(src: dict, dest: dict):
+    from copy import deepcopy
+    dst = deepcopy(dest)
+    from_src = {}
+
+    for key, value in src.items():
+        if key not in dst:
+            dst[key] = value
+            from_src[key] = set_source_recursive(value, True)
+        elif isinstance(src[key], dict):
+            dst[key], f = source_dict_merge(src[key], dst[key])
+            f |= {'_source': False}
+            from_src[key] = f
+
+    return dst, from_src
+
+def ext_dict_merge(src: dict, dest: Union[dict, 'ConfigDict']):
+    d, f = source_dict_merge(src, dest)
+    if hasattr(d, '_from_defaults'):
+        setattr(d, '_from_defaults', f)
+    return d
+
+def from_source(d: dict, path: list) -> bool:
+    for key in path:
+        d  = d[key] if key in d else {}
+        if not d or not isinstance(d, dict):
+            return False
+    return d.get('_source', False)
+
 class Xml:
     def __init__(self):
         self.ref = {}
@@ -221,43 +260,6 @@ class Xml:
             return False
         return True
 
-    def _set_source_recursive(self, o: Union[dict, str, list], b: bool):
-        d = {}
-        if not isinstance(o, dict):
-            d = {'_source': b}
-        else:
-            for k, v in o.items():
-                d[k] = self._set_source_recursive(v, b)
-            d |= {'_source': b}
-        return d
-
-    # use local copy of function in module configdict, to avoid circular
-    # import
-    #
-    # extend dict_merge to keep track of keys only in source
-    def _dict_merge(self, source, destination):
-        from copy import deepcopy
-        dest = deepcopy(destination)
-        from_source = {}
-
-        for key, value in source.items():
-            if key not in dest:
-                dest[key] = value
-                from_source[key] = self._set_source_recursive(value, True)
-            elif isinstance(source[key], dict):
-                dest[key], f = self._dict_merge(source[key], dest[key])
-                f |= {'_source': False}
-                from_source[key] = f
-
-        return dest, from_source
-
-    def from_source(self, d: dict, path: list) -> bool:
-        for key in path:
-            d  = d[key] if key in d else {}
-            if not d or not isinstance(d, dict):
-                return False
-        return d.get('_source', False)
-
     def _relative_defaults(self, rpath: list, conf: dict, recursive=False) -> dict:
         res: dict = {}
         res = self.get_defaults(rpath, recursive=recursive,
@@ -298,17 +300,3 @@ class Xml:
                 res = {}
 
         return res
-
-    def merge_defaults(self, path: list, conf: Union[dict, 'ConfigDict'],
-                       get_first_key=False, recursive=False) -> dict:
-        """Return config dict with defaults non-destructively merged
-
-        This merges non-recursive defaults relative to the config dict.
-        """
-        d = self.relative_defaults(path, conf, get_first_key=get_first_key,
-                                   recursive=recursive)
-        d, f = self._dict_merge(d, conf)
-        d = type(conf)(d)
-        if hasattr(d, '_from_defaults'):
-            setattr(d, '_from_defaults', f)
-        return d
