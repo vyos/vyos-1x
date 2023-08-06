@@ -23,14 +23,12 @@ from netaddr import IPRange
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.dict import dict_search
 from vyos.utils.process import call
 from vyos.utils.process import run
 from vyos.utils.network import is_subnet_connected
 from vyos.utils.network import is_addr_assigned
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -109,19 +107,15 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dhcp = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
-    # T2665: defaults include lease time per TAG node which need to be added to
-    # individual subnet definitions
-    default_values = defaults(base + ['shared-network-name', 'subnet'])
+    dhcp = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                no_tag_node_value_mangle=True,
+                                get_first_key=True,
+                                with_recursive_defaults=True)
 
     if 'shared_network_name' in dhcp:
         for network, network_config in dhcp['shared_network_name'].items():
             if 'subnet' in network_config:
                 for subnet, subnet_config in network_config['subnet'].items():
-                    if 'lease' not in subnet_config:
-                        dhcp['shared_network_name'][network]['subnet'][subnet] = dict_merge(
-                            default_values, dhcp['shared_network_name'][network]['subnet'][subnet])
-
                     # If exclude IP addresses are defined we need to slice them out of
                     # the defined ranges
                     if {'exclude', 'range'} <= set(subnet_config):
