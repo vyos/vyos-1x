@@ -47,9 +47,8 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             tmp = os.environ['TEST_ETH'].split()
             cls._interfaces = tmp
         else:
-            for tmp in Section.interfaces('ethernet'):
-                if not '.' in tmp:
-                    cls._interfaces.append(tmp)
+            for tmp in Section.interfaces('ethernet', vlan=False):
+                cls._interfaces.append(tmp)
         # call base-classes classmethod
         super(VRFTest, cls).setUpClass()
 

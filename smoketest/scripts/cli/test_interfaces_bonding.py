@@ -37,9 +37,8 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
         if 'TEST_ETH' in os.environ:
             cls._members = os.environ['TEST_ETH'].split()
         else:
-            for tmp in Section.interfaces('ethernet'):
-                if not '.' in tmp:
-                    cls._members.append(tmp)
+            for tmp in Section.interfaces('ethernet', vlan=False):
+                cls._members.append(tmp)
 
         cls._options = {'bond0' : []}
         for member in cls._members:
