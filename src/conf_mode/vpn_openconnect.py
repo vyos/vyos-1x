@@ -19,7 +19,6 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
@@ -28,7 +27,6 @@ from vyos.utils.network import check_port_availability
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos import ConfigError
 from passlib.hash import sha512_crypt
 from time import sleep
@@ -47,66 +45,6 @@ radius_servers = cfg_dir + '/radius_servers'
 def get_hash(password):
     return sha512_crypt.hash(password)
 
-
-
-def _default_dict_cleanup(origin: dict, default_values: dict) -> dict:
-    """
-    https://vyos.dev/T2665
-    Clear unnecessary key values in merged config by dict_merge function
-    :param origin: config
-    :type origin: dict
-    :param default_values: default values
-    :type default_values: dict
-    :return: merged dict
-    :rtype: dict
-    """
-    if 'mode' in origin["authentication"] and "local" in \
-            origin["authentication"]["mode"]:
-        del origin['authentication']['local_users']['username']['otp']
-        if not origin["authentication"]["local_users"]["username"]:
-            raise ConfigError(
-                'Openconnect authentication mode local requires at least one user')
-        default_ocserv_usr_values = \
-        default_values['authentication']['local_users']['username']['otp']
-        for user, params in origin['authentication']['local_users'][
-            'username'].items():
-            # Not every configuration requires OTP settings
-            if origin['authentication']['local_users']['username'][user].get(
-                    'otp'):
-                origin['authentication']['local_users']['username'][user][
-                    'otp'] = dict_merge(default_ocserv_usr_values,
-                                        origin['authentication'][
-                                            'local_users']['username'][user][
-                                            'otp'])
-
-    if 'mode' in origin["authentication"] and "radius" in \
-            origin["authentication"]["mode"]:
-        del origin['authentication']['radius']['server']['port']
-        if not origin["authentication"]['radius']['server']:
-            raise ConfigError(
-                'Openconnect authentication mode radius requires at least one RADIUS server')
-        default_values_radius_port = \
-        default_values['authentication']['radius']['server']['port']
-        for server, params in origin['authentication']['radius'][
-            'server'].items():
-            if 'port' not in params:
-                params['port'] = default_values_radius_port
-
-    if 'mode' in origin["accounting"] and "radius" in \
-            origin["accounting"]["mode"]:
-        del origin['accounting']['radius']['server']['port']
-        if not origin["accounting"]['radius']['server']:
-            raise ConfigError(
-                'Openconnect accounting mode radius requires at least one RADIUS server')
-        default_values_radius_port = \
-            default_values['accounting']['radius']['server']['port']
-        for server, params in origin['accounting']['radius'][
-            'server'].items():
-            if 'port' not in params:
-                params['port'] = default_values_radius_port
-    return origin
-
-
 def get_config(config=None):
     if config:
         conf = config
@@ -116,16 +54,14 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    ocserv = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    ocserv = dict_merge(default_values, ocserv)
-    # workaround a "know limitation" - https://vyos.dev/T2665
-    ocserv = _default_dict_cleanup(ocserv, default_values)
+    ocserv = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  get_first_key=True,
+                                  with_recursive_defaults=True)
+
     if ocserv:
         ocserv['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
+                                             no_tag_node_value_mangle=True,
+                                             get_first_key=True)
 
     return ocserv
 
@@ -142,6 +78,8 @@ def verify(ocserv):
     # Check accounting
     if "accounting" in ocserv:
         if "mode" in ocserv["accounting"] and "radius" in ocserv["accounting"]["mode"]:
+            if not origin["accounting"]['radius']['server']:
+                raise ConfigError('Openconnect accounting mode radius requires at least one RADIUS server')
             if "authentication" not in ocserv or "mode" not in ocserv["authentication"]:
                 raise ConfigError('Accounting depends on OpenConnect authentication configuration')
             elif "radius" not in ocserv["authentication"]["mode"]:
@@ -150,9 +88,13 @@ def verify(ocserv):
     # Check authentication
     if "authentication" in ocserv:
         if "mode" in ocserv["authentication"]:
-            if "local" in ocserv["authentication"]["mode"]:
-                if "radius" in ocserv["authentication"]["mode"]:
+            if ("local" in ocserv["authentication"]["mode"] and
+                "radius" in ocserv["authentication"]["mode"]):
                     raise ConfigError('OpenConnect authentication modes are mutually-exclusive, remove either local or radius from your configuration')
+            if "radius" in ocserv["authentication"]["mode"]:
+                if not ocserv["authentication"]['radius']['server']:
+                    raise ConfigError('Openconnect authentication mode radius requires at least one RADIUS server')
+            if "local" in ocserv["authentication"]["mode"]:
                 if not ocserv["authentication"]["local_users"]:
                     raise ConfigError('openconnect mode local required at least one user')
                 if not ocserv["authentication"]["local_users"]["username"]:
