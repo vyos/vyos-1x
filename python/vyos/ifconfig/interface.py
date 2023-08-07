@@ -1275,7 +1275,6 @@ class Interface(Control):
             # running, but it should be running (e.g. on system startup)
             if 'dhcp_options_changed' in self.config or not is_systemd_service_active(systemd_service):
                 return self._cmd(f'systemctl restart {systemd_service}')
-            return None
         else:
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
@@ -1284,6 +1283,7 @@ class Interface(Control):
                 if os.path.isfile(file):
                     os.remove(file)
 
+        return None
 
     def set_dhcpv6(self, enable):
         """
@@ -1316,6 +1316,8 @@ class Interface(Control):
                 self._cmd(f'systemctl stop {systemd_service}')
             if os.path.isfile(config_file):
                 os.remove(config_file)
+
+        return None
 
     def set_mirror_redirect(self):
         # Please refer to the document for details
