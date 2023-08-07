@@ -29,4 +29,14 @@
       </node>
     </children>
   </node>
+  <node name="reset">
+    <children>
+      <leafNode name="rpki">
+        <properties>
+          <help>Reset RPKI</help>
+        </properties>
+        <command>vtysh -c "rpki reset"</command>
+      </leafNode>
+    </children>
+  </node>
 </interfaceDefinition>
