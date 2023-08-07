@@ -19,12 +19,10 @@ import re
 from pathlib import Path
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.utils.process import call
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -45,16 +43,12 @@ def get_config(config=None):
     if 'device' not in console:
         return console
 
-    # convert CLI values to system values
-    default_values = defaults(base + ['device'])
     for device, device_config in console['device'].items():
         if 'speed' not in device_config and device.startswith('hvc'):
             # XEN console has a different default console speed
             console['device'][device]['speed'] = 38400
-        else:
-            # Merge in XML defaults - the proper way to do it
-            console['device'][device] = dict_merge(default_values,
-                                                   console['device'][device])
+
+    console = conf.merge_defaults(console, recursive=True)
 
     return console
 
