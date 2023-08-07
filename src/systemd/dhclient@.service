@@ -7,7 +7,7 @@ After=vyos-router.service
 [Service]
 Type=exec
 ExecStart=/sbin/dhclient -4 -d $DHCLIENT_OPTS
-ExecStop=/sbin/dhclient -4 -d $DHCLIENT_OPTS -r
+ExecStop=/sbin/dhclient -4 -r $DHCLIENT_OPTS
 Restart=always
 RestartPreventExitStatus=
 RestartSec=10
