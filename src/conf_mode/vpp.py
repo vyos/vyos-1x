@@ -22,7 +22,6 @@ from re import search as re_search, MULTILINE as re_M
 
 from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.ifconfig import Section
 from vyos.utils.boot import boot_configuration_complete
@@ -31,7 +30,6 @@ from vyos.utils.process import rc_cmd
 from vyos.utils.system import sysctl_read
 from vyos.utils.system import sysctl_apply
 from vyos.template import render
-from vyos.xml import defaults
 
 from vyos import ConfigError
 from vyos import airbag
@@ -94,28 +92,18 @@ def get_config(config=None):
     if not conf.exists(base):
         return {'removed_ifaces': removed_ifaces}
 
-    config = conf.get_config_dict(base,
+    config = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                  no_tag_node_value_mangle=True,
                                   get_first_key=True,
-                                  key_mangling=('-', '_'),
-                                  no_tag_node_value_mangle=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    if 'interface' in default_values:
-        del default_values['interface']
-    config = dict_merge(default_values, config)
+                                  with_recursive_defaults=True)
 
     if 'interface' in config:
         for iface, iface_config in config['interface'].items():
-            default_values_iface = defaults(base + ['interface'])
-            config['interface'][iface] = dict_merge(default_values_iface, config['interface'][iface])
             # add an interface to a list of interfaces that need
             # to be reinitialized after the commit
             set_dependents('ethernet', conf, iface)
 
-        # Get PCI address auto
-        for iface, iface_config in config['interface'].items():
+            # Get PCI address auto
             if iface_config['pci'] == 'auto':
                 config['interface'][iface]['pci'] = _get_pci_address_by_interface(iface)
 
