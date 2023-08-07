@@ -24,7 +24,6 @@ from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.system import sysctl_write
 from vyos.utils.file import write_file
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -37,12 +36,9 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'ipv6']
 
-    opt = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    opt = dict_merge(default_values, opt)
+    opt = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True,
+                               with_recursive_defaults=True)
 
     # When working with FRR we need to know the corresponding address-family
     opt['afi'] = 'ipv6'
