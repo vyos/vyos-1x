@@ -19,12 +19,10 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.utils.process import call
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -50,43 +48,9 @@ def get_config(config=None):
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: syslog.update({'restart_required': {}})
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # XXX: some syslog default values can not be merged here (originating from
-    # a tagNode - remove and add them later per individual tagNode instance
-    if 'console' in default_values:
-        del default_values['console']
-    for entity in ['global', 'user', 'host', 'file']:
-        if entity in default_values:
-            del default_values[entity]
-
-    syslog = dict_merge(default_values, syslog)
-
-    # XXX: add defaults for "console" tree
-    if 'console' in syslog and 'facility' in syslog['console']:
-        default_values = defaults(base + ['console', 'facility'])
-        for facility in syslog['console']['facility']:
-            syslog['console']['facility'][facility] = dict_merge(default_values,
-                                                                syslog['console']['facility'][facility])
-
-    # XXX: add defaults for "host" tree
-    for syslog_type in ['host', 'user', 'file']:
-        # Bail out early if there is nothing to do
-        if syslog_type not in syslog:
-            continue
-
-        default_values_host = defaults(base + [syslog_type])
-        if 'facility' in default_values_host:
-            del default_values_host['facility']
-
-        for tmp, tmp_config in syslog[syslog_type].items():
-            syslog[syslog_type][tmp] = dict_merge(default_values_host, syslog[syslog_type][tmp])
-            if 'facility' in tmp_config:
-                default_values_facility = defaults(base + [syslog_type, 'facility'])
-                for facility in tmp_config['facility']:
-                    syslog[syslog_type][tmp]['facility'][facility] = dict_merge(default_values_facility,
-                        syslog[syslog_type][tmp]['facility'][facility])
+    syslog = conf.merge_defaults(syslog, recursive=True)
+    if syslog.from_defaults(['global']):
+        del syslog['global']
 
     return syslog
 
