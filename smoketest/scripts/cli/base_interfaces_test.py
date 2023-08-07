@@ -146,8 +146,6 @@ class BasicInterfaceTest:
                 for option in self._options.get(interface, []):
                     self.cli_set(self._base_path + [interface] + option.split())
 
-                self.cli_set(self._base_path + [interface, 'disable'])
-
                 # Also enable DHCP (ISC DHCP always places interface in admin up
                 # state so we check that we do not start DHCP client.
                 # https://vyos.dev/T2767
