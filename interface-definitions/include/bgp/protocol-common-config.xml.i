@@ -1123,25 +1123,26 @@
             <valueless/>
           </properties>
         </leafNode>
-        <node name="med">
+        <leafNode name="med">
           <properties>
             <help>MED attribute comparison parameters</help>
+            <completionHelp>
+              <list>confed missing-as-worst</list>
+            </completionHelp>
+            <valueHelp>
+              <format>confed</format>
+              <description>Compare MEDs among confederation paths</description>
+            </valueHelp>
+            <valueHelp>
+              <format>missing-as-worst</format>
+              <description>Treat missing route as a MED as the least preferred one</description>
+            </valueHelp>
+            <constraint>
+              <regex>(confed|missing-as-worst)</regex>
+            </constraint>
+            <multi/>
           </properties>
-          <children>
-            <leafNode name="confed">
-              <properties>
-                <help>Compare MEDs among confederation paths</help>
-                <valueless/>
-              </properties>
-            </leafNode>
-            <leafNode name="missing-as-worst">
-              <properties>
-                <help>Treat missing route as a MED as the least preferred one</help>
-                <valueless/>
-              </properties>
-            </leafNode>
-          </children>
-        </node>
+        </leafNode>
         <node name="peer-type">
           <properties>
             <help>Peer type</help>
