@@ -20,14 +20,13 @@ from shutil import rmtree
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.config import config_dict_merge
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
 from vyos.utils.dict import dict_search
 from vyos.utils.file import write_file
 from vyos.utils.network import is_addr_assigned
-from vyos.xml import defaults
 from vyos.base import Warning
 from vyos import ConfigError
 from vyos import airbag
@@ -125,7 +124,8 @@ def get_config(config=None):
                                  get_first_key=True)
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
+    default_values = conf.get_config_defaults(**proxy.kwargs,
+                                              recursive=True)
 
     # if no authentication method is supplied, no need to add defaults
     if not dict_search('authentication.method', proxy):
@@ -138,16 +138,7 @@ def get_config(config=None):
         proxy['squidguard_conf'] = squidguard_config_file
         proxy['squidguard_db_dir'] = squidguard_db_dir
 
-    # XXX: T2665: blend in proper cache-peer default values later
-    default_values.pop('cache_peer')
-    proxy = dict_merge(default_values, proxy)
-
-    # XXX: T2665: blend in proper cache-peer default values
-    if 'cache_peer' in proxy:
-        default_values = defaults(base + ['cache-peer'])
-        for peer in proxy['cache_peer']:
-            proxy['cache_peer'][peer] = dict_merge(default_values,
-                                                   proxy['cache_peer'][peer])
+    proxy = config_dict_merge(default_values, proxy)
 
     return proxy
 
