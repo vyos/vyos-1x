@@ -21,12 +21,10 @@ from syslog import syslog
 from syslog import LOG_INFO
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.utils.process import call
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -57,8 +55,8 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    ssh = dict_merge(default_values, ssh)
+    ssh = conf.merge_defaults(ssh, recursive=True)
+
     # pass config file path - used in override template
     ssh['config_file'] = config_file
 
