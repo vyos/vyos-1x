@@ -24,14 +24,12 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.process import call
 from vyos.utils.permission import chmod_755
 from vyos.utils.network import is_addr_assigned
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -48,11 +46,9 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    tftpd = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    tftpd = dict_merge(default_values, tftpd)
+    tftpd = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                 get_first_key=True,
+                                 with_recursive_defaults=True)
     return tftpd
 
 def verify(tftpd):
