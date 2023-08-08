@@ -1,0 +1,14 @@
+[Unit]
+After=
+After=vyos-router.service
+ConditionPathExists=
+ConditionPathExists=/run/zabbix/zabbix-agent2.conf
+
+[Service]
+EnvironmentFile=
+ExecStart=
+ExecStart=/usr/sbin/zabbix_agent2 --config /run/zabbix/zabbix-agent2.conf --foreground
+WorkingDirectory=
+WorkingDirectory=/run/zabbix
+Restart=always
+RestartSec=10

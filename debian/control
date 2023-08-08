@@ -191,6 +191,7 @@ Depends:
   wireguard-tools,
   wireless-regdb,
   wpasupplicant (>= 0.6.7),
+  zabbix-agent2,
   ndppd,
   miniupnpd-nftables
 Description: VyOS configuration scripts and data
