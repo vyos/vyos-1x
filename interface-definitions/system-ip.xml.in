@@ -48,6 +48,64 @@
               </leafNode>
             </children>
           </node>
+          <node name="tcp">
+            <properties>
+              <help>IPv4 TCP parameters</help>
+            </properties>
+            <children>
+              <node name="mss">
+                <properties>
+                  <help>IPv4 TCP MSS probing options</help>
+                </properties>
+                <children>
+                  <leafNode name="probing">
+                    <properties>
+                      <help>Attempt to lower the MSS if TCP connections fail to establish</help>
+                      <completionHelp>
+                        <list>on-icmp-black-hole force</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>on-icmp-black-hole</format>
+                        <description>Attempt TCP MSS probing when an ICMP black hole is detected</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>force</format>
+                      <description>Attempt TCP MSS probing by default</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(on-icmp-black-hole|force)</regex>
+                      </constraint>
+                      <constraintErrorMessage>Must be on-icmp-black-hole or force</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="base">
+                    <properties>
+                      <help>Base MSS to start probing from (applicable to "probing force")</help>
+                      <valueHelp>
+                        <format>u32:48-1460</format>
+                        <description>Base MSS value for probing (default: 1024)</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 48-1460"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="floor">
+                    <properties>
+                      <help>Minimum MSS to stop probing at (default: 48)</help>
+                      <valueHelp>
+                        <format>u32:48-1460</format>
+                        <description>Minimum MSS value to probe</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 48-1460"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </node>
           #include <include/system-ip-protocol.xml.i>
         </children>
       </node>
