@@ -252,5 +252,41 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
 
+    def test_nat_balance(self):
+        ifname = 'eth0'
+        member_1 = '198.51.100.1'
+        weight_1 = '10'
+        member_2 = '198.51.100.2'
+        weight_2 = '90'
+        member_3 = '192.0.2.1'
+        weight_3 = '35'
+        member_4 = '192.0.2.2'
+        weight_4 = '65'
+        dst_port = '443'
+
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', ifname])
+        self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
+        self.cli_set(dst_path + ['rule', '1', 'destination', 'port', dst_port])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'source-address'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'source-port'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'destination-address'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'destination-port'])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_1, 'weight', weight_1])
+        self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_2, 'weight', weight_2])
+
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', ifname])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'hash', 'random'])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_3, 'weight', weight_3])
+        self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_4, 'weight', weight_4])
+
+        self.cli_commit()
+
+        nftables_search = [
+            [f'iifname "{ifname}"', f'tcp dport {dst_port}', f'dnat to jhash ip saddr . tcp sport . ip daddr . tcp dport mod 100 map', f'0-9 : {member_1}, 10-99 : {member_2}'],
+            [f'oifname "{ifname}"', f'snat to numgen random mod 100 map', f'0-34 : {member_3}, 35-99 : {member_4}']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_nat')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

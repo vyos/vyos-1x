@@ -94,6 +94,39 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         if options:
             translation_str += f' {",".join(options)}'
 
+        if 'backend' in rule_conf['load_balance']:
+            hash_input_items = []
+            current_prob = 0
+            nat_map = []
+
+            for trans_addr, addr in rule_conf['load_balance']['backend'].items():
+                item_prob = int(addr['weight'])
+                upper_limit = current_prob + item_prob - 1
+                hash_val = str(current_prob) + '-' + str(upper_limit)
+                element = hash_val + " : " + trans_addr
+                nat_map.append(element)
+                current_prob = current_prob + item_prob
+
+            elements = ' , '.join(nat_map)
+
+            if 'hash' in rule_conf['load_balance'] and 'random' in rule_conf['load_balance']['hash']:
+                translation_str += ' numgen random mod 100 map ' + '{ ' + f'{elements}' + ' }'
+            else:
+                for input_param in rule_conf['load_balance']['hash']:
+                    if input_param == 'source-address':
+                        param = 'ip saddr'
+                    elif input_param == 'destination-address':
+                        param = 'ip daddr'
+                    elif input_param == 'source-port':
+                        prot = rule_conf['protocol']
+                        param = f'{prot} sport'
+                    elif input_param == 'destination-port':
+                        prot = rule_conf['protocol']
+                        param = f'{prot} dport'
+                    hash_input_items.append(param)
+                hash_input = ' . '.join(hash_input_items)
+                translation_str += f' jhash ' + f'{hash_input}' + ' mod 100 map ' + '{ ' + f'{elements}' + ' }'
+
     for target in ['source', 'destination']:
         if target not in rule_conf:
             continue
