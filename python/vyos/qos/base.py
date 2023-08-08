@@ -298,6 +298,27 @@ class QoSBase:
                                 filter_cmd += f' flowid {self._parent:x}:{cls:x}'
                                 self._cmd(filter_cmd)
 
+                    if any(tmp in ['exceed', 'bandwidth', 'burst'] for tmp in cls_config):
+                        filter_cmd += f' action police'
+
+                        if 'exceed' in cls_config:
+                            action = cls_config['exceed']
+                            filter_cmd += f' conform-exceed {action}'
+                        if 'not_exceed' in cls_config:
+                            action = cls_config['not_exceed']
+                            filter_cmd += f'/{action}'
+
+                        if 'bandwidth' in cls_config:
+                            rate = self._rate_convert(cls_config['bandwidth'])
+                            filter_cmd += f' rate {rate}'
+
+                        if 'burst' in cls_config:
+                            burst = cls_config['burst']
+                            filter_cmd += f' burst {burst}'
+                        cls = int(cls)
+                        filter_cmd += f' flowid {self._parent:x}:{cls:x}'
+                        self._cmd(filter_cmd)
+
                 else:
 
                     filter_cmd += ' basic'
