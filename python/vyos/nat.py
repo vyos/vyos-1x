@@ -94,7 +94,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         if options:
             translation_str += f' {",".join(options)}'
 
-        if 'backend' in rule_conf['load_balance']:
+        if not ipv6 and 'backend' in rule_conf['load_balance']:
             hash_input_items = []
             current_prob = 0
             nat_map = []
