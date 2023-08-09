@@ -27,10 +27,14 @@ def load_reference(cache=[]):
 
     try:
         from vyos.xml_ref.cache import reference
-        xml.define(reference)
-        cache.append(xml)
     except Exception:
         raise ImportError('no xml reference cache !!')
+
+    if not reference:
+        raise ValueError('empty xml reference cache !!')
+
+    xml.define(reference)
+    cache.append(xml)
 
     return xml
 
