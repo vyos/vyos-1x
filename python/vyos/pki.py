@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -62,6 +62,18 @@ private_format_map = {
     'PKCS8': serialization.PrivateFormat.PKCS8,
     'OpenSSH': serialization.PrivateFormat.OpenSSH
 }
+
+hash_map = {
+    'sha256': hashes.SHA256,
+    'sha384': hashes.SHA384,
+    'sha512': hashes.SHA512,
+}
+
+def get_certificate_fingerprint(cert, hash):
+    hash_algorithm = hash_map[hash]()
+    fp = cert.fingerprint(hash_algorithm)
+
+    return fp.hex(':').upper()
 
 def encode_certificate(cert):
     return cert.public_bytes(encoding=serialization.Encoding.PEM).decode('utf-8')

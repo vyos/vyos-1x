@@ -535,6 +535,15 @@
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4" --pem</command>
               </leafNode>
+              <tagNode name="fingerprint">
+                <properties>
+                  <help>Show x509 certificate fingerprint</help>
+                  <completionHelp>
+                    <list>sha256 sha384 sha512</list>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/pki.py --action show --certificate "$4" --fingerprint "$6"</command>
+              </tagNode>
             </children>
           </tagNode>
           <leafNode name="crl">
