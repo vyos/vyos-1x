@@ -19,10 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -44,11 +42,9 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    sla = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    sla = dict_merge(default_values, sla)
+    sla = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True,
+                               with_recursive_defaults=True)
 
     # Ignore default XML values if config doesn't exists
     # Delete key from dict

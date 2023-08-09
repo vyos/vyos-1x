@@ -21,14 +21,12 @@ from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_source_interface
 from vyos.template import render
 from vyos.utils.process import cmd
 from vyos.utils.process import is_systemd_service_running
 from vyos.utils.network import is_addr_assigned
 from vyos.utils.network import is_intf_addr_assigned
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -48,12 +46,9 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['system', 'option']
-    options = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    options = dict_merge(default_values, options)
+    options = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                   get_first_key=True,
+                                   with_recursive_defaults=True)
 
     return options
 

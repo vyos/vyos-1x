@@ -31,7 +31,6 @@ from vyos.utils.permission import chmod_755
 from vyos.utils.dict import dict_search
 from vyos.utils.network import is_addr_assigned
 from vyos.version import get_version_data
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -70,26 +69,9 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-
-    # We can not merge defaults for tagNodes - those need to be blended in
-    # per tagNode instance
-    if 'listen_address' in default_values:
-        del default_values['listen_address']
-    if 'community' in default_values:
-        del default_values['community']
-    if 'trap_target' in default_values:
-        del default_values['trap_target']
-    if 'v3' in default_values:
-        del default_values['v3']
-    snmp = dict_merge(default_values, snmp)
+    snmp = conf.merge_defaults(snmp, recursive=True)
 
     if 'listen_address' in snmp:
-        default_values = defaults(base + ['listen-address'])
-        for address in snmp['listen_address']:
-            snmp['listen_address'][address] = dict_merge(
-                default_values, snmp['listen_address'][address])
-
         # Always listen on localhost if an explicit address has been configured
         # This is a safety measure to not end up with invalid listen addresses
         # that are not configured on this system. See https://vyos.dev/T850
@@ -100,41 +82,6 @@ def get_config(config=None):
         if '::1' not in snmp['listen_address']:
             tmp = {'::1': {'port': '161'}}
             snmp['listen_address'] = dict_merge(tmp, snmp['listen_address'])
-
-    if 'community' in snmp:
-        default_values = defaults(base + ['community'])
-        if 'network' in default_values:
-            # convert multiple default networks to list
-            default_values['network'] = default_values['network'].split()
-        for community in snmp['community']:
-            snmp['community'][community] = dict_merge(
-                default_values, snmp['community'][community])
-
-    if 'trap_target' in snmp:
-        default_values = defaults(base + ['trap-target'])
-        for trap in snmp['trap_target']:
-            snmp['trap_target'][trap] = dict_merge(
-                default_values, snmp['trap_target'][trap])
-
-    if 'v3' in snmp:
-        default_values = defaults(base + ['v3'])
-        # tagNodes need to be merged in individually later on
-        for tmp in ['user', 'group', 'trap_target']:
-            del default_values[tmp]
-        snmp['v3'] = dict_merge(default_values, snmp['v3'])
-
-        for user_group in ['user', 'group']:
-            if user_group in snmp['v3']:
-                default_values = defaults(base + ['v3', user_group])
-                for tmp in snmp['v3'][user_group]:
-                    snmp['v3'][user_group][tmp] = dict_merge(
-                        default_values, snmp['v3'][user_group][tmp])
-
-            if 'trap_target' in snmp['v3']:
-                default_values = defaults(base + ['v3', 'trap-target'])
-                for trap in snmp['v3']['trap_target']:
-                    snmp['v3']['trap_target'][trap] = dict_merge(
-                        default_values, snmp['v3']['trap_target'][trap])
 
     return snmp
 

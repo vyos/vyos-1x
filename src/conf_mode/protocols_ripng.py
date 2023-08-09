@@ -24,7 +24,6 @@ from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos.template import render_to_string
 from vyos import ConfigError
 from vyos import frr
@@ -45,9 +44,7 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # merge in remaining default values
-    ripng = dict_merge(default_values, ripng)
+    ripng = conf.merge_defaults(ripng, recursive=True)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().

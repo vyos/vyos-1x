@@ -17,12 +17,10 @@
 import os
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
 from vyos.template import is_ipv6
 from vyos.template import render_to_string
 from vyos.utils.network import is_ipv6_link_local
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -41,18 +39,7 @@ def get_config(config=None):
     if not conf.exists(base):
         return bfd
 
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary retrived.
-    # XXX: T2665: we currently have no nice way for defaults under tag
-    # nodes, thus we load the defaults "by hand"
-    default_values = defaults(base + ['peer'])
-    if 'peer' in bfd:
-        for peer in bfd['peer']:
-            bfd['peer'][peer] = dict_merge(default_values, bfd['peer'][peer])
-
-    if 'profile' in bfd:
-        for profile in bfd['profile']:
-            bfd['profile'][profile] = dict_merge(default_values, bfd['profile'][profile])
+    bfd = conf.merge_defaults(bfd, recursive=True)
 
     return bfd
 

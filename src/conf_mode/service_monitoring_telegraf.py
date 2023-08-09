@@ -22,7 +22,6 @@ from sys import exit
 from shutil import rmtree
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
@@ -30,7 +29,6 @@ from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.process import cmd
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -83,8 +81,7 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    monitoring = dict_merge(default_values, monitoring)
+    monitoring = conf.merge_defaults(monitoring, recursive=True)
 
     monitoring['custom_scripts_dir'] = custom_scripts_dir
     monitoring['hostname'] = get_hostname()

@@ -20,7 +20,6 @@ import re
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.firewall import find_nftables_rule
 from vyos.firewall import remove_nftables_rule
 from vyos.utils.process import process_named_running
@@ -28,7 +27,6 @@ from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -77,16 +75,8 @@ def get_config(config=None):
     base = ['system', 'conntrack']
 
     conntrack = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    if 'timeout' in default_values and 'custom' in default_values['timeout']:
-        del default_values['timeout']['custom']
-    conntrack = dict_merge(default_values, conntrack)
+                                     get_first_key=True,
+                                     with_recursive_defaults=True)
 
     return conntrack
 

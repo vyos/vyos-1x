@@ -21,14 +21,12 @@ from sys import exit
 from glob import glob
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.hostsd_client import Client as hostsd_client
 from vyos.template import render
 from vyos.template import bracketize_ipv6
 from vyos.utils.process import call
 from vyos.utils.permission import chown
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 
 from vyos import ConfigError
 from vyos import airbag
@@ -52,31 +50,10 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    dns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True, no_tag_node_value_mangle=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrieved.
-    default_values = defaults(base)
-    # T2665 due to how defaults under tag nodes work, we must clear these out before we merge
-    del default_values['authoritative_domain']
-    del default_values['name_server']
-    del default_values['domain']['name_server']
-    dns = dict_merge(default_values, dns)
-
-    # T2665: we cleared default values for tag node 'name_server' above.
-    # We now need to add them back back in a granular way.
-    if 'name_server' in dns:
-        default_values = defaults(base + ['name-server'])
-        for server in dns['name_server']:
-            dns['name_server'][server] = dict_merge(default_values, dns['name_server'][server])
-
-    # T2665: we cleared default values for tag node 'domain' above.
-    # We now need to add them back back in a granular way.
-    if 'domain' in dns:
-        default_values = defaults(base + ['domain', 'name-server'])
-        for domain in dns['domain'].keys():
-            for server in dns['domain'][domain]['name_server']:
-                dns['domain'][domain]['name_server'][server] = dict_merge(
-                    default_values, dns['domain'][domain]['name_server'][server])
+    dns = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               no_tag_node_value_mangle=True,
+                               get_first_key=True,
+                               with_recursive_defaults=True)
 
     # some additions to the default dictionary
     if 'system' in dns:
@@ -109,9 +86,6 @@ def get_config(config=None):
                     rdata = recorddata[rtype][subnode]
 
                     if rtype in [ 'a', 'aaaa' ]:
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'address' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one address is required')
                             continue
@@ -127,9 +101,6 @@ def get_config(config=None):
                                 'value': address
                             })
                     elif rtype in ['cname', 'ptr', 'ns']:
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'target' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: target is required')
                             continue
@@ -141,18 +112,12 @@ def get_config(config=None):
                             'value': '{}.'.format(rdata['target'])
                         })
                     elif rtype == 'mx':
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        del rdefaults['server']
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'server' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one server is required')
                             continue
 
                         for servername in rdata['server']:
                             serverdata = rdata['server'][servername]
-                            serverdefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'server']) # T2665
-                            serverdata = dict_merge(serverdefaults, serverdata)
                             zone['records'].append({
                                 'name': subnode,
                                 'type': rtype.upper(),
@@ -160,9 +125,6 @@ def get_config(config=None):
                                 'value': '{} {}.'.format(serverdata['priority'], servername)
                             })
                     elif rtype == 'txt':
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'value' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one value is required')
                             continue
@@ -175,9 +137,6 @@ def get_config(config=None):
                                 'value': "\"{}\"".format(value.replace("\"", "\\\""))
                             })
                     elif rtype == 'spf':
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'value' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: value is required')
                             continue
@@ -189,19 +148,12 @@ def get_config(config=None):
                             'value': '"{}"'.format(rdata['value'].replace("\"", "\\\""))
                         })
                     elif rtype == 'srv':
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        del rdefaults['entry']
-                        rdata = dict_merge(rdefaults, rdata)
-
                         if not 'entry' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one entry is required')
                             continue
 
                         for entryno in rdata['entry']:
                             entrydata = rdata['entry'][entryno]
-                            entrydefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'entry']) # T2665
-                            entrydata = dict_merge(entrydefaults, entrydata)
-
                             if not 'hostname' in entrydata:
                                 dns['authoritative_zone_errors'].append(f'{subnode}.{node}: hostname is required for entry {entryno}')
                                 continue
@@ -217,19 +169,12 @@ def get_config(config=None):
                                 'value': '{} {} {} {}.'.format(entrydata['priority'], entrydata['weight'], entrydata['port'], entrydata['hostname'])
                             })
                     elif rtype == 'naptr':
-                        rdefaults = defaults(base + ['authoritative-domain', 'records', rtype]) # T2665
-                        del rdefaults['rule']
-                        rdata = dict_merge(rdefaults, rdata)
-
-
                         if not 'rule' in rdata:
                             dns['authoritative_zone_errors'].append(f'{subnode}.{node}: at least one rule is required')
                             continue
 
                         for ruleno in rdata['rule']:
                             ruledata = rdata['rule'][ruleno]
-                            ruledefaults = defaults(base + ['authoritative-domain', 'records', rtype, 'rule']) # T2665
-                            ruledata = dict_merge(ruledefaults, ruledata)
                             flags = ""
                             if 'lookup-srv' in ruledata:
                                 flags += "S"

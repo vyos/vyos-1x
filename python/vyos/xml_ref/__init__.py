@@ -13,7 +13,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional, Union, TYPE_CHECKING
 from vyos.xml_ref import definition
+
+if TYPE_CHECKING:
+    from vyos.config import ConfigDict
 
 def load_reference(cache=[]):
     if cache:
@@ -48,11 +52,11 @@ def is_leaf(path: list) -> bool:
 def cli_defined(path: list, node: str, non_local=False) -> bool:
     return load_reference().cli_defined(path, node, non_local=non_local)
 
-def from_source(d: dict, path: list) -> bool:
-    return load_reference().from_source(d, path)
-
 def component_version() -> dict:
     return load_reference().component_version()
+
+def default_value(path: list) -> Optional[Union[str, list]]:
+    return load_reference().default_value(path)
 
 def multi_to_list(rpath: list, conf: dict) -> dict:
     return load_reference().multi_to_list(rpath, conf)
@@ -68,8 +72,8 @@ def relative_defaults(rpath: list, conf: dict, get_first_key=False,
                                               get_first_key=get_first_key,
                                               recursive=recursive)
 
-def merge_defaults(path: list, conf: dict, get_first_key=False,
-                   recursive=False) -> dict:
-    return load_reference().merge_defaults(path, conf,
-                                           get_first_key=get_first_key,
-                                           recursive=recursive)
+def from_source(d: dict, path: list) -> bool:
+    return definition.from_source(d, path)
+
+def ext_dict_merge(source: dict, destination: Union[dict, 'ConfigDict']):
+    return definition.ext_dict_merge(source, destination)

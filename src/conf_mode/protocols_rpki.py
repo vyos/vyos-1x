@@ -19,10 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -43,8 +41,7 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    rpki = dict_merge(default_values, rpki)
+    rpki = conf.merge_defaults(rpki, recursive=True)
 
     return rpki
 

@@ -24,7 +24,6 @@ from sys import exit
 from time import sleep
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_vrf
 from vyos.defaults import directories
 from vyos.template import render
@@ -35,7 +34,6 @@ from vyos.utils.process import call
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 from vyos.utils.process import DEVNULL
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -93,7 +91,9 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'login']
     login = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                 no_tag_node_value_mangle=True, get_first_key=True)
+                                 no_tag_node_value_mangle=True,
+                                 get_first_key=True,
+                                 with_recursive_defaults=True)
 
     # users no longer existing in the running configuration need to be deleted
     local_users = get_local_users()
@@ -101,27 +101,9 @@ def get_config(config=None):
     if 'user' in login:
         cli_users = list(login['user'])
 
-        # XXX: T2665: we can not safely rely on the defaults() when there are
-        # tagNodes in place, it is better to blend in the defaults manually.
-        default_values = defaults(base + ['user'])
-        for user in login['user']:
-            login['user'][user] = dict_merge(default_values, login['user'][user])
-
-    # Add TACACS global defaults
-    if 'tacacs' in login:
-        default_values = defaults(base + ['tacacs'])
-        if 'server' in default_values:
-            del default_values['server']
-        login['tacacs'] = dict_merge(default_values, login['tacacs'])
-
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    for backend in ['radius', 'tacacs']:
-        default_values = defaults(base + [backend, 'server'])
-        for server in dict_search(f'{backend}.server', login) or []:
-            login[backend]['server'][server] = dict_merge(default_values,
-                login[backend]['server'][server])
-
+    # prune TACACS global defaults if not set by user
+    if login.from_defaults(['tacacs']):
+        del login['tacacs']
 
     # create a list of all users, cli and users
     all_users = list(set(local_users + cli_users))

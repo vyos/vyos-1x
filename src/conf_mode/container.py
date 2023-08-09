@@ -37,7 +37,7 @@ from vyos.template import inc_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.template import render
-from vyos.xml import defaults
+from vyos.xml_ref import default_value
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -66,58 +66,26 @@ def get_config(config=None):
 
     base = ['container']
     container = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                     get_first_key=True, no_tag_node_value_mangle=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # container base default values can not be merged here - remove and add them later
-    if 'name' in default_values:
-        del default_values['name']
-    # registry will be handled below
-    if 'registry' in default_values:
-        del default_values['registry']
-    container = dict_merge(default_values, container)
+                                     no_tag_node_value_mangle=True,
+                                     get_first_key=True,
+                                     with_recursive_defaults=True)
 
-    # Merge per-container default values
-    if 'name' in container:
-        default_values = defaults(base + ['name'])
-        if 'port' in default_values:
-            del default_values['port']
-        if 'volume' in default_values:
-            del default_values['volume']
-        for name in container['name']:
-            container['name'][name] = dict_merge(default_values, container['name'][name])
-
-            # T5047: Any container related configuration changed? We only
-            # wan't to restart the required containers and not all of them ...
-            tmp = is_node_changed(conf, base + ['name', name])
-            if tmp:
-                if 'container_restart' not in container:
-                    container['container_restart'] = [name]
-                else:
-                    container['container_restart'].append(name)
-
-            # XXX: T2665: we can not safely rely on the defaults() when there are
-            # tagNodes in place, it is better to blend in the defaults manually.
-            if 'port' in container['name'][name]:
-                for port in container['name'][name]['port']:
-                    default_values_port = defaults(base + ['name', 'port'])
-                    container['name'][name]['port'][port] = dict_merge(
-                        default_values_port, container['name'][name]['port'][port])
-            # XXX: T2665: we can not safely rely on the defaults() when there are
-            # tagNodes in place, it is better to blend in the defaults manually.
-            if 'volume' in container['name'][name]:
-                for volume in container['name'][name]['volume']:
-                    default_values_volume = defaults(base + ['name', 'volume'])
-                    container['name'][name]['volume'][volume] = dict_merge(
-                        default_values_volume, container['name'][name]['volume'][volume])
+    for name in container.get('name', []):
+        # T5047: Any container related configuration changed? We only
+        # wan't to restart the required containers and not all of them ...
+        tmp = is_node_changed(conf, base + ['name', name])
+        if tmp:
+            if 'container_restart' not in container:
+                container['container_restart'] = [name]
+            else:
+                container['container_restart'].append(name)
 
     # registry is a tagNode with default values - merge the list from
     # default_values['registry'] into the tagNode variables
     if 'registry' not in container:
         container.update({'registry' : {}})
-        default_values = defaults(base)
-        for registry in default_values['registry'].split():
+        default_values = default_value(base + ['registry'])
+        for registry in default_values:
             tmp = {registry : {}}
             container['registry'] = dict_merge(tmp, container['registry'])
 

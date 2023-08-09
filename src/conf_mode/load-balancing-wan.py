@@ -21,10 +21,8 @@ from shutil import rmtree
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.utils.process import cmd
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -41,48 +39,15 @@ def get_config(config=None):
         conf = Config()
 
     base = ['load-balancing', 'wan']
-    lb = conf.get_config_dict(base,
+    lb = conf.get_config_dict(base, key_mangling=('-', '_'),
+                              no_tag_node_value_mangle=True,
                               get_first_key=True,
-                              key_mangling=('-', '_'),
-                              no_tag_node_value_mangle=True)
+                              with_recursive_defaults=True)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # lb base default values can not be merged here - remove and add them later
-    if 'interface_health' in default_values:
-        del default_values['interface_health']
-    if 'rule' in default_values:
-        del default_values['rule']
-    lb = dict_merge(default_values, lb)
-
-    if 'interface_health' in lb:
-        for iface in lb.get('interface_health'):
-            default_values_iface = defaults(base + ['interface-health'])
-            if 'test' in default_values_iface:
-                del default_values_iface['test']
-            lb['interface_health'][iface] = dict_merge(
-                default_values_iface, lb['interface_health'][iface])
-            if 'test' in lb['interface_health'][iface]:
-                for node_test in lb['interface_health'][iface]['test']:
-                    default_values_test = defaults(base +
-                                                   ['interface-health', 'test'])
-                    lb['interface_health'][iface]['test'][node_test] = dict_merge(
-                            default_values_test,
-                            lb['interface_health'][iface]['test'][node_test])
-
-    if 'rule' in lb:
-        for rule in lb.get('rule'):
-            default_values_rule = defaults(base + ['rule'])
-            if 'interface' in default_values_rule:
-                del default_values_rule['interface']
-            lb['rule'][rule] = dict_merge(default_values_rule, lb['rule'][rule])
-            if not conf.exists(base + ['rule', rule, 'limit']):
-                del lb['rule'][rule]['limit']
-            if 'interface' in lb['rule'][rule]:
-                for iface in lb['rule'][rule]['interface']:
-                    default_values_rule_iface = defaults(base + ['rule', 'interface'])
-                    lb['rule'][rule]['interface'][iface] = dict_merge(default_values_rule_iface, lb['rule'][rule]['interface'][iface])
+    # prune limit key if not set by user
+    for rule in lb.get('rule', []):
+        if lb.from_defaults(['rule', rule, 'limit']):
+            del lb['rule'][rule]['limit']
 
     return lb
 

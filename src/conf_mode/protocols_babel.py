@@ -19,13 +19,13 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.config import config_dict_merge
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configverify import verify_common_route_maps
 from vyos.configverify import verify_access_list
 from vyos.configverify import verify_prefix_list
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos.template import render_to_string
 from vyos import ConfigError
 from vyos import frr
@@ -38,7 +38,8 @@ def get_config(config=None):
     else:
         conf = Config()
     base = ['protocols', 'babel']
-    babel = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    babel = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                 get_first_key=True)
 
     # FRR has VRF support for different routing daemons. As interfaces belong
     # to VRFs - or the global VRF, we need to check for changed interfaces so
@@ -54,15 +55,13 @@ def get_config(config=None):
         return babel
 
     # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
+    # values which we need to update into the dictionary retrieved.
+    default_values = conf.get_config_defaults(base, key_mangling=('-', '_'),
+                                              get_first_key=True,
+                                              recursive=True)
 
-    # XXX: T2665: we currently have no nice way for defaults under tag nodes,
-    # clean them out and add them manually :(
-    del default_values['interface']
-
-    # merge in remaining default values
-    babel = dict_merge(default_values, babel)
+    # merge in default values
+    babel = config_dict_merge(default_values, babel)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().

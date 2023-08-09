@@ -23,12 +23,10 @@ from ipaddress import IPv4Network
 from ipaddress import IPv6Network
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.utils.process import call
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -47,10 +45,7 @@ def get_config(config=None):
     if not upnpd:
         return None
 
-    if 'rule' in upnpd:
-        default_member_values = defaults(base + ['rule'])
-        for rule,rule_config in upnpd['rule'].items():
-            upnpd['rule'][rule] = dict_merge(default_member_values, upnpd['rule'][rule])
+    upnpd = conf.merge_defaults(upnpd, recursive=True)
 
     uuidgen = uuid.uuid1()
     upnpd.update({'uuid': uuidgen})

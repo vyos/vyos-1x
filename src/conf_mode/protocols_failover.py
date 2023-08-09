@@ -19,10 +19,8 @@ import json
 from pathlib import Path
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 
@@ -42,15 +40,12 @@ def get_config(config=None):
         conf = Config()
 
     base = ['protocols', 'failover']
-    failover = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    failover = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                    get_first_key=True)
 
     # Set default values only if we set config
-    if failover.get('route'):
-        for route, route_config in failover.get('route').items():
-            for next_hop, next_hop_config in route_config.get('next_hop').items():
-                default_values = defaults(base + ['route'])
-                failover['route'][route]['next_hop'][next_hop] = dict_merge(
-                    default_values['next_hop'], failover['route'][route]['next_hop'][next_hop])
+    if failover.get('route') is not None:
+        failover = conf.merge_defaults(failover, recursive=True)
 
     return failover
 

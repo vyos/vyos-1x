@@ -14,10 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from sys import exit
-from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
@@ -25,16 +22,13 @@ from vyos.configdict import node_changed
 from vyos.configdict import is_member
 from vyos.configdict import is_source_interface
 from vyos.configdict import has_vlan_subinterface_configured
-from vyos.configdict import dict_merge
 from vyos.configverify import verify_dhcpv6
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
-from vyos.xml import defaults
 
-from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 from vyos import ConfigError
 
@@ -61,22 +55,8 @@ def get_config(config=None):
         else:
             bridge.update({'member' : {'interface_remove' : tmp }})
 
-    if dict_search('member.interface', bridge) != None:
-        # XXX: T2665: we need a copy of the dict keys for iteration, else we will get:
-        # RuntimeError: dictionary changed size during iteration
+    if dict_search('member.interface', bridge) is not None:
         for interface in list(bridge['member']['interface']):
-            for key in ['cost', 'priority']:
-                if interface == key:
-                    del bridge['member']['interface'][key]
-                    continue
-
-        # the default dictionary is not properly paged into the dict (see T2665)
-        # thus we will ammend it ourself
-        default_member_values = defaults(base + ['member', 'interface'])
-        for interface,interface_config in bridge['member']['interface'].items():
-            bridge['member']['interface'][interface] = dict_merge(
-                    default_member_values, bridge['member']['interface'][interface])
-
             # Check if member interface is already member of another bridge
             tmp = is_member(conf, interface, 'bridge')
             if tmp and bridge['ifname'] not in tmp:

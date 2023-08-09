@@ -19,11 +19,9 @@ from sys import exit
 from vyos import ConfigError
 from vyos import airbag
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.logger import syslog
 from vyos.template import render
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 airbag.enable()
 
 # path to logrotate configs
@@ -38,11 +36,9 @@ def get_config(config=None):
         conf = Config()
 
     base = ['system', 'logs']
-    default_values = defaults(base)
-    logs_config = conf.get_config_dict(base,
-                                       key_mangling=('-', '_'),
-                                       get_first_key=True)
-    logs_config = dict_merge(default_values, logs_config)
+    logs_config = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                       get_first_key=True,
+                                       with_recursive_defaults=True)
 
     return logs_config
 

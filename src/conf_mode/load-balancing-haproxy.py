@@ -20,14 +20,12 @@ from sys import exit
 from shutil import rmtree
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.utils.process import call
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -54,18 +52,8 @@ def get_config(config=None):
         lb['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
                                     get_first_key=True, no_tag_node_value_mangle=True)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    if 'backend' in default_values:
-        del default_values['backend']
     if lb:
-        lb = dict_merge(default_values, lb)
-
-    if 'backend' in lb:
-        for backend in lb['backend']:
-            default_balues_backend = defaults(base + ['backend'])
-            lb['backend'][backend] = dict_merge(default_balues_backend, lb['backend'][backend])
+        lb = conf.merge_defaults(lb, recursive=True)
 
     return lb
 

@@ -19,10 +19,8 @@ import os
 from sys import exit
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -50,8 +48,9 @@ def get_config(config=None):
         return None
 
     dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'),
-                                  get_first_key=True, no_tag_node_value_mangle=True,
-                                  with_defaults=True, with_recursive_defaults=True)
+                                  no_tag_node_value_mangle=True,
+                                  get_first_key=True,
+                                  with_recursive_defaults=True)
 
     dyndns['config_file'] = config_file
     return dyndns

@@ -20,10 +20,8 @@ from sys import exit
 from psutil import process_iter
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.template import render
 from vyos.utils.process import call
-from vyos.xml import defaults
 from vyos import ConfigError
 
 config_file = '/run/conserver/conserver.cf'
@@ -49,11 +47,7 @@ def get_config(config=None):
 
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrived.
-    default_values = defaults(base + ['device'])
-    if 'device' in proxy:
-        for device in proxy['device']:
-            tmp = dict_merge(default_values, proxy['device'][device])
-            proxy['device'][device] = tmp
+    proxy = conf.merge_defaults(proxy, recursive=True)
 
     return proxy
 

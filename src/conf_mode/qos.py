@@ -38,7 +38,6 @@ from vyos.qos import TrafficShaper
 from vyos.qos import TrafficShaperHFSC
 from vyos.utils.process import call
 from vyos.utils.dict import dict_search_recursive
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -97,63 +96,32 @@ def get_config(config=None):
                 type_node = path.split(" ")[1] # return only interface type node
                 set_dependents(type_node, conf, ifname)
 
-    if 'policy' in qos:
-        for policy in qos['policy']:
-            # when calling defaults() we need to use the real CLI node, thus we
-            # need a hyphen
-            policy_hyphen = policy.replace('_', '-')
+    for policy in qos.get('policy', []):
+        if policy in ['random_detect']:
+            for rd_name in list(qos['policy'][policy]):
+                # There are eight precedence levels - ensure all are present
+                # to be filled later down with the appropriate default values
+                default_precedence = {'precedence' : { '0' : {}, '1' : {}, '2' : {}, '3' : {},
+                                                       '4' : {}, '5' : {}, '6' : {}, '7' : {} }}
+                qos['policy']['random_detect'][rd_name] = dict_merge(
+                    default_precedence, qos['policy']['random_detect'][rd_name])
 
-            if policy in ['random_detect']:
-                for rd_name, rd_config in qos['policy'][policy].items():
-                    # There are eight precedence levels - ensure all are present
-                    # to be filled later down with the appropriate default values
-                    default_precedence = {'precedence' : { '0' : {}, '1' : {}, '2' : {}, '3' : {},
-                                                           '4' : {}, '5' : {}, '6' : {}, '7' : {} }}
-                    qos['policy']['random_detect'][rd_name] = dict_merge(
-                        default_precedence, qos['policy']['random_detect'][rd_name])
+    qos = conf.merge_defaults(qos, recursive=True)
 
-            for p_name, p_config in qos['policy'][policy].items():
-                default_values = defaults(base + ['policy', policy_hyphen])
+    for policy in qos.get('policy', []):
+        for p_name, p_config in qos['policy'][policy].items():
+            if 'precedence' in p_config:
+                # precedence settings are a bit more complex as they are
+                # calculated under specific circumstances:
+                for precedence in p_config['precedence']:
+                    max_thr = int(qos['policy'][policy][p_name]['precedence'][precedence]['maximum_threshold'])
+                    if 'minimum_threshold' not in qos['policy'][policy][p_name]['precedence'][precedence]:
+                        qos['policy'][policy][p_name]['precedence'][precedence]['minimum_threshold'] = str(
+                            int((9 + int(precedence)) * max_thr) // 18);
 
-                if policy in ['priority_queue']:
-                    if 'default' not in p_config:
-                        raise ConfigError(f'QoS policy {p_name} misses "default" class!')
-
-                # XXX: T2665: we can not safely rely on the defaults() when there are
-                # tagNodes in place, it is better to blend in the defaults manually.
-                if 'class' in default_values:
-                    del default_values['class']
-                if 'precedence' in default_values:
-                    del default_values['precedence']
-
-                qos['policy'][policy][p_name] = dict_merge(
-                    default_values, qos['policy'][policy][p_name])
-
-                # class is another tag node which requires individual handling
-                if 'class' in p_config:
-                    default_values = defaults(base + ['policy', policy_hyphen, 'class'])
-                    for p_class in p_config['class']:
-                        qos['policy'][policy][p_name]['class'][p_class] = dict_merge(
-                            default_values, qos['policy'][policy][p_name]['class'][p_class])
-
-                if 'precedence' in p_config:
-                    default_values = defaults(base + ['policy', policy_hyphen, 'precedence'])
-                    # precedence values are a bit more complex as they are calculated
-                    # under specific circumstances - thus we need to iterate two times.
-                    # first blend in the defaults from XML / CLI
-                    for precedence in p_config['precedence']:
-                        qos['policy'][policy][p_name]['precedence'][precedence] = dict_merge(
-                            default_values, qos['policy'][policy][p_name]['precedence'][precedence])
-                    # second calculate defaults based on actual dictionary
-                    for precedence in p_config['precedence']:
-                        max_thr = int(qos['policy'][policy][p_name]['precedence'][precedence]['maximum_threshold'])
-                        if 'minimum_threshold' not in qos['policy'][policy][p_name]['precedence'][precedence]:
-                            qos['policy'][policy][p_name]['precedence'][precedence]['minimum_threshold'] = str(
-                                int((9 + int(precedence)) * max_thr) // 18);
-
-                        if 'queue_limit' not in qos['policy'][policy][p_name]['precedence'][precedence]:
-                            qos['policy'][policy][p_name]['precedence'][precedence]['queue_limit'] = \
-                                str(int(4 * max_thr))
+                    if 'queue_limit' not in qos['policy'][policy][p_name]['precedence'][precedence]:
+                        qos['policy'][policy][p_name]['precedence'][precedence]['queue_limit'] = \
+                            str(int(4 * max_thr))
 
     return qos
 
@@ -202,7 +170,9 @@ def verify(qos):
                                 queue_lim = int(precedence_config['queue_limit'])
                                 if queue_lim < max_tr:
                                     raise ConfigError(f'Policy "{policy}" uses queue-limit "{queue_lim}" < max-threshold "{max_tr}"!')
-
+                if policy_type in ['priority_queue']:
+                    if 'default' not in policy_config:
+                        raise ConfigError(f'Policy {policy} misses "default" class!')
                 if 'default' in policy_config:
                     if 'bandwidth' not in policy_config['default'] and policy_type not in ['priority_queue', 'round_robin']:
                         raise ConfigError('Bandwidth not defined for default traffic!')

@@ -19,8 +19,6 @@ import json
 from pathlib import Path
 
 from vyos.config import Config
-from vyos.configdict import dict_merge
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 
@@ -42,12 +40,8 @@ def get_config(config=None):
     base = ['service', 'config-sync']
     if not conf.exists(base):
         return None
-    config = conf.get_config_dict(base,
-                                  get_first_key=True,
-                                  no_tag_node_value_mangle=True)
-
-    default_values = defaults(base)
-    config = dict_merge(default_values, config)
+    config = conf.get_config_dict(base, get_first_key=True,
+                                  with_recursive_defaults=True)
 
     return config
 

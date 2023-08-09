@@ -22,14 +22,13 @@ from ipaddress import ip_address
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
+from vyos.config import config_dict_merge
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.network import is_addr_assigned
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -128,30 +127,19 @@ def get_config(config=None):
 
     flow_accounting = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
+    # We have gathered the dict representation of the CLI, but there are
+    # default values which we need to conditionally update into the
+    # dictionary retrieved.
+    default_values = conf.get_config_defaults(**flow_accounting.kwargs,
+                                              recursive=True)
 
-    # delete individual flow type default - should only be added if user uses
-    # this feature
+    # delete individual flow type defaults - should only be added if user
+    # sets this feature
     for flow_type in ['sflow', 'netflow']:
-        if flow_type in default_values:
+        if flow_type not in flow_accounting and flow_type in default_values:
             del default_values[flow_type]
-    flow_accounting = dict_merge(default_values, flow_accounting)
 
-    for flow_type in ['sflow', 'netflow']:
-        if flow_type in flow_accounting:
-            default_values = defaults(base + [flow_type])
-            # we need to merge individual server configurations
-            if 'server' in default_values:
-                del default_values['server']
-            flow_accounting[flow_type] = dict_merge(default_values, flow_accounting[flow_type])
-
-            if 'server' in flow_accounting[flow_type]:
-                default_values = defaults(base + [flow_type, 'server'])
-                for server in flow_accounting[flow_type]['server']:
-                    flow_accounting[flow_type]['server'][server] = dict_merge(
-                        default_values,flow_accounting[flow_type]['server'][server])
+    flow_accounting = config_dict_merge(default_values, flow_accounting)
 
     return flow_accounting
 

@@ -27,7 +27,6 @@ from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
-from vyos.configdict import dict_merge
 from vyos.defaults import directories
 from vyos.ifconfig import Interface
 from vyos.pki import encode_public_key
@@ -45,7 +44,6 @@ from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import call
 from vyos.utils.process import run
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -84,88 +82,23 @@ def get_config(config=None):
 
     # retrieve common dictionary keys
     ipsec = conf.get_config_dict(base, key_mangling=('-', '_'),
-                                 get_first_key=True, no_tag_node_value_mangle=True)
-
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    # XXX: T2665: we must safely remove default values for tag nodes, those are
-    # added in a more fine grained way later on
-    del default_values['esp_group']
-    del default_values['ike_group']
-    del default_values['remote_access']
-    del default_values['site_to_site']
-    ipsec = dict_merge(default_values, ipsec)
-
-    if 'esp_group' in ipsec:
-        default_values = defaults(base + ['esp-group'])
-        for group in ipsec['esp_group']:
-            ipsec['esp_group'][group] = dict_merge(default_values,
-                                                   ipsec['esp_group'][group])
-    if 'ike_group' in ipsec:
-        default_values = defaults(base + ['ike-group'])
-        # proposal is a tag node which may come with individual defaults per node
-        if 'proposal' in default_values:
-            del default_values['proposal']
-
-        for group in ipsec['ike_group']:
-            ipsec['ike_group'][group] = dict_merge(default_values,
-                                                   ipsec['ike_group'][group])
-
-            if 'proposal' in ipsec['ike_group'][group]:
-                default_values = defaults(base + ['ike-group', 'proposal'])
-                for proposal in ipsec['ike_group'][group]['proposal']:
-                    ipsec['ike_group'][group]['proposal'][proposal] = dict_merge(default_values,
-                        ipsec['ike_group'][group]['proposal'][proposal])
-
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    if dict_search('remote_access.connection', ipsec):
-        default_values = defaults(base + ['remote-access', 'connection'])
-        for rw in ipsec['remote_access']['connection']:
-            ipsec['remote_access']['connection'][rw] = dict_merge(default_values,
-              ipsec['remote_access']['connection'][rw])
-
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    if dict_search('remote_access.radius.server', ipsec):
-        # Fist handle the "base" stuff like RADIUS timeout
-        default_values = defaults(base + ['remote-access', 'radius'])
-        if 'server' in default_values:
-            del default_values['server']
-        ipsec['remote_access']['radius'] = dict_merge(default_values,
-                                                      ipsec['remote_access']['radius'])
-
-        # Take care about individual RADIUS servers implemented as tagNodes - this
-        # requires special treatment
-        default_values = defaults(base + ['remote-access', 'radius', 'server'])
-        for server in ipsec['remote_access']['radius']['server']:
-            ipsec['remote_access']['radius']['server'][server] = dict_merge(default_values,
-                ipsec['remote_access']['radius']['server'][server])
-
-    # XXX: T2665: we can not safely rely on the defaults() when there are
-    # tagNodes in place, it is better to blend in the defaults manually.
-    if dict_search('site_to_site.peer', ipsec):
-        default_values = defaults(base + ['site-to-site', 'peer'])
-        for peer in ipsec['site_to_site']['peer']:
-            ipsec['site_to_site']['peer'][peer] = dict_merge(default_values,
-              ipsec['site_to_site']['peer'][peer])
+                                 no_tag_node_value_mangle=True,
+                                 get_first_key=True,
+                                 with_recursive_defaults=True)
 
     ipsec['dhcp_no_address'] = {}
     ipsec['install_routes'] = 'no' if conf.exists(base + ["options", "disable-route-autoinstall"]) else default_install_routes
     ipsec['interface_change'] = leaf_node_changed(conf, base + ['interface'])
     ipsec['nhrp_exists'] = conf.exists(['protocols', 'nhrp', 'tunnel'])
     ipsec['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                             get_first_key=True,
-                                             no_tag_node_value_mangle=True)
+                                        no_tag_node_value_mangle=True,
+                                        get_first_key=True)
 
     tmp = conf.get_config_dict(l2tp_base, key_mangling=('-', '_'),
-                                             get_first_key=True,
-                                             no_tag_node_value_mangle=True)
+                               no_tag_node_value_mangle=True,
+                               get_first_key=True)
     if tmp:
-        ipsec['l2tp'] = tmp
-        l2tp_defaults = defaults(l2tp_base)
-        ipsec['l2tp'] = dict_merge(l2tp_defaults, ipsec['l2tp'])
+        ipsec['l2tp'] = conf.merge_defaults(tmp, recursive=True)
         ipsec['l2tp_outside_address'] = conf.return_value(['vpn', 'l2tp', 'remote-access', 'outside-address'])
         ipsec['l2tp_ike_default'] = 'aes256-sha1-modp1024,3des-sha1-modp1024'
         ipsec['l2tp_esp_default'] = 'aes256-sha1,3des-sha1'

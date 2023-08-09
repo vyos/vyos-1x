@@ -28,7 +28,6 @@ from vyos.ifconfig import Interface
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
 from vyos.template import render_to_string
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import frr
 from vyos import airbag
@@ -69,14 +68,8 @@ def get_config(config=None):
         isis.update({'deleted' : ''})
         return isis
 
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    # XXX: Note that we can not call defaults(base), as defaults does not work
-    # on an instance of a tag node. As we use the exact same CLI definition for
-    # both the non-vrf and vrf version this is absolutely safe!
-    default_values = defaults(base_path)
     # merge in default values
-    isis = dict_merge(default_values, isis)
+    isis = conf.merge_defaults(isis, recursive=True)
 
     # We also need some additional information from the config, prefix-lists
     # and route-maps for instance. They will be used in verify().
