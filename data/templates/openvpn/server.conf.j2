@@ -200,6 +200,14 @@ tls-client
 {%     elif tls.role is vyos_defined('passive') %}
 tls-server
 {%     endif %}
+
+{%     if peer_fingerprint is vyos_defined %}
+<peer-fingerprint>
+{%         for fp in peer_fingerprint %}
+{{ fp }}
+{%         endfor %}
+</peer-fingerprint>
+{%     endif %}
 {% endif %}
 
 # Encryption options
