@@ -28,6 +28,7 @@ from vyos.config import Config
 from vyos.configquery import ConfigTreeQuery
 from vyos.configdict import dict_merge
 from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
+from vyos.pki import get_certificate_fingerprint
 from vyos.pki import create_certificate, create_certificate_request, create_certificate_revocation_list
 from vyos.pki import create_private_key
 from vyos.pki import create_dh_parameters
@@ -916,6 +917,12 @@ def show_certificate(name=None, pem=False):
     print("Certificates:")
     print(tabulate.tabulate(data, headers))
 
+def show_certificate_fingerprint(name, hash):
+    cert = get_config_certificate(name=name)
+    cert = load_certificate(cert['certificate'])
+
+    print(get_certificate_fingerprint(cert, hash))
+
 def show_crl(name=None, pem=False):
     headers = ['CA Name', 'Updated', 'Revokes']
     data = []
@@ -961,6 +968,7 @@ if __name__ == '__main__':
     parser.add_argument('--sign', help='Sign certificate with specified CA', required=False)
     parser.add_argument('--self-sign', help='Self-sign the certificate', action='store_true')
     parser.add_argument('--pem', help='Output using PEM encoding', action='store_true')
+    parser.add_argument('--fingerprint', help='Show fingerprint and exit', action='store')
 
     # SSH
     parser.add_argument('--ssh', help='SSH Key', required=False)
@@ -1057,7 +1065,10 @@ if __name__ == '__main__':
                     if not conf.exists(['pki', 'certificate', cert_name]):
                         print(f'Certificate "{cert_name}" does not exist!')
                         exit(1)
-                show_certificate(None if args.certificate == 'all' else args.certificate, args.pem)
+                if args.fingerprint is None:
+                    show_certificate(None if args.certificate == 'all' else args.certificate, args.pem)
+                else:
+                    show_certificate_fingerprint(args.certificate, args.fingerprint)
             elif args.crl:
                 show_crl(None if args.crl == 'all' else args.crl, args.pem)
             else:
