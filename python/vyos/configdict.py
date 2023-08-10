@@ -20,7 +20,6 @@ import os
 import json
 
 from vyos.utils.dict import dict_search
-from vyos.xml import defaults
 from vyos.utils.process import cmd
 
 def retrieve_config(path_hash, base_path, config):
