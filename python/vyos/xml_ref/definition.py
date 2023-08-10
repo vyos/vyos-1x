@@ -162,7 +162,7 @@ class Xml:
 
     def component_version(self) -> dict:
         d = {}
-        for k, v in self.ref['component_version']:
+        for k, v in self.ref['component_version'].items():
             d[k] = int(v)
         return d
 
