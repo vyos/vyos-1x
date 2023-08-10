@@ -752,6 +752,16 @@
                   </completionHelp>
                 </properties>
               </leafNode>
+              <leafNode name="peer-fingerprint">
+                <properties>
+                  <multi/>
+                  <help>Peer certificate SHA256 fingerprint</help>
+                  <constraint>
+                    <regex>[0-9a-fA-F]{2}:([0-9a-fA-F]{2}:){30}[0-9a-fA-F]{2}</regex>
+                  </constraint>
+                  <constraintErrorMessage>Peer certificate fingerprint must be a colon-separated SHA256 hex digest</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <leafNode name="tls-version-min">
                 <properties>
                   <help>Specify the minimum required TLS version</help>
