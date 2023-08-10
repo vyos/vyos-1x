@@ -189,16 +189,7 @@ def verify_pki(openvpn):
             if dict_search_args(pki, 'certificate', tls['certificate'], 'private', 'password_protected') is not None:
                 raise ConfigError(f'Cannot use encrypted private key on openvpn interface {interface}')
 
-            if mode == 'server' and 'dh_params' not in tls and not is_ec_private_key(pki, tls['certificate']):
-                raise ConfigError('Must specify "tls dh-params" when not using EC keys in server mode')
-
         if 'dh_params' in tls:
-            if 'dh' not in pki:
-                raise ConfigError('There are no DH parameters in PKI configuration')
-
-            if tls['dh_params'] not in pki['dh']:
-                raise ConfigError(f'Invalid dh-params on openvpn interface {interface}')
-
             pki_dh = pki['dh'][tls['dh_params']]
             dh_params = load_dh_parameters(pki_dh['parameters'])
             dh_numbers = dh_params.parameter_numbers()
@@ -206,6 +197,7 @@ def verify_pki(openvpn):
 
             if dh_bits < 2048:
                 raise ConfigError(f'Minimum DH key-size is 2048 bits')
+
 
         if 'auth_key' in tls or 'crypt_key' in tls:
             if not dict_search_args(pki, 'openvpn', 'shared_secret'):
@@ -494,9 +486,6 @@ def verify(openvpn):
             elif tmp == 'passive':
                 if openvpn['protocol'] == 'tcp-active':
                     raise ConfigError('Cannot specify "tcp-active" when "tls role" is "passive"')
-
-                if not dict_search('tls.dh_params', openvpn):
-                    raise ConfigError('Must specify "tls dh-params" when "tls role" is "passive"')
 
         if 'certificate' in openvpn['tls'] and is_ec_private_key(openvpn['pki'], openvpn['tls']['certificate']):
             if 'dh_params' in openvpn['tls']:
