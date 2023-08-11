@@ -101,11 +101,31 @@ load_bootfile ()
     )
 }
 
+# restore if missing pre-config script
+restore_if_missing_preconfig_script ()
+{
+    if [ ! -x ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script ]; then
+        cp ${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
+        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script
+        chmod 750 ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script
+    fi
+}
+
 # execute the pre-config script
 run_preconfig_script ()
 {
     if [ -x $vyatta_sysconfdir/config/scripts/vyos-preconfig-bootup.script ]; then
         $vyatta_sysconfdir/config/scripts/vyos-preconfig-bootup.script
+    fi
+}
+
+# restore if missing post-config script
+restore_if_missing_postconfig_script ()
+{
+    if [ ! -x ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script ]; then
+        cp ${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
+        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
+        chmod 750 ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
     fi
 }
 
@@ -360,6 +380,8 @@ start ()
     log_daemon_msg "Starting VyOS router"
     disabled migrate || migrate_bootfile
 
+    restore_if_missing_preconfig_script
+
     run_preconfig_script
 
     run_postupgrade_script
@@ -383,6 +405,8 @@ start ()
 
     telinit q
     chmod g-w,o-w /
+
+    restore_if_missing_postconfig_script
 
     run_postconfig_scripts
 }
