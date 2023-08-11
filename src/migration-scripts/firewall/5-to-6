@@ -46,12 +46,54 @@ for interface in config.list_nodes(base):
     if config.exists(base + [interface, 'adjust-mss']):
         section = Section.section(interface)
         tmp = config.return_value(base + [interface, 'adjust-mss'])
-        config.set(['interfaces', section, interface, 'ip', 'adjust-mss'], value=tmp)
+
+        vlan = interface.split('.')
+        base_interface_path = ['interfaces', section, vlan[0]]
+
+        if len(vlan) == 1:
+            # Normal interface, no VLAN
+            config.set(base_interface_path + ['ip', 'adjust-mss'], value=tmp)
+        elif len(vlan) == 2:
+            # Regular VIF or VIF-S interface - we need to check the config
+            vif = vlan[1]
+            if config.exists(base_interface_path + ['vif', vif]):
+                config.set(base_interface_path + ['vif', vif, 'ip', 'adjust-mss'], value=tmp)
+            elif config.exists(base_interface_path + ['vif-s', vif]):
+                config.set(base_interface_path + ['vif-s', vif, 'ip', 'adjust-mss'], value=tmp)
+        elif len(vlan) == 3:
+            # VIF-S interface with VIF-C subinterface
+            vif_s = vlan[1]
+            vif_c = vlan[2]
+            config.set(base_interface_path + ['vif-s', vif_s, 'vif-c', vif_c, 'ip', 'adjust-mss'], value=tmp)
+            config.set_tag(base_interface_path + ['vif-s'])
+            config.set_tag(base_interface_path + ['vif-s', vif_s, 'vif-c'])
 
     if config.exists(base + [interface, 'adjust-mss6']):
         section = Section.section(interface)
         tmp = config.return_value(base + [interface, 'adjust-mss6'])
-        config.set(['interfaces', section, interface, 'ipv6', 'adjust-mss'], value=tmp)
+
+        vlan = interface.split('.')
+        base_interface_path = ['interfaces', section, vlan[0]]
+
+        if len(vlan) == 1:
+            # Normal interface, no VLAN
+            config.set(['interfaces', section, interface, 'ipv6', 'adjust-mss'], value=tmp)
+        elif len(vlan) == 2:
+            # Regular VIF or VIF-S interface - we need to check the config
+            vif = vlan[1]
+            if config.exists(base_interface_path + ['vif', vif]):
+                config.set(base_interface_path + ['vif', vif, 'ipv6', 'adjust-mss'], value=tmp)
+                config.set_tag(base_interface_path + ['vif'])
+            elif config.exists(base_interface_path + ['vif-s', vif]):
+                config.set(base_interface_path + ['vif-s', vif, 'ipv6', 'adjust-mss'], value=tmp)
+                config.set_tag(base_interface_path + ['vif-s'])
+        elif len(vlan) == 3:
+            # VIF-S interface with VIF-C subinterface
+            vif_s = vlan[1]
+            vif_c = vlan[2]
+            config.set(base_interface_path + ['vif-s', vif_s, 'vif-c', vif_c, 'ipv6', 'adjust-mss'], value=tmp)
+            config.set_tag(base_interface_path + ['vif-s'])
+            config.set_tag(base_interface_path + ['vif-s', vif_s, 'vif-c'])
 
 config.delete(['firewall', 'options'])
 
