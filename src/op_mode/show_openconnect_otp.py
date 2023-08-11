@@ -17,12 +17,11 @@
 
 import argparse
 import os
+from base64 import b32encode
 
 from vyos.config import Config
-from vyos.xml import defaults
-from vyos.configdict import dict_merge
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import popen
-from base64 import b32encode
 
 otp_file = '/run/ocserv/users.oath'
 
@@ -33,7 +32,7 @@ def check_uname_otp(username):
     config = Config()
     base_key = ['vpn', 'openconnect', 'authentication', 'local-users', 'username', username, 'otp', 'key']
     if not config.exists(base_key):
-        return None
+        return False
     return True
 
 def get_otp_ocserv(username):
@@ -41,21 +40,21 @@ def get_otp_ocserv(username):
     base = ['vpn', 'openconnect']
     if not config.exists(base):
         return None
-    ocserv = config.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
-    # We have gathered the dict representation of the CLI, but there are default
-    # options which we need to update into the dictionary retrived.
-    default_values = defaults(base)
-    ocserv = dict_merge(default_values, ocserv)
-    # workaround a "know limitation" - https://vyos.dev/T2665
-    del ocserv['authentication']['local_users']['username']['otp']
-    if not ocserv["authentication"]["local_users"]["username"]:
+
+    ocserv = config.get_config_dict(base, key_mangling=('-', '_'),
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
+
+    user_path = ['authentication', 'local_users', 'username']
+    users = dict_search_args(ocserv, *user_path)
+
+    if users is None:
         return None
-    default_ocserv_usr_values = default_values['authentication']['local_users']['username']['otp']
-    for user, params in ocserv['authentication']['local_users']['username'].items():
-        # Not every configuration requires OTP settings
-        if ocserv['authentication']['local_users']['username'][user].get('otp'):
-            ocserv['authentication']['local_users']['username'][user]['otp'] = dict_merge(default_ocserv_usr_values, ocserv['authentication']['local_users']['username'][user]['otp'])
-    result = ocserv['authentication']['local_users']['username'][username]
+
+    # function is called conditionally, if check_uname_otp true, so username
+    # exists
+    result = users[username]
+
     return result
 
 def display_otp_ocserv(username, params, info):
@@ -101,8 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('--info', action="store", type=str, default='full', help='Wich information to display')
 
     args = parser.parse_args()
-    check_otp = check_uname_otp(args.user)
-    if check_otp:
+    if check_uname_otp(args.user):
         user_otp_params = get_otp_ocserv(args.user)
         display_otp_ocserv(args.user, user_otp_params, args.info)
     else:

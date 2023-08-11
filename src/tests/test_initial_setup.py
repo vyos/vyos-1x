@@ -21,14 +21,16 @@ import vyos.configtree
 import vyos.initialsetup as vis
 
 from unittest import TestCase
-from vyos import xml
+from vyos.xml_ref import definition
+from vyos.xml_ref.pkg_cache.vyos_1x_cache import reference
 
 class TestInitialSetup(TestCase):
     def setUp(self):
         with open('tests/data/config.boot.default', 'r') as f:
             config_string = f.read()
             self.config = vyos.configtree.ConfigTree(config_string)
-            self.xml = xml.load_configuration()
+            self.xml = definition.Xml()
+            self.xml.define(reference)
 
     def test_set_user_password(self):
         vis.set_user_password(self.config, 'vyos', 'vyosvyos')

@@ -37,7 +37,7 @@ import re
 import sys
 import fileinput
 
-from vyos.xml import component_version
+from vyos.xml_ref import component_version
 from vyos.version import get_version
 from vyos.defaults import directories
 

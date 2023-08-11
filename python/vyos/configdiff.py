@@ -22,7 +22,7 @@ from vyos.configdict import list_diff
 from vyos.utils.dict import get_sub_dict
 from vyos.utils.dict import mangle_dict_keys
 from vyos.utils.dict import dict_search_args
-from vyos.xml import defaults
+from vyos.xml_ref import get_defaults
 
 class ConfigDiffError(Exception):
     """
@@ -240,7 +240,9 @@ class ConfigDiff(object):
                         if self._key_mangling:
                             ret[k] = self._mangle_dict_keys(ret[k])
                         if k in target_defaults and not no_defaults:
-                            default_values = defaults(self._make_path(path))
+                            default_values = get_defaults(self._make_path(path),
+                                                          get_first_key=True,
+                                                          recursive=True)
                             ret[k] = dict_merge(default_values, ret[k])
                 return ret
 
@@ -264,7 +266,9 @@ class ConfigDiff(object):
                     ret[k] = self._mangle_dict_keys(ret[k])
 
                 if k in target_defaults and not no_defaults:
-                    default_values = defaults(self._make_path(path))
+                    default_values = get_defaults(self._make_path(path),
+                                                  get_first_key=True,
+                                                  recursive=True)
                     ret[k] = dict_merge(default_values, ret[k])
 
         return ret
@@ -312,7 +316,9 @@ class ConfigDiff(object):
                         if self._key_mangling:
                             ret[k] = self._mangle_dict_keys(ret[k])
                         if k in target_defaults and not no_defaults:
-                            default_values = defaults(self._make_path(path))
+                            default_values = get_defaults(self._make_path(path),
+                                                          get_first_key=True,
+                                                          recursive=True)
                             ret[k] = dict_merge(default_values, ret[k])
                 return ret
 
@@ -335,7 +341,9 @@ class ConfigDiff(object):
                     ret[k] = self._mangle_dict_keys(ret[k])
 
                 if k in target_defaults and not no_defaults:
-                    default_values = defaults(self._make_path(path))
+                    default_values = get_defaults(self._make_path(path),
+                                                  get_first_key=True,
+                                                  recursive=True)
                     ret[k] = dict_merge(default_values, ret[k])
 
         return ret

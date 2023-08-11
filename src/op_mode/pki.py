@@ -26,7 +26,6 @@ from cryptography.x509.oid import ExtendedKeyUsageOID
 
 from vyos.config import Config
 from vyos.configquery import ConfigTreeQuery
-from vyos.configdict import dict_merge
 from vyos.pki import encode_certificate, encode_public_key, encode_private_key, encode_dh_parameters
 from vyos.pki import get_certificate_fingerprint
 from vyos.pki import create_certificate, create_certificate_request, create_certificate_revocation_list
@@ -39,7 +38,6 @@ from vyos.utils.io import ask_input
 from vyos.utils.io import ask_yes_no
 from vyos.utils.misc import install_into_config
 from vyos.utils.process import cmd
-from vyos.xml import defaults
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
@@ -50,10 +48,9 @@ def get_default_values():
     # Fetch default x509 values
     base = ['pki', 'x509', 'default']
     x509_defaults = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                     no_tag_node_value_mangle=True,
                                      get_first_key=True,
-                                     no_tag_node_value_mangle=True)
-    default_values = defaults(base)
-    x509_defaults = dict_merge(default_values, x509_defaults)
+                                     with_recursive_defaults=True)
 
     return x509_defaults
 

@@ -26,7 +26,7 @@ from vyos.utils.commit import commit_in_progress
 from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
 from vyos.utils.process import run
-from vyos.xml import defaults
+from vyos.xml_ref import get_defaults
 
 base = ['firewall']
 timeout = 300
@@ -49,13 +49,7 @@ def get_config(conf):
     firewall = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True,
                                     no_tag_node_value_mangle=True)
 
-    default_values = defaults(base)
-    for tmp in ['name', 'ipv6_name']:
-        if tmp in default_values:
-            del default_values[tmp]
-
-    if 'zone' in default_values:
-        del default_values['zone']
+    default_values = get_defaults(base, get_first_key=True)
 
     firewall = dict_merge(default_values, firewall)
 
