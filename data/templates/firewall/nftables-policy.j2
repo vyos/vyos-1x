@@ -25,7 +25,7 @@ table ip vyos_mangle {
     chain VYOS_PBR_UD_{{ route_text }} {
 {%         if conf.rule is vyos_defined %}
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule(route_text, rule_id, 'ip') }}
+        {{ rule_conf | nft_rule('route', route_text, rule_id, 'ip') }}
 {%             endfor %}
 {%         endif %}
     }
@@ -54,7 +54,7 @@ table ip6 vyos_mangle {
     chain VYOS_PBR6_UD_{{ route_text }} {
 {%         if conf.rule is vyos_defined %}
 {%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
-        {{ rule_conf | nft_rule(route_text, rule_id, 'ip6') }}
+        {{ rule_conf | nft_rule('route6', route_text, rule_id, 'ip6') }}
 {%             endfor %}
 {%         endif %}
     }
