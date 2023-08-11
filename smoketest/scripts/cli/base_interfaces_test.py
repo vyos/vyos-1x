@@ -843,6 +843,7 @@ class BasicInterfaceTest:
 
             mss = '1400'
             dad_transmits = '10'
+            accept_dad = '0'
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -852,6 +853,9 @@ class BasicInterfaceTest:
                 # Options
                 if cli_defined(self._base_path + ['ipv6'], 'adjust-mss'):
                     self.cli_set(path + ['ipv6', 'adjust-mss', mss])
+
+                if cli_defined(self._base_path + ['ipv6'], 'accept-dad'):
+                    self.cli_set(path + ['ipv6', 'accept-dad', accept_dad])
 
                 if cli_defined(self._base_path + ['ipv6'], 'dup-addr-detect-transmits'):
                     self.cli_set(path + ['ipv6', 'dup-addr-detect-transmits', dad_transmits])
@@ -869,6 +873,10 @@ class BasicInterfaceTest:
                     for line in out.splitlines():
                         if line.startswith(base_options):
                             self.assertIn(f'tcp option maxseg size set {mss}', line)
+
+                if cli_defined(self._base_path + ['ipv6'], 'accept-dad'):
+                    tmp = read_file(f'{proc_base}/accept_dad')
+                    self.assertEqual(accept_dad, tmp)
 
                 if cli_defined(self._base_path + ['ipv6'], 'dup-addr-detect-transmits'):
                     tmp = read_file(f'{proc_base}/dad_transmits')

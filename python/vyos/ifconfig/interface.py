@@ -191,6 +191,10 @@ class Interface(Control):
             'validate': lambda fwd: assert_range(fwd,0,2),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
         },
+        'ipv6_accept_dad': {
+            'validate': lambda dad: assert_range(dad,0,3),
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_dad',
+        },
         'ipv6_dad_transmits': {
             'validate': assert_positive,
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
@@ -255,6 +259,9 @@ class Interface(Control):
         },
         'ipv6_forwarding': {
             'location': '/proc/sys/net/ipv6/conf/{ifname}/forwarding',
+        },
+        'ipv6_accept_dad': {
+            'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_dad',
         },
         'ipv6_dad_transmits': {
             'location': '/proc/sys/net/ipv6/conf/{ifname}/dad_transmits',
@@ -845,6 +852,13 @@ class Interface(Control):
         if tmp == forwarding:
             return None
         return self.set_interface('ipv6_forwarding', forwarding)
+
+    def set_ipv6_dad_accept(self, dad):
+        """Whether to accept DAD (Duplicate Address Detection)"""
+        tmp = self.get_interface('ipv6_accept_dad')
+        if tmp == dad:
+            return None
+        return self.set_interface('ipv6_accept_dad', dad)
 
     def set_ipv6_dad_messages(self, dad):
         """
@@ -1551,9 +1565,17 @@ class Interface(Control):
         value = '1' if (tmp != None) else '0'
         self.set_ipv6_autoconf(value)
 
-        # IPv6 Duplicate Address Detection (DAD) tries
+        # Whether to accept IPv6 DAD (Duplicate Address Detection) packets
+        tmp = dict_search('ipv6.accept_dad', config)
+        # Not all interface types got this CLI option, but if they do, there
+        # is an XML defaultValue available
+        if (tmp != None): self.set_ipv6_dad_accept(tmp)
+
+        # IPv6 DAD tries
         tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
-        self.set_ipv6_dad_messages(tmp)
+        # Not all interface types got this CLI option, but if they do, there
+        # is an XML defaultValue available
+        if (tmp != None): self.set_ipv6_dad_messages(tmp)
 
         # Delete old IPv6 EUI64 addresses before changing MAC
         for addr in (dict_search('ipv6.address.eui64_old', config) or []):
