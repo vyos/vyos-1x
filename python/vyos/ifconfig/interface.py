@@ -1553,8 +1553,7 @@ class Interface(Control):
 
         # IPv6 Duplicate Address Detection (DAD) tries
         tmp = dict_search('ipv6.dup_addr_detect_transmits', config)
-        value = tmp if (tmp != None) else '1'
-        self.set_ipv6_dad_messages(value)
+        self.set_ipv6_dad_messages(tmp)
 
         # Delete old IPv6 EUI64 addresses before changing MAC
         for addr in (dict_search('ipv6.address.eui64_old', config) or []):
