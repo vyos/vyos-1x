@@ -1,0 +1,184 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="monitoring">
+        <children>
+          <node name="zabbix-agent" owner="${vyos_conf_scripts_dir}/service_monitoring_zabbix-agent.py">
+            <properties>
+              <help>Zabbix-agent settings</help>
+            </properties>
+            <children>
+              <leafNode name="directory">
+                <properties>
+                  <help>Folder containing individual Zabbix-agent configuration files</help>
+                  <constraint>
+                    <validator name="file-path" argument="--directory"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <node name="limits">
+                <properties>
+                  <help>Limit settings</help>
+                </properties>
+                <children>
+                  <leafNode name="buffer-flush-interval">
+                    <properties>
+                      <help>Do not keep data longer than N seconds in buffer</help>
+                      <valueHelp>
+                        <format>u32:1-3600</format>
+                        <description>Seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-3600"/>
+                      </constraint>
+                      <constraintErrorMessage>buffer-flush-interval must be between 1 and 3600 seconds</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>5</defaultValue>
+                  </leafNode>
+                  <leafNode name="buffer-size">
+                    <properties>
+                      <help>Maximum number of values in a memory buffer</help>
+                      <valueHelp>
+                        <format>u32:2-65535</format>
+                        <description>Maximum number of values in a memory buffer</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 2-65535"/>
+                      </constraint>
+                      <constraintErrorMessage>Buffer-size must be between 2 and 65535</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>100</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="log">
+                <properties>
+                  <help>Log settings</help>
+                </properties>
+                <children>
+                  <leafNode name="debug-level">
+                    <properties>
+                      <help>Debug level</help>
+                      <completionHelp>
+                        <list>basic critical error warning debug extended-debug</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>basic</format>
+                        <description>Basic information</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>critical</format>
+                        <description>Critical information</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>error</format>
+                        <description>Error information</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>warning</format>
+                        <description>Warnings</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>debug</format>
+                        <description>Debug information</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>extended-debug</format>
+                        <description>Extended debug information</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(basic|critical|error|warning|debug|extended-debug)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>warning</defaultValue>
+                  </leafNode>
+                  <leafNode name="remote-commands">
+                    <properties>
+                      <help>Enable logging of executed shell commands as warnings</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="size">
+                    <properties>
+                      <help>Log file size in megabytes</help>
+                      <valueHelp>
+                        <format>u32:0-1024</format>
+                        <description>Megabytes</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 0-1024"/>
+                      </constraint>
+                      <constraintErrorMessage>Size must be between 0 and 1024 Megabytes</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>0</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+              #include <include/listen-address.xml.i>
+              <leafNode name="listen-address">
+                <defaultValue>0.0.0.0</defaultValue>
+              </leafNode>
+              #include <include/port-number.xml.i>
+              <leafNode name="port">
+                <defaultValue>10050</defaultValue>
+              </leafNode>
+              <leafNode name="server">
+                <properties>
+                  <help>Remote server to connect to</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Server IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Server IPv6 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>hostname</format>
+                    <description>Server hostname/FQDN</description>
+                  </valueHelp>
+                  <multi/>
+                </properties>
+              </leafNode>
+              <tagNode name="server-active">
+                <properties>
+                  <help>Remote server address to get active checks from</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>Server IPv4 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Server IPv6 address</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>hostname</format>
+                    <description>Server hostname/FQDN</description>
+                  </valueHelp>
+                </properties>
+                <children>
+                  #include <include/port-number.xml.i>
+                </children>
+              </tagNode>
+              <leafNode name="timeout">
+                <properties>
+                  <help>Item processing timeout in seconds</help>
+                  <valueHelp>
+                    <format>u32:1-30</format>
+                    <description>Item processing timeout</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-30"/>
+                  </constraint>
+                  <constraintErrorMessage>Timeout must be between 1 and 30 seconds</constraintErrorMessage>
+                </properties>
+                <defaultValue>3</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
