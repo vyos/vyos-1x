@@ -45,7 +45,7 @@ from sys import exit
 from vyos.configtree import ConfigTree
 from vyos.ifconfig import Section
 
-if (len(argv) < 1):
+if len(argv) < 2:
     print("Must specify file name!")
     exit(1)
 
@@ -77,14 +77,14 @@ if config.exists(base + ['state-policy']):
                     config.set(base + [family, hook, priority, 'rule', position, 'action'], value=action)
                     position = position + 1
     config.delete(base + ['state-policy'])
-############
 
 ## migration of global options:
 for option in ['all-ping', 'broadcast-ping', 'config-trap', 'ip-src-route', 'ipv6-receive-redirects', 'ipv6-src-route', 'log-martians',
                 'receive-redirects', 'resolver-cache', 'resolver-internal', 'send-redirects', 'source-validation', 'syn-cookies', 'twa-hazards-protection']:
     if config.exists(base + [option]):
-        val = config.return_value(base + [option])
-        config.set(base + ['global-options', option], value=val)
+        if option != 'config-trap':
+            val = config.return_value(base + [option])
+            config.set(base + ['global-options', option], value=val)
         config.delete(base + [option])
 
 ### Migration of firewall name and ipv6-name
@@ -182,7 +182,7 @@ if config.exists(base + ['interface']):
     config.delete(base + ['interface'])
 
 
-### Migration of zones config v2:
+### Migration of zones:
 ### User interface groups 
 if config.exists(base + ['zone']):
     inp_ipv4_rule = 101
@@ -364,7 +364,7 @@ if config.exists(base + ['zone']):
 
     config.delete(base + ['zone'])
 
-###### END migration zones v2
+###### END migration zones
 
 try:
     with open(file_name, 'w') as f:

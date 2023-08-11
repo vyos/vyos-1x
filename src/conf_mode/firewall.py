@@ -180,14 +180,6 @@ def get_config(config=None):
         # Update nat and policy-route as firewall groups were updated
         set_dependents('group_resync', conf)
 
-    #if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
-    if 'config_trap' in firewall and firewall['global_options']['config_trap'] == 'enable':
-        diff = get_config_diff(conf)
-        firewall['trap_diff'] = diff.get_child_nodes_diff_str(base)
-        firewall['trap_targets'] = conf.get_config_dict(['service', 'snmp', 'trap-target'],
-                                        key_mangling=('-', '_'), get_first_key=True,
-                                        no_tag_node_value_mangle=True)
-
     firewall['geoip_updated'] = geoip_updated(conf, firewall)
 
     fqdn_config_parse(firewall)
@@ -327,10 +319,6 @@ def verify_nested_group(group_name, group, groups, seen):
             verify_nested_group(g, groups[g], groups, seen)
 
 def verify(firewall):
-    if 'config_trap' in firewall and firewall['config_trap'] == 'enable':
-        if not firewall['trap_targets']:
-            raise ConfigError(f'Firewall config-trap enabled but "service snmp trap-target" is not defined')
-
     if 'group' in firewall:
         for group_type in nested_group_types:
             if group_type in firewall['group']:
@@ -408,9 +396,6 @@ def apply_sysfs(firewall):
 
 def post_apply_trap(firewall):
     if 'first_install' in firewall:
-        return None
-
-    if 'config_trap' not in firewall['global_options'] or firewall['global_options']['config_trap'] != 'enable':
         return None
 
     if not process_named_running('snmpd'):

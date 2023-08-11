@@ -44,26 +44,6 @@
       </properties>
       <defaultValue>disable</defaultValue>
     </leafNode>
-    <leafNode name="config-trap">
-      <properties>
-        <help>SNMP trap generation on firewall configuration changes</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable sending SNMP trap on firewall configuration change</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable sending SNMP trap on firewall configuration change</description>
-        </valueHelp>
-        <constraint>
-          <regex>(enable|disable)</regex>
-        </constraint>
-      </properties>
-      <defaultValue>disable</defaultValue>
-    </leafNode>
     <leafNode name="ip-src-route">
       <properties>
         <help>Policy for handling IPv4 packets with source route option</help>
