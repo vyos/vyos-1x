@@ -25,7 +25,7 @@ from vyos.utils.file import read_file
 
 PROCESS_NAME = 'zabbix_agent2'
 ZABBIX_AGENT_CONF = '/run/zabbix/zabbix-agent2.conf'
-base_path = ['service', 'zabbix-agent']
+base_path = ['service', 'monitoring', 'zabbix-agent']
 
 
 class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):

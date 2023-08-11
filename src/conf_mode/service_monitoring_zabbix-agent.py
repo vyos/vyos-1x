@@ -35,7 +35,7 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base = ['service', 'zabbix-agent']
+    base = ['service', 'monitoring', 'zabbix-agent']
 
     if not conf.exists(base):
         return None
