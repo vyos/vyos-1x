@@ -64,7 +64,8 @@ def get_config(config=None):
     if interfaces_removed:
         ospfv3['interface_removed'] = list(interfaces_removed)
 
-    # Bail out early if configuration tree does not exist
+    # Bail out early if configuration tree does no longer exist. this must
+    # be done after retrieving the list of interfaces to be removed.
     if not conf.exists(base):
         ospfv3.update({'deleted' : ''})
         return ospfv3
@@ -166,7 +167,7 @@ def apply(ospfv3):
         if key not in ospfv3:
             continue
         for interface in ospfv3[key]:
-            frr_cfg.modify_section(f'^interface {interface}{vrf}', stop_pattern='^exit', remove_stop_mark=True)
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
 
     if 'new_frr_config' in ospfv3:
         frr_cfg.add_before(frr.default_add_before, ospfv3['new_frr_config'])

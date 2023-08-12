@@ -63,7 +63,8 @@ def get_config(config=None):
     if interfaces_removed:
         isis['interface_removed'] = list(interfaces_removed)
 
-    # Bail out early if configuration tree does not exist
+    # Bail out early if configuration tree does no longer exist. this must
+    # be done after retrieving the list of interfaces to be removed.
     if not conf.exists(base):
         isis.update({'deleted' : ''})
         return isis
@@ -247,7 +248,7 @@ def apply(isis):
         if key not in isis:
             continue
         for interface in isis[key]:
-            frr_cfg.modify_section(f'^interface {interface}{vrf}', stop_pattern='^exit', remove_stop_mark=True)
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
 
     if 'frr_isisd_config' in isis:
         frr_cfg.add_before(frr.default_add_before, isis['frr_isisd_config'])

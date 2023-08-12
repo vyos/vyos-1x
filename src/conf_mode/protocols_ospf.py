@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -65,7 +65,8 @@ def get_config(config=None):
     if interfaces_removed:
         ospf['interface_removed'] = list(interfaces_removed)
 
-    # Bail out early if configuration tree does not exist
+    # Bail out early if configuration tree does no longer exist. this must
+    # be done after retrieving the list of interfaces to be removed.
     if not conf.exists(base):
         ospf.update({'deleted' : ''})
         return ospf
@@ -249,7 +250,7 @@ def apply(ospf):
         if key not in ospf:
             continue
         for interface in ospf[key]:
-            frr_cfg.modify_section(f'^interface {interface}{vrf}', stop_pattern='^exit', remove_stop_mark=True)
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
 
     if 'frr_ospfd_config' in ospf:
         frr_cfg.add_before(frr.default_add_before, ospf['frr_ospfd_config'])
