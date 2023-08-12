@@ -462,15 +462,17 @@ def process_running(pid_file):
         pid = f.read().strip()
     return pid_exists(int(pid))
 
-
-def process_named_running(name):
+def process_named_running(name, cmdline: str=None):
     """ Checks if process with given name is running and returns its PID.
     If Process is not running, return None
     """
     from psutil import process_iter
-    for p in process_iter():
-        if name in p.name():
-            return p.pid
+    for p in process_iter(['name', 'pid', 'cmdline']):
+        if cmdline:
+            if p.info['name'] == name and cmdline in p.info['cmdline']:
+                return p.info['pid']
+        elif p.info['name'] == name:
+            return p.info['pid']
     return None
 
 
