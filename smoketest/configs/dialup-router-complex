@@ -1094,6 +1094,10 @@ firewall {
             adjust-mss 1452
             adjust-mss6 1432
         }
+        interface eth0.10 {
+            adjust-mss 1320
+            adjust-mss6 1300
+        }
     }
     receive-redirects disable
     send-redirects enable
