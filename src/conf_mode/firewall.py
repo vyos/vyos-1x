@@ -23,7 +23,6 @@ from sys import exit
 
 from vyos.base import Warning
 from vyos.config import Config
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
@@ -37,7 +36,6 @@ from vyos.utils.dict import dict_search_args
 from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
-from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -133,47 +131,6 @@ def get_config(config=None):
                                     get_first_key=True,
                                     with_recursive_defaults=True)
 
-    # We have gathered the dict representation of the CLI, but there are
-    # default options which we need to update into the dictionary retrived.
-    # XXX: T2665: we currently have no nice way for defaults under tag
-    # nodes, thus we load the defaults "by hand"
-    default_values = defaults(base)
-
-    for family in ['ipv4', 'ipv6']:
-        for tmp in ['name', 'forward', 'input', 'output', 'prerouting']:
-            if tmp in default_values[family]:
-                del default_values[family][tmp]
-
-
-    firewall = dict_merge(default_values, firewall)
-
-    # Merge in defaults for IPv4 ruleset
-    if 'name' in firewall['ipv4']:
-        default_values = defaults(base + ['ipv4'] + ['name'])
-        for name in firewall['ipv4']['name']:
-            firewall['ipv4']['name'][name] = dict_merge(default_values,
-                                                firewall['ipv4']['name'][name])
-    for hook in ['forward', 'input', 'output', 'prerouting']:
-        if hook in firewall['ipv4']:
-            for priority in ['filter', 'mangle', 'raw']:
-                if priority in firewall['ipv4'][hook]:
-                    default_values = defaults(base + ['ipv4'] + [hook] + [priority])
-                    firewall['ipv4'][hook][priority] = dict_merge(default_values,
-                                                        firewall['ipv4'][hook][priority])
-
-    # Merge in defaults for IPv6 ruleset
-    if 'name' in firewall['ipv6']:
-        default_values = defaults(base + ['ipv6'] + ['name'])
-        for ipv6_name in firewall['ipv6']['name']:
-            firewall['ipv6']['name'][ipv6_name] = dict_merge(default_values,
-                                                          firewall['ipv6']['name'][ipv6_name])
-    for hook in ['forward', 'input', 'output', 'prerouting']:
-        if hook in firewall['ipv6']:
-            for priority in ['filter', 'mangle', 'raw']:
-                if priority in firewall['ipv6'][hook]:
-                    default_values = defaults(base + ['ipv6'] + [hook] + [priority])
-                    firewall['ipv6'][hook][priority] = dict_merge(default_values,
-                                                        firewall['ipv6'][hook][priority])
 
     firewall['group_resync'] = bool('group' in firewall or node_changed(conf, base + ['group']))
     if firewall['group_resync']:
