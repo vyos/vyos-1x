@@ -144,32 +144,54 @@ def mac_to_eui64(mac, prefix=None):
         except:  # pylint: disable=bare-except
             return
 
-def convert_data(data):
-    """Convert multiple types of data to types usable in CLI
+
+def convert_data(data) -> dict | list | tuple | str | int | float | bool | None:
+    """Filter and convert multiple types of data to types usable in CLI/API
+
+    WARNING: Must not be used for anything except formatting output for API or CLI
+
+    On the output allowed everything supported in JSON.
 
     Args:
-        data (str | bytes | list | OrderedDict): input data
+        data (Any): input data
 
     Returns:
-        str | list | dict: converted data
+        dict | list | tuple | str | int | float | bool | None: converted data
     """
     from base64 import b64encode
-    from collections import OrderedDict
 
-    if isinstance(data, str):
+    # return original data for types which do not require conversion
+    if isinstance(data, str | int | float | bool | None):
         return data
-    if isinstance(data, bytes):
-        try:
-            return data.decode()
-        except UnicodeDecodeError:
-            return b64encode(data).decode()
+
     if isinstance(data, list):
         list_tmp = []
         for item in data:
             list_tmp.append(convert_data(item))
         return list_tmp
-    if isinstance(data, OrderedDict):
+
+    if isinstance(data, tuple):
+        list_tmp = list(data)
+        tuple_tmp = tuple(convert_data(list_tmp))
+        return tuple_tmp
+
+    if isinstance(data, bytes | bytearray):
+        try:
+            return data.decode()
+        except UnicodeDecodeError:
+            return b64encode(data).decode()
+
+    if isinstance(data, set | frozenset):
+        list_tmp = convert_data(list(data))
+        return list_tmp
+
+    if isinstance(data, dict):
         dict_tmp = {}
         for key, value in data.items():
             dict_tmp[key] = convert_data(value)
         return dict_tmp
+
+    # do not return anything for other types
+    # which cannot be converted to JSON
+    # for example: complex | range | memoryview
+    return
