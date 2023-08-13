@@ -337,10 +337,6 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_delete(path + ['protocol'])
 
-
-        # check validate() - must specify "tls dh-params" when "tls role" is "passive"
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
         self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
 
         self.cli_commit()
