@@ -56,7 +56,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
@@ -84,7 +84,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' compatible rfc1583', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth {bandwidth}', frrconfig)
@@ -116,7 +116,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         for ptotocol in protocols:
@@ -137,7 +137,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
         self.assertIn(f' default-information originate metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
@@ -147,7 +147,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f' default-information originate always metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
 
 
@@ -189,7 +189,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' mpls-te on', frrconfig)
         self.assertIn(f' mpls-te router-address 0.0.0.0', frrconfig) # default
@@ -212,7 +212,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['distance', 'ospf', 'inter-area', inter_area])
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f' distance ospf intra-area {intra_area} inter-area {inter_area} external {external}', frrconfig)
 
 
@@ -228,7 +228,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         for neighbor in neighbors:
             self.assertIn(f' neighbor {neighbor} priority {priority} poll-interval {poll_interval}', frrconfig) # default
@@ -247,7 +247,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         for protocol in redistribute:
             self.assertIn(f' redistribute {protocol} metric {metric} metric-type {metric_type} route-map {route_map}', frrconfig)
@@ -274,7 +274,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' area {area} shortcut {shortcut}', frrconfig)
         self.assertIn(f' area {area} virtual-link {virtual_link} hello-interval {hello} retransmit-interval {retransmit} transmit-delay {transmit} dead-interval {dead}', frrconfig)
@@ -306,11 +306,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' passive-interface default', frrconfig)
 
         for interface in interfaces:
+            # Can not use daemon for getFRRconfig() as bandwidth parameter belongs to zebra process
             config = self.getFRRconfig(f'interface {interface}')
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf authentication-key {password}', config)
@@ -322,6 +323,17 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ip ospf priority {priority}', config)
             self.assertIn(f' no ip ospf passive', config)
             self.assertIn(f' bandwidth {bandwidth}', config)
+
+        # T5467: Remove interface from OSPF process and VRF
+        self.cli_delete(base_path + ['interface'])
+        self.cli_commit()
+
+        for interface in interfaces:
+            # T5467: It must also be removed from FRR config
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            self.assertNotIn(f'interface {interface}', frrconfig)
+            # There should be no OSPF related command at all under the interface
+            self.assertNotIn(f' ip ospf', frrconfig)
 
     def test_ospf_11_interface_area(self):
         area = '0'
@@ -339,11 +351,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
 
         for interface in interfaces:
-            config = self.getFRRconfig(f'interface {interface}')
+            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf area {area}', config)
 
@@ -355,8 +367,10 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         vrf = 'blue'
         vrf_base = ['vrf', 'name', vrf]
         vrf_iface = 'eth1'
+        area = '1'
+
         self.cli_set(vrf_base + ['table', table])
-        self.cli_set(vrf_base + ['protocols', 'ospf', 'interface', vrf_iface])
+        self.cli_set(vrf_base + ['protocols', 'ospf', 'interface', vrf_iface, 'area', area])
         self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
 
         # Also set a default VRF OSPF config
@@ -364,15 +378,30 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
 
-        frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}')
+        frrconfig = self.getFRRconfig(f'router ospf vrf {vrf}', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf vrf {vrf}', frrconfig)
         self.assertIn(f' auto-cost reference-bandwidth 100', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # defaults
+
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', daemon=PROCESS_NAME)
+        self.assertIn(f'interface {vrf_iface}', frrconfig)
+        self.assertIn(f' ip ospf area {area}', frrconfig)
+
+        # T5467: Remove interface from OSPF process and VRF
+        self.cli_delete(vrf_base + ['protocols', 'ospf', 'interface'])
+        self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
+        self.cli_commit()
+
+        # T5467: It must also be removed from FRR config
+        frrconfig = self.getFRRconfig(f'interface {vrf_iface}', daemon=PROCESS_NAME)
+        self.assertNotIn(f'interface {vrf_iface}', frrconfig)
+        # There should be no OSPF related command at all under the interface
+        self.assertNotIn(f' ip ospf', frrconfig)
 
         # cleanup
         self.cli_delete(['vrf', 'name', vrf])
@@ -385,7 +414,6 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         area = '0.0.0.10'
         network = '10.0.0.0/8'
 
-
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'action', 'permit'])
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'source', 'any'])
         self.cli_set(['policy', 'access-list', acl, 'rule', seq, 'destination', 'any'])
@@ -396,7 +424,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig) # default
         self.assertIn(f' network {network} area {area}', frrconfig)
@@ -430,7 +458,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify all changes
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f' segment-routing on', frrconfig)
         self.assertIn(f' segment-routing global-block {global_block_low} {global_block_high} local-block {local_block_low} {local_block_high}', frrconfig)
         self.assertIn(f' segment-routing node-msd {maximum_stack_size}', frrconfig)
@@ -449,7 +477,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify main OSPF changes
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' timers throttle spf 200 1000 10000', frrconfig)
         self.assertIn(f' mpls ldp-sync holddown {holddown}', frrconfig)
@@ -457,11 +485,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
 
-            # Commit interface changes for holddown
-            self.cli_commit()
+        # Commit interface changes for holddown
+        self.cli_commit()
 
+        for interface in interfaces:
             # Verify interface changes for holddown
-            config = self.getFRRconfig(f'interface {interface}')
+            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf dead-interval 40', config)
             self.assertIn(f' ip ospf mpls ldp-sync', config)
@@ -470,11 +499,12 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
 
-            # Commit interface changes for disable
-            self.cli_commit()
+        # Commit interface changes for disable
+        self.cli_commit()
 
+        for interface in interfaces:
             # Verify interface changes for disable
-            config = self.getFRRconfig(f'interface {interface}')
+            config = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
             self.assertIn(f'interface {interface}', config)
             self.assertIn(f' ip ospf dead-interval 40', config)
             self.assertIn(f' no ip ospf mpls ldp-sync', config)
@@ -496,7 +526,7 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify FRR ospfd configuration
-        frrconfig = self.getFRRconfig('router ospf')
+        frrconfig = self.getFRRconfig('router ospf', daemon=PROCESS_NAME)
         self.assertIn(f'router ospf', frrconfig)
         self.assertIn(f' capability opaque', frrconfig)
         self.assertIn(f' graceful-restart grace-period {period}', frrconfig)

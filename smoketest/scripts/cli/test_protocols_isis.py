@@ -295,9 +295,10 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'holddown', holddown])
 
-            # Commit interface changes for holddown
-            self.cli_commit()
+        # Commit interface changes for holddown
+        self.cli_commit()
 
+        for interface in self._interfaces:
             # Verify interface changes for holddown
             tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
             self.assertIn(f'interface {interface}', tmp)
@@ -308,9 +309,10 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         for interface in self._interfaces:
             self.cli_set(base_path + ['interface', interface, 'ldp-sync', 'disable'])
 
-            # Commit interface changes for disable
-            self.cli_commit()
+        # Commit interface changes for disable
+        self.cli_commit()
 
+        for interface in self._interfaces:
             # Verify interface changes for disable
             tmp = self.getFRRconfig(f'interface {interface}', daemon='isisd')
             self.assertIn(f'interface {interface}', tmp)
