@@ -137,7 +137,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'source', 'group', 'domain-group', 'smoketest_domain'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'outbound-interface', 'interface-group', 'smoketest_interface'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'outbound-interface', 'interface-group', '!smoketest_interface'])
 
         self.cli_commit()
 
@@ -153,7 +153,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['elements = { 192.0.2.5, 192.0.2.8,'],
             ['192.0.2.10, 192.0.2.11 }'],
             ['ip saddr @D_smoketest_domain', 'accept'],
-            ['oifname @I_smoketest_interface', 'accept']
+            ['oifname != @I_smoketest_interface', 'accept']
         ]
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
@@ -192,6 +192,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
     def test_ipv4_basic_rules(self):
         name = 'smoketest'
         interface = 'eth0'
+        interface_inv = '!eth0'
         interface_wc = 'l2tp*'
         mss_range = '501-1460'
         conn_mark = '555'
@@ -231,7 +232,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '5', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '5', 'tcp', 'mss', mss_range])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '5', 'packet-type', 'broadcast'])
-        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '5', 'inbound-interface', 'interface-name', interface])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '5', 'inbound-interface', 'interface-name', interface_wc])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'action', 'return'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'connection-mark', conn_mark])
@@ -239,7 +240,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'default-action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'protocol', 'gre'])
-        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'outbound-interface', 'interface-name', interface_wc])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'outbound-interface', 'interface-name', interface_inv])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '6', 'action', 'return'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '6', 'protocol', 'icmp'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '6', 'connection-mark', conn_mark])
@@ -255,11 +256,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['tcp dport 22', 'add @RECENT_FWD_filter_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
-            ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface}"', 'meta pkttype broadcast', 'accept'],
+            ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface_wc}"', 'meta pkttype broadcast', 'accept'],
             ['meta l4proto gre', f'ct mark {mark_hex}', 'return'],
             ['chain VYOS_OUTPUT_filter'],
             ['type filter hook output priority filter; policy accept;'],
-            ['meta l4proto gre', f'oifname "{interface_wc}"', 'drop'],
+            ['meta l4proto gre', f'oifname != "{interface}"', 'drop'],
             ['meta l4proto icmp', f'ct mark {mark_hex}', 'return'],
             ['chain NAME_smoketest'],
             ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],

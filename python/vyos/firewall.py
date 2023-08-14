@@ -272,20 +272,34 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 output.append(f'ip6 hoplimit {operator} {value}')
 
     if 'inbound_interface' in rule_conf:
+        operator = ''
         if 'interface_name' in rule_conf['inbound_interface']:
             iiface = rule_conf['inbound_interface']['interface_name']
-            output.append(f'iifname {{{iiface}}}')
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} {{{iiface}}}')
         else:
             iiface = rule_conf['inbound_interface']['interface_group']
-            output.append(f'iifname @I_{iiface}')
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} @I_{iiface}')
 
     if 'outbound_interface' in rule_conf:
+        operator = ''
         if 'interface_name' in rule_conf['outbound_interface']:
             oiface = rule_conf['outbound_interface']['interface_name']
-            output.append(f'oifname {{{oiface}}}')
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} {{{oiface}}}')
         else:
             oiface = rule_conf['outbound_interface']['interface_group']
-            output.append(f'oifname @I_{oiface}')
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} @I_{oiface}')
 
     if 'ttl' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}

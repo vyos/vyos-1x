@@ -7,10 +7,18 @@
     </completionHelp>
     <valueHelp>
       <format>txt</format>
-      <description>Interface name, wildcard (*) supported</description>
+      <description>Interface name</description>
+    </valueHelp>
+    <valueHelp>
+      <format>txt*</format>
+      <description>Interface name with wildcard</description>
+    </valueHelp>
+    <valueHelp>
+      <format>!txt</format>
+      <description>Inverted interface name to match</description>
     </valueHelp>
     <constraint>
-      #include <include/constraint/interface-name-with-wildcard.xml.i>
+      #include <include/constraint/interface-name-with-wildcard-and-inverted.xml.i>
     </constraint>
   </properties>
 </leafNode>
@@ -20,6 +28,14 @@
     <completionHelp>
       <path>firewall group interface-group</path>
     </completionHelp>
+    <valueHelp>
+      <format>txt</format>
+      <description>Interface-group name to match</description>
+    </valueHelp>
+    <valueHelp>
+      <format>!txt</format>
+      <description>Inverted interface-group name to match</description>
+    </valueHelp>
   </properties>
 </leafNode>
 <!-- include end -->
