@@ -4,26 +4,26 @@
     <children>
       <tagNode name="tinc" owner="${vyos_conf_scripts_dir}/interfaces-tinc.py">
         <properties>
-          <help>Tinc VPN Tunnel Interface</help>
+          <help>tinc VPN Tunnel Interface</help>
           <priority>460</priority>
           <constraint>
             <regex>^tinc[0-9]+$</regex>
           </constraint>
-          <constraintErrorMessage>Tinc VPN tunnel interface must be named vtincN</constraintErrorMessage>
+          <constraintErrorMessage>tinc VPN tunnel interface must be named vtincN</constraintErrorMessage>
           <valueHelp>
             <format>tincN</format>
-            <description>Tinc VPN interface name</description>
+            <description>tinc VPN interface name</description>
           </valueHelp>
         </properties>
         <children>
           <leafNode name="node-name">
             <properties>
-              <help>Local Node Name options(require)</help>
+              <help>Local node name options(require)</help>
             </properties>
           </leafNode>
           <leafNode name="subnets">
             <properties>
-              <help>Declare network segment</help>
+              <help>Subnet settings</help>
               <valueHelp>
                 <format>ipv4net</format>
                 <description>IPv4 address and prefix length</description>
@@ -129,13 +129,13 @@
             <children>
               <leafNode name="cipher">
                 <properties>
-                  <help>Standard Data Encryption Algorithm(default:aes-256-cbc)</help>
+                  <help>Standard Data Encryption algorithm(default: aes-256-cbc)</help>
                 </properties>
                 <defaultValue>aes-256-cbc</defaultValue>
               </leafNode>
               <leafNode name="digset">
                 <properties>
-                  <help>UDP Digest settings(default:sha256)</help>
+                  <help>UDP Digest settings(default: sha256)</help>
                 </properties>
                 <defaultValue>sha256</defaultValue>
               </leafNode>
@@ -143,7 +143,7 @@
           </node>
           <leafNode name="bridge">
             <properties>
-              <help>Tinc VPN interface device Bridge Mode(If this option is not specified, tinc will run in routing mode)</help>
+              <help>tinc VPN interface device Bridge Mode(If this option is not specified, tinc will run in routing mode)</help>
               <completionHelp>
                 <list>switch hub</list>
               </completionHelp>
@@ -235,7 +235,7 @@
           </leafNode>
           <leafNode name="key-expire">
             <properties>
-              <help>Key expiration time(seconds,default:3600)</help>
+              <help>Key expiration time(seconds, default: 3600)</help>
             </properties>
             <defaultValue>3600</defaultValue>
           </leafNode>
@@ -247,25 +247,25 @@
           </leafNode>
           <leafNode name="mac-expire">
             <properties>
-              <help>MAC expiration time(seconds,default:600)</help>
+              <help>MAC expiration time(seconds, default: 600)</help>
             </properties>
             <defaultValue>600</defaultValue>
           </leafNode>
           <leafNode name="max-timeout">
             <properties>
-              <help>Max Timeout(seconds,default:900)</help>
+              <help>Max Timeout(seconds, default: 900)</help>
             </properties>
             <defaultValue>900</defaultValue>
           </leafNode>
           <leafNode name="ping-interval">
             <properties>
-              <help>Ping Interval(seconds,default:60)</help>
+              <help>Ping Interval(seconds, default: 60)</help>
             </properties>
             <defaultValue>60</defaultValue>
           </leafNode>
           <leafNode name="ping-timeout">
             <properties>
-              <help>Ping Timeout(seconds,default:5)</help>
+              <help>Ping Timeout(seconds, default: 5)</help>
             </properties>
             <defaultValue>5</defaultValue>
           </leafNode>
@@ -334,7 +334,7 @@
                   </valueHelp>
                   <valueHelp>
                     <format>exec</format>
-                    <description>Executes the given command which should set up the outgoing connection. The environment variables NAME, NODE, REMOTEADDRES and REMOTEPORT are available</description>
+                    <description>Command to execute on connection setup</description>
                   </valueHelp>
                   <constraint>
                     <regex>(socks4|socks5|http|exec)</regex>
@@ -369,26 +369,26 @@
               </leafNode>
               <leafNode name="exec">
                 <properties>
-                  <help>Executes the given command which should set up the outgoing connection. The environment variables NAME, NODE, REMOTEADDRES and REMOTEPORT are available</help>
+                  <help>Command to execute on connection setup</help>
                 </properties>
               </leafNode>
             </children>
           </node>
           <leafNode name="replay-window">
             <properties>
-              <help>ReplayWindow(Bytes,default:16)</help>
+              <help>ReplayWindow(Bytes, default: 16)</help>
             </properties>
             <defaultValue>16</defaultValue>
           </leafNode>
           <leafNode name="strict-subnets">
             <properties>
-              <help>When this option is enabled tinc will only use Subnet statements which are present in the host config files in the local /etc/tinc/netname/hosts/ directory. Subnets learned via connections to other nodes and which are not present in the local host config files are ignored</help>
+              <help>Ignore connections from unknown networks</help>
               <valueless/>
             </properties>
           </leafNode>
           <leafNode name="tunnel-server">
             <properties>
-              <help>When this option is enabled tinc will no longer forward information between other tinc daemons, and will only allow connections with nodes for which host config files are present in the local /etc/tinc/netname/hosts/ directory, Setting this options also implicitly sets StrictSubnets</help>
+              <help>Declare the node as a tunnel server</help>
               <valueless/>
             </properties>
           </leafNode>
@@ -428,19 +428,19 @@
           </leafNode>
           <leafNode name="compression-level">
             <properties>
-              <help>Compression Level Option(default:9)</help>
+              <help>Compression Level Option(default: 9)</help>
             </properties>
             <defaultValue>9</defaultValue>
           </leafNode>
           <leafNode name="mac-length">
             <properties>
-              <help>MAC Length(Bytes,default:4)</help>
+              <help>MAC Length(Bytes, default: 4)</help>
             </properties>
             <defaultValue>4</defaultValue>
           </leafNode>
           <leafNode name="mtu">
             <properties>
-              <help>MTU(Bytes,default:1514)</help>
+              <help>MTU(Bytes, default: 1514)</help>
             </properties>
             <defaultValue>1514</defaultValue>
           </leafNode>

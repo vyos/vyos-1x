@@ -6,12 +6,12 @@
         <children>
           <node name="tinc">
             <properties>
-              <help>Show Tinc VPN interface information</help>
+              <help>Show tinc VPN interface information</help>
             </properties>
             <children>
               <leafNode name="detail">
                 <properties>
-                  <help>Show detailed Tinc VPN interface information</help>
+                  <help>Show detailed tinc VPN interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf-type=tinc --action=show</command>
               </leafNode>
@@ -19,7 +19,7 @@
           </node>
           <tagNode name="tinc">
             <properties>
-              <help>Show Tinc VPN interface information</help>
+              <help>Show tinc VPN interface information</help>
               <completionHelp>
                 <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
               </completionHelp>
@@ -28,7 +28,7 @@
             <children>
               <leafNode name="brief">
                 <properties>
-                  <help>Show summary of specified Tinc VPN interface information</help>
+                  <help>Show summary of specified tinc VPN interface information</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/show_interfaces.py --intf="$4" --action=show-brief</command>
               </leafNode>
@@ -36,26 +36,6 @@
           </tagNode>
         </children>
       </node>
-    </children>
-  </node>
-  <node name="generate">
-    <children>
-      <tagNode name="tinc">
-        <properties>
-          <help>Generate tinc vpn tunnel configuration</help>
-          <completionHelp>
-            <script>sudo ${vyos_completion_dir}/list_interfaces.py --type tinc</script>
-          </completionHelp>
-        </properties>
-        <children>
-          <leafNode name="host-conf">
-            <properties>
-              <help>Generate tinc vpn tunnel host configuration path</help>
-            </properties>
-            <command>scp "$5" "/etc/tinc/$3/hosts/"</command>
-          </leafNode>
-        </children>
-      </tagNode>
     </children>
   </node>
 </interfaceDefinition>

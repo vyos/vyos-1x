@@ -194,7 +194,6 @@ Depends:
   zabbix-agent2,
   ndppd,
   miniupnpd-nftables,
-  wpasupplicant (>= 0.6.7),
   tinc
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
