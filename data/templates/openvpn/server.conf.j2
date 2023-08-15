@@ -201,9 +201,9 @@ tls-client
 tls-server
 {%     endif %}
 
-{%     if peer_fingerprint is vyos_defined %}
+{%     if tls.peer_fingerprint is vyos_defined %}
 <peer-fingerprint>
-{%         for fp in peer_fingerprint %}
+{%         for fp in tls.peer_fingerprint %}
 {{ fp }}
 {%         endfor %}
 </peer-fingerprint>
