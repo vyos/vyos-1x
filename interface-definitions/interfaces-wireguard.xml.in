@@ -59,6 +59,7 @@
             </properties>
             <children>
               #include <include/generic-disable-node.xml.i>
+              #include <include/generic-description.xml.i>
               <leafNode name="public-key">
                 <properties>
                   <help>base64 encoded public key</help>
