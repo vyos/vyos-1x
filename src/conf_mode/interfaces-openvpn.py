@@ -166,17 +166,23 @@ def verify_pki(openvpn):
             raise ConfigError(f'Invalid shared-secret on openvpn interface {interface}')
 
     if tls:
-        if 'ca_certificate' not in tls:
-            raise ConfigError(f'Must specify "tls ca-certificate" on openvpn interface {interface}')
+        if (mode in ['server', 'client']) and ('ca_certificate' not in tls):
+            raise ConfigError(f'Must specify "tls ca-certificate" on openvpn interface {interface},\
+              it is required in server and client modes')
+        else:
+            if ('ca_certificate' not in tls) and ('peer_fingerprint' not in tls):
+                raise ConfigError('Either "tls ca-certificate" or "tls peer-fingerprint" is required\
+                  on openvpn interface {interface} in site-to-site mode')
 
-        for ca_name in tls['ca_certificate']:
-            if ca_name not in pki['ca']:
-                raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
+        if 'ca_certificate' in tls:
+            for ca_name in tls['ca_certificate']:
+                if ca_name not in pki['ca']:
+                    raise ConfigError(f'Invalid CA certificate on openvpn interface {interface}')
 
-        if len(tls['ca_certificate']) > 1:
-            sorted_chain = sort_ca_chain(tls['ca_certificate'], pki['ca'])
-            if not verify_ca_chain(sorted_chain, pki['ca']):
-                raise ConfigError(f'CA certificates are not a valid chain')
+            if len(tls['ca_certificate']) > 1:
+                sorted_chain = sort_ca_chain(tls['ca_certificate'], pki['ca'])
+                if not verify_ca_chain(sorted_chain, pki['ca']):
+                    raise ConfigError(f'CA certificates are not a valid chain')
 
         if mode != 'client' and 'auth_key' not in tls:
             if 'certificate' not in tls:
