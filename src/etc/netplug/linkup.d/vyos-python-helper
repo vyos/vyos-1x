@@ -1,0 +1,4 @@
+#!/bin/sh
+PYTHON3=$(which python3)
+# Call the real python script and forward commandline arguments
+$PYTHON3 /etc/netplug/vyos-netplug-dhcp-client "${@:1}"
