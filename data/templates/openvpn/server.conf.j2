@@ -185,7 +185,7 @@ tls-version-min {{ tls.tls_version_min }}
 {%     endif %}
 {%     if tls.dh_params is vyos_defined %}
 dh /run/openvpn/{{ ifname }}_dh.pem
-{%     elif mode is vyos_defined('server') and tls.private_key is vyos_defined %}
+{%     else %}
 dh none
 {%     endif %}
 {%     if tls.auth_key is vyos_defined %}
