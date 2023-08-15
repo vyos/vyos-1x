@@ -351,39 +351,6 @@ def apply_sysfs(firewall):
                 with open(path, 'w') as f:
                     f.write(value)
 
-def post_apply_trap(firewall):
-    if 'first_install' in firewall:
-        return None
-
-    if not process_named_running('snmpd'):
-        return None
-
-    trap_username = os.getlogin()
-
-    for host, target_conf in firewall['trap_targets'].items():
-        community = target_conf['community'] if 'community' in target_conf else 'public'
-        port = int(target_conf['port']) if 'port' in target_conf else 162
-
-        base_cmd = f'snmptrap -v2c -c {community} {host}:{port} 0 {snmp_trap_mib}::{snmp_trap_name} '
-
-        for change_type, changes in firewall['trap_diff'].items():
-            for path_str, value in changes.items():
-                objects = [
-                    f'mgmtEventUser s "{trap_username}"',
-                    f'mgmtEventSource i {snmp_event_source}',
-                    f'mgmtEventType i {snmp_change_type[change_type]}'
-                ]
-
-                if change_type == 'add':
-                    objects.append(f'mgmtEventCurrCfg s "{path_str} {value}"')
-                elif change_type == 'delete':
-                    objects.append(f'mgmtEventPrevCfg s "{path_str} {value}"')
-                elif change_type == 'change':
-                    objects.append(f'mgmtEventPrevCfg s "{path_str} {value[0]}"')
-                    objects.append(f'mgmtEventCurrCfg s "{path_str} {value[1]}"')
-
-                cmd(base_cmd + ' '.join(objects))
-
 def apply(firewall):
     install_result, output = rc_cmd(f'nft -f {nftables_conf}')
     if install_result == 1:
@@ -407,8 +374,6 @@ def apply(firewall):
         if 'name' in firewall['geoip_updated'] or 'ipv6_name' in firewall['geoip_updated']:
             print('Updating GeoIP. Please wait...')
             geoip_update(firewall)
-
-    post_apply_trap(firewall)
 
     return None
 
