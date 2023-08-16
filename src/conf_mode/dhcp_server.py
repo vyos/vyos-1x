@@ -296,6 +296,10 @@ def generate(dhcp):
     render(config_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
 
+    # Clean up configuration test file
+    if os.path.exists(tmp_file):
+        os.unlink(tmp_file)
+
     return None
 
 def apply(dhcp):
