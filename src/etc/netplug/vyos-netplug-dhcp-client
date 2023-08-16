@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+#
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+
+from time import sleep
+
+from vyos.configquery import ConfigTreeQuery
+from vyos.ifconfig import Section
+from vyos.utils.boot import boot_configuration_complete
+from vyos.utils.commit import commit_in_progress
+from vyos.utils.process import call
+from vyos import airbag
+airbag.enable()
+
+if len(sys.argv) < 3:
+    airbag.noteworthy("Must specify both interface and link status!")
+    sys.exit(1)
+
+if not boot_configuration_complete():
+    airbag.noteworthy("System bootup not yet finished...")
+    sys.exit(1)
+
+while commit_in_progress():
+    sleep(1)
+
+interface = sys.argv[1]
+in_out = sys.argv[2]
+config = ConfigTreeQuery()
+
+interface_path = ['interfaces'] + Section.get_config_path(interface).split()
+
+for _, interface_config in config.get_config_dict(interface_path).items():
+    # Bail out early if we do not have an IP address configured
+    if 'address' not in interface_config:
+        continue
+    # Bail out early if interface ist administrative down
+    if 'disable' in interface_config:
+        continue
+    systemd_action = 'start'
+    if in_out == 'out':
+        systemd_action = 'stop'
+    # Start/Stop DHCP service
+    if 'dhcp' in interface_config['address']:
+        call(f'systemctl {systemd_action} dhclient@{interface}.service')
+    # Start/Stop DHCPv6 service
+    if 'dhcpv6' in interface_config['address']:
+        call(f'systemctl {systemd_action} dhcp6c@{interface}.service')

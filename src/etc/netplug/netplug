@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+dev="$1"
+action="$2"
+
+case "$action" in
+in)
+   run-parts --arg $dev --arg in /etc/netplug/linkup.d
+    ;;
+out)
+   run-parts --arg $dev --arg out /etc/netplug/linkdown.d
+    ;;
+
+# probe loads and initialises the driver for the interface and brings the
+# interface into the "up" state, so that it can generate netlink(7) events.
+# This interferes with "admin down" for an interface. Thus, commented out. An
+# "admin up" is treated as a "link up" and thus, "link up" action is executed.
+# To execute "link down" action on "admin down", run appropriate script in
+# /etc/netplug/linkdown.d
+#probe)
+#    ;;
+
+*)
+    exit 1
+    ;;
+esac
