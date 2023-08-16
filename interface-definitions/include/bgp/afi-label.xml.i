@@ -29,6 +29,19 @@
             </constraint>
           </properties>
         </leafNode>
+        <node name="allocation-mode">
+          <properties>
+            <help>Label allocation mode</help>
+          </properties>
+          <children>
+            <leafNode name="per-nexhop">
+              <properties>
+                <help>Allocate a label per connected next-hop in the VRF</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
       </children>
     </node>
   </children>
