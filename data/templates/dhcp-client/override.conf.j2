@@ -10,6 +10,6 @@ ConditionPathExists={{ isc_dhclient_dir }}/dhclient_%i.conf
 ExecStart=
 ExecStart={{ vrf_command }}/sbin/dhclient -4 {{ dhclient_options }} {{ ifname }}
 ExecStop=
-ExecStop=/sbin/dhclient -4 -r {{ dhclient_options }} {{ ifname }}
+ExecStop={{ vrf_command }}/sbin/dhclient -4 -r {{ dhclient_options }} {{ ifname }}
 WorkingDirectory={{ isc_dhclient_dir }}
 PIDFile={{ isc_dhclient_dir }}/dhclient_%i.pid
