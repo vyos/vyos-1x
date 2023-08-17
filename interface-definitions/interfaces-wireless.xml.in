@@ -778,6 +778,7 @@
             </properties>
             <defaultValue>monitor</defaultValue>
           </leafNode>
+          #include <include/interface/per-client-thread.xml.i>
           #include <include/interface/redirect.xml.i>
           #include <include/interface/vif.xml.i>
           #include <include/interface/vif-s.xml.i>
