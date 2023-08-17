@@ -54,6 +54,9 @@ def get_config(config=None):
         tmp = leaf_node_changed(conf, ['encapsulation'])
         if tmp: tunnel.update({'encapsulation_changed': {}})
 
+        tmp = leaf_node_changed(conf, ['parameters', 'ip', 'key'])
+        if tmp: tunnel.update({'key_changed': {}})
+
         # We also need to inspect other configured tunnels as there are Kernel
         # restrictions where we need to comply. E.g. GRE tunnel key can't be used
         # twice, or with multiple GRE tunnels to the same location we must specify
@@ -174,8 +177,9 @@ def apply(tunnel):
         encap = dict_search('linkinfo.info_kind', tmp)
         remote = dict_search('linkinfo.info_data.remote', tmp)
 
-    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or encap in
-        ['gretap', 'ip6gretap'] or remote in ['any']):
+    if ('deleted' in tunnel or 'encapsulation_changed' in tunnel or
+        encap in ['gretap', 'ip6gretap'] or remote in ['any'] or
+        'key_changed' in tunnel):
         if interface in interfaces():
             tmp = Interface(interface)
             tmp.remove()
