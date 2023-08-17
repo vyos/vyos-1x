@@ -36,6 +36,12 @@
             </properties>
             <command>journalctl --no-hostname --follow --boot --unit conntrackd.service</command>
           </leafNode>
+          <leafNode name="console-server">
+            <properties>
+              <help>Monitor last lines of console server log</help>
+            </properties>
+            <command>journalctl --no-hostname --follow --boot --unit conserver-server.service</command>
+          </leafNode>
           <node name="dhcp">
             <properties>
               <help>Monitor last lines of Dynamic Host Control Protocol log</help>
