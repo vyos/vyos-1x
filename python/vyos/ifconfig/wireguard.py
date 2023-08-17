@@ -27,7 +27,6 @@ from vyos.ifconfig import Operational
 from vyos.template import is_ipv6
 from vyos.base import Warning
 
-
 class WireGuardOperational(Operational):
     def _dump(self):
         """Dump wireguard data in a python friendly way."""
@@ -229,13 +228,6 @@ class WireGuardIf(Interface):
                 # PSK key file is not required to be stored persistently as its backed by CLI
                 if psk_file != no_psk_file and os.path.exists(psk_file):
                     os.remove(psk_file)
-
-        try:
-            self._write_sysfs(f'/sys/devices/virtual/net/{self.ifname}/threaded',
-                          '1' if 'threaded' in config else '0')
-        except Exception:
-            Warning(f'Update threaded status on interface "{config["ifname"]}" FAILED.\n'
-                    f'An unexpected error occurred.')
 
         # call base class
         super().update(config)

@@ -145,18 +145,11 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'public-key', pubkey])
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
         self.cli_set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
-        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'disable'])
-        self.cli_set(base_path + [interface, 'threaded'])
-
-        # Threaded is set and no enabled peer is configured
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_delete(base_path + [interface, 'peer', 'PEER01', 'disable'])
+        self.cli_set(base_path + [interface, 'per-client-thread'])
 
         # Commit peers
         self.cli_commit()
-        tmp = read_file(f'/sys/devices/virtual/net/{interface}/threaded')
+        tmp = read_file(f'/sys/class/net/{interface}/threaded')
         self.assertTrue(tmp, "1")
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -219,6 +219,10 @@ class Interface(Control):
             'validate': lambda link: assert_range(link,0,3),
             'location': '/proc/sys/net/ipv4/conf/{ifname}/link_filter',
         },
+        'per_client_thread': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/threaded',
+        },
     }
 
     _sysfs_get = {
@@ -266,6 +270,10 @@ class Interface(Control):
         },
         'link_detect': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/link_filter',
+        },
+        'per_client_thread': {
+            'validate': assert_boolean,
+            'location': '/sys/class/net/{ifname}/threaded',
         },
     }
 
@@ -1357,6 +1365,30 @@ class Interface(Control):
                                  f'egress redirect dev {target_if}')
             if err: print('tc filter add for redirect failed')
 
+    def set_per_client_thread(self, enable):
+        """
+        Per-device control to enable/disable the threaded mode for all the napi
+        instances of the given network device, without the need for a device up/down.
+
+        User sets it to 1 or 0 to enable or disable threaded mode.
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('wg1').set_per_client_thread(1)
+        """
+        # In the case of a "virtual" interface like wireguard, the sysfs
+        # node is only created once there is a peer configured. We can now
+        # add a verify() code-path for this or make this dynamic without
+        # nagging the user
+        tmp = self._sysfs_get['per_client_thread']['location']
+        if not os.path.exists(tmp):
+            return None
+
+        tmp = self.get_interface('per_client_thread')
+        if tmp == enable:
+            return None
+        self.set_interface('per_client_thread', enable)
+
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
         get_config_dict(). It's main intention is to consolidate the scattered
@@ -1564,6 +1596,11 @@ class Interface(Control):
 
         # configure interface mirror or redirection target
         self.set_mirror_redirect()
+
+        # enable/disable NAPI threading mode
+        tmp = dict_search('per_client_thread', config)
+        value = '1' if (tmp != None) else '0'
+        self.set_per_client_thread(value)
 
         # Enable/Disable of an interface must always be done at the end of the
         # derived class to make use of the ref-counting set_admin_state()
