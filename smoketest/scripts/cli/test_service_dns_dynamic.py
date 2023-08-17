@@ -22,10 +22,11 @@ from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSessionError
 from vyos.util import cmd
-from vyos.util import process_named_running
+from vyos.util import process_running
 
 PROCESS_NAME = 'ddclient'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
+DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 base_path = ['service', 'dns', 'dynamic']
 
 def get_config_value(key):
@@ -89,7 +90,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertTrue(pwd == "'" + password + "'")
 
             # Check for running process
-            self.assertTrue(process_named_running(PROCESS_NAME))
+            self.assertTrue(process_running(DDCLIENT_PID))
 
     def test_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
@@ -119,7 +120,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         # TODO: inspect generated configuration file
 
         # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.assertTrue(process_running(DDCLIENT_PID))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
