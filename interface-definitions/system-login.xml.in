@@ -184,6 +184,13 @@
               <leafNode name="home-directory">
                 <properties>
                   <help>Home directory</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Path to home directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>\/$|(\/[a-zA-Z_0-9-]+)+</regex>
+                  </constraint>
                 </properties>
               </leafNode>
             </children>
