@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2021 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -19,6 +19,7 @@ import unittest
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
+from vyos.utils.file import read_file
 
 base_path = ['interfaces', 'wireguard']
 
@@ -35,7 +36,7 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_wireguard_peer(self):
+    def test_01_wireguard_peer(self):
         # Create WireGuard interfaces with associated peers
         for intf in self._interfaces:
             peer = 'foo-' + intf
@@ -62,7 +63,7 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             self.assertTrue(os.path.isdir(f'/sys/class/net/{intf}'))
 
-    def test_wireguard_add_remove_peer(self):
+    def test_02_wireguard_add_remove_peer(self):
         # T2939: Create WireGuard interfaces with associated peers.
         # Remove one of the configured peers.
         # T4774: Test prevention of duplicate peer public keys
@@ -100,10 +101,9 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path + [interface, 'peer', 'PEER01'])
         self.cli_commit()
 
-    def test_wireguard_same_public_key(self):
-        # T2939: Create WireGuard interfaces with associated peers.
-        # Remove one of the configured peers.
-        # T4774: Test prevention of duplicate peer public keys
+    def test_03_wireguard_same_public_key(self):
+        # T5413: Test prevention of equality interface public key and peer's
+        #        public key
         interface = 'wg0'
         port = '12345'
         privkey = 'OOjcXGfgQlAuM6q8Z9aAYduCua7pxf7UKYvIqoUPoGQ='
@@ -128,6 +128,29 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
+    def test_04_wireguard_threaded(self):
+        # T5409: Test adding threaded option on interface.
+        #        Test prevention for adding threaded
+        #        if no enabled peer is configured.
+        interface = 'wg0'
+        port = '12345'
+        privkey = 'OOjcXGfgQlAuM6q8Z9aAYduCua7pxf7UKYvIqoUPoGQ='
+        pubkey = 'ebFx/1G0ti8tvuZd94sEIosAZZIznX+dBAKG/8DFm0I='
+
+        self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'private-key', privkey])
+
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'port', port])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'public-key', pubkey])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'allowed-ips', '10.205.212.10/32'])
+        self.cli_set(base_path + [interface, 'peer', 'PEER01', 'address', '192.0.2.1'])
+        self.cli_set(base_path + [interface, 'per-client-thread'])
+
+        # Commit peers
+        self.cli_commit()
+        tmp = read_file(f'/sys/class/net/{interface}/threaded')
+        self.assertTrue(tmp, "1")
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

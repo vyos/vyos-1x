@@ -120,6 +120,7 @@
             </children>
           </tagNode>
           #include <include/interface/redirect.xml.i>
+          #include <include/interface/per-client-thread.xml.i>
           #include <include/interface/vrf.xml.i>
         </children>
       </tagNode>

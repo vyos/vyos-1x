@@ -90,7 +90,6 @@ def verify(wireguard):
 
     # run checks on individual configured WireGuard peer
     public_keys = []
-
     for tmp in wireguard['peer']:
         peer = wireguard['peer'][tmp]
 
@@ -107,8 +106,9 @@ def verify(wireguard):
         if peer['public_key'] in public_keys:
             raise ConfigError(f'Duplicate public-key defined on peer "{tmp}"')
 
-        if 'disable' not in peer and is_wireguard_key_pair(wireguard['private_key'], peer['public_key']):
-            raise ConfigError(f'Peer "{tmp}" has the same public key as the interface "{wireguard["ifname"]}"')
+        if 'disable' not in peer:
+            if is_wireguard_key_pair(wireguard['private_key'], peer['public_key']):
+                raise ConfigError(f'Peer "{tmp}" has the same public key as the interface "{wireguard["ifname"]}"')
 
         public_keys.append(peer['public_key'])
 
