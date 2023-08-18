@@ -118,6 +118,17 @@ def verify(macsec):
                 if 'disable' not in peer_config and ('mac' not in peer_config or 'rx_key' not in peer_config):
                     raise ConfigError('Every enabled MACsec static peer must have a MAC address and rx-key defined.')
 
+                # check rx-key length against cipher suite
+                rx_len = len(peer_config['rx_key'])
+
+                if dict_search('security.cipher', macsec) == 'gcm-aes-128' and rx_len != 32:
+                    # gcm-aes-128 requires a 128bit long key - 32 characters (string) = 16byte = 128bit
+                    raise ConfigError('gcm-aes-128 requires a 128bit long key!')
+
+                if dict_search('security.cipher', macsec) == 'gcm-aes-256' and rx_len != 64:
+                    # gcm-aes-256 requires a 256bit long key - 64 characters (string) = 32byte = 256bit
+                    raise ConfigError('gcm-aes-256 requires a 256bit long key!')
+
         # Logic to check MKA configuration
         else:
             if dict_search('security.mka.cak', macsec) == None or dict_search('security.mka.ckn', macsec) == None:
