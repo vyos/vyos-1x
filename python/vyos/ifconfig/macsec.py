@@ -39,12 +39,36 @@ class MACsecIf(Interface):
     def _create(self):
         """
         Create MACsec interface in OS kernel. Interface is administrative
-        down by default.
+        down by default when not using static keys.
         """
+
         # create tunnel interface
         cmd  = 'ip link add link {source_interface} {ifname} type {type}'.format(**self.config)
         cmd += f' cipher {self.config["security"]["cipher"]}'
         self._cmd(cmd)
 
-        # interface is always A/D down. It needs to be enabled explicitly
-        self.set_admin_state('down')
+        # Check if using static keys
+        if 'static' in self.config["security"]:
+            # Set static TX key
+            cmd = 'ip macsec add {ifname} tx sa 0 pn 1 on key 00'.format(**self.config)
+            cmd += f' {self.config["security"]["static"]["tx_key"]}'
+            self._cmd(cmd)
+
+            for peer, peer_config in self.config["security"]["static"]["peer"].items():
+                if 'disable' in peer_config:
+                    continue
+
+                # Create the address
+                cmd = 'ip macsec add {ifname} rx port 1 address'.format(**self.config)
+                cmd += f' {peer_config["mac"]}'
+                self._cmd(cmd)
+                # Add the rx-key to the address
+                cmd += f' sa 0 pn 1 on key 01 {peer_config["rx_key"]}'
+                self._cmd(cmd)
+
+            # Set admin state to up
+            self.set_admin_state('up')
+
+        else:
+            # interface is always A/D down. It needs to be enabled explicitly
+            self.set_admin_state('down')
