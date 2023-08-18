@@ -95,6 +95,9 @@ def verify(macsec):
 
         # Logic to check static configuration
         if dict_search('security.static', macsec) != None:
+            # tx-key must be defined
+            if dict_search('security.static.tx_key', macsec) == None:
+                raise ConfigError('Static MACsec tx-key must be defined.')
 
             tx_len = len(dict_search('security.static.tx_key', macsec))
 
