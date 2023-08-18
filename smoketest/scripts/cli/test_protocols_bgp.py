@@ -888,7 +888,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'  export vpn', afi_config)
             self.assertIn(f'  import vpn', afi_config)
             self.assertIn(f'  label vpn export {label}', afi_config)
-            self.assertIn(f'  label vpn export allocation-mode per-nexthop ', afi_config)  
+            self.assertIn(f'  label vpn export allocation-mode per-nexthop', afi_config)
             self.assertIn(f'  rd vpn export {rd}', afi_config)
             self.assertIn(f'  route-map vpn export {route_map_out}', afi_config)
             self.assertIn(f'  route-map vpn import {route_map_in}', afi_config)
