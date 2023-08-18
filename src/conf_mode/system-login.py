@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
+import base64
 
 from passlib.hosts import linux_context
 from psutil import users
@@ -22,10 +24,12 @@ from pwd import getpwall
 from pwd import getpwnam
 from sys import exit
 from time import sleep
-
 from vyos.config import Config
+from vyos.configdict import dict_merge
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_vrf
 from vyos.defaults import directories
+from vyos.pki import wrap_certificate
 from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.utils.dict import dict_search
@@ -44,6 +48,11 @@ radius_config_file = "/etc/pam_radius_auth.conf"
 tacacs_pam_config_file = "/etc/tacplus_servers"
 tacacs_nss_config_file = "/etc/tacplus_nss.conf"
 nss_config_file = "/etc/nsswitch.conf"
+sssd_config_file= "/etc/sssd/sssd.conf"
+sssd_ca_path= "/run/sssd"
+krb5_keytab_path="/run/krb5/keytab"
+krb5_config_file= "/etc/krb5.conf"
+krb5_confd_file="/etc/krb5/conf.d/10-krb5.conf"
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
@@ -83,6 +92,11 @@ def get_shadow_password(username):
             if username == items[0]:
                 return items[1]
     return None
+
+def sanitze_krb5_principal_name(kpn):
+    san_kpn = re.sub(r"^([a-zA-Z]*)(\/)((([a-z0-9][a-z0-9\-]*[a-z0-9])|[a-z0-9]+\.)*([a-z]+)\.?)(\@)(((([A-Z0-9][A-Z0-9\-]*[A-Z0-9])|[A-Z0-9]+\.)*([A-Z]+)\.?))$", r"\1_\3_\9", kpn)
+
+    return san_kpn
 
 def get_config(config=None):
     if config:
@@ -200,6 +214,30 @@ def verify(login):
 
         verify_vrf(login['tacacs'])
 
+    if 'sssd' in login:
+        fail = True
+        for domain, domain_config in dict_search('sssd.ipa_domain', login).items():
+            if 'ipa_hostname' not in domain_config:
+                raise ConfigError(f'IPA Domain "{domain}" requires a client hostname to be set!')
+            if 'krb_realm' not in domain_config:
+                raise ConfigError(f'IPA Domain "{domain}" requires a Kerberos realm to be set!')
+            if 'keytab' not in domain_config:
+                raise ConfigError(f'IPA Domain "{domain}" requires a Kerberos keytab to be set!')
+            if 'ca_certificate' not in domain_config:
+                raise ConfigError(f'IPA Domain "{domain}" requires a CA certificate to be set!')
+            if 'disable' not in domain_config:
+                fail = False
+        if fail:
+            raise ConfigError('All SSSD domains are disabled')
+
+    if 'kerberos' in login:
+        if 'keytab' not in login['kerberos']:
+            raise ConfigError(f'Kerberos requires Keytab!')
+        if 'default_keytab' not in login['kerberos']:
+            raise ConfigError(f'Default keytab is required!')
+        if 'default_realm' not in login['kerberos']:
+            raise ConfigError(f'Default realm is required!')
+
     if 'max_login_session' in login and 'timeout' not in login:
         raise ConfigError('"login timeout" must be configured!')
 
@@ -269,16 +307,67 @@ def generate(login):
     ### TACACS+ based user authentication
     if 'tacacs' in login:
         render(tacacs_pam_config_file, 'login/tacplus_servers.j2', login,
-                   permission=0o644, user='root', group='root')
+               permission=0o644, user='root', group='root')
         render(tacacs_nss_config_file, 'login/tacplus_nss.conf.j2', login,
-                   permission=0o644, user='root', group='root')
+               permission=0o644, user='root', group='root')
     else:
         if os.path.isfile(tacacs_pam_config_file):
             os.unlink(tacacs_pam_config_file)
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
 
+    ### SSSD based authentication
+    if 'sssd' in login:
+        if 'keytab' not in login['kerberos']:
+            raise ConfigError(f'SSSD requires Kerboers keytab!')
 
+        pki_conf = Config()
+        base_pki = ['pki']
+        pki = pki_conf.get_config_dict(base_pki, key_mangling=('-', '_'),
+                                       no_tag_node_value_mangle=True, get_first_key=True)
+
+        # Generate the CA Certificates and keytab names for the specified IPA domains
+        for domain, domain_data in dict_search('sssd.ipa_domain', login).items():
+            ca_filename = os.path.join(sssd_ca_path, domain + '_ca.crt')
+            ca_name = domain_data['ca_certificate']
+            ca_cert = pki['ca'][ca_name]
+            os.makedirs(os.path.dirname(ca_filename), exist_ok=True)
+            with open(ca_filename, 'w', 0o644) as f:
+                f.write(wrap_certificate(ca_cert['certificate']))
+            # Generate keytab names
+            login['sssd']['ipa_domain'][domain]['sanitized_keytab_name'] = sanitze_krb5_principal_name(domain_data['keytab']) + ".keytab"
+
+        render(sssd_config_file, 'sssd/sssd.conf.j2', login,
+               permission=0o600, user='root', group='root')
+
+    else:
+        if os.path.isfile(sssd_config_file):
+            os.unlink(sssd_config_file)
+
+    ### Kerberos authentication
+    if 'kerberos' in login:
+
+        # Generate keytabs from config
+        for principal, principal_data in dict_search('kerberos.keytab.principal', login).items():
+            #keytab_filename = os.path.join(krb5_keytab_path, principal + '.keytab')
+            login['kerberos']['keytab']['principal'][principal]['sanitzed_keytab_name'] = sanitze_krb5_principal_name(principal) + ".keytab"
+            keytab_filename = os.path.join(krb5_keytab_path, login['kerberos']['keytab']['principal'][principal]['sanitzed_keytab_name'])
+            os.makedirs(os.path.dirname(keytab_filename), exist_ok=True)
+            with open(keytab_filename, 'wb', 0o600) as f:
+                f.write(base64.b64decode(principal_data['krb_keytab']))
+
+        login['kerberos']['sanitzed_default_keytab_name'] = sanitze_krb5_principal_name(login['kerberos']['default_keytab']) + ".keytab"
+
+        render(krb5_config_file, 'krb5/krb5.conf.j2', login,
+                    permission=0o644, user='root', group='root')
+        render(krb5_confd_file, 'krb5/10-krb5-conf.j2', login,
+                    permission=0o600, user='root', group='root')
+
+    else:
+        if os.path.isfile(krb5_config_file):
+            os.unlink(krb5_config_file)
+        if os.path.isfile(krb5_confd_file):
+            os.unlink(krb5_confd_file)
 
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,
@@ -388,6 +477,18 @@ def apply(login):
     if 'tacacs' in login:
         pam_cmd = '--enable'
     cmd(f'pam-auth-update --package {pam_cmd} tacplus')
+
+    # Enable/Disble SSSD service
+    sssd_action = 'stop'
+    pam_cmd = '--remove'
+    if 'sssd' in login:
+        sssd_action = 'start'
+        if 'restart_required' in login['sssd']:
+            sssd_action = 'restart'
+    # SSSD should not be used to login to system. This would provide CLI access to all directory users
+    # SSSD should only be enabled in pam.d for specific services
+    cmd(f'pam-auth-update --package {pam_cmd} sss')
+    cmd(f'systemctl {sssd_action} sssd')
 
     return None
 

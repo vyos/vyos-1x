@@ -1,0 +1,41 @@
+{% if kerberos is vyos_defined %}
+includedir /var/lib/sss/pubconf/krb5.include.d/
+
+[libdefaults]
+{%     if kerberos.default_realm is vyos_defined %}default_realm = {{ kerberos.default_realm }}
+{%     endif %}
+{%     if kerberos.dns_lookup_realm is vyos_defined %}dns_lookup_realm = true
+{%     endif %}
+{%     if kerberos.dns_lookup_kdc is vyos_defined %}dns_lookup_kdc = true
+{%     endif %}
+{%     if kerberos.rdns is vyos_defined %}rdns = true
+{%     else %}rdns = false
+{%     endif %}
+{%     if kerberos.ticket_lifetime is vyos_defined %}ticket_lifetime = {{ kerberos.ticket_lifetime }}
+{%     endif %}
+{%     if kerberos.forwardable is vyos_defined %}forwardable = yes
+{%     endif %}
+{%     if kerberos.keytab is vyos_defined %}default_keytab_name = /run/krb5/keytab/{{ kerberos.sanitzed_default_keytab_name }}
+{%     endif %}
+udp_preference_limit = 0
+default_ccache_name = KEYRING:persistent:%{uid}
+
+[realms]
+{%     if sssd.ipa_domain is vyos_defined %}
+{%         for domain in sssd.ipa_domain %}
+  {{ sssd.ipa_domain[domain].krb_realm }} = {
+    pkinit_anchors = FILE:/run/sssd/{{ sssd.ipa_domain[domain].ca_certificate }}_ca.crt
+
+  }
+{%         endfor %}
+{%     endif %}
+
+[domain_realm]
+{%     if sssd.ipa_domain is vyos_defined %}
+{%         for domain in sssd.ipa_domain %}
+  .{{ domain }} = {{ sssd.ipa_domain[domain].krb_realm }}
+  {{ domain }} = {{ sssd.ipa_domain[domain].krb_realm }}
+
+{%         endfor %}
+{%     endif %}
+{% endif %}

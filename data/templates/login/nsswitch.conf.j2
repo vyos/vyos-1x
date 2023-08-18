@@ -3,8 +3,8 @@
 #
 # Example configuration of GNU Name Service Switch functionality.
 
-passwd:         {{ 'mapuid ' if radius is vyos_defined }}{{ 'tacplus ' if tacacs is vyos_defined }}files{{ ' mapname' if radius is vyos_defined }}
-group:          {{ 'mapname ' if radius is vyos_defined }}{{ 'tacplus ' if tacacs is vyos_defined }}files
+passwd:         {{ 'mapuid ' if radius is vyos_defined }}{{ 'tacplus ' if tacacs is vyos_defined }}files{{ ' mapname' if radius is vyos_defined }}{{ ' sss' if sssd is vyos_defined }}
+group:          {{ 'mapname ' if radius is vyos_defined }}{{ 'tacplus ' if tacacs is vyos_defined }}files{{ ' sss' if sssd is vyos_defined }}
 shadow:         files
 gshadow:        files
 

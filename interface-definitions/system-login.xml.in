@@ -263,6 +263,8 @@
               #include <include/interface/vrf.xml.i>
             </children>
           </node>
+          #include <include/sssd-domain.xml.i>
+          #include <include/kerberos/kerberos.xml.i>
           <leafNode name="max-login-session">
             <properties>
               <help>Maximum number of all login sessions</help>
