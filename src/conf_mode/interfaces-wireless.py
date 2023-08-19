@@ -116,7 +116,7 @@ def verify(wifi):
         raise ConfigError('You must specify a WiFi mode')
 
     if 'ssid' not in wifi and wifi['type'] != 'monitor':
-        raise ConfigError('SSID must be configured')
+        raise ConfigError('SSID must be configured unless type is set to "monitor"!')
 
     if wifi['type'] == 'access-point':
         if 'country_code' not in wifi:
