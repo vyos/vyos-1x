@@ -34,7 +34,7 @@
             <help>Label allocation mode</help>
           </properties>
           <children>
-            <leafNode name="per-nexhop">
+            <leafNode name="per-nexthop">
               <properties>
                 <help>Allocate a label per connected next-hop in the VRF</help>
                 <valueless/>

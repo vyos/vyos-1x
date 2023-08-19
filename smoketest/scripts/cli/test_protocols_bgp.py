@@ -868,7 +868,7 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ['address-family', afi, 'export', 'vpn'])
             self.cli_set(base_path + ['address-family', afi, 'import', 'vpn'])
             self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'export', label])
-            self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'allocation-mode', 'per-nexhop'])
+            self.cli_set(base_path + ['address-family', afi, 'label', 'vpn', 'allocation-mode', 'per-nexthop'])
             self.cli_set(base_path + ['address-family', afi, 'rd', 'vpn', 'export', rd])
             self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'export', route_map_out])
             self.cli_set(base_path + ['address-family', afi, 'route-map', 'vpn', 'import', route_map_in])

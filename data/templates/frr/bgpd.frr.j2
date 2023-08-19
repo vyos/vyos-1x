@@ -349,8 +349,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if afi_config.label.vpn.export is vyos_defined %}
   label vpn export {{ afi_config.label.vpn.export }}
 {%         endif %}
-{%         if afi_config.label.vpn.allocation_mode.per_nexhop is vyos_defined %}
-  label vpn export allocation-mode per-nexthop 
+{%         if afi_config.label.vpn.allocation_mode.per_nexthop is vyos_defined %}
+  label vpn export allocation-mode per-nexthop
 {%         endif %}
 {%         if afi_config.local_install is vyos_defined %}
 {%             for interface in afi_config.local_install.interface %}
