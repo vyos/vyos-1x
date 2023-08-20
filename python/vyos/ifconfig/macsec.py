@@ -39,7 +39,7 @@ class MACsecIf(Interface):
     def _create(self):
         """
         Create MACsec interface in OS kernel. Interface is administrative
-        down by default when not using static keys.
+        down by default.
         """
 
         # create tunnel interface
