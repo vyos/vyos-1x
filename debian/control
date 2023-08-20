@@ -78,6 +78,7 @@ Depends:
   isc-dhcp-relay,
   isc-dhcp-server,
   iw,
+  jool,
   keepalived (>=2.0.5),
   lcdproc,
   lcdproc-extra-drivers,

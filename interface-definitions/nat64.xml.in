@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="nat64" owner="${vyos_conf_scripts_dir}/nat64.py">
+    <properties>
+      <help>IPv6-to-IPv4 Network Address Translation (NAT64) Settings</help>
+      <priority>501</priority>
+    </properties>
+    <children>
+      <node name="source">
+        <properties>
+          <help>IPv6 source to IPv4 destination address translation</help>
+        </properties>
+        <children>
+          <tagNode name="rule">
+            <properties>
+              <help>Source NAT64 rule number</help>
+              <valueHelp>
+                <format>u32:1-999999</format>
+                <description>Number for this rule</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 1-999999"/>
+              </constraint>
+              <constraintErrorMessage>NAT64 rule number must be between 1 and 999999</constraintErrorMessage>
+            </properties>
+            <children>
+              #include <include/generic-description.xml.i>
+              #include <include/generic-disable-node.xml.i>
+              <node name="source">
+                <properties>
+                  <help>IPv6 source prefix options</help>
+                </properties>
+                <children>
+                  <leafNode name="prefix">
+                    <properties>
+                      <help>IPv6 prefix to be translated</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>IPv6 prefix</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="translation">
+                <properties>
+                  <help>Translated IPv4 address options</help>
+                </properties>
+                <children>
+                  <tagNode name="pool">
+                    <properties>
+                      <help>Translation IPv4 pool number</help>
+                      <valueHelp>
+                        <format>u32:1-999999</format>
+                        <description>Number for this rule</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-999999"/>
+                      </constraint>
+                      <constraintErrorMessage>NAT64 pool number must be between 1 and 999999</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/generic-description.xml.i>
+                      #include <include/generic-disable-node.xml.i>
+                      #include <include/nat-translation-port.xml.i>
+                      #include <include/nat64-protocol.xml.i>
+                      <leafNode name="address">
+                        <properties>
+                          <help>IPv4 address or prefix to translate to</help>
+                          <valueHelp>
+                            <format>ipv4</format>
+                            <description>IPv4 address</description>
+                          </valueHelp>
+                          <valueHelp>
+                            <format>ipv4net</format>
+                            <description>IPv4 prefix</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="ipv4-address"/>
+                            <validator name="ipv4-prefix"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
