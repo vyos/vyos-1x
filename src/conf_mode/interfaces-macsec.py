@@ -160,7 +160,7 @@ def verify(macsec):
 
 def generate(macsec):
     # Only generate wpa_supplicant config if using MKA
-    if dict_search('security.static', macsec) == None:
+    if dict_search('security.mka.cak', macsec):
         render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.j2', macsec)
     return None
 
