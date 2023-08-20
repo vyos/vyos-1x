@@ -66,7 +66,7 @@ class MACsecIf(Interface):
                 cmd += f' sa 0 pn 1 on key 01 {peer_config["key"]}'
                 self._cmd(cmd)
 
-            # Set admin state to up
+            # interface is always A/D down. It needs to be enabled explicitly
             self.set_admin_state('down')
 
         else:
