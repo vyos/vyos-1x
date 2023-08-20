@@ -54,46 +54,22 @@
               </leafNode>
               <node name="static">
                 <properties>
-                  <help>Assign static MACSec keys instead of using MKA</help>
+                  <help>Use static keys for MACsec [static Secure Authentication Key (SAK) mode]</help>
                 </properties>
                 <children>
-                  <leafNode name="tx-key">
-                    <properties>
-                      <help>Set the static transmit key</help>
-                      <valueHelp>
-                        <format>txt</format>
-                        <description>16-byte (128-bit) hex-string (32 hex-digits) for gcm-aes-128 or 32-byte (256-bit) hex-string (64 hex-digits) for gcm-aes-256</description>
-                      </valueHelp>
-                      <constraint>
-                        <regex>[A-Fa-f0-9]{32}</regex>
-                        <regex>[A-Fa-f0-9]{64}</regex>
-                      </constraint>
-                    </properties>
-                  </leafNode>
+                  #include <include/interface/macsec-key.xml.i>
                   <tagNode name="peer">
                     <properties>
-                      <help>peer alias</help>
+                      <help>MACsec peer name</help>
                       <constraint>
                         <regex>[^ ]{1,100}</regex>
                       </constraint>
-                      <constraintErrorMessage>peer alias too long (limit 100 characters)</constraintErrorMessage>
+                      <constraintErrorMessage>MACsec peer name exceeds limit of 100 characters</constraintErrorMessage>
                     </properties>
                     <children>
                       #include <include/generic-disable-node.xml.i>
                       #include <include/interface/mac.xml.i>
-                      <leafNode name="rx-key">
-                        <properties>
-                          <help>Set the static receive key for peer</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>16-byte (128-bit) hex-string (32 hex-digits) for gcm-aes-128 or 32-byte (256-bit) hex-string (64 hex-digits) for gcm-aes-256</description>
-                          </valueHelp>
-                          <constraint>
-                            <regex>[A-Fa-f0-9]{32}</regex>
-                            <regex>[A-Fa-f0-9]{64}</regex>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/interface/macsec-key.xml.i>
                     </children>
                   </tagNode>
                 </children>

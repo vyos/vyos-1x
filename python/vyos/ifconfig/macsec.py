@@ -51,7 +51,7 @@ class MACsecIf(Interface):
         if 'static' in self.config["security"]:
             # Set static TX key
             cmd = 'ip macsec add {ifname} tx sa 0 pn 1 on key 00'.format(**self.config)
-            cmd += f' {self.config["security"]["static"]["tx_key"]}'
+            cmd += f' {self.config["security"]["static"]["key"]}'
             self._cmd(cmd)
 
             for peer, peer_config in self.config["security"]["static"]["peer"].items():
@@ -63,11 +63,11 @@ class MACsecIf(Interface):
                 cmd += f' {peer_config["mac"]}'
                 self._cmd(cmd)
                 # Add the rx-key to the address
-                cmd += f' sa 0 pn 1 on key 01 {peer_config["rx_key"]}'
+                cmd += f' sa 0 pn 1 on key 01 {peer_config["key"]}'
                 self._cmd(cmd)
 
             # Set admin state to up
-            self.set_admin_state('up')
+            self.set_admin_state('down')
 
         else:
             # interface is always A/D down. It needs to be enabled explicitly

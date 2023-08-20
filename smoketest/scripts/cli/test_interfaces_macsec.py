@@ -245,10 +245,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             self.cli_commit()
 
         # check validate() - tx-key length must match cipher
-        self.cli_set(self._base_path + [interface, 'security', 'static', 'tx-key', tx_key_2])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(self._base_path + [interface, 'security', 'static', 'tx-key', tx_key_1])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_1])
 
         # check validate() - at least one peer must be defined
         with self.assertRaises(ConfigSessionError):
@@ -262,23 +262,22 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_delete(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac'])
-        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'rx-key', rx_key_1])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'key', rx_key_1])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac', peer_mac])
 
         # check validate() - peer rx-key length must match cipher
         self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher2])
-        self.cli_set(self._base_path + [interface, 'security', 'static', 'tx-key', tx_key_2])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'rx-key', rx_key_2])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'key', rx_key_2])
 
         # final commit and verify
         self.cli_commit()
         self.assertIn(interface, interfaces())
         self.assertEqual(cipher2, get_cipher(interface))
-        # Add checks for keys?
         self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
 
 if __name__ == '__main__':
