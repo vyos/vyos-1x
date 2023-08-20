@@ -595,6 +595,49 @@
               <help>Wireless security settings</help>
             </properties>
             <children>
+              <node name="station-address">
+                <properties>
+                  <help>Station MAC address based authentication</help>
+                </properties>
+                <children>
+                  <leafNode name="mode">
+                    <properties>
+                      <help>Select security operation mode</help>
+                      <completionHelp>
+                        <list>accept deny</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>accept</format>
+                        <description>Accept all clients unless found in deny list</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>deny</format>
+                        <description>Deny all clients unless found in accept list</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(accept|deny)</regex>
+                      </constraint>
+                    </properties>
+                    <defaultValue>accept</defaultValue>
+                  </leafNode>
+                  <node name="accept">
+                    <properties>
+                      <help>Accept station MAC address</help>
+                    </properties>
+                    <children>
+                      #include <include/interface/mac-multi.xml.i>
+                    </children>
+                  </node>
+                  <node name="deny">
+                    <properties>
+                      <help>Deny station MAC address</help>
+                    </properties>
+                    <children>
+                      #include <include/interface/mac-multi.xml.i>
+                    </children>
+                  </node>
+                </children>
+              </node>
               <node name="wep">
                 <properties>
                   <help>Wired Equivalent Privacy (WEP) parameters</help>

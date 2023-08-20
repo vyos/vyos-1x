@@ -1,0 +1,7 @@
+# List of MAC addresses that are not allowed to authenticate
+# (IEEE 802.11) with the access point
+{% if security.station_address.deny.mac is vyos_defined %}
+{%     for mac in security.station_address.deny.mac %}
+{{ mac | lower }}
+{%     endfor %}
+{% endif %}
