@@ -25,8 +25,6 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
-from vyos.configverify import verify_dhcpv6
-from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
