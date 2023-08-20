@@ -83,6 +83,20 @@ def read_json(fname, defaultonfailure=None):
             return defaultonfailure
         raise e
 
+def write_json(fname, data, indent=2, defaultonfailure=None):
+    """
+    encode data to json and write to a file
+    should defaultonfailure be not None, it is returned on failure to write
+    """
+    import json
+    try:
+        with open(fname, 'w') as f:
+            json.dump(data, f, indent=indent)
+    except Exception as e:
+        if defaultonfailure is not None:
+            return defaultonfailure
+        raise e
+
 def chown(path, user, group):
     """ change file/directory owner """
     from pwd import getpwnam
