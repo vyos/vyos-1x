@@ -163,6 +163,73 @@ Depends:
   sstp-client,
   strongswan (>= 5.9),
   strongswan-swanctl (>= 5.9),
+<<<<<<< HEAD
+=======
+  charon-systemd,
+  libcharon-extra-plugins (>=5.9),
+  libcharon-extauth-plugins (>=5.9),
+  libstrongswan-extra-plugins (>=5.9),
+  libstrongswan-standard-plugins (>=5.9),
+  python3-vici (>= 5.7.2),
+# End "vpn ipsec"
+# For "nat64"
+  jool,
+# End "nat64"
+# For nat66
+  ndppd,
+# End nat66
+# For "system ntp"
+  chrony,
+# End "system ntp"
+# For "vpn openconnect"
+  ocserv,
+# End "vpn openconnect"
+# For "set system flow-accounting"
+  pmacct (>= 1.6.0),
+# End "set system flow-accounting"
+# For container
+  podman,
+  netavark,
+  aardvark-dns,
+# iptables is only used for containers now, not the the firewall CLI
+  iptables,
+# End container
+## End Configuration mode
+## Operational mode
+# Used for hypervisor model in "run show version"
+  hvinfo,
+# For "run traceroute"
+  traceroute,
+# For "run monitor traffic"
+  tcpdump,
+# End "run monitor traffic"
+# For "run show hardware storage smart"
+  smartmontools,
+# For "run show hardware scsi"
+  lsscsi,
+# For "run show hardware pci"
+  pciutils,
+# For "show hardware usb"
+  usbutils,
+# For "run show hardware storage nvme"
+  nvme-cli,
+# For "run monitor bandwidth-test"
+  iperf,
+  iperf3,
+# End "run monitor bandwidth-test"
+# For "run wake-on-lan"
+  etherwake,
+# For "run force ipv6-nd"
+  ndisc6,
+# For "run monitor bandwidth"
+  bmon,
+# End Operational mode
+## Optional utilities
+  easy-rsa,
+  tcptraceroute,
+  mtr-tiny,
+  telnet,
+>>>>>>> 7d49f7079 (nat64: T160: Implement Jool-based NAT64 translator)
   stunnel4,
   sudo,
   systemd,
