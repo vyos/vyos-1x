@@ -912,3 +912,24 @@ def sysctl_write(name, value):
 def is_ipv6_enabled() -> bool:
     """ Check if IPv6 support on the system is enabled or not """
     return (sysctl_read('net.ipv6.conf.all.disable_ipv6') == '0')
+
+def interface_exists(interface) -> bool:
+    import os
+    return os.path.exists(f'/sys/class/net/{interface}')
+
+def get_vrf_members(vrf: str) -> list:
+    """
+    Get list of interface VRF members
+    :param vrf: str
+    :return: list
+    """
+    import json
+    if not interface_exists(vrf):
+        raise ValueError(f'VRF "{vrf}" does not exist!')
+    output = cmd(f'ip --json --brief link show master {vrf}')
+    answer = json.loads(output)
+    interfaces = []
+    for data in answer:
+        if 'ifname' in data:
+            interfaces.append(data.get('ifname'))
+    return interfaces

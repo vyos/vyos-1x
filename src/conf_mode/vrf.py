@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,8 @@ from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import sysctl_write
 from vyos.util import is_ipv6_enabled
+from vyos.util import interface_exists
+from vyos.util import get_vrf_members
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -155,7 +157,21 @@ def apply(vrf):
     sysctl_write('net.ipv4.udp_l3mdev_accept', bind_all)
 
     for tmp in (dict_search('vrf_remove', vrf) or []):
-        if os.path.isdir(f'/sys/class/net/{tmp}'):
+        if interface_exists(tmp):
+            # T5492: deleting a VRF instance may leafe processes running
+            # (e.g. dhclient) as there is a depedency ordering issue in the CLI.
+            # We need to ensure that we stop the dhclient processes first so
+            # a proper DHCLP RELEASE message is sent
+            for interface in get_vrf_members(tmp):
+                vrf_iface = Interface(interface)
+                vrf_iface.set_dhcp(False)
+                vrf_iface.set_dhcpv6(False)
+
+            # Remove nftables conntrack zone map item
+            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{tmp}" }}'
+            cmd(f'nft {nft_del_element}')
+
+            # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
 
     if 'name' in vrf:
