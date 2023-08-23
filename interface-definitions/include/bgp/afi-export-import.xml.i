@@ -32,6 +32,7 @@
         </valueHelp>
         <completionHelp>
           <path>vrf name</path>
+          <list>default</list>
         </completionHelp>
         <multi/>
       </properties>
