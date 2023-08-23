@@ -17,6 +17,15 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="host-name">
+                <properties>
+                  <help>Zabbix agent hostname</help>
+                  <constraint>
+                    #include <include/constraint/host-name.xml.i>
+                  </constraint>
+                  <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+                </properties>
+              </leafNode>
               <node name="limits">
                 <properties>
                   <help>Limit settings</help>

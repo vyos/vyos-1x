@@ -50,6 +50,7 @@ class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
         port = '10050'
         timeout = '5'
         listen_ip = '0.0.0.0'
+        hostname = 'r-vyos'
 
         self.cli_set(base_path + ['directory', directory])
         self.cli_set(base_path + ['limits', 'buffer-flush-interval', buffer_send])
@@ -61,6 +62,7 @@ class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
         for server_active, server_config in servers_active.items():
             self.cli_set(base_path + ['server-active', server_active, 'port', server_config['port']])
         self.cli_set(base_path + ['timeout', timeout])
+        self.cli_set(base_path + ['host-name', hostname])
 
         # commit changes
         self.cli_commit()
@@ -80,6 +82,7 @@ class TestZabbixAgent(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'BufferSize={buffer_size}', config)
         self.assertIn(f'Include={directory}/*.conf', config)
         self.assertIn(f'Timeout={timeout}', config)
+        self.assertIn(f'Hostname={hostname}', config)
 
 
 if __name__ == '__main__':
