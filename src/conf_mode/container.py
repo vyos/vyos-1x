@@ -33,6 +33,7 @@ from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import run
 from vyos.utils.process import rc_cmd
+from vyos.template import bracketize_ipv6
 from vyos.template import inc_ip
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
@@ -280,6 +281,14 @@ def generate_run_arguments(name, container_config):
             protocol = container_config['port'][portmap]['protocol']
             sport = container_config['port'][portmap]['source']
             dport = container_config['port'][portmap]['destination']
+            listen_addresses = container_config['port'][portmap].get('listen_address', [])
+
+        # If listen_addresses is not empty, include them in the publish command
+        if listen_addresses:
+            for listen_address in listen_addresses:
+                port += f' --publish {bracketize_ipv6(listen_address)}:{sport}:{dport}/{protocol}'
+        else:
+            # If listen_addresses is empty, just include the standard publish command
             port += f' --publish {sport}:{dport}/{protocol}'
 
     # Bind volume
