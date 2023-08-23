@@ -36,12 +36,34 @@ def get_protocol_by_name(protocol_name):
     except socket.error:
         return protocol_name
 
+def interface_exists(interface) -> bool:
+    import os
+    return os.path.exists(f'/sys/class/net/{interface}')
+
 def interface_exists_in_netns(interface_name, netns):
     from vyos.utils.process import rc_cmd
     rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
     if rc == 0:
         return True
     return False
+
+def get_vrf_members(vrf: str) -> list:
+    """
+    Get list of interface VRF members
+    :param vrf: str
+    :return: list
+    """
+    import json
+    from vyos.utils.process import cmd
+    if not interface_exists(vrf):
+        raise ValueError(f'VRF "{vrf}" does not exist!')
+    output = cmd(f'ip --json --brief link show master {vrf}')
+    answer = json.loads(output)
+    interfaces = []
+    for data in answer:
+        if 'ifname' in data:
+            interfaces.append(data.get('ifname'))
+    return interfaces
 
 def get_interface_vrf(interface):
     """ Returns VRF of given interface """

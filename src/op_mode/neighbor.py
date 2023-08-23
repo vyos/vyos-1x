@@ -31,13 +31,10 @@ import sys
 import typing
 
 import vyos.opmode
+from vyos.utils.network import interface_exists
 
 ArgFamily = typing.Literal['inet', 'inet6']
 ArgState = typing.Literal['reachable', 'stale', 'failed', 'permanent']
-
-def interface_exists(interface):
-    import os
-    return os.path.exists(f'/sys/class/net/{interface}')
 
 def get_raw_data(family, interface=None, state=None):
     from json import loads

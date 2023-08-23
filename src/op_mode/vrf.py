@@ -20,10 +20,10 @@ import sys
 import typing
 
 from tabulate import tabulate
+from vyos.utils.network import get_vrf_members
 from vyos.utils.process import cmd
 
 import vyos.opmode
-
 
 def _get_raw_data(name=None):
     """
@@ -45,21 +45,6 @@ def _get_raw_data(name=None):
     return data
 
 
-def _get_vrf_members(vrf: str) -> list:
-    """
-    Get list of interface VRF members
-    :param vrf: str
-    :return: list
-    """
-    output = cmd(f'ip --json --brief link show master {vrf}')
-    answer = json.loads(output)
-    interfaces = []
-    for data in answer:
-        if 'ifname' in data:
-            interfaces.append(data.get('ifname'))
-    return interfaces if len(interfaces) > 0 else ['n/a']
-
-
 def _get_formatted_output(raw_data):
     data_entries = []
     for vrf in raw_data:
@@ -67,7 +52,9 @@ def _get_formatted_output(raw_data):
         state = vrf.get('operstate').lower()
         hw_address = vrf.get('address')
         flags = ','.join(vrf.get('flags')).lower()
-        members = ','.join(_get_vrf_members(name))
+        tmp = get_vrf_members(name)
+        if tmp: members = ','.join(get_vrf_members(name))
+        else: members = 'n/a'
         data_entries.append([name, state, hw_address, flags, members])
 
     headers = ["Name", "State", "MAC address", "Flags", "Interfaces"]
