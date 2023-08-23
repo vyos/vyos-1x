@@ -56,10 +56,13 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     elif 'translation' in rule_conf:
         addr = dict_search_args(rule_conf, 'translation', 'address')
         port = dict_search_args(rule_conf, 'translation', 'port')
-        redirect_port = dict_search_args(rule_conf, 'translation', 'redirect', 'port')
-        if redirect_port:
-            translation_output = [f'redirect to {redirect_port}']
+        if 'redirect' in rule_conf['translation']:
+            translation_output = [f'redirect']
+            redirect_port = dict_search_args(rule_conf, 'translation', 'redirect', 'port')
+            if redirect_port:
+                translation_output.append(f'to {redirect_port}')
         else:
+
             translation_prefix = nat_type[:1]
             translation_output = [f'{translation_prefix}nat']
 

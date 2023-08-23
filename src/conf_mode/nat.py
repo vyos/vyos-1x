@@ -224,7 +224,7 @@ def verify(nat):
             elif config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
                 Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
 
-            if not dict_search('translation.address', config) and not dict_search('translation.port', config) and not dict_search('translation.redirect.port', config):
+            if not dict_search('translation.address', config) and not dict_search('translation.port', config) and 'redirect' not in config['translation']:
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
                     raise ConfigError(f'{err_msg} translation requires address and/or port')
 

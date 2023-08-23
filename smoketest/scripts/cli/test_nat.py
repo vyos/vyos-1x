@@ -244,10 +244,17 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(dst_path + ['rule', '10', 'inbound-interface', ifname])
         self.cli_set(dst_path + ['rule', '10', 'translation', 'redirect', 'port', redirected_port])
 
+        self.cli_set(dst_path + ['rule', '20', 'destination', 'address', dst_addr_1])
+        self.cli_set(dst_path + ['rule', '20', 'destination', 'port', dest_port])
+        self.cli_set(dst_path + ['rule', '20', 'protocol', protocol])
+        self.cli_set(dst_path + ['rule', '20', 'inbound-interface', ifname])
+        self.cli_set(dst_path + ['rule', '20', 'translation', 'redirect'])
+
         self.cli_commit()
 
         nftables_search = [
-            [f'iifname "{ifname}"', f'ip daddr {dst_addr_1}', f'{protocol} dport {dest_port}', f'redirect to :{redirected_port}']
+            [f'iifname "{ifname}"', f'ip daddr {dst_addr_1}', f'{protocol} dport {dest_port}', f'redirect to :{redirected_port}'],
+            [f'iifname "{ifname}"', f'ip daddr {dst_addr_1}', f'{protocol} dport {dest_port}', f'redirect']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
