@@ -213,6 +213,7 @@
               <help>Publish port to the container</help>
             </properties>
             <children>
+              #include <include/listen-address.xml.i>
               <leafNode name="source">
                 <properties>
                   <help>Source host port</help>
