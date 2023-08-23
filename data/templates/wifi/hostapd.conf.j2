@@ -430,14 +430,22 @@ ieee80211n={{ '1' if 'n' in mode or 'ac' in mode else '0' }}
 ignore_broadcast_ssid=1
 {% endif %}
 
-# Station MAC address -based authentication
+{% if type is vyos_defined('access-point') %}
+# Station MAC address-based authentication
 # Please note that this kind of access control requires a driver that uses
 # hostapd to take care of management frame processing and as such, this can be
 # used with driver=hostap or driver=nl80211, but not with driver=atheros.
 # 0 = accept unless in deny list
 # 1 = deny unless in accept list
 # 2 = use external RADIUS server (accept/deny lists are searched first)
-macaddr_acl=0
+macaddr_acl={{ '0' if security.station_address.mode is vyos_defined('accept') else '1' }}
+
+# Accept/deny lists are read from separate files (containing list of
+# MAC addresses, one per line). Use absolute path name to make sure that the
+# files can be read on SIGHUP configuration reloads.
+accept_mac_file={{ hostapd_accept_station_conf }}
+deny_mac_file={{ hostapd_deny_station_conf }}
+{% endif %}
 
 {% if max_stations is vyos_defined %}
 # Maximum number of stations allowed in station table. New stations will be

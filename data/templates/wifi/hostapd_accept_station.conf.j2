@@ -1,0 +1,7 @@
+# List of MAC addresses that are allowed to authenticate (IEEE 802.11)
+# with the AP
+{% if security.station_address.accept.mac is vyos_defined %}
+{%     for mac in security.station_address.accept.mac %}
+{{ mac | lower }}
+{%     endfor %}
+{% endif %}

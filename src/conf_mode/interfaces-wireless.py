@@ -25,8 +25,6 @@ from vyos.configdict import get_interface_dict
 from vyos.configdict import dict_merge
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
-from vyos.configverify import verify_dhcpv6
-from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_mirror_redirect
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
@@ -42,6 +40,8 @@ airbag.enable()
 # XXX: wpa_supplicant works on the source interface
 wpa_suppl_conf = '/run/wpa_supplicant/{ifname}.conf'
 hostapd_conf = '/run/hostapd/{ifname}.conf'
+hostapd_accept_station_conf = '/run/hostapd/{ifname}_station_accept.conf'
+hostapd_deny_station_conf = '/run/hostapd/{ifname}_station_deny.conf'
 
 def find_other_stations(conf, base, ifname):
     """
@@ -81,10 +81,12 @@ def get_config(config=None):
 
     if 'deleted' not in wifi:
         # then get_interface_dict provides default keys
-        if wifi.from_defaults(['security']): # if not set by user
-            del wifi['security']
+        if wifi.from_defaults(['security', 'wep']): # if not set by user
+            del wifi['security']['wep']
+        if wifi.from_defaults(['security', 'wpa']): # if not set by user
+            del wifi['security']['wpa']
 
-    if 'security' in wifi and 'wpa' in wifi['security']:
+    if dict_search('security.wpa', wifi) != None:
         wpa_cipher = wifi['security']['wpa'].get('cipher')
         wpa_mode = wifi['security']['wpa'].get('mode')
         if not wpa_cipher:
@@ -101,6 +103,10 @@ def get_config(config=None):
     # Only one wireless interface per phy can be in station mode
     tmp = find_other_stations(conf, base, wifi['ifname'])
     if tmp: wifi['station_interfaces'] = tmp
+
+    # used in hostapt.conf.j2
+    wifi['hostapd_accept_station_conf'] = hostapd_accept_station_conf.format(**wifi)
+    wifi['hostapd_deny_station_conf'] = hostapd_deny_station_conf.format(**wifi)
 
     return wifi
 
@@ -189,7 +195,10 @@ def generate(wifi):
     if 'deleted' in wifi:
         if os.path.isfile(hostapd_conf.format(**wifi)):
             os.unlink(hostapd_conf.format(**wifi))
-
+        if os.path.isfile(hostapd_accept_station_conf.format(**wifi)):
+            os.unlink(hostapd_accept_station_conf.format(**wifi))
+        if os.path.isfile(hostapd_deny_station_conf.format(**wifi)):
+            os.unlink(hostapd_deny_station_conf.format(**wifi))
         if os.path.isfile(wpa_suppl_conf.format(**wifi)):
             os.unlink(wpa_suppl_conf.format(**wifi))
 
@@ -224,12 +233,12 @@ def generate(wifi):
 
     # render appropriate new config files depending on access-point or station mode
     if wifi['type'] == 'access-point':
-        render(hostapd_conf.format(**wifi), 'wifi/hostapd.conf.j2',
-               wifi)
+        render(hostapd_conf.format(**wifi), 'wifi/hostapd.conf.j2', wifi)
+        render(hostapd_accept_station_conf.format(**wifi), 'wifi/hostapd_accept_station.conf.j2', wifi)
+        render(hostapd_deny_station_conf.format(**wifi), 'wifi/hostapd_deny_station.conf.j2', wifi)
 
     elif wifi['type'] == 'station':
-        render(wpa_suppl_conf.format(**wifi), 'wifi/wpa_supplicant.conf.j2',
-               wifi)
+        render(wpa_suppl_conf.format(**wifi), 'wifi/wpa_supplicant.conf.j2', wifi)
 
     return None
 

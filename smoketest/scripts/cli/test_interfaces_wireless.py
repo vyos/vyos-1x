@@ -234,8 +234,50 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertIn(interface, bridge_members)
 
         self.cli_delete(bridge_path)
-        self.cli_delete(self._base_path)
+
+    def test_wireless_security_station_address(self):
+        interface = 'wlan0'
+        ssid = 'VyOS-ACL'
+
+        hostapd_accept_station_conf = f'/run/hostapd/{interface}_station_accept.conf'
+        hostapd_deny_station_conf = f'/run/hostapd/{interface}_station_deny.conf'
+
+        accept_mac = ['00:00:00:00:ac:01', '00:00:00:00:ac:02', '00:00:00:00:ac:03', '00:00:00:00:ac:04']
+        deny_mac = ['00:00:00:00:de:01', '00:00:00:00:de:02', '00:00:00:00:de:03', '00:00:00:00:de:04']
+
+        self.cli_set(self._base_path + [interface, 'ssid', ssid])
+        self.cli_set(self._base_path + [interface, 'country-code', 'se'])
+        self.cli_set(self._base_path + [interface, 'type', 'access-point'])
+        self.cli_set(self._base_path + [interface, 'security', 'station-address', 'mode', 'accept'])
+
+        for mac in accept_mac:
+            self.cli_set(self._base_path + [interface, 'security', 'station-address', 'accept', 'mac', mac])
+        for mac in deny_mac:
+            self.cli_set(self._base_path + [interface, 'security', 'station-address', 'deny', 'mac', mac])
+
         self.cli_commit()
+
+        # in accept mode all addresses are allowed unless specified in the deny list
+        tmp = get_config_value(interface, 'macaddr_acl')
+        self.assertEqual(tmp, '0')
+
+        accept_list = read_file(hostapd_accept_station_conf)
+        for mac in accept_mac:
+            self.assertIn(mac, accept_list)
+
+        deny_list = read_file(hostapd_deny_station_conf)
+        for mac in deny_mac:
+            self.assertIn(mac, deny_list)
+
+        #  Switch mode accept -> deny
+        self.cli_set(self._base_path + [interface, 'security', 'station-address', 'mode', 'deny'])
+        self.cli_commit()
+        # In deny mode all addresses are denied unless specified in the allow list
+        tmp = get_config_value(interface, 'macaddr_acl')
+        self.assertEqual(tmp, '1')
+
+        # Check for running process
+        self.assertTrue(process_named_running('hostapd'))
 
 if __name__ == '__main__':
     check_kmod('mac80211_hwsim')
