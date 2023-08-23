@@ -1,4 +1,4 @@
-# Copyright 2020-2021 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2020-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -41,10 +41,30 @@ class MACsecIf(Interface):
         Create MACsec interface in OS kernel. Interface is administrative
         down by default.
         """
+
         # create tunnel interface
         cmd  = 'ip link add link {source_interface} {ifname} type {type}'.format(**self.config)
         cmd += f' cipher {self.config["security"]["cipher"]}'
         self._cmd(cmd)
+
+        # Check if using static keys
+        if 'static' in self.config["security"]:
+            # Set static TX key
+            cmd = 'ip macsec add {ifname} tx sa 0 pn 1 on key 00'.format(**self.config)
+            cmd += f' {self.config["security"]["static"]["key"]}'
+            self._cmd(cmd)
+
+            for peer, peer_config in self.config["security"]["static"]["peer"].items():
+                if 'disable' in peer_config:
+                    continue
+
+                # Create the address
+                cmd = 'ip macsec add {ifname} rx port 1 address'.format(**self.config)
+                cmd += f' {peer_config["mac"]}'
+                self._cmd(cmd)
+                # Add the rx-key to the address
+                cmd += f' sa 0 pn 1 on key 01 {peer_config["key"]}'
+                self._cmd(cmd)
 
         # interface is always A/D down. It needs to be enabled explicitly
         self.set_admin_state('down')

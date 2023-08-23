@@ -208,5 +208,77 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
+    def test_macsec_static_keys(self):
+        src_interface = 'eth0'
+        interface = 'macsec5'
+        cipher1 = 'gcm-aes-128'
+        cipher2 = 'gcm-aes-256'
+        tx_key_1 = '71a82a48eddfa12c08a19792ca20c4bb'
+        tx_key_2 = 'dd487b2958e855ea35a5d43a5ecb3dcfbe7889ffcb877770252feb13b734478d'
+        rx_key_1 = '0022d00f57e75241a230cdf7118dfcc5'
+        rx_key_2 = 'b7d6d7ad075e02323fdeb845217b884d3f93ff36b2cdaf6b07eeb189b877245f'
+        peer_mac = '00:11:22:33:44:55'
+        self.cli_set(self._base_path + [interface])
+
+         # Encrypt link
+        self.cli_set(self._base_path + [interface, 'security', 'encrypt'])
+
+        # check validate() - source interface is mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'source-interface', src_interface])
+
+        # check validate() - cipher is mandatory
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher1])
+
+        # check validate() - only static or mka config is allowed
+        self.cli_set(self._base_path + [interface, 'security', 'static'])
+        self.cli_set(self._base_path + [interface, 'security', 'mka', 'cak', tx_key_1])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'security', 'mka'])
+
+        # check validate() - tx-key required
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # check validate() - tx-key length must match cipher
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_1])
+
+        # check validate() - at least one peer must be defined
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # check validate() - enabled peer must have both rx-key and MAC defined
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac', peer_mac])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac'])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'key', rx_key_1])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'mac', peer_mac])
+
+        # check validate() - peer rx-key length must match cipher
+        self.cli_set(self._base_path + [interface, 'security', 'cipher', cipher2])
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'key', tx_key_2])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(self._base_path + [interface, 'security', 'static', 'peer', 'TESTPEER', 'key', rx_key_2])
+
+        # final commit and verify
+        self.cli_commit()
+        self.assertIn(interface, interfaces())
+        self.assertEqual(cipher2, get_cipher(interface))
+        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

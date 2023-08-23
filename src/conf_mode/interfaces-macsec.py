@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -42,6 +42,14 @@ airbag.enable()
 
 # XXX: wpa_supplicant works on the source interface
 wpa_suppl_conf = '/run/wpa_supplicant/{source_interface}.conf'
+
+# Constants
+## gcm-aes-128 requires a 128bit long key - 32 characters (string) = 16byte = 128bit
+GCM_AES_128_LEN: int = 32
+GCM_128_KEY_ERROR = 'gcm-aes-128 requires a 128bit long key!'
+## gcm-aes-256 requires a 256bit long key - 64 characters (string) = 32byte = 256bit
+GCM_AES_256_LEN: int = 64
+GCM_256_KEY_ERROR = 'gcm-aes-256 requires a 256bit long key!'
 
 def get_config(config=None):
     """
@@ -89,18 +97,54 @@ def verify(macsec):
         raise ConfigError('Cipher suite must be set for MACsec "{ifname}"'.format(**macsec))
 
     if dict_search('security.encrypt', macsec) != None:
-        if dict_search('security.mka.cak', macsec) == None or dict_search('security.mka.ckn', macsec) == None:
-            raise ConfigError('Missing mandatory MACsec security keys as encryption is enabled!')
+        # Check that only static or MKA config is present
+        if dict_search('security.static', macsec) != None and (dict_search('security.mka.cak', macsec) != None or dict_search('security.mka.ckn', macsec) != None):
+            raise ConfigError('Only static or MKA can be used!')
 
-        cak_len = len(dict_search('security.mka.cak', macsec))
+        # Logic to check static configuration
+        if dict_search('security.static', macsec) != None:
+            # tx-key must be defined
+            if dict_search('security.static.key', macsec) == None:
+                raise ConfigError('Static MACsec tx-key must be defined.')
 
-        if dict_search('security.cipher', macsec) == 'gcm-aes-128' and cak_len != 32:
-            # gcm-aes-128 requires a 128bit long key - 32 characters (string) = 16byte = 128bit
-            raise ConfigError('gcm-aes-128 requires a 128bit long key!')
+            tx_len = len(dict_search('security.static.key', macsec))
 
-        elif dict_search('security.cipher', macsec) == 'gcm-aes-256' and cak_len != 64:
-            # gcm-aes-128 requires a 128bit long key - 64 characters (string) = 32byte = 256bit
-            raise ConfigError('gcm-aes-128 requires a 256bit long key!')
+            if dict_search('security.cipher', macsec) == 'gcm-aes-128' and tx_len != GCM_AES_128_LEN:
+                raise ConfigError(GCM_128_KEY_ERROR)
+
+            if dict_search('security.cipher', macsec) == 'gcm-aes-256' and tx_len != GCM_AES_256_LEN:
+                raise ConfigError(GCM_256_KEY_ERROR)
+
+            # Make sure at least one peer is defined
+            if 'peer' not in macsec['security']['static']:
+                raise ConfigError('Must have at least one peer defined for static MACsec')
+
+            # For every enabled peer, make sure a MAC and rx-key is defined
+            for peer, peer_config in macsec['security']['static']['peer'].items():
+                if 'disable' not in peer_config and ('mac' not in peer_config or 'key' not in peer_config):
+                    raise ConfigError('Every enabled MACsec static peer must have a MAC address and rx-key defined.')
+
+                # check rx-key length against cipher suite
+                rx_len = len(peer_config['key'])
+
+                if dict_search('security.cipher', macsec) == 'gcm-aes-128' and rx_len != GCM_AES_128_LEN:
+                    raise ConfigError(GCM_128_KEY_ERROR)
+
+                if dict_search('security.cipher', macsec) == 'gcm-aes-256' and rx_len != GCM_AES_256_LEN:
+                    raise ConfigError(GCM_256_KEY_ERROR)
+
+        # Logic to check MKA configuration
+        else:
+            if dict_search('security.mka.cak', macsec) == None or dict_search('security.mka.ckn', macsec) == None:
+                raise ConfigError('Missing mandatory MACsec security keys as encryption is enabled!')
+
+            cak_len = len(dict_search('security.mka.cak', macsec))
+
+            if dict_search('security.cipher', macsec) == 'gcm-aes-128' and cak_len != GCM_AES_128_LEN:
+                raise ConfigError(GCM_128_KEY_ERROR)
+
+            elif dict_search('security.cipher', macsec) == 'gcm-aes-256' and cak_len != GCM_AES_256_LEN:
+                raise ConfigError(GCM_256_KEY_ERROR)
 
     if 'source_interface' in macsec:
         # MACsec adds a 40 byte overhead (32 byte MACsec + 8 bytes VLAN 802.1ad
@@ -115,7 +159,9 @@ def verify(macsec):
 
 
 def generate(macsec):
-    render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.j2', macsec)
+    # Only generate wpa_supplicant config if using MKA
+    if dict_search('security.mka.cak', macsec):
+        render(wpa_suppl_conf.format(**macsec), 'macsec/wpa_supplicant.conf.j2', macsec)
     return None
 
 
@@ -142,8 +188,10 @@ def apply(macsec):
     i = MACsecIf(**macsec)
     i.update(macsec)
 
-    if not is_systemd_service_running(systemd_service) or 'shutdown_required' in macsec:
-        call(f'systemctl reload-or-restart {systemd_service}')
+    # Only reload/restart if using MKA
+    if dict_search('security.mka.cak', macsec):
+        if not is_systemd_service_running(systemd_service) or 'shutdown_required' in macsec:
+            call(f'systemctl reload-or-restart {systemd_service}')
 
     return None
 

@@ -52,6 +52,28 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <node name="static">
+                <properties>
+                  <help>Use static keys for MACsec [static Secure Authentication Key (SAK) mode]</help>
+                </properties>
+                <children>
+                  #include <include/interface/macsec-key.xml.i>
+                  <tagNode name="peer">
+                    <properties>
+                      <help>MACsec peer name</help>
+                      <constraint>
+                        <regex>[^ ]{1,100}</regex>
+                      </constraint>
+                      <constraintErrorMessage>MACsec peer name exceeds limit of 100 characters</constraintErrorMessage>
+                    </properties>
+                    <children>
+                      #include <include/generic-disable-node.xml.i>
+                      #include <include/interface/mac.xml.i>
+                      #include <include/interface/macsec-key.xml.i>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
               <node name="mka">
                 <properties>
                   <help>MACsec Key Agreement protocol (MKA)</help>
