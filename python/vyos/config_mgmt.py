@@ -34,7 +34,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 
-SAVE_CONFIG = '/opt/vyatta/sbin/vyatta-save-config.pl'
+SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
 
 # created by vyatta-cfg-postinst
 commit_post_hook_dir = '/etc/commit/post-hooks.d'
