@@ -25,6 +25,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.configdict import is_node_changed
+from vyos.ifconfig import Interface
 from vyos.util import call
 from vyos.util import cmd
 from vyos.util import dict_search
@@ -465,6 +466,13 @@ def apply(container):
 
     if disabled_new:
         call('systemctl daemon-reload')
+
+    if 'network' in container:
+        for network, network_config in container['network'].items():
+            network_name = f'pod-{network}'
+            if os.path.exists(f'/sys/class/net/{network_name}'):
+                tmp = Interface(network_name)
+                tmp.add_ipv6_eui64_address('fe80::/64')
 
     return None
 
