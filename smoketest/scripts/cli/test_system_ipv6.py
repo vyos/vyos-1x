@@ -109,6 +109,16 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
                 protocol = 'ospf6'
             self.assertIn(f'ipv6 protocol {protocol} route-map route-map-{protocol}', frrconfig)
 
+        # Delete route-maps
+        self.cli_delete(['policy', 'route-map'])
+        self.cli_delete(base_path + ['protocol'])
+
+        self.cli_commit()
+
+        # Verify route-map properly applied to FRR
+        frrconfig = self.getFRRconfig('ipv6 protocol', end='', daemon='zebra')
+        self.assertNotIn(f'ipv6 protocol', frrconfig)
+
     def test_system_ipv6_protocol_non_existing_route_map(self):
         non_existing = 'non-existing6'
         self.cli_set(base_path + ['protocol', 'static', 'route-map', non_existing])
@@ -117,6 +127,7 @@ class TestSystemIPv6(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(['policy', 'route-map', non_existing, 'rule', '10', 'action', 'deny'])
+
         # Commit again
         self.cli_commit()
 

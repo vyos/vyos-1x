@@ -61,8 +61,7 @@ def verify(opt):
     return
 
 def generate(opt):
-    if 'protocol' in opt:
-        opt['frr_zebra_config'] = render_to_string('frr/zebra.route-map.frr.j2', opt)
+    opt['frr_zebra_config'] = render_to_string('frr/zebra.route-map.frr.j2', opt)
     return
 
 def apply(opt):
@@ -94,17 +93,16 @@ def apply(opt):
             if name == 'accept_dad':
                 write_file(os.path.join(root, name), value)
 
-    if 'protocol' in opt:
-        zebra_daemon = 'zebra'
-        # Save original configuration prior to starting any commit actions
-        frr_cfg = frr.FRRConfig()
+    zebra_daemon = 'zebra'
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
 
-        # The route-map used for the FIB (zebra) is part of the zebra daemon
-        frr_cfg.load_configuration(zebra_daemon)
-        frr_cfg.modify_section(r'ipv6 protocol \w+ route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
-        if 'frr_zebra_config' in opt:
-            frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
-        frr_cfg.commit_configuration(zebra_daemon)
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(r'ipv6 protocol \w+ route-map [-a-zA-Z0-9.]+', stop_pattern='(\s|!)')
+    if 'frr_zebra_config' in opt:
+        frr_cfg.add_before(frr.default_add_before, opt['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
 
 if __name__ == '__main__':
     try:

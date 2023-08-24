@@ -98,6 +98,16 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         for protocol in protocols:
             self.assertIn(f'ip protocol {protocol} route-map route-map-{protocol}', frrconfig)
 
+        # Delete route-maps
+        self.cli_delete(['policy', 'route-map'])
+        self.cli_delete(base_path + ['protocol'])
+
+        self.cli_commit()
+
+        # Verify route-map properly applied to FRR
+        frrconfig = self.getFRRconfig('ip protocol', end='', daemon='zebra')
+        self.assertNotIn(f'ip protocol', frrconfig)
+
     def test_system_ip_protocol_non_existing_route_map(self):
         non_existing = 'non-existing'
         self.cli_set(base_path + ['protocol', 'static', 'route-map', non_existing])
@@ -106,6 +116,7 @@ class TestSystemIP(VyOSUnitTestSHIM.TestCase):
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
         self.cli_set(['policy', 'route-map', non_existing, 'rule', '10', 'action', 'deny'])
+
         # Commit again
         self.cli_commit()
 

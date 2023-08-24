@@ -315,6 +315,19 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
             for protocol in v4_protocols:
                 self.assertIn(f' ip protocol {protocol} route-map route-map-{vrf}-{protocol}', frrconfig)
 
+        # Delete route-maps
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_delete(['policy', 'route-map', f'route-map-{vrf}-{protocol}'])
+            self.cli_delete(base + ['ip', 'protocol'])
+
+        self.cli_commit()
+
+        # Verify route-map properly is removed from FRR
+        for vrf in vrfs:
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', daemon='zebra')
+            self.assertNotIn(f'vrf {vrf}', frrconfig)
+
     def test_vrf_ip_ipv6_protocol_non_existing_route_map(self):
         table = '6100'
         non_existing = 'non-existing'
@@ -368,6 +381,19 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
                     protocol = 'ospf6'
                 route_map = f'route-map-{vrf}-{protocol}'
                 self.assertIn(f' ipv6 protocol {protocol} route-map {route_map}', frrconfig)
+
+        # Delete route-maps
+        for vrf in vrfs:
+            base = base_path + ['name', vrf]
+            self.cli_delete(['policy', 'route-map', f'route-map-{vrf}-{protocol}'])
+            self.cli_delete(base + ['ipv6', 'protocol'])
+
+        self.cli_commit()
+
+        # Verify route-map properly is removed from FRR
+        for vrf in vrfs:
+            frrconfig = self.getFRRconfig(f'vrf {vrf}', daemon='zebra')
+            self.assertNotIn(f'vrf {vrf}', frrconfig)
 
     def test_vrf_vni_duplicates(self):
         base_table = '6300'
@@ -463,4 +489,4 @@ class VRFTest(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=2, failfast=True)
