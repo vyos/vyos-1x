@@ -463,6 +463,7 @@ def apply(container):
             # it to a VRF as there's no consumer, yet.
             if os.path.exists(f'/sys/class/net/{network_name}'):
                 tmp = Interface(network_name)
+                tmp.add_ipv6_eui64_address('fe80::/64')
                 tmp.set_vrf(network_config.get('vrf', ''))
 
     return None
