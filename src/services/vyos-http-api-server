@@ -480,7 +480,7 @@ def configure_op(data: Union[ConfigureModel, ConfigureListModel]):
     return success(None)
 
 @app.post("/retrieve")
-def retrieve_op(data: RetrieveModel):
+async def retrieve_op(data: RetrieveModel):
     session = app.state.vyos_session
     env = session.get_session_env()
     config = vyos.config.Config(session_env=env)
