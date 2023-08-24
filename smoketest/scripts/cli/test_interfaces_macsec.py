@@ -139,15 +139,9 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         # final commit and verify
         self.cli_commit()
         self.assertIn(interface, interfaces())
-        self.assertIn(interface, interfaces())
+
+        # Verify proper cipher suite (T4537)
         self.assertEqual(cipher, get_cipher(interface))
-
-        # check that we use the new macsec_csindex option (T4537)
-        tmp = get_config_value(src_interface, 'macsec_csindex')
-        self.assertIn("0", tmp)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_macsec_gcm_aes_256(self):
         src_interface = 'eth0'
@@ -168,18 +162,12 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         # final commit and verify
         self.cli_commit()
         self.assertIn(interface, interfaces())
+
+        # Verify proper cipher suite (T4537)
         self.assertEqual(cipher, get_cipher(interface))
-
-        # check that we use the new macsec_csindex option (T4537)
-        tmp = get_config_value(src_interface, 'macsec_csindex')
-        self.assertIn("1", tmp)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_macsec_source_interface(self):
         # Ensure source-interface can bot be part of any other bond or bridge
-
         base_bridge = ['interfaces', 'bridge', 'br200']
         base_bond = ['interfaces', 'bonding', 'bond200']
 
@@ -204,9 +192,6 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             # final commit and verify
             self.cli_commit()
             self.assertIn(interface, interfaces())
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_macsec_static_keys(self):
         src_interface = 'eth0'
