@@ -777,6 +777,30 @@ class Interface(Control):
             return None
         return self.set_interface('rp_filter', value)
 
+    def _cleanup_ipv6_source_validation_rules(self, ifname):
+        commands = []
+        results = self._cmd(f'nft -a list chain ip6 raw vyos_rpfilter').split("\n")
+        for line in results:
+            if f'iifname "{ifname}"' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    self._cmd(f'nft delete rule ip6 raw vyos_rpfilter handle {handle_search[1]}')
+
+    def set_ipv6_source_validation(self, mode):
+        """
+        Set IPv6 reverse path validation
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_ipv6_source_validation('strict')
+        """
+        self._cleanup_ipv6_source_validation_rules(self.ifname)
+        nft_prefix = f'nft add rule ip6 raw vyos_rpfilter iifname "{self.ifname}"'
+        if mode == 'strict':
+            self._cmd(f"{nft_prefix} fib saddr . iif oif 0 counter drop")
+        elif mode == 'loose':
+            self._cmd(f"{nft_prefix} fib saddr oif 0 counter drop")
+
     def set_ipv6_accept_ra(self, accept_ra):
         """
         Accept Router Advertisements; autoconfigure using them.
@@ -1567,6 +1591,11 @@ class Interface(Control):
         tmp = dict_search('ip.source_validation', config)
         value = tmp if (tmp != None) else '0'
         self.set_ipv4_source_validation(value)
+
+        # IPv6 source-validation
+        tmp = dict_search('ipv6.source_validation', config)
+        value = tmp if (tmp != None) else '0'
+        self.set_ipv6_source_validation(value)
 
         # MTU - Maximum Transfer Unit has a default value. It must ALWAYS be set
         # before mangling any IPv6 option. If MTU is less then 1280 IPv6 will be

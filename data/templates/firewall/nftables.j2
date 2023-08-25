@@ -3,9 +3,9 @@
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
 {% if first_install is not vyos_defined %}
-delete table inet vyos_rpfilter
+delete table inet vyos_global_rpfilter
 {% endif %}
-table inet vyos_rpfilter {
+table inet vyos_global_rpfilter {
     chain PREROUTING {
         type filter hook prerouting priority -300; policy accept;
 {% if global_options.source_validation is vyos_defined('loose') %}

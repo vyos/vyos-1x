@@ -9,6 +9,7 @@
     #include <include/interface/ipv6-accept-dad.xml.i>
     #include <include/interface/ipv6-address.xml.i>
     #include <include/interface/ipv6-dup-addr-detect-transmits.xml.i>
+    #include <include/interface/source-validation.xml.i>
   </children>
 </node>
 <!-- include end -->
