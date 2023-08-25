@@ -1,0 +1,17 @@
+---
+name: Add pull request labels
+
+on:
+  pull_request:
+    branches:
+      - current
+      - crux
+      - equuleus
+      - sagitta
+
+jobs:
+  add-pr-label:
+    name: Add PR Labels
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/labeler@v5.0.0-alpha.1
