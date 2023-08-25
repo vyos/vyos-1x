@@ -17,6 +17,7 @@ eases the automatic generation of a changelog file.
 A good approach for writing commit messages is actually to have a look at the
 file(s) history by invoking git log path/to/file.txt.
 
+
 ### Prepare patch/commit
 
 In a big system, such as VyOS, that is comprised of multiple components, it’s
