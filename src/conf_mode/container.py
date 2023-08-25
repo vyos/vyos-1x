@@ -283,13 +283,13 @@ def generate_run_arguments(name, container_config):
             dport = container_config['port'][portmap]['destination']
             listen_addresses = container_config['port'][portmap].get('listen_address', [])
 
-        # If listen_addresses is not empty, include them in the publish command
-        if listen_addresses:
-            for listen_address in listen_addresses:
-                port += f' --publish {bracketize_ipv6(listen_address)}:{sport}:{dport}/{protocol}'
-        else:
-            # If listen_addresses is empty, just include the standard publish command
-            port += f' --publish {sport}:{dport}/{protocol}'
+            # If listen_addresses is not empty, include them in the publish command
+            if listen_addresses:
+                for listen_address in listen_addresses:
+                    port += f' --publish {bracketize_ipv6(listen_address)}:{sport}:{dport}/{protocol}'
+            else:
+                # If listen_addresses is empty, just include the standard publish command
+                port += f' --publish {sport}:{dport}/{protocol}'
 
     # Bind volume
     volume = ''
