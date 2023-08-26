@@ -54,7 +54,6 @@ sysfs_config = {
     'log_martians': {'sysfs': '/proc/sys/net/ipv4/conf/all/log_martians'},
     'receive_redirects': {'sysfs': '/proc/sys/net/ipv4/conf/*/accept_redirects'},
     'send_redirects': {'sysfs': '/proc/sys/net/ipv4/conf/*/send_redirects'},
-    'source_validation': {'sysfs': '/proc/sys/net/ipv4/conf/*/rp_filter', 'disable': '0', 'strict': '1', 'loose': '2'},
     'syn_cookies': {'sysfs': '/proc/sys/net/ipv4/tcp_syncookies'},
     'twa_hazards_protection': {'sysfs': '/proc/sys/net/ipv4/tcp_rfc1337'}
 }

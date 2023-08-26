@@ -844,6 +844,7 @@ class BasicInterfaceTest:
             mss = '1400'
             dad_transmits = '10'
             accept_dad = '0'
+            source_validation = 'strict'
 
             for interface in self._interfaces:
                 path = self._base_path + [interface]
@@ -862,6 +863,9 @@ class BasicInterfaceTest:
 
                 if cli_defined(self._base_path + ['ipv6'], 'disable-forwarding'):
                     self.cli_set(path + ['ipv6', 'disable-forwarding'])
+
+                if cli_defined(self._base_path + ['ipv6'], 'source-validation'):
+                    self.cli_set(path + ['ipv6', 'source-validation', source_validation])
 
             self.cli_commit()
 
@@ -885,6 +889,14 @@ class BasicInterfaceTest:
                 if cli_defined(self._base_path + ['ipv6'], 'disable-forwarding'):
                     tmp = read_file(f'{proc_base}/forwarding')
                     self.assertEqual('0', tmp)
+
+                if cli_defined(self._base_path + ['ipv6'], 'source-validation'):
+                    base_options = f'iifname "{interface}"'
+                    out = cmd('sudo nft list chain ip6 raw vyos_rpfilter')
+                    for line in out.splitlines():
+                        if line.startswith(base_options):
+                            self.assertIn('fib saddr . iif oif 0', line)
+                            self.assertIn('drop', line)
 
         def test_dhcpv6_client_options(self):
             if not self._test_ipv6_dhcpc6:
