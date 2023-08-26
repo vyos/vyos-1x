@@ -84,17 +84,16 @@ def get_config(config=None):
                                get_first_key=True,
                                no_tag_node_value_mangle=True)
 
-    if 'interface' in qos:
-        for ifname, if_conf in qos['interface'].items():
-            if_node = Section.get_config_path(ifname)
+    for ifname in interfaces():
+        if_node = Section.get_config_path(ifname)
 
-            if not if_node:
-                continue
+        if not if_node:
+            continue
 
-            path = f'interfaces {if_node}'
-            if conf.exists(f'{path} mirror') or conf.exists(f'{path} redirect'):
-                type_node = path.split(" ")[1] # return only interface type node
-                set_dependents(type_node, conf, ifname)
+        path = f'interfaces {if_node}'
+        if conf.exists(f'{path} mirror') or conf.exists(f'{path} redirect'):
+            type_node = path.split(" ")[1] # return only interface type node
+            set_dependents(type_node, conf, ifname.split(".")[0])
 
     for policy in qos.get('policy', []):
         if policy in ['random_detect']:
@@ -209,6 +208,8 @@ def apply(qos):
         call(f'tc qdisc del dev {interface} parent ffff:')
         call(f'tc qdisc del dev {interface} root')
 
+    call_dependents()
+
     if not qos or 'interface' not in qos:
         return None
 
@@ -228,8 +229,6 @@ def apply(qos):
             shaper_type, shaper_config = get_shaper(qos, interface_config, direction)
             tmp = shaper_type(interface)
             tmp.update(shaper_config, direction)
-
-    call_dependents()
 
     return None
 
