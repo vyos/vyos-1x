@@ -26,7 +26,7 @@ from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
-# from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_interface_exists
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
@@ -38,6 +38,7 @@ from vyos.utils.process import process_named_running
 from vyos.utils.process import rc_cmd
 from vyos import ConfigError
 from vyos import airbag
+
 airbag.enable()
 
 nat_conf_script = 'nat.py'
@@ -100,7 +101,7 @@ def geoip_updated(conf, firewall):
         elif (path[0] == 'ipv6'):
             set_name = f'GEOIP_CC6_{path[1]}_{path[2]}_{path[4]}'
             out['ipv6_name'].append(set_name)
-            
+
         updated = True
 
     if 'delete' in node_diff:
@@ -139,6 +140,14 @@ def get_config(config=None):
     firewall['geoip_updated'] = geoip_updated(conf, firewall)
 
     fqdn_config_parse(firewall)
+
+    firewall['flowtable_enabled'] = False
+    flow_offload = dict_search_args(firewall, 'global_options', 'flow_offload')
+    if flow_offload and 'disable' not in flow_offload:
+        for offload_type in ('software', 'hardware'):
+            if dict_search_args(flow_offload, offload_type, 'interface'):
+                firewall['flowtable_enabled'] = True
+                break
 
     return firewall
 
@@ -327,6 +336,14 @@ def verify(firewall):
                         for rule_id, rule_conf in name_conf['rule'].items():
                             verify_rule(firewall, rule_conf, True)
 
+    # Verify flow offload options
+    flow_offload = dict_search_args(firewall, 'global_options', 'flow_offload')
+    for offload_type in ('software', 'hardware'):
+        interfaces = dict_search_args(flow_offload, offload_type, 'interface') or []
+        for interface in interfaces:
+            # nft will raise an error when adding a non-existent interface to a flowtable
+            verify_interface_exists(interface)
+
     return None
 
 def generate(firewall):
@@ -336,13 +353,15 @@ def generate(firewall):
     # Determine if conntrack is needed
     firewall['ipv4_conntrack_action'] = 'return'
     firewall['ipv6_conntrack_action'] = 'return'
-
-    for rules, path in dict_search_recursive(firewall, 'rule'):
-        if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
-            if path[0] == 'ipv4':
-                firewall['ipv4_conntrack_action'] = 'accept'
-            elif path[0] == 'ipv6':
-                firewall['ipv6_conntrack_action'] = 'accept'
+    if firewall['flowtable_enabled']:  # Netfilter's flowtable offload requires conntrack
+        firewall['ipv4_conntrack_action'] = 'accept'
+        firewall['ipv6_conntrack_action'] = 'accept'
+    else:  # Check if conntrack is needed by firewall rules
+        for proto in ('ipv4', 'ipv6'):
+            for rules, _ in dict_search_recursive(firewall.get(proto, {}), 'rule'):
+                if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
+                    firewall[f'{proto}_conntrack_action'] = 'accept'
+                    break
 
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None

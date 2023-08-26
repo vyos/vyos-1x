@@ -2,6 +2,7 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 {% import 'firewall/nftables-bridge.j2' as bridge_tmpl %}
+{% import 'firewall/nftables-offload.j2' as offload %}
 
 flush chain raw FW_CONNTRACK
 flush chain ip6 raw FW_CONNTRACK
@@ -271,3 +272,26 @@ table bridge vyos_filter {
 {{ group_tmpl.groups(group, False, False) }}
 }
 {% endif %}
+{{ group_tmpl.groups(group, True) }}
+}
+
+table inet vyos_offload
+delete table inet vyos_offload
+table inet vyos_offload {
+{% if flowtable_enabled %}
+{%     if global_options.flow_offload.hardware.interface is vyos_defined %}
+    {{- offload.render_flowtable('VYOS_FLOWTABLE_hardware', global_options.flow_offload.hardware.interface | list, priority='filter - 2', hardware_offload=true) }}
+    chain VYOS_OFFLOAD_hardware {
+        type filter hook forward priority filter - 2; policy accept;
+        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_hardware
+    }
+{%     endif %}
+{%     if global_options.flow_offload.software.interface is vyos_defined %}
+    {{- offload.render_flowtable('VYOS_FLOWTABLE_software', global_options.flow_offload.software.interface | list, priority='filter - 1') }}
+    chain VYOS_OFFLOAD_software {
+        type filter hook forward priority filter - 1; policy accept;
+        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_software
+    }
+{%     endif %}
+{% endif %}
+}

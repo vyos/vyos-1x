@@ -603,5 +603,17 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 with open(path, 'r') as f:
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
 
+    def test_flow_offload_software(self):
+        self.cli_set(['firewall', 'global-options', 'flow-offload', 'software', 'interface', 'eth0'])
+        self.cli_commit()
+        nftables_search = [
+            ['flowtable VYOS_FLOWTABLE_software'],
+            ['hook ingress priority filter - 1'],
+            ['devices = { eth0 }'],
+            ['flow add @VYOS_FLOWTABLE_software'],
+        ]
+        self.verify_nftables(nftables_search, 'inet vyos_offload')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

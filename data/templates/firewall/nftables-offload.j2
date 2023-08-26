@@ -1,0 +1,11 @@
+{% macro render_flowtable(name, devices, priority='filter', hardware_offload=false, with_counter=true) %}
+flowtable {{ name }} {
+    hook ingress priority {{ priority }}; devices = { {{ devices | join(', ') }} };
+{% if hardware_offload %}
+    flags offload;
+{% endif %}
+{% if with_counter %}
+    counter
+{% endif %}
+}
+{% endmacro %}

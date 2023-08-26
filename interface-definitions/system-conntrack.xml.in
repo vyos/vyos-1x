@@ -9,6 +9,12 @@
           <priority>218</priority>
         </properties>
         <children>
+          <leafNode name="flow-accounting">
+            <properties>
+              <help>Enable connection tracking flow accounting</help>
+              <valueless/>
+            </properties>
+          </leafNode>
           <leafNode name="expect-table-size">
             <properties>
               <help>Size of connection tracking expect table</help>
