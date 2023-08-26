@@ -78,6 +78,17 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(not matched if inverse else matched, msg=search)
 
+    def verify_nftables_chain(self, nftables_search, table, chain, inverse=False, args=''):
+        nftables_output = cmd(f'sudo nft {args} list chain {table} {chain}')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(not matched if inverse else matched, msg=search)
+
     def wait_for_domain_resolver(self, table, set_name, element, max_wait=10):
         # Resolver no longer blocks commit, need to wait for daemon to populate set
         count = 0
@@ -510,6 +521,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
+
+        # Check conntrack
+        self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
 
     def test_source_validation(self):
         # Strict

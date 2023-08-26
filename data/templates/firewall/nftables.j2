@@ -2,6 +2,21 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
+flush chain raw FW_CONNTRACK
+flush chain ip6 raw FW_CONNTRACK
+
+table raw {
+    chain FW_CONNTRACK {
+        {{ ipv4_conntrack_action }}
+    }
+}
+
+table ip6 raw {
+    chain FW_CONNTRACK {
+        {{ ipv6_conntrack_action }}
+    }
+}
+
 {% if first_install is not vyos_defined %}
 delete table inet vyos_global_rpfilter
 {% endif %}

@@ -333,6 +333,17 @@ def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
 
+    # Determine if conntrack is needed
+    firewall['ipv4_conntrack_action'] = 'return'
+    firewall['ipv6_conntrack_action'] = 'return'
+
+    for rules, path in dict_search_recursive(firewall, 'rule'):
+        if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
+            if path[0] == 'ipv4':
+                firewall['ipv4_conntrack_action'] = 'accept'
+            elif path[0] == 'ipv6':
+                firewall['ipv6_conntrack_action'] = 'accept'
+
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
 
