@@ -1,5 +1,6 @@
 # vyos-1x: VyOS command definitions, configuration scripts, and data
 
+
 VyOS 1.1.x had its codebase split into way too many submodules for no good
 reason, which made it hard to navigate or write meaningful changelogs. As the
 code undergoes rewrite in the new style in VyOS 1.2.0+, we consolidate the
