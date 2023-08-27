@@ -13,5 +13,8 @@ jobs:
   add-pr-label:
     name: Add PR Labels
     runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/labeler@v5.0.0-alpha.1
