@@ -602,7 +602,7 @@
               <leafNode name="no-serve-rfc1918">
                 <properties>
                   <help>Makes the server authoritatively not aware of RFC1918 addresses</help>
-		          <valueless/>
+                  <valueless/>
                 </properties>
               </leafNode>
               <leafNode name="allow-from">
@@ -623,6 +623,18 @@
                 </properties>
               </leafNode>
               #include <include/listen-address.xml.i>
+              <leafNode name="lua-dns-script">
+                <properties>
+                  <help>PowerDNS recursor LUA dns-script file</help>
+                  <valueHelp>
+                    <format>file</format>
+                    <description>Path to file in the /config directory</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="file-path"/>
+                  </constraint>
+                </properties>
+              </leafNode>
               #include <include/port-number.xml.i>
               <leafNode name="port">
                 <defaultValue>53</defaultValue>

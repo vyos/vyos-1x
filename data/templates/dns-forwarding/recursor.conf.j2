@@ -32,6 +32,11 @@ local-address={{ listen_address | join(',') }}
 # listen-port
 local-port={{ port }}
 
+{% if lua_dns_script is vyos_defined %}
+# lua dns script
+lua-dns-script={{ lua_dns_script }}
+{% endif %}
+
 # dnssec
 dnssec={{ dnssec }}
 
