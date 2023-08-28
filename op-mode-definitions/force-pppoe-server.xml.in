@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="force">
+    <children>
+      <node name="pppoe-server">
+        <properties>
+          <help>Set PPPoE-server oprions</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>Set listen interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <command>/usr/bin/accel-cmd -p 2001 pppoe interface add $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
