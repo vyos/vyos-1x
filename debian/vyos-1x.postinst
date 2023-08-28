@@ -29,6 +29,11 @@ do
     sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
+# Both RADIUS and TACACS users belong to aaa group - this must be added first
+if ! grep -q '^aaa' /etc/group; then
+    addgroup --firstgid 1000 --quiet aaa
+fi
+
 # Remove TACACS user added by base package - we use our own UID range and group
 # assignments - see below
 if grep -q '^tacacs' /etc/passwd; then
@@ -72,11 +77,6 @@ if ! grep -q '^tacacs' /etc/passwd; then
         fi
         level=$(( level+1 ))
     done 2>&1 | grep -v 'User tacacs${level} already exists'
-fi
-
-
-if ! grep -q '^aaa' /etc/group; then
-    addgroup --firstgid 1000 --quiet aaa
 fi
 
 # Add RADIUS operator user for RADIUS authenticated users to map to
