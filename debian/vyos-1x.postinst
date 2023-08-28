@@ -59,10 +59,8 @@ if ! grep -q '^tacacs' /etc/passwd; then
     vyos_group=vyattaop
     while [ $level -lt 16 ]; do
         adduser --quiet --system --firstuid 900 --disabled-login --ingroup users \
-            --home /home/tacacs${level} --gecos "TACACS+ mapped user at privilege level ${level}" \
+            --no-create-home --gecos "TACACS+ mapped user at privilege level ${level}" \
             --shell /bin/vbash tacacs${level}
-        # fix home permission - onl required b/c of system user
-        chmod 700 /home/tacacs${level}
         adduser --quiet tacacs${level} frrvty
         adduser --quiet tacacs${level} adm
         adduser --quiet tacacs${level} dip
