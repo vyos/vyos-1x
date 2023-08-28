@@ -179,7 +179,7 @@ def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
     return code, out
 
 def call(command, flag='', shell=None, input=None, timeout=None, env=None,
-         stdout=PIPE, stderr=PIPE, decode='utf-8'):
+         stdout=None, stderr=None, decode='utf-8'):
     """
     A wrapper around popen, which print the stdout and
     will return the error code of a command
