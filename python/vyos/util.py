@@ -788,6 +788,13 @@ def get_interface_config(interface):
     tmp = loads(cmd(f'ip -d -j link show {interface}'))[0]
     return tmp
 
+def get_interface_vrf(interface):
+    """ Returns VRF of given interface """
+    tmp = get_interface_config(interface)
+    if dict_search('linkinfo.info_slave_kind', tmp) == 'vrf':
+        return tmp['master']
+    return 'default'
+
 def print_error(str='', end='\n'):
     """
     Print `str` to stderr, terminated with `end`.

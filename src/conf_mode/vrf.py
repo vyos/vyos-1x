@@ -167,10 +167,6 @@ def apply(vrf):
                 vrf_iface.set_dhcp(False)
                 vrf_iface.set_dhcpv6(False)
 
-            # Remove nftables conntrack zone map item
-            nft_del_element = f'delete element inet vrf_zones ct_iface_map {{ "{tmp}" }}'
-            cmd(f'nft {nft_del_element}')
-
             # Delete the VRF Kernel interface
             call(f'ip link delete dev {tmp}')
 
