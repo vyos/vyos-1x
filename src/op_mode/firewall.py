@@ -127,7 +127,7 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
                     if not source_addr:
                         source_addr = dict_search_args(rule_conf, 'source', 'group', 'domain_group')
                         if not source_addr:
-                            source_addr = '0.0.0.0/0'
+                            source_addr = '::/0' if ipv6 else '0.0.0.0/0'
 
             # Get destination
             dest_addr = dict_search_args(rule_conf, 'destination', 'address')
@@ -138,7 +138,21 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
                     if not dest_addr:
                         dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'domain_group')
                         if not dest_addr:
-                            dest_addr = '0.0.0.0/0'
+                            dest_addr = '::/0' if ipv6 else '0.0.0.0/0'
+
+            # Get inbound interface
+            iiface = dict_search_args(rule_conf, 'inbound_interface', 'interface_name')
+            if not iiface:
+                iiface = dict_search_args(rule_conf, 'inbound_interface', 'interface_group')
+                if not iiface:
+                    iiface = 'any'
+
+            # Get outbound interface
+            oiface = dict_search_args(rule_conf, 'outbound_interface', 'interface_name')
+            if not oiface:
+                oiface = dict_search_args(rule_conf, 'outbound_interface', 'interface_group')
+                if not oiface:
+                    oiface = 'any'
 
             row = [rule_id]
             if rule_id in details:
@@ -151,6 +165,8 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             row.append(rule_conf['action'])
             row.append(source_addr)
             row.append(dest_addr)
+            row.append(iiface)
+            row.append(oiface)
             rows.append(row)
 
     if 'default_action' in prior_conf and not single_rule_id:
@@ -168,7 +184,7 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
         rows.append(row)
 
     if rows:
-        header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination']
+        header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
         print(tabulate.tabulate(rows, header) + '\n')
 
 def show_firewall():
