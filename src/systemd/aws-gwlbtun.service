@@ -1,0 +1,11 @@
+[Unit]
+Description=Description=AWS Gateway Load Balancer Tunnel Handler
+Documentation=https://github.com/aws-samples/aws-gateway-load-balancer-tunnel-handler
+After=network.target
+
+[Service]
+ExecStart=
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

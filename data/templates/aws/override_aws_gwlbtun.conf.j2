@@ -1,0 +1,36 @@
+{% set args = [] %}
+{% if script.on_create is vyos_defined %}
+{%     set _ = args.append("-c " + script.on_create) %}
+{% endif %}
+{% if script.on_destroy is vyos_defined %}
+{%     set _ = args.append("-r " + script.on_destroy) %}
+{% endif %}
+
+{% if status.port is vyos_defined %}
+{%     set _ = args.append("-p " + status.port) %}
+{% endif %}
+
+{% if threads.tunnel is vyos_defined %}
+{%     set _ = args.append("--tunthreads " + threads.tunnel) %}
+{% endif %}
+{% if threads.tunnel_affinity is vyos_defined %}
+{%     set _ = args.append("--tunaffinity " + threads.tunnel_affinity) %}
+{% endif %}
+
+{% if threads.udp is vyos_defined %}
+{%     set _ = args.append("--udpthreads " + threads.udp) %}
+{% endif %}
+{% if threads.udp_affinity is vyos_defined %}
+{%     set _ = args.append("--udpaffinity " + threads.udp_affinity) %}
+{% endif %}
+
+[Unit]
+StartLimitIntervalSec=0
+After=vyos-router.service
+
+[Service]
+EnvironmentFile=
+ExecStart=/usr/bin/gwlbtun {{ args | join(' ') }}
+CapabilityBoundingSet=CAP_NET_ADMIN
+Restart=always
+RestartSec=10

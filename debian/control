@@ -36,6 +36,7 @@ Depends:
   accel-ppp,
   auditd,
   avahi-daemon,
+  aws-gwlbtun,
   beep,
   bmon,
   bsdmainutils,
