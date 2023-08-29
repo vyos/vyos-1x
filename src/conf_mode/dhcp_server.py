@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2022 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -34,6 +34,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/run/dhcp-server/dhcpd.conf'
+systemd_override = r'/run/systemd/system/isc-dhcp-server.service.d/10-override.conf'
 
 def dhcp_slice_range(exclude_list, range_dict):
     """
@@ -295,6 +296,7 @@ def generate(dhcp):
     # render the "real" configuration
     render(config_file, 'dhcp-server/dhcpd.conf.j2', dhcp,
            formater=lambda _: _.replace("&quot;", '"'))
+    render(systemd_override, 'dhcp-server/10-override.conf.j2', dhcp)
 
     # Clean up configuration test file
     if os.path.exists(tmp_file):
@@ -303,6 +305,7 @@ def generate(dhcp):
     return None
 
 def apply(dhcp):
+    call('systemctl daemon-reload')
     # bail out early - looks like removal from running config
     if not dhcp or 'disable' in dhcp:
         call('systemctl stop isc-dhcp-server.service')
