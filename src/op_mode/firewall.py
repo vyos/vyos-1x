@@ -38,12 +38,13 @@ def get_config_firewall(conf, hook=None, priority=None, ipv6=False):
 
 def get_nftables_details(hook, priority, ipv6=False):
     suffix = '6' if ipv6 else ''
+    aux = 'IPV6_' if ipv6 else ''
     name_prefix = 'NAME6_' if ipv6 else 'NAME_'
     if hook == 'name' or hook == 'ipv6-name':
         command = f'sudo nft list chain ip{suffix} vyos_filter {name_prefix}{priority}'
     else:
         up_hook = hook.upper()
-        command = f'sudo nft list chain ip{suffix} vyos_filter VYOS_{up_hook}_{priority}'
+        command = f'sudo nft list chain ip{suffix} vyos_filter VYOS_{aux}{up_hook}_{priority}'
 
     try:
         results = cmd(command)
@@ -106,7 +107,7 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
     ip_str = 'IPv6' if ipv6 else 'IPv4'
     print(f'\n---------------------------------\n{ip_str} Firewall "{hook} {prior}"\n')
 
-    details = get_nftables_details(prior, ipv6)
+    details = get_nftables_details(hook, prior, ipv6)
     rows = []
 
     if 'rule' in prior_conf:
@@ -117,8 +118,27 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             if 'disable' in rule_conf:
                 continue
 
-            source_addr = dict_search_args(rule_conf, 'source', 'address') or '0.0.0.0/0'
-            dest_addr = dict_search_args(rule_conf, 'destination', 'address') or '0.0.0.0/0'
+            # Get source
+            source_addr = dict_search_args(rule_conf, 'source', 'address')
+            if not source_addr:
+                source_addr = dict_search_args(rule_conf, 'source', 'group', 'address_group')
+                if not source_addr:
+                    source_addr = dict_search_args(rule_conf, 'source', 'group', 'network_group')
+                    if not source_addr:
+                        source_addr = dict_search_args(rule_conf, 'source', 'group', 'domain_group')
+                        if not source_addr:
+                            source_addr = '0.0.0.0/0'
+
+            # Get destination
+            dest_addr = dict_search_args(rule_conf, 'destination', 'address')
+            if not dest_addr:
+                dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'address_group')
+                if not dest_addr:
+                    dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'network_group')
+                    if not dest_addr:
+                        dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'domain_group')
+                        if not dest_addr:
+                            dest_addr = '0.0.0.0/0'
 
             row = [rule_id]
             if rule_id in details:
