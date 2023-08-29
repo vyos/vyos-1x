@@ -119,6 +119,7 @@
                 <path>firewall group address-group</path>
                 <path>firewall group network-group</path>
                 <path>firewall group port-group</path>
+                <path>firewall group interface-group</path>
                 <path>firewall group ipv6-address-group</path>
                 <path>firewall group ipv6-network-group</path>
               </completionHelp>
