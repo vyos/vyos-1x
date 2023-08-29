@@ -29,6 +29,11 @@ do
     sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
+# We do not make use of a TACACS UNIX group - drop it
+if grep -q '^tacacs' /etc/group; then
+    delgroup tacacs
+fi
+
 # Both RADIUS and TACACS users belong to aaa group - this must be added first
 if ! grep -q '^aaa' /etc/group; then
     addgroup --firstgid 1000 --quiet aaa
@@ -42,6 +47,7 @@ if grep -q '^tacacs' /etc/passwd; then
         vyos_group=vyattaop
         while [ $level -lt 16 ]; do
             userdel tacacs${level} || true
+            rm -rf /home/tacacs${level} || true
             level=$(( level+1 ))
         done 2>&1
     fi
