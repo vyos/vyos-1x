@@ -24,7 +24,7 @@ from vyos.config import Config
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search_args
 
-def get_config_firewall(conf, hook=None, priority=None, ipv6=False, interfaces=True):
+def get_config_firewall(conf, hook=None, priority=None, ipv6=False):
     config_path = ['firewall']
     if hook:
         config_path += ['ipv6' if ipv6 else 'ipv4', hook]
@@ -38,12 +38,13 @@ def get_config_firewall(conf, hook=None, priority=None, ipv6=False, interfaces=T
 
 def get_nftables_details(hook, priority, ipv6=False):
     suffix = '6' if ipv6 else ''
+    aux = 'IPV6_' if ipv6 else ''
     name_prefix = 'NAME6_' if ipv6 else 'NAME_'
     if hook == 'name' or hook == 'ipv6-name':
         command = f'sudo nft list chain ip{suffix} vyos_filter {name_prefix}{priority}'
     else:
         up_hook = hook.upper()
-        command = f'sudo nft list chain ip{suffix} vyos_filter VYOS_{up_hook}_{priority}'
+        command = f'sudo nft list chain ip{suffix} vyos_filter VYOS_{aux}{up_hook}_{priority}'
 
     try:
         results = cmd(command)
@@ -106,7 +107,7 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
     ip_str = 'IPv6' if ipv6 else 'IPv4'
     print(f'\n---------------------------------\n{ip_str} Firewall "{hook} {prior}"\n')
 
-    details = get_nftables_details(prior, ipv6)
+    details = get_nftables_details(hook, prior, ipv6)
     rows = []
 
     if 'rule' in prior_conf:
@@ -117,8 +118,41 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             if 'disable' in rule_conf:
                 continue
 
-            source_addr = dict_search_args(rule_conf, 'source', 'address') or '0.0.0.0/0'
-            dest_addr = dict_search_args(rule_conf, 'destination', 'address') or '0.0.0.0/0'
+            # Get source
+            source_addr = dict_search_args(rule_conf, 'source', 'address')
+            if not source_addr:
+                source_addr = dict_search_args(rule_conf, 'source', 'group', 'address_group')
+                if not source_addr:
+                    source_addr = dict_search_args(rule_conf, 'source', 'group', 'network_group')
+                    if not source_addr:
+                        source_addr = dict_search_args(rule_conf, 'source', 'group', 'domain_group')
+                        if not source_addr:
+                            source_addr = '::/0' if ipv6 else '0.0.0.0/0'
+
+            # Get destination
+            dest_addr = dict_search_args(rule_conf, 'destination', 'address')
+            if not dest_addr:
+                dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'address_group')
+                if not dest_addr:
+                    dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'network_group')
+                    if not dest_addr:
+                        dest_addr = dict_search_args(rule_conf, 'destination', 'group', 'domain_group')
+                        if not dest_addr:
+                            dest_addr = '::/0' if ipv6 else '0.0.0.0/0'
+
+            # Get inbound interface
+            iiface = dict_search_args(rule_conf, 'inbound_interface', 'interface_name')
+            if not iiface:
+                iiface = dict_search_args(rule_conf, 'inbound_interface', 'interface_group')
+                if not iiface:
+                    iiface = 'any'
+
+            # Get outbound interface
+            oiface = dict_search_args(rule_conf, 'outbound_interface', 'interface_name')
+            if not oiface:
+                oiface = dict_search_args(rule_conf, 'outbound_interface', 'interface_group')
+                if not oiface:
+                    oiface = 'any'
 
             row = [rule_id]
             if rule_id in details:
@@ -131,6 +165,8 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             row.append(rule_conf['action'])
             row.append(source_addr)
             row.append(dest_addr)
+            row.append(iiface)
+            row.append(oiface)
             rows.append(row)
 
     if 'default_action' in prior_conf and not single_rule_id:
@@ -148,7 +184,7 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
         rows.append(row)
 
     if rows:
-        header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination']
+        header = ['Rule', 'Packets', 'Bytes', 'Action', 'Source', 'Destination', 'Inbound-Interface', 'Outbound-interface']
         print(tabulate.tabulate(rows, header) + '\n')
 
 def show_firewall():
@@ -204,7 +240,7 @@ def show_firewall_rule(hook, priority, rule_id, ipv6=False):
 
 def show_firewall_group(name=None):
     conf = Config()
-    firewall = get_config_firewall(conf, interfaces=False)
+    firewall = get_config_firewall(conf)
 
     if 'group' not in firewall:
         return
@@ -225,18 +261,37 @@ def show_firewall_group(name=None):
 
         for item in family:
             for name_type in ['name', 'ipv6_name', 'forward', 'input', 'output']:
-                if name_type not in firewall[item]:
-                    continue
-                for name, name_conf in firewall[item][name_type].items():
-                    if 'rule' not in name_conf:
+                if item in firewall:
+                    if name_type not in firewall[item]:
                         continue
-                    for rule_id, rule_conf in name_conf['rule'].items():
-                        source_group = dict_search_args(rule_conf, 'source', 'group', group_type)
-                        dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
-                        if source_group and group_name == source_group:
-                            out.append(f'{name}-{rule_id}')
-                        elif dest_group and group_name == dest_group:
-                            out.append(f'{name}-{rule_id}')
+                    for priority, priority_conf in firewall[item][name_type].items():
+                        if priority not in firewall[item][name_type]:
+                            continue
+                        for rule_id, rule_conf in priority_conf['rule'].items():
+                            source_group = dict_search_args(rule_conf, 'source', 'group', group_type)
+                            dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
+                            in_interface = dict_search_args(rule_conf, 'inbound_interface', 'interface_group')
+                            out_interface = dict_search_args(rule_conf, 'outbound_interface', 'interface_group')
+                            if source_group:
+                                if source_group[0] == "!":
+                                    source_group = source_group[1:]
+                                if group_name == source_group:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+                            if dest_group:
+                                if dest_group[0] == "!":
+                                    dest_group = dest_group[1:]
+                                if group_name == dest_group:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+                            if in_interface:
+                                if in_interface[0] == "!":
+                                    in_interface = in_interface[1:]
+                                if group_name == in_interface:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
+                            if out_interface:
+                                if out_interface[0] == "!":
+                                    out_interface = out_interface[1:]
+                                if group_name == out_interface:
+                                    out.append(f'{item}-{name_type}-{priority}-{rule_id}')
         return out
 
     header = ['Name', 'Type', 'References', 'Members']
@@ -257,6 +312,8 @@ def show_firewall_group(name=None):
                 row.append("\n".join(sorted(group_conf['mac_address'])))
             elif 'port' in group_conf:
                 row.append("\n".join(sorted(group_conf['port'])))
+            elif 'interface' in group_conf:
+                row.append("\n".join(sorted(group_conf['interface'])))
             else:
                 row.append('N/A')
             rows.append(row)
