@@ -165,6 +165,14 @@
   </properties>
 </leafNode>
 #include <include/isis/ldp-sync-protocol.xml.i>
+<node name="fast-reroute">
+  <properties>
+    <help>IS-IS fast reroute configuration</help>
+  </properties>
+  <children>
+    #include <include/isis/lfa-protocol.xml.i>
+  </children>
+</node>
 <leafNode name="net">
   <properties>
     <help>A Network Entity Title for this process (ISO only)</help>

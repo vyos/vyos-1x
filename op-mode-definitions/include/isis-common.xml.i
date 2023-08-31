@@ -17,6 +17,33 @@
   </properties>
   <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
 </tagNode>
+<node name="fast-reroute">
+  <properties>
+    <help>Show IS-IS fast reroute/loop free alternate (lfa) information</help>
+  </properties>
+  <children>
+    <node name="summary">
+      <properties>
+        <help>Show summary of fast reroute/loop free alternate (lfa) information</help>
+      </properties>
+      <children>
+        <leafNode name="level-1">
+          <properties>
+            <help>Show level-1 specific fast reroute/loop free alternate (lfa) information</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </leafNode>
+        <leafNode name="level-2">
+          <properties>
+            <help>Show level-2 specific fast reroute/loop free alternate (lfa) information</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </leafNode>
+      </children>
+      <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+    </node>
+  </children>
+</node>
 <leafNode name="hostname">
   <properties>
     <help>Show IS-IS dynamic hostname mapping</help>
