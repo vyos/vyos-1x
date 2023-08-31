@@ -178,6 +178,11 @@ def verify(container):
                     if 'value' not in cfg:
                         raise ConfigError(f'Environment variable {var} has no value assigned!')
 
+            if 'label' in container_config:
+                for var, cfg in container_config['label'].items():
+                    if 'value' not in cfg:
+                        raise ConfigError(f'Label variable {var} has no value assigned!')
+
             if 'volume' in container_config:
                 for volume, volume_config in container_config['volume'].items():
                     if 'source' not in volume_config:
@@ -267,6 +272,12 @@ def generate_run_arguments(name, container_config):
     if 'environment' in container_config:
         for k, v in container_config['environment'].items():
             env_opt += f" --env \"{k}={v['value']}\""
+
+    # Check/set label options "--label foo=bar"
+    env_opt = ''
+    if 'label' in container_config:
+        for k, v in container_config['label'].items():
+            env_opt += f" --label \"{k}={v['value']}\""
 
     hostname = ''
     if 'host_name' in container_config:
