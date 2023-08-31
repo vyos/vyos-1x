@@ -25,6 +25,11 @@ export-etc-hosts={{ 'no' if ignore_hosts_file is defined else 'yes' }}
 # listen-address
 local-address={{ listen_address | join(',') }}
 
+{% if port is defined and port is not none %}
+# listen-port
+local-port={{ port }}
+{% endif %}
+
 # dnssec
 dnssec={{ dnssec }}
 
