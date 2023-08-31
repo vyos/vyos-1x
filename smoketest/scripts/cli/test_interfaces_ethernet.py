@@ -250,7 +250,16 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
         for interface in self._interfaces:
             # Enable EAPoL
             self.cli_set(self._base_path + [interface, 'eapol', 'ca-certificate', 'eapol-server-ca-intermediate'])
+            self.cli_set(self._base_path + [interface, 'eapol', 'ca-certificate', 'eapol-client-ca-intermediate'])
             self.cli_set(self._base_path + [interface, 'eapol', 'certificate', cert_name])
+
+        self.cli_commit()
+
+        # Test multiple CA chains
+        self.assertEqual(get_certificate_count(interface, 'ca'), 4)
+
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'eapol', 'ca-certificate', 'eapol-client-ca-intermediate'])
 
         self.cli_commit()
 

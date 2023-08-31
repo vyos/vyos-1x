@@ -186,14 +186,15 @@ def generate(ethernet):
 
         if 'ca_certificate' in ethernet['eapol']:
             ca_cert_file_path = os.path.join(cfg_dir, f'{ifname}_ca.pem')
-            ca_cert_name = ethernet['eapol']['ca_certificate']
-            pki_ca_cert = ethernet['pki']['ca'][ca_cert_name]
+            ca_chains = []
 
-            loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
-            ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+            for ca_cert_name in ethernet['eapol']['ca_certificate']:
+                pki_ca_cert = ethernet['pki']['ca'][ca_cert_name]
+                loaded_ca_cert = load_certificate(pki_ca_cert['certificate'])
+                ca_full_chain = find_chain(loaded_ca_cert, loaded_ca_certs)
+                ca_chains.append('\n'.join(encode_certificate(c) for c in ca_full_chain))
 
-            write_file(ca_cert_file_path,
-                       '\n'.join(encode_certificate(c) for c in ca_full_chain))
+            write_file(ca_cert_file_path, '\n'.join(ca_chains))
 
     return None
 
