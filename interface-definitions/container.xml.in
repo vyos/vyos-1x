@@ -145,6 +145,26 @@
               <constraintErrorMessage>The command's arguments must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
+          <tagNode name="label">
+            <properties>
+              <help>Add label variables</help>
+              <constraint>
+                <regex>[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?</regex>
+              </constraint>
+              <constraintErrorMessage>Label variable name must be alphanumeric and can contain hyphen, dots and underscores</constraintErrorMessage>
+            </properties>
+            <children>
+              <leafNode name="value">
+                <properties>
+                  <help>Set label option value</help>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>Set label option value</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+            </children>
+          </tagNode>
           <leafNode name="memory">
             <properties>
               <help>Memory (RAM) available to this container</help>
