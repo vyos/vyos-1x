@@ -338,10 +338,12 @@ def _get_formatted_client_leases(lease_data, family):
     from time import localtime
     from time import strftime
 
-    from vyos.validate import is_intf_addr_assigned
+    from vyos.utils.network import is_intf_addr_assigned
 
     data_entries = []
     for lease in lease_data:
+        if not lease.get('new_ip_address'):
+            continue
         data_entries.append(["Interface", lease['interface']])
         if 'new_ip_address' in lease:
             tmp = '[Active]' if is_intf_addr_assigned(lease['interface'], lease['new_ip_address']) else '[Inactive]'
