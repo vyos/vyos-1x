@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <tagNode name="command">
+        <properties>
+          <help>Monitor operational mode command (refreshes every 2 seconds)</help>
+        </properties>
+        <command>watch --no-title ${vyos_op_scripts_dir}/vyos-op-cmd-wrapper.sh ${@:3}</command>
+      </tagNode>
+      <node name="command">
+        <children>
+          <node name="diff">
+            <properties>
+              <help>Show differences during each run</help>
+            </properties>
+          </node>
+          <tagNode name="diff">
+            <properties>
+              <help>Monitor operational mode command (refreshes every 2 seconds)</help>
+            </properties>
+            <command>watch --no-title --differences ${vyos_op_scripts_dir}/vyos-op-cmd-wrapper.sh ${@:4}</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
