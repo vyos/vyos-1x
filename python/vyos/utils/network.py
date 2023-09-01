@@ -117,6 +117,37 @@ def get_interface_namespace(iface):
             if iface == tmp["ifname"]:
                 return netns
 
+def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
+    """Check if IPv6 address is in tentative state.
+
+    This function checks if an IPv6 address on a specific network interface is
+    in the tentative state. IPv6 tentative addresses are not fully configured
+    and are undergoing Duplicate Address Detection (DAD) to ensure they are
+    unique on the network.
+
+    Args:
+        iface (str): The name of the network interface.
+        ipv6_address (str): The IPv6 address to check.
+
+    Returns:
+        bool: True if the IPv6 address is tentative, False otherwise.
+    """
+    import json
+    from vyos.utils.process import rc_cmd
+
+    rc, out = rc_cmd(f'ip -6 --json address show dev {iface} scope global')
+    if rc:
+        return False
+
+    data = json.loads(out)
+    for addr_info in data[0]['addr_info']:
+        if (
+            addr_info.get('local') == ipv6_address and
+            addr_info.get('tentative', False)
+        ):
+            return True
+    return False
+
 def is_wwan_connected(interface):
     """ Determine if a given WWAN interface, e.g. wwan0 is connected to the
     carrier network or not """
