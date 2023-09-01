@@ -138,11 +138,11 @@
           </leafNode>
           <leafNode name="arguments">
             <properties>
-              <help>The command's arguments for this container</help>
+              <help>Command arguments for this container</help>
               <constraint>
                 <regex>[ !#-%&amp;(-~]+</regex>
               </constraint>
-              <constraintErrorMessage>The command's arguments must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+              <constraintErrorMessage>The command arguments must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="memory">
