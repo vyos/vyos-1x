@@ -110,7 +110,7 @@
               <constraint>
                 <regex>[ !#-%&amp;(-~]+</regex>
               </constraint>
-              <constraintErrorMessage>Entrypoint must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+              <constraintErrorMessage>Entrypoint must be ASCII characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="host-name">
@@ -133,7 +133,7 @@
               <constraint>
                 <regex>[ !#-%&amp;(-~]+</regex>
               </constraint>
-              <constraintErrorMessage>Command must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+              <constraintErrorMessage>Command must be ASCII characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="arguments">
@@ -142,7 +142,7 @@
               <constraint>
                 <regex>[ !#-%&amp;(-~]+</regex>
               </constraint>
-              <constraintErrorMessage>The command arguments must be ascii characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
+              <constraintErrorMessage>The command arguments must be ASCII characters, use &amp;quot; and &amp;apos for double and single quotes respectively</constraintErrorMessage>
             </properties>
           </leafNode>
           <leafNode name="memory">
