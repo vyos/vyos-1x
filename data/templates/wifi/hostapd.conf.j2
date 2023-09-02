@@ -340,6 +340,12 @@ vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%     endif %}
 
 {%     set output = namespace(value='')  %}
+{%     if capabilities.vht.channel_set_width is vyos_defined('2') %}
+{%         set output.value = output.value ~ '[VHT160]' %}
+{%     endif %}
+{%     if capabilities.vht.channel_set_width is vyos_defined('3') %}
+{%         set output.value = output.value ~ '[VHT160-80PLUS80]' %}
+{%     endif %}
 {%     if capabilities.vht.stbc.tx is vyos_defined %}
 {%         set output.value = output.value ~ '[TX-STBC-2BY1]' %}
 {%     endif %}
@@ -363,30 +369,21 @@ vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%     endif %}
 {%     if capabilities.vht.max_mpdu_exp is vyos_defined %}
 {%         set output.value = output.value ~ '[MAX-A-MPDU-LEN-EXP-' ~ capabilities.vht.max_mpdu_exp ~ ']' %}
-{%         if capabilities.vht.max_mpdu_exp is vyos_defined('2') %}
-{%             set output.value = output.value ~ '[VHT160]' %}
-{%         endif %}
-{%         if capabilities.vht.max_mpdu_exp is vyos_defined('3') %}
-{%             set output.value = output.value ~ '[VHT160-80PLUS80]' %}
-{%         endif %}
 {%     endif %}
 {%     if capabilities.vht.link_adaptation is vyos_defined('unsolicited') %}
 {%         set output.value = output.value ~ '[VHT-LINK-ADAPT2]' %}
 {%     elif capabilities.vht.link_adaptation is vyos_defined('both') %}
 {%         set output.value = output.value ~ '[VHT-LINK-ADAPT3]' %}
 {%     endif %}
-
 {%     for short_gi in capabilities.vht.short_gi if capabilities.vht.short_gi is vyos_defined %}
 {%         set output.value = output.value ~ '[SHORT-GI-' ~ short_gi | upper ~ ']'  %}
 {%     endfor %}
-
 {%     for beamform in capabilities.vht.beamform if capabilities.vht.beamform is vyos_defined %}
 {%         set output.value = output.value ~ '[SU-BEAMFORMER]' if beamform is vyos_defined('single-user-beamformer') else '' %}
 {%         set output.value = output.value ~ '[SU-BEAMFORMEE]' if beamform is vyos_defined('single-user-beamformee') else '' %}
 {%         set output.value = output.value ~ '[MU-BEAMFORMER]' if beamform is vyos_defined('multi-user-beamformer')  else '' %}
 {%         set output.value = output.value ~ '[MU-BEAMFORMEE]' if beamform is vyos_defined('multi-user-beamformee')  else '' %}
 {%     endfor %}
-
 {%     if capabilities.vht.antenna_count is vyos_defined and capabilities.vht.antenna_count | int > 1  %}
 {%         if capabilities.vht.beamform is vyos_defined %}
 {%             if capabilities.vht.beamform == 'single-user-beamformer' %}
