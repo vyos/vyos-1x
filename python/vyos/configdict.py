@@ -412,9 +412,13 @@ def get_interface_dict(config, base, ifname=''):
                  'no-default-route', 'vendor-class-id']:
         dhcp = leaf_node_changed(config, ['dhcp-options', leaf_node])
         if dhcp:
-            dict.update({'dhcp_options_old' : dhcp})
-            # one option is suffiecient to set 'dhcp_options_old' key
+            dict.update({'dhcp_options_changed' : {}})
+            # one option is suffiecient to set 'dhcp_options_changed' key
             break
+
+    # Check if any DHCP options changed which require a client restat
+    vrf = is_node_changed(config, base + [ifname, 'vrf'])
+    if vrf: dict.update({'dhcp_options_changed' : {}})
 
     # Some interfaces come with a source_interface which must also not be part
     # of any other bond or bridge interface as it is exclusivly assigned as the
@@ -465,9 +469,13 @@ def get_interface_dict(config, base, ifname=''):
                      'no-default-route', 'vendor-class-id']:
             dhcp = leaf_node_changed(config, ['vif', vif, 'dhcp-options', leaf_node])
             if dhcp:
-                dict['vif'][vif].update({'dhcp_options_old' : dhcp})
-                # one option is suffiecient to set 'dhcp_options_old' key
+                dict['vif'][vif].update({'dhcp_options_changed' : {}})
+                # one option is suffiecient to set 'dhcp_options_changed' key
                 break
+
+        # Check if any DHCP options changed which require a client restat
+        vrf = is_node_changed(config, base + [ifname, 'vif', vif, 'vrf'])
+        if vrf: dict['vif'][vif].update({'dhcp_options_changed' : {}})
 
     for vif_s, vif_s_config in dict.get('vif_s', {}).items():
         default_vif_s_values = defaults(base + ['vif-s'])
@@ -497,9 +505,13 @@ def get_interface_dict(config, base, ifname=''):
                      'no-default-route', 'vendor-class-id']:
             dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'dhcp-options', leaf_node])
             if dhcp:
-                dict['vif_s'][vif_s].update({'dhcp_options_old' : dhcp})
-                # one option is suffiecient to set 'dhcp_options_old' key
+                dict['vif_s'][vif_s].update({'dhcp_options_changed' : {}})
+                # one option is suffiecient to set 'dhcp_options_changed' key
                 break
+
+        # Check if any DHCP options changed which require a client restat
+        vrf = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vrf'])
+        if vrf: dict['vif_s'][vif_s].update({'dhcp_options_changed' : {}})
 
         for vif_c, vif_c_config in vif_s_config.get('vif_c', {}).items():
             default_vif_c_values = defaults(base + ['vif-s', 'vif-c'])
@@ -530,9 +542,13 @@ def get_interface_dict(config, base, ifname=''):
                 dhcp = leaf_node_changed(config, ['vif-s', vif_s, 'vif-c', vif_c,
                                                   'dhcp-options', leaf_node])
                 if dhcp:
-                    dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_old' : dhcp})
-                    # one option is suffiecient to set 'dhcp_options_old' key
+                    dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : {}})
+                    # one option is suffiecient to set 'dhcp_options_changed' key
                     break
+
+            # Check if any DHCP options changed which require a client restat
+            vrf = is_node_changed(config, base + [ifname, 'vif-s', vif_s, 'vif-c', vif_c, 'vrf'])
+            if vrf: dict['vif_s'][vif_s]['vif_c'][vif_c].update({'dhcp_options_changed' : {}})
 
     # Check vif, vif-s/vif-c VLAN interfaces for removal
     dict = get_removed_vlans(config, dict)

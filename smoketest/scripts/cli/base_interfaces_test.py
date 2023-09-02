@@ -33,8 +33,12 @@ from vyos.util import cmd
 from vyos.util import dict_search
 from vyos.util import process_named_running
 from vyos.util import get_interface_config
+from vyos.util import get_interface_vrf
 from vyos.validate import is_intf_addr_assigned
 from vyos.validate import is_ipv6_link_local
+
+dhclient_process_name = 'dhclient'
+dhcp6c_process_name = 'dhcp6c'
 
 def is_mirrored_to(interface, mirror_if, qdisc):
     """
@@ -65,6 +69,7 @@ class BasicInterfaceTest:
         _test_ipv6_pd = False
         _test_ipv6_dhcpc6 = False
         _test_mirror = False
+        _test_vrf = False
         _base_path = []
 
         _options = {}
@@ -98,7 +103,7 @@ class BasicInterfaceTest:
                 self.assertNotIn(intf, interfaces())
 
             # No daemon that was started during a test should remain running
-            for daemon in ['dhcp6c', 'dhclient']:
+            for daemon in [dhclient_process_name, dhcp6c_process_name]:
                 self.assertFalse(process_named_running(daemon))
 
         def test_dhcp_disable_interface(self):
@@ -125,6 +130,71 @@ class BasicInterfaceTest:
             for interface in self._interfaces:
                 flags = read_file(f'/sys/class/net/{interface}/flags')
                 self.assertEqual(int(flags, 16) & 1, 0)
+
+        def test_dhcp_vrf(self):
+            if not self._test_dhcp or not self._test_vrf:
+                self.skipTest('not supported')
+
+            vrf_name = 'purple4'
+            self.cli_set(['vrf', 'name', vrf_name, 'table', '65000'])
+
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
+                self.cli_set(self._base_path + [interface, 'vrf', vrf_name])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf_name)
+
+                # Check if dhclient process runs
+                dhclient_pid = process_named_running(dhclient_process_name, cmdline=interface)
+                self.assertTrue(dhclient_pid)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertIn(str(dhclient_pid), vrf_pids)
+                # and the commandline has the appropriate options
+                cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
+                self.assertIn('-e\x00IF_METRIC=210', cmdline) # 210 is the default value
+
+            self.cli_delete(['vrf', 'name', vrf_name])
+
+        def test_dhcpv6_vrf(self):
+            if not self._test_ipv6_dhcpc6 or not self._test_vrf:
+                self.skipTest('not supported')
+
+            vrf_name = 'purple6'
+            self.cli_set(['vrf', 'name', vrf_name, 'table', '65001'])
+
+            # When interface is configured as admin down, it must be admin down
+            # even when dhcpc starts on the given interface
+            for interface in self._interfaces:
+                for option in self._options.get(interface, []):
+                    self.cli_set(self._base_path + [interface] + option.split())
+
+                self.cli_set(self._base_path + [interface, 'address', 'dhcpv6'])
+                self.cli_set(self._base_path + [interface, 'vrf', vrf_name])
+
+            self.cli_commit()
+
+            # Validate interface state
+            for interface in self._interfaces:
+                tmp = get_interface_vrf(interface)
+                self.assertEqual(tmp, vrf_name)
+
+                # Check if dhclient process runs
+                tmp = process_named_running(dhcp6c_process_name, cmdline=interface)
+                self.assertTrue(tmp)
+                # .. inside the appropriate VRF instance
+                vrf_pids = cmd(f'ip vrf pids {vrf_name}')
+                self.assertIn(str(tmp), vrf_pids)
+
+            self.cli_delete(['vrf', 'name', vrf_name])
 
         def test_span_mirror(self):
             if not self._mirror_interfaces:
@@ -725,3 +795,4 @@ class BasicInterfaceTest:
                 # as until commit() is called, nothing happens
                 section = Section.section(delegatee)
                 self.cli_delete(['interfaces', section, delegatee])
+

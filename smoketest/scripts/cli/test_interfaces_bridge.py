@@ -33,6 +33,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._test_dhcp = True
+        cls._test_vrf = True
         cls._test_ip = True
         cls._test_ipv6 = True
         cls._test_ipv6_pd = True

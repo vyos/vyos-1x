@@ -1137,39 +1137,42 @@ class Interface(Control):
         ifname = self.ifname
         config_base = r'/var/lib/dhcp/dhclient'
         config_file = f'{config_base}_{ifname}.conf'
-        options_file = f'{config_base}_{ifname}.options'
         pid_file = f'{config_base}_{ifname}.pid'
         lease_file = f'{config_base}_{ifname}.leases'
+        systemd_override_file = f'/run/systemd/system/dhclient@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhclient@{ifname}.service'
 
         # 'up' check is mandatory b/c even if the interface is A/D, as soon as
         # the DHCP client is started the interface will be placed in u/u state.
         # This is not what we intended to do when disabling an interface.
-        if enable and 'disable' not in self._config:
-            if dict_search('dhcp_options.host_name', self._config) == None:
+        if enable and 'disable' not in self.config:
+            if dict_search('dhcp_options.host_name', self.config) == None:
                 # read configured system hostname.
                 # maybe change to vyos hostd client ???
                 hostname = 'vyos'
                 with open('/etc/hostname', 'r') as f:
                     hostname = f.read().rstrip('\n')
                     tmp = {'dhcp_options' : { 'host_name' : hostname}}
-                    self._config = dict_merge(tmp, self._config)
+                    self.config = dict_merge(tmp, self.config)
 
-            render(options_file, 'dhcp-client/daemon-options.tmpl', self._config)
-            render(config_file, 'dhcp-client/ipv4.tmpl', self._config)
+            render(systemd_override_file, 'dhcp-client/override.conf.j2', self.config)
+            render(config_file, 'dhcp-client/ipv4.tmpl', self.config)
+
+            # Reload systemd unit definitons as some options are dynamically generated
+            self._cmd('systemctl daemon-reload')
 
             # When the DHCP client is restarted a brief outage will occur, as
             # the old lease is released a new one is acquired (T4203). We will
             # only restart DHCP client if it's option changed, or if it's not
             # running, but it should be running (e.g. on system startup)
-            if 'dhcp_options_old' in self._config or not is_systemd_service_active(systemd_service):
+            if 'dhcp_options_changed' in self.config or not is_systemd_service_active(systemd_service):
                 return self._cmd(f'systemctl restart {systemd_service}')
             return None
         else:
             if is_systemd_service_active(systemd_service):
                 self._cmd(f'systemctl stop {systemd_service}')
             # cleanup old config files
-            for file in [config_file, options_file, pid_file, lease_file]:
+            for file in [config_file, systemd_override_file, pid_file, lease_file]:
                 if os.path.isfile(file):
                     os.remove(file)
 
@@ -1183,11 +1186,15 @@ class Interface(Control):
 
         ifname = self.ifname
         config_file = f'/run/dhcp6c/dhcp6c.{ifname}.conf'
+        systemd_override_file = f'/run/systemd/system/dhcp6c@{ifname}.service.d/10-override.conf'
         systemd_service = f'dhcp6c@{ifname}.service'
 
-        if enable and 'disable' not in self._config:
-            render(config_file, 'dhcp-client/ipv6.tmpl',
-                   self._config)
+        if enable and 'disable' not in self.config:
+            render(systemd_override_file, 'dhcp-client/ipv6.override.conf.j2', self.config)
+            render(config_file, 'dhcp-client/ipv6.tmpl', self.config)
+
+            # Reload systemd unit definitons as some options are dynamically generated
+            self._cmd('systemctl daemon-reload')
 
             # We must ignore any return codes. This is required to enable
             # DHCPv6-PD for interfaces which are yet not up and running.
@@ -1204,15 +1211,15 @@ class Interface(Control):
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
-        source_if = self._config['ifname']
-        config = self._config.get('mirror', None)
+        source_if = self.config['ifname']
+        config = self.config.get('mirror', None)
 
-        if 'is_mirror_intf' in self._config:
-            source_if = next(iter(self._config['is_mirror_intf']))
-            config = self._config['is_mirror_intf'][source_if].get('mirror', None)
+        if 'is_mirror_intf' in self.config:
+            source_if = next(iter(self.config['is_mirror_intf']))
+            config = self.config['is_mirror_intf'][source_if].get('mirror', None)
 
         # Check configuration stored by old perl code before delete T3782
-        if not 'redirect' in self._config:
+        if not 'redirect' in self.config:
             # Please do not clear the 'set $? = 0 '. It's meant to force a return of 0
             # Remove existing mirroring rules
             delete_tc_cmd  = f'tc qdisc del dev {source_if} handle ffff: ingress 2> /dev/null;'
@@ -1251,10 +1258,7 @@ class Interface(Control):
             import pprint
             pprint.pprint(config)
 
-        # Cache the configuration - it will be reused inside e.g. DHCP handler
-        # XXX: maybe pass the option via __init__ in the future and rename this
-        # method to apply()?
-        self._config = config
+        self.config = config
 
         # Change interface MAC address - re-set to real hardware address (hw-id)
         # if custom mac is removed. Skip if bond member.
