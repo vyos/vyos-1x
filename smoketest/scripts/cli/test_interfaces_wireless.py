@@ -97,6 +97,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
 
         vht_opt = {
             # VyOS CLI option           hostapd - ht_capab setting
+            'channel-set-width 3'     : '[VHT160-80PLUS80]',
             'stbc tx'                 : '[TX-STBC-2BY1]',
             'stbc rx 12'              : '[RX-STBC-12]',
             'ldpc'                    : '[RXLDPC]',
@@ -104,7 +105,7 @@ class WirelessInterfaceTest(BasicInterfaceTest.TestCase):
             'vht-cf'                  : '[HTC-VHT]',
             'antenna-pattern-fixed'   : '[RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]',
             'max-mpdu 11454'          : '[MAX-MPDU-11454]',
-            'max-mpdu-exp 2'          : '[MAX-A-MPDU-LEN-EXP-2][VHT160]',
+            'max-mpdu-exp 2'          : '[MAX-A-MPDU-LEN-EXP-2]',
             'link-adaptation both'    : '[VHT-LINK-ADAPT3]',
             'short-gi 80'             : '[SHORT-GI-80]',
             'short-gi 160'            : '[SHORT-GI-160]',
