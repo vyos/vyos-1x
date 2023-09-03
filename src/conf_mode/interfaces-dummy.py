@@ -55,7 +55,10 @@ def generate(dummy):
     return None
 
 def apply(dummy):
-    d = DummyIf(dummy['ifname'])
+    if 'netns' in dummy:
+        d = DummyIf(ifname=dummy['ifname'], netns=dummy['netns'])
+    else:
+        d = DummyIf(dummy['ifname'])
 
     # Remove dummy interface
     if 'deleted' in dummy:
