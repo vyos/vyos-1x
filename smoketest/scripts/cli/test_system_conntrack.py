@@ -35,6 +35,17 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
+    def verify_nftables(self, nftables_search, table, inverse=False, args=''):
+        nftables_output = cmd(f'sudo nft {args} list table {table}')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(not matched if inverse else matched, msg=search)
+
     def test_conntrack_options(self):
         conntrack_config = {
             'net.netfilter.nf_conntrack_expect_max' : {
@@ -231,6 +242,52 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         # a valid config file is sufficient
         tmp = read_file('/etc/modprobe.d/vyatta_nf_conntrack.conf')
         self.assertIn(hash_size_default, tmp)
+
+    def test_conntrack_ignore(self):
+        address_group = 'conntracktest'
+        address_group_member = '192.168.0.1'
+        ipv6_address_group = 'conntracktest6'
+        ipv6_address_group_member = 'dead:beef::1'
+
+        self.cli_set(['firewall', 'group', 'address-group', address_group, 'address', address_group_member])
+        self.cli_set(['firewall', 'group', 'ipv6-address-group', ipv6_address_group, 'address', ipv6_address_group_member])
+
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'source', 'address', '192.0.2.1'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'address', '192.0.2.2'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'port', '22'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'protocol', 'tcp'])
+
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'source', 'address', '192.0.2.1'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'destination', 'group', 'address-group', address_group])
+
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'source', 'address', 'fe80::1'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'address', 'fe80::2'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'port', '22'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'protocol', 'tcp'])
+
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '12', 'source', 'address', 'fe80::1'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '12', 'destination', 'group', 'address-group', ipv6_address_group])
+
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '13', 'source', 'address', 'fe80::1'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '13', 'destination', 'address', '!fe80::3'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'notrack'],
+            ['ip saddr 192.0.2.1', 'ip daddr @A_conntracktest', 'notrack']
+        ]
+
+        nftables6_search = [
+            ['ip6 saddr fe80::1', 'ip6 daddr fe80::2', 'tcp dport 22', 'notrack'],
+            ['ip6 saddr fe80::1', 'ip6 daddr @A6_conntracktest6', 'notrack'],
+            ['ip6 saddr fe80::1', 'ip6 daddr != fe80::3', 'notrack']
+        ]
+
+        self.verify_nftables(nftables_search, 'raw')
+        self.verify_nftables(nftables6_search, 'ip6 raw')
+
+        self.cli_delete(['firewall'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
