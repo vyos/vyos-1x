@@ -102,7 +102,7 @@ def verify(igmp):
         # Check, is this multicast group
         for intfc in igmp['ifaces']:
             for gr_addr in igmp['ifaces'][intfc]['gr_join']:
-                if IPv4Address(gr_addr) < IPv4Address('224.0.0.0'):
+                if not IPv4Address(gr_addr).is_multicast:
                     raise ConfigError(gr_addr + " not a multicast group")
 
 def generate(igmp):

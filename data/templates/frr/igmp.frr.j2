@@ -27,9 +27,9 @@ interface {{ interface }}
 {%     if interface_config.query_max_resp_time %}
  ip igmp query-max-response-time {{ interface_config.query_max_resp_time }}
 {%     endif %}
-{%     for group in interface_config.gr_join %}
-{%         if ifaces[iface].gr_join[group] %}
-{%             for source in ifaces[iface].gr_join[group] %}
+{%     for group, sources in interface_config.gr_join.items() %}
+{%         if sources is vyos_defined %}
+{%             for source in sources %}
  ip igmp join {{ group }} {{ source }}
 {%             endfor %}
 {%         else %}
