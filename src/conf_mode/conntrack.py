@@ -24,7 +24,9 @@ from vyos.firewall import find_nftables_rule
 from vyos.firewall import remove_nftables_rule
 from vyos.utils.process import process_named_running
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_search_args
 from vyos.utils.process import cmd
+from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
 from vyos.template import render
 from vyos import ConfigError
@@ -62,6 +64,13 @@ module_map = {
      },
 }
 
+valid_groups = [
+    'address_group',
+    'domain_group',
+    'network_group',
+    'port_group'
+]
+
 def resync_conntrackd():
     tmp = run('/usr/libexec/vyos/conf_mode/conntrack_sync.py')
     if tmp > 0:
@@ -78,15 +87,53 @@ def get_config(config=None):
                                      get_first_key=True,
                                      with_recursive_defaults=True)
 
+    conntrack['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'),
+                                                 get_first_key=True,
+                                                 no_tag_node_value_mangle=True)
+
     return conntrack
 
 def verify(conntrack):
-    if dict_search('ignore.rule', conntrack) != None:
-        for rule, rule_config in conntrack['ignore']['rule'].items():
-            if dict_search('destination.port', rule_config) or \
-               dict_search('source.port', rule_config):
-               if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
-                   raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
+    for inet in ['ipv4', 'ipv6']:
+        if dict_search_args(conntrack, 'ignore', inet, 'rule') != None:
+            for rule, rule_config in conntrack['ignore'][inet]['rule'].items():
+                if dict_search('destination.port', rule_config) or \
+                   dict_search('destination.group.port_group', rule_config) or \
+                   dict_search('source.port', rule_config) or \
+                   dict_search('source.group.port_group', rule_config):
+                   if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
+                       raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
+
+                for side in ['destination', 'source']:
+                    if side in rule_config:
+                        side_conf = rule_config[side]
+
+                        if 'group' in side_conf:
+                            if len({'address_group', 'network_group', 'domain_group'} & set(side_conf['group'])) > 1:
+                                raise ConfigError('Only one address-group, network-group or domain-group can be specified')
+
+                            for group in valid_groups:
+                                if group in side_conf['group']:
+                                    group_name = side_conf['group'][group]
+                                    error_group = group.replace("_", "-")
+
+                                    if group in ['address_group', 'network_group', 'domain_group']:
+                                        if 'address' in side_conf:
+                                            raise ConfigError(f'{error_group} and address cannot both be defined')
+
+                                    if group_name and group_name[0] == '!':
+                                        group_name = group_name[1:]
+
+                                    if inet == 'ipv6':
+                                        group = f'ipv6_{group}'
+
+                                    group_obj = dict_search_args(conntrack['firewall_group'], group, group_name)
+
+                                    if group_obj is None:
+                                        raise ConfigError(f'Invalid {error_group} "{group_name}" on ignore rule')
+
+                                    if not group_obj:
+                                        Warning(f'{error_group} "{group_name}" has no members!')
 
     return None
 
@@ -94,26 +141,18 @@ def generate(conntrack):
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
     render(nftables_ct_file, 'conntrack/nftables-ct.j2', conntrack)
-
-    # dry-run newly generated configuration
-    tmp = run(f'nft -c -f {nftables_ct_file}')
-    if tmp > 0:
-        if os.path.exists(nftables_ct_file):
-            os.unlink(nftables_ct_file)
-        raise ConfigError('Configuration file errors encountered!')
-
     return None
 
-def find_nftables_ct_rule(rule):
+def find_nftables_ct_rule(table, chain, rule):
     helper_search = re.search('ct helper set "(\w+)"', rule)
     if helper_search:
         rule = helper_search[1]
-    return find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule])
+    return find_nftables_rule(table, chain, [rule])
 
-def find_remove_rule(rule):
-    handle = find_nftables_ct_rule(rule)
+def find_remove_rule(table, chain, rule):
+    handle = find_nftables_ct_rule(table, chain, rule)
     if handle:
-        remove_nftables_rule('raw', 'VYOS_CT_HELPER', handle)
+        remove_nftables_rule(table, chain, handle)
 
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
@@ -127,18 +166,24 @@ def apply(conntrack):
                         cmd(f'rmmod {mod}')
             if 'nftables' in module_config:
                 for rule in module_config['nftables']:
-                    find_remove_rule(rule)
+                    find_remove_rule('raw', 'VYOS_CT_HELPER', rule)
+                    find_remove_rule('ip6 raw', 'VYOS_CT_HELPER', rule)
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     cmd(f'modprobe {mod}')
             if 'nftables' in module_config:
                 for rule in module_config['nftables']:
-                    if not find_nftables_ct_rule(rule):
-                        cmd(f'nft insert rule ip raw VYOS_CT_HELPER {rule}')
+                    if not find_nftables_ct_rule('raw', 'VYOS_CT_HELPER', rule):
+                        cmd(f'nft insert rule raw VYOS_CT_HELPER {rule}')
+
+                    if not find_nftables_ct_rule('ip6 raw', 'VYOS_CT_HELPER', rule):
+                        cmd(f'nft insert rule ip6 raw VYOS_CT_HELPER {rule}')
 
     # Load new nftables ruleset
-    cmd(f'nft -f {nftables_ct_file}')
+    install_result, output = rc_cmd(f'nft -f {nftables_ct_file}')
+    if install_result == 1:
+        raise ConfigError(f'Failed to apply configuration: {output}')
 
     if process_named_running('conntrackd'):
         # Reload conntrack-sync daemon to fetch new sysctl values

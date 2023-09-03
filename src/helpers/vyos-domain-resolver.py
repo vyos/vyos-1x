@@ -37,12 +37,14 @@ domain_state = {}
 ipv4_tables = {
     'ip vyos_mangle',
     'ip vyos_filter',
-    'ip vyos_nat'
+    'ip vyos_nat',
+    'ip raw'
 }
 
 ipv6_tables = {
     'ip6 vyos_mangle',
-    'ip6 vyos_filter'
+    'ip6 vyos_filter',
+    'ip6 raw'
 }
 
 def get_config(conf):

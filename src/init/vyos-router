@@ -335,6 +335,9 @@ start ()
     nfct helper add rpc inet tcp
     nfct helper add rpc inet udp
     nfct helper add tns inet tcp
+    nfct helper add rpc inet6 tcp
+    nfct helper add rpc inet6 udp
+    nfct helper add tns inet6 tcp
     nft -f /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
 
     rm -f /etc/hostname
