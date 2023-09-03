@@ -342,8 +342,7 @@ vht_oper_chwidth={{ capabilities.vht.channel_set_width }}
 {%     set output = namespace(value='')  %}
 {%     if capabilities.vht.channel_set_width is vyos_defined('2') %}
 {%         set output.value = output.value ~ '[VHT160]' %}
-{%     endif %}
-{%     if capabilities.vht.channel_set_width is vyos_defined('3') %}
+{%     elif capabilities.vht.channel_set_width is vyos_defined('3') %}
 {%         set output.value = output.value ~ '[VHT160-80PLUS80]' %}
 {%     endif %}
 {%     if capabilities.vht.stbc.tx is vyos_defined %}
