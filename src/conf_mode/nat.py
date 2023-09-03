@@ -112,7 +112,7 @@ def verify_rule(config, err_msg, groups_dict):
                         group_obj = dict_search_args(groups_dict, group, group_name)
 
                         if group_obj is None:
-                            raise ConfigError(f'Invalid {error_group} "{group_name}" on firewall rule')
+                            raise ConfigError(f'Invalid {error_group} "{group_name}" on nat rule')
 
                         if not group_obj:
                             Warning(f'{error_group} "{group_name}" has no members!')
