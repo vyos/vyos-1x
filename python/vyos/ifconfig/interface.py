@@ -38,6 +38,7 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_namespace
+from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import run
 from vyos.template import is_ipv4
@@ -60,15 +61,6 @@ from netaddr import EUI
 from netaddr import mac_unix_expanded
 
 link_local_prefix = 'fe80::/64'
-
-
-def _interface_exists_in_netns(interface_name, netns):
-    from vyos.util import rc_cmd
-    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
-    if rc == 0:
-        return True
-    return False
-
 
 class Interface(Control):
     # This is the class which will be used to create
@@ -572,7 +564,7 @@ class Interface(Control):
             return None
 
         # Check if interface realy exists in namespace
-        if _interface_exists_in_netns(self.ifname, netns):
+        if is_netns_interface(self.ifname, netns):
             self._cmd(f'ip netns exec {netns} ip link del dev {self.ifname}')
             return
 
@@ -1514,7 +1506,7 @@ class Interface(Control):
         # Since the interface is pushed onto a separate logical stack
         # Configure NETNS
         if dict_search('netns', config) != None:
-            if not _interface_exists_in_netns(self.ifname, self.config['netns']):
+            if not is_netns_interface(self.ifname, self.config['netns']):
                 self.set_netns(config.get('netns', ''))
         else:
             self.del_netns(config.get('netns', ''))

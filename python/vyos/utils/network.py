@@ -40,9 +40,9 @@ def interface_exists(interface) -> bool:
     import os
     return os.path.exists(f'/sys/class/net/{interface}')
 
-def interface_exists_in_netns(interface_name, netns):
+def is_netns_interface(interface, netns):
     from vyos.utils.process import rc_cmd
-    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface_name}')
+    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface}')
     if rc == 0:
         return True
     return False
