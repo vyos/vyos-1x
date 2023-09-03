@@ -49,7 +49,7 @@
               </valueHelp>
               <valueHelp>
                 <format>sys-module</format>
-                <description>Load and unload kernel modules</description>
+                <description>Load, unload and delete kernel modules</description>
               </valueHelp>
               <valueHelp>
                 <format>sys-time</format>
