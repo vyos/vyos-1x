@@ -78,8 +78,7 @@ def get_interface_config(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
     """
-    import os
-    if not os.path.exists(f'/sys/class/net/{interface}'):
+    if not interface_exists(interface):
         return None
     from json import loads
     from vyos.utils.process import cmd
@@ -90,8 +89,7 @@ def get_interface_address(interface):
     """ Returns the used encapsulation protocol for given interface.
         If interface does not exist, None is returned.
     """
-    import os
-    if not os.path.exists(f'/sys/class/net/{interface}'):
+    if not interface_exists(interface):
         return None
     from json import loads
     from vyos.utils.process import cmd
@@ -141,8 +139,7 @@ def is_wwan_connected(interface):
 
 def get_bridge_fdb(interface):
     """ Returns the forwarding database entries for a given interface """
-    import os
-    if not os.path.exists(f'/sys/class/net/{interface}'):
+    if not interface_exists(interface):
         return None
     from json import loads
     from vyos.utils.process import cmd
