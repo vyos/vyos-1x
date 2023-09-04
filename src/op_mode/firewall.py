@@ -130,10 +130,12 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
                             source_addr = dict_search_args(rule_conf, 'source', 'fqdn')
                             if not source_addr:
                                 source_addr = dict_search_args(rule_conf, 'source', 'geoip', 'country_code')
-                                if source_addr and 'inverse_match' in dict_search_args(rule_conf, 'source', 'geoip'):
-                                    source_addr = '!' + str(source_addr)
+                                if source_addr:
+                                    source_addr = str(source_addr)[1:-1].replace('\'','')
+                                    if 'inverse_match' in dict_search_args(rule_conf, 'source', 'geoip'):
+                                        source_addr = 'NOT ' + str(source_addr)
                                 if not source_addr:
-                                    source_addr = '::/0' if ipv6 else '0.0.0.0/0'
+                                    source_addr = 'any'
 
             # Get destination
             dest_addr = dict_search_args(rule_conf, 'destination', 'address')
@@ -147,10 +149,12 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
                             dest_addr = dict_search_args(rule_conf, 'destination', 'fqdn')
                             if not dest_addr:
                                 dest_addr = dict_search_args(rule_conf, 'destination', 'geoip', 'country_code')
-                                if dest_addr and 'inverse_match' in dict_search_args(rule_conf, 'destination', 'geoip'):
-                                    dest_addr = '!' + str(dest_addr)
+                                if dest_addr:
+                                    dest_addr = str(dest_addr)[1:-1].replace('\'','')
+                                    if 'inverse_match' in dict_search_args(rule_conf, 'destination', 'geoip'):
+                                        dest_addr = 'NOT ' + str(dest_addr)
                                 if not dest_addr:
-                                    dest_addr = '::/0' if ipv6 else '0.0.0.0/0'
+                                    dest_addr = 'any'
 
             # Get inbound interface
             iiface = dict_search_args(rule_conf, 'inbound_interface', 'interface_name')
@@ -181,7 +185,22 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             row.append(oiface)
             rows.append(row)
 
-    if 'default_action' in prior_conf and not single_rule_id:
+
+    if hook in ['input', 'forward', 'output']:
+        row = ['default']
+        row.append('N/A')
+        row.append('N/A')
+        if 'default_action' in prior_conf:
+            row.append(prior_conf['default_action'])
+        else:
+            row.append('accept')
+        row.append('any')
+        row.append('any')
+        row.append('any')
+        row.append('any')
+        rows.append(row)
+
+    elif 'default_action' in prior_conf and not single_rule_id:
         row = ['default']
         if 'default-action' in details:
             rule_details = details['default-action']
@@ -191,8 +210,10 @@ def output_firewall_name_statistics(hook, prior, prior_conf, ipv6=False, single_
             row.append('0')
             row.append('0')
         row.append(prior_conf['default_action'])
-        row.append('0.0.0.0/0') # Source
-        row.append('0.0.0.0/0') # Dest
+        row.append('any') # Source
+        row.append('any') # Dest
+        row.append('any')   # inbound-interface
+        row.append('any')   # outbound-interface
         rows.append(row)
 
     if rows:
@@ -315,7 +336,7 @@ def show_firewall_group(name=None):
                 continue
 
             references = find_references(group_type, group_name)
-            row = [group_name, group_type, '\n'.join(references) or 'N/A']
+            row = [group_name, group_type, '\n'.join(references) or 'N/D']
             if 'address' in group_conf:
                 row.append("\n".join(sorted(group_conf['address'])))
             elif 'network' in group_conf:
@@ -327,7 +348,7 @@ def show_firewall_group(name=None):
             elif 'interface' in group_conf:
                 row.append("\n".join(sorted(group_conf['interface'])))
             else:
-                row.append('N/A')
+                row.append('N/D')
             rows.append(row)
 
     if rows:
