@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2021 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 
 from sys import exit
 from ipaddress import ip_interface
@@ -28,6 +29,7 @@ from vyos.template import render
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.util import call
+from vyos.util import is_ipv6_tentative
 from vyos.util import is_systemd_service_running
 from vyos.xml import defaults
 from vyos import ConfigError
@@ -146,6 +148,18 @@ def apply(vrrp):
     if not vrrp:
         call(f'systemctl stop {service_name}')
         return None
+
+    # Check if IPv6 address is tentative T5533
+    for group, group_config in vrrp['group'].items():
+        if 'hello_source_address' in group_config:
+            if is_ipv6(group_config['hello_source_address']):
+                ipv6_address = group_config['hello_source_address']
+                interface = group_config['interface']
+                checks = 20
+                interval = 0.1
+                for _ in range(checks):
+                    if is_ipv6_tentative(interface, ipv6_address):
+                        time.sleep(interval)
 
     # XXX: T3944 - reload keepalived configuration if service is already running
     # to not cause any service disruption when applying changes.
