@@ -25,7 +25,7 @@
             <properties>
               <help>Container capabilities/permissions</help>
               <completionHelp>
-                <list>net-admin net-bind-service net-raw setpcap sys-admin sys-time</list>
+                <list>net-admin net-bind-service net-raw setpcap sys-admin sys-module sys-time</list>
               </completionHelp>
               <valueHelp>
                 <format>net-admin</format>
@@ -48,11 +48,15 @@
                 <description>Administation operations (quotactl, mount, sethostname, setdomainame)</description>
               </valueHelp>
               <valueHelp>
+                <format>sys-module</format>
+                <description>Load, unload and delete kernel modules</description>
+              </valueHelp>
+              <valueHelp>
                 <format>sys-time</format>
                 <description>Permission to set system clock</description>
               </valueHelp>
               <constraint>
-                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-time)</regex>
+                <regex>(net-admin|net-bind-service|net-raw|setpcap|sys-admin|sys-module|sys-time)</regex>
               </constraint>
               <multi/>
             </properties>
