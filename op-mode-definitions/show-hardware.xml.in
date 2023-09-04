@@ -31,7 +31,7 @@
             <properties>
               <help>Show system DMI details</help>
             </properties>
-            <command>${vyatta_bindir}/vyatta-show-dmi</command>
+            <command>sudo dmidecode</command>
           </node>
           <node name="mem">
             <properties>
