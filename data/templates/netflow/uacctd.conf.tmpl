@@ -30,7 +30,7 @@ plugins: {% if templatecfg['netflow']['servers'] != none %}
 {%     for server in templatecfg['sflow']['servers'] %},sfprobe[sf_{{ server['address'] }}]{% endfor %}
 {%   else %}
 {%     for server in templatecfg['sflow']['servers'] %}
-{%       if loop.last %}sfprobe[sf_{{ server['address'] }}]{% else %}sfprobe[sf_{{ server['address'] }}],{% endif %}
+{%       if loop.last %}sfprobe[sf_{{ server['address'] | dot_colon_to_dash }}]{% else %}sfprobe[sf_{{ server['address'] | dot_colon_to_dash }}],{% endif %}
 {%     endfor %}
 {%   endif %}
 {% set plugins_presented = true %}
