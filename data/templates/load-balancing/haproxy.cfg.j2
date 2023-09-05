@@ -150,13 +150,13 @@ backend {{ back }}
 {%             endfor %}
 {%         endif %}
 {%         if back_config.timeout.check is vyos_defined %}
-    timeout check {{ back_config.timeout.check }}
+    timeout check {{ back_config.timeout.check }}s
 {%         endif %}
 {%         if back_config.timeout.connect is vyos_defined %}
-    timeout connect {{ back_config.timeout.connect }}
+    timeout connect {{ back_config.timeout.connect }}s
 {%         endif %}
 {%         if back_config.timeout.server is vyos_defined %}
-    timeout server {{ back_config.timeout.server }}
+    timeout server {{ back_config.timeout.server }}s
 {%         endif %}
 
 {%     endfor %}
