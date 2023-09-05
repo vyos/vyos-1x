@@ -200,9 +200,9 @@ Proceed ?'''
             raise ConfigMgmtError(out)
 
         entry = self._read_tmp_log_entry()
-        self._add_log_entry(**entry)
 
         if self._archive_active_config():
+            self._add_log_entry(**entry)
             self._update_archive()
 
         msg = 'Reboot timer stopped'
@@ -334,10 +334,10 @@ Proceed ?'''
             user = self._get_user()
             via = 'init'
             comment = ''
-            self._add_log_entry(user, via, comment)
             # add empty init config before boot-config load for revision
             # and diff consistency
             if self._archive_active_config():
+                self._add_log_entry(user, via, comment)
                 self._update_archive()
 
         os.umask(mask)
@@ -352,9 +352,8 @@ Proceed ?'''
             self._new_log_entry(tmp_file=tmp_log_entry)
             return
 
-        self._add_log_entry()
-
         if self._archive_active_config():
+            self._add_log_entry()
             self._update_archive()
 
     def commit_archive(self):
