@@ -177,7 +177,7 @@
                 <properties>
                   <help>Show all the pre-shared key secrets</help>
                 </properties>
-                <command>sudo cat /etc/ipsec.secrets | sed 's/#.*//'</command>
+                <command>${vyos_op_scripts_dir}/ipsec.py show_psk</command>
               </node>
               <node name="status">
                 <properties>
