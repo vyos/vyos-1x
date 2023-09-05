@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -55,7 +55,7 @@ def generate(dummy):
     return None
 
 def apply(dummy):
-    d = DummyIf(dummy['ifname'])
+    d = DummyIf(**dummy)
 
     # Remove dummy interface
     if 'deleted' in dummy:

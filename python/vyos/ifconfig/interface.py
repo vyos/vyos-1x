@@ -38,7 +38,9 @@ from vyos.utils.dict import dict_search
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_interface_namespace
+from vyos.utils.network import is_netns_interface
 from vyos.utils.process import is_systemd_service_active
+from vyos.utils.process import run
 from vyos.template import is_ipv4
 from vyos.template import is_ipv6
 from vyos.utils.network import is_intf_addr_assigned
@@ -137,9 +139,6 @@ class Interface(Control):
         'mtu': {
             'validate': assert_mtu,
             'shellcmd': 'ip link set dev {ifname} mtu {value}',
-        },
-        'netns': {
-            'shellcmd': 'ip link set dev {ifname} netns {value}',
         },
         'vrf': {
             'convert': lambda v: f'master {v}' if v else 'nomaster',
@@ -286,8 +285,11 @@ class Interface(Control):
     }
 
     @classmethod
-    def exists(cls, ifname):
-        return os.path.exists(f'/sys/class/net/{ifname}')
+    def exists(cls, ifname: str, netns: str=None) -> bool:
+        cmd = f'ip link show dev {ifname}'
+        if netns:
+           cmd = f'ip netns exec {netns} {cmd}'
+        return run(cmd) == 0
 
     @classmethod
     def get_config(cls):
@@ -355,7 +357,13 @@ class Interface(Control):
         self.vrrp = VRRP(ifname)
 
     def _create(self):
+        # Do not create interface that already exist or exists in netns
+        netns = self.config.get('netns', None)
+        if self.exists(f'{self.ifname}', netns=netns):
+            return
+
         cmd = 'ip link add dev {ifname} type {type}'.format(**self.config)
+        if 'netns' in self.config: cmd = f'ip netns exec {netns} {cmd}'
         self._cmd(cmd)
 
     def remove(self):
@@ -390,6 +398,9 @@ class Interface(Control):
         # after interface removal no other commands should be allowed
         # to be called and instead should raise an Exception:
         cmd = 'ip link del dev {ifname}'.format(**self.config)
+        # for delete we can't get data from self.config{'netns'}
+        netns = get_interface_namespace(self.ifname)
+        if netns: cmd = f'ip netns exec {netns} {cmd}'
         return self._cmd(cmd)
 
     def _set_vrf_ct_zone(self, vrf):
@@ -397,6 +408,10 @@ class Interface(Control):
         Add/Remove rules in nftables to associate traffic in VRF to an
         individual conntack zone
         """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         if vrf:
             # Get routing table ID for VRF
             vrf_table_id = get_interface_config(vrf).get('linkinfo', {}).get(
@@ -540,36 +555,30 @@ class Interface(Control):
         if prev_state == 'up':
             self.set_admin_state('up')
 
-    def del_netns(self, netns):
-        """
-        Remove interface from given NETNS.
-        """
-
-        # If NETNS does not exist then there is nothing to delete
+    def del_netns(self, netns: str) -> bool:
+        """ Remove interface from given network namespace """
+        # If network namespace does not exist then there is nothing to delete
         if not os.path.exists(f'/run/netns/{netns}'):
-            return None
+            return False
 
-        # As a PoC we only allow 'dummy' interfaces
-        if 'dum' not in self.ifname:
-            return None
+        # Check if interface exists in network namespace
+        if is_netns_interface(self.ifname, netns):
+            self._cmd(f'ip netns exec {netns} ip link del dev {self.ifname}')
+            return True
+        return False
 
-        # Check if interface realy exists in namespace
-        if get_interface_namespace(self.ifname) != None:
-            self._cmd(f'ip netns exec {get_interface_namespace(self.ifname)} ip link del dev {self.ifname}')
-            return
-
-    def set_netns(self, netns):
+    def set_netns(self, netns: str) -> bool:
         """
-        Add interface from given NETNS.
+        Add interface from given network namespace
 
         Example:
         >>> from vyos.ifconfig import Interface
         >>> Interface('dum0').set_netns('foo')
         """
+        self._cmd(f'ip link set dev {self.ifname} netns {netns}')
+        return True
 
-        self.set_interface('netns', netns)
-
-    def set_vrf(self, vrf):
+    def set_vrf(self, vrf: str) -> bool:
         """
         Add/Remove interface from given VRF instance.
 
@@ -581,10 +590,11 @@ class Interface(Control):
 
         tmp = self.get_interface('vrf')
         if tmp == vrf:
-            return None
+            return False
 
         self.set_interface('vrf', vrf)
         self._set_vrf_ct_zone(vrf)
+        return True
 
     def set_arp_cache_tmo(self, tmo):
         """
@@ -621,6 +631,10 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_tcp_ipv4_mss(1340)
         """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         self._cleanup_mss_rules('raw', self.ifname)
         nft_prefix = 'nft add rule raw VYOS_TCP_MSS'
         base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
@@ -641,6 +655,10 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_tcp_mss(1320)
         """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         self._cleanup_mss_rules('ip6 raw', self.ifname)
         nft_prefix = 'nft add rule ip6 raw VYOS_TCP_MSS'
         base_cmd = f'oifname "{self.ifname}" tcp flags & (syn|rst) == syn'
@@ -755,6 +773,10 @@ class Interface(Control):
 
         As per RFC3074.
         """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         if value == 'strict':
             value = 1
         elif value == 'loose':
@@ -794,6 +816,10 @@ class Interface(Control):
         >>> from vyos.ifconfig import Interface
         >>> Interface('eth0').set_ipv6_source_validation('strict')
         """
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         self._cleanup_ipv6_source_validation_rules(self.ifname)
         nft_prefix = f'nft add rule ip6 raw vyos_rpfilter iifname "{self.ifname}"'
         if mode == 'strict':
@@ -1143,13 +1169,17 @@ class Interface(Control):
         if addr in self._addr:
             return False
 
+        # get interface network namespace if specified
+        netns = self.config.get('netns', None)
+
         # add to interface
         if addr == 'dhcp':
             self.set_dhcp(True)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(True)
-        elif not is_intf_addr_assigned(self.ifname, addr):
-            tmp = f'ip addr add {addr} dev {self.ifname}'
+        elif not is_intf_addr_assigned(self.ifname, addr, netns=netns):
+            netns_cmd  = f'ip netns exec {netns}' if netns else ''
+            tmp = f'{netns_cmd} ip addr add {addr} dev {self.ifname}'
             # Add broadcast address for IPv4
             if is_ipv4(addr): tmp += ' brd +'
 
@@ -1189,13 +1219,17 @@ class Interface(Control):
         if not addr:
             raise ValueError()
 
+        # get interface network namespace if specified
+        netns = self.config.get('netns', None)
+
         # remove from interface
         if addr == 'dhcp':
             self.set_dhcp(False)
         elif addr == 'dhcpv6':
             self.set_dhcpv6(False)
-        elif is_intf_addr_assigned(self.ifname, addr):
-            self._cmd(f'ip addr del "{addr}" dev "{self.ifname}"')
+        elif is_intf_addr_assigned(self.ifname, addr, netns=netns):
+            netns_cmd  = f'ip netns exec {netns}' if netns else ''
+            self._cmd(f'{netns_cmd} ip addr del {addr} dev {self.ifname}')
         else:
             return False
 
@@ -1215,8 +1249,11 @@ class Interface(Control):
         self.set_dhcp(False)
         self.set_dhcpv6(False)
 
+        netns = get_interface_namespace(self.ifname)
+        netns_cmd = f'ip netns exec {netns}' if netns else ''
+        cmd = f'{netns_cmd} ip addr flush dev {self.ifname}'
         # flush all addresses
-        self._cmd(f'ip addr flush dev "{self.ifname}"')
+        self._cmd(cmd)
 
     def add_to_bridge(self, bridge_dict):
         """
@@ -1371,6 +1408,11 @@ class Interface(Control):
         #   - https://man7.org/linux/man-pages/man8/tc-mirred.8.html
         # Depening if we are the source or the target interface of the port
         # mirror we need to setup some variables.
+
+        # Don't allow for netns yet
+        if 'netns' in self.config:
+            return None
+
         source_if = self.config['ifname']
 
         mirror_config = None
@@ -1471,8 +1513,8 @@ class Interface(Control):
         # Since the interface is pushed onto a separate logical stack
         # Configure NETNS
         if dict_search('netns', config) != None:
-            self.set_netns(config.get('netns', ''))
-            return
+            if not is_netns_interface(self.ifname, self.config['netns']):
+                self.set_netns(config.get('netns', ''))
         else:
             self.del_netns(config.get('netns', ''))
 
