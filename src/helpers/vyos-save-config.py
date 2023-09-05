@@ -44,7 +44,10 @@ ct = config.get_config_tree(effective=True)
 
 write_file = save_file if remote_save is None else NamedTemporaryFile(delete=False).name
 with open(write_file, 'w') as f:
-    f.write(ct.to_string())
+    # config_tree is None before boot configuration is complete;
+    # automated saves should check boot_configuration_complete
+    if ct is not None:
+        f.write(ct.to_string())
     f.write("\n")
     f.write(system_footer())
 
