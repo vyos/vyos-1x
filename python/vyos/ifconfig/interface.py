@@ -175,10 +175,6 @@ class Interface(Control):
             'validate': assert_boolean,
             'location': '/proc/sys/net/ipv4/conf/{ifname}/bc_forwarding',
         },
-        'rp_filter': {
-            'validate': lambda flt: assert_range(flt,0,3),
-            'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
-        },
         'ipv6_accept_ra': {
             'validate': lambda ara: assert_range(ara,0,3),
             'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
@@ -251,9 +247,6 @@ class Interface(Control):
         },
         'ipv4_directed_broadcast': {
             'location': '/proc/sys/net/ipv4/conf/{ifname}/bc_forwarding',
-        },
-        'rp_filter': {
-            'location': '/proc/sys/net/ipv4/conf/{ifname}/rp_filter',
         },
         'ipv6_accept_ra': {
             'location': '/proc/sys/net/ipv6/conf/{ifname}/accept_ra',
@@ -745,40 +738,32 @@ class Interface(Control):
             return None
         return self.set_interface('ipv4_directed_broadcast', forwarding)
 
-    def set_ipv4_source_validation(self, value):
+    def _cleanup_ipv4_source_validation_rules(self, ifname):
+        results = self._cmd(f'nft -a list chain ip raw vyos_rpfilter').split("\n")
+        for line in results:
+            if f'iifname "{ifname}"' in line:
+                handle_search = re.search('handle (\d+)', line)
+                if handle_search:
+                    self._cmd(f'nft delete rule ip raw vyos_rpfilter handle {handle_search[1]}')
+
+    def set_ipv4_source_validation(self, mode):
         """
-        Help prevent attacks used by Spoofing IP Addresses. Reverse path
-        filtering is a Kernel feature that, when enabled, is designed to ensure
-        packets that are not routable to be dropped. The easiest example of this
-        would be and IP Address of the range 10.0.0.0/8, a private IP Address,
-        being received on the Internet facing interface of the router.
+        Set IPv4 reverse path validation
 
-        As per RFC3074.
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').set_ipv4_source_validation('strict')
         """
-        if value == 'strict':
-            value = 1
-        elif value == 'loose':
-            value = 2
-        else:
-            value = 0
-
-        all_rp_filter = int(read_file('/proc/sys/net/ipv4/conf/all/rp_filter'))
-        if all_rp_filter > value:
-            global_setting = 'disable'
-            if   all_rp_filter == 1: global_setting = 'strict'
-            elif all_rp_filter == 2: global_setting = 'loose'
-
-            from vyos.base import Warning
-            Warning(f'Global source-validation is set to "{global_setting}", this '\
-                    f'overrides per interface setting on "{self.ifname}"!')
-
-        tmp = self.get_interface('rp_filter')
-        if int(tmp) == value:
-            return None
-        return self.set_interface('rp_filter', value)
+        self._cleanup_ipv4_source_validation_rules(self.ifname)
+        nft_prefix = f'nft insert rule ip raw vyos_rpfilter iifname "{self.ifname}"'
+        if mode in ['strict', 'loose']:
+            self._cmd(f"{nft_prefix} counter return")
+        if mode == 'strict':
+            self._cmd(f"{nft_prefix} fib saddr . iif oif 0 counter drop")
+        elif mode == 'loose':
+            self._cmd(f"{nft_prefix} fib saddr oif 0 counter drop")
 
     def _cleanup_ipv6_source_validation_rules(self, ifname):
-        commands = []
         results = self._cmd(f'nft -a list chain ip6 raw vyos_rpfilter').split("\n")
         for line in results:
             if f'iifname "{ifname}"' in line:
@@ -795,7 +780,9 @@ class Interface(Control):
         >>> Interface('eth0').set_ipv6_source_validation('strict')
         """
         self._cleanup_ipv6_source_validation_rules(self.ifname)
-        nft_prefix = f'nft add rule ip6 raw vyos_rpfilter iifname "{self.ifname}"'
+        nft_prefix = f'nft insert rule ip6 raw vyos_rpfilter iifname "{self.ifname}"'
+        if mode in ['strict', 'loose']:
+            self._cmd(f"{nft_prefix} counter return")
         if mode == 'strict':
             self._cmd(f"{nft_prefix} fib saddr . iif oif 0 counter drop")
         elif mode == 'loose':
