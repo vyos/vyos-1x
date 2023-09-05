@@ -188,7 +188,7 @@ def apply(ha):
         return None
 
     # Check if IPv6 address is tentative T5533
-    for group, group_config in ha['vrrp']['group'].items():
+    for group, group_config in ha.get('vrrp', {}).get('group', {}).items():
         if 'hello_source_address' in group_config:
             if is_ipv6(group_config['hello_source_address']):
                 ipv6_address = group_config['hello_source_address']
