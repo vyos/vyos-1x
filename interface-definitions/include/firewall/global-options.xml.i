@@ -145,21 +145,21 @@
     </leafNode>
     <leafNode name="source-validation">
       <properties>
-        <help>Policy for source validation by reversed path, as specified in RFC3704</help>
+        <help>Policy for IPv4 source validation by reversed path, as specified in RFC3704</help>
         <completionHelp>
           <list>strict loose disable</list>
         </completionHelp>
         <valueHelp>
           <format>strict</format>
-          <description>Enable Strict Reverse Path Forwarding as defined in RFC3704</description>
+          <description>Enable IPv4 Strict Reverse Path Forwarding as defined in RFC3704</description>
         </valueHelp>
         <valueHelp>
           <format>loose</format>
-          <description>Enable Loose Reverse Path Forwarding as defined in RFC3704</description>
+          <description>Enable IPv4 Loose Reverse Path Forwarding as defined in RFC3704</description>
         </valueHelp>
         <valueHelp>
           <format>disable</format>
-          <description>No source validation</description>
+          <description>No IPv4 source validation</description>
         </valueHelp>
         <constraint>
           <regex>(strict|loose|disable)</regex>
@@ -223,6 +223,30 @@
         </valueHelp>
         <constraint>
           <regex>(enable|disable)</regex>
+        </constraint>
+      </properties>
+      <defaultValue>disable</defaultValue>
+    </leafNode>
+    <leafNode name="ipv6-source-validation">
+      <properties>
+        <help>Policy for IPv6 source validation by reversed path, as specified in RFC3704</help>
+        <completionHelp>
+          <list>strict loose disable</list>
+        </completionHelp>
+        <valueHelp>
+          <format>strict</format>
+          <description>Enable IPv6 Strict Reverse Path Forwarding as defined in RFC3704</description>
+        </valueHelp>
+        <valueHelp>
+          <format>loose</format>
+          <description>Enable IPv6 Loose Reverse Path Forwarding as defined in RFC3704</description>
+        </valueHelp>
+        <valueHelp>
+          <format>disable</format>
+          <description>No IPv6 source validation</description>
+        </valueHelp>
+        <constraint>
+          <regex>(strict|loose|disable)</regex>
         </constraint>
       </properties>
       <defaultValue>disable</defaultValue>
