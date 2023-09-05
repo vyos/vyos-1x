@@ -12,6 +12,12 @@
           <help>Virtual Router Redundancy Protocol settings</help>
         </properties>
         <children>
+          <leafNode name="disable-snmp">
+            <properties>
+              <valueless/>
+              <help>Disable SNMP</help>
+            </properties>
+          </leafNode>
           <node name="global-parameters">
             <properties>
               <help>VRRP global parameters</help>
