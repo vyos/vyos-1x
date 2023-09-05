@@ -526,9 +526,8 @@ Proceed ?'''
         return len(l)
 
     def _check_revision_number(self, rev: int) -> bool:
-        # exclude init revision:
         maxrev = self._get_number_of_revisions()
-        if not 0 <= rev < maxrev - 1:
+        if not 0 <= rev < maxrev:
             return False
         return True
 
