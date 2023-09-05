@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import time
 
 from sys import exit
@@ -24,6 +25,7 @@ from ipaddress import IPv6Interface
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdict import leaf_node_changed
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -33,6 +35,9 @@ from vyos.utils.process import call
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+
+systemd_override = r'/run/systemd/system/keepalived.service.d/10-override.conf'
 
 
 def get_config(config=None):
@@ -53,6 +58,9 @@ def get_config(config=None):
     conntrack_path = ['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group']
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
+
+    if leaf_node_changed(conf, base + ['vrrp', 'disable-snmp']):
+        ha.update({'restart_required': {}})
 
     return ha
 
@@ -164,19 +172,23 @@ def verify(ha):
 
 def generate(ha):
     if not ha or 'disable' in ha:
+        if os.path.isfile(systemd_override):
+            os.unlink(systemd_override)
         return None
 
     render(VRRP.location['config'], 'high-availability/keepalived.conf.j2', ha)
+    render(systemd_override, 'high-availability/10-override.conf.j2', ha)
     return None
 
 def apply(ha):
     service_name = 'keepalived.service'
+    call('systemctl daemon-reload')
     if not ha or 'disable' in ha:
         call(f'systemctl stop {service_name}')
         return None
 
     # Check if IPv6 address is tentative T5533
-    for group, group_config in ha['vrrp']['group'].items():
+    for group, group_config in ha.get('vrrp', {}).get('group', {}).items():
         if 'hello_source_address' in group_config:
             if is_ipv6(group_config['hello_source_address']):
                 ipv6_address = group_config['hello_source_address']
@@ -187,7 +199,11 @@ def apply(ha):
                     if is_ipv6_tentative(interface, ipv6_address):
                         time.sleep(interval)
 
-    call(f'systemctl reload-or-restart {service_name}')
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in ha:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {service_name}')
     return None
 
 if __name__ == '__main__':
