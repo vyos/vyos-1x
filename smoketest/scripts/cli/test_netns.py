@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -16,7 +16,6 @@
 
 import unittest
 
-from netifaces import interfaces
 from base_vyostest_shim import VyOSUnitTestSHIM
 
 from vyos.configsession import ConfigSession
@@ -24,56 +23,61 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.ifconfig import Section
 from vyos.utils.process import cmd
+from vyos.utils.network import is_netns_interface
+from vyos.utils.network import get_netns_all
 
 base_path = ['netns']
-namespaces = ['mgmt', 'front', 'back', 'ams-ix']
+interfaces = ['dum10', 'dum12', 'dum50']
 
-class NETNSTest(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self._interfaces = ['dum10', 'dum12', 'dum50']
+class NetNSTest(VyOSUnitTestSHIM.TestCase):
+    def tearDown(self):
+        self.cli_delete(base_path)
+        # commit changes
+        self.cli_commit()
 
-    def test_create_netns(self):
+        # There should be no network namespace remaining
+        tmp = cmd('ip netns ls')
+        self.assertFalse(tmp)
+
+        super(NetNSTest, self).tearDown()
+
+    def test_netns_create(self):
+        namespaces = ['mgmt', 'front', 'back']
         for netns in namespaces:
-            base = base_path + ['name', netns]
-            self.cli_set(base)
+            self.cli_set(base_path + ['name', netns])
 
         # commit changes
         self.cli_commit()
 
-        netns_list = cmd('ip netns ls')
-
         # Verify NETNS configuration
         for netns in namespaces:
-            self.assertTrue(netns in netns_list)
+            self.assertIn(netns, get_netns_all())
 
-
-    def test_netns_assign_interface(self):
+    def test_netns_interface(self):
         netns = 'foo'
-        self.cli_set(['netns', 'name', netns])
+        self.cli_set(base_path + ['name', netns])
 
         # Set
-        for iface in self._interfaces:
+        for iface in interfaces:
             self.cli_set(['interfaces', 'dummy', iface, 'netns', netns])
 
         # commit changes
         self.cli_commit()
 
-        netns_iface_list = cmd(f'sudo ip netns exec {netns} ip link show')
-
-        for iface in self._interfaces:
-            self.assertTrue(iface in netns_iface_list)
+        for interface in interfaces:
+            self.assertTrue(is_netns_interface(interface, netns))
 
         # Delete
-        for iface in self._interfaces:
-            self.cli_delete(['interfaces', 'dummy', iface, 'netns', netns])
+        for interface in interfaces:
+            self.cli_delete(['interfaces', 'dummy', interface])
 
         # commit changes
         self.cli_commit()
 
         netns_iface_list = cmd(f'sudo ip netns exec {netns} ip link show')
 
-        for iface in self._interfaces:
-            self.assertNotIn(iface, netns_iface_list)
+        for interface in interfaces:
+            self.assertFalse(is_netns_interface(interface, netns))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

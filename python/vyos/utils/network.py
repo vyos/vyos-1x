@@ -42,10 +42,16 @@ def interface_exists(interface) -> bool:
 
 def is_netns_interface(interface, netns):
     from vyos.utils.process import rc_cmd
-    rc, out = rc_cmd(f'ip netns exec {netns} ip link show dev {interface}')
+    rc, out = rc_cmd(f'sudo ip netns exec {netns} ip link show dev {interface}')
     if rc == 0:
         return True
     return False
+
+def get_netns_all() -> list:
+    from json import loads
+    from vyos.utils.process import cmd
+    tmp = loads(cmd('ip --json netns ls'))
+    return [ netns['name'] for netns in tmp ]
 
 def get_vrf_members(vrf: str) -> list:
     """
