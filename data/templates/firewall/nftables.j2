@@ -29,9 +29,9 @@ table ip6 raw {
     }
 
     chain vyos_global_rpfilter {
-{% if global_options.source_validation is vyos_defined('loose') %}
+{% if global_options.ipv6_source_validation is vyos_defined('loose') %}
         fib saddr oif 0 counter drop
-{% elif global_options.source_validation is vyos_defined('strict') %}
+{% elif global_options.ipv6_source_validation is vyos_defined('strict') %}
         fib saddr . iif oif 0 counter drop
 {% endif %}
         return
