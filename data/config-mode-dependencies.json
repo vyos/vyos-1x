@@ -1,5 +1,5 @@
 {
-  "firewall": {"group_resync": ["nat", "policy-route"]},
+  "firewall": {"group_resync": ["conntrack", "nat", "policy-route"]},
   "http_api": {"https": ["https"]},
   "pki": {
            "ethernet": ["interfaces-ethernet"],
