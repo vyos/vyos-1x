@@ -779,6 +779,45 @@ def show_ra_summary(raw: bool):
     return _get_formatted_output_ra_summary(list_sa)
 
 
+# PSK block
+def _get_raw_psk():
+    conf: ConfigTreeQuery = ConfigTreeQuery()
+    config_path = ['vpn', 'ipsec', 'authentication', 'psk']
+    psk_config = conf.get_config_dict(config_path, key_mangling=('-', '_'),
+                                       get_first_key=True,
+                                       no_tag_node_value_mangle=True)
+
+    psk_list = []
+    for psk, psk_data in psk_config.items():
+        psk_data['psk'] = psk
+        psk_list.append(psk_data)
+
+    return psk_list
+
+
+def _get_formatted_psk(psk_list):
+    headers = ["PSK", "Id", "Secret"]
+    formatted_data = []
+
+    for psk_data in psk_list:
+        formatted_data.append([psk_data["psk"], "\n".join(psk_data["id"]), psk_data["secret"]])
+
+    return tabulate(formatted_data, headers=headers)
+
+
+def show_psk(raw: bool):
+    config = ConfigTreeQuery()
+    if not config.exists('vpn ipsec authentication psk'):
+        raise vyos.opmode.UnconfiguredSubsystem('VPN ipsec psk authentication is not configured')
+
+    psk = _get_raw_psk()
+    if raw:
+        return psk
+    return _get_formatted_psk(psk)
+
+# PSK block end
+
+
 if __name__ == '__main__':
     try:
         res = vyos.opmode.run(sys.modules[__name__])
