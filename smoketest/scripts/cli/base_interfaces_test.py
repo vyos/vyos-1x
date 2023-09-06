@@ -834,8 +834,12 @@ class BasicInterfaceTest:
                     self.assertEqual('1', tmp)
 
                 if cli_defined(self._base_path + ['ip'], 'source-validation'):
-                    tmp = read_file(f'{proc_base}/rp_filter')
-                    self.assertEqual('2', tmp)
+                    base_options = f'iifname "{interface}"'
+                    out = cmd('sudo nft list chain ip raw vyos_rpfilter')
+                    for line in out.splitlines():
+                        if line.startswith(base_options):
+                            self.assertIn('fib saddr oif 0', line)
+                            self.assertIn('drop', line)
 
         def test_interface_ipv6_options(self):
             if not self._test_ipv6:

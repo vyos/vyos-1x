@@ -5,9 +5,21 @@
 flush chain raw FW_CONNTRACK
 flush chain ip6 raw FW_CONNTRACK
 
+flush chain raw vyos_global_rpfilter
+flush chain ip6 raw vyos_global_rpfilter
+
 table raw {
     chain FW_CONNTRACK {
         {{ ipv4_conntrack_action }}
+    }
+
+    chain vyos_global_rpfilter {
+{% if global_options.source_validation is vyos_defined('loose') %}
+        fib saddr oif 0 counter drop
+{% elif global_options.source_validation is vyos_defined('strict') %}
+        fib saddr . iif oif 0 counter drop
+{% endif %}
+        return
     }
 }
 
@@ -15,19 +27,14 @@ table ip6 raw {
     chain FW_CONNTRACK {
         {{ ipv6_conntrack_action }}
     }
-}
 
-{% if first_install is not vyos_defined %}
-delete table inet vyos_global_rpfilter
-{% endif %}
-table inet vyos_global_rpfilter {
-    chain PREROUTING {
-        type filter hook prerouting priority -300; policy accept;
-{% if global_options.source_validation is vyos_defined('loose') %}
+    chain vyos_global_rpfilter {
+{% if global_options.ipv6_source_validation is vyos_defined('loose') %}
         fib saddr oif 0 counter drop
-{% elif global_options.source_validation is vyos_defined('strict') %}
+{% elif global_options.ipv6_source_validation is vyos_defined('strict') %}
         fib saddr . iif oif 0 counter drop
 {% endif %}
+        return
     }
 }
 
