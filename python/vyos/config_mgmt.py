@@ -25,6 +25,7 @@ from datetime import datetime
 from textwrap import dedent
 from pathlib import Path
 from tabulate import tabulate
+from shutil import copy
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
@@ -224,8 +225,6 @@ Proceed ?'''
     def rollback(self, rev: int, no_prompt: bool=False) -> Tuple[str,int]:
         """Reboot to config revision 'rev'.
         """
-        from shutil import copy
-
         msg = ''
 
         if not self._check_revision_number(rev):
@@ -475,20 +474,20 @@ Proceed ?'''
         conf_file.chmod(0o644)
 
     def _archive_active_config(self) -> bool:
-        use_tmp = (boot_configuration_complete() or not
-                   os.path.isfile(archive_config_file))
+        save_to_tmp = (boot_configuration_complete() or not
+                       os.path.isfile(archive_config_file))
         mask = os.umask(0o113)
 
-        if use_tmp:
-            ext = os.getpid()
-            cmp_saved = f'/tmp/config.boot.{ext}'
+        ext = os.getpid()
+        cmp_saved = f'/tmp/config.boot.{ext}'
+        if save_to_tmp:
             save_config(cmp_saved)
         else:
-            cmp_saved = config_file
+            copy(config_file, cmp_saved)
 
         try:
             if cmp(cmp_saved, archive_config_file, shallow=False):
-                if use_tmp: os.unlink(cmp_saved)
+                os.unlink(cmp_saved)
                 os.umask(mask)
                 return False
         except FileNotFoundError:
