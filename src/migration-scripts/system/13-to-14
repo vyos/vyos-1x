@@ -34,7 +34,7 @@ else:
 
     # retrieve all valid timezones
     try:
-        tz_datas = cmd('find /usr/share/zoneinfo/posix -type f -or -type l | sed -e s:/usr/share/zoneinfo/posix/::')
+        tz_datas = cmd('timedatectl list-timezones')
     except OSError:
         tz_datas = ''
     tz_data = tz_datas.split('\n')
