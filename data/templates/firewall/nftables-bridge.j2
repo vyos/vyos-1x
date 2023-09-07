@@ -1,0 +1,35 @@
+{% macro bridge(bridge) %}
+{% set ns = namespace(sets=[]) %}
+{% if bridge.forward is vyos_defined %}
+{%     for prior, conf in bridge.forward.items() %}
+{%         set def_action = conf.default_action %}
+    chain VYOS_FORWARD_{{ prior }} {
+        type filter hook forward priority {{ prior }}; policy {{ def_action }};
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+    {{ rule_conf | nft_rule('FWD', prior, rule_id, 'bri') }}
+{%                 if rule_conf.recent is vyos_defined %}
+{%                     set ns.sets = ns.sets + ['FWD_' + prior + '_' + rule_id] %}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+    }
+{%     endfor %}
+{% endif %}
+
+{% if bridge.name is vyos_defined %}
+{%     for name_text, conf in bridge.name.items() %}
+    chain NAME_{{ name_text }} {
+{%         if conf.rule is vyos_defined %}
+{%             for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
+    {{ rule_conf | nft_rule('NAM', name_text, rule_id, 'bri') }}
+{%                 if rule_conf.recent is vyos_defined %}
+{%                     set ns.sets = ns.sets + ['NAM_' + name_text + '_' + rule_id] %}
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+    {{ conf | nft_default_rule(name_text) }}
+    }
+{%     endfor %}
+{% endif %}
+{% endmacro %}

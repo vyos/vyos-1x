@@ -87,7 +87,14 @@ def nft_action(vyos_action):
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     output = []
-    def_suffix = '6' if ip_name == 'ip6' else ''
+    #def_suffix = '6' if ip_name == 'ip6' else ''
+
+    if ip_name == 'ip6':
+        def_suffix = '6'
+        family = 'ipv6'
+    else:
+        def_suffix = ''
+        family = 'bri' if ip_name == 'bri' else 'ipv4'
 
     if 'state' in rule_conf and rule_conf['state']:
         states = ",".join([s for s, v in rule_conf['state'].items() if v == 'enable'])
@@ -244,8 +251,9 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
-        output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
-
+        #output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
+        output.append(f'log prefix "[{family}-{hook}-{fw_name}-{rule_id}-{action[:1].upper()}]"')
+                        ##{family}-{hook}-{fw_name}-{rule_id}
         if 'log_options' in rule_conf:
 
             if 'level' in rule_conf['log_options']:
@@ -379,6 +387,13 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         conn_mark_str = ','.join(rule_conf['connection_mark'])
         output.append(f'ct mark {{{conn_mark_str}}}')
 
+    if 'vlan' in rule_conf:
+        if 'id' in rule_conf['vlan']:
+            output.append(f'vlan id {rule_conf["vlan"]["id"]}')
+        if 'priority' in rule_conf['vlan']:
+            output.append(f'vlan pcp {rule_conf["vlan"]["priority"]}')
+
+
     output.append('counter')
 
     if 'set' in rule_conf:
@@ -404,7 +419,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     else:
         output.append('return')
 
-    output.append(f'comment "{hook}-{fw_name}-{rule_id}"')
+    output.append(f'comment "{family}-{hook}-{fw_name}-{rule_id}"')
     return " ".join(output)
 
 def parse_tcp_flags(flags):

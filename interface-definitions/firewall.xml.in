@@ -284,6 +284,15 @@
           </tagNode>
         </children>
       </node>
+      <node name="bridge">
+        <properties>
+          <help>Bridge firewall</help>
+        </properties>
+        <children>
+          #include <include/firewall/bridge-hook-forward.xml.i>
+          #include <include/firewall/bridge-custom-name.xml.i>
+        </children>
+      </node>
       <node name="ipv4">
         <properties>
           <help>IPv4 firewall</help>
