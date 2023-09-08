@@ -29,7 +29,9 @@ from ipaddress import summarize_address_range
 from netifaces import interfaces
 from secrets import SystemRandom
 from shutil import rmtree
+from time import sleep
 
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -100,7 +102,7 @@ def get_config(config=None):
 
     if is_node_changed(conf, base + [ifname, 'openvpn-option']):
         openvpn.update({'restart_required': {}})
-    if is_node_changed(conf, base + [ifname, 'enable-dco']):
+    if is_node_changed(conf, base + [ifname, 'offload', 'dco']):
         openvpn.update({'restart_required': {}})
 
     # We have to get the dict using 'get_config_dict' instead of 'get_interface_dict'
@@ -679,9 +681,6 @@ def apply(openvpn):
             if os.path.isfile(cleanup_file):
                 os.unlink(cleanup_file)
 
-        if interface in interfaces():
-            VTunIf(interface).remove()
-
     # dynamically load/unload DCO Kernel extension if requested
     dco_module = 'ovpn_dco_v2'
     if 'module_load_dco' in openvpn:
@@ -706,6 +705,15 @@ def apply(openvpn):
     if 'restart_required' in openvpn:
         action = 'restart'
     call(f'systemctl {action} openvpn@{interface}.service')
+
+    count = 0
+    while not interface in interfaces():
+        if count > 10:
+            Warning(f'OpenVPN did not create "{interface}" interface in a reasonable time. It may not be configured correctly.')
+            return None
+
+        count += 1
+        sleep(1)
 
     o = VTunIf(**openvpn)
     o.update(openvpn)

@@ -23,22 +23,18 @@ class VTunIf(Interface):
         **{
             'section': 'openvpn',
             'prefixes': ['vtun', ],
+            'eternal': 'vtun[0-9]+$',
             'bridgeable': True,
         },
     }
 
     def _create(self):
-        """ Depending on OpenVPN operation mode the interface is created
-        immediately (e.g. Server mode) or once the connection to the server is
-        established (client mode). The latter will only be brought up once the
-        server can be reached, thus we might need to create this interface in
-        advance for the service to be operational. """
-        try:
-            cmd = 'openvpn --mktun --dev-type {device_type} --dev {ifname}'.format(**self.config)
-            return self._cmd(cmd)
-        except PermissionError:
-            # interface created by OpenVPN daemon in the meantime ...
-            pass
+        # Interface is managed by OpenVPN daemon
+        pass
+
+    def _delete(self):
+        # Interface is managed by OpenVPN daemon
+        pass
 
     def add_addr(self, addr):
         # IP addresses are managed by OpenVPN daemon
