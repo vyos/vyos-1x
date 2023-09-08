@@ -16,6 +16,7 @@
 "neighbor.py",
 "nhrp.py",
 "openconnect.py",
+"otp.py",
 "openvpn.py",
 "reset_vpn.py",
 "reverseproxy.py",
