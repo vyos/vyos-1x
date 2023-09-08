@@ -274,10 +274,10 @@ def generate_run_arguments(name, container_config):
             env_opt += f" --env \"{k}={v['value']}\""
 
     # Check/set label options "--label foo=bar"
-    env_opt = ''
+    label = ''
     if 'label' in container_config:
         for k, v in container_config['label'].items():
-            env_opt += f" --label \"{k}={v['value']}\""
+            label += f" --label \"{k}={v['value']}\""
 
     hostname = ''
     if 'host_name' in container_config:
@@ -314,7 +314,7 @@ def generate_run_arguments(name, container_config):
 
     container_base_cmd = f'--detach --interactive --tty --replace {cap_add} ' \
                          f'--memory {memory}m --shm-size {shared_memory}m --memory-swap 0 --restart {restart} ' \
-                         f'--name {name} {hostname} {device} {port} {volume} {env_opt}'
+                         f'--name {name} {hostname} {device} {port} {volume} {env_opt} {label}'
 
     entrypoint = ''
     if 'entrypoint' in container_config:
