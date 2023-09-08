@@ -274,8 +274,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['meta l4proto gre', f'oifname != "{interface}"', 'drop'],
             ['meta l4proto icmp', f'ct mark {mark_hex}', 'return'],
             ['chain NAME_smoketest'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
-            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[ipv4-NAM-smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
             ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop']
         ]
 
@@ -331,7 +331,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             [f'meta l4proto tcp','queue to 3'],
             [f'meta l4proto udp','queue flags bypass,fanout to 0-15'],
             [f'chain NAME_{name}'],
-            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
+            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[ipv4-NAM-{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'accept'],
             [f'log prefix "[{name}-default-D]"', 'drop']
         ]
@@ -412,7 +412,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['type filter hook output priority filter; policy drop;'],
             ['meta l4proto gre', f'oifname "{interface}"', 'return'],
             [f'chain NAME6_{name}'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" log level crit', 'accept'],
+            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
             [f'"{name} default-action drop"', f'log prefix "[{name}-default-D]"', 'drop']
         ]
 
@@ -525,6 +525,41 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         # Check conntrack
         self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
         self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
+
+    def test_bridge_basic_rules(self):
+        name = 'smoketest'
+        interface_in = 'eth0'
+        mac_address = '00:53:00:00:00:01'
+        vlan_id = '12'
+        vlan_prior = '3'
+
+        self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'source', 'mac-address', mac_address])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'inbound-interface', 'interface-name', interface_in])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
+
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VYOS_FORWARD_filter'],
+            ['type filter hook forward priority filter; policy drop;'],
+            [f'vlan id {vlan_id}', 'accept'],
+            [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            [f'chain NAME_{name}'],
+            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'bridge vyos_filter')
 
     def test_source_validation(self):
         # Strict

@@ -32,7 +32,7 @@ table ip vyos_mangle {
 {%     endfor %}
 {% endif %}
 
-{{ group_tmpl.groups(firewall_group, False) }}
+{{ group_tmpl.groups(firewall_group, False, True) }}
 }
 
 table ip6 vyos_mangle {
@@ -61,5 +61,5 @@ table ip6 vyos_mangle {
 {%     endfor %}
 {% endif %}
 
-{{ group_tmpl.groups(firewall_group, True) }}
+{{ group_tmpl.groups(firewall_group, True, True) }}
 }
