@@ -24,6 +24,7 @@ from vyos.configsession import ConfigSession, ConfigSessionError
 from vyos import ConfigError
 
 config_dir = '/usr/libexec/vyos/tests/config'
+config_test_dir = '/usr/libexec/vyos/tests/config-tests'
 save_config = '/tmp/vyos-configtest-save'
 
 class DynamicClassBase(unittest.TestCase):
@@ -42,7 +43,7 @@ class DynamicClassBase(unittest.TestCase):
         except OSError:
             pass
 
-def make_test_function(filename):
+def make_test_function(filename, test_path=None):
     def test_config_load(self):
         config_path = os.path.join(config_dir, filename)
         self.session.migrate_and_load_config(config_path)
@@ -51,6 +52,16 @@ def make_test_function(filename):
         except (ConfigError, ConfigSessionError):
             self.session.discard()
             self.fail()
+
+        if test_path:
+            config_commands = self.session.show(['configuration', 'commands'])
+            
+            with open(test_path, 'r') as f:
+                for line in f.readlines():
+                    if not line or line.startswith("#"):
+                        continue
+
+                    self.assertIn(line, config_commands)
     return test_config_load
 
 def class_name_from_func_name(s):
@@ -69,10 +80,18 @@ if __name__ == '__main__':
     config_list.sort()
 
     for config in config_list:
-        test_func = make_test_function(config)
+        test_path = os.path.join(config_test_dir, config)
+
+        if not os.path.exists(test_path):
+            test_path = None
+        else:
+            log.info(f'Loaded migration result test for config "{config}"')
+
+        test_func = make_test_function(config, test_path)
 
         func_name = config.replace('-', '_')
         klassname = f'TestConfig{class_name_from_func_name(func_name)}'
+
         globals()[klassname] = type(klassname,
                                     (DynamicClassBase,),
                                     {f'test_{func_name}': test_func})
