@@ -124,11 +124,12 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, original)
 
         # Delete veth interfaces and netns
-        for iface in [iface1, iface2, iface3, container_iface1, container_iface2, container_iface3]:
+        for iface in [iface1, iface2, iface3]:
             call(f'sudo ip link del dev {iface}')
 
         delete_netns(ns1)
         delete_netns(ns2)
+        delete_netns(ns3)
 
     def test_check_chains(self):
 
@@ -246,11 +247,13 @@ class TestLoadBalancingWan(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, nat_vyos_pre_snat_hook)
 
         # Delete veth interfaces and netns
-        for iface in [iface1, iface2, iface3, container_iface1, container_iface2, container_iface3]:
+        for iface in [iface1, iface2, iface3]:
             call(f'sudo ip link del dev {iface}')
 
         delete_netns(ns1)
         delete_netns(ns2)
+        delete_netns(ns3)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
