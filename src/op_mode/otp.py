@@ -23,7 +23,7 @@ from jinja2 import Template
 from vyos.configquery import ConfigTreeQuery
 from vyos.xml import defaults
 from vyos.configdict import dict_merge
-from vyos.util import popen
+from vyos.utils.process import popen
 
 
 users_otp_template = Template("""
