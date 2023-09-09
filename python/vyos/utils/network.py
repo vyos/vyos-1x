@@ -429,7 +429,7 @@ def is_subnet_connected(subnet, primary=False):
 
     return False
 
-def is_afi_configured(interface, afi):
+def is_afi_configured(interface: str, afi):
     """ Check if given address family is configured, or in other words - an IP
     address is assigned to the interface. """
     from netifaces import ifaddresses
@@ -446,3 +446,46 @@ def is_afi_configured(interface, afi):
         return False
 
     return afi in addresses
+
+def get_vxlan_vlan_tunnels(interface: str) -> list:
+    """ Return a list of strings with VLAN IDs configured in the Kernel """
+    from json import loads
+    from vyos.utils.process import cmd
+
+    if not interface.startswith('vxlan'):
+        raise ValueError('Only applicable for VXLAN interfaces!')
+
+    # Determine current OS Kernel configured VLANs
+    #
+    # $ bridge -j -p vlan tunnelshow dev vxlan0
+    # [ {
+    #         "ifname": "vxlan0",
+    #         "tunnels": [ {
+    #                 "vlan": 10,
+    #                 "vlanEnd": 11,
+    #                 "tunid": 10010,
+    #                 "tunidEnd": 10011
+    #             },{
+    #                 "vlan": 20,
+    #                 "tunid": 10020
+    #             } ]
+    #     } ]
+    #
+    os_configured_vlan_ids = []
+    tmp = loads(cmd(f'bridge --json vlan tunnelshow dev {interface}'))
+    if tmp:
+        for tunnel in tmp[0].get('tunnels', {}):
+            vlanStart = tunnel['vlan']
+            if 'vlanEnd' in tunnel:
+                vlanEnd = tunnel['vlanEnd']
+                # Build a real list for user VLAN IDs
+                vlan_list = list(range(vlanStart, vlanEnd +1))
+                # Convert list of integers to list or strings
+                os_configured_vlan_ids.extend(map(str, vlan_list))
+                # Proceed with next tunnel - this one is complete
+                continue
+
+            # Add single tunel id - not part of a range
+            os_configured_vlan_ids.append(str(vlanStart))
+
+    return os_configured_vlan_ids

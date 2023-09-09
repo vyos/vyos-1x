@@ -139,7 +139,7 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
     expect:  a list of error codes to consider as normal
     """
     decoded, code = popen(
-        command, flag,
+        command.lstrip(), flag,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,

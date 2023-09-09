@@ -1,4 +1,4 @@
-# Copyright 2019-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2019-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -13,9 +13,15 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+from json import loads
+
 from vyos import ConfigError
+from vyos.configdict import list_diff
 from vyos.ifconfig import Interface
+from vyos.utils.assertion import assert_list
 from vyos.utils.dict import dict_search
+from vyos.utils.network import get_interface_config
+from vyos.utils.network import get_vxlan_vlan_tunnels
 
 @Interface.register
 class VXLANIf(Interface):
@@ -48,6 +54,13 @@ class VXLANIf(Interface):
             'bridgeable': True,
         }
     }
+
+    _command_set = {**Interface._command_set, **{
+        'vlan_tunnel': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'shellcmd': 'bridge link set dev {ifname} vlan_tunnel {value}',
+        },
+    }}
 
     def _create(self):
         # This table represents a mapping from VyOS internal config dict to
@@ -99,3 +112,54 @@ class VXLANIf(Interface):
                 cmd = f'bridge fdb append to 00:00:00:00:00:00 dst {remote} ' \
                        'port {port} dev {ifname}'
                 self._cmd(cmd.format(**self.config))
+
+    def set_vlan_vni_mapping(self, state):
+        """
+        Controls whether vlan to tunnel mapping is enabled on the port.
+        By default this flag is off.
+        """
+        if not isinstance(state, bool):
+            raise ValueError('Value out of range')
+
+        cur_vlan_ids = []
+        if 'vlan_to_vni_removed' in self.config:
+            cur_vlan_ids = self.config['vlan_to_vni_removed']
+            for vlan in cur_vlan_ids:
+                self._cmd(f'bridge vlan del dev {self.ifname} vid {vlan}')
+
+        # Determine current OS Kernel vlan_tunnel setting - only adjust when needed
+        tmp = get_interface_config(self.ifname)
+        cur_state = 'on' if dict_search(f'linkinfo.info_slave_data.vlan_tunnel', tmp) == True else 'off'
+        new_state = 'on' if state else 'off'
+        if cur_state != new_state:
+            self.set_interface('vlan_tunnel', new_state)
+
+        # Determine current OS Kernel configured VLANs
+        os_configured_vlan_ids = get_vxlan_vlan_tunnels(self.ifname)
+
+        if 'vlan_to_vni' in self.config:
+            add_vlan = list_diff(list(self.config['vlan_to_vni'].keys()), os_configured_vlan_ids)
+
+            for vlan, vlan_config in self.config['vlan_to_vni'].items():
+                # VLAN mapping already exists - skip
+                if vlan not in add_vlan:
+                    continue
+
+                vni = vlan_config['vni']
+                # The following commands must be run one after another,
+                # they can not be combined with linux 6.1 and iproute2 6.1
+                self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan}')
+                self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan} tunnel_info id {vni}')
+
+    def update(self, config):
+        """ General helper function which works on a dictionary retrived by
+        get_config_dict(). It's main intention is to consolidate the scattered
+        interface setup code and provide a single point of entry when workin
+        on any interface. """
+
+        # call base class last
+        super().update(config)
+
+        # Enable/Disable VLAN tunnel mapping
+        # This is only possible after the interface was assigned to the bridge
+        self.set_vlan_vni_mapping(dict_search('vlan_to_vni', config) != None)

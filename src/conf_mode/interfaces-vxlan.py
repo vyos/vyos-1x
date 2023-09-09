@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -24,6 +24,7 @@ from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import leaf_node_changed
 from vyos.configdict import is_node_changed
+from vyos.configdict import node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
@@ -57,6 +58,9 @@ def get_config(config=None):
         if is_node_changed(conf, base + [ifname, cli_option]):
             vxlan.update({'rebuild_required': {}})
             break
+
+    tmp = node_changed(conf, base + [ifname, 'vlan-to-vni'], recursive=True)
+    if tmp: vxlan.update({'vlan_to_vni_removed': tmp})
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation
@@ -145,6 +149,20 @@ def verify(vxlan):
                 if protocol == 'ipv6':
                     raise ConfigError(error_msg)
                 protocol = 'ipv4'
+
+    if 'vlan_to_vni' in vxlan:
+        if 'is_bridge_member' not in vxlan:
+            raise ConfigError('VLAN to VNI mapping requires that VXLAN interface '\
+                              'is member of a bridge interface!')
+
+        vnis_used = []
+        for vif, vif_config in vxlan['vlan_to_vni'].items():
+            if 'vni' not in vif_config:
+                raise ConfigError(f'Must define VNI for VLAN "{vif}"!')
+            vni = vif_config['vni']
+            if vni in vnis_used:
+                raise ConfigError(f'VNI "{vni}" is already assigned to a different VLAN!')
+            vnis_used.append(vni)
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
