@@ -20,6 +20,8 @@ from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
 from vyos.utils.network import get_bridge_fdb
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import interface_exists
+from vyos.utils.network import get_vxlan_vlan_tunnels
 from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 
@@ -132,6 +134,54 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         options = get_interface_config(interface)
         self.assertTrue(options['linkinfo']['info_data']['external'])
         self.assertEqual('vxlan',    options['linkinfo']['info_kind'])
+
+    def test_vxlan_vlan_vni_mapping(self):
+        bridge = 'br0'
+        interface = 'vxlan0'
+        source_interface = 'eth0'
+
+        vlan_to_vni = {
+            '10': '10010',
+            '11': '10011',
+            '12': '10012',
+            '13': '10013',
+            '20': '10020',
+            '30': '10030',
+            '31': '10031',
+        }
+
+        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
+
+        for vlan, vni in vlan_to_vni.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+
+        # This must fail as this VXLAN interface is not associated with any bridge
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', interface])
+
+        # It is not allowed to use duplicate VNIs
+        self.cli_set(self._base_path + [interface, 'vlan-to-vni', '11', 'vni', vlan_to_vni['10']])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        # restore VLAN - VNI mappings
+        for vlan, vni in vlan_to_vni.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+
+        # commit configuration
+        self.cli_commit()
+
+        self.assertTrue(interface_exists(bridge))
+        self.assertTrue(interface_exists(interface))
+
+        tmp = get_interface_config(interface)
+        self.assertEqual(tmp['master'], bridge)
+
+        tmp = get_vxlan_vlan_tunnels('vxlan0')
+        self.assertEqual(tmp, list(vlan_to_vni))
+
+        self.cli_delete(['interfaces', 'bridge', bridge])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
