@@ -29,7 +29,7 @@ table raw {
         return
     }
 
-{{ group_tmpl.groups(firewall_group, False) }}
+{{ group_tmpl.groups(firewall_group, False, True) }}
 }
 
 flush chain ip6 raw {{ nft_ct_ignore_name }}
@@ -54,5 +54,5 @@ table ip6 raw {
         return
     }
 
-{{ group_tmpl.groups(firewall_group, True) }}
+{{ group_tmpl.groups(firewall_group, True, True) }}
 }
