@@ -300,6 +300,8 @@ def show_firewall_group(name=None):
                     for priority, priority_conf in firewall[item][name_type].items():
                         if priority not in firewall[item][name_type]:
                             continue
+                        if 'rule' not in priority_conf:
+                            continue
                         for rule_id, rule_conf in priority_conf['rule'].items():
                             source_group = dict_search_args(rule_conf, 'source', 'group', group_type)
                             dest_group = dict_search_args(rule_conf, 'destination', 'group', group_type)
