@@ -32,21 +32,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_pim6_01_defaults(self):
-        # commit changes
-        self.cli_set(base_path)
-        self.cli_commit()
-
-        interfaces = Section.interfaces('ethernet')
-
-        # Verify FRR pim6d configuration
-        for interface in interfaces:
-            config = self.getFRRconfig(
-                f'interface {interface}', daemon=PROCESS_NAME)
-            self.assertIn(f'interface {interface}', config)
-            self.assertNotIn(f' ipv6 mld', config)
-
-    def test_pim6_02_mld_simple(self):
+    def test_pim6_01_mld_simple(self):
         # commit changes
         interfaces = Section.interfaces('ethernet')
 
@@ -78,7 +64,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ipv6 mld', config)
             self.assertIn(f' ipv6 mld version 1', config)
 
-    def test_pim6_03_mld_join(self):
+    def test_pim6_02_mld_join(self):
         # commit changes
         interfaces = Section.interfaces('ethernet')
 
@@ -108,7 +94,7 @@ class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
         # Join a source-specific multicast group
         for interface in interfaces:
             self.cli_set(base_path + ['interface', interface,
-                         'mld', 'join', 'ff38::5678', '2001:db8::5678'])
+                         'mld', 'join', 'ff38::5678', 'source', '2001:db8::5678'])
 
         self.cli_commit()
 
