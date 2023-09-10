@@ -353,7 +353,7 @@
                 <description>Object size in KB</description>
               </valueHelp>
               <constraint>
-                <validator name="numeric" argument="--range 1-100000"/>
+                <validator name="numeric" argument="--range 1-1000000"/>
               </constraint>
             </properties>
           </leafNode>
