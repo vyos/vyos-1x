@@ -170,7 +170,7 @@ def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
     (1, 'Device "eth99" does not exist.')
     """
     out, code = popen(
-        command.lstrip(), flag,
+        command, flag,
         stdout=stdout, stderr=stderr,
         input=input, timeout=timeout,
         env=env, shell=shell,
