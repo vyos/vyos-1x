@@ -337,10 +337,6 @@ start ()
     nfct helper add tns inet tcp
     nft -f /usr/share/vyos/vyos-firewall-init.conf || log_failure_msg "could not initiate firewall rules"
 
-    rm -f /etc/hostname
-    ${vyos_conf_scripts_dir}/host_name.py || log_failure_msg "could not reset host-name"
-    systemctl start frr.service
-
     # As VyOS does not execute commands that are not present in the CLI we call
     # the script by hand to have a single source for the login banner and MOTD
     ${vyos_conf_scripts_dir}/system_console.py || log_failure_msg "could not reset serial console"
@@ -372,6 +368,13 @@ start ()
     mount -o $tmpfs_opts -t tmpfs none ${vyatta_configdir} \
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
+
+    rm -f /etc/hostname
+    ${vyos_conf_scripts_dir}/host_name.py || log_failure_msg "could not reset host-name"
+    ${vyos_conf_scripts_dir}/system_frr.py || log_failure_msg "could not reset FRR config"
+    # If for any reason FRR was not started by system_frr.py - start it anyways.
+    # This is a safety net!
+    systemctl start frr.service
 
     disabled bootfile || init_bootfile
 
