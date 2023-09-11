@@ -25,12 +25,14 @@ from datetime import datetime
 from textwrap import dedent
 from pathlib import Path
 from tabulate import tabulate
+from shutil import copy
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
 from vyos.defaults import directories
 from vyos.version import get_full_version_data
 from vyos.utils.io import ask_yes_no
+from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 
@@ -200,9 +202,9 @@ Proceed ?'''
             raise ConfigMgmtError(out)
 
         entry = self._read_tmp_log_entry()
-        self._add_log_entry(**entry)
 
         if self._archive_active_config():
+            self._add_log_entry(**entry)
             self._update_archive()
 
         msg = 'Reboot timer stopped'
@@ -223,8 +225,6 @@ Proceed ?'''
     def rollback(self, rev: int, no_prompt: bool=False) -> Tuple[str,int]:
         """Reboot to config revision 'rev'.
         """
-        from shutil import copy
-
         msg = ''
 
         if not self._check_revision_number(rev):
@@ -334,10 +334,10 @@ Proceed ?'''
             user = self._get_user()
             via = 'init'
             comment = ''
-            self._add_log_entry(user, via, comment)
             # add empty init config before boot-config load for revision
             # and diff consistency
             if self._archive_active_config():
+                self._add_log_entry(user, via, comment)
                 self._update_archive()
 
         os.umask(mask)
@@ -352,9 +352,8 @@ Proceed ?'''
             self._new_log_entry(tmp_file=tmp_log_entry)
             return
 
-        self._add_log_entry()
-
         if self._archive_active_config():
+            self._add_log_entry()
             self._update_archive()
 
     def commit_archive(self):
@@ -475,22 +474,26 @@ Proceed ?'''
         conf_file.chmod(0o644)
 
     def _archive_active_config(self) -> bool:
+        save_to_tmp = (boot_configuration_complete() or not
+                       os.path.isfile(archive_config_file))
         mask = os.umask(0o113)
 
         ext = os.getpid()
-        tmp_save = f'/tmp/config.boot.{ext}'
-        save_config(tmp_save)
+        cmp_saved = f'/tmp/config.boot.{ext}'
+        if save_to_tmp:
+            save_config(cmp_saved)
+        else:
+            copy(config_file, cmp_saved)
 
         try:
-            if cmp(tmp_save, archive_config_file, shallow=False):
-                # this will be the case on boot, as well as certain
-                # re-initialiation instances after delete/set
-                os.unlink(tmp_save)
+            if cmp(cmp_saved, archive_config_file, shallow=False):
+                os.unlink(cmp_saved)
+                os.umask(mask)
                 return False
         except FileNotFoundError:
             pass
 
-        rc, out = rc_cmd(f'sudo mv {tmp_save} {archive_config_file}')
+        rc, out = rc_cmd(f'sudo mv {cmp_saved} {archive_config_file}')
         os.umask(mask)
 
         if rc != 0:
@@ -522,9 +525,8 @@ Proceed ?'''
         return len(l)
 
     def _check_revision_number(self, rev: int) -> bool:
-        # exclude init revision:
         maxrev = self._get_number_of_revisions()
-        if not 0 <= rev < maxrev - 1:
+        if not 0 <= rev < maxrev:
             return False
         return True
 
