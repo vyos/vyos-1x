@@ -138,7 +138,6 @@ def cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
              (default is OSError) with the error code
     expect:  a list of error codes to consider as normal
     """
-    command = command.lstrip() if isinstance(command, str) else command
     decoded, code = popen(
         command, flag,
         stdout=stdout, stderr=stderr,
@@ -170,7 +169,6 @@ def rc_cmd(command, flag='', shell=None, input=None, timeout=None, env=None,
     % rc_cmd('ip link show dev eth99')
     (1, 'Device "eth99" does not exist.')
     """
-    command = command.lstrip() if isinstance(command, str) else command
     out, code = popen(
         command, flag,
         stdout=stdout, stderr=stderr,
