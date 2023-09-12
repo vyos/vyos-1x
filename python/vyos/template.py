@@ -671,7 +671,8 @@ def conntrack_ignore_rule(rule_conf, rule_id, ipv6=False):
 
     if 'inbound_interface' in rule_conf:
         ifname = rule_conf['inbound_interface']
-        output.append(f'iifname {ifname}')
+        if ifname != 'any':
+            output.append(f'iifname {ifname}')
 
     if 'protocol' in rule_conf:
         proto = rule_conf['protocol']
