@@ -7,4 +7,4 @@ After=vyos-router.service
 PIDFile={{ config_file | replace('.conf', '.pid') }}
 EnvironmentFile=
 ExecStart=
-ExecStart=/usr/bin/ddclient -file {{ config_file }}
+ExecStart={{ vrf_command }}/usr/bin/ddclient -file {{ config_file }}

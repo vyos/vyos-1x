@@ -17,6 +17,8 @@
 import os
 import unittest
 import tempfile
+import random
+import string
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
@@ -24,8 +26,10 @@ from vyos.configsession import ConfigSessionError
 from vyos.utils.process import cmd
 from vyos.utils.process import process_running
 
+DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
 DDCLIENT_CONF = '/run/ddclient/ddclient.conf'
 DDCLIENT_PID = '/run/ddclient/ddclient.pid'
+DDCLIENT_PNAME = 'ddclient'
 
 base_path = ['service', 'dns', 'dynamic']
 hostname = 'test.ddns.vyos.io'
@@ -187,6 +191,36 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'zone={zone}', ddclient_conf)
             self.assertIn(f'password={key_file.name}', ddclient_conf)
             self.assertIn(f'ttl={ttl}', ddclient_conf)
+
+    def test_05_dyndns_vrf(self):
+        vrf_name = f'vyos-test-{"".join(random.choices(string.ascii_letters + string.digits, k=5))}'
+        svc_path = ['address', interface, 'service', 'cloudflare']
+
+        # Always start with a clean CLI instance
+        self.cli_delete(base_path)
+
+        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(base_path + ['vrf', vrf_name])
+
+        self.cli_set(base_path + svc_path + ['protocol', 'cloudflare'])
+        self.cli_set(base_path + svc_path + ['host-name', hostname])
+        self.cli_set(base_path + svc_path + ['zone', zone])
+        self.cli_set(base_path + svc_path + ['password', password])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check for process in VRF
+        systemd_override = cmd(f'cat {DDCLIENT_SYSTEMD_UNIT}')
+        self.assertIn(f'ExecStart=ip vrf exec {vrf_name} /usr/bin/ddclient -file {DDCLIENT_CONF}',
+                      systemd_override)
+
+        # Check for process in VRF
+        proc = cmd(f'ip vrf pids {vrf_name}')
+        self.assertIn(DDCLIENT_PNAME, proc)
+
+        # Cleanup VRF
+        self.cli_delete(['vrf', 'name', vrf_name])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
