@@ -18,4 +18,21 @@
       </node>
     </children>
   </node>
+  <node name="force">
+    <children>
+      <node name="ntp">
+        <properties>
+          <help>NTP (Network Time Protocol) operations</help>
+        </properties>
+        <children>
+          <node name="synchronization">
+            <properties>
+              <help>Force NTP time synchronization</help>
+            </properties>
+            <command>sudo chronyc makestep</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
 </interfaceDefinition>
