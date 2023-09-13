@@ -19,6 +19,7 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos import ConfigError
@@ -61,6 +62,10 @@ def verify(dyndns):
         return None
 
     for address in dyndns['address']:
+        # If dyndns address is an interface, ensure it exists
+        if address != 'web':
+            verify_interface_exists(address)
+
         # RFC2136 - configuration validation
         if 'rfc2136' in dyndns['address'][address]:
             for config in dyndns['address'][address]['rfc2136'].values():
