@@ -170,7 +170,7 @@
 {%             endif %}
 {%         endif %}
 {%         if afi_config.remove_private_as is vyos_defined %}
-  neighbor {{ neighbor }} remove-private-AS
+  neighbor {{ neighbor }} remove-private-AS {{ 'all' if afi_config.remove_private_as.all is vyos_defined }}
 {%         endif %}
 {%         if afi_config.route_reflector_client is vyos_defined %}
   neighbor {{ neighbor }} route-reflector-client

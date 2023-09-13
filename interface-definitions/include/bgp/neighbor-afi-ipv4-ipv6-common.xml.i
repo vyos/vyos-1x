@@ -1,4 +1,5 @@
 <!-- include start from bgp/neighbor-afi-ipv4-ipv6-common.xml.i -->
+
 <leafNode name="addpath-tx-all">
   <properties>
     <help>Use addpath to advertise all paths to a neighbor</help>
@@ -156,12 +157,19 @@
   </properties>
 </leafNode>
 #include <include/bgp/afi-nexthop-self.xml.i>
-<leafNode name="remove-private-as">
+<node name="remove-private-as">
   <properties>
     <help>Remove private AS numbers from AS path in outbound route updates</help>
-    <valueless/>
   </properties>
-</leafNode>
+  <children>
+    <leafNode name="all">
+      <properties>
+        <help>Remove private AS numbers to all AS numbers in outbound route updates</help>
+        <valueless/>
+      </properties>
+    </leafNode>
+  </children>
+</node>
 #include <include/bgp/afi-route-map.xml.i>
 #include <include/bgp/afi-route-reflector-client.xml.i>
 #include <include/bgp/afi-route-server-client.xml.i>
