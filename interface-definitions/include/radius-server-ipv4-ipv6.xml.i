@@ -26,6 +26,26 @@
       </children>
     </tagNode>
     #include <include/source-address-ipv4-ipv6-multi.xml.i>
+    <leafNode name="security-mode">
+      <properties>
+        <help>Security mode for RADIUS authentication</help>
+        <completionHelp>
+          <list>mandatory optional</list>
+        </completionHelp>
+        <valueHelp>
+          <format>mandatory</format>
+          <description>Deny access immediately if RADIUS answers with Access-Reject</description>
+        </valueHelp>
+        <valueHelp>
+          <format>optional</format>
+          <description>Pass to the next authentication method if RADIUS answers with Access-Reject</description>
+        </valueHelp>
+        <constraint>
+          <regex>(mandatory|optional)</regex>
+        </constraint>
+      </properties>
+      <defaultValue>optional</defaultValue>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
