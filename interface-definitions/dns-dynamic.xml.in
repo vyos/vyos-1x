@@ -61,6 +61,7 @@
                     <children>
                       #include <include/generic-description.xml.i>
                       #include <include/dns/dynamic-service-host-name-server.xml.i>
+                      #include <include/dns/dynamic-service-wait-expiry-time.xml.i>
                       <leafNode name="key">
                         <properties>
                           <help>File containing the TSIG secret key shared with remote DNS server</help>
@@ -88,6 +89,7 @@
                     <children>
                       #include <include/generic-description.xml.i>
                       #include <include/dns/dynamic-service-host-name-server.xml.i>
+                      #include <include/dns/dynamic-service-wait-expiry-time.xml.i>
                       #include <include/generic-username.xml.i>
                       #include <include/generic-password.xml.i>
                       #include <include/dns/time-to-live.xml.i>
