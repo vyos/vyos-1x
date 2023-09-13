@@ -104,7 +104,7 @@ def generate(dyndns):
     if not dyndns or 'address' not in dyndns:
         return None
 
-    render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns)
+    render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns, permission=0o600)
     render(systemd_override, 'dns-dynamic/override.conf.j2', dyndns)
     return None
 
