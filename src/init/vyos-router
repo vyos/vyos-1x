@@ -346,6 +346,8 @@ start ()
     ${vyos_conf_scripts_dir}/system-login.py || log_failure_msg "could not reset system login"
     ${vyos_conf_scripts_dir}/system-login-banner.py || log_failure_msg "could not reset motd and issue files"
     ${vyos_conf_scripts_dir}/system-option.py || log_failure_msg "could not reset system option files"
+    ${vyos_conf_scripts_dir}/system-ip.py || log_failure_msg "could not reset system IPv4 options"
+    ${vyos_conf_scripts_dir}/system-ipv6.py || log_failure_msg "could not reset system IPv6 options"
     ${vyos_conf_scripts_dir}/conntrack.py || log_failure_msg "could not reset conntrack subsystem"
     ${vyos_conf_scripts_dir}/container.py || log_failure_msg "could not reset container subsystem"
 
