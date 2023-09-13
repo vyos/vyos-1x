@@ -164,6 +164,7 @@
                 </properties>
                 <defaultValue>300</defaultValue>
               </leafNode>
+              #include <include/interface/vrf.xml.i>
             </children>
           </node>
         </children>
