@@ -22,17 +22,14 @@ from vyos import airbag
 from vyos.config import Config
 from vyos.logger import syslog
 from vyos.template import render_to_string
+from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
-from vyos.utils.process import run
+from vyos.utils.process import call
 airbag.enable()
 
 # path to daemons config and config status files
 config_file = '/etc/frr/daemons'
-vyos_status_file = '/tmp/vyos-config-status'
-# path to watchfrr for FRR control
-watchfrr = '/usr/lib/frr/watchfrr.sh'
-
 
 def get_config(config=None):
     if config:
@@ -45,11 +42,9 @@ def get_config(config=None):
 
     return frr_config
 
-
 def verify(frr_config):
     # Nothing to verify here
     pass
-
 
 def generate(frr_config):
     # read daemons config file
@@ -62,25 +57,21 @@ def generate(frr_config):
         write_file(config_file, daemons_config_new)
         frr_config['config_file_changed'] = True
 
-
 def apply(frr_config):
-    # check if this is initial commit during boot or intiated by CLI
-    # if the file exists, this must be CLI commit
-    commit_type_cli = Path(vyos_status_file).exists()
     # display warning to user
-    if commit_type_cli and frr_config.get('config_file_changed'):
+    if boot_configuration_complete() and frr_config.get('config_file_changed'):
         # Since FRR restart is not safe thing, better to give
         # control over this to users
         print('''
         You need to reboot a router (preferred) or restart FRR
         to apply changes in modules settings
         ''')
-    # restart FRR automatically. DUring the initial boot this should be
-    # safe in most cases
-    if not commit_type_cli and frr_config.get('config_file_changed'):
-        syslog.warning('Restarting FRR to apply changes in modules')
-        run(f'{watchfrr} restart')
 
+    # restart FRR automatically
+    # During initial boot this should be safe in most cases
+    if not boot_configuration_complete() and frr_config.get('config_file_changed'):
+        syslog.warning('Restarting FRR to apply changes in modules')
+        call(f'systemctl restart frr.service')
 
 if __name__ == '__main__':
     try:
