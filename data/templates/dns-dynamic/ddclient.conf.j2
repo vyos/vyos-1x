@@ -59,11 +59,8 @@ use=no            {# ddclient default ('ip') results in confusing warning messag
 {%                 endif %}
 {%                 for host in config.host_name if config.host_name is vyos_defined %}
 {%                     set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
-                                                      else (['v6'] if config.ip_version == 'ipv6' else ['']) %}
+                                                      else [config.ip_version[2:]] %} {# 'ipvX' -> 'vX' #}
 # Web service dynamic DNS configuration for {{ name }}: [{{ config.protocol }}, {{ host }}]
-{# For ipv4 only setup or legacy ipv6 setup, don't append 'new-style' compliant suffix
-   ('usev4', 'ifv4', 'webv4' etc.) to the properties and instead live through the
-   deprecation warnings for better compatibility with most ddclient protocols. #}
 {{ render_config(host, address, service_cfg.web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
                  login=config.username, password=config.password) }}
