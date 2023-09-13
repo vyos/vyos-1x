@@ -3,6 +3,9 @@
   <node name="show">
     <children>
       <node name="tech-support">
+        <properties>
+          <help>Show tech-support report</help>
+        </properties>
         <children>
           <node name="report">
             <properties>
