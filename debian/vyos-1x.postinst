@@ -29,14 +29,9 @@ do
     sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
 done
 
-# We do not make use of a TACACS UNIX group - drop it
-if grep -q '^tacacs' /etc/group; then
-    delgroup tacacs
-fi
-
-# Both RADIUS and TACACS users belong to aaa group - this must be added first
-if ! grep -q '^aaa' /etc/group; then
-    addgroup --firstgid 1000 --quiet aaa
+# We need to have a group for RADIUS service users to use it inside PAM rules
+if ! grep -q '^radius' /etc/group; then
+    addgroup --firstgid 1000 --quiet radius
 fi
 
 # Remove TACACS user added by base package - we use our own UID range and group
@@ -64,7 +59,7 @@ if ! grep -q '^tacacs' /etc/passwd; then
     level=0
     vyos_group=vyattaop
     while [ $level -lt 16 ]; do
-        adduser --quiet --system --firstuid 900 --disabled-login --ingroup users \
+        adduser --quiet --system --firstuid 900 --disabled-login --ingroup tacacs \
             --no-create-home --gecos "TACACS+ mapped user at privilege level ${level}" \
             --shell /bin/vbash tacacs${level}
         adduser --quiet tacacs${level} frrvty
@@ -87,7 +82,7 @@ fi
 
 # Add RADIUS operator user for RADIUS authenticated users to map to
 if ! grep -q '^radius_user' /etc/passwd; then
-    adduser --quiet --firstuid 1000 --disabled-login --ingroup users \
+    adduser --quiet --firstuid 1000 --disabled-login --ingroup radius \
         --no-create-home --gecos "RADIUS mapped user at privilege level operator" \
         --shell /sbin/radius_shell radius_user
     adduser --quiet radius_user frrvty
@@ -101,7 +96,7 @@ fi
 
 # Add RADIUS admin user for RADIUS authenticated users to map to
 if ! grep -q '^radius_priv_user' /etc/passwd; then
-    adduser --quiet --firstuid 1000 --disabled-login --ingroup users \
+    adduser --quiet --firstuid 1000 --disabled-login --ingroup radius \
         --no-create-home --gecos "RADIUS mapped user at privilege level admin" \
         --shell /sbin/radius_shell radius_priv_user
     adduser --quiet radius_priv_user frrvty
