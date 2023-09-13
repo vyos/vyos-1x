@@ -48,6 +48,11 @@ if grep -q '^tacacs' /etc/passwd; then
     fi
 fi
 
+# Remove TACACS+ PAM default profile
+if [[ -e /usr/share/pam-configs/tacplus ]]; then
+    rm /usr/share/pam-configs/tacplus
+fi
+
 # Add TACACS system users required for TACACS based system authentication
 if ! grep -q '^tacacs' /etc/passwd; then
     # Add the tacacs group and all 16 possible tacacs privilege-level users to
@@ -66,7 +71,6 @@ if ! grep -q '^tacacs' /etc/passwd; then
         adduser --quiet tacacs${level} adm
         adduser --quiet tacacs${level} dip
         adduser --quiet tacacs${level} users
-        adduser --quiet tacacs${level} aaa
         if [ $level -lt 15 ]; then
             adduser --quiet tacacs${level} vyattaop
             adduser --quiet tacacs${level} operator
