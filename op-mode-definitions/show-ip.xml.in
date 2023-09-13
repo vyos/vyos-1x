@@ -33,6 +33,12 @@
               </tagNode>
             </children>
           </node>
+          <leafNode name="nht">
+            <properties>
+              <help>Show IPv4 nexthop tracking table</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
         </children>
       </node>
     </children>
