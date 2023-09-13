@@ -111,6 +111,9 @@ def verify(dyndns):
                         raise ConfigError(f'"{config["protocol"]}" does not support '
                                           f'both IPv4 and IPv6 at the same time for "{config["server"]}"')
 
+                if {'wait_time', 'expiry_time'} <= config.keys() and int(config['expiry_time']) < int(config['wait_time']):
+                        raise ConfigError(f'"expiry-time" must be greater than "wait-time"')
+
     return None
 
 def generate(dyndns):
