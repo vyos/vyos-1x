@@ -1,0 +1,19 @@
+Name: TACACS+ authentication (optional mode)
+Default: no
+Priority: 576
+
+Auth-Type: Primary
+Auth-Initial:
+    [default=ignore success=end] pam_tacplus.so include=/etc/tacplus_servers login=login
+Auth:
+    [default=ignore success=end] pam_tacplus.so include=/etc/tacplus_servers login=login use_first_pass
+
+Account-Type: Primary
+Account:
+    [default=ignore success=1] pam_succeed_if.so user notingroup tacacs quiet
+    [default=ignore new_authtok_reqd=done success=end perm_denied=bad auth_err=bad] pam_tacplus.so include=/etc/tacplus_servers login=login
+
+Session-Type: Additional
+Session:
+    [default=ignore success=1] pam_succeed_if.so user notingroup tacacs quiet
+    [default=ignore success=ok perm_denied=bad auth_err=bad] pam_tacplus.so include=/etc/tacplus_servers login=login
