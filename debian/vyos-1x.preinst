@@ -2,7 +2,6 @@ dpkg-divert --package vyos-1x --add --no-rename /etc/securetty
 dpkg-divert --package vyos-1x --add --no-rename /etc/security/capability.conf
 dpkg-divert --package vyos-1x --add --no-rename /lib/systemd/system/lcdproc.service
 dpkg-divert --package vyos-1x --add --no-rename /etc/logrotate.d/conntrackd
-dpkg-divert --package vyos-1x --add --no-rename /usr/share/pam-configs/radius
 dpkg-divert --package vyos-1x --add --no-rename /usr/share/pam-configs/tacplus
 dpkg-divert --package vyos-1x --add --no-rename /etc/rsyslog.conf
 dpkg-divert --package vyos-1x --add --no-rename /etc/skel/.bashrc
