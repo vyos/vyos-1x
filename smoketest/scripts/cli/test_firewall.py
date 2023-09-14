@@ -540,8 +540,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
         # Check conntrack
-        self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
-        self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['return']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
 
     def test_bridge_basic_rules(self):
         name = 'smoketest'

@@ -141,6 +141,11 @@ def get_config(config=None):
 
     fqdn_config_parse(firewall)
 
+<<<<<<< HEAD
+=======
+    set_dependents('conntrack', conf)
+
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)
     return firewall
 
 def verify_rule(firewall, rule_conf, ipv6):
@@ -424,6 +429,7 @@ def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
 
+<<<<<<< HEAD
     if 'zone' in firewall:
         for local_zone, local_zone_conf in firewall['zone'].items():
             if 'local_zone' not in local_zone_conf:
@@ -448,6 +454,8 @@ def generate(firewall):
             elif path[0] == 'ipv6':
                 firewall['ipv6_conntrack_action'] = 'accept'
 
+=======
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
 
@@ -477,8 +485,7 @@ def apply(firewall):
 
     apply_sysfs(firewall)
 
-    if firewall['group_resync']:
-        call_dependents()
+    call_dependents()
 
     # T970 Enable a resolver (systemd daemon) that checks
     # domain-group/fqdn addresses and update entries for domains by timeout

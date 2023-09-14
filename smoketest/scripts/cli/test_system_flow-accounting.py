@@ -67,7 +67,7 @@ class TestSystemFlowAccounting(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # verify configuration
-        nftables_output = cmd('sudo nft list chain raw VYOS_CT_PREROUTING_HOOK').splitlines()
+        nftables_output = cmd('sudo nft list chain raw VYOS_PREROUTING_HOOK').splitlines()
         for interface in Section.interfaces('ethernet'):
             rule_found = False
             ifname_search = f'iifname "{interface}"'

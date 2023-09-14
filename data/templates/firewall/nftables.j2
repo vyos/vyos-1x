@@ -5,16 +5,31 @@
 {% import 'firewall/nftables-offload.j2' as offload_tmpl %}
 {% import 'firewall/nftables-zone.j2' as zone_tmpl %}
 
+<<<<<<< HEAD
 flush chain raw FW_CONNTRACK
 flush chain ip6 raw FW_CONNTRACK
 
 table raw {
     chain FW_CONNTRACK {
         {{ ipv4_conntrack_action }}
+=======
+flush chain raw vyos_global_rpfilter
+flush chain ip6 raw vyos_global_rpfilter
+
+table raw {
+    chain vyos_global_rpfilter {
+{% if global_options.source_validation is vyos_defined('loose') %}
+        fib saddr oif 0 counter drop
+{% elif global_options.source_validation is vyos_defined('strict') %}
+        fib saddr . iif oif 0 counter drop
+{% endif %}
+        return
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)
     }
 }
 
 table ip6 raw {
+<<<<<<< HEAD
     chain FW_CONNTRACK {
         {{ ipv6_conntrack_action }}
     }
@@ -27,6 +42,10 @@ table inet vyos_global_rpfilter {
     chain PREROUTING {
         type filter hook prerouting priority -300; policy accept;
 {% if global_options.source_validation is vyos_defined('loose') %}
+=======
+    chain vyos_global_rpfilter {
+{% if global_options.ipv6_source_validation is vyos_defined('loose') %}
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)
         fib saddr oif 0 counter drop
 {% elif global_options.source_validation is vyos_defined('strict') %}
         fib saddr . iif oif 0 counter drop
@@ -284,4 +303,26 @@ table bridge vyos_filter {
 {{ bridge_tmpl.bridge(bridge) }}
 {{ group_tmpl.groups(group, False, False) }}
 
+<<<<<<< HEAD
 }
+=======
+{% if first_install is not vyos_defined %}
+delete table inet vyos_offload
+{% endif %}
+table inet vyos_offload {
+{% if global_options.flow_offload.hardware.interface is vyos_defined %}
+    {{- offload.render_flowtable('VYOS_FLOWTABLE_hardware', global_options.flow_offload.hardware.interface | list, priority='filter - 2', hardware_offload=true) }}
+    chain VYOS_OFFLOAD_hardware {
+        type filter hook forward priority filter - 2; policy accept;
+        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_hardware
+    }
+{% endif %}
+{% if global_options.flow_offload.software.interface is vyos_defined %}
+    {{- offload.render_flowtable('VYOS_FLOWTABLE_software', global_options.flow_offload.software.interface | list, priority='filter - 1') }}
+    chain VYOS_OFFLOAD_software {
+        type filter hook forward priority filter - 1; policy accept;
+        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_software
+    }
+{% endif %}
+}
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)

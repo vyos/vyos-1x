@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "firewall": {"group_resync": ["nat", "policy-route"]},
   "interfaces_bonding": {
            "ethernet": ["interfaces-ethernet"]
@@ -6,6 +7,13 @@
   "interfaces_bridge": {
            "vxlan": ["interfaces-vxlan"]
          },
+=======
+  "firewall": {"conntrack": ["conntrack"], "group_resync": ["conntrack", "nat", "policy-route"]},
+  "http_api": {"https": ["https"]},
+  "load_balancing_wan": {"conntrack": ["conntrack"]},
+  "nat": {"conntrack": ["conntrack"]},
+  "nat66": {"conntrack": ["conntrack"]},
+>>>>>>> 734d84f69 (conntrack: T5571: Refactor conntrack to be independent conf script from firewall, nat, nat66)
   "pki": {
            "ethernet": ["interfaces-ethernet"],
            "openvpn": ["interfaces-openvpn"],
