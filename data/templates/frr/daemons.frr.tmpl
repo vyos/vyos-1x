@@ -17,40 +17,41 @@ bfdd=yes
 staticd=yes
 
 vtysh_enable=yes
-zebra_options="  -s 90000000 --daemon -A 127.0.0.1
+zebra_options="   --daemon -A 127.0.0.1 -s 90000000
 {%- if irdp is defined %} -M irdp{% endif -%}
 {%- if snmp is defined and snmp.zebra is defined %} -M snmp{% endif -%}
 "
-bgpd_options="   --daemon -A 127.0.0.1
+bgpd_options="    --daemon -A 127.0.0.1 -M rpki
 {%- if bmp is defined %} -M bmp{% endif -%}
 {%- if snmp is defined and snmp.bgpd is defined %} -M snmp{% endif -%}
 "
-ospfd_options="  --daemon -A 127.0.0.1
+ospfd_options="   --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.ospfd is defined %} -M snmp{% endif -%}
 "
-ospf6d_options=" --daemon -A ::1
+ospf6d_options="  --daemon -A ::1
 {%- if snmp is defined and snmp.ospf6d is defined %} -M snmp{% endif -%}
 "
-ripd_options="   --daemon -A 127.0.0.1
+ripd_options="    --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.ripd is defined %} -M snmp{% endif -%}
 "
-ripngd_options=" --daemon -A ::1"
-isisd_options="  --daemon -A 127.0.0.1
+ripngd_options="  --daemon -A ::1"
+isisd_options="   --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.isisd is defined %} -M snmp{% endif -%}
 "
-pimd_options="  --daemon -A 127.0.0.1"
-pim6d_options=" --daemon -A ::1"
-ldpd_options="  --daemon -A 127.0.0.1
+pimd_options="    --daemon -A 127.0.0.1"
+pim6d_options="   --daemon -A ::1"
+ldpd_options="    --daemon -A 127.0.0.1
 {%- if snmp is defined and snmp.ldpd is defined %} -M snmp{% endif -%}
 "
-mgmtd_options=" --daemon -A 127.0.0.1"
-nhrpd_options="  --daemon -A 127.0.0.1"
+mgmtd_options="   --daemon -A 127.0.0.1"
+nhrpd_options="   --daemon -A 127.0.0.1"
 eigrpd_options="  --daemon -A 127.0.0.1"
 babeld_options="  --daemon -A 127.0.0.1"
 sharpd_options="  --daemon -A 127.0.0.1"
-pbrd_options="  --daemon -A 127.0.0.1"
-staticd_options="  --daemon -A 127.0.0.1"
-bfdd_options="  --daemon -A 127.0.0.1"
+pbrd_options="    --daemon -A 127.0.0.1"
+staticd_options=" --daemon -A 127.0.0.1"
+bfdd_options="    --daemon -A 127.0.0.1"
 
 watchfrr_enable=no
 valgrind_enable=no
+
