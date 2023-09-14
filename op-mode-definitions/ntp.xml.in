@@ -29,6 +29,17 @@
             <properties>
               <help>Force NTP time synchronization</help>
             </properties>
+            <children>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Force NTP time synchronization in given VRF</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <command>sudo ip vrf exec $5 chronyc makestep</command>
+              </tagNode>
+            </children>
             <command>sudo chronyc makestep</command>
           </node>
         </children>
