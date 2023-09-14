@@ -18,8 +18,6 @@ import jmespath
 import json
 import os
 
-from distutils.version import LooseVersion
-from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
@@ -39,10 +37,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-if LooseVersion(kernel_version()) > LooseVersion('5.1'):
-    k_mod = ['nft_nat', 'nft_chain_nat']
-else:
-    k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
+k_mod = ['nft_nat', 'nft_chain_nat']
 
 nftables_nat_config = '/run/nftables_nat.conf'
 nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
