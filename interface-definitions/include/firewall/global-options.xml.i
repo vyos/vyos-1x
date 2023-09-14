@@ -271,6 +271,7 @@
       </properties>
       <defaultValue>disable</defaultValue>
     </leafNode>
+    #include <include/firewall/flow-offload.xml.i>
   </children>
 </node>
 <!-- include end -->

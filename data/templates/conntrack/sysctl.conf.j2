@@ -24,3 +24,4 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = {{ timeout.tcp.time_wait }}
 net.netfilter.nf_conntrack_udp_timeout = {{ timeout.udp.other }}
 net.netfilter.nf_conntrack_udp_timeout_stream = {{ timeout.udp.stream }}
 
+net.netfilter.nf_conntrack_acct = {{ '1' if flow_accounting is vyos_defined else '0' }}
