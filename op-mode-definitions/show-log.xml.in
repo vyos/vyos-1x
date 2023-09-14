@@ -133,47 +133,267 @@
             <properties>
               <help>Show log for Firewall</help>
             </properties>
+            <command>journalctl --no-hostname --boot -k | egrep "(ipv[46]|bri)-(FWD|INP|OUT|NAM)"</command>
             <children>
-              <tagNode name="ipv6-name">
+              <node name="bridge">
                 <properties>
-                  <help>Show log for a specified firewall (IPv6)</help>
-                  <completionHelp>
-                    <path>firewall ipv6-name</path>
-                  </completionHelp>
+                  <help>Show firewall bridge log</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | egrep "\[$5-([0-9]+|default)-[ADR]\]"</command>
+                <command>journalctl --no-hostname --boot -k | egrep "bri-(FWD|INP|OUT|NAM)"</command>
                 <children>
-                  <tagNode name="rule">
+                  <node name="forward">
                     <properties>
-                      <help>Show log for a rule in the specified firewall</help>
+                      <help>Show Bridge forward firewall log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep bri-FWD</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show Bridge firewall forward filter</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep bri-FWD-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall bridge forward filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[bri-FWD-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="name">
+                    <properties>
+                      <help>Show custom Bridge firewall log</help>
                       <completionHelp>
-                        <path>firewall ipv6-name ${COMP_WORDS[4]} rule</path>
+                        <path>firewall bridge name</path>
                       </completionHelp>
                     </properties>
-                    <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | grep -e "\[$5-$7-[ADR]\]"</command>
+                    <command>journalctl --no-hostname --boot -k | grep bri-NAM-$6</command>
+                    <children>
+                      <tagNode name="rule">
+                        <properties>
+                          <help>Show log for a rule in the specified firewall</help>
+                          <completionHelp>
+                            <path>firewall bridge name ${COMP_WORDS[5]} rule</path>
+                          </completionHelp>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | egrep "\[bri-NAM-$6-$8-[ADRJC]\]"</command>
+                      </tagNode>
+                    </children>
                   </tagNode>
                 </children>
-              </tagNode>
-              <tagNode name="name">
+              </node>
+              <node name="ipv4">
                 <properties>
-                  <help>Show log for a specified firewall (IPv4)</help>
-                  <completionHelp>
-                    <path>firewall name</path>
-                  </completionHelp>
+                  <help>Show firewall IPv4 log</help>
                 </properties>
-                <command>cat $(printf "%s\n" /var/log/messages* | sort -nr ) | egrep "\[$5-([0-9]+|default)-[ADR]\]"</command>
+                <command>journalctl --no-hostname --boot -k | egrep "ipv4-(FWD|INP|OUT|NAM)"</command>
                 <children>
-                  <tagNode name="rule">
+                  <node name="forward">
                     <properties>
-                      <help>Show log for a rule in the specified firewall</help>
+                      <help>Show firewall IPv4 forward log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv4-FWD</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv4 forward filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv4-FWD-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv4 forward filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv4-FWD-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="input">
+                    <properties>
+                      <help>Show firewall IPv4 input log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv4-INP</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv4 input filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv4-INP-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv4 input filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv4-INP-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="name">
+                    <properties>
+                      <help>Show custom IPv4 firewall log</help>
                       <completionHelp>
-                        <path>firewall name ${COMP_WORDS[4]} rule</path>
+                        <path>firewall ipv4 name</path>
                       </completionHelp>
                     </properties>
-                    <command>cat $(printf "%s\n" /var/log/messages* | sort -nr) | egrep "\[$5-$7-[ADR]\]"</command>
+                    <command>journalctl --no-hostname --boot -k | grep ipv4-NAM-$6</command>
+                    <children>
+                      <tagNode name="rule">
+                        <properties>
+                          <help>Show log for a rule in the specified firewall</help>
+                          <completionHelp>
+                            <path>firewall ipv4 name ${COMP_WORDS[5]} rule</path>
+                          </completionHelp>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | egrep "\[ipv4-NAM-$6-$8-[ADRJC]\]"</command>
+                      </tagNode>
+                    </children>
                   </tagNode>
+                  <node name="output">
+                    <properties>
+                      <help>Show firewall IPv4 output log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv4-OUT</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv4 output filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv4-OUT-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv4 output filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv4-OUT-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
                 </children>
-              </tagNode>
+              </node>
+              <node name="ipv6">
+                <properties>
+                  <help>Show firewall IPv6 log</help>
+                </properties>
+                <command>journalctl --no-hostname --boot -k | egrep "ipv6-(FWD|INP|OUT|NAM)"</command>
+                <children>
+                  <node name="forward">
+                    <properties>
+                      <help>Show firewall IPv6 forward log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv6-FWD</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv6 forward filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv6-FWD-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv6 forward filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-FWD-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <node name="input">
+                    <properties>
+                      <help>Show firewall IPv6 input log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv6-INP</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv6 input filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv6-INP-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv6 input filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-INP-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                  <tagNode name="name">
+                    <properties>
+                      <help>Show custom IPv6 firewall log</help>
+                      <completionHelp>
+                        <path>firewall ipv6 name</path>
+                      </completionHelp>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv6-NAM-$6</command>
+                    <children>
+                      <tagNode name="rule">
+                        <properties>
+                          <help>Show log for a rule in the specified firewall</help>
+                          <completionHelp>
+                            <path>firewall ipv6 name ${COMP_WORDS[5]} rule</path>
+                          </completionHelp>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-NAM-$6-$8-[ADRJC]\]"</command>
+                      </tagNode>
+                    </children>
+                  </tagNode>
+                  <node name="output">
+                    <properties>
+                      <help>Show firewall IPv6 output log</help>
+                    </properties>
+                    <command>journalctl --no-hostname --boot -k | grep ipv6-OUT</command>
+                    <children>
+                      <node name="filter">
+                        <properties>
+                          <help>Show firewall IPv6 output filter log</help>
+                        </properties>
+                        <command>journalctl --no-hostname --boot -k | grep ipv6-OUT-filter</command>
+                        <children>
+                          <tagNode name="rule">
+                            <properties>
+                              <help>Show log for a rule in the specified firewall</help>
+                              <completionHelp>
+                                <path>firewall ipv6 output filter rule</path>
+                              </completionHelp>
+                            </properties>
+                            <command>journalctl --no-hostname --boot -k | egrep "\[ipv6-OUT-filter-$8-[ADRJC]\]"</command>
+                          </tagNode>
+                        </children>
+                      </node>
+                    </children>
+                  </node>
+                </children>
+              </node>
             </children>
           </node>
           <leafNode name="flow-accounting">
