@@ -141,13 +141,7 @@ def get_config(config=None):
 
     fqdn_config_parse(firewall)
 
-    firewall['flowtable_enabled'] = False
-    flow_offload = dict_search_args(firewall, 'global_options', 'flow_offload')
-    if flow_offload and 'disable' not in flow_offload:
-        for offload_type in ('software', 'hardware'):
-            if dict_search_args(flow_offload, offload_type, 'interface'):
-                firewall['flowtable_enabled'] = True
-                break
+    set_dependents('conntrack', conf)
 
     return firewall
 
@@ -350,19 +344,6 @@ def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
 
-    # Determine if conntrack is needed
-    firewall['ipv4_conntrack_action'] = 'return'
-    firewall['ipv6_conntrack_action'] = 'return'
-    if firewall['flowtable_enabled']:  # Netfilter's flowtable offload requires conntrack
-        firewall['ipv4_conntrack_action'] = 'accept'
-        firewall['ipv6_conntrack_action'] = 'accept'
-    else:  # Check if conntrack is needed by firewall rules
-        for proto in ('ipv4', 'ipv6'):
-            for rules, _ in dict_search_recursive(firewall.get(proto, {}), 'rule'):
-                if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
-                    firewall[f'{proto}_conntrack_action'] = 'accept'
-                    break
-
     render(nftables_conf, 'firewall/nftables.j2', firewall)
     return None
 
@@ -392,8 +373,7 @@ def apply(firewall):
 
     apply_sysfs(firewall)
 
-    if firewall['group_resync']:
-        call_dependents()
+    call_dependents()
 
     # T970 Enable a resolver (systemd daemon) that checks
     # domain-group/fqdn addresses and update entries for domains by timeout

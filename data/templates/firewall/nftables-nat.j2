@@ -2,27 +2,6 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
-{% if helper_functions is vyos_defined('remove') %}
-{# NAT if going to be disabled - remove rules and targets from nftables #}
-{%     set base_command = 'delete rule ip raw' %}
-{{ base_command }} PREROUTING handle {{ pre_ct_ignore }}
-{{ base_command }} OUTPUT     handle {{ out_ct_ignore }}
-{{ base_command }} PREROUTING handle {{ pre_ct_conntrack }}
-{{ base_command }} OUTPUT     handle {{ out_ct_conntrack }}
-
-delete chain ip raw NAT_CONNTRACK
-
-{% elif helper_functions is vyos_defined('add') %}
-{# NAT if enabled - add targets to nftables #}
-add chain ip raw NAT_CONNTRACK
-add rule ip raw NAT_CONNTRACK counter accept
-{%     set base_command = 'add rule ip raw' %}
-{{ base_command }} PREROUTING position {{ pre_ct_ignore }}    counter jump VYOS_CT_HELPER
-{{ base_command }} OUTPUT     position {{ out_ct_ignore }}    counter jump VYOS_CT_HELPER
-{{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
-{{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
-{% endif %}
-
 {% if first_install is not vyos_defined %}
 delete table ip vyos_nat
 {% endif %}

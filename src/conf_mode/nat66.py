@@ -23,6 +23,7 @@ from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.utils.process import cmd
 from vyos.utils.kernel import check_kmod
@@ -37,18 +38,6 @@ k_mod = ['nft_nat', 'nft_chain_nat']
 nftables_nat66_config = '/run/nftables_nat66.nft'
 ndppd_config = '/run/ndppd/ndppd.conf'
 
-def get_handler(json, chain, target):
-    """ Get nftable rule handler number of given chain/target combination.
-    Handler is required when adding NAT66/Conntrack helper targets """
-    for x in json:
-        if x['chain'] != chain:
-            continue
-        if x['target'] != target:
-            continue
-        return x['handle']
-
-    return None
-
 def get_config(config=None):
     if config:
         conf = config
@@ -58,35 +47,10 @@ def get_config(config=None):
     base = ['nat66']
     nat = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
 
-    # read in current nftable (once) for further processing
-    tmp = cmd('nft -j list table ip6 raw')
-    nftable_json = json.loads(tmp)
-
-    # condense the full JSON table into a list with only relevand informations
-    pattern = 'nftables[?rule].rule[?expr[].jump].{chain: chain, handle: handle, target: expr[].jump.target | [0]}'
-    condensed_json = jmespath.search(pattern, nftable_json)
+    set_dependents('conntrack', conf)
 
     if not conf.exists(base):
-        nat['helper_functions'] = 'remove'
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
         nat['deleted'] = ''
-        return nat
-
-    # check if NAT66 connection tracking helpers need to be set up - this has to
-    # be done only once
-    if not get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK'):
-        nat['helper_functions'] = 'add'
-
-        # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_IGNORE')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_PREROUTING_HOOK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_IGNORE')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_OUTPUT_HOOK')
-    else:
-        nat['helper_functions'] = 'has'
 
     return nat
 
@@ -94,10 +58,6 @@ def verify(nat):
     if not nat or 'deleted' in nat:
         # no need to verify the CLI as NAT66 is going to be deactivated
         return None
-
-    if 'helper_functions' in nat and nat['helper_functions'] != 'has':
-        if not (nat['pre_ct_conntrack'] or nat['out_ct_conntrack']):
-            raise Exception('could not determine nftable ruleset handlers')
 
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
@@ -154,6 +114,8 @@ def apply(nat):
             os.unlink(ndppd_config)
     else:
         cmd('systemctl restart ndppd')
+
+    call_dependents()
 
     return None
 
