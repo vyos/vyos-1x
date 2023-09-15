@@ -59,7 +59,7 @@ def get_config(config=None):
     if conf.exists(conntrack_path):
         ha['conntrack_sync_group'] = conf.return_value(conntrack_path)
 
-    if leaf_node_changed(conf, base + ['vrrp', 'disable-snmp']):
+    if leaf_node_changed(conf, base + ['vrrp', 'snmp']):
         ha.update({'restart_required': {}})
 
     return ha
