@@ -6,6 +6,9 @@
                 "group_resync": ["conntrack", "nat", "policy-route"]
               },
   "http_api": {"https": ["https"]},
+  "interfaces_bonding": {
+           "ethernet": ["interfaces-ethernet"]
+         },
   "load_balancing_wan": {
                           "conntrack": ["conntrack"],
                           "conntrack_sync": ["conntrack_sync"]
