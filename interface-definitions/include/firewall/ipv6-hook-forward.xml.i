@@ -24,8 +24,10 @@
             <constraintErrorMessage>Firewall rule number must be between 1 and 999999</constraintErrorMessage>
           </properties>
           <children>
+            #include <include/firewall/action-forward.xml.i>
             #include <include/firewall/common-rule-ipv6.xml.i>
             #include <include/firewall/inbound-interface.xml.i>
+            #include <include/firewall/offload-target.xml.i>
             #include <include/firewall/outbound-interface.xml.i>
           </children>
         </tagNode>

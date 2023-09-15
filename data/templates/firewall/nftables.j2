@@ -2,7 +2,7 @@
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 {% import 'firewall/nftables-bridge.j2' as bridge_tmpl %}
-{% import 'firewall/nftables-offload.j2' as offload %}
+{% import 'firewall/nftables-offload.j2' as offload_tmpl %}
 
 flush chain raw vyos_global_rpfilter
 flush chain ip6 raw vyos_global_rpfilter
@@ -34,6 +34,12 @@ delete table ip vyos_filter
 {% endif %}
 table ip vyos_filter {
 {% if ipv4 is vyos_defined %}
+{%     if flowtable is vyos_defined %}
+{%         for name, flowtable_conf in flowtable.items() %}
+{{ offload_tmpl.flowtable(name, flowtable_conf) }}
+{%         endfor %}
+{%     endif %}
+
 {%     set ns = namespace(sets=[]) %}
 {%     if ipv4.forward is vyos_defined %}
 {%         for prior, conf in ipv4.forward.items() %}
@@ -153,6 +159,12 @@ delete table ip6 vyos_filter
 {% endif %}
 table ip6 vyos_filter {
 {% if ipv6 is vyos_defined %}
+{%     if flowtable is vyos_defined %}
+{%         for name, flowtable_conf in flowtable.items() %}
+{{ offload_tmpl.flowtable(name, flowtable_conf) }}
+{%         endfor %}
+{%     endif %}
+
 {%     set ns = namespace(sets=[]) %}
 {%     if ipv6.forward is vyos_defined %}
 {%         for prior, conf in ipv6.forward.items() %}
@@ -261,23 +273,3 @@ table bridge vyos_filter {
 {{ group_tmpl.groups(group, False, False) }}
 }
 {% endif %}
-
-{% if first_install is not vyos_defined %}
-delete table inet vyos_offload
-{% endif %}
-table inet vyos_offload {
-{% if global_options.flow_offload.hardware.interface is vyos_defined %}
-    {{- offload.render_flowtable('VYOS_FLOWTABLE_hardware', global_options.flow_offload.hardware.interface | list, priority='filter - 2', hardware_offload=true) }}
-    chain VYOS_OFFLOAD_hardware {
-        type filter hook forward priority filter - 2; policy accept;
-        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_hardware
-    }
-{% endif %}
-{% if global_options.flow_offload.software.interface is vyos_defined %}
-    {{- offload.render_flowtable('VYOS_FLOWTABLE_software', global_options.flow_offload.software.interface | list, priority='filter - 1') }}
-    chain VYOS_OFFLOAD_software {
-        type filter hook forward priority filter - 1; policy accept;
-        ct state { established, related } meta l4proto { tcp, udp } flow add @VYOS_FLOWTABLE_software
-    }
-{% endif %}
-}

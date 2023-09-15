@@ -604,16 +604,32 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
 
     def test_flow_offload_software(self):
-        self.cli_set(['firewall', 'global-options', 'flow-offload', 'software', 'interface', 'eth0'])
-        self.cli_commit()
-        nftables_search = [
-            ['flowtable VYOS_FLOWTABLE_software'],
-            ['hook ingress priority filter - 1'],
-            ['devices = { eth0 }'],
-            ['flow add @VYOS_FLOWTABLE_software'],
-        ]
-        self.verify_nftables(nftables_search, 'inet vyos_offload')
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
 
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'related', 'enable'])
+
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'related', 'enable'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['flowtable VYOS_FLOWTABLE_smoketest'],
+            ['hook ingress priority filter'],
+            ['devices = { eth0 }'],
+            ['ct state { established, related }', 'meta l4proto { tcp, udp }', 'flow add @VYOS_FLOWTABLE_smoketest'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

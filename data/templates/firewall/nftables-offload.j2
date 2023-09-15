@@ -1,11 +1,9 @@
-{% macro render_flowtable(name, devices, priority='filter', hardware_offload=false, with_counter=true) %}
-flowtable {{ name }} {
-    hook ingress priority {{ priority }}; devices = { {{ devices | join(', ') }} };
-{% if hardware_offload %}
-    flags offload;
+{% macro flowtable(name, config) %}
+    flowtable VYOS_FLOWTABLE_{{ name }} {
+        hook ingress priority 0; devices = { {{ config.interface | join(', ') }} };
+{% if config.offload is vyos_defined('hardware') %}
+        flags offload;
 {% endif %}
-{% if with_counter %}
-    counter
-{% endif %}
-}
+        counter
+    }
 {% endmacro %}
