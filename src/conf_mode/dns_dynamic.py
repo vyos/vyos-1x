@@ -30,7 +30,7 @@ config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 
 # Protocols that require zone
-zone_allowed = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+zone_required = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
 
 # Protocols that do not require username
 username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla']
@@ -40,6 +40,10 @@ ttl_supported = ['cloudflare', 'gandi', 'hetzner', 'dnsexit', 'godaddy', 'nfsn']
 
 # Protocols that support both IPv4 and IPv6
 dualstack_supported = ['cloudflare', 'dyndns2', 'freedns', 'njalla']
+
+# dyndns2 protocol in ddclient honors dual stack for selective servers
+# because of the way it is implemented in ddclient
+dyndns_dualstack_servers = ['members.dyndns.org', 'dynv6.com']
 
 def get_config(config=None):
     if config:
@@ -86,10 +90,10 @@ def verify(dyndns):
                     if field not in config:
                         raise ConfigError(f'"{field.replace("_", "-")}" {error_msg}')
 
-                if config['protocol'] in zone_allowed and 'zone' not in config:
+                if config['protocol'] in zone_required and 'zone' not in config:
                         raise ConfigError(f'"zone" {error_msg}')
 
-                if config['protocol'] not in zone_allowed and 'zone' in config:
+                if config['protocol'] not in zone_required and 'zone' in config:
                         raise ConfigError(f'"{config["protocol"]}" does not support "zone"')
 
                 if config['protocol'] not in username_unnecessary:
@@ -104,7 +108,7 @@ def verify(dyndns):
                         raise ConfigError(f'"{config["protocol"]}" does not support '
                                           f'both IPv4 and IPv6 at the same time')
                     # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
-                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] != 'members.dyndns.org':
+                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] not in dyndns_dualstack_servers:
                         raise ConfigError(f'"{config["protocol"]}" does not support '
                                           f'both IPv4 and IPv6 at the same time for "{config["server"]}"')
 
