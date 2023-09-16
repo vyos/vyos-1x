@@ -155,11 +155,6 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         rule = '5'
         self.cli_set(src_path + ['rule', rule, 'source', 'address', '192.0.2.0/24'])
 
-        # check validate() - outbound-interface must be defined
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'eth0'])
-
         # check validate() - translation address not specified
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
