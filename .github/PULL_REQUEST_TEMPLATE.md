@@ -21,6 +21,9 @@ the box, please use [x]
 <!-- All submitted PRs must be linked to a Task on Phabricator. -->
 * https://vyos.dev/Txxxx
 
+## Related PR(s)
+<!-- Link here any PRs in other repositories that are required by this PR -->
+
 ## Component(s) name
 <!-- A rather incomplete list of components: ethernet, wireguard, bgp, mpls, ldp, l2tp, dhcp ... -->
 
