@@ -27,6 +27,7 @@ from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
 from vyos.configverify import verify_interface_exists
+from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
@@ -291,7 +292,31 @@ def verify_nested_group(group_name, group, groups, seen):
         if 'include' in groups[g]:
             verify_nested_group(g, groups[g], groups, seen)
 
+def verify_hardware_offload(ifname):
+    ethtool = Ethtool(ifname)
+    enabled, fixed = ethtool.get_hw_tc_offload()
+
+    if not enabled and fixed:
+        raise ConfigError(f'Interface "{ifname}" does not support hardware offload')
+
+    if not enabled:
+        raise ConfigError(f'Interface "{ifname}" requires "offload hw-tc-offload"')
+
 def verify(firewall):
+    if 'flowtable' in firewall:
+        for flowtable, flowtable_conf in firewall['flowtable'].items():
+            if 'interface' not in flowtable_conf:
+                raise ConfigError(f'Flowtable "{flowtable}" requires at least one interface')
+
+            for ifname in flowtable_conf['interface']:
+                verify_interface_exists(ifname)
+
+            if dict_search_args(flowtable_conf, 'offload') == 'hardware':
+                interfaces = flowtable_conf['interface']
+
+                for ifname in interfaces:
+                    verify_hardware_offload(ifname)
+
     if 'group' in firewall:
         for group_type in nested_group_types:
             if group_type in firewall['group']:
@@ -338,14 +363,6 @@ def verify(firewall):
                     if 'rule' in name_conf:
                         for rule_id, rule_conf in name_conf['rule'].items():
                             verify_rule(firewall, rule_conf, True)
-
-    # Verify flow offload options
-    flow_offload = dict_search_args(firewall, 'global_options', 'flow_offload')
-    for offload_type in ('software', 'hardware'):
-        interfaces = dict_search_args(flow_offload, offload_type, 'interface') or []
-        for interface in interfaces:
-            # nft will raise an error when adding a non-existent interface to a flowtable
-            verify_interface_exists(interface)
 
     return None
 

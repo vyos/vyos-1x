@@ -603,8 +603,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 with open(path, 'r') as f:
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
 
-    def test_flow_offload_software(self):
+    def test_flow_offload(self):
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
+
+        # QEMU virtual NIC does not support hw-tc-offload
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
         self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'offload'])

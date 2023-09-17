@@ -57,6 +57,10 @@ class EthernetIf(Interface):
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'gso', v),
         },
+        'hw-tc-offload': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'possible': lambda i, v: EthernetIf.feature(i, 'hw-tc-offload', v),
+        },
         'lro': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'possible': lambda i, v: EthernetIf.feature(i, 'lro', v),
@@ -222,6 +226,25 @@ class EthernetIf(Interface):
                 print('Adapter does not support changing generic-segmentation-offload settings!')
         return False
 
+    def set_hw_tc_offload(self, state):
+        """
+        Enable hardware TC flow offload. State can be either True or False.
+        Example:
+        >>> from vyos.ifconfig import EthernetIf
+        >>> i = EthernetIf('eth0')
+        >>> i.set_hw_tc_offload(True)
+        """
+        if not isinstance(state, bool):
+            raise ValueError('Value out of range')
+
+        enabled, fixed = self.ethtool.get_hw_tc_offload()
+        if enabled != state:
+            if not fixed:
+                return self.set_interface('hw-tc-offload', 'on' if state else 'off')
+            else:
+                print('Adapter does not support changing hw-tc-offload settings!')
+        return False
+
     def set_lro(self, state):
         """
         Enable Large Receive offload. State can be either True or False.
@@ -357,6 +380,9 @@ class EthernetIf(Interface):
 
         # GSO (generic segmentation offload)
         self.set_gso(dict_search('offload.gso', config) != None)
+
+        # GSO (generic segmentation offload)
+        self.set_hw_tc_offload(dict_search('offload.hw-tc-offload', config) != None)
 
         # LRO (large receive offload)
         self.set_lro(dict_search('offload.lro', config) != None)
