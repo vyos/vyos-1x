@@ -124,6 +124,17 @@ def verify(conntrack):
                    if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
                        raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
 
+                tcp_flags = dict_search_args(rule_config, 'tcp', 'flags')
+                if tcp_flags:
+                    if dict_search_args(rule_config, 'protocol') != 'tcp':
+                        raise ConfigError('Protocol must be tcp when specifying tcp flags')
+
+                    not_flags = dict_search_args(rule_config, 'tcp', 'flags', 'not')
+                    if not_flags:
+                        duplicates = [flag for flag in tcp_flags if flag in not_flags]
+                        if duplicates:
+                            raise ConfigError(f'Cannot match a tcp flag as set and not set')
+
                 for side in ['destination', 'source']:
                     if side in rule_config:
                         side_conf = rule_config[side]

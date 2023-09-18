@@ -181,6 +181,7 @@
 </node>
 #include <include/firewall/state.xml.i>
 #include <include/firewall/tcp-flags.xml.i>
+#include <include/firewall/tcp-mss.xml.i>
 <node name="time">
   <properties>
     <help>Time to match rule</help>
