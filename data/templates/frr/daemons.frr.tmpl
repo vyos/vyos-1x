@@ -8,6 +8,12 @@
 # pbrd   Replaced by PBR in nftables.
 # vrrpd  Replaced by package keepalived.
 #
+# And these must be disabled aswell since they are currently missing a VyOS CLI:
+#
+# sharpd
+# fabricd
+# pathd
+#
 
 #zebra=yes
 #mgmtd=yes
@@ -24,12 +30,12 @@ ldpd=yes
 nhrpd=no
 eigrpd=yes
 babeld=yes
-sharpd=yes
+sharpd=no
 pbrd=no
 bfdd=yes
-fabricd=yes
+fabricd=no
 vrrpd=no
-pathd=yes
+pathd=no
 
 #
 # Define defaults for all services even those who shall be kept disabled.

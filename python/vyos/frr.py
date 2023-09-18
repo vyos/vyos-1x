@@ -87,8 +87,7 @@ LOG.addHandler(ch)
 LOG.addHandler(ch2)
 
 _frr_daemons = ['zebra', 'staticd', 'bgpd', 'ospfd', 'ospf6d', 'ripd', 'ripngd',
-                'isisd', 'pim6d', 'ldpd', 'eigrpd', 'babeld', 'sharpd', 'bfdd',
-                'fabricd', 'pathd']
+                'isisd', 'pim6d', 'ldpd', 'eigrpd', 'babeld', 'bfdd']
 
 path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'

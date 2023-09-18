@@ -80,29 +80,11 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon babeld</command>
       </leafNode>
-      <leafNode name="sharp">
-        <properties>
-          <help>Restart Testing (SHARP) daemon</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon sharpd</command>
-      </leafNode>
       <leafNode name="bfd">
         <properties>
           <help>Restart Bidirectional Forwarding Detection (BFD) daemon</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bfdd</command>
-      </leafNode>
-      <leafNode name="fabric">
-        <properties>
-          <help>Restart OpenFabric daemon</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon fabricd</command>
-      </leafNode>
-      <leafNode name="path">
-        <properties>
-          <help>Restart Path Computation Element (PCE) Communication Protocol (PCEP) daemon used by SR</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon pathd</command>
       </leafNode>
     </children>
   </node>
