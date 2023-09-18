@@ -678,6 +678,11 @@ def conntrack_ignore_rule(rule_conf, rule_id, ipv6=False):
         proto = rule_conf['protocol']
         output.append(f'meta l4proto {proto}')
 
+    tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
+    if tcp_flags:
+        from vyos.firewall import parse_tcp_flags
+        output.append(parse_tcp_flags(tcp_flags))
+
     for side in ['source', 'destination']:
         if side in rule_conf:
             side_conf = rule_conf[side]

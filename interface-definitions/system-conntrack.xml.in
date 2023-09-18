@@ -127,6 +127,7 @@
                           #include <include/nat-port.xml.i>
                         </children>
                       </node>
+                      #include <include/firewall/tcp-flags.xml.i>
                     </children>
                   </tagNode>
                 </children>
@@ -212,6 +213,7 @@
                           #include <include/nat-port.xml.i>
                         </children>
                       </node>
+                      #include <include/firewall/tcp-flags.xml.i>
                     </children>
                   </tagNode>
                 </children>

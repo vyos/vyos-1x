@@ -256,6 +256,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'address', '192.0.2.2'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'port', '22'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'tcp', 'flags', 'syn'])
 
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'source', 'address', '192.0.2.1'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'destination', 'group', 'address-group', address_group])
@@ -274,7 +275,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'notrack'],
+            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'tcp flags & syn == syn', 'notrack'],
             ['ip saddr 192.0.2.1', 'ip daddr @A_conntracktest', 'notrack']
         ]
 
