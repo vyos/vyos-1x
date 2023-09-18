@@ -18,7 +18,7 @@ from pathlib import Path
 from sys import exit
 
 from vyos import ConfigError
-from vyos import airbag
+from vyos.base import Warning
 from vyos.config import Config
 from vyos.logger import syslog
 from vyos.template import render_to_string
@@ -26,6 +26,8 @@ from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.file import read_file
 from vyos.utils.file import write_file
 from vyos.utils.process import call
+
+from vyos import airbag
 airbag.enable()
 
 # path to daemons config and config status files
@@ -62,10 +64,8 @@ def apply(frr_config):
     if boot_configuration_complete() and frr_config.get('config_file_changed'):
         # Since FRR restart is not safe thing, better to give
         # control over this to users
-        print('''
-        You need to reboot a router (preferred) or restart FRR
-        to apply changes in modules settings
-        ''')
+        Warning('You need to reboot the router (preferred) or restart '\
+                'FRR to apply changes in modules settings')
 
     # restart FRR automatically
     # During initial boot this should be safe in most cases
