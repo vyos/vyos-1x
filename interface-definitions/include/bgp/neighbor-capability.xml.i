@@ -16,6 +16,12 @@
         <valueless/>
       </properties>
     </leafNode>
+    <leafNode name="software-version">
+      <properties>
+        <help>Advertise Software Version capability to the peer</help>
+        <valueless/>
+      </properties>
+    </leafNode>
   </children>
 </node>
 <!-- include end -->
