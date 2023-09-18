@@ -58,6 +58,12 @@ exit
 !
 router isis VyOS {{ 'vrf ' + vrf if vrf is vyos_defined }}
  net {{ net }}
+{% if advertise_high_metrics is vyos_defined %}
+advertise-high-metrics
+{% endif %}
+{% if advertise_passive_only is vyos_defined %}
+advertise-passive-only
+{% endif %}
 {% if dynamic_hostname is vyos_defined %}
  hostname dynamic
 {% endif %}

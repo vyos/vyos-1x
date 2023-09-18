@@ -1,4 +1,16 @@
 <!-- include start from isis/protocol-common-config.xml.i -->
+<leafNode name="advertise-high-metrics">
+  <properties>
+    <help>Advertise high metric value on all interfaces</help>
+    <valueless/>
+  </properties>
+</leafNode>
+<leafNode name="advertise-passive-only">
+  <properties>
+    <help>Advertise prefixes of passive interfaces only</help>
+    <valueless/>
+  </properties>
+</leafNode>
 <node name="area-password">
   <properties>
     <help>Configure the authentication password for an area</help>
