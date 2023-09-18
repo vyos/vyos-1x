@@ -79,8 +79,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
             # default value 300 seconds
             self.assertIn(f'daemon=300', ddclient_conf)
-            self.assertIn(f'use=if', ddclient_conf)
-            self.assertIn(f'if={interface}', ddclient_conf)
+            self.assertIn(f'usev4=ifv4', ddclient_conf)
+            self.assertIn(f'ifv4={interface}', ddclient_conf)
             self.assertIn(f'password={password}', ddclient_conf)
 
             for opt in details.keys():
