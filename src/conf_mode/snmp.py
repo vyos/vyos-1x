@@ -253,9 +253,7 @@ def apply(snmp):
     # Enable AgentX in FRR
     # This should be done for each daemon individually because common command
     # works only if all the daemons started with SNMP support
-    frr_daemons_list = [
-        'bgpd', 'ospf6d', 'ospfd', 'ripd', 'ripngd', 'isisd', 'ldpd', 'zebra'
-    ]
+    frr_daemons_list = ['zebra', 'bgpd', 'ospf6d', 'ospfd', 'ripd', 'isisd', 'ldpd']
     for frr_daemon in frr_daemons_list:
         call(
             f'vtysh -c "configure terminal" -d {frr_daemon} -c "agentx" >/dev/null'
