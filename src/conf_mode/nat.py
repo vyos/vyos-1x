@@ -18,13 +18,12 @@ import jmespath
 import json
 import os
 
-from distutils.version import LooseVersion
-from platform import release as kernel_version
 from sys import exit
 from netifaces import interfaces
 
 from vyos.base import Warning
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.template import is_ip_network
 from vyos.utils.kernel import check_kmod
@@ -38,10 +37,7 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-if LooseVersion(kernel_version()) > LooseVersion('5.1'):
-    k_mod = ['nft_nat', 'nft_chain_nat']
-else:
-    k_mod = ['nft_nat', 'nft_chain_nat_ipv4']
+k_mod = ['nft_nat', 'nft_chain_nat']
 
 nftables_nat_config = '/run/nftables_nat.conf'
 nftables_static_nat_conf = '/run/nftables_static-nat-rules.nft'
@@ -53,18 +49,27 @@ valid_groups = [
     'port_group'
 ]
 
-def get_handler(json, chain, target):
-    """ Get nftable rule handler number of given chain/target combination.
-    Handler is required when adding NAT/Conntrack helper targets """
-    for x in json:
-        if x['chain'] != chain:
-            continue
-        if x['target'] != target:
-            continue
-        return x['handle']
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
 
-    return None
+    base = ['nat']
+    nat = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True,
+                               with_recursive_defaults=True)
 
+    set_dependents('conntrack', conf)
+
+    if not conf.exists(base):
+        nat['deleted'] = ''
+        return nat
+
+    nat['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
+                                    no_tag_node_value_mangle=True)
+
+    return nat
 
 def verify_rule(config, err_msg, groups_dict):
     """ Common verify steps used for both source and destination NAT """
@@ -136,61 +141,10 @@ def verify_rule(config, err_msg, groups_dict):
             if count != 100:
                 Warning(f'Sum of weight for nat load balance rule is not 100. You may get unexpected behaviour')
 
-def get_config(config=None):
-    if config:
-        conf = config
-    else:
-        conf = Config()
-
-    base = ['nat']
-    nat = conf.get_config_dict(base, key_mangling=('-', '_'),
-                               get_first_key=True,
-                               with_recursive_defaults=True)
-
-    # read in current nftable (once) for further processing
-    tmp = cmd('nft -j list table raw')
-    nftable_json = json.loads(tmp)
-
-    # condense the full JSON table into a list with only relevand informations
-    pattern = 'nftables[?rule].rule[?expr[].jump].{chain: chain, handle: handle, target: expr[].jump.target | [0]}'
-    condensed_json = jmespath.search(pattern, nftable_json)
-
-    if not conf.exists(base):
-        if get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER'):
-            nat['helper_functions'] = 'remove'
-
-            # Retrieve current table handler positions
-            nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_HELPER')
-            nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK')
-            nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_HELPER')
-            nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'NAT_CONNTRACK')
-        nat['deleted'] = ''
-        return nat
-
-    nat['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'), get_first_key=True,
-                                    no_tag_node_value_mangle=True)
-
-    # check if NAT connection tracking helpers need to be set up - this has to
-    # be done only once
-    if not get_handler(condensed_json, 'PREROUTING', 'NAT_CONNTRACK'):
-        nat['helper_functions'] = 'add'
-
-        # Retrieve current table handler positions
-        nat['pre_ct_ignore'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_IGNORE')
-        nat['pre_ct_conntrack'] = get_handler(condensed_json, 'PREROUTING', 'VYOS_CT_PREROUTING_HOOK')
-        nat['out_ct_ignore'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_IGNORE')
-        nat['out_ct_conntrack'] = get_handler(condensed_json, 'OUTPUT', 'VYOS_CT_OUTPUT_HOOK')
-
-    return nat
-
 def verify(nat):
     if not nat or 'deleted' in nat:
         # no need to verify the CLI as NAT is going to be deactivated
         return None
-
-    if 'helper_functions' in nat:
-        if not (nat['pre_ct_ignore'] or nat['pre_ct_conntrack'] or nat['out_ct_ignore'] or nat['out_ct_conntrack']):
-            raise Exception('could not determine nftable ruleset handlers')
 
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
@@ -266,6 +220,8 @@ def apply(nat):
     if not nat or 'deleted' in nat:
         os.unlink(nftables_nat_config)
         os.unlink(nftables_static_nat_conf)
+
+    call_dependents()
 
     return None
 

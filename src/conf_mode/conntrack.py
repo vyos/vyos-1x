@@ -20,11 +20,10 @@ import re
 from sys import exit
 
 from vyos.config import Config
-from vyos.firewall import find_nftables_rule
-from vyos.firewall import remove_nftables_rule
 from vyos.utils.process import process_named_running
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
+from vyos.utils.dict import dict_search_recursive
 from vyos.utils.process import cmd
 from vyos.utils.process import rc_cmd
 from vyos.utils.process import run
@@ -47,8 +46,8 @@ module_map = {
         'ko' : ['nf_nat_h323', 'nf_conntrack_h323'],
     },
     'nfs' : {
-        'nftables' : ['ct helper set "rpc_tcp" tcp dport "{111}" return',
-                      'ct helper set "rpc_udp" udp dport "{111}" return']
+        'nftables' : ['ct helper set "rpc_tcp" tcp dport {111} return',
+                      'ct helper set "rpc_udp" udp dport {111} return']
     },
     'pptp' : {
         'ko' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
@@ -57,7 +56,7 @@ module_map = {
         'ko' : ['nf_nat_sip', 'nf_conntrack_sip'],
      },
     'sqlnet' : {
-        'nftables' : ['ct helper set "tns_tcp" tcp dport "{1521,1525,1536}" return']
+        'nftables' : ['ct helper set "tns_tcp" tcp dport {1521,1525,1536} return']
     },
     'tftp' : {
         'ko' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
@@ -87,9 +86,24 @@ def get_config(config=None):
                                      get_first_key=True,
                                      with_recursive_defaults=True)
 
-    conntrack['firewall_group'] = conf.get_config_dict(['firewall', 'group'], key_mangling=('-', '_'),
+    conntrack['firewall'] = conf.get_config_dict(['firewall'], key_mangling=('-', '_'),
                                                  get_first_key=True,
                                                  no_tag_node_value_mangle=True)
+
+    conntrack['flowtable_enabled'] = False
+    flow_offload = dict_search_args(conntrack['firewall'], 'global_options', 'flow_offload')
+    if flow_offload and 'disable' not in flow_offload:
+        for offload_type in ('software', 'hardware'):
+            if dict_search_args(flow_offload, offload_type, 'interface'):
+                conntrack['flowtable_enabled'] = True
+                break
+
+    conntrack['ipv4_nat_action'] = 'accept' if conf.exists(['nat']) else 'return'
+    conntrack['ipv6_nat_action'] = 'accept' if conf.exists(['nat66']) else 'return'
+    conntrack['wlb_action'] = 'accept' if conf.exists(['load-balancing', 'wan']) else 'return'
+    conntrack['wlb_local_action'] = conf.exists(['load-balancing', 'wan', 'enable-local-traffic'])
+
+    conntrack['module_map'] = module_map
 
     return conntrack
 
@@ -103,6 +117,17 @@ def verify(conntrack):
                    dict_search('source.group.port_group', rule_config):
                    if 'protocol' not in rule_config or rule_config['protocol'] not in ['tcp', 'udp']:
                        raise ConfigError(f'Port requires tcp or udp as protocol in rule {rule}')
+
+                tcp_flags = dict_search_args(rule_config, 'tcp', 'flags')
+                if tcp_flags:
+                    if dict_search_args(rule_config, 'protocol') != 'tcp':
+                        raise ConfigError('Protocol must be tcp when specifying tcp flags')
+
+                    not_flags = dict_search_args(rule_config, 'tcp', 'flags', 'not')
+                    if not_flags:
+                        duplicates = [flag for flag in tcp_flags if flag in not_flags]
+                        if duplicates:
+                            raise ConfigError(f'Cannot match a tcp flag as set and not set')
 
                 for side in ['destination', 'source']:
                     if side in rule_config:
@@ -127,7 +152,7 @@ def verify(conntrack):
                                     if inet == 'ipv6':
                                         group = f'ipv6_{group}'
 
-                                    group_obj = dict_search_args(conntrack['firewall_group'], group, group_name)
+                                    group_obj = dict_search_args(conntrack['firewall'], 'group', group, group_name)
 
                                     if group_obj is None:
                                         raise ConfigError(f'Invalid {error_group} "{group_name}" on ignore rule')
@@ -138,21 +163,28 @@ def verify(conntrack):
     return None
 
 def generate(conntrack):
+    if not os.path.exists(nftables_ct_file):
+        conntrack['first_install'] = True
+
+    # Determine if conntrack is needed
+    conntrack['ipv4_firewall_action'] = 'return'
+    conntrack['ipv6_firewall_action'] = 'return'
+
+    if conntrack['flowtable_enabled']:
+        conntrack['ipv4_firewall_action'] = 'accept'
+        conntrack['ipv6_firewall_action'] = 'accept'
+    else:
+        for rules, path in dict_search_recursive(conntrack['firewall'], 'rule'):
+            if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
+                if path[0] == 'ipv4':
+                    conntrack['ipv4_firewall_action'] = 'accept'
+                elif path[0] == 'ipv6':
+                    conntrack['ipv6_firewall_action'] = 'accept'
+
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)
     render(nftables_ct_file, 'conntrack/nftables-ct.j2', conntrack)
     return None
-
-def find_nftables_ct_rule(table, chain, rule):
-    helper_search = re.search('ct helper set "(\w+)"', rule)
-    if helper_search:
-        rule = helper_search[1]
-    return find_nftables_rule(table, chain, [rule])
-
-def find_remove_rule(table, chain, rule):
-    handle = find_nftables_ct_rule(table, chain, rule)
-    if handle:
-        remove_nftables_rule(table, chain, handle)
 
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
@@ -164,21 +196,10 @@ def apply(conntrack):
                     # Only remove the module if it's loaded
                     if os.path.exists(f'/sys/module/{mod}'):
                         cmd(f'rmmod {mod}')
-            if 'nftables' in module_config:
-                for rule in module_config['nftables']:
-                    find_remove_rule('raw', 'VYOS_CT_HELPER', rule)
-                    find_remove_rule('ip6 raw', 'VYOS_CT_HELPER', rule)
         else:
             if 'ko' in module_config:
                 for mod in module_config['ko']:
                     cmd(f'modprobe {mod}')
-            if 'nftables' in module_config:
-                for rule in module_config['nftables']:
-                    if not find_nftables_ct_rule('raw', 'VYOS_CT_HELPER', rule):
-                        cmd(f'nft insert rule raw VYOS_CT_HELPER {rule}')
-
-                    if not find_nftables_ct_rule('ip6 raw', 'VYOS_CT_HELPER', rule):
-                        cmd(f'nft insert rule ip6 raw VYOS_CT_HELPER {rule}')
 
     # Load new nftables ruleset
     install_result, output = rc_cmd(f'nft -f {nftables_ct_file}')

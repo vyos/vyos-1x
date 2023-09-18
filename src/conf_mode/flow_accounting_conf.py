@@ -37,7 +37,7 @@ uacctd_conf_path = '/run/pmacct/uacctd.conf'
 systemd_service = 'uacctd.service'
 systemd_override = f'/run/systemd/system/{systemd_service}.d/override.conf'
 nftables_nflog_table = 'raw'
-nftables_nflog_chain = 'VYOS_CT_PREROUTING_HOOK'
+nftables_nflog_chain = 'VYOS_PREROUTING_HOOK'
 egress_nftables_nflog_table = 'inet mangle'
 egress_nftables_nflog_chain = 'FORWARD'
 

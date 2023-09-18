@@ -200,7 +200,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                     self.assertTrue(os.path.isdir(f'/sys/module/{driver}'))
             if 'nftables' in module_options:
                 for rule in module_options['nftables']:
-                    self.assertTrue(find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule]) != None)
+                    self.assertTrue(find_nftables_rule('ip vyos_conntrack', 'VYOS_CT_HELPER', [rule]) != None)
 
         # unload modules
         for module in modules:
@@ -216,7 +216,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
                     self.assertFalse(os.path.isdir(f'/sys/module/{driver}'))
             if 'nftables' in module_options:
                 for rule in module_options['nftables']:
-                    self.assertTrue(find_nftables_rule('raw', 'VYOS_CT_HELPER', [rule]) == None)
+                    self.assertTrue(find_nftables_rule('ip vyos_conntrack', 'VYOS_CT_HELPER', [rule]) == None)
 
     def test_conntrack_hash_size(self):
         hash_size = '65536'
@@ -256,6 +256,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'address', '192.0.2.2'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'destination', 'port', '22'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'protocol', 'tcp'])
+        self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '1', 'tcp', 'flags', 'syn'])
 
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'source', 'address', '192.0.2.1'])
         self.cli_set(base_path + ['ignore', 'ipv4', 'rule', '2', 'destination', 'group', 'address-group', address_group])
@@ -274,7 +275,7 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'notrack'],
+            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'tcp flags & syn == syn', 'notrack'],
             ['ip saddr 192.0.2.1', 'ip daddr @A_conntracktest', 'notrack']
         ]
 
@@ -284,8 +285,8 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
             ['ip6 saddr fe80::1', 'ip6 daddr != fe80::3', 'notrack']
         ]
 
-        self.verify_nftables(nftables_search, 'raw')
-        self.verify_nftables(nftables6_search, 'ip6 raw')
+        self.verify_nftables(nftables_search, 'ip vyos_conntrack')
+        self.verify_nftables(nftables6_search, 'ip6 vyos_conntrack')
 
         self.cli_delete(['firewall'])
 

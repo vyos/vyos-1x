@@ -1,22 +1,5 @@
 #!/usr/sbin/nft -f
 
-{% if helper_functions is vyos_defined('remove') %}
-{# NAT if going to be disabled - remove rules and targets from nftables #}
-{%     set base_command = 'delete rule ip6 raw' %}
-{{ base_command }} PREROUTING handle {{ pre_ct_conntrack }}
-{{ base_command }} OUTPUT handle {{ out_ct_conntrack }}
-
-delete chain ip6 raw NAT_CONNTRACK
-
-{% elif helper_functions is vyos_defined('add') %}
-{# NAT if enabled - add targets to nftables #}
-add chain ip6 raw NAT_CONNTRACK
-add rule ip6 raw NAT_CONNTRACK counter accept
-{%     set base_command = 'add rule ip6 raw' %}
-{{ base_command }} PREROUTING position {{ pre_ct_conntrack }} counter jump NAT_CONNTRACK
-{{ base_command }} OUTPUT     position {{ out_ct_conntrack }} counter jump NAT_CONNTRACK
-{% endif %}
-
 {% if first_install is not vyos_defined %}
 delete table ip6 vyos_nat
 {% endif %}

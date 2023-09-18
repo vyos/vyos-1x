@@ -1,6 +1,9 @@
 {
-  "firewall": {"group_resync": ["conntrack", "nat", "policy-route"]},
+  "firewall": {"conntrack": ["conntrack"], "group_resync": ["conntrack", "nat", "policy-route"]},
   "http_api": {"https": ["https"]},
+  "load_balancing_wan": {"conntrack": ["conntrack"]},
+  "nat": {"conntrack": ["conntrack"]},
+  "nat66": {"conntrack": ["conntrack"]},
   "pki": {
            "ethernet": ["interfaces-ethernet"],
            "openvpn": ["interfaces-openvpn"],
