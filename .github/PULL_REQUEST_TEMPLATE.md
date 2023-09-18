@@ -37,6 +37,14 @@ like this
 ```
 -->
 
+## Smoketest result
+<!-- Provide the output of the smoketest
+```
+$ /usr/libexec/vyos/tests/smoke/cli/test_xxx_feature.py
+test_01_simple_options (__main__.TestFeature.test_01_simple_options) ... ok
+```
+-->
+
 ## Checklist:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
 <!--- If you're unsure about any of these, don't hesitate to ask. We're here to help! -->
