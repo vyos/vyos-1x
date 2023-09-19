@@ -267,9 +267,7 @@ table ip6 vyos_filter {
 {% if first_install is not vyos_defined %}
 delete table bridge vyos_filter
 {% endif %}
-{% if bridge is vyos_defined %}
 table bridge vyos_filter {
 {{ bridge_tmpl.bridge(bridge) }}
 {{ group_tmpl.groups(group, False, False) }}
 }
-{% endif %}
