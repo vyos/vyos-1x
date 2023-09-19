@@ -7,6 +7,46 @@
     </properties>
     <children>
       #include <include/firewall/global-options.xml.i>
+      <tagNode name="flowtable">
+        <properties>
+          <help>Flowtable</help>
+          <constraint>
+            <regex>[a-zA-Z0-9][\w\-\.]*</regex>
+          </constraint>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          <leafNode name="interface">
+            <properties>
+              <help>Interfaces to use this flowtable</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <multi/>
+            </properties>
+          </leafNode>
+          <leafNode name="offload">
+            <properties>
+              <help>Offloading method</help>
+              <completionHelp>
+                <list>hardware software</list>
+              </completionHelp>
+              <valueHelp>
+                <format>hardware</format>
+                <description>Hardware offload</description>
+              </valueHelp>
+              <valueHelp>
+                <format>software</format>
+                <description>Software offload</description>
+              </valueHelp>
+              <constraint>
+                <regex>(hardware|software)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>software</defaultValue>
+          </leafNode>
+        </children>
+      </tagNode>
       <node name="group">
         <properties>
           <help>Firewall group</help>
