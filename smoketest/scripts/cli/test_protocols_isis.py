@@ -100,6 +100,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(vrf_base + ['table', table])
         self.cli_set(vrf_base + ['protocols', 'isis', 'net', net])
         self.cli_set(vrf_base + ['protocols', 'isis', 'interface', vrf_iface])
+        self.cli_set(vrf_base + ['protocols', 'isis', 'advertise-high-metrics'])
+        self.cli_set(vrf_base + ['protocols', 'isis', 'advertise-passive-only'])
         self.cli_set(['interfaces', 'ethernet', vrf_iface, 'vrf', vrf])
 
         # Also set a default VRF IS-IS config
@@ -115,6 +117,8 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         tmp = self.getFRRconfig(f'router isis {domain} vrf {vrf}', daemon='isisd')
         self.assertIn(f'router isis {domain} vrf {vrf}', tmp)
         self.assertIn(f' net {net}', tmp)
+        self.assertIn(f' advertise-high-metrics', tmp)
+        self.assertIn(f' advertise-passive-only', tmp)
 
         self.cli_delete(['vrf', 'name', vrf])
         self.cli_delete(['interfaces', 'ethernet', vrf_iface, 'vrf'])
