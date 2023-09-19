@@ -68,12 +68,6 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ldpd</command>
       </leafNode>
-      <leafNode name="eigrp">
-        <properties>
-          <help>Restart Enhanced Interior Gateway Routing Protocol (EIGRP) daemon</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon eigrpd</command>
-      </leafNode>
       <leafNode name="babel">
         <properties>
           <help>Restart Babel routing daemon</help>
