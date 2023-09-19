@@ -935,7 +935,7 @@ def is_ipv6_tentative(iface: str, ipv6_address: str) -> bool:
     import json
     from vyos.util import rc_cmd
 
-    rc, out = rc_cmd(f'ip -6 --json address show dev {iface} scope global')
+    rc, out = rc_cmd(f'ip -6 --json address show dev {iface}')
     if rc:
         return False
 
