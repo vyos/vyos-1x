@@ -90,14 +90,6 @@ def get_config(config=None):
                                                  get_first_key=True,
                                                  no_tag_node_value_mangle=True)
 
-    conntrack['flowtable_enabled'] = False
-    flow_offload = dict_search_args(conntrack['firewall'], 'global_options', 'flow_offload')
-    if flow_offload and 'disable' not in flow_offload:
-        for offload_type in ('software', 'hardware'):
-            if dict_search_args(flow_offload, offload_type, 'interface'):
-                conntrack['flowtable_enabled'] = True
-                break
-
     conntrack['ipv4_nat_action'] = 'accept' if conf.exists(['nat']) else 'return'
     conntrack['ipv6_nat_action'] = 'accept' if conf.exists(['nat66']) else 'return'
     conntrack['wlb_action'] = 'accept' if conf.exists(['load-balancing', 'wan']) else 'return'
@@ -170,16 +162,12 @@ def generate(conntrack):
     conntrack['ipv4_firewall_action'] = 'return'
     conntrack['ipv6_firewall_action'] = 'return'
 
-    if conntrack['flowtable_enabled']:
-        conntrack['ipv4_firewall_action'] = 'accept'
-        conntrack['ipv6_firewall_action'] = 'accept'
-    else:
-        for rules, path in dict_search_recursive(conntrack['firewall'], 'rule'):
-            if any(('state' in rule_conf or 'connection_status' in rule_conf) for rule_conf in rules.values()):
-                if path[0] == 'ipv4':
-                    conntrack['ipv4_firewall_action'] = 'accept'
-                elif path[0] == 'ipv6':
-                    conntrack['ipv6_firewall_action'] = 'accept'
+    for rules, path in dict_search_recursive(conntrack['firewall'], 'rule'):
+        if any(('state' in rule_conf or 'connection_status' in rule_conf or 'offload_target' in rule_conf) for rule_conf in rules.values()):
+            if path[0] == 'ipv4':
+                conntrack['ipv4_firewall_action'] = 'accept'
+            elif path[0] == 'ipv6':
+                conntrack['ipv6_firewall_action'] = 'accept'
 
     render(conntrack_config, 'conntrack/vyos_nf_conntrack.conf.j2', conntrack)
     render(sysctl_file, 'conntrack/sysctl.conf.j2', conntrack)

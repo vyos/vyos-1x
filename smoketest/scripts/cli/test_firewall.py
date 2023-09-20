@@ -637,5 +637,9 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
 
+        # Check conntrack
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
