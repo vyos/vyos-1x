@@ -74,6 +74,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(back_base + [bk_second_name, 'mode', mode])
         self.cli_set(back_base + [bk_second_name, 'server', bk_second_name, 'address', bk_server_second])
         self.cli_set(back_base + [bk_second_name, 'server', bk_second_name, 'port', bk_server_port])
+        self.cli_set(back_base + [bk_second_name, 'server', bk_second_name, 'backup'])
 
         self.cli_set(base_path + ['global-parameters', 'max-connections', max_connections])
 
@@ -106,6 +107,7 @@ class TestLoadBalancingReverseProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'backend {bk_second_name}', config)
         self.assertIn(f'mode {mode}', config)
         self.assertIn(f'server {bk_second_name} {bk_server_second}:{bk_server_port}', config)
+        self.assertIn(f'server {bk_second_name} {bk_server_second}:{bk_server_port} backup', config)
 
 
 if __name__ == '__main__':
