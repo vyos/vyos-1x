@@ -3,7 +3,7 @@
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept continue jump reject return drop queue</list>
+      <list>accept continue jump reject return drop queue synproxy</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
@@ -33,8 +33,12 @@
       <format>queue</format>
       <description>Enqueue packet to userspace</description>
     </valueHelp>
+    <valueHelp>
+      <format>synproxy</format>
+      <description>Synproxy connections</description>
+    </valueHelp>
     <constraint>
-      <regex>(accept|continue|jump|reject|return|drop|queue)</regex>
+      <regex>(accept|continue|jump|reject|return|drop|queue|synproxy)</regex>
     </constraint>
   </properties>
 </leafNode>
