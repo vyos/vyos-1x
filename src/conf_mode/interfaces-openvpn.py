@@ -30,6 +30,7 @@ from netifaces import interfaces
 from secrets import SystemRandom
 from shutil import rmtree
 
+from vyos.base import DeprecationWarning
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -164,6 +165,11 @@ def verify_pki(openvpn):
 
         if shared_secret_key not in pki['openvpn']['shared_secret']:
             raise ConfigError(f'Invalid shared-secret on openvpn interface {interface}')
+
+        # If PSK settings are correct, warn about its deprecation
+        DeprecationWarning("OpenVPN shared-secret support will be removed in future VyOS versions.\n\
+        Please migrate your site-to-site tunnels to TLS.\n\
+        You can use self-signed certificates with peer fingerprint verification, consult the documentation for details.")
 
     if tls:
         if (mode in ['server', 'client']) and ('ca_certificate' not in tls):
