@@ -32,7 +32,7 @@ from vyos.system import disk, grub, image
 from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no
 from vyos.utils.file import chmod_2775
-from vyos.util import run
+from vyos.utils.process import run
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
