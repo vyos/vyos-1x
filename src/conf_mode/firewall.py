@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -160,6 +160,26 @@ def verify_rule(firewall, rule_conf, ipv6):
             if target not in dict_search_args(firewall, 'ipv6', 'name'):
                 raise ConfigError(f'Invalid jump-target. Firewall ipv6 name {target} does not exist on the system')
 
+<<<<<<< HEAD
+=======
+    if rule_conf['action'] == 'offload':
+        if 'offload_target' not in rule_conf:
+            raise ConfigError('Action set to offload, but no offload-target specified')
+
+        offload_target = rule_conf['offload_target']
+
+        if not dict_search_args(firewall, 'flowtable', offload_target):
+            raise ConfigError(f'Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
+
+    if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
+        raise ConfigError('"synproxy" option allowed only for action synproxy')
+    if rule_conf['action'] == 'synproxy':
+        if not rule_conf.get('synproxy', {}).get('tcp'):
+            raise ConfigError('synproxy TCP MSS is not defined')
+        if rule_conf.get('protocol', {}) != 'tcp':
+            raise ConfigError('For action "synproxy" the protocol must be set to TCP')
+
+>>>>>>> bdad4e046 (T5217: Add firewall synproxy)
     if 'queue_options' in rule_conf:
         if 'queue' not in rule_conf['action']:
             raise ConfigError('queue-options defined, but action queue needed and it is not defined')

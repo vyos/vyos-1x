@@ -1,17 +1,17 @@
-<!-- include start from firewall/action.xml.i -->
+<!-- include start from firewall/action-forward.xml.i -->
 <leafNode name="action">
   <properties>
     <help>Rule action</help>
     <completionHelp>
-<<<<<<< HEAD
-      <list>accept jump reject return drop queue</list>
-=======
-      <list>accept continue jump reject return drop queue synproxy</list>
->>>>>>> bdad4e046 (T5217: Add firewall synproxy)
+      <list>accept continue jump reject return drop queue offload synproxy</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
       <description>Accept matching entries</description>
+    </valueHelp>
+    <valueHelp>
+      <format>continue</format>
+      <description>Continue parsing next rule</description>
     </valueHelp>
     <valueHelp>
       <format>jump</format>
@@ -34,15 +34,15 @@
       <description>Enqueue packet to userspace</description>
     </valueHelp>
     <valueHelp>
+      <format>offload</format>
+      <description>Offload packet via flowtable</description>
+    </valueHelp>
+    <valueHelp>
       <format>synproxy</format>
       <description>Synproxy connections</description>
     </valueHelp>
     <constraint>
-<<<<<<< HEAD
-      <regex>(accept|jump|reject|return|drop|queue)</regex>
-=======
-      <regex>(accept|continue|jump|reject|return|drop|queue|synproxy)</regex>
->>>>>>> bdad4e046 (T5217: Add firewall synproxy)
+      <regex>(accept|continue|jump|reject|return|drop|queue|offload|synproxy)</regex>
     </constraint>
   </properties>
 </leafNode>

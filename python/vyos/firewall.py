@@ -242,6 +242,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
+<<<<<<< HEAD
     if 'log' in rule_conf and rule_conf['log'] == 'enable':
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
         output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
@@ -263,6 +264,11 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 if 'snapshot_length' in rule_conf['log_options']:
                     log_snaplen = rule_conf['log_options']['snapshot_length']
                     output.append(f'snaplen {log_snaplen}')
+=======
+    if rule_conf['action'] == 'synproxy':
+        if 'synproxy' in rule_conf:
+            output.append('ct state invalid,untracked')
+>>>>>>> bdad4e046 (T5217: Add firewall synproxy)
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
@@ -401,6 +407,22 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 queue_opts = ','.join(rule_conf['queue_options'])
                 output.append(f'{queue_opts}')
 
+<<<<<<< HEAD
+=======
+                if 'queue_options' in rule_conf:
+                    queue_opts = ','.join(rule_conf['queue_options'])
+                    output.append(f'{queue_opts}')
+
+        # Synproxy
+        if 'synproxy' in rule_conf:
+            synproxy_mss = dict_search_args(rule_conf, 'synproxy', 'tcp', 'mss')
+            if synproxy_mss:
+                output.append(f'mss {synproxy_mss}')
+            synproxy_ws = dict_search_args(rule_conf, 'synproxy', 'tcp', 'window_scale')
+            if synproxy_ws:
+                output.append(f'wscale {synproxy_ws} timestamp sack-perm')
+
+>>>>>>> bdad4e046 (T5217: Add firewall synproxy)
     else:
         output.append('return')
 
