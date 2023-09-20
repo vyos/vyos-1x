@@ -19,7 +19,7 @@ from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
 from vyos.template import render
-from vyos.util import run, cmd
+from vyos.utils.process import run, cmd
 from vyos.system import disk
 
 # Define variables

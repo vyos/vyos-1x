@@ -18,7 +18,7 @@ from os import sync
 
 from psutil import disk_partitions
 
-from vyos.util import run, cmd
+from vyos.utils.process import run, cmd
 
 
 def disk_cleanup(drive_path: str) -> None:

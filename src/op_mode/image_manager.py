@@ -23,7 +23,7 @@ from shutil import rmtree
 from sys import exit
 
 from vyos.system import disk, grub, image
-from vyos.util import ask_yes_no
+from vyos.utils.io import ask_yes_no
 
 
 def delete_image(image_name: str) -> None:
