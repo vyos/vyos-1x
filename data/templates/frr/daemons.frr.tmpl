@@ -1,4 +1,24 @@
-zebra=yes
+#
+# The watchfrr, zebra, mgmtd and staticd daemons are always started.
+#
+# Note: The following FRR-services must be kept disabled because they are replaced by other packages in VyOS:
+#
+# pimd   Replaced by package igmpproxy.
+# nhrpd  Replaced by package opennhrp.
+# pbrd   Replaced by PBR in nftables.
+# vrrpd  Replaced by package keepalived.
+#
+# And these must be disabled aswell since they are currently missing a VyOS CLI:
+#
+# eigrp
+# sharpd
+# fabricd
+# pathd
+#
+
+#zebra=yes
+#mgmtd=yes
+#staticd=yes
 bgpd=yes
 ospfd=yes
 ospf6d=yes
@@ -9,49 +29,84 @@ pimd=no
 pim6d=yes
 ldpd=yes
 nhrpd=no
-eigrpd=yes
+eigrpd=no
 babeld=yes
 sharpd=no
 pbrd=no
 bfdd=yes
-staticd=yes
+fabricd=no
+vrrpd=no
+pathd=no
+
+#
+# Define defaults for all services even those who shall be kept disabled.
+#
+
+zebra_options="  --daemon -A 127.0.0.1 -s 90000000{{ ' -M snmp' if snmp.zebra is vyos_defined }}{{ ' -M irdp' if irdp is vyos_defined }}"
+mgmtd_options="  --daemon -A 127.0.0.1"
+staticd_options="--daemon -A 127.0.0.1"
+bgpd_options="   --daemon -A 127.0.0.1 -M rpki{{ ' -M snmp' if snmp.bgpd is vyos_defined }}{{ ' -M bmp' if bmp is vyos_defined }}"
+ospfd_options="  --daemon -A 127.0.0.1{{ ' -M snmp' if snmp.ospfd is vyos_defined }}"
+ospf6d_options=" --daemon -A ::1{{ ' -M snmp' if snmp.ospf6d is vyos_defined }}"
+ripd_options="   --daemon -A 127.0.0.1{{ ' -M snmp' if snmp.ripd is vyos_defined }}"
+ripngd_options=" --daemon -A ::1"
+isisd_options="  --daemon -A 127.0.0.1{{ ' -M snmp' if snmp.isisd is vyos_defined }}"
+pimd_options="   --daemon -A 127.0.0.1"
+pim6d_options="  --daemon -A ::1"
+ldpd_options="   --daemon -A 127.0.0.1{{ ' -M snmp' if snmp.ldpd is vyos_defined }}"
+nhrpd_options="  --daemon -A 127.0.0.1"
+eigrpd_options=" --daemon -A 127.0.0.1"
+babeld_options=" --daemon -A 127.0.0.1"
+sharpd_options=" --daemon -A 127.0.0.1"
+pbrd_options="   --daemon -A 127.0.0.1"
+bfdd_options="   --daemon -A 127.0.0.1"
+fabricd_options="--daemon -A 127.0.0.1"
+vrrpd_options="  --daemon -A 127.0.0.1"
+pathd_options="  --daemon -A 127.0.0.1"
+
+#frr_global_options=""
+
+#zebra_wrap=""
+#mgmtd_wrap=""
+#staticd_wrap=""
+#bgpd_wrap=""
+#ospfd_wrap=""
+#ospf6d_wrap=""
+#ripd_wrap=""
+#ripngd_wrap=""
+#isisd_wrap=""
+#pimd_wrap=""
+#pim6d_wrap=""
+#ldpd_wrap=""
+#nhrpd_wrap=""
+#eigrpd_wrap=""
+#babeld_wrap=""
+#sharpd_wrap=""
+#pbrd_wrap=""
+#bfdd_wrap=""
+#fabricd_wrap=""
+#vrrpd_wrap=""
+#pathd_wrap=""
+
+#all_wrap=""
+
+#
+# Other options.
+#
+# For more information see:
+# https://github.com/FRRouting/frr/blob/stable/9.0/tools/etc/frr/daemons
+# https://docs.frrouting.org/en/stable-9.0/setup.html
+#
 
 vtysh_enable=yes
-zebra_options="   --daemon -A 127.0.0.1 -s 90000000
-{%- if irdp is defined %} -M irdp{% endif -%}
-{%- if snmp is defined and snmp.zebra is defined %} -M snmp{% endif -%}
-"
-bgpd_options="    --daemon -A 127.0.0.1 -M rpki
-{%- if bmp is defined %} -M bmp{% endif -%}
-{%- if snmp is defined and snmp.bgpd is defined %} -M snmp{% endif -%}
-"
-ospfd_options="   --daemon -A 127.0.0.1
-{%- if snmp is defined and snmp.ospfd is defined %} -M snmp{% endif -%}
-"
-ospf6d_options="  --daemon -A ::1
-{%- if snmp is defined and snmp.ospf6d is defined %} -M snmp{% endif -%}
-"
-ripd_options="    --daemon -A 127.0.0.1
-{%- if snmp is defined and snmp.ripd is defined %} -M snmp{% endif -%}
-"
-ripngd_options="  --daemon -A ::1"
-isisd_options="   --daemon -A 127.0.0.1
-{%- if snmp is defined and snmp.isisd is defined %} -M snmp{% endif -%}
-"
-pimd_options="    --daemon -A 127.0.0.1"
-pim6d_options="   --daemon -A ::1"
-ldpd_options="    --daemon -A 127.0.0.1
-{%- if snmp is defined and snmp.ldpd is defined %} -M snmp{% endif -%}
-"
-mgmtd_options="   --daemon -A 127.0.0.1"
-nhrpd_options="   --daemon -A 127.0.0.1"
-eigrpd_options="  --daemon -A 127.0.0.1"
-babeld_options="  --daemon -A 127.0.0.1"
-sharpd_options="  --daemon -A 127.0.0.1"
-pbrd_options="    --daemon -A 127.0.0.1"
-staticd_options=" --daemon -A 127.0.0.1"
-bfdd_options="    --daemon -A 127.0.0.1"
-
 watchfrr_enable=no
 valgrind_enable=no
+
+#watchfrr_options=""
+
+frr_profile="traditional"
+
+#MAX_FDS=1024
+
+#FRR_NO_ROOT="yes"
 

@@ -86,9 +86,12 @@ ch2 = logging.StreamHandler(stream=sys.stdout)
 LOG.addHandler(ch)
 LOG.addHandler(ch2)
 
-_frr_daemons = ['zebra', 'bgpd', 'fabricd', 'isisd', 'ospf6d', 'ospfd', 'pbrd',
-                'pimd', 'ripd', 'ripngd', 'sharpd', 'staticd', 'vrrpd', 'ldpd',
-                'bfdd', 'eigrpd', 'babeld' ,'pim6d']
+# Full list of FRR 9.0/stable daemons for reference
+#_frr_daemons = ['zebra', 'staticd', 'bgpd', 'ospfd', 'ospf6d', 'ripd', 'ripngd',
+#                'isisd', 'pim6d', 'ldpd', 'eigrpd', 'babeld', 'sharpd', 'bfdd',
+#                'fabricd', 'pathd']
+_frr_daemons = ['zebra', 'staticd', 'bgpd', 'ospfd', 'ospf6d', 'ripd', 'ripngd',
+                'isisd', 'pim6d', 'ldpd', 'babeld', 'bfdd']
 
 path_vtysh = '/usr/bin/vtysh'
 path_frr_reload = '/usr/lib/frr/frr-reload.py'

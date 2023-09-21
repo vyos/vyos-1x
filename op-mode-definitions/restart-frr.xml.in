@@ -8,29 +8,23 @@
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart</command>
       </leafNode>
-      <leafNode name="bfd">
+      <leafNode name="zebra">
         <properties>
-          <help>Restart Bidirectional Forwarding Detection (BFD) daemon</help>
+          <help>Restart Routing Information Base (RIB) IP manager daemon</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bfdd</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon zebra</command>
+      </leafNode>
+      <leafNode name="static">
+        <properties>
+          <help>Restart static routing daemon</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon staticd</command>
       </leafNode>
       <leafNode name="bgp">
         <properties>
           <help>Restart Border Gateway Protocol (BGP) routing daemon</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bgpd</command>
-      </leafNode>
-      <leafNode name="isis">
-        <properties>
-          <help>Restart Intermediate System to Intermediate System (IS-IS) routing daemon</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon isisd</command>
-      </leafNode>
-      <leafNode name="ldp">
-        <properties>
-          <help>Restart the Label Distribution Protocol (LDP) daemon</help>
-        </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ldpd</command>
       </leafNode>
       <leafNode name="ospf">
         <properties>
@@ -52,27 +46,39 @@
       </leafNode>
       <leafNode name="ripng">
         <properties>
-          <help>Restart Routing Information Protocol NG (RIPng) routing daemon</help>
+          <help>Restart IPv6 Routing Information Protocol (RIPng) routing daemon</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ripngd</command>
       </leafNode>
-      <leafNode name="static">
+      <leafNode name="isis">
         <properties>
-          <help>Restart static routing daemon</help>
+          <help>Restart Intermediate System to Intermediate System (IS-IS) routing daemon</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon staticd</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon isisd</command>
       </leafNode>
-      <leafNode name="zebra">
+      <leafNode name="pim6">
         <properties>
-          <help>Restart Routing Information Base (RIB) manager daemon</help>
+          <help>Restart IPv6 Protocol Independent Multicast (PIM) daemon</help>
         </properties>
-        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon zebra</command>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon pim6d</command>
+      </leafNode>
+      <leafNode name="ldp">
+        <properties>
+          <help>Restart Label Distribution Protocol (LDP) daemon used by MPLS</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon ldpd</command>
       </leafNode>
       <leafNode name="babel">
         <properties>
           <help>Restart Babel routing daemon</help>
         </properties>
         <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon babeld</command>
+      </leafNode>
+      <leafNode name="bfd">
+        <properties>
+          <help>Restart Bidirectional Forwarding Detection (BFD) daemon</help>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/restart_frr.py --action restart --daemon bfdd</command>
       </leafNode>
     </children>
   </node>
