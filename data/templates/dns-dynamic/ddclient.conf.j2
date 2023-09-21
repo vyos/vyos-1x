@@ -28,19 +28,21 @@ syslog=yes
 ssl=yes
 pid={{ config_file | replace('.conf', '.pid') }}
 cache={{ config_file | replace('.conf', '.cache') }}
-{# Explicitly override global options for reliability #}
-web=googledomains {# ddclient default ('dyndns') doesn't support ssl and results in process lockup #}
-use=no            {# ddclient default ('ip') results in confusing warning message in log #}
+{# ddclient default (web=dyndns) doesn't support ssl and results in process lockup #}
+web=googledomains
+{# ddclient default (use=ip) results in confusing warning message in log #}
+use=no
 
 {% if address is vyos_defined %}
 {%     for address, service_cfg in address.items() %}
 {%         if service_cfg.rfc2136 is vyos_defined %}
 {%             for name, config in service_cfg.rfc2136.items() %}
 {%                 if config.description is vyos_defined %}
-# {{ config.description }}
 
+# {{ config.description }}
 {%                 endif %}
 {%                 for host in config.host_name if config.host_name is vyos_defined %}
+
 # RFC2136 dynamic DNS configuration for {{ name }}: [{{ config.zone }}, {{ host }}]
 {# Don't append 'new-style' compliant suffix ('usev4', 'usev6', 'ifv4', 'ifv6' etc.)
    to the properties since 'nsupdate' doesn't support that yet. #}
@@ -54,12 +56,13 @@ use=no            {# ddclient default ('ip') results in confusing warning messag
 {%         if service_cfg.service is vyos_defined %}
 {%             for name, config in service_cfg.service.items() %}
 {%                 if config.description is vyos_defined %}
-# {{ config.description }}
 
+# {{ config.description }}
 {%                 endif %}
 {%                 for host in config.host_name if config.host_name is vyos_defined %}
 {%                     set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
-                                                      else [config.ip_version[2:]] %} {# 'ipvX' -> 'vX' #}
+                                                      else [config.ip_version[2:]] %}
+
 # Web service dynamic DNS configuration for {{ name }}: [{{ config.protocol }}, {{ host }}]
 {{ render_config(host, address, service_cfg.web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
