@@ -162,27 +162,34 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
     def test_conntrack_module_enable(self):
         # conntrack helper modules are disabled by default
         modules = {
-            'ftp' : {
-                'driver' : ['nf_nat_ftp', 'nf_conntrack_ftp'],
+            'ftp': {
+                'driver': ['nf_nat_ftp', 'nf_conntrack_ftp'],
+                'nftables': ['ct helper set "ftp_tcp"']
             },
-            'h323' : {
-                'driver' : ['nf_nat_h323', 'nf_conntrack_h323'],
+            'h323': {
+                'driver': ['nf_nat_h323', 'nf_conntrack_h323'],
+                'nftables': ['ct helper set "ras_udp"',
+                             'ct helper set "q931_tcp"']
             },
-            'nfs' : {
-                'nftables' : ['ct helper set "rpc_tcp"',
-                              'ct helper set "rpc_udp"']
+            'nfs': {
+                'nftables': ['ct helper set "rpc_tcp"',
+                             'ct helper set "rpc_udp"']
             },
-            'pptp' : {
-                'driver' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
+            'pptp': {
+                'driver': ['nf_nat_pptp', 'nf_conntrack_pptp'],
+                'nftables': ['ct helper set "pptp_tcp"']
              },
-            'sip' : {
-                'driver' : ['nf_nat_sip', 'nf_conntrack_sip'],
+            'sip': {
+                'driver': ['nf_nat_sip', 'nf_conntrack_sip'],
+                'nftables': ['ct helper set "sip_tcp"',
+                             'ct helper set "sip_udp"']
              },
-            'sqlnet' : {
-                'nftables' : ['ct helper set "tns_tcp"']
+            'sqlnet': {
+                'nftables': ['ct helper set "tns_tcp"']
             },
-            'tftp' : {
-                'driver' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
+            'tftp': {
+                'driver': ['nf_nat_tftp', 'nf_conntrack_tftp'],
+                'nftables': ['ct helper set "tftp_udp"']
              },
         }
 

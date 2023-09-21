@@ -1,5 +1,6 @@
 #!/usr/sbin/nft -f
 
+{% import 'conntrack/nftables-helpers.j2' as helper_tmpl %}
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
 
 {% if first_install is not vyos_defined %}
@@ -52,30 +53,7 @@ table ip vyos_conntrack {
         notrack
     }
 
-    ct helper rpc_tcp {
-        type "rpc" protocol tcp;
-    }
-
-    ct helper rpc_udp {
-        type "rpc" protocol udp;
-    }
-
-    ct helper tns_tcp {
-        type "tns" protocol tcp;
-    }
-
-    chain VYOS_CT_HELPER {
-{% for module, module_conf in module_map.items() %}
-{%     if modules[module] is vyos_defined %}
-{%         if 'nftables' in module_conf %}
-{%             for rule in module_conf.nftables %}
-        {{ rule }}
-{%             endfor %}
-{%         endif %}
-{%     endif %}
-{% endfor %}
-        return
-    }
+{{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=True) }}
 
     chain FW_CONNTRACK {
         {{ ipv4_firewall_action }}
@@ -140,30 +118,7 @@ table ip6 vyos_conntrack {
         notrack
     }
 
-    ct helper rpc_tcp {
-        type "rpc" protocol tcp;
-    }
-
-    ct helper rpc_udp {
-        type "rpc" protocol udp;
-    }
-
-    ct helper tns_tcp {
-        type "tns" protocol tcp;
-    }
-
-    chain VYOS_CT_HELPER {
-{% for module, module_conf in module_map.items() %}
-{%     if modules[module] is vyos_defined %}
-{%         if 'nftables' in module_conf %}
-{%             for rule in module_conf.nftables %}
-        {{ rule }}
-{%             endfor %}
-{%         endif %}
-{%     endif %}
-{% endfor %}
-        return
-    }
+{{ helper_tmpl.conntrack_helpers(module_map, modules, ipv4=False) }}
 
     chain FW_CONNTRACK {
         {{ ipv6_firewall_action }}

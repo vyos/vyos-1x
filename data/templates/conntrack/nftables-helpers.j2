@@ -1,0 +1,70 @@
+{% macro conntrack_helpers(module_map, modules, ipv4=True) %}
+{% if modules.ftp is vyos_defined %}
+    ct helper ftp_tcp {
+        type "ftp" protocol tcp;
+    }
+{% endif %}
+
+{% if modules.h323 is vyos_defined %}
+    ct helper ras_udp {
+        type "RAS" protocol udp;
+    }
+
+    ct helper q931_tcp {
+        type "Q.931" protocol tcp;
+    }
+{% endif %}
+
+{% if modules.pptp is vyos_defined and ipv4 %}
+    ct helper pptp_tcp {
+        type "pptp" protocol tcp;
+    }
+{% endif %}
+
+{% if modules.nfs is vyos_defined %}
+    ct helper rpc_tcp {
+        type "rpc" protocol tcp;
+    }
+
+    ct helper rpc_udp {
+        type "rpc" protocol udp;
+    }
+{% endif %}
+
+{% if modules.sip is vyos_defined %}
+    ct helper sip_tcp {
+        type "sip" protocol tcp;
+    }
+
+    ct helper sip_udp {
+        type "sip" protocol udp;
+    }
+{% endif %}
+
+{% if modules.tftp is vyos_defined %}
+    ct helper tftp_udp {
+        type "tftp" protocol udp;
+    }
+{% endif %}
+
+{% if modules.sqlnet is vyos_defined %}
+    ct helper tns_tcp {
+        type "tns" protocol tcp;
+    }
+{% endif %}
+
+    chain VYOS_CT_HELPER {
+{% for module, module_conf in module_map.items() %}
+{%     if modules[module] is vyos_defined %}
+{%         if 'nftables' in module_conf %}
+{%             if module_conf.ipv4 is not vyos_defined or module_conf.ipv4 == ipv4 %}
+{%                 for rule in module_conf.nftables %}
+        {{ rule }}
+{%                 endfor %}
+{%             endif %}
+{%         endif %}
+{%     endif %}
+{% endfor %}
+        return
+    }
+{% endmacro %}
