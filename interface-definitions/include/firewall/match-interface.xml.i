@@ -4,6 +4,7 @@
     <help>Match interface</help>
     <completionHelp>
       <script>${vyos_completion_dir}/list_interfaces</script>
+      <path>vrf name</path>
     </completionHelp>
     <valueHelp>
       <format>txt</format>
@@ -18,7 +19,8 @@
       <description>Inverted interface name to match</description>
     </valueHelp>
     <constraint>
-      #include <include/constraint/interface-name-with-wildcard-and-inverted.xml.i>
+      <regex>(\!?)(bond|br|dum|en|ersp|eth|gnv|ifb|lan|l2tp|l2tpeth|macsec|peth|ppp|pppoe|pptp|sstp|tun|veth|vti|vtun|vxlan|wg|wlan|wwan)([0-9]?)(\*?)(.+)?|(\!?)lo</regex>
+      <validator name="vrf-name"/>
     </constraint>
   </properties>
 </leafNode>
