@@ -35,6 +35,9 @@ zone_allowed = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
 # Protocols that do not require username
 username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla']
 
+# Protocols that support TTL
+ttl_supported = ['cloudflare', 'gandi', 'hetzner', 'dnsexit', 'godaddy', 'nfsn']
+
 # Protocols that support both IPv4 and IPv6
 dualstack_supported = ['cloudflare', 'dyndns2', 'freedns', 'njalla']
 
@@ -92,6 +95,9 @@ def verify(dyndns):
                 if config['protocol'] not in username_unnecessary:
                     if 'username' not in config:
                         raise ConfigError(f'"username" {error_msg}')
+
+                if config['protocol'] not in ttl_supported and 'ttl' in config:
+                    raise ConfigError(f'"{config["protocol"]}" does not support "ttl"')
 
                 if config['ip_version'] == 'both':
                     if config['protocol'] not in dualstack_supported:

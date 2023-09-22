@@ -63,18 +63,29 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
             self.cli_set(base_path + ddns + [svc, 'password', password])
             self.cli_set(base_path + ddns + [svc, 'zone', zone])
+            self.cli_set(base_path + ddns + [svc, 'ttl', ttl])
             for opt, value in details.items():
                 self.cli_set(base_path + ddns + [svc, opt, value])
 
-            # commit changes
+            # 'zone' option is supported and required by 'cloudfare', but not 'freedns' and 'zoneedit'
+            self.cli_set(base_path + ddns + [svc, 'zone', zone])
             if details['protocol'] == 'cloudflare':
                 pass
             else:
-                # zone option does not work on all protocols, an exception is
-                # raised for all others
+                # exception is raised for unsupported ones
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
-                self.cli_delete(base_path + ddns + [svc, 'zone', zone])
+                self.cli_delete(base_path + ddns + [svc, 'zone'])
+
+            # 'ttl' option is supported by 'cloudfare', but not 'freedns' and 'zoneedit'
+            self.cli_set(base_path + ddns + [svc, 'ttl', ttl])
+            if details['protocol'] == 'cloudflare':
+                pass
+            else:
+                # exception is raised for unsupported ones
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+                self.cli_delete(base_path + ddns + [svc, 'ttl'])
 
             # commit changes
             self.cli_commit()
