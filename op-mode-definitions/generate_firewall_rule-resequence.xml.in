@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="firewall">
+        <properties>
+          <help>Firewall</help>
+        </properties>
+        <children>
+          <node name="rule-resequence">
+            <properties>
+              <help>Resequence the firewall rules</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/generate_firewall_rule-resequence.py</command>
+            <children>
+              <tagNode name="start">
+                <properties>
+                  <help>Set the first sequence number</help>
+                  <completionHelp>
+                    <list>1-1000</list>
+                  </completionHelp>
+                </properties>
+                <command>${vyos_op_scripts_dir}/generate_firewall_rule-resequence.py --start $5</command>
+                <children>
+                  <tagNode name="step">
+                    <properties>
+                      <help>Step between rules</help>
+                      <completionHelp>
+                        <list>1-1000</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/generate_firewall_rule-resequence.py --start $5 --step $7</command>
+                  </tagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
