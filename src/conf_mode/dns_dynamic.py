@@ -30,7 +30,7 @@ config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 
 # Protocols that require zone
-zone_required = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+zone_necessary = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
 
 # Protocols that do not require username
 username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla']
@@ -51,11 +51,11 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base_level = ['service', 'dns', 'dynamic']
-    if not conf.exists(base_level):
+    base = ['service', 'dns', 'dynamic']
+    if not conf.exists(base):
         return None
 
-    dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'),
+    dyndns = conf.get_config_dict(base, key_mangling=('-', '_'),
                                   no_tag_node_value_mangle=True,
                                   get_first_key=True,
                                   with_recursive_defaults=True)
@@ -90,15 +90,14 @@ def verify(dyndns):
                     if field not in config:
                         raise ConfigError(f'"{field.replace("_", "-")}" {error_msg}')
 
-                if config['protocol'] in zone_required and 'zone' not in config:
-                        raise ConfigError(f'"zone" {error_msg}')
+                if config['protocol'] in zone_necessary and 'zone' not in config:
+                    raise ConfigError(f'"zone" {error_msg}')
 
-                if config['protocol'] not in zone_required and 'zone' in config:
-                        raise ConfigError(f'"{config["protocol"]}" does not support "zone"')
+                if config['protocol'] not in zone_necessary and 'zone' in config:
+                    raise ConfigError(f'"{config["protocol"]}" does not support "zone"')
 
-                if config['protocol'] not in username_unnecessary:
-                    if 'username' not in config:
-                        raise ConfigError(f'"username" {error_msg}')
+                if config['protocol'] not in username_unnecessary and 'username' not in config:
+                    raise ConfigError(f'"username" {error_msg}')
 
                 if config['protocol'] not in ttl_supported and 'ttl' in config:
                     raise ConfigError(f'"{config["protocol"]}" does not support "ttl"')

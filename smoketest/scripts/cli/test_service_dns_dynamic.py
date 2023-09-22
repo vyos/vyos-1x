@@ -32,12 +32,19 @@ DDCLIENT_PID = '/run/ddclient/ddclient.pid'
 DDCLIENT_PNAME = 'ddclient'
 
 base_path = ['service', 'dns', 'dynamic']
+server = 'ddns.vyos.io'
 hostname = 'test.ddns.vyos.io'
 zone = 'vyos.io'
+username = 'vyos_user'
 password = 'paSS_@4ord'
+ttl = '300'
 interface = 'eth0'
 
 class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
+    def setUp(self):
+        # Always start with a clean CLI instance
+        self.cli_delete(base_path)
+
     def tearDown(self):
         # Check for running process
         self.assertTrue(process_running(DDCLIENT_PID))
@@ -51,41 +58,38 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     # IPv4 standard DDNS service configuration
     def test_01_dyndns_service_standard(self):
-        ddns = ['address', interface, 'service']
+        svc_path = ['address', interface, 'service']
         services = {'cloudflare': {'protocol': 'cloudflare'},
-                    'freedns': {'protocol': 'freedns', 'username': 'vyos_user'},
-                    'zoneedit': {'protocol': 'zoneedit1', 'username': 'vyos_user'}}
+                    'freedns': {'protocol': 'freedns', 'username': username},
+                    'zoneedit': {'protocol': 'zoneedit1', 'username': username}}
 
         for svc, details in services.items():
-            # Always start with a clean CLI instance
-            self.cli_delete(base_path)
-
-            self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
-            self.cli_set(base_path + ddns + [svc, 'password', password])
-            self.cli_set(base_path + ddns + [svc, 'zone', zone])
-            self.cli_set(base_path + ddns + [svc, 'ttl', ttl])
+            self.cli_set(base_path + svc_path + [svc, 'host-name', hostname])
+            self.cli_set(base_path + svc_path + [svc, 'password', password])
+            self.cli_set(base_path + svc_path + [svc, 'zone', zone])
+            self.cli_set(base_path + svc_path + [svc, 'ttl', ttl])
             for opt, value in details.items():
-                self.cli_set(base_path + ddns + [svc, opt, value])
+                self.cli_set(base_path + svc_path + [svc, opt, value])
 
             # 'zone' option is supported and required by 'cloudfare', but not 'freedns' and 'zoneedit'
-            self.cli_set(base_path + ddns + [svc, 'zone', zone])
+            self.cli_set(base_path + svc_path + [svc, 'zone', zone])
             if details['protocol'] == 'cloudflare':
                 pass
             else:
                 # exception is raised for unsupported ones
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
-                self.cli_delete(base_path + ddns + [svc, 'zone'])
+                self.cli_delete(base_path + svc_path + [svc, 'zone'])
 
             # 'ttl' option is supported by 'cloudfare', but not 'freedns' and 'zoneedit'
-            self.cli_set(base_path + ddns + [svc, 'ttl', ttl])
+            self.cli_set(base_path + svc_path + [svc, 'ttl', ttl])
             if details['protocol'] == 'cloudflare':
                 pass
             else:
                 # exception is raised for unsupported ones
                 with self.assertRaises(ConfigSessionError):
                     self.cli_commit()
-                self.cli_delete(base_path + ddns + [svc, 'ttl'])
+                self.cli_delete(base_path + svc_path + [svc, 'ttl'])
 
             # commit changes
             self.cli_commit()
@@ -109,20 +113,17 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     # IPv6 only DDNS service configuration
     def test_02_dyndns_service_ipv6(self):
         timeout = '60'
-        ddns = ['address', interface, 'service', 'dynv6']
+        svc_path = ['address', interface, 'service', 'dynv6']
         proto = 'dyndns2'
-        user = 'none'
-        password = 'paSS_4ord'
-        srv = 'ddns.vyos.io'
         ip_version = 'ipv6'
 
         self.cli_set(base_path + ['timeout', timeout])
-        self.cli_set(base_path + ddns + ['ip-version', ip_version])
-        self.cli_set(base_path + ddns + ['protocol', proto])
-        self.cli_set(base_path + ddns + ['server', srv])
-        self.cli_set(base_path + ddns + ['username', user])
-        self.cli_set(base_path + ddns + ['password', password])
-        self.cli_set(base_path + ddns + ['host-name', hostname])
+        self.cli_set(base_path + svc_path + ['ip-version', ip_version])
+        self.cli_set(base_path + svc_path + ['protocol', proto])
+        self.cli_set(base_path + svc_path + ['server', server])
+        self.cli_set(base_path + svc_path + ['username', username])
+        self.cli_set(base_path + svc_path + ['password', password])
+        self.cli_set(base_path + svc_path + ['host-name', hostname])
 
         # commit changes
         self.cli_commit()
@@ -133,37 +134,45 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'usev6=ifv6', ddclient_conf)
         self.assertIn(f'ifv6={interface}', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
-        self.assertIn(f'server={srv}', ddclient_conf)
-        self.assertIn(f'login={user}', ddclient_conf)
+        self.assertIn(f'server={server}', ddclient_conf)
+        self.assertIn(f'login={username}', ddclient_conf)
         self.assertIn(f'password={password}', ddclient_conf)
 
     # IPv4+IPv6 dual DDNS service configuration
     def test_03_dyndns_service_dual_stack(self):
-        ddns = ['address', interface, 'service']
-        services = {'cloudflare': {'protocol': 'cloudflare', 'zone': 'vyos.io'},
-                    'freedns': {'protocol': 'freedns', 'username': 'vyos_user'}}
-        password = 'vyos_pass'
+        svc_path = ['address', interface, 'service']
+        services = {'cloudflare': {'protocol': 'cloudflare', 'zone': zone},
+                    'freedns': {'protocol': 'freedns', 'username': username},
+                    'google': {'protocol': 'googledomains', 'username': username}}
         ip_version = 'both'
 
-        for svc, details in services.items():
-            # Always start with a clean CLI instance
-            self.cli_delete(base_path)
-
-            self.cli_set(base_path + ddns + [svc, 'host-name', hostname])
-            self.cli_set(base_path + ddns + [svc, 'password', password])
-            self.cli_set(base_path + ddns + [svc, 'ip-version', ip_version])
+        for name, details in services.items():
+            self.cli_set(base_path + svc_path + [name, 'host-name', hostname])
+            self.cli_set(base_path + svc_path + [name, 'password', password])
             for opt, value in details.items():
-                self.cli_set(base_path + ddns + [svc, opt, value])
+                self.cli_set(base_path + svc_path + [name, opt, value])
+
+            # Dual stack is supported by 'cloudfare' and 'freedns' but not 'googledomains'
+            # exception is raised for unsupported ones
+            self.cli_set(base_path + svc_path + [name, 'ip-version', ip_version])
+            if details['protocol'] not in ['cloudflare', 'freedns']:
+                with self.assertRaises(ConfigSessionError):
+                    self.cli_commit()
+                self.cli_delete(base_path + svc_path + [name, 'ip-version'])
 
             # commit changes
             self.cli_commit()
 
             # Check the generating config parameters
             ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
-            self.assertIn(f'usev4=ifv4', ddclient_conf)
-            self.assertIn(f'usev6=ifv6', ddclient_conf)
-            self.assertIn(f'ifv4={interface}', ddclient_conf)
-            self.assertIn(f'ifv6={interface}', ddclient_conf)
+            if details['protocol'] not in ['cloudflare', 'freedns']:
+                self.assertIn(f'usev4=ifv4', ddclient_conf)
+                self.assertIn(f'ifv4={interface}', ddclient_conf)
+            else:
+                self.assertIn(f'usev4=ifv4', ddclient_conf)
+                self.assertIn(f'usev6=ifv6', ddclient_conf)
+                self.assertIn(f'ifv4={interface}', ddclient_conf)
+                self.assertIn(f'ifv6={interface}', ddclient_conf)
             self.assertIn(f'password={password}', ddclient_conf)
 
             for opt in details.keys():
@@ -176,19 +185,16 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def test_04_dyndns_rfc2136(self):
         # Check if DDNS service can be configured and runs
-        ddns = ['address', interface, 'rfc2136', 'vyos']
-        srv = 'ns1.vyos.io'
-        zone = 'vyos.io'
-        ttl = '300'
+        svc_path = ['address', interface, 'rfc2136', 'vyos']
 
         with tempfile.NamedTemporaryFile(prefix='/config/auth/') as key_file:
             key_file.write(b'S3cretKey')
 
-            self.cli_set(base_path + ddns + ['server', srv])
-            self.cli_set(base_path + ddns + ['zone', zone])
-            self.cli_set(base_path + ddns + ['key', key_file.name])
-            self.cli_set(base_path + ddns + ['ttl', ttl])
-            self.cli_set(base_path + ddns + ['host-name', hostname])
+            self.cli_set(base_path + svc_path + ['server', server])
+            self.cli_set(base_path + svc_path + ['zone', zone])
+            self.cli_set(base_path + svc_path + ['key', key_file.name])
+            self.cli_set(base_path + svc_path + ['ttl', ttl])
+            self.cli_set(base_path + svc_path + ['host-name', hostname])
 
             # commit changes
             self.cli_commit()
@@ -198,7 +204,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'use=if', ddclient_conf)
             self.assertIn(f'if={interface}', ddclient_conf)
             self.assertIn(f'protocol=nsupdate', ddclient_conf)
-            self.assertIn(f'server={srv}', ddclient_conf)
+            self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'zone={zone}', ddclient_conf)
             self.assertIn(f'password={key_file.name}', ddclient_conf)
             self.assertIn(f'ttl={ttl}', ddclient_conf)
@@ -230,9 +236,6 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
     def test_06_dyndns_vrf(self):
         vrf_name = f'vyos-test-{"".join(random.choices(string.ascii_letters + string.digits, k=5))}'
         svc_path = ['address', interface, 'service', 'cloudflare']
-
-        # Always start with a clean CLI instance
-        self.cli_delete(base_path)
 
         self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
         self.cli_set(base_path + ['vrf', vrf_name])
