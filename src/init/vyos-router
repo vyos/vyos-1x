@@ -371,8 +371,11 @@ start ()
       && chgrp ${GROUP} ${vyatta_configdir}
     log_action_end_msg $?
 
-    rm -f /etc/hostname
-    ${vyos_conf_scripts_dir}/host_name.py || log_failure_msg "could not reset host-name"
+    # T5239: early read of system hostname as this value is read-only once during
+    # FRR initialisation
+    tmp=$(${vyos_libexec_dir}/read-saved-value.py --path "system host-name")
+    hostnamectl set-hostname --static "$tmp"
+
     ${vyos_conf_scripts_dir}/system_frr.py || log_failure_msg "could not reset FRR config"
     # If for any reason FRR was not started by system_frr.py - start it anyways.
     # This is a safety net!
