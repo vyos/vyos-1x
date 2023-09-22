@@ -29,13 +29,14 @@
  neighbor {{ neighbor }} bfd profile {{ config.bfd.profile }}
 {%     endif %}
 {% endif %}
-{% if config.capability is vyos_defined %}
-{%     if config.capability.dynamic is vyos_defined %}
+{% if config.capability.dynamic is vyos_defined %}
  neighbor {{ neighbor }} capability dynamic
-{%     endif %}
-{%     if config.capability.extended_nexthop is vyos_defined %}
+{% endif %}
+{% if config.capability.extended_nexthop is vyos_defined %}
  neighbor {{ neighbor }} capability extended-nexthop
-{%     endif %}
+{% endif %}
+{% if config.capability.software_version is vyos_defined %}
+ neighbor {{ neighbor }} capability software-version
 {% endif %}
 {% if config.description is vyos_defined %}
  neighbor {{ neighbor }} description {{ config.description }}
@@ -76,6 +77,9 @@
 {% endif %}
 {% if config.path_attribute.discard is vyos_defined %}
  neighbor {{ neighbor }} path-attribute discard {{ config.path_attribute.discard }}
+{% endif %}
+{% if config.path_attribute.treat_as_withdraw is vyos_defined %}
+ neighbor {{ neighbor }} path-attribute treat-as-withdraw {{ config.path_attribute.treat_as_withdraw }}
 {% endif %}
 {% if config.port is vyos_defined %}
  neighbor {{ neighbor }} port {{ config.port }}

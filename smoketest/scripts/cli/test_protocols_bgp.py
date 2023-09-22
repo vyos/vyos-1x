@@ -44,6 +44,7 @@ neighbor_config = {
         'bfd'              : '',
         'cap_dynamic'      : '',
         'cap_ext_next'     : '',
+        'cap_ext_sver'     : '',
         'remote_as'        : '100',
         'adv_interv'       : '400',
         'passive'          : '',
@@ -71,6 +72,7 @@ neighbor_config = {
         'pfx_list_out'     : prefix_list_out,
         'no_send_comm_std' : '',
         'local_role'       : 'rs-client',
+        'p_attr_taw'       : '200',
         },
     '192.0.2.3' : {
         'advertise_map'    : route_map_in,
@@ -87,6 +89,7 @@ neighbor_config = {
         'exist_map'        : route_map_out,
         'cap_dynamic'      : '',
         'cap_ext_next'     : '',
+        'cap_ext_sver'     : '',
         'remote_as'        : '123',
         'adv_interv'       : '400',
         'passive'          : '',
@@ -137,6 +140,7 @@ peer_group_config = {
         'remote_as'        : '111',
         'graceful_rst_no'  : '',
         'port'             : '667',
+        'p_attr_taw'       : '126',
         },
     'foo-bar' : {
         'advertise_map'    : route_map_in,
@@ -217,6 +221,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} capability dynamic', frrconfig)
         if 'cap_ext_next' in peer_config:
             self.assertIn(f' neighbor {peer} capability extended-nexthop', frrconfig)
+        if 'cap_ext_sver' in peer_config:
+            self.assertIn(f' neighbor {peer} capability software-version', frrconfig)
         if 'description' in peer_config:
             self.assertIn(f' neighbor {peer} description {peer_config["description"]}', frrconfig)
         if 'no_cap_nego' in peer_config:
@@ -264,6 +270,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} addpath-tx-all-paths', frrconfig)
         if 'p_attr_discard' in peer_config:
             self.assertIn(f' neighbor {peer} path-attribute discard {peer_config["p_attr_discard"]}', frrconfig)
+        if 'p_attr_taw' in peer_config:
+            self.assertIn(f' neighbor {peer} path-attribute treat-as-withdraw {peer_config["p_attr_taw"]}', frrconfig)
         if 'addpath_per_as' in peer_config:
             self.assertIn(f' neighbor {peer} addpath-tx-bestpath-per-AS', frrconfig)
         if 'advertise_map' in peer_config:
@@ -390,6 +398,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'dynamic'])
             if 'cap_ext_next' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'extended-nexthop'])
+            if 'cap_ext_sver' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'capability', 'software-version'])
             if 'description' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'description', peer_config["description"]])
             if 'no_cap_nego' in peer_config:
@@ -424,6 +434,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'update-source', peer_config["update_src"]])
             if 'p_attr_discard' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'discard', peer_config["p_attr_discard"]])
+            if 'p_attr_taw' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'path-attribute', 'treat-as-withdraw', peer_config["p_attr_taw"]])
             if 'route_map_in' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'route-map', 'import', peer_config["route_map_in"]])
             if 'route_map_out' in peer_config:
@@ -490,6 +502,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'dynamic'])
             if 'cap_ext_next' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'extended-nexthop'])
+            if 'cap_ext_sver' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'software-version'])
             if 'description' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'description', config["description"]])
             if 'no_cap_nego' in config:
@@ -544,6 +558,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'disable-connected-check'])
             if 'p_attr_discard' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'discard', config["p_attr_discard"]])
+            if 'p_attr_taw' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'path-attribute', 'treat-as-withdraw', config["p_attr_taw"]])
 
             # Conditional advertisement
             if 'advertise_map' in config:
