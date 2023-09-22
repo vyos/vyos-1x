@@ -74,18 +74,7 @@
                         </properties>
                       </leafNode>
                       #include <include/dns/time-to-live.xml.i>
-                      <leafNode name="zone">
-                        <properties>
-                          <help>Forwarding zone to be updated</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>RFC2136 Zone to be updated</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="fqdn"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
+                      #include <include/dns/dynamic-service-zone.xml.i>
                     </children>
                   </tagNode>
                   <tagNode name="service">
@@ -113,15 +102,7 @@
                           </constraint>
                         </properties>
                       </leafNode>
-                      <leafNode name="zone">
-                        <properties>
-                          <help>DNS zone to update (not used by all protocols)</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Name of DNS zone</description>
-                          </valueHelp>
-                        </properties>
-                      </leafNode>
+                      #include <include/dns/dynamic-service-zone.xml.i>
                       <leafNode name="ip-version">
                         <properties>
                           <help>IP address version to use</help>
