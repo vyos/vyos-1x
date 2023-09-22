@@ -124,6 +124,12 @@
                       </constraint>
                     </properties>
                   </leafNode>
+                  <leafNode name="backup">
+                    <properties>
+                      <help>Use backup server if other servers are not available</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
                   <leafNode name="check">
                     <properties>
                       <help>Active health check backend server</help>
