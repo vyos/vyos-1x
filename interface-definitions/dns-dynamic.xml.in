@@ -90,6 +90,7 @@
                       #include <include/dns/dynamic-service-host-name-server.xml.i>
                       #include <include/generic-username.xml.i>
                       #include <include/generic-password.xml.i>
+                      #include <include/dns/time-to-live.xml.i>
                       <leafNode name="protocol">
                         <properties>
                           <help>ddclient protocol used for Dynamic DNS service</help>

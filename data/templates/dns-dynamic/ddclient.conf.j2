@@ -66,7 +66,7 @@ use=no
 # Web service dynamic DNS configuration for {{ name }}: [{{ config.protocol }}, {{ host }}]
 {{ render_config(host, address, service_cfg.web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
-                 login=config.username, password=config.password) }}
+                 login=config.username, password=config.password, ttl=config.ttl) }}
 
 {%                 endfor %}
 {%             endfor %}
