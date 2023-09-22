@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="add">
+    <children>
+      <tagNode name="raid">
+        <properties>
+          <help>Add a RAID set element</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_raidset.sh</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <node name="by-id">
+            <properties>
+              <help>Add a member by disk id to a RAID set</help>
+            </properties>
+            <children>
+              <tagNode name="member">
+                <properties>
+                  <help>Add a member to a RAID set</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --by-id --member $6</command>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="member">
+            <properties>
+              <help>Add a member to a RAID set</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/raid.py add --raid-set-name $3 --member $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="delete">
+    <children>
+      <tagNode name="raid">
+        <properties>
+          <help>Add a RAID set element</help>
+          <completionHelp>
+            <script>${vyos_completion_dir}/list_raidset.sh</script>
+          </completionHelp>
+        </properties>
+        <children>
+          <node name="by-id">
+            <properties>
+              <help>Add a member by disk id to a RAID set</help>
+            </properties>
+            <children>
+              <tagNode name="member">
+                <properties>
+                  <help>Add a member to a RAID set</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --by-id --member $6</command>
+              </tagNode>
+            </children>
+          </node>
+          <tagNode name="member">
+            <properties>
+              <help>Add a member to a RAID set</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --member $5</command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

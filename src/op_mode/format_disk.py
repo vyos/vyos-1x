@@ -24,6 +24,7 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.process import call
 from vyos.utils.process import cmd
 from vyos.utils.process import DEVNULL
+from vyos.utils.disk import device_from_id
 
 def list_disks():
     disks = set()
@@ -77,12 +78,18 @@ if __name__ == '__main__':
     group = parser.add_argument_group()
     group.add_argument('-t', '--target', type=str, required=True, help='Target device to format')
     group.add_argument('-p', '--proto', type=str, required=True, help='Prototype device to use as reference')
+    parser.add_argument('--by-id', action='store_true', help='Specify device by disk id')
     args = parser.parse_args()
+    target = args.target
+    proto = args.proto
+    if args.by_id:
+        target = device_from_id(target)
+        proto = device_from_id(proto)
 
-    target_disk = args.target
+    target_disk = target
     eligible_target_disks = list_disks()
 
-    proto_disk = args.proto
+    proto_disk = proto
     eligible_proto_disks = eligible_target_disks.copy()
     eligible_proto_disks.remove(target_disk)
 

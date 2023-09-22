@@ -5,6 +5,26 @@
       <help>Format a device</help>
     </properties>
     <children>
+      <node name="by-id">
+        <properties>
+          <help>Find disk by ending of id string</help>
+        </properties>
+        <children>
+          <tagNode name="disk">
+            <properties>
+              <help>Format a disk drive</help>
+            </properties>
+            <children>
+              <tagNode name="like">
+                <properties>
+                  <help>Format this disk the same as another disk</help>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/format_disk.py --by-id --target $4 --proto $6</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
       <tagNode name="disk">
         <properties>
           <help>Format a disk drive</help>
