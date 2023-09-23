@@ -20,6 +20,7 @@ import re
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.process import process_named_running
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
@@ -78,11 +79,6 @@ valid_groups = [
     'port_group'
 ]
 
-def resync_conntrackd():
-    tmp = run('/usr/libexec/vyos/conf_mode/conntrack_sync.py')
-    if tmp > 0:
-        print('ERROR: error restarting conntrackd!')
-
 def get_config(config=None):
     if config:
         conf = config
@@ -104,6 +100,9 @@ def get_config(config=None):
     conntrack['wlb_local_action'] = conf.exists(['load-balancing', 'wan', 'enable-local-traffic'])
 
     conntrack['module_map'] = module_map
+
+    if conf.exists(['service', 'conntrack-sync']):
+        set_dependents('conntrack_sync', conf)
 
     return conntrack
 
@@ -213,9 +212,7 @@ def apply(conntrack):
         module_str = ' '.join(rm_modules)
         cmd(f'rmmod {module_str}')
 
-    if process_named_running('conntrackd'):
-        # Reload conntrack-sync daemon to fetch new sysctl values
-        resync_conntrackd()
+    call_dependents()
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080
