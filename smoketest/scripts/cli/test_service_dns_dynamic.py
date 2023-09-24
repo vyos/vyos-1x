@@ -203,7 +203,31 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'password={key_file.name}', ddclient_conf)
             self.assertIn(f'ttl={ttl}', ddclient_conf)
 
-    def test_05_dyndns_vrf(self):
+    def test_05_dyndns_hostname(self):
+        # Check if DDNS service can be configured and runs
+        svc_path = ['address', interface, 'service', 'namecheap']
+        proto = 'namecheap'
+        hostnames = ['@', 'www', hostname, f'@.{hostname}']
+
+        for name in hostnames:
+            self.cli_set(base_path + svc_path + ['protocol', proto])
+            self.cli_set(base_path + svc_path + ['server', server])
+            self.cli_set(base_path + svc_path + ['username', username])
+            self.cli_set(base_path + svc_path + ['password', password])
+            self.cli_set(base_path + svc_path + ['host-name', name])
+
+            # commit changes
+            self.cli_commit()
+
+            # Check the generating config parameters
+            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            self.assertIn(f'protocol={proto}', ddclient_conf)
+            self.assertIn(f'server={server}', ddclient_conf)
+            self.assertIn(f'login={username}', ddclient_conf)
+            self.assertIn(f'password={password}', ddclient_conf)
+            self.assertIn(f'{name}', ddclient_conf)
+
+    def test_06_dyndns_vrf(self):
         vrf_name = f'vyos-test-{"".join(random.choices(string.ascii_letters + string.digits, k=5))}'
         svc_path = ['address', interface, 'service', 'cloudflare']
 

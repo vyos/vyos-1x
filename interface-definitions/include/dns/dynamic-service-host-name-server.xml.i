@@ -4,8 +4,9 @@
     <help>Hostname to register with Dynamic DNS service</help>
     <constraint>
         #include <include/constraint/host-name.xml.i>
+        <regex>(\@|\*)[-.A-Za-z0-9]*</regex>
     </constraint>
-    <constraintErrorMessage>Host-name must be alphanumeric and can contain hyphens</constraintErrorMessage>
+    <constraintErrorMessage>Host-name must be alphanumeric, can contain hyphens and can be prefixed with '@' or '*'</constraintErrorMessage>
     <multi/>
   </properties>
 </leafNode>
