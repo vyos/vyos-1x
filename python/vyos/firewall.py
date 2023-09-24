@@ -95,6 +95,20 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if states:
             output.append(f'ct state {{{states}}}')
 
+    if 'conntrack_helper' in rule_conf:
+        helper_map = {'h323': ['RAS', 'Q.931'], 'nfs': ['rpc'], 'sqlnet': ['tns']}
+        helper_out = []
+
+        for helper in rule_conf['conntrack_helper']:
+            if helper in helper_map:
+                helper_out.extend(helper_map[helper])
+            else:
+                helper_out.append(helper)
+
+        if helper_out:
+            helper_str = ','.join(f'"{s}"' for s in helper_out)
+            output.append(f'ct helper {{{helper_str}}}')
+
     if 'connection_status' in rule_conf and rule_conf['connection_status']:
         status = rule_conf['connection_status']
         if status['nat'] == 'destination':

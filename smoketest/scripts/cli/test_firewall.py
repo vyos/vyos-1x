@@ -503,12 +503,15 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'state', 'invalid', 'enable'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'state', 'new', 'enable'])
-
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'connection-status', 'nat', 'destination'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'new', 'enable'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'established', 'enable'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'connection-status', 'nat', 'source'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'state', 'related', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'conntrack-helper', 'ftp'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'conntrack-helper', 'pptp'])
 
         self.cli_commit()
 
@@ -517,6 +520,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state invalid', 'reject'],
             ['ct state new', 'ct status dnat', 'accept'],
             ['ct state { established, new }', 'ct status snat', 'accept'],
+            ['ct state related', 'ct helper { "ftp", "pptp" }', 'accept'],
             ['drop', f'comment "{name} default-action drop"']
         ]
 
