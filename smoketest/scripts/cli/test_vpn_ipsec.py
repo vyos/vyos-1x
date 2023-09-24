@@ -45,76 +45,61 @@ PROCESS_NAME = 'charon-systemd'
 regex_uuid4 = '[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}'
 
 ca_pem = """
-MIIDSzCCAjOgAwIBAgIUQHK+ZgTUYZksvXY2/MyW+Jiels4wDQYJKoZIhvcNAQEL
-BQAwFjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMjEwNjE0MTk0NTI3WhcNMzEw
-NjEyMTk0NTI3WjAWMRQwEgYDVQQDDAtFYXN5LVJTQSBDQTCCASIwDQYJKoZIhvcN
-AQEBBQADggEPADCCAQoCggEBAKCAzpatA8yywXhGunWD//6Qg9EMJMb+7didNr10
-DuYPPGyTOXwG4Xicbr0FJ6cNkWg4wj3ZXEqqBzgS1Z9u78yuYPt5LE9eM8Wtawp7
-qIUCMTlSu4uD3/4A3c1xfHDpTOEl1BDvxMtQxQZcMNQVUG5ZMdcWQvqvQG6F7Nak
-+jgkaQ+Gyhwq++KVTEHJsA6+POuD0uaqAJv3tLGrRf4y4zdOn4thuTQ9swIBjKW6
-ci78Dk0F4u24YYV2BHKsPEPIyCQxKSRrMvqVWWljX9HmNsGawyEhLvW34aphj0aD
-JL/n1kWm+DnGyM+Rp6pXQz5y3xAnmKeYziaQNnvHoQi+gY0CAwEAAaOBkDCBjTAd
-BgNVHQ4EFgQUy43jkjE+CORrxeddqofQztZ9UxYwUQYDVR0jBEowSIAUy43jkjE+
-CORrxeddqofQztZ9UxahGqQYMBYxFDASBgNVBAMMC0Vhc3ktUlNBIENBghRAcr5m
-BNRhmSy9djb8zJb4mJ6WzjAMBgNVHRMEBTADAQH/MAsGA1UdDwQEAwIBBjANBgkq
-hkiG9w0BAQsFAAOCAQEALHdd1JXq6EUF9dSUijPLEiDVwn2TTIBIxvQqFzpWDDHg
-EWLzRJESyNUbIiwuUGwvqcVki0TmQcFR9XwmcDFDotlXz9OQISBlCW+Twuf4/XAL
-11njH8qXSaWF/wPbF35NOPhV5xOOCZ6K7Vilp3tK6LeOWvz2AUtwiVE1prNV3cIA
-B2ham0JASS0HIkfrcjpZNcx4NlSBaFf4MK5A11p13zPqMqzdEqn6n8fbYEADfVzy
-TfdqX1dPVc9zaM8uwyh5VyYBMDV7DoL384ZHJZYLENK/pT4kbl+sM/Cnhvyu0UCe
-RVqJGQtCdChZpDAVkzJRQYw3/FR8Mj+M+8GrgOrJ0w==
+MIICMDCCAdegAwIBAgIUBCzIjYvD7SPbx5oU18IYg7NVxQ0wCgYIKoZIzj0EAwIw
+ZzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzEgMB4GA1UEAwwXSVBTZWMgU21va2V0ZXN0
+IFJvb3QgQ0EwHhcNMjMwOTI0MTIwMzQxWhcNMzMwOTIxMTIwMzQxWjBnMQswCQYD
+VQQGEwJHQjETMBEGA1UECAwKU29tZS1TdGF0ZTESMBAGA1UEBwwJU29tZS1DaXR5
+MQ0wCwYDVQQKDARWeU9TMSAwHgYDVQQDDBdJUFNlYyBTbW9rZXRlc3QgUm9vdCBD
+QTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEh8/yU572B3zmFxrGgHk+H7grYt
+EHUJodY3gXNWMHz0gySrbGhsGtECDfP/G+T4Suk7cuVzB1wnLocSafD8TcqjYTBf
+MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgGGMB0GA1UdJQQWMBQGCCsG
+AQUFBwMCBggrBgEFBQcDATAdBgNVHQ4EFgQUTYoQJNlk7X87/gRegHnCnPef39Aw
+CgYIKoZIzj0EAwIDRwAwRAIgX1spXjrUc10r3g/Zm4O31LU5O08J2vVqFo94zHE5
+0VgCIG4JK9Zg5O/yn4mYksZux7efiHRUzL2y2TXQ9IqrqM8W
+"""
+
+int_ca_pem = """
+MIICYDCCAgWgAwIBAgIUcFx2BVYErHI+SneyPYHijxXt1cgwCgYIKoZIzj0EAwIw
+ZzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzEgMB4GA1UEAwwXSVBTZWMgU21va2V0ZXN0
+IFJvb3QgQ0EwHhcNMjMwOTI0MTIwNTE5WhcNMzMwOTIwMTIwNTE5WjBvMQswCQYD
+VQQGEwJHQjETMBEGA1UECAwKU29tZS1TdGF0ZTESMBAGA1UEBwwJU29tZS1DaXR5
+MQ0wCwYDVQQKDARWeU9TMSgwJgYDVQQDDB9JUFNlYyBTbW9rZXRlc3QgSW50ZXJt
+ZWRpYXRlIENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIHw2G5dq3c715AcA
+tzR++dYu1fLRFmHzRGTZOT7hLrh2Fg4hnKFPLOeUA5Qi50xCvjJ9JnonTyy2RfRH
+axYizKOBhjCBgzASBgNVHRMBAf8ECDAGAQH/AgEAMA4GA1UdDwEB/wQEAwIBhjAd
+BgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwEwHQYDVR0OBBYEFC9KrFYtA+hO
+l7vdMbWxTMAyLB7BMB8GA1UdIwQYMBaAFE2KECTZZO1/O/4EXoB5wpz3n9/QMAoG
+CCqGSM49BAMCA0kAMEYCIQCnqWbElgOL9dGO3iLxasFNq/hM7vM/DzaiHi4BowxW
+0gIhAMohefNj+QgLfPhvyODHIPE9LMyfp7lJEaCC2K8PCSFD
 """
 
 peer_cert = """
-MIIDZjCCAk6gAwIBAgIRAKHpoE0rTcB/YXhnFpeckngwDQYJKoZIhvcNAQELBQAw
-FjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0EwHhcNMjEwNjE0MjAwNDQ3WhcNMjQwNTI5
-MjAwNDQ3WjAQMQ4wDAYDVQQDDAVwZWVyMTCCASIwDQYJKoZIhvcNAQEBBQADggEP
-ADCCAQoCggEBALNwjDC1Lj2ojfCi1TESsyD0MLuqUVLTBZaXCXFtQdB/Aw3b3eBc
-J8+FUYQ6xMplmklXcjJEyXSMvqENpLX6xEDNWWvqTf22eEWt36QTfBeyFyDKtXnm
-4Y+ufXAHl3sLtyZN/7q+Xl4ubYvtAHVRLYzkXAtj1tVdaYEZQy8x/F3ZFFUsCfxR
-RqJBKTxcENP8STpIz9X8dS9iif9SBA42C0eHqMWv1tYW1IHO9gQxYFS3cvoPDPlD
-AJ3ihu5x3fO892S7FtZLVN/GsN1TKRKL217eVPyW0+QcnUwbrXWc7fnmm1btXVmh
-9YKPdtX8WnEeOtMCVZGKqdydnI3iAqvPmd0CAwEAAaOBtDCBsTAJBgNVHRMEAjAA
-MB0GA1UdDgQWBBQGsAPY4cHnTNUv7l+l8OYRSqcX8jBRBgNVHSMESjBIgBTLjeOS
-MT4I5GvF512qh9DO1n1TFqEapBgwFjEUMBIGA1UEAwwLRWFzeS1SU0EgQ0GCFEBy
-vmYE1GGZLL12NvzMlviYnpbOMBMGA1UdJQQMMAoGCCsGAQUFBwMBMAsGA1UdDwQE
-AwIFoDAQBgNVHREECTAHggVwZWVyMTANBgkqhkiG9w0BAQsFAAOCAQEAdJr+11eG
-FvChxu/LkwsXe2V+OZzGRq+hmQlaK3kG/AyI5hVA/IVHJkDe281wbBNKBWYxeSMn
-lAKbwuhPluO99oldzY9ZVkSiRmLh3r27wy/y+1plvoNxyTN7644Hvtk/8P/LV67R
-amXvVgkhpvIQSBfgifXzqUs+BV/x7TSeN3isxNOB8FP6imODsw8lF0Ir1Ze34emr
-TMNo5wNR5xp2dUa9OkzjRpgpifh20zM3UeVOixIPoq78IDjT0aZP8Lve2/g4Ccc6
-RHNF31r/2UL8rZfQRUAMijVdAvIINCk0kRBhNcr9MCi3czmmgiXXMGwLWLvSkfnE
-W06wKX1lpPSptg==
+MIICSTCCAfCgAwIBAgIUPxYleUgCo/glVVePze3QmAFgi6MwCgYIKoZIzj0EAwIw
+bzELMAkGA1UEBhMCR0IxEzARBgNVBAgMClNvbWUtU3RhdGUxEjAQBgNVBAcMCVNv
+bWUtQ2l0eTENMAsGA1UECgwEVnlPUzEoMCYGA1UEAwwfSVBTZWMgU21va2V0ZXN0
+IEludGVybWVkaWF0ZSBDQTAeFw0yMzA5MjQxMjA2NDJaFw0yODA5MjIxMjA2NDJa
+MGQxCzAJBgNVBAYTAkdCMRMwEQYDVQQIDApTb21lLVN0YXRlMRIwEAYDVQQHDAlT
+b21lLUNpdHkxDTALBgNVBAoMBFZ5T1MxHTAbBgNVBAMMFElQU2VjIFNtb2tldGVz
+dCBQZWVyMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZJtuTDu84uy++GMwRNLl
+10JAXZxXQSDl+CdTWwjbQZURcdY+ia7BoaoYX/0VKPel3Se64rIUQQLQoY/9MJb9
+UKN1MHMwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwEwYDVR0lBAwwCgYI
+KwYBBQUHAwEwHQYDVR0OBBYEFNJCdnkm3cAmf04UwOKL7IqMJ6OXMB8GA1UdIwQY
+MBaAFC9KrFYtA+hOl7vdMbWxTMAyLB7BMAoGCCqGSM49BAMCA0cAMEQCIGVnDRUy
+UJ0U/deDvrBo1+AakZndkNAMN/XNo5a5GzhEAiBCY7E/3b0BIO8FiIbVB3iDcaxg
+g7ET2RgWxvhEoN3ZRw==
 """
 
 peer_key = """
-MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCzcIwwtS49qI3w
-otUxErMg9DC7qlFS0wWWlwlxbUHQfwMN293gXCfPhVGEOsTKZZpJV3IyRMl0jL6h
-DaS1+sRAzVlr6k39tnhFrd+kE3wXshcgyrV55uGPrn1wB5d7C7cmTf+6vl5eLm2L
-7QB1US2M5FwLY9bVXWmBGUMvMfxd2RRVLAn8UUaiQSk8XBDT/Ek6SM/V/HUvYon/
-UgQONgtHh6jFr9bWFtSBzvYEMWBUt3L6Dwz5QwCd4obucd3zvPdkuxbWS1TfxrDd
-UykSi9te3lT8ltPkHJ1MG611nO355ptW7V1ZofWCj3bV/FpxHjrTAlWRiqncnZyN
-4gKrz5ndAgMBAAECggEACvAya4mv3uxWcrPKYSptpvWbvuTb/juE3LAqUDLDz0ze
-x8p+VP3pI1pSJMhcVKYq6IufF3df/G3T9Qda4gj+S6D48X4f8PZdkInP1zWk2+Ds
-TgBtXZf4agTN+rVLw6FsMbaRfzW5lO4pmV0CKSSgrTUCc2NLpkgCdW8vzEG0y5ek
-15uBOyvuydWM4CFgZT/cUvnu4UtPFL1vaTdD4Lw0FfZq4iS8SWsGbbMoTPKkJRlS
-k9oMEOvhA1WIfSgiG0FyaidoNEormB6J1SKVo27P8SOYu2etiFdF9SJUYg9cBzM3
-z3HcAsXeSh2kpc8Fc2yOS6zI5AsC0Len2SQmKQD8YQKBgQDlgg5cZV5AY2Ji6b+T
-nTHjna7dg/kzUOYs0AmK9DHHziZJ2SKucJlB9smynPLjY/MQbKcNWQ1Cad+olDNP
-Ts4lLhs4kbITkmgPQME3it1fGstHy/sGcF0m+YRsSxfwt5bxLXH86+d067C0XMhg
-URMgGv9ZBTe/P1LuhIUTEjYzlQKBgQDIJvl7sSXHRRB0k7NU/uV3Tut3NTqIzXiz
-pq9hMyF+3aIqaA7kdjIIJczv1grVYz+RUdX3Gu1FyHMl8ynoEz5NNWsbe+Ay/moa
-ztijak3UH3M+d6WsxSRehdYl6DaMstHwWfKZvWNJCGyl7ckz9gGjc3DY/qYqZDrx
-p3LlZsY7KQKBgQCj3ur2GgLkIpI7Yf9CHPlkNlCHJhYnB9pxoNFPf/CTY6R/EiTr
-PMaRDO8TM3FR3ynMTmgw5abMBuCFc9v3AqO6dGNHTvBBfUYDrg7H48UQhQckaocA
-H/bDP2HIGQ4s+Ek0R2ieWKpZF3iCL8V60CjBwcUVAN6/FS3X1JNX/KbqyQKBgQDA
-8dlk5PN/MlPXnZ6t2/7G0bxpsVVZFYI65P+CGvE6RFuUt7VLhalbc10pAtR0unVI
-GHTD/iAnOkHOnqeSQiK3+TvkRbluTxVn/GiYt9yJFTxaRqrebzlNKYW0CzOy1JtP
-MNaOYCS6/bUHC7//KDKSJ7HsbScwDGlKFVrMTBPiaQKBgQCjkIJDZ4pC3er7QiC3
-RXWPyxIG5iTjn4fizphaBt6+pkBAlBh0V6inmleAWa5DJSpgU4jQv4mZsAQs6ctq
-usmoy47ke8pTXPHgQ8ZUwsfM4IztqOm+w0X6mSZi6HdJCnMdxCZBBpO225UvonSR
-rgiyCHemtMepq57Pl1Nmj49eEA==
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgVDEZDK7q/T+tiJUV
+WLKS3ZYDfZ4lZv0C1gJpYq0gWP2hRANCAARkm25MO7zi7L74YzBE0uXXQkBdnFdB
+IOX4J1NbCNtBlRFx1j6JrsGhqhhf/RUo96XdJ7rishRBAtChj/0wlv1Q
 """
+
+swanctl_dir = '/etc/swanctl'
+CERT_PATH   = f'{swanctl_dir}/x509/'
+CA_PATH     = f'{swanctl_dir}/x509ca/'
 
 class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
     skip_process_check = False
@@ -400,7 +385,9 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         # Enable PKI
         peer_name = 'peer1'
         ca_name = 'MyVyOS-CA'
+        int_ca_name = 'MyVyOS-IntCA'
         self.cli_set(['pki', 'ca', ca_name, 'certificate', ca_pem.replace('\n','')])
+        self.cli_set(['pki', 'ca', int_ca_name, 'certificate', int_ca_pem.replace('\n','')])
         self.cli_set(['pki', 'certificate', peer_name, 'certificate', peer_cert.replace('\n','')])
         self.cli_set(['pki', 'certificate', peer_name, 'private', 'key', peer_key.replace('\n','')])
 
@@ -415,7 +402,7 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         self.cli_set(peer_base_path + ['authentication', 'local-id', peer_name])
         self.cli_set(peer_base_path + ['authentication', 'mode', 'x509'])
         self.cli_set(peer_base_path + ['authentication', 'remote-id', 'peer2'])
-        self.cli_set(peer_base_path + ['authentication', 'x509', 'ca-certificate', ca_name])
+        self.cli_set(peer_base_path + ['authentication', 'x509', 'ca-certificate', int_ca_name])
         self.cli_set(peer_base_path + ['authentication', 'x509', 'certificate', peer_name])
         self.cli_set(peer_base_path + ['connection-type', 'initiate'])
         self.cli_set(peer_base_path + ['ike-group', ike_group])
@@ -465,6 +452,11 @@ class TestVPNIPsec(VyOSUnitTestSHIM.TestCase):
         ]
         for line in swanctl_secrets_lines:
             self.assertIn(line, swanctl_conf)
+
+        # Check Root CA, Intermediate CA and Peer cert/key pair is present
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}_1.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CA_PATH, f'{int_ca_name}_2.pem')))
+        self.assertTrue(os.path.exists(os.path.join(CERT_PATH, f'{peer_name}.pem')))
 
         # There is only one VTI test so no need to delete this globally in tearDown()
         self.cli_delete(vti_path)

@@ -29,7 +29,10 @@ from vyos.configdict import leaf_node_changed
 from vyos.configverify import verify_interface_exists
 from vyos.defaults import directories
 from vyos.ifconfig import Interface
+from vyos.pki import encode_certificate
 from vyos.pki import encode_public_key
+from vyos.pki import find_chain
+from vyos.pki import load_certificate
 from vyos.pki import load_private_key
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_crl
@@ -431,15 +434,23 @@ def generate_pki_files_x509(pki, x509_conf):
     ca_cert_name = x509_conf['ca_certificate']
     ca_cert_data = dict_search_args(pki, 'ca', ca_cert_name, 'certificate')
     ca_cert_crls = dict_search_args(pki, 'ca', ca_cert_name, 'crl') or []
+    ca_index = 1
     crl_index = 1
+
+    ca_cert = load_certificate(ca_cert_data)
+    pki_ca_certs = [load_certificate(ca['certificate']) for ca in pki['ca'].values()]
+
+    ca_cert_chain = find_chain(ca_cert, pki_ca_certs)
 
     cert_name = x509_conf['certificate']
     cert_data = dict_search_args(pki, 'certificate', cert_name, 'certificate')
     key_data = dict_search_args(pki, 'certificate', cert_name, 'private', 'key')
     protected = 'passphrase' in x509_conf
 
-    with open(os.path.join(CA_PATH, f'{ca_cert_name}.pem'), 'w') as f:
-        f.write(wrap_certificate(ca_cert_data))
+    for ca_cert_obj in ca_cert_chain:
+        with open(os.path.join(CA_PATH, f'{ca_cert_name}_{ca_index}.pem'), 'w') as f:
+            f.write(encode_certificate(ca_cert_obj))
+        ca_index += 1
 
     for crl in ca_cert_crls:
         with open(os.path.join(CRL_PATH, f'{ca_cert_name}_{crl_index}.pem'), 'w') as f:
