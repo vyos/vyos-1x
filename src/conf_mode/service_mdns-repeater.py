@@ -100,7 +100,7 @@ def generate(mdns):
         if len(mdns['interface']) < 2:
             return None
 
-    render(config_file, 'mdns-repeater/avahi-daemon.j2', mdns)
+    render(config_file, 'mdns-repeater/avahi-daemon.conf.j2', mdns)
     return None
 
 def apply(mdns):
