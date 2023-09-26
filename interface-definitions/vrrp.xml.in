@@ -351,6 +351,12 @@
               </leafNode>
             </children>
           </tagNode>
+          <leafNode name="snmp">
+            <properties>
+              <valueless/>
+              <help>Enable SNMP</help>
+            </properties>
+          </leafNode>
           <tagNode name="sync-group">
             <properties>
               <help>VRRP sync group</help>
