@@ -45,3 +45,12 @@ done
 
 # Enable Cloud-init pre-configuration service
 systemctl enable vyos-config-cloud-init.service
+
+# We need to have a group for RADIUS service users to use it inside PAM rules
+if ! grep -q '^radius' /etc/group; then
+    addgroup --quiet radius
+fi
+
+# And add RADIUS users to this group
+usermod -aG radius radius_user
+usermod -aG radius radius_priv_user

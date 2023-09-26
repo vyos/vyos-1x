@@ -1,0 +1,19 @@
+Name: RADIUS authentication (mandatory mode)
+Default: no
+Priority: 576
+
+Auth-Type: Primary
+Auth-Initial:
+    [default=ignore success=end auth_err=die perm_denied=die user_unknown=die] pam_radius_auth.so
+Auth:
+    [default=ignore success=end auth_err=die perm_denied=die user_unknown=die] pam_radius_auth.so use_first_pass
+
+Account-Type: Primary
+Account:
+    [default=ignore success=1] pam_succeed_if.so user notingroup radius quiet
+    [default=ignore success=end] pam_radius_auth.so
+
+Session-Type: Additional
+Session:
+    [default=ignore success=1] pam_succeed_if.so user notingroup radius quiet
+    [default=bad success=ok] pam_radius_auth.so

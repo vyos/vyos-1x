@@ -299,9 +299,15 @@ def apply(login):
     env = os.environ.copy()
     env['DEBIAN_FRONTEND'] = 'noninteractive'
     try:
+        # Disable PAM before enabling or modifying anything
+        cmd('pam-auth-update --disable radius-mandatory radius-optional', env=env)
         if 'radius' in login:
             # Enable RADIUS in PAM
-            cmd('pam-auth-update --package --enable radius', env=env)
+            if login['radius'].get('security_mode', '') == 'mandatory':
+                pam_profile = 'radius-mandatory'
+            else:
+                pam_profile = 'radius-optional'
+            cmd(f'pam-auth-update --enable {pam_profile}', env=env)
             # Make NSS system aware of RADIUS
             # This fancy snipped was copied from old Vyatta code
             command = "sed -i -e \'/\smapname/b\' \
@@ -312,8 +318,6 @@ def apply(login):
                           -e \'/^group:[^#]*$/s/: */&mapname /\' \
                           /etc/nsswitch.conf"
         else:
-            # Disable RADIUS in PAM
-            cmd('pam-auth-update --package --remove radius', env=env)
             # Drop RADIUS from NSS NSS system
             # This fancy snipped was copied from old Vyatta code
             command = "sed -i -e \'/^passwd:.*mapuid[ \t]/s/mapuid[ \t]//\' \
