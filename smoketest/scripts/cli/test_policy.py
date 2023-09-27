@@ -1519,6 +1519,28 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
+    # Test set table for destination and protocol
+    def test_protocol_destination_table_id(self):
+        path = base_path + ['local-route']
+
+        dst = '203.0.113.12'
+        rule = '85'
+        table = '104'
+        proto = 'tcp'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'destination', dst])
+        self.cli_set(path + ['rule', rule, 'protocol', proto])
+
+        self.cli_commit()
+
+        original = """
+        85:	from all to 203.0.113.12 ipproto tcp lookup 104
+        """
+        tmp = cmd('ip rule show prio 85')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
     # Test set table for sources with fwmark
     def test_fwmark_sources_table_id(self):
         path = base_path + ['local-route']

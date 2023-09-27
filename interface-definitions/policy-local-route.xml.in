@@ -53,6 +53,7 @@
                   </constraint>
                 </properties>
               </leafNode>
+              #include <include/policy/local-route_rule_protocol.xml.i>
               <leafNode name="source">
                 <properties>
                   <help>Source address or prefix</help>
