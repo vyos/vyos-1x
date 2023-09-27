@@ -3,6 +3,7 @@
 #include <include/generic-description.xml.i>
 #include <include/firewall/dscp.xml.i>
 #include <include/firewall/packet-options.xml.i>
+#include <include/firewall/firewall-mark.xml.i>
 #include <include/firewall/connection-mark.xml.i>
 #include <include/firewall/conntrack-helper.xml.i>
 #include <include/firewall/nft-queue.xml.i>

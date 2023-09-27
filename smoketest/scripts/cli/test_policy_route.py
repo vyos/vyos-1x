@@ -191,15 +191,18 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
     def test_pbr_matching_criteria(self):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'protocol', 'udp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'action', 'drop'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '1', 'mark', '2020'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'mark', '2-3000'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '2', 'set', 'table', table_id])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'source', 'address', '198.51.100.0/24'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'destination', 'port', '22'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'state', 'new', 'enable'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'ttl', 'gt', '2'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'mark', '!456'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '3', 'set', 'table', table_id])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'protocol', 'icmp'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'icmp', 'type-name', 'echo-request'])
@@ -210,6 +213,7 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '4', 'set', 'table', table_id])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'dscp', '41'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'dscp', '57-59'])
+        self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'mark', '!456-500'])
         self.cli_set(['policy', 'route', 'smoketest', 'rule', '5', 'set', 'table', table_id])
 
         self.cli_set(['policy', 'route6', 'smoketest6', 'rule', '1', 'protocol', 'udp'])
@@ -247,11 +251,11 @@ class TestPolicyRoute(VyOSUnitTestSHIM.TestCase):
         # IPv4
         nftables_search = [
             ['iifname { "' + interface + '", "' + interface_wc + '" }', 'jump VYOS_PBR_UD_smoketest'],
-            ['meta l4proto udp', 'drop'],
-            ['tcp flags syn / syn,ack', 'meta mark set ' + mark_hex],
-            ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark set ' + mark_hex],
+            ['meta l4proto udp', 'meta mark 0x000007e4', 'drop'],
+            ['tcp flags syn / syn,ack', 'meta mark 0x00000002-0x00000bb8', 'meta mark set ' + mark_hex],
+            ['ct state new', 'tcp dport 22', 'ip saddr 198.51.100.0/24', 'ip ttl > 2', 'meta mark != 0x000001c8', 'meta mark set ' + mark_hex],
             ['log prefix "[ipv4-route-smoketest-4-A]"', 'icmp type echo-request', 'ip length { 128, 1024-2048 }', 'meta pkttype other', 'meta mark set ' + mark_hex],
-            ['ip dscp { 0x29, 0x39-0x3b }', 'meta mark set ' + mark_hex]
+            ['ip dscp { 0x29, 0x39-0x3b }', 'meta mark != 0x000001c8-0x000001f4', 'meta mark set ' + mark_hex]
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_mangle')

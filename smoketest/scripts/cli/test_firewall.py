@@ -308,10 +308,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'source', 'address', '198.51.100.1'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'mark', '1010'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'jump-target', name])
 
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'protocol', 'tcp'])
+        self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'mark', '!98765'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'action', 'queue'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '2', 'queue', '3'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '3', 'protocol', 'udp'])
@@ -325,11 +327,11 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
             ['type filter hook forward priority filter; policy drop;'],
-            ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
+            ['ip saddr 198.51.100.1', 'meta mark 0x000003f2', f'jump NAME_{name}'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
-            [f'meta l4proto tcp','queue to 3'],
-            [f'meta l4proto udp','queue flags bypass,fanout to 0-15'],
+            ['meta mark != 0x000181cd', 'meta l4proto tcp','queue to 3'],
+            ['meta l4proto udp','queue flags bypass,fanout to 0-15'],
             [f'chain NAME_{name}'],
             ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[ipv4-NAM-{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'accept'],
@@ -466,6 +468,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'default-action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'source', 'address', '2001:db8::/64'])
+        self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'mark', '!6655-7766'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'action', 'jump'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '1', 'jump-target', name])
 
@@ -477,7 +480,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip6 length 1-1999', 'ip6 length != 60000-65535', 'ip6 dscp 0x04-0x0e', 'ip6 dscp != 0x1f-0x23', 'accept'],
             ['chain VYOS_IPV6_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
-            ['ip6 saddr 2001:db8::/64', f'jump NAME6_{name}'],
+            ['ip6 saddr 2001:db8::/64', 'meta mark != 0x000019ff-0x00001e56', f'jump NAME6_{name}'],
             [f'chain NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'accept'],
             [f'log prefix "[{name}-default-D]"', 'drop']
