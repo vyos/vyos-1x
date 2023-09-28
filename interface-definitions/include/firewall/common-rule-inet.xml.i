@@ -4,6 +4,7 @@
 #include <include/firewall/dscp.xml.i>
 #include <include/firewall/packet-options.xml.i>
 #include <include/firewall/connection-mark.xml.i>
+#include <include/firewall/conntrack-helper.xml.i>
 #include <include/firewall/nft-queue.xml.i>
 <leafNode name="disable">
   <properties>
