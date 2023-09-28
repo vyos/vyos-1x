@@ -176,6 +176,8 @@ def verify_rule(firewall, rule_conf, ipv6):
     if rule_conf['action'] != 'synproxy' and 'synproxy' in rule_conf:
         raise ConfigError('"synproxy" option allowed only for action synproxy')
     if rule_conf['action'] == 'synproxy':
+        if 'state' in rule_conf:
+            raise ConfigError('For action "synproxy" state cannot be defined')
         if not rule_conf.get('synproxy', {}).get('tcp'):
             raise ConfigError('synproxy TCP MSS is not defined')
         if rule_conf.get('protocol', {}) != 'tcp':
