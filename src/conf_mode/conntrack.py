@@ -20,6 +20,7 @@ import re
 from sys import exit
 
 from vyos.config import Config
+from vyos.configdep import set_dependents, call_dependents
 from vyos.utils.process import process_named_running
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_search_args
@@ -39,27 +40,35 @@ nftables_ct_file = r'/run/nftables-ct.conf'
 # Every ALG (Application Layer Gateway) consists of either a Kernel Object
 # also called a Kernel Module/Driver or some rules present in iptables
 module_map = {
-    'ftp' : {
-        'ko' : ['nf_nat_ftp', 'nf_conntrack_ftp'],
+    'ftp': {
+        'ko': ['nf_nat_ftp', 'nf_conntrack_ftp'],
+        'nftables': ['ct helper set "ftp_tcp" tcp dport {21} return']
     },
-    'h323' : {
-        'ko' : ['nf_nat_h323', 'nf_conntrack_h323'],
+    'h323': {
+        'ko': ['nf_nat_h323', 'nf_conntrack_h323'],
+        'nftables': ['ct helper set "ras_udp" udp dport {1719} return',
+                     'ct helper set "q931_tcp" tcp dport {1720} return']
     },
-    'nfs' : {
-        'nftables' : ['ct helper set "rpc_tcp" tcp dport {111} return',
-                      'ct helper set "rpc_udp" udp dport {111} return']
+    'nfs': {
+        'nftables': ['ct helper set "rpc_tcp" tcp dport {111} return',
+                     'ct helper set "rpc_udp" udp dport {111} return']
     },
-    'pptp' : {
-        'ko' : ['nf_nat_pptp', 'nf_conntrack_pptp'],
+    'pptp': {
+        'ko': ['nf_nat_pptp', 'nf_conntrack_pptp'],
+        'nftables': ['ct helper set "pptp_tcp" tcp dport {1723} return'],
+        'ipv4': True
      },
-    'sip' : {
-        'ko' : ['nf_nat_sip', 'nf_conntrack_sip'],
+    'sip': {
+        'ko': ['nf_nat_sip', 'nf_conntrack_sip'],
+        'nftables': ['ct helper set "sip_tcp" tcp dport {5060,5061} return',
+                     'ct helper set "sip_udp" udp dport {5060,5061} return']
      },
-    'sqlnet' : {
-        'nftables' : ['ct helper set "tns_tcp" tcp dport {1521,1525,1536} return']
+    'sqlnet': {
+        'nftables': ['ct helper set "tns_tcp" tcp dport {1521,1525,1536} return']
     },
-    'tftp' : {
-        'ko' : ['nf_nat_tftp', 'nf_conntrack_tftp'],
+    'tftp': {
+        'ko': ['nf_nat_tftp', 'nf_conntrack_tftp'],
+        'nftables': ['ct helper set "tftp_udp" udp dport {69} return']
      },
 }
 
@@ -69,11 +78,6 @@ valid_groups = [
     'network_group',
     'port_group'
 ]
-
-def resync_conntrackd():
-    tmp = run('/usr/libexec/vyos/conf_mode/conntrack_sync.py')
-    if tmp > 0:
-        print('ERROR: error restarting conntrackd!')
 
 def get_config(config=None):
     if config:
@@ -96,6 +100,9 @@ def get_config(config=None):
     conntrack['wlb_local_action'] = conf.exists(['load-balancing', 'wan', 'enable-local-traffic'])
 
     conntrack['module_map'] = module_map
+
+    if conf.exists(['service', 'conntrack-sync']):
+        set_dependents('conntrack_sync', conf)
 
     return conntrack
 
@@ -177,26 +184,35 @@ def generate(conntrack):
 def apply(conntrack):
     # Depending on the enable/disable state of the ALG (Application Layer Gateway)
     # modules we need to either insmod or rmmod the helpers.
+    
+    add_modules = []
+    rm_modules = []
+
     for module, module_config in module_map.items():
-        if dict_search(f'modules.{module}', conntrack) is None:
+        if dict_search_args(conntrack, 'modules', module) is None:
             if 'ko' in module_config:
-                for mod in module_config['ko']:
-                    # Only remove the module if it's loaded
-                    if os.path.exists(f'/sys/module/{mod}'):
-                        cmd(f'rmmod {mod}')
+                unloaded = [mod for mod in module_config['ko'] if os.path.exists(f'/sys/module/{mod}')]
+                rm_modules.extend(unloaded)
         else:
             if 'ko' in module_config:
-                for mod in module_config['ko']:
-                    cmd(f'modprobe {mod}')
+                add_modules.extend(module_config['ko'])
+
+    # Add modules before nftables uses them
+    if add_modules:
+        module_str = ' '.join(add_modules)
+        cmd(f'modprobe -a {module_str}')
 
     # Load new nftables ruleset
     install_result, output = rc_cmd(f'nft -f {nftables_ct_file}')
     if install_result == 1:
         raise ConfigError(f'Failed to apply configuration: {output}')
 
-    if process_named_running('conntrackd'):
-        # Reload conntrack-sync daemon to fetch new sysctl values
-        resync_conntrackd()
+    # Remove modules after nftables stops using them
+    if rm_modules:
+        module_str = ' '.join(rm_modules)
+        cmd(f'rmmod {module_str}')
+
+    call_dependents()
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080

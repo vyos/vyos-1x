@@ -1,4 +1,5 @@
 {
+  "conntrack": {"conntrack_sync": ["conntrack_sync"]},
   "firewall": {"conntrack": ["conntrack"], "group_resync": ["conntrack", "nat", "policy-route"]},
   "http_api": {"https": ["https"]},
   "load_balancing_wan": {"conntrack": ["conntrack"]},
