@@ -18,7 +18,7 @@ import os
 
 from json import loads
 from sys import exit
-from netifaces import ifaddresses, interfaces, AF_INET
+from netifaces import ifaddresses, interfaces, AF_INET, AF_INET6
 
 from vyos.config import Config
 from vyos.ifconfig.vrrp import VRRP
@@ -36,18 +36,22 @@ def get_config(config=None):
         conf = config
     else:
         conf = Config()
+
     base = ['service', 'mdns', 'repeater']
-    mdns = conf.get_config_dict(base, key_mangling=('-', '_'), get_first_key=True)
+    if not conf.exists(base):
+        return None
+
+    mdns = conf.get_config_dict(base, key_mangling=('-', '_'),
+                                no_tag_node_value_mangle=True,
+                                get_first_key=True,
+                                with_recursive_defaults=True)
 
     if mdns:
         mdns['vrrp_exists'] = conf.exists('high-availability vrrp')
     return mdns
 
 def verify(mdns):
-    if not mdns:
-        return None
-
-    if 'disable' in mdns:
+    if not mdns or 'disable' in mdns:
         return None
 
     # We need at least two interfaces to repeat mDNS advertisments
@@ -60,8 +64,12 @@ def verify(mdns):
         if interface not in interfaces():
             raise ConfigError(f'Interface "{interface}" does not exist!')
 
-        if AF_INET not in ifaddresses(interface):
+        if mdns['ip_version'] in ['ipv4', 'both'] and AF_INET not in ifaddresses(interface):
             raise ConfigError('mDNS repeater requires an IPv4 address to be '
+                                  f'configured on interface "{interface}"')
+
+        if mdns['ip_version'] in ['ipv6', 'both'] and AF_INET6 not in ifaddresses(interface):
+            raise ConfigError('mDNS repeater requires an IPv6 address to be '
                                   f'configured on interface "{interface}"')
 
     return None
@@ -92,7 +100,7 @@ def generate(mdns):
         if len(mdns['interface']) < 2:
             return None
 
-    render(config_file, 'mdns-repeater/avahi-daemon.j2', mdns)
+    render(config_file, 'mdns-repeater/avahi-daemon.conf.j2', mdns)
     return None
 
 def apply(mdns):
