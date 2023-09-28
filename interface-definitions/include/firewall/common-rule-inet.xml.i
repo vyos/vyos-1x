@@ -220,6 +220,7 @@
     </leafNode>
   </children>
 </node>
+#include <include/firewall/synproxy.xml.i>
 <node name="state">
   <properties>
     <help>Session state</help>
