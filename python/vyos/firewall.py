@@ -263,9 +263,8 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
-    if rule_conf['action'] == 'synproxy':
-        if 'synproxy' in rule_conf:
-            output.append('ct state invalid,untracked')
+    if dict_search_args(rule_conf, 'action') == 'synproxy':
+        output.append('ct state invalid,untracked')
 
     if 'hop_limit' in rule_conf:
         operators = {'eq': '==', 'gt': '>', 'lt': '<'}
