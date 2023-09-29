@@ -212,7 +212,12 @@ def apply(conntrack):
         module_str = ' '.join(rm_modules)
         cmd(f'rmmod {module_str}')
 
-    call_dependents()
+    try:
+        call_dependents()
+    except ConfigError:
+        # Ignore config errors on dependent due to being called too early. Example:
+        # ConfigError("ConfigError('Interface ethN requires an IP address!')")
+        pass
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080
