@@ -51,20 +51,20 @@ def get_config(config=None):
         tmp = node_changed(conf, base_rule, key_mangling=('-', '_'))
         if tmp:
             for rule in (tmp or []):
-                src = leaf_node_changed(conf, base_rule + [rule, 'source'])
+                src = leaf_node_changed(conf, base_rule + [rule, 'source', 'address'])
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
                 iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
-                dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
+                dst = leaf_node_changed(conf, base_rule + [rule, 'destination', 'address'])
                 proto = leaf_node_changed(conf, base_rule + [rule, 'protocol'])
                 rule_def = {}
                 if src:
-                    rule_def = dict_merge({'source' : src}, rule_def)
+                    rule_def = dict_merge({'source': {'address': src}}, rule_def)
                 if fwmk:
                     rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
                 if iif:
                     rule_def = dict_merge({'inbound_interface' : iif}, rule_def)
                 if dst:
-                    rule_def = dict_merge({'destination' : dst}, rule_def)
+                    rule_def = dict_merge({'destination': {'address': dst}}, rule_def)
                 if proto:
                     rule_def = dict_merge({'protocol' : proto}, rule_def)
                 dict = dict_merge({dict_id : {rule : rule_def}}, dict)
@@ -78,10 +78,10 @@ def get_config(config=None):
         # delete policy local-route rule x destination x.x.x.x
         if 'rule' in pbr[route]:
             for rule, rule_config in pbr[route]['rule'].items():
-                src = leaf_node_changed(conf, base_rule + [rule, 'source'])
+                src = leaf_node_changed(conf, base_rule + [rule, 'source', 'address'])
                 fwmk = leaf_node_changed(conf, base_rule + [rule, 'fwmark'])
                 iif = leaf_node_changed(conf, base_rule + [rule, 'inbound-interface'])
-                dst = leaf_node_changed(conf, base_rule + [rule, 'destination'])
+                dst = leaf_node_changed(conf, base_rule + [rule, 'destination', 'address'])
                 proto = leaf_node_changed(conf, base_rule + [rule, 'protocol'])
                 # keep track of changes in configuration
                 # otherwise we might remove an existing node although nothing else has changed
@@ -94,7 +94,8 @@ def get_config(config=None):
                     # if a new selector is added, we have to remove all previous rules without this selector
                     # to make sure we remove all previous rules with this source(s), it will be included
                     if 'source' in rule_config:
-                        rule_def = dict_merge({'source': rule_config['source']}, rule_def)
+                        if 'address' in rule_config['source']:
+                            rule_def = dict_merge({'source': {'address': rule_config['source']['address']}}, rule_def)
                 else:
                     # if src is not None, it's previous content will be returned
                     # this can be an empty array if it's just being set, or the previous value
@@ -102,7 +103,8 @@ def get_config(config=None):
                     changed = True
                     # set the old value for removal if it's not empty
                     if len(src) > 0:
-                        rule_def = dict_merge({'source' : src}, rule_def)
+                        rule_def = dict_merge({'source': {'address': src}}, rule_def)
+
                 if fwmk is None:
                     if 'fwmark' in rule_config:
                         rule_def = dict_merge({'fwmark': rule_config['fwmark']}, rule_def)
@@ -110,6 +112,7 @@ def get_config(config=None):
                     changed = True
                     if len(fwmk) > 0:
                         rule_def = dict_merge({'fwmark' : fwmk}, rule_def)
+
                 if iif is None:
                     if 'inbound_interface' in rule_config:
                         rule_def = dict_merge({'inbound_interface': rule_config['inbound_interface']}, rule_def)
@@ -117,13 +120,16 @@ def get_config(config=None):
                     changed = True
                     if len(iif) > 0:
                         rule_def = dict_merge({'inbound_interface' : iif}, rule_def)
+
                 if dst is None:
                     if 'destination' in rule_config:
-                        rule_def = dict_merge({'destination': rule_config['destination']}, rule_def)
+                        if 'address' in rule_config['destination']:
+                            rule_def = dict_merge({'destination': {'address': rule_config['destination']['address']}}, rule_def)
                 else:
                     changed = True
                     if len(dst) > 0:
-                        rule_def = dict_merge({'destination' : dst}, rule_def)
+                        rule_def = dict_merge({'destination': {'address': dst}}, rule_def)
+
                 if proto is None:
                     if 'protocol' in rule_config:
                         rule_def = dict_merge({'protocol': rule_config['protocol']}, rule_def)
@@ -131,6 +137,7 @@ def get_config(config=None):
                     changed = True
                     if len(proto) > 0:
                         rule_def = dict_merge({'protocol' : proto}, rule_def)
+
                 if changed:
                     dict = dict_merge({dict_id : {rule : rule_def}}, dict)
                     pbr.update(dict)
@@ -184,8 +191,8 @@ def apply(pbr):
             v6 = " -6" if rule_rm == 'rule6_remove' else ""
 
             for rule, rule_config in pbr[rule_rm].items():
-                source = rule_config.get('source', [''])
-                destination = rule_config.get('destination', [''])
+                source = rule_config.get('source', {}).get('address', [''])
+                destination = rule_config.get('destination', {}).get('address', [''])
                 fwmark = rule_config.get('fwmark', [''])
                 inbound_interface = rule_config.get('inbound_interface', [''])
                 protocol = rule_config.get('protocol', [''])
@@ -210,8 +217,8 @@ def apply(pbr):
         if 'rule' in pbr_route:
             for rule, rule_config in pbr_route['rule'].items():
                 table = rule_config['set'].get('table', '')
-                source = rule_config.get('source', ['all'])
-                destination = rule_config.get('destination', ['all'])
+                source = rule_config.get('source', {}).get('address', ['all'])
+                destination = rule_config.get('destination', {}).get('address', ['all'])
                 fwmark = rule_config.get('fwmark', '')
                 inbound_interface = rule_config.get('inbound_interface', '')
                 protocol = rule_config.get('protocol', '')

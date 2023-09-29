@@ -1467,7 +1467,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '23'
         for src in sources:
             self.cli_set(path + ['rule', rule, 'set', 'table', table])
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
 
         self.cli_commit()
 
@@ -1508,7 +1508,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '154'
 
         self.cli_set(path + ['rule', rule, 'set', 'table', table])
-        self.cli_set(path + ['rule', rule, 'destination', dst])
+        self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
 
         self.cli_commit()
 
@@ -1529,7 +1529,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         proto = 'tcp'
 
         self.cli_set(path + ['rule', rule, 'set', 'table', table])
-        self.cli_set(path + ['rule', rule, 'destination', dst])
+        self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
         self.cli_set(path + ['rule', rule, 'protocol', proto])
 
         self.cli_commit()
@@ -1551,7 +1551,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '150'
         for src in sources:
             self.cli_set(path + ['rule', rule, 'set', 'table', table])
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
             self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
 
         self.cli_commit()
@@ -1576,7 +1576,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.cli_set(path + ['rule', rule, 'set', 'table', table])
         self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
         for src in sources:
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
 
         self.cli_commit()
 
@@ -1602,8 +1602,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for src in sources:
             for dst in destinations:
                 self.cli_set(path + ['rule', rule, 'set', 'table', table])
-                self.cli_set(path + ['rule', rule, 'source', src])
-                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'source', 'address', src])
+                self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
                 self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
 
         self.cli_commit()
@@ -1627,7 +1627,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '23'
         for src in sources:
             self.cli_set(path + ['rule', rule, 'set', 'table', table])
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
 
         self.cli_commit()
 
@@ -1668,7 +1668,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '154'
 
         self.cli_set(path + ['rule', rule, 'set', 'table', table])
-        self.cli_set(path + ['rule', rule, 'destination', dst])
+        self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
 
         self.cli_commit()
 
@@ -1689,7 +1689,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '150'
         for src in sources:
             self.cli_set(path + ['rule', rule, 'set', 'table', table])
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
             self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
 
         self.cli_commit()
@@ -1712,7 +1712,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '150'
         for src in sources:
             self.cli_set(path + ['rule', rule, 'set', 'table', table])
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
             self.cli_set(path + ['rule', rule, 'inbound-interface', iif])
 
         self.cli_commit()
@@ -1739,8 +1739,8 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for src in sources:
             for dst in destinations:
                 self.cli_set(path + ['rule', rule, 'set', 'table', table])
-                self.cli_set(path + ['rule', rule, 'source', src])
-                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'source', 'address', src])
+                self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
                 self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
 
         self.cli_commit()
@@ -1770,15 +1770,15 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         for src in sources:
             for dst in destinations:
                 self.cli_set(path + ['rule', rule, 'set', 'table', table])
-                self.cli_set(path + ['rule', rule, 'source', src])
-                self.cli_set(path + ['rule', rule, 'destination', dst])
+                self.cli_set(path + ['rule', rule, 'source', 'address', src])
+                self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
                 self.cli_set(path + ['rule', rule, 'fwmark', fwmk])
 
         for src in sources_v6:
             for dst in destinations_v6:
                 self.cli_set(path_v6 + ['rule', rule, 'set', 'table', table])
-                self.cli_set(path_v6 + ['rule', rule, 'source', src])
-                self.cli_set(path_v6 + ['rule', rule, 'destination', dst])
+                self.cli_set(path_v6 + ['rule', rule, 'source', 'address', src])
+                self.cli_set(path_v6 + ['rule', rule, 'destination', 'address', dst])
                 self.cli_set(path_v6 + ['rule', rule, 'fwmark', fwmk])
 
         self.cli_commit()
@@ -1821,7 +1821,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         table = '151'
         self.cli_set(path + ['rule', rule, 'set', 'table', table])
         for src in sources:
-            self.cli_set(path + ['rule', rule, 'source', src])
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
 
         self.cli_commit()
 
@@ -1834,7 +1834,7 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
         self.assertEqual(sort_ip(tmp), sort_ip(original_first))
 
         # Create second commit with added destination
-        self.cli_set(path + ['rule', rule, 'destination', destination])
+        self.cli_set(path + ['rule', rule, 'destination', 'address', destination])
         self.cli_commit()
 
         original_second = """
