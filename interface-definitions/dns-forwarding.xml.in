@@ -158,6 +158,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -195,6 +198,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -227,6 +233,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -274,6 +283,9 @@
                             </children>
                           </tagNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -302,6 +314,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -334,6 +349,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -364,6 +382,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -393,6 +414,9 @@
                             </properties>
                           </leafNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -477,6 +501,9 @@
                             </children>
                           </tagNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>
@@ -585,6 +612,9 @@
                             </children>
                           </tagNode>
                           #include <include/dns/time-to-live.xml.i>
+                          <leafNode name="ttl">
+                              <defaultValue>300</defaultValue>
+                          </leafNode>
                           #include <include/generic-disable-node.xml.i>
                         </children>
                       </tagNode>

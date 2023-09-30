@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ddclient -list-protocols | grep -qw $1
+ddclient -list-protocols | grep -vE 'nsupdate|cloudns' | grep -qw $1
 
 if [ $? -gt 0 ]; then
     echo "Error: $1 is not a valid protocol, please choose from the supported list of protocols"
