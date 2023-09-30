@@ -54,42 +54,22 @@
                 </properties>
               </leafNode>
               #include <include/policy/local-route_rule_protocol.xml.i>
-              <leafNode name="source">
+              <node name="source">
                 <properties>
-                  <help>Source address or prefix</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Address to match against</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv4net</format>
-                    <description>Prefix to match against</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ip-prefix"/>
-                  </constraint>
-                  <multi/>
+                  <help>Source parameters</help>
                 </properties>
-              </leafNode>
-              <leafNode name="destination">
+                <children>
+                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                </children>
+              </node>
+              <node name="destination">
                 <properties>
-                  <help>Destination address or prefix</help>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>Address to match against</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv4net</format>
-                    <description>Prefix to match against</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                    <validator name="ip-prefix"/>
-                  </constraint>
-                  <multi/>
+                  <help>Destination parameters</help>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                </children>
+              </node>
               #include <include/interface/inbound-interface.xml.i>
             </children>
           </tagNode>
@@ -145,42 +125,22 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name="source">
+              <node name="source">
                 <properties>
-                  <help>Source address or prefix</help>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Address to match against</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6net</format>
-                    <description>Prefix to match against</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                    <validator name="ipv6-prefix"/>
-                  </constraint>
-                  <multi/>
+                  <help>Source parameters</help>
                 </properties>
-              </leafNode>
-              <leafNode name="destination">
+                <children>
+                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                </children>
+              </node>
+              <node name="destination">
                 <properties>
-                  <help>Destination address or prefix</help>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>Address to match against</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6net</format>
-                    <description>Prefix to match against</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv6-address"/>
-                    <validator name="ipv6-prefix"/>
-                  </constraint>
-                  <multi/>
+                  <help>Destination parameters</help>
                 </properties>
-              </leafNode>
+                <children>
+                  #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                </children>
+              </node>
               #include <include/interface/inbound-interface.xml.i>
             </children>
           </tagNode>
