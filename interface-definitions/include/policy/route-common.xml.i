@@ -1,6 +1,7 @@
 <!-- include start from policy/route-common.xml.i -->
 #include <include/policy/route-rule-action.xml.i>
 #include <include/generic-description.xml.i>
+#include <include/firewall/firewall-mark.xml.i>
 <leafNode name="disable">
   <properties>
     <help>Option to disable firewall rule</help>

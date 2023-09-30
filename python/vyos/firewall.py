@@ -381,6 +381,14 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         conn_mark_str = ','.join(rule_conf['connection_mark'])
         output.append(f'ct mark {{{conn_mark_str}}}')
 
+    if 'mark' in rule_conf:
+        mark = rule_conf['mark']
+        operator = ''
+        if mark[0] == '!':
+            operator = '!='
+            mark = mark[1:]
+        output.append(f'meta mark {operator} {{{mark}}}')
+
     if 'vlan' in rule_conf:
         if 'id' in rule_conf['vlan']:
             output.append(f'vlan id {rule_conf["vlan"]["id"]}')
