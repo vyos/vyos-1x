@@ -116,9 +116,18 @@ if __name__ == "__main__":
         print('Firewall is not configured')
         exit(1)
 
-    #config_dict =  config.get_config_dict('firewall')
     config_dict = config.get_config_dict('firewall')
 
+    # Remove global-options, group and flowtable as they don't need sequencing
+    if 'global-options' in config_dict['firewall']:
+        del config_dict['firewall']['global-options']
+
+    if 'group' in config_dict['firewall']:
+        del config_dict['firewall']['group']
+
+    if 'flowtable' in config_dict['firewall']:
+        del config_dict['firewall']['flowtable']
+    
     # Convert rule keys to integers, rule "10" -> rule 10
     # This is necessary for sorting the rules
     config_dict = convert_rule_keys_to_int(config_dict)
