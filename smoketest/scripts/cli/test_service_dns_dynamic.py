@@ -116,6 +116,9 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         svc_path = ['address', interface, 'service', 'dynv6']
         proto = 'dyndns2'
         ip_version = 'ipv6'
+        wait_time = '600'
+        expiry_time_good = '3600'
+        expiry_time_bad = '360'
 
         self.cli_set(base_path + ['timeout', timeout])
         self.cli_set(base_path + svc_path + ['ip-version', ip_version])
@@ -124,6 +127,13 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + svc_path + ['username', username])
         self.cli_set(base_path + svc_path + ['password', password])
         self.cli_set(base_path + svc_path + ['host-name', hostname])
+        self.cli_set(base_path + svc_path + ['wait-time', wait_time])
+
+        # expiry-time must be greater than wait-time, exception is raised otherwise
+        self.cli_set(base_path + svc_path + ['expiry-time', expiry_time_bad])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(base_path + svc_path + ['expiry-time', expiry_time_good])
 
         # commit changes
         self.cli_commit()
@@ -137,6 +147,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'server={server}', ddclient_conf)
         self.assertIn(f'login={username}', ddclient_conf)
         self.assertIn(f'password={password}', ddclient_conf)
+        self.assertIn(f'min-interval={wait_time}', ddclient_conf)
+        self.assertIn(f'max-interval={expiry_time_good}', ddclient_conf)
 
     # IPv4+IPv6 dual DDNS service configuration
     def test_03_dyndns_service_dual_stack(self):
