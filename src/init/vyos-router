@@ -105,6 +105,9 @@ load_bootfile ()
 restore_if_missing_preconfig_script ()
 {
     if [ ! -x ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script ]; then
+        mkdir -p ${vyatta_sysconfdir}/config/scripts
+        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
+        chmod 775 ${vyatta_sysconfdir}/config/scripts
         cp ${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-preconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
         chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script
         chmod 750 ${vyatta_sysconfdir}/config/scripts/vyos-preconfig-bootup.script
@@ -123,6 +126,9 @@ run_preconfig_script ()
 restore_if_missing_postconfig_script ()
 {
     if [ ! -x ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script ]; then
+        mkdir -p ${vyatta_sysconfdir}/config/scripts
+        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
+        chmod 775 ${vyatta_sysconfdir}/config/scripts
         cp ${vyos_rootfs_dir}/opt/vyatta/etc/config/scripts/vyos-postconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
         chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
         chmod 750 ${vyatta_sysconfdir}/config/scripts/vyos-postconfig-bootup.script
