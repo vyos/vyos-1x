@@ -4,7 +4,7 @@
     <properties>
       <help>Virtual Routing and Forwarding</help>
       <!-- must be before any interface, check /opt/vyatta/sbin/priority.pl -->
-      <priority>299</priority>
+      <priority>11</priority>
     </properties>
     <children>
       <leafNode name="bind-to-all">
