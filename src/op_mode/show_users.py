@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import pwd
-import spwd
 import struct
 import sys
 from time import ctime
@@ -48,6 +47,10 @@ def is_locked(user_name: str) -> bool:
     """Check if a given user has password in shadow db"""
 
     try:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",category=DeprecationWarning)
+            import spwd
         encrypted_password = spwd.getspnam(user_name)[1]
         return encrypted_password == '*' or encrypted_password.startswith('!')
     except (KeyError, PermissionError):
