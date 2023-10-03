@@ -58,11 +58,13 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = 'VyOS-user-' + interface
             passwd = 'VyOS-passwd-' + interface
             mtu = '1400'
+            mru = '1300'
 
             self.cli_set(base_path + [interface, 'authentication', 'user', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'default-route', 'auto'])
             self.cli_set(base_path + [interface, 'mtu', mtu])
+            self.cli_set(base_path + [interface, 'mru', mru])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
@@ -80,6 +82,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, mtu)
+            tmp = get_config_value(interface, 'mru')[1]
+            self.assertEqual(tmp, mru)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
