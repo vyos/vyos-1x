@@ -28,6 +28,7 @@ from vyos.configverify import verify_vrf
 from vyos.defaults import directories
 from vyos.template import render
 from vyos.template import is_ipv4
+from vyos.utils.boot import boot_configuration_complete
 from vyos.utils.dict import dict_search
 from vyos.utils.process import cmd
 from vyos.utils.process import call
@@ -281,8 +282,6 @@ def generate(login):
         if os.path.isfile(tacacs_nss_config_file):
             os.unlink(tacacs_nss_config_file)
 
-
-
     # NSS must always be present on the system
     render(nss_config_file, 'login/nsswitch.conf.j2', login,
                permission=0o644, user='root', group='root')
@@ -306,6 +305,12 @@ def generate(login):
 
 
 def apply(login):
+    # Script is invoked from vyos-router.service during startup.
+    # While configuration mounting and so on is not yet complete,
+    # skip any code that messes with the local user database
+    if not boot_configuration_complete():
+        return None
+
     if 'user' in login:
         for user, user_config in login['user'].items():
             # make new user using vyatta shell and make home directory (-m),
