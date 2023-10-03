@@ -64,7 +64,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'default-route', 'auto'])
             self.cli_set(base_path + [interface, 'mtu', mtu])
-            self.cli_set(base_path + [interface, 'mru', mru])
+            self.cli_set(base_path + [interface, 'mru', '9000'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
@@ -72,8 +72,13 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
                 self.cli_commit()
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
 
-            # commit changes
-            self.cli_commit()
+            # check validate() - MRU needs to be less or equal then MTU
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'mru', mru])
+
+        # commit changes
+        self.cli_commit()
 
         # verify configuration file(s)
         for interface in self._interfaces:
