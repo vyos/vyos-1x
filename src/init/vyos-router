@@ -234,6 +234,27 @@ cleanup_post_commit_hooks () {
 # system defaults.
 security_reset ()
 {
+
+    # restore NSS cofniguration back to sane system defaults
+    # will be overwritten later when configuration is loaded
+    cat <<EOF >/etc/nsswitch.conf
+passwd:         files
+group:          files
+shadow:         files
+gshadow:        files
+
+# Per T2678, commenting out myhostname
+hosts:          files dns #myhostname
+networks:       files
+
+protocols:      db files
+services:       db files
+ethers:         db files
+rpc:            db files
+
+netgroup:       nis
+EOF
+
     # restore PAM back to virgin state (no radius/tacacs services)
     pam-auth-update --disable radius-mandatory radius-optional
     rm -f /etc/pam_radius_auth.conf
@@ -349,7 +370,6 @@ start ()
     # As VyOS does not execute commands that are not present in the CLI we call
     # the script by hand to have a single source for the login banner and MOTD
     ${vyos_conf_scripts_dir}/system_console.py || log_failure_msg "could not reset serial console"
-    ${vyos_conf_scripts_dir}/system-login.py || log_failure_msg "could not reset system login"
     ${vyos_conf_scripts_dir}/system-login-banner.py || log_failure_msg "could not reset motd and issue files"
     ${vyos_conf_scripts_dir}/system-option.py || log_failure_msg "could not reset system option files"
     ${vyos_conf_scripts_dir}/system-ip.py || log_failure_msg "could not reset system IPv4 options"
