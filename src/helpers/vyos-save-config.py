@@ -19,6 +19,7 @@ import os
 import re
 import sys
 from tempfile import NamedTemporaryFile
+from argparse import ArgumentParser
 
 from vyos.config import Config
 from vyos.remote import urlc
@@ -28,8 +29,15 @@ from vyos.defaults import directories
 DEFAULT_CONFIG_PATH = os.path.join(directories['config'], 'config.boot')
 remote_save = None
 
-if len(sys.argv) > 1:
-    save_file = sys.argv[1]
+parser = ArgumentParser(description='Save configuration')
+parser.add_argument('file', type=str, nargs='?', help='Save configuration to file')
+parser.add_argument('--write-json-file', type=str, help='Save JSON of configuration to file')
+args = parser.parse_args()
+file = args.file
+json_file = args.write_json_file
+
+if file is not None:
+    save_file = file
 else:
     save_file = DEFAULT_CONFIG_PATH
 
@@ -50,6 +58,13 @@ with open(write_file, 'w') as f:
         f.write(ct.to_string())
     f.write("\n")
     f.write(system_footer())
+
+if json_file is not None and ct is not None:
+    try:
+        with open(json_file, 'w') as f:
+            f.write(ct.to_json())
+    except OSError as e:
+        print(f'failed to write JSON file: {e}')
 
 if remote_save is not None:
     try:

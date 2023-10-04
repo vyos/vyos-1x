@@ -25,7 +25,7 @@ from datetime import datetime
 from textwrap import dedent
 from pathlib import Path
 from tabulate import tabulate
-from shutil import copy
+from shutil import copy, chown
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
@@ -37,6 +37,7 @@ from vyos.utils.process import is_systemd_service_active
 from vyos.utils.process import rc_cmd
 
 SAVE_CONFIG = '/usr/libexec/vyos/vyos-save-config.py'
+config_json = '/run/vyatta/config/config.json'
 
 # created by vyatta-cfg-postinst
 commit_post_hook_dir = '/etc/commit/post-hooks.d'
@@ -64,8 +65,11 @@ formatter = logging.Formatter('%(funcName)s: %(levelname)s:%(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-def save_config(target):
-    cmd = f'{SAVE_CONFIG} {target}'
+def save_config(target, json_out=None):
+    if json_out is None:
+        cmd = f'{SAVE_CONFIG} {target}'
+    else:
+        cmd = f'{SAVE_CONFIG} {target} --write-json-file {json_out}'
     rc, out = rc_cmd(cmd)
     if rc != 0:
         logger.critical(f'save config failed: {out}')
@@ -326,6 +330,12 @@ Proceed ?'''
         """
         mask = os.umask(0o002)
         os.makedirs(archive_dir, exist_ok=True)
+        json_dir = os.path.dirname(config_json)
+        try:
+            os.makedirs(json_dir, exist_ok=True)
+            chown(json_dir, group='vyattacfg')
+        except OSError as e:
+            logger.warning(f'cannot create {json_dir}: {e}')
 
         self._add_logrotate_conf()
 
@@ -481,9 +491,20 @@ Proceed ?'''
         ext = os.getpid()
         cmp_saved = f'/tmp/config.boot.{ext}'
         if save_to_tmp:
-            save_config(cmp_saved)
+            save_config(cmp_saved, json_out=config_json)
         else:
             copy(config_file, cmp_saved)
+
+        # on boot, we need to manually create the config.json file; after
+        # boot, it is written by save_config, above
+        if not os.path.exists(config_json):
+            ct = self._get_saved_config_tree()
+            try:
+                with open(config_json, 'w') as f:
+                    f.write(ct.to_json())
+                chown(config_json, group='vyattacfg')
+            except OSError as e:
+                logger.warning(f'cannot create {config_json}: {e}')
 
         try:
             if cmp(cmp_saved, archive_config_file, shallow=False):
