@@ -24,7 +24,6 @@ directories = {
   'op_mode' : f'{base_dir}/op_mode',
   'services' : f'{base_dir}/services',
   'config' : '/opt/vyatta/etc/config',
-  'current' : '/opt/vyatta/etc/config-migrate/current',
   'migrate' : '/opt/vyatta/etc/config-migrate/migrate',
   'log' : '/var/log/vyatta',
   'templates' : '/usr/share/vyos/templates/',
