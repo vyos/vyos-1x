@@ -90,31 +90,6 @@ def from_system():
     """
     return component_version()
 
-def legacy_from_system():
-    """
-    Get system component version dict from legacy location.
-    This is for a transitional sanity check; the directory will eventually
-    be removed.
-    """
-    system_versions = {}
-    legacy_dir = directories['current']
-
-    # To be removed:
-    if not os.path.isdir(legacy_dir):
-        return system_versions
-
-    try:
-        version_info = os.listdir(legacy_dir)
-    except OSError as err:
-        sys.exit(repr(err))
-
-    for info in version_info:
-        if re.match(r'[\w,-]+@\d+', info):
-            pair = info.split('@')
-            system_versions[pair[0]] = int(pair[1])
-
-    return system_versions
-
 def format_string(ver: dict) -> str:
     """
     Version dict to string.
