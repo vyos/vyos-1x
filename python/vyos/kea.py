@@ -83,6 +83,13 @@ def kea_parse_options(config):
         options.append({'name': 'rfc3442-static-route', 'data': ", ".join(routes if not default_route else routes + [default_route])})
         options.append({'name': 'windows-static-route', 'data': ", ".join(routes)})
 
+    if 'time_zone' in config:
+        with open("/usr/share/zoneinfo/" + config['time_zone'], "rb") as f:
+            tz_string = f.read().split(b"\n")[-2].decode("utf-8")
+
+        options.append({'name': 'pcode', 'data': tz_string})
+        options.append({'name': 'tcode', 'data': config['time_zone']})
+
     return options
 
 def kea_parse_subnet(subnet, config):

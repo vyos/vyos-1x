@@ -184,6 +184,7 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(pool + ['static-route', '10.0.0.0/24', 'next-hop', '192.0.2.1'])
         self.cli_set(pool + ['ipv6-only-preferred', ipv6_only_preferred])
+        self.cli_set(pool + ['time-zone', 'Europe/London'])
 
         # check validate() - No DHCP address range or active static-mapping set
         with self.assertRaises(ConfigSessionError):
@@ -261,6 +262,16 @@ class TestServiceDHCPServer(VyOSUnitTestSHIM.TestCase):
                 obj,
                 ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
                 {'name': 'ip-forwarding', 'data': "true"})
+
+        # Time zone
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'pcode', 'data': 'GMT0BST,M3.5.0/1,M10.5.0'})
+        self.verify_config_object(
+                obj,
+                ['Dhcp4', 'shared-networks', 0, 'subnet4', 0, 'option-data'],
+                {'name': 'tcode', 'data': 'Europe/London'})
 
         # Verify pools
         self.verify_config_object(
