@@ -10,6 +10,7 @@
       </properties>
       <children>
         #include <include/firewall/default-action-base-chains.xml.i>
+        #include <include/firewall/enable-default-log.xml.i>
         #include <include/generic-description.xml.i>
         <tagNode name="rule">
           <properties>
