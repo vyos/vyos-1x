@@ -37,7 +37,7 @@
     <children>
       <tagNode name="raid">
         <properties>
-          <help>Add a RAID set element</help>
+          <help>Delete a RAID set element</help>
           <completionHelp>
             <script>${vyos_completion_dir}/list_raidset.sh</script>
           </completionHelp>
@@ -50,7 +50,7 @@
             <children>
               <tagNode name="member">
                 <properties>
-                  <help>Add a member to a RAID set</help>
+                  <help>Delete a member from a RAID set</help>
                 </properties>
                 <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --by-id --member $6</command>
               </tagNode>
@@ -58,7 +58,7 @@
           </node>
           <tagNode name="member">
             <properties>
-              <help>Add a member to a RAID set</help>
+              <help>Delete a member from a RAID set</help>
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/raid.py delete --raid-set-name $3 --member $5</command>
           </tagNode>
