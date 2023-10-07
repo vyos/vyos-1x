@@ -59,16 +59,23 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
             mtu = '1400'
+            mru = '1300'
 
             self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'mtu', mtu])
+            self.cli_set(base_path + [interface, 'mru', '9000'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+
+            # check validate() - MRU needs to be less or equal then MTU
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'mru', mru])
 
         # commit changes
         self.cli_commit()
@@ -80,6 +87,8 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, mtu)
+            tmp = get_config_value(interface, 'mru')[1]
+            self.assertEqual(tmp, mru)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')

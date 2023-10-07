@@ -50,7 +50,7 @@ ifname {{ ifname }}
 ipparam {{ ifname }}
 debug
 mtu {{ mtu }}
-mru {{ mtu }}
+mru {{ mru }}
 
 {% if authentication is vyos_defined %}
 {{ 'user "' + authentication.username + '"' if authentication.username is vyos_defined }}

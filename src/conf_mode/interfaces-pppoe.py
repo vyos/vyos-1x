@@ -77,6 +77,11 @@ def verify(pppoe):
     if {'connect_on_demand', 'vrf'} <= set(pppoe):
         raise ConfigError('On-demand dialing and VRF can not be used at the same time')
 
+    # both MTU and MRU have default values, thus we do not need to check
+    # if the key exists
+    if int(pppoe['mru']) > int(pppoe['mtu']):
+        raise ConfigError('PPPoE MRU needs to be lower then MTU!')
+
     return None
 
 def generate(pppoe):
