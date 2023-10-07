@@ -22,11 +22,12 @@ import grp
 import copy
 import json
 import logging
+import signal
 import traceback
 import threading
+from time import sleep
 from typing import List, Union, Callable, Dict
 
-import uvicorn
 from fastapi import FastAPI, Depends, Request, Response, HTTPException
 from fastapi import BackgroundTasks
 from fastapi.responses import HTMLResponse
@@ -37,6 +38,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.datastructures import FormData
 from starlette.formparsers import FormParser, MultiPartParser
 from multipart.multipart import parse_options_header
+from uvicorn import Config as UvicornConfig
+from uvicorn import Server as UvicornServer
 
 from ariadne.asgi import GraphQL
 
@@ -735,7 +738,7 @@ def reset_op(data: ResetModel):
 # GraphQL integration
 ###
 
-def graphql_init(fast_api_app):
+def graphql_init(app: FastAPI = app):
     from api.graphql.libs.token_auth import get_user_context
     api.graphql.state.init()
     api.graphql.state.settings['app'] = app
@@ -761,26 +764,45 @@ def graphql_init(fast_api_app):
                                           debug=True,
                                           introspection=in_spec))
 ###
+# Modify uvicorn to allow reloading server within the configsession
+###
 
-if __name__ == '__main__':
-    # systemd's user and group options don't work, do it by hand here,
-    # else no one else will be able to commit
-    cfg_group = grp.getgrnam(CFG_GROUP)
-    os.setgid(cfg_group.gr_gid)
+server = None
+shutdown = False
 
-    # Need to set file permissions to 775 too so that every vyattacfg group member
-    # has write access to the running config
-    os.umask(0o002)
+class ApiServerConfig(UvicornConfig):
+    pass
 
+class ApiServer(UvicornServer):
+    def install_signal_handlers(self):
+        pass
+
+def reload_handler(signum, frame):
+    global server
+    logger.debug('Reload signal received...')
+    if server is not None:
+        server.handle_exit(signum, frame)
+        server = None
+        logger.info('Server stopping for reload...')
+    else:
+        logger.warning('Reload called for non-running server...')
+
+def shutdown_handler(signum, frame):
+    global shutdown
+    logger.debug('Shutdown signal received...')
+    server.handle_exit(signum, frame)
+    logger.info('Server shutdown...')
+    shutdown = True
+
+def initialization(session: ConfigSession, app: FastAPI = app):
+    global server
     try:
         server_config = load_server_config()
-    except Exception as err:
-        logger.critical(f"Failed to load the HTTP API server config: {err}")
+    except Exception as e:
+        logger.critical(f'Failed to load the HTTP API server config: {e}')
         sys.exit(1)
 
-    config_session = ConfigSession(os.getpid())
-
-    app.state.vyos_session = config_session
+    app.state.vyos_session = session
     app.state.vyos_keys = server_config['api_keys']
 
     app.state.vyos_debug = server_config['debug']
@@ -803,14 +825,44 @@ if __name__ == '__main__':
     if app.state.vyos_graphql:
         graphql_init(app)
 
+    if not server_config['socket']:
+        config = ApiServerConfig(app,
+                                 host=server_config["listen_address"],
+                                 port=int(server_config["port"]),
+                                 proxy_headers=True)
+    else:
+        config = ApiServerConfig(app,
+                                 uds="/run/api.sock",
+                                 proxy_headers=True)
+    server = ApiServer(config)
+
+def run_server():
     try:
-        if not server_config['socket']:
-            uvicorn.run(app, host=server_config["listen_address"],
-                             port=int(server_config["port"]),
-                             proxy_headers=True)
-        else:
-            uvicorn.run(app, uds="/run/api.sock",
-                             proxy_headers=True)
-    except OSError as err:
-        logger.critical(f"OSError {err}")
+        server.run()
+    except OSError as e:
+        logger.critical(e)
         sys.exit(1)
+
+if __name__ == '__main__':
+    # systemd's user and group options don't work, do it by hand here,
+    # else no one else will be able to commit
+    cfg_group = grp.getgrnam(CFG_GROUP)
+    os.setgid(cfg_group.gr_gid)
+
+    # Need to set file permissions to 775 too so that every vyattacfg group member
+    # has write access to the running config
+    os.umask(0o002)
+
+    signal.signal(signal.SIGHUP, reload_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+
+    config_session = ConfigSession(os.getpid())
+
+    while True:
+        logger.debug('Enter main loop...')
+        if shutdown:
+            break
+        if server is None:
+            initialization(config_session)
+            server.run()
+        sleep(1)
