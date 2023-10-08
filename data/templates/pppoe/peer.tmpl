@@ -50,7 +50,7 @@ ifname {{ ifname }}
 ipparam {{ ifname }}
 debug
 mtu {{ mtu }}
-mru {{ mtu }}
+mru {{ mru }}
 
 {% if authentication is defined %}
 {{ 'user "' + authentication.user + '"' if authentication.user is defined }}
