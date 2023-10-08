@@ -20,7 +20,7 @@
     #include <include/interface/disable.xml.i>
     <leafNode name="protocol">
       <properties>
-        <help>Protocol used for service VLAN (default: 802.1ad)</help>
+        <help>Protocol used for service VLAN</help>
         <completionHelp>
           <list>802.1ad 802.1q</list>
         </completionHelp>

@@ -432,7 +432,7 @@
           </node>
           <leafNode name="channel">
             <properties>
-              <help>Wireless radio channel (default: 0)</help>
+              <help>Wireless radio channel</help>
               <valueHelp>
                 <format>0</format>
                 <description>Automatic Channel Selection (ACS)</description>
@@ -516,7 +516,7 @@
               </completionHelp>
               <valueHelp>
                 <format>disabled</format>
-                <description>no MFP (hostapd default)</description>
+                <description>no MFP</description>
               </valueHelp>
               <valueHelp>
                 <format>optional</format>
@@ -548,7 +548,7 @@
               </valueHelp>
               <valueHelp>
                 <format>g</format>
-                <description>802.11g - 54 Mbits/sec (default)</description>
+                <description>802.11g - 54 Mbits/sec</description>
               </valueHelp>
               <valueHelp>
                 <format>n</format>
@@ -566,7 +566,7 @@
           </leafNode>
           <leafNode name="physical-device">
             <properties>
-              <help>Wireless physical device (default: phy0)</help>
+              <help>Wireless physical device</help>
               <completionHelp>
                 <script>${vyos_completion_dir}/list_wireless_phys.sh</script>
               </completionHelp>

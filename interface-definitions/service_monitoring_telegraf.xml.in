@@ -50,13 +50,13 @@
               </leafNode>
               <leafNode name="source">
                 <properties>
-                  <help>Source parameters for monitoring (default: all)</help>
+                  <help>Source parameters for monitoring</help>
                   <completionHelp>
                     <list>all hardware-utilization logs network system telegraf</list>
                   </completionHelp>
                   <valueHelp>
                     <format>all</format>
-                    <description>All parameters (default)</description>
+                    <description>All parameters</description>
                   </valueHelp>
                   <valueHelp>
                     <format>hardware-utilization</format>
@@ -150,7 +150,7 @@
                        <help>Metric version control mapping from Telegraf to Prometheus format</help>
                        <valueHelp>
                          <format>u32:1-2</format>
-                         <description>Metric version (default: 2)</description>
+                         <description>Metric version</description>
                        </valueHelp>
                        <constraint>
                          <validator name="numeric" argument="--range 1-2"/>

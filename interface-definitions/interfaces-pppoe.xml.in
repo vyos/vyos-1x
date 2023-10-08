@@ -21,7 +21,7 @@
           #include <include/interface/dial-on-demand.xml.i>
           <leafNode name="default-route">
             <properties>
-              <help>Default route insertion behaviour (default: auto)</help>
+              <help>Default route insertion behaviour</help>
               <completionHelp>
                 <list>auto none force</list>
               </completionHelp>

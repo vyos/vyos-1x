@@ -46,7 +46,7 @@
           </leafNode>
           <leafNode name="port">
             <properties>
-              <help>Destination port of VXLAN tunnel (default: 8472)</help>
+              <help>Destination port of VXLAN tunnel</help>
               <valueHelp>
                 <format>u32:1-65535</format>
                 <description>Numeric IP port</description>

@@ -29,7 +29,7 @@
           #include <include/interface/mac.xml.i>
           <leafNode name="mode">
             <properties>
-              <help>Receive mode (default: private)</help>
+              <help>Receive mode</help>
               <completionHelp>
                 <list>private vepa bridge passthru</list>
               </completionHelp>

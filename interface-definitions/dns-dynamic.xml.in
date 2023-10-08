@@ -47,7 +47,7 @@
                       </leafNode>
                       <leafNode name="ttl">
                         <properties>
-                          <help>Time To Live (default: 600)</help>
+                          <help>Time To Live</help>
                           <valueHelp>
                             <format>u32:1-86400</format>
                             <description>DNS forwarding cache size</description>

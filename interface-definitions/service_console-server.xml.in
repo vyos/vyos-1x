@@ -41,7 +41,7 @@
               </leafNode>
               <leafNode name="data-bits">
                 <properties>
-                  <help>Serial port data bits (default: 8)</help>
+                  <help>Serial port data bits</help>
                   <completionHelp>
                     <list>7 8</list>
                   </completionHelp>
@@ -53,7 +53,7 @@
               </leafNode>
               <leafNode name="stop-bits">
                 <properties>
-                  <help>Serial port stop bits (default: 1)</help>
+                  <help>Serial port stop bits</help>
                   <completionHelp>
                     <list>1 2</list>
                   </completionHelp>
@@ -65,7 +65,7 @@
               </leafNode>
               <leafNode name="parity">
                 <properties>
-                  <help>Parity setting (default: none)</help>
+                  <help>Parity setting</help>
                   <completionHelp>
                     <list>even odd none</list>
                   </completionHelp>

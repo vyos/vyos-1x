@@ -157,7 +157,7 @@
                       </completionHelp>
                       <valueHelp>
                         <format>u32:0-255</format>
-                        <description>Encaplimit (default: 4)</description>
+                        <description>Encaplimit</description>
                       </valueHelp>
                       <valueHelp>
                         <format>none</format>
