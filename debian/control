@@ -11,15 +11,17 @@ Build-Depends:
   libvyosconfig0 (>= 0.0.7),
   libzmq3-dev,
   python3 (>= 3.10),
-  python3-coverage,
+# For generating command definitions
   python3-lxml,
+  python3-xmltodict,
+# For running tests
+  python3-coverage,
   python3-netifaces,
   python3-nose,
   python3-jinja2,
   python3-psutil,
   python3-setuptools,
   python3-sphinx,
-  python3-xmltodict,
   quilt,
   whois
 Standards-Version: 3.9.6
@@ -31,107 +33,20 @@ Pre-Depends:
   libpam-tacplus [amd64],
   libpam-radius-auth [amd64]
 Depends:
+## Fundamentals
   ${python3:Depends} (>= 3.10),
-  aardvark-dns,
-  accel-ppp,
-  auditd,
-  avahi-daemon,
-  aws-gwlbtun,
-  beep,
-  bmon,
-  bsdmainutils,
-  charon-systemd,
-  conntrack,
-  conntrackd,
-  conserver-client,
-  conserver-server,
-  console-data,
-  cron,
-  curl,
-  dbus,
-  ddclient (>= 3.9.1),
-  dropbear,
-  easy-rsa,
-  etherwake,
-  ethtool,
-  fdisk,
-  fastnetmon [amd64],
-  file,
-  frr (>= 7.5),
-  frr-pythontools,
-  frr-rpki-rtrlib,
-  frr-snmp,
-  fuse-overlayfs,
-  libpam-google-authenticator,
-  grc,
-  haproxy,
-  hostapd,
-  hsflowd,
-  hvinfo,
-  igmpproxy,
-  ipaddrcheck,
-  iperf,
-  iperf3,
-  iproute2 (>= 6.0.0),
-  iptables,
-  iputils-arping,
-  isc-dhcp-client,
-  isc-dhcp-relay,
-  isc-dhcp-server,
-  iw,
-  keepalived (>=2.0.5),
-  lcdproc,
-  lcdproc-extra-drivers,
-  libatomic1,
-  libauparse0,
-  libcharon-extra-plugins (>=5.9),
-  libcharon-extauth-plugins (>=5.9),
-  libndp-tools,
-  libnetfilter-conntrack3,
-  libnfnetlink0,
-  libqmi-utils,
-  libstrongswan-extra-plugins (>=5.9),
-  libstrongswan-standard-plugins (>=5.9),
-  libvppinfra [amd64],
   libvyosconfig0,
-  linux-cpupower,
-  lldpd,
-  lm-sensors,
-  lsscsi,
-  minisign,
-  modemmanager,
-  mtr-tiny,
-  ndisc6,
-  ndppd,
-  netavark,
-  netplug,
-  nfct,
-  nftables (>= 0.9.3),
-  nginx-light,
-  chrony,
-  nvme-cli,
-  ocserv,
-  opennhrp,
-  openssh-server,
-  openssl,
-  openvpn,
-  openvpn-auth-ldap,
-  openvpn-auth-radius,
-  openvpn-otp,
-  owamp-client,
-  owamp-server,
-  pciutils,
-  pdns-recursor,
-  pmacct (>= 1.6.0),
-  podman,
-  pppoe,
-  procps,
+  vyatta-bash,
+  vyatta-cfg,
+  vyos-http-api-tools,
+  vyos-utils,
+## End of Fundamentals
+## Python libraries used in multiple modules and scripts
   python3,
   python3-certbot-nginx,
   python3-cryptography,
   python3-hurry.filesize,
   python3-inotify,
-  python3-isc-dhcp-leases,
   python3-jinja2,
   python3-jmespath,
   python3-netaddr,
@@ -144,57 +59,257 @@ Depends:
   python3-pyudev,
   python3-six,
   python3-tabulate,
-  python3-vici (>= 5.7.2),
   python3-voluptuous,
-  python3-vpp-api [amd64],
   python3-xmltodict,
   python3-zmq,
-  qrencode,
-  radvd,
-  salt-minion,
+## End of Python libraries
+## Basic System services and utilities
+  sudo,
+  systemd,
+  bsdmainutils,
+  openssl,
+  curl,
+  dbus,
+  file,
+  iproute2 (>= 6.0.0),
+  linux-cpupower,
+# ipaddrcheck is widely used in IP value validators
+  ipaddrcheck,
+  ethtool,
+  fdisk,
+  lm-sensors,
+  procps,
+  netplug,
   sed,
-  smartmontools,
+  ssl-cert,
+  tuned,
+  beep,
+  wide-dhcpv6-client,
+# Generic colorizer
+  grc,
+## End of System services and utilities
+## For the installer
+# Image signature verification tool
+  minisign,
+# Live filesystem tools
+  squashfs-tools,
+  fuse-overlayfs,
+## End installer
+  auditd,
+  iputils-arping,
+  isc-dhcp-client,
+# For "vpn pptp", "vpn l2tp", "vpn sstp", "service ipoe-server"
+  accel-ppp,
+# End "vpn pptp", "vpn l2tp", "vpn sstp", "service ipoe-server"
+  avahi-daemon,
+  conntrack,
+  conntrackd,
+## Conf mode features
+# For "interfaces wireless"
+  hostapd,
+  hsflowd,
+  iw,
+  wireless-regdb,
+  wpasupplicant (>= 0.6.7),
+# End "interfaces wireless"
+# For "interfaces wwan"
+  modemmanager,
+  usb-modeswitch,
+  libqmi-utils,
+# End "interfaces wwan"
+# For "interfaces openvpn"
+  openvpn,
+  openvpn-auth-ldap,
+  openvpn-auth-radius,
+  openvpn-otp,
+  libpam-google-authenticator,
+# End "interfaces openvpn"
+# For "interfaces wireguard"
+  wireguard-tools,
+  qrencode,
+# End "interfaces wireguard"
+# For "interfaces pppoe"
+  pppoe,
+# End "interfaces pppoe"
+# For "interfaces sstpc"
+  sstp-client,
+# End "interfaces sstpc"
+# For "protocols *"
+  frr (>= 7.5),
+  frr-pythontools,
+  frr-rpki-rtrlib,
+  frr-snmp,
+# End "protocols *"
+# For "protocols nhrp" (part of DMVPN)
+  opennhrp,
+# End "protocols nhrp"
+# For "protocols igmp-proxy"
+  igmpproxy,
+# End "protocols igmp-proxy"
+# For "service console-server"
+  conserver-client,
+  conserver-server,
+  console-data,
+  dropbear,
+# End "service console-server"
+# For "set service aws glb"
+  aws-gwlbtun,
+# For "service dns dynamic"
+  ddclient (>= 3.9.1),
+# End "service dns dynamic"
+# # For "service ids"
+  fastnetmon [amd64],
+# End "service ids"
+# For "service router-advert"
+  radvd,
+# End "service route-advert"
+# For "high-availability reverse-proxy"
+  haproxy,
+# End "high-availability reverse-proxy"
+# For "service dhcp-relay"
+  isc-dhcp-relay,
+# For "service dhcp-server"
+  isc-dhcp-server,
+  python3-isc-dhcp-leases,
+# End "service dhcp-server"
+# For "service lldp"
+  lldpd,
+# End "service lldp"
+# For "service https"
+  nginx-light,
+# End "service https"
+# For "service ssh"
+  openssh-server,
+  sshguard,
+# End "service ssh"
+# For "service salt-minion"
+  salt-minion,
+# End "service salt-minion"
+# For "service snmp"
   snmp,
   snmpd,
-  squashfs-tools,
+# End "service snmp"
+# For "service upnp"
+  miniupnpd-nftables,
+# End "service upnp"
+# For "service webproxy"
   squid,
   squidclient,
   squidguard,
-  sshguard,
-  ssl-cert,
-  sstp-client,
-  strongswan (>= 5.9),
-  strongswan-swanctl (>= 5.9),
-  stunnel4,
-  sudo,
-  systemd,
+# End "service webproxy"
+# For "service monitoring telegraf"
   telegraf (>= 1.20),
-  tcpdump,
-  tcptraceroute,
-  telnet,
+# End "service monitoring telegraf"
+# For "service monitoring zabbix-agent"
+  zabbix-agent2,
+# End "service monitoring zabbix-agent"
+# For "service tftp-server"
   tftpd-hpa,
-  traceroute,
-  tuned,
+# End "service tftp-server"
+# For "service dns forwarding"
+  pdns-recursor,
+# End "service dns forwarding"
+# For "service sla owamp"
+  owamp-client,
+  owamp-server,
+# End "service sla owamp"
+# For "service sla twamp"
   twamp-client,
   twamp-server,
+# End "service sla twamp"
+# For "service broadcast-relay"
   udp-broadcast-relay,
-  uidmap,
-  usb-modeswitch,
+# End "service broadcast-relay"
+# For "high-availability vrrp"
+  keepalived (>=2.0.5),
+# End "high-availability-vrrp"
+# For "system task-scheduler"
+  cron,
+# End "system task-scheduler"
+# For "system lcd"
+  lcdproc,
+  lcdproc-extra-drivers,
+# End "system lcd"
+# For firewall
+  libndp-tools,
+  libnetfilter-conntrack3,
+  libnfnetlink0,
+  nfct,
+  nftables (>= 0.9.3),
+# For "vpn ipsec"
+  strongswan (>= 5.9),
+  strongswan-swanctl (>= 5.9),
+  charon-systemd,
+  libcharon-extra-plugins (>=5.9),
+  libcharon-extauth-plugins (>=5.9),
+  libstrongswan-extra-plugins (>=5.9),
+  libstrongswan-standard-plugins (>=5.9),
+  python3-vici (>= 5.7.2),
+# End "vpn ipsec"
+# For nat66
+  ndppd,
+# End nat66
+# For "system ntp"
+  chrony,
+# End "system ntp"
+# For "vpn openconnect"
+  ocserv,
+# End "vpn openconnect"
+# For "set system flow-accounting"
+  pmacct (>= 1.6.0),
+# End "set system flow-accounting"
+# For container
+  podman,
+  netavark,
+  aardvark-dns,
+# iptables is only used for containers now, not the the firewall CLI
+  iptables,
+# End container
+## End Configuration mode
+## Operational mode
+# Used for hypervisor model in "run show version"
+  hvinfo,
+# For "run traceroute"
+  traceroute,
+# For "run monitor traffic"
+  tcpdump,
+# End "run monitor traffic"
+# For "run show hardware storage smart"
+  smartmontools,
+# For "run show hardware scsi"
+  lsscsi,
+# For "run show hardware pci"
+  pciutils,
+# For "show hardware usb"
   usbutils,
+# For "run show hardware storage nvme"
+  nvme-cli,
+# For "run monitor bandwidth-test"
+  iperf,
+  iperf3,
+# End "run monitor bandwidth-test"
+# For "run wake-on-lan"
+  etherwake,
+# For "run force ipv6-nd"
+  ndisc6,
+# For "run monitor bandwidth"
+  bmon,
+# End Operational mode
+## VPP
   vpp [amd64],
   vpp-plugin-core [amd64],
   vpp-plugin-dpdk [amd64],
-  vyatta-bash,
-  vyatta-cfg,
-  vyos-http-api-tools,
-  vyos-utils,
-  wide-dhcpv6-client,
-  wireguard-tools,
-  wireless-regdb,
-  wpasupplicant (>= 0.6.7),
-  zabbix-agent2,
-  ndppd,
-  miniupnpd-nftables
+  python3-vpp-api [amd64],
+  libvppinfra [amd64],
+## End VPP
+## Optional utilities
+  easy-rsa,
+  tcptraceroute,
+  mtr-tiny,
+  telnet,
+  stunnel4,
+  uidmap
+## End optional utilities
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
