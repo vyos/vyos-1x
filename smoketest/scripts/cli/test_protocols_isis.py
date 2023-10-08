@@ -324,5 +324,65 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f' ipv6 router isis {domain}', tmp)
             self.assertIn(f' no isis mpls ldp-sync', tmp)
 
+    def test_isis_09_lfa(self):
+        prefix_list = 'lfa-prefix-list-test-1'
+        prefix_list_address = '192.168.255.255/32'
+        interface = 'lo'
+
+        self.cli_set(base_path + ['net', net])
+        self.cli_set(base_path + ['interface', interface])
+        self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'action', 'permit'])
+        self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'prefix', prefix_list_address])
+        
+        # Commit main ISIS changes
+        self.cli_commit()
+
+        # Add remote portion of LFA with prefix list with validation
+        for level in ['level-1', 'level-2']:
+            self.cli_set(base_path + ['fast-reroute', 'lfa', 'remote', 'prefix-list', prefix_list, level])
+            self.cli_commit()
+            tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+            self.assertIn(f' net {net}', tmp)
+            self.assertIn(f' fast-reroute remote-lfa prefix-list {prefix_list} {level}', tmp)
+            self.cli_delete(base_path + ['fast-reroute'])
+            self.cli_commit()
+
+        # Add local portion of LFA load-sharing portion with validation
+        for level in ['level-1', 'level-2']:
+            self.cli_set(base_path + ['fast-reroute', 'lfa', 'local', 'load-sharing', 'disable', level])
+            self.cli_commit()
+            tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+            self.assertIn(f' net {net}', tmp)
+            self.assertIn(f' fast-reroute load-sharing disable {level}', tmp)
+            self.cli_delete(base_path + ['fast-reroute'])
+            self.cli_commit()
+
+        # Add local portion of LFA priority-limit portion with validation
+        for priority in ['critical', 'high', 'medium']:
+            for level in ['level-1', 'level-2']:
+                self.cli_set(base_path + ['fast-reroute', 'lfa', 'local', 'priority-limit', priority, level])
+                self.cli_commit()
+                tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+                self.assertIn(f' net {net}', tmp)
+                self.assertIn(f' fast-reroute priority-limit {priority} {level}', tmp)
+                self.cli_delete(base_path + ['fast-reroute'])
+                self.cli_commit()
+
+        # Add local portion of LFA tiebreaker portion with validation
+        index = '100'
+        for tiebreaker in ['downstream','lowest-backup-metric','node-protecting']:
+            for level in ['level-1', 'level-2']:
+                self.cli_set(base_path + ['fast-reroute', 'lfa', 'local', 'tiebreaker', tiebreaker, 'index', index, level])
+                self.cli_commit()
+                tmp = self.getFRRconfig(f'router isis {domain}', daemon='isisd')
+                self.assertIn(f' net {net}', tmp)
+                self.assertIn(f' fast-reroute lfa tiebreaker {tiebreaker} index {index} {level}', tmp)
+                self.cli_delete(base_path + ['fast-reroute'])
+                self.cli_commit()
+
+        # Clean up and remove prefix list
+        self.cli_delete(['policy', 'prefix-list', prefix_list])
+        self.cli_commit()
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
