@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+# Removes outdated ciphers (DES and Blowfish) from OpenVPN configs
+
+import sys
+
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+if not config.exists(['interfaces', 'openvpn']):
+    # Nothing to do
+    sys.exit(0)
+else:
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    for	i in ovpn_intfs:
+        # Remove DES and Blowfish from 'encryption cipher'
+        cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'cipher']
+        if config.exists(cipher_path):
+            cipher = config.return_value(cipher_path)
+            if cipher in ['des', 'bf128', 'bf256']:
+                config.delete(cipher_path)
+
+        ncp_cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers']
+        if config.exists(ncp_cipher_path):
+            ncp_ciphers = config.return_values(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'])
+            if 'des' in ncp_ciphers:
+                config.delete_value(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'], 'des')
+
+        # Clean up the encryption subtree if the migration procedure left it empty
+        if config.exists(['interfaces', 'openvpn', i, 'encryption']) and \
+           (config.list_nodes(['interfaces', 'openvpn', i, 'encryption']) == []):
+            config.delete(['interfaces', 'openvpn', i, 'encryption'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)

@@ -19,6 +19,7 @@
   #include <include/version/ids-version.xml.i>
   #include <include/version/ipoe-server-version.xml.i>
   #include <include/version/ipsec-version.xml.i>
+  #include <include/version/openvpn-version.xml.i>
   #include <include/version/isis-version.xml.i>
   #include <include/version/l2tp-version.xml.i>
   #include <include/version/lldp-version.xml.i>
