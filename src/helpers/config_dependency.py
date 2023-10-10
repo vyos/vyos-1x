@@ -18,22 +18,75 @@
 
 import os
 import sys
+import json
 from argparse import ArgumentParser
 from argparse import ArgumentTypeError
-
-try:
-    from vyos.configdep import check_dependency_graph
-    from vyos.defaults import directories
-except ImportError:
-    # allow running during addon package build
-    _here = os.path.dirname(__file__)
-    sys.path.append(os.path.join(_here, '../../python/vyos'))
-    from configdep import check_dependency_graph
-    from defaults import directories
+from graphlib import TopologicalSorter, CycleError
 
 # addon packages will need to specify the dependency directory
-dependency_dir = os.path.join(directories['data'],
-                              'config-mode-dependencies')
+data_dir = '/usr/share/vyos/'
+dependency_dir = os.path.join(data_dir, 'config-mode-dependencies')
+
+def dict_merge(source, destination):
+    from copy import deepcopy
+    tmp = deepcopy(destination)
+
+    for key, value in source.items():
+        if key not in tmp:
+            tmp[key] = value
+        elif isinstance(source[key], dict):
+            tmp[key] = dict_merge(source[key], tmp[key])
+
+    return tmp
+
+def read_dependency_dict(dependency_dir: str = dependency_dir) -> dict:
+    res = {}
+    for dep_file in os.listdir(dependency_dir):
+        if not dep_file.endswith('.json'):
+            continue
+        path = os.path.join(dependency_dir, dep_file)
+        with open(path) as f:
+            d = json.load(f)
+        if dep_file == 'vyos-1x.json':
+            res = dict_merge(res, d)
+        else:
+            res = dict_merge(d, res)
+
+    return res
+
+def graph_from_dependency_dict(d: dict) -> dict:
+    g = {}
+    for k in list(d):
+        g[k] = set()
+        # add the dependencies for every sub-case; should there be cases
+        # that are mutally exclusive in the future, the graphs will be
+        # distinguished
+        for el in list(d[k]):
+            g[k] |= set(d[k][el])
+
+    return g
+
+def is_acyclic(d: dict) -> bool:
+    g = graph_from_dependency_dict(d)
+    ts = TopologicalSorter(g)
+    try:
+        # get node iterator
+        order = ts.static_order()
+        # try iteration
+        _ = [*order]
+    except CycleError:
+        return False
+
+    return True
+
+def check_dependency_graph(dependency_dir: str = dependency_dir,
+                           supplement: str = None) -> bool:
+    d = read_dependency_dict(dependency_dir=dependency_dir)
+    if supplement is not None:
+        with open(supplement) as f:
+            d = dict_merge(json.load(f), d)
+
+    return is_acyclic(d)
 
 def path_exists(s):
     if not os.path.exists(s):
@@ -50,8 +103,10 @@ def main():
     args = vars(parser.parse_args())
 
     if not check_dependency_graph(**args):
+        print("dependency error: cycle exists")
         sys.exit(1)
 
+    print("dependency graph acyclic")
     sys.exit(0)
 
 if __name__ == '__main__':
