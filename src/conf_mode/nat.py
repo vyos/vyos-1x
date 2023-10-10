@@ -151,8 +151,11 @@ def verify(nat):
             err_msg = f'Source NAT configuration error in rule {rule}:'
 
             if 'outbound_interface' in config:
-                if config['outbound_interface'] not in 'any' and config['outbound_interface'] not in interfaces():
-                    Warning(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
+                if 'interface_name' in config['outbound_interface'] and 'interface_group' in config['outbound_interface']:
+                    raise ConfigError(f'Cannot specify both interface-group and interface-name for nat source rule "{rule}"')
+                elif 'interface_name' in config['outbound_interface']:
+                    if config['outbound_interface']['interface_name'] not in 'any' and config['outbound_interface']['interface_name'] not in interfaces():
+                        Warning(f'rule "{rule}" interface "{config["outbound_interface"]["interface_name"]}" does not exist on this system')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config):
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
@@ -172,8 +175,11 @@ def verify(nat):
             err_msg = f'Destination NAT configuration error in rule {rule}:'
 
             if 'inbound_interface' in config:
-                if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
-                    Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
+                if 'interface_name' in config['inbound_interface'] and 'interface_group' in config['inbound_interface']:
+                    raise ConfigError(f'Cannot specify both interface-group and interface-name for destination nat rule "{rule}"')
+                elif 'interface_name' in config['inbound_interface']:
+                    if config['inbound_interface']['interface_name'] not in 'any' and config['inbound_interface']['interface_name'] not in interfaces():
+                        Warning(f'rule "{rule}" interface "{config["inbound_interface"]["interface_name"]}" does not exist on this system')
 
             if not dict_search('translation.address', config) and not dict_search('translation.port', config) and 'redirect' not in config['translation']:
                 if 'exclude' not in config and 'backend' not in config['load_balance']:
