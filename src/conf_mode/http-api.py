@@ -27,6 +27,7 @@ from vyos.config import Config
 from vyos.configdep import set_dependents, call_dependents
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_running
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -130,7 +131,10 @@ def apply(http_api):
     service_name = 'vyos-http-api.service'
 
     if http_api is not None:
-        call(f'systemctl restart {service_name}')
+        if is_systemd_service_running(f'{service_name}'):
+            call(f'systemctl reload {service_name}')
+        else:
+            call(f'systemctl restart {service_name}')
     else:
         call(f'systemctl stop {service_name}')
 
