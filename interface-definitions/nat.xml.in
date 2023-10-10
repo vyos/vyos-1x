@@ -14,7 +14,7 @@
           #include <include/nat-rule.xml.i>
           <tagNode name="rule">
             <children>
-              #include <include/inbound-interface.xml.i>
+              #include <include/firewall/inbound-interface.xml.i>
               <node name="translation">
                 <properties>
                   <help>Inside NAT IP (destination NAT only)</help>
@@ -77,7 +77,7 @@
               <constraintErrorMessage>NAT rule number must be between 1 and 999999</constraintErrorMessage>
             </properties>
             <children>
-              #include <include/nat-interface.xml.i>
+              #include <include/firewall/outbound-interface.xml.i>
               <node name="translation">
                 <properties>
                   <help>Outside NAT IP (source NAT only)</help>
