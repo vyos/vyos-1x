@@ -1541,6 +1541,56 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
+    # Test set table for destination, source, protocol, fwmark and port
+    def test_protocol_port_address_fwmark_table_id(self):
+        path = base_path + ['local-route']
+
+        dst = '203.0.113.5'
+        src_list = ['203.0.113.1', '203.0.113.2']
+        rule = '23'
+        fwmark = '123456'
+        table = '123'
+        new_table = '111'
+        proto = 'udp'
+        new_proto = 'tcp'
+        src_port = '5555'
+        dst_port = '8888'
+
+        self.cli_set(path + ['rule', rule, 'set', 'table', table])
+        self.cli_set(path + ['rule', rule, 'destination', 'address', dst])
+        self.cli_set(path + ['rule', rule, 'source', 'port', src_port])
+        self.cli_set(path + ['rule', rule, 'protocol', proto])
+        self.cli_set(path + ['rule', rule, 'fwmark', fwmark])
+        self.cli_set(path + ['rule', rule, 'destination', 'port', dst_port])
+        for src in src_list:
+            self.cli_set(path + ['rule', rule, 'source', 'address', src])
+
+        self.cli_commit()
+
+        original = """
+        23:	from 203.0.113.1 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
+        23:	from 203.0.113.2 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
+        """
+        tmp = cmd(f'ip rule show prio {rule}')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
+        # Change table and protocol, delete fwmark and source port
+        self.cli_delete(path + ['rule', rule, 'fwmark'])
+        self.cli_delete(path + ['rule', rule, 'source', 'port'])
+        self.cli_set(path + ['rule', rule, 'set', 'table', new_table])
+        self.cli_set(path + ['rule', rule, 'protocol', new_proto])
+
+        self.cli_commit()
+
+        original = """
+        23:	from 203.0.113.1 to 203.0.113.5 ipproto tcp dport 8888 lookup 111
+        23:	from 203.0.113.2 to 203.0.113.5 ipproto tcp dport 8888 lookup 111
+        """
+        tmp = cmd(f'ip rule show prio {rule}')
+
+        self.assertEqual(sort_ip(tmp), sort_ip(original))
+
     # Test set table for sources with fwmark
     def test_fwmark_sources_table_id(self):
         path = base_path + ['local-route']
