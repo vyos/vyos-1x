@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Deletes Wireguard peers if they have the same public key as the router has.
+
+import json
+from sys import argv
+from sys import exit
+from vyos.configtree import ConfigTree
+from vyos.ifconfig import EthernetIf
+from vyos.ifconfig import BondIf
+from vyos.utils.dict import dict_to_paths_values
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+with open(file_name, 'r') as f:
+    config_file = f.read()
+    base = ['interfaces', 'bonding']
+
+config = ConfigTree(config_file)
+if not config.exists(base):
+    # Nothing to do
+    exit(0)
+for bond in config.list_nodes(base):
+    member_base = base + [bond, 'member', 'interface']
+    if config.exists(member_base):
+        for interface in config.return_values(member_base):
+            if_base = ['interfaces', 'ethernet', interface]
+            if config.exists(if_base):
+                config_ethernet = json.loads(config.get_subtree(if_base).to_json())
+                eth_dict_paths = dict_to_paths_values(config_ethernet)
+                for option_path, option_value in eth_dict_paths.items():
+                    # If option is allowed for changing then continue
+                    converted_path = option_path.replace('-','_')
+                    if converted_path in EthernetIf.get_bond_member_allowed_options():
+                        continue
+                    # if option is inherited from bond then continue
+                    if converted_path in BondIf.get_inherit_bond_options():
+                        continue
+                    option_path_list = option_path.split('.')
+                    config.delete(if_base + option_path_list)
+                    del option_path_list[-1]
+                    # delete empty node from config
+                    while len(option_path_list) > 0:
+                        if config.list_nodes(if_base + option_path_list):
+                            break
+                        config.delete(if_base + option_path_list)
+                        del option_path_list[-1]
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print(f'Failed to save the modified config: {e}')
+    exit(1)

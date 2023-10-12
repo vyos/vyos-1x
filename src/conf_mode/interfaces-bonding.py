@@ -18,7 +18,6 @@ import os
 
 from sys import exit
 from netifaces import interfaces
-
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
 from vyos.configdict import is_node_changed
@@ -34,10 +33,13 @@ from vyos.configverify import verify_source_interface
 from vyos.configverify import verify_vlan_config
 from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
+from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig import Section
 from vyos.utils.dict import dict_search
+from vyos.utils.dict import dict_to_paths_values
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
+from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -90,7 +92,6 @@ def get_config(config=None):
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
-
     # Reset config level to interfaces
     old_level = conf.get_level()
     conf.set_level(['interfaces'])
@@ -102,6 +103,10 @@ def get_config(config=None):
 
         tmp = {}
         for interface in interfaces_removed:
+            # if member is deleted from bond, add dependencies to call
+            # ethernet commit again in apply function
+            # to apply options under ethernet section
+            set_dependents('ethernet', conf, interface)
             section = Section.section(interface) # this will be 'ethernet' for 'eth0'
             if conf.exists([section, interface, 'disable']):
                 tmp[interface] = {'disable': ''}
@@ -116,9 +121,21 @@ def get_config(config=None):
 
     if dict_search('member.interface', bond):
         for interface, interface_config in bond['member']['interface'].items():
+
+            interface_ethernet_config = conf.get_config_dict(
+                ['interfaces', 'ethernet', interface],
+                key_mangling=('-', '_'),
+                get_first_key=True,
+                no_tag_node_value_mangle=True,
+                with_defaults=False,
+                with_recursive_defaults=False)
+
+            interface_config['config_paths'] = dict_to_paths_values(interface_ethernet_config)
+
             # Check if member interface is a new member
             if not conf.exists_effective(base + [ifname, 'member', 'interface', interface]):
                 bond['shutdown_required'] = {}
+                interface_config['new_added'] = {}
 
             # Check if member interface is disabled
             conf.set_level(['interfaces'])
@@ -151,7 +168,6 @@ def get_config(config=None):
             # bond members must not have a VRF attached
             tmp = has_vrf_configured(conf, interface)
             if tmp: interface_config['has_vrf'] = {}
-
     return bond
 
 
@@ -212,6 +228,14 @@ def verify(bond):
             if 'has_vrf' in interface_config:
                 raise ConfigError(error_msg + 'it has a VRF assigned!')
 
+            if 'new_added' in interface_config and 'config_paths' in interface_config:
+                for option_path, option_value in interface_config['config_paths'].items():
+                    if option_path in EthernetIf.get_bond_member_allowed_options() :
+                        continue
+                    if option_path in BondIf.get_inherit_bond_options():
+                        continue
+                    raise ConfigError(error_msg + f'it has a "{option_path.replace(".", " ")}" assigned!')
+
     if 'primary' in bond:
         if bond['primary'] not in bond['member']['interface']:
             raise ConfigError(f'Primary interface of bond "{bond_name}" must be a member interface')
@@ -227,13 +251,17 @@ def generate(bond):
 
 def apply(bond):
     b = BondIf(bond['ifname'])
-
     if 'deleted' in bond:
         # delete interface
         b.remove()
     else:
         b.update(bond)
-
+    if dict_search('member.interface_remove', bond):
+        try:
+            call_dependents()
+        except ConfigError:
+            raise ConfigError('Error in updating ethernet interface '
+                              'after deleting it from bond')
     return None
 
 if __name__ == '__main__':

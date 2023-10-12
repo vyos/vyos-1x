@@ -75,6 +75,40 @@ class EthernetIf(Interface):
         },
     }}
 
+    @staticmethod
+    def get_bond_member_allowed_options() -> list:
+        """
+        Return list of options which are allowed for changing,
+        when interface is a bond member
+        :return: List of interface options
+        :rtype: list
+        """
+        bond_allowed_sections = [
+            'description',
+            'disable',
+            'disable_flow_control',
+            'disable_link_detect',
+            'duplex',
+            'eapol.ca_certificate',
+            'eapol.certificate',
+            'eapol.passphrase',
+            'mirror.egress',
+            'mirror.ingress',
+            'offload.gro',
+            'offload.gso',
+            'offload.lro',
+            'offload.rfs',
+            'offload.rps',
+            'offload.sg',
+            'offload.tso',
+            'redirect',
+            'ring_buffer.rx',
+            'ring_buffer.tx',
+            'speed',
+            'hw_id'
+        ]
+        return bond_allowed_sections
+
     def __init__(self, ifname, **kargs):
         super().__init__(ifname, **kargs)
         self.ethtool = Ethtool(ifname)
