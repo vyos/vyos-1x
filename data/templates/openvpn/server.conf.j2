@@ -205,19 +205,12 @@ tls-server
 {% if encryption is vyos_defined %}
 {%     if encryption.cipher is vyos_defined %}
 cipher {{ encryption.cipher | openvpn_cipher }}
-{%         if encryption.cipher is vyos_defined('bf128') %}
-keysize 128
-{%         elif encryption.cipher is vyos_defined('bf256') %}
-keysize 256
-{%         endif %}
 {%     endif %}
 {%     if encryption.ncp_ciphers is vyos_defined %}
 data-ciphers {{ encryption.ncp_ciphers | openvpn_ncp_ciphers }}
 {%     endif %}
 {% endif %}
-# https://vyos.dev/T5027
-# Required to support BF-CBC (default ciphername when none given)
-providers legacy default
+providers default
 
 {% if hash is vyos_defined %}
 auth {{ hash }}
