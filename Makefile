@@ -26,9 +26,9 @@ interface_definitions: $(config_xml_obj)
 
 	$(CURDIR)/scripts/override-default $(BUILD_DIR)/interface-definitions
 
-	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions || exit 1
-
 	find $(BUILD_DIR)/interface-definitions -type f -name "*.xml" | xargs -I {} $(CURDIR)/scripts/build-command-templates {} $(CURDIR)/schema/interface_definition.rng $(TMPL_DIR) || exit 1
+
+	$(CURDIR)/python/vyos/xml_ref/generate_cache.py --xml-dir $(BUILD_DIR)/interface-definitions || exit 1
 
 	# XXX: delete top level node.def's that now live in other packages
 	# IPSec VPN EAP-RADIUS does not support source-address
