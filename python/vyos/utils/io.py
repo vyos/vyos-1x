@@ -24,45 +24,6 @@ def print_error(str='', end='\n'):
     sys.stderr.write(end)
     sys.stderr.flush()
 
-def make_progressbar():
-    """
-    Make a procedure that takes two arguments `done` and `total` and prints a
-     progressbar based on the ratio thereof, whose length is determined by the
-     width of the terminal.
-    """
-    import shutil, math
-    col, _ = shutil.get_terminal_size()
-    col = max(col - 15, 20)
-    def print_progressbar(done, total):
-        if done <= total:
-            increment = total / col
-            length = math.ceil(done / increment)
-            percentage = str(math.ceil(100 * done / total)).rjust(3)
-            print_error(f'[{length * "#"}{(col - length) * "_"}] {percentage}%', '\r')
-            # Print a newline so that the subsequent prints don't overwrite the full bar.
-        if done == total:
-            print_error()
-    return print_progressbar
-
-def make_incremental_progressbar(increment: float):
-    """
-    Make a generator that displays a progressbar that grows monotonically with
-     every iteration.
-    First call displays it at 0% and every subsequent iteration displays it
-     at `increment` increments where 0.0 < `increment` < 1.0.
-    Intended for FTP and HTTP transfers with stateless callbacks.
-    """
-    print_progressbar = make_progressbar()
-    total = 0.0
-    while total < 1.0:
-        print_progressbar(total, 1.0)
-        yield
-        total += increment
-    print_progressbar(1, 1)
-    # Ignore further calls.
-    while True:
-        yield
-
 def ask_input(question, default='', numeric_only=False, valid_responses=[]):
     question_out = question
     if default:

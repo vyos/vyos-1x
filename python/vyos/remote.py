@@ -32,9 +32,8 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3 import PoolManager
 
+from vyos.progressbar import Progressbar
 from vyos.utils.io import ask_yes_no
-from vyos.utils.io import make_incremental_progressbar
-from vyos.utils.io import make_progressbar
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
 from vyos.utils.process import cmd
@@ -131,16 +130,16 @@ class FtpC:
             if self.secure:
                 conn.prot_p()
             # Almost all FTP servers support the `SIZE' command.
+            size = conn.size(self.path)
             if self.check_space:
-                check_storage(path, conn.size(self.path))
+                check_storage(path, size)
             # No progressbar if we can't determine the size or if the file is too small.
             if self.progressbar and size and size > CHUNK_SIZE:
-                progress = make_incremental_progressbar(CHUNK_SIZE / size)
-                next(progress)
-                callback = lambda block: begin(f.write(block), next(progress))
+                with Progressbar(CHUNK_SIZE / size) as p:
+                    callback = lambda block: begin(f.write(block), p.increment())
+                    conn.retrbinary('RETR ' + self.path, callback, CHUNK_SIZE)
             else:
-                callback = f.write
-            conn.retrbinary('RETR ' + self.path, callback, CHUNK_SIZE)
+                conn.retrbinary('RETR ' + self.path, f.write, CHUNK_SIZE)
 
     def upload(self, location: str):
         size = os.path.getsize(location)
@@ -150,12 +149,10 @@ class FtpC:
             if self.secure:
                 conn.prot_p()
             if self.progressbar and size and size > CHUNK_SIZE:
-                progress = make_incremental_progressbar(CHUNK_SIZE / size)
-                next(progress)
-                callback = lambda block: next(progress)
+                with Progressbar(CHUNK_SIZE / size) as p:
+                    conn.storbinary('STOR ' + self.path, f, CHUNK_SIZE, lambda block: p.increment())
             else:
-                callback = None
-            conn.storbinary('STOR ' + self.path, f, CHUNK_SIZE, callback)
+                conn.storbinary('STOR ' + self.path, f, CHUNK_SIZE)
 
 class SshC:
     known_hosts = os.path.expanduser('~/.ssh/known_hosts')
@@ -190,14 +187,16 @@ class SshC:
         return ssh
 
     def download(self, location: str):
-        callback = make_progressbar() if self.progressbar else None
         with self._establish() as ssh, ssh.open_sftp() as sftp:
             if self.check_space:
                 check_storage(location, sftp.stat(self.path).st_size)
-            sftp.get(self.path, location, callback=callback)
+            if self.progressbar:
+                with Progressbar() as p:
+                    sftp.get(self.path, location, callback=p.progress)
+            else:
+                sftp.get(self.path, location)
 
     def upload(self, location: str):
-        callback = make_progressbar() if self.progressbar else None
         with self._establish() as ssh, ssh.open_sftp() as sftp:
             try:
                 # If the remote path is a directory, use the original filename.
@@ -210,7 +209,11 @@ class SshC:
             except IOError:
                 path = self.path
             finally:
-                sftp.put(location, path, callback=callback)
+                if self.progressbar:
+                    with Progressbar() as p:
+                        sftp.put(location, path, callback=p.progress)
+                else:
+                    sftp.put(location, path)
 
 
 class HttpC:
@@ -264,10 +267,9 @@ class HttpC:
             with s.get(final_urlstring, stream=True,
                        timeout=self.timeout) as r, open(location, 'wb') as f:
                 if self.progressbar and size:
-                    progress = make_incremental_progressbar(CHUNK_SIZE / size)
-                    next(progress)
-                    for chunk in iter(lambda: begin(next(progress), r.raw.read(CHUNK_SIZE)), b''):
-                        f.write(chunk)
+                    with Progressbar(CHUNK_SIZE / size) as p:
+                        for chunk in iter(lambda: begin(p.increment(), r.raw.read(CHUNK_SIZE)), b''):
+                            f.write(chunk)
                 else:
                     # We'll try to stream the download directly with `copyfileobj()` so that large
                     #  files (like entire VyOS images) don't occupy much memory.
