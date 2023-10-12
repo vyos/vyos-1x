@@ -14,19 +14,19 @@ mpls ldp
  ordered-control
 {%     endif %}
 {%     if ldp.neighbor is vyos_defined %}
-{%         for neighbor, neighbor_config in ldp.neighbor %}
+{%         for neighbor, neighbor_config in ldp.neighbor.items() %}
 {%             if neighbor_config.password is vyos_defined %}
- neighbor {{ neighbors }} password {{ neighbor_config.password }}
+ neighbor {{ neighbor }} password {{ neighbor_config.password }}
 {%             endif %}
 {%             if neighbor_config.ttl_security is vyos_defined %}
 {%                 if neighbor_config.ttl_security.disable is vyos_defined %}
- neighbor {{ neighbors }} ttl-security disable
+ neighbor {{ neighbor }} ttl-security disable
 {%                 else %}
- neighbor {{ neighbors }} ttl-security hops {{ neighbor_config.ttl_security }}
+ neighbor {{ neighbor }} ttl-security hops {{ neighbor_config.ttl_security }}
 {%                 endif %}
 {%             endif %}
 {%             if neighbor_config.session_holdtime is vyos_defined %}
- neighbor {{ neighbors }} session holdtime {{ neighbor_config.session_holdtime }}
+ neighbor {{ neighbor }} session holdtime {{ neighbor_config.session_holdtime }}
 {%             endif %}
 {%         endfor %}
 {%     endif %}
