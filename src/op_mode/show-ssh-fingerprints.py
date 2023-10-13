@@ -25,7 +25,7 @@ if publickeys:
     print("SSH server public key fingerprints:\n", flush=True)
     for keyfile in publickeys:
         os.system('ssh-keygen -l -v -E sha256 -f ' + keyfile)
-        print("")
+        print("", flush=True)
 else:
     print("No SSH server public keys are found.")
 
