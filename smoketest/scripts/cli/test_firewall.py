@@ -568,5 +568,84 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                 with open(path, 'r') as f:
                     self.assertNotEqual(f.read().strip(), conf['default'], msg=path)
 
+<<<<<<< HEAD
+=======
+### Zone
+    def test_zone_basic(self):
+        self.cli_set(['firewall', 'ipv4', 'name', 'smoketest', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'smoketest-local', 'from', 'smoketest-eth0', 'firewall', 'name', 'smoketest'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VYOS_ZONE_FORWARD'],
+            ['type filter hook forward priority filter + 1'],
+            ['chain VYOS_ZONE_OUTPUT'],
+            ['type filter hook output priority filter + 1'],
+            ['chain VYOS_ZONE_LOCAL'],
+            ['type filter hook input priority filter + 1'],
+            ['chain VZONE_smoketest-eth0'],
+            ['chain VZONE_smoketest-local_IN'],
+            ['chain VZONE_smoketest-local_OUT'],
+            ['oifname "eth0"', 'jump VZONE_smoketest-eth0'],
+            ['jump VZONE_smoketest-local_IN'],
+            ['jump VZONE_smoketest-local_OUT'],
+            ['iifname "eth0"', 'jump NAME_smoketest'],
+            ['oifname "eth0"', 'jump NAME_smoketest']
+        ]
+
+        nftables_output = cmd('sudo nft list table ip vyos_filter')
+
+        for search in nftables_search:
+            matched = False
+            for line in nftables_output.split("\n"):
+                if all(item in line for item in search):
+                    matched = True
+                    break
+            self.assertTrue(matched)
+
+
+    def test_flow_offload(self):
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
+
+        # QEMU virtual NIC does not support hw-tc-offload
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'related', 'enable'])
+
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'related', 'enable'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['flowtable VYOS_FLOWTABLE_smoketest'],
+            ['hook ingress priority filter'],
+            ['devices = { eth0 }'],
+            ['ct state { established, related }', 'meta l4proto { tcp, udp }', 'flow add @VYOS_FLOWTABLE_smoketest'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # Check conntrack
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
+>>>>>>> c74ecbaac (T5541: firewall zone: re add firewall zone-base firewall)
 if __name__ == '__main__':
     unittest.main(verbosity=2)

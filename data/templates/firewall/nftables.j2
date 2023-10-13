@@ -1,6 +1,12 @@
 #!/usr/sbin/nft -f
 
 {% import 'firewall/nftables-defines.j2' as group_tmpl %}
+<<<<<<< HEAD
+=======
+{% import 'firewall/nftables-bridge.j2' as bridge_tmpl %}
+{% import 'firewall/nftables-offload.j2' as offload_tmpl %}
+{% import 'firewall/nftables-zone.j2' as zone_tmpl %}
+>>>>>>> c74ecbaac (T5541: firewall zone: re add firewall zone-base firewall)
 
 flush chain raw FW_CONNTRACK
 flush chain ip6 raw FW_CONNTRACK
@@ -147,7 +153,15 @@ table ip vyos_filter {
 {%         endfor %}
 {%     endif %}
 {% endif %}
+<<<<<<< HEAD
 {{ group_tmpl.groups(group, False) }}
+=======
+{{ group_tmpl.groups(group, False, True) }}
+
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, False) }}
+{% endif %}
+>>>>>>> c74ecbaac (T5541: firewall zone: re add firewall zone-base firewall)
 }
 
 {% if first_install is not vyos_defined %}
@@ -250,5 +264,23 @@ table ip6 vyos_filter {
 {%         endfor %}
 {%     endif %}
 {% endif %}
+<<<<<<< HEAD
 {{ group_tmpl.groups(group, True) }}
 }
+=======
+{{ group_tmpl.groups(group, True, True) }}
+{% if zone is vyos_defined %}
+{{ zone_tmpl.zone_chains(zone, True) }}
+{% endif %}
+}
+
+## Bridge Firewall
+{% if first_install is not vyos_defined %}
+delete table bridge vyos_filter
+{% endif %}
+table bridge vyos_filter {
+{{ bridge_tmpl.bridge(bridge) }}
+{{ group_tmpl.groups(group, False, False) }}
+
+}
+>>>>>>> c74ecbaac (T5541: firewall zone: re add firewall zone-base firewall)
