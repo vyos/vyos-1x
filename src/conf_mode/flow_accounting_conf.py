@@ -28,6 +28,7 @@ from vyos.ifconfig import Section
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.process import cmd
+from vyos.utils.process import run
 from vyos.utils.network import is_addr_assigned
 from vyos import ConfigError
 from vyos import airbag
@@ -114,6 +115,30 @@ def _nftables_config(configured_ifaces, direction, length=None):
     # change nftables
     for command in nftable_commands:
         cmd(command, raising=ConfigError)
+
+
+def _nftables_trigger_setup(operation: str) -> None:
+    """Add a dummy rule to unlock the main pmacct loop with a packet-trigger
+
+    Args:
+        operation (str): 'add' or 'delete' a trigger
+    """
+    # check if a chain exists
+    table_exists = False
+    if run('nft -snj list table ip pmacct') == 0:
+        table_exists = True
+
+    if operation == 'delete' and table_exists:
+        nft_cmd: str = 'nft delete table ip pmacct'
+        cmd(nft_cmd, raising=ConfigError)
+    if operation == 'add' and not table_exists:
+        nft_cmds: list[str] = [
+            'nft add table ip pmacct',
+            'nft add chain ip pmacct pmacct_out { type filter hook output priority raw - 50 \\; policy accept \\; }',
+            'nft add rule ip pmacct pmacct_out oif lo ip daddr 127.0.254.0 counter log group 2 snaplen 1 queue-threshold 0 comment NFLOG_TRIGGER'
+        ]
+        for nft_cmd in nft_cmds:
+            cmd(nft_cmd, raising=ConfigError)
 
 
 def get_config(config=None):
@@ -252,7 +277,6 @@ def generate(flow_config):
     call('systemctl daemon-reload')
 
 def apply(flow_config):
-    action = 'restart'
     # Check if flow-accounting was removed and define command
     if not flow_config:
         _nftables_config([], 'ingress')
@@ -262,6 +286,10 @@ def apply(flow_config):
         call(f'systemctl stop {systemd_service}')
         if os.path.exists(uacctd_conf_path):
             os.unlink(uacctd_conf_path)
+
+        # must be done after systemctl
+        _nftables_trigger_setup('delete')
+
         return
 
     # Start/reload flow-accounting daemon
@@ -276,6 +304,10 @@ def apply(flow_config):
             _nftables_config(flow_config['interface'], 'egress', flow_config['packet_length'])
         else:
             _nftables_config([], 'egress')
+
+    # add a trigger for signal processing
+    _nftables_trigger_setup('add')
+
 
 if __name__ == '__main__':
     try:
