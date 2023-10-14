@@ -17,16 +17,25 @@
 
 import sys
 import glob
-import os
+import argparse
+from vyos.utils.process import cmd
 
-publickeys = glob.glob('/etc/ssh/*.pub')
+# Parse command line
+parser = argparse.ArgumentParser()
+parser.add_argument("--ascii", help="Show visual ASCII art representation of the public key", action="store_true")
+args = parser.parse_args()
+
+# Get list of server public keys
+publickeys = glob.glob("/etc/ssh/*.pub")
 
 if publickeys:
     print("SSH server public key fingerprints:\n", flush=True)
     for keyfile in publickeys:
-        os.system('ssh-keygen -l -v -E sha256 -f ' + keyfile)
-        print("", flush=True)
+        if args.ascii:
+            print(cmd("ssh-keygen -l -v -E sha256 -f " + keyfile) + "\n", flush=True)
+        else:
+            print(cmd("ssh-keygen -l -E sha256 -f " + keyfile) + "\n", flush=True)
 else:
-    print("No SSH server public keys are found.")
+    print("No SSH server public keys are found.", flush=True)
 
 sys.exit(0)
