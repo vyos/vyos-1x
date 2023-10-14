@@ -32,9 +32,17 @@ if publickeys:
     print("SSH server public key fingerprints:\n", flush=True)
     for keyfile in publickeys:
         if args.ascii:
-            print(cmd("ssh-keygen -l -v -E sha256 -f " + keyfile) + "\n", flush=True)
+            try:
+                print(cmd("ssh-keygen -l -v -E sha256 -f " + keyfile) + "\n", flush=True)
+            # Ignore invalid public keys
+            except:
+                pass
         else:
-            print(cmd("ssh-keygen -l -E sha256 -f " + keyfile) + "\n", flush=True)
+            try:
+                print(cmd("ssh-keygen -l -E sha256 -f " + keyfile) + "\n", flush=True)
+            # Ignore invalid public keys
+            except:
+                pass
 else:
     print("No SSH server public keys are found.", flush=True)
 
