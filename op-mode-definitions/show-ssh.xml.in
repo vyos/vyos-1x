@@ -12,6 +12,14 @@
               <help>Show SSH server public key fingerprints</help>
             </properties>
             <command>${vyos_op_scripts_dir}/show-ssh-fingerprints.py</command>
+            <children>
+              <node name="ascii">
+                <properties>
+                  <help>Show visual ASCII art representation of the public key</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/show-ssh-fingerprints.py --ascii</command>
+              </node>
+            </children>
           </node>
         </children>
       </node>
