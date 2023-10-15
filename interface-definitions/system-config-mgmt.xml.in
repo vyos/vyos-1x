@@ -21,7 +21,7 @@
                     <description>Uniform Resource Identifier</description>
                   </valueHelp>
                   <constraint>
-                    <validator name="url --file-transport"/>
+                    <regex>(http|https|ftp|ftps|sftp|ssh|scp|tftp|git|git\+(\w+)):\/\/.*</regex>
                   </constraint>
                   <multi/>
                 </properties>
