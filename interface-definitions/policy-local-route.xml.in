@@ -60,6 +60,7 @@
                 </properties>
                 <children>
                   #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/port-number.xml.i>
                 </children>
               </node>
               <node name="destination">
@@ -68,6 +69,7 @@
                 </properties>
                 <children>
                   #include <include/policy/local-route_rule_ipv4_address.xml.i>
+                  #include <include/port-number.xml.i>
                 </children>
               </node>
               #include <include/interface/inbound-interface.xml.i>
@@ -125,12 +127,14 @@
                   </constraint>
                 </properties>
               </leafNode>
+              #include <include/policy/local-route_rule_protocol.xml.i>
               <node name="source">
                 <properties>
                   <help>Source parameters</help>
                 </properties>
                 <children>
                   #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/port-number.xml.i>
                 </children>
               </node>
               <node name="destination">
@@ -139,6 +143,7 @@
                 </properties>
                 <children>
                   #include <include/policy/local-route_rule_ipv6_address.xml.i>
+                  #include <include/port-number.xml.i>
                 </children>
               </node>
               #include <include/interface/inbound-interface.xml.i>
