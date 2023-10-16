@@ -506,11 +506,13 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
 
         interface = 'vtun5001'
         path = base_path + [interface]
+        encryption_cipher = 'aes256'
 
         self.cli_set(path + ['mode', 'site-to-site'])
         self.cli_set(path + ['local-address', '10.0.0.2'])
         self.cli_set(path + ['remote-address', '192.168.0.3'])
         self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
+        self.cli_set(path + ['encryption', 'cipher', encryption_cipher])
 
         self.cli_commit()
 
@@ -548,6 +550,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
         port = ''
         local_address = ''
         remote_address = ''
+        encryption_cipher = 'aes256'
 
         for ii in num_range:
             interface = f'vtun{ii}'
@@ -571,6 +574,7 @@ class TestInterfacesOpenVPN(VyOSUnitTestSHIM.TestCase):
             self.cli_set(path + ['remote-port', port])
             self.cli_set(path + ['shared-secret-key', 'ovpn_test'])
             self.cli_set(path + ['remote-address', remote_address])
+            self.cli_set(path + ['encryption', 'cipher', encryption_cipher])
             self.cli_set(path + ['vrf', vrf_name])
 
         self.cli_commit()
