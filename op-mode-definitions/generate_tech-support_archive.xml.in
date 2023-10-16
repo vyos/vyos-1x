@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="tech-support">
+        <properties>
+          <help>Generate tech support info</help>
+        </properties>
+        <children>
+          <node name="archive">
+            <properties>
+              <help>Generate tech support archive</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py</command>
+          </node>
+          <tagNode name="archive">
+            <properties>
+              <help>Generate tech support archive to defined location</help>
+              <completionHelp>
+                <list> &lt;file&gt; &lt;scp://user:passwd@host&gt; &lt;ftp://user:passwd@host&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/generate_tech-support_archive.py $4</command>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
