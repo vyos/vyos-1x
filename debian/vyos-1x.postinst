@@ -201,14 +201,3 @@ systemctl enable vyos-config-cloud-init.service
 # Update XML cache
 python3 /usr/lib/python3/dist-packages/vyos/xml_ref/update_cache.py
 
-# T1797: disable VPP support for rolling release, should be used by developers
-# only (in the initial phase). If you wan't to enable VPP use the below command
-# on your VyOS installation:
-#
-# sudo mv /opt/vyatta/share/vyatta-cfg/vpp /opt/vyatta/share/vyatta-cfg/templates/vpp
-if [ -d /opt/vyatta/share/vyatta-cfg/templates/vpp ]; then
-    if [ -d /opt/vyatta/share/vyatta-cfg/vpp ]; then
-        rm -rf /opt/vyatta/share/vyatta-cfg/vpp
-    fi
-    mv /opt/vyatta/share/vyatta-cfg/templates/vpp /opt/vyatta/share/vyatta-cfg/vpp
-fi
