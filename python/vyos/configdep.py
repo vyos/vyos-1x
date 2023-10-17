@@ -43,7 +43,7 @@ def canon_name_of_path(path: str) -> str:
     return canon_name(script)
 
 def caller_name() -> str:
-    return stack()[-1].filename
+    return stack()[2].filename
 
 def read_dependency_dict(dependency_dir: str = dependency_dir) -> dict:
     res = {}
