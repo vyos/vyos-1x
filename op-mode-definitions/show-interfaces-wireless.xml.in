@@ -20,7 +20,7 @@
                 <properties>
                   <help>Show wireless interface configuration</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_wireless.py --brief</command>
+                <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_info</command>
               </leafNode>
             </children>
           </node>
@@ -35,15 +35,15 @@
             <children>
               <leafNode name="brief">
                 <properties>
-                  <help>Show summary of the specified wireless interface information</help>
+                  <help>Show brief summary of the specified wireless interface</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=wireless</command>
               </leafNode>
               <node name="scan">
                 <properties>
-                  <help>Show summary of the specified wireless interface information</help>
+                  <help>Scan for networks via specified wireless interface</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/show_wireless.py --scan "$4"</command>
+                <command>sudo ${vyos_op_scripts_dir}/interfaces_wireless.py show_scan --intf-name="$4"</command>
                 <children>
                   <leafNode name="detail">
                     <properties>
@@ -57,7 +57,7 @@
                 <properties>
                   <help>Show specified Wireless interface information</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show_wireless.py --stations "$4"</command>
+                <command>${vyos_op_scripts_dir}/interfaces_wireless.py show_stations --intf-name="$4"</command>
               </leafNode>
               <tagNode name="vif">
                 <properties>
