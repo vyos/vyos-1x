@@ -21,7 +21,7 @@
 # send some packets to pmacct to wake it up
 
 from argparse import ArgumentParser
-from socket import socket
+from socket import socket, AF_INET, SOCK_DGRAM
 from sys import exit
 from time import sleep
 
@@ -42,11 +42,12 @@ def stop_process(pid: int, timeout: int) -> None:
     uacctd.terminate()
 
     # create a socket
-    trigger = socket()
+    trigger = socket(AF_INET, SOCK_DGRAM)
 
     first_cycle: bool = True
     while uacctd.is_running() and timeout:
-        trigger.sendto(b'WAKEUP', ('127.0.254.0', 0))
+        print('sending a packet to uacctd...')
+        trigger.sendto(b'WAKEUP', ('127.0.254.0', 1))
         # do not sleep during first attempt
         if not first_cycle:
             sleep(1)
