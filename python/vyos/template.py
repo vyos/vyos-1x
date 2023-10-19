@@ -582,10 +582,11 @@ def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip'):
 def nft_default_rule(fw_conf, fw_name, ipv6=False):
     output = ['counter']
     default_action = fw_conf['default_action']
+    family = 'ipv6' if ipv6 else 'ipv4'
 
     if 'enable_default_log' in fw_conf:
         action_suffix = default_action[:1].upper()
-        output.append(f'log prefix "[{fw_name[:19]}-default-{action_suffix}]"')
+        output.append(f'log prefix "[{family}-{fw_name[:19]}-default-{action_suffix}]"')
 
     #output.append(nft_action(default_action))
     output.append(f'{default_action}')
