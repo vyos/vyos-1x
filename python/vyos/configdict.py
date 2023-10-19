@@ -258,10 +258,10 @@ def has_address_configured(conf, intf):
     old_level = conf.get_level()
     conf.set_level([])
 
-    intfpath = 'interfaces ' + Section.get_config_path(intf)
-    if ( conf.exists(f'{intfpath} address') or
-            conf.exists(f'{intfpath} ipv6 address autoconf') or
-            conf.exists(f'{intfpath} ipv6 address eui64') ):
+    intfpath = ['interfaces', Section.get_config_path(intf)]
+    if (conf.exists([intfpath, 'address']) or
+        conf.exists([intfpath, 'ipv6', 'address', 'autoconf']) or
+        conf.exists([intfpath, 'ipv6', 'address', 'eui64'])):
         ret = True
 
     conf.set_level(old_level)
@@ -279,8 +279,7 @@ def has_vrf_configured(conf, intf):
     old_level = conf.get_level()
     conf.set_level([])
 
-    tmp = ['interfaces', Section.get_config_path(intf), 'vrf']
-    if conf.exists(tmp):
+    if conf.exists(['interfaces', Section.get_config_path(intf), 'vrf']):
         ret = True
 
     conf.set_level(old_level)
@@ -298,8 +297,7 @@ def has_vlan_subinterface_configured(conf, intf):
     ret = False
 
     intfpath = ['interfaces', Section.section(intf), intf]
-    if ( conf.exists(intfpath + ['vif']) or
-            conf.exists(intfpath + ['vif-s'])):
+    if (conf.exists(intfpath + ['vif']) or conf.exists(intfpath + ['vif-s'])):
         ret = True
 
     return ret
