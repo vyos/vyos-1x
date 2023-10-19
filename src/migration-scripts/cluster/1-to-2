@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import re
+import sys
+
+from vyos.configtree import ConfigTree
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("Must specify file name!")
+        sys.exit(1)
+
+    file_name = sys.argv[1]
+
+    with open(file_name, 'r') as f:
+        config_file = f.read()
+
+    config = ConfigTree(config_file)
+
+    if not config.exists(['cluster']):
+        # Cluster is not set -- nothing to do at all
+        sys.exit(0)
+
+    # If at least one cluster group is defined, we have real work to do.
+    # If there are no groups, we remove the top-level cluster node at the end of this script anyway.
+    if config.exists(['cluster', 'group']):
+        # First, gather timer and interface settings to duplicate them in all groups,
+        # since in the old cluster they are global, but in VRRP they are always per-group
+
+        global_interface = None
+        if config.exists(['cluster', 'interface']):
+            global_interface = config.return_value(['cluster', 'interface'])
+        else:
+            # Such configs shouldn't exist in practice because interface is a required option.
+            # But since it's possible to specify interface inside 'service' options,
+            # we may be able to convert such configs nonetheless.
+            print("Warning: incorrect cluster config: interface is not defined.", file=sys.stderr)
+
+        # There are three timers: advertise-interval, dead-interval, and monitor-dead-interval
+        # Only the first one makes sense for the VRRP, we translate it to advertise-interval
+        advertise_interval = None
+        if config.exists(['cluster', 'keepalive-interval']):
+            advertise_interval = config.return_value(['cluster', 'keepalive-interval'])
+
+        if advertise_interval is not None:
+            # Cluster had all timers in milliseconds, so we need to convert them to seconds
+            # And ensure they are not shorter than one second
+            advertise_interval = int(advertise_interval) // 1000
+            if advertise_interval < 1:
+                advertise_interval = 1
+
+        # Cluster had password as a global option, in VRRP it's per-group
+        password = None
+        if config.exists(['cluster', 'pre-shared-secret']):
+            password = config.return_value(['cluster', 'pre-shared-secret'])
+
+        # Set up the stage for converting cluster groups to VRRP groups
+        free_vrids = set(range(1,255))
+        vrrp_base_path = ['high-availability', 'vrrp', 'group']
+        if not config.exists(vrrp_base_path):
+            # If VRRP is not set up, create a node and set it to 'tag node'
+            # Setting it to 'tag' is not mandatory but it's better to be consistent
+            # with configs produced by 'save'
+            config.set(vrrp_base_path)
+            config.set_tag(vrrp_base_path)
+        else:
+            # If there are VRRP groups already, we need to find the set of unused VRID numbers to avoid conflicts
+            existing_vrids = set()
+            for vg in config.list_nodes(vrrp_base_path):
+                existing_vrids.add(int(config.return_value(vrrp_base_path + [vg, 'vrid'])))
+            free_vrids = free_vrids.difference(existing_vrids)
+
+        # Now handle cluster groups
+        groups = config.list_nodes(['cluster', 'group'])
+        for g in groups:
+            base_path = ['cluster', 'group', g]
+            service_names = config.return_values(base_path + ['service'])
+
+            # Cluster used to allow services other than IP addresses, at least nominally
+            # Whether that ever worked is a big question, but we need to consider that,
+            # since configs with custom services are definitely impossible to meaningfully migrate now
+            services = {"ip": [], "other": []}
+            for s in service_names:
+                if re.match(r'^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})(/[a-z]+\d+)?$', s):
+                    services["ip"].append(s)
+                else:
+                    services["other"].append(s)
+
+            if services["other"]:
+                print("Cluster config includes non-IP address services and cannot be migrated", file=sys.stderr)
+                sys.exit(1)
+
+            # Cluster allowed virtual IPs for different interfaces within a single group.
+            # VRRP groups are by definition bound to interfaces, so we cannot migrate such configurations.
+            # Thus we need to find out if all addresses either leave the interface unspecified
+            # (in that case the global 'cluster interface' option is used),
+            # or have the same interface, or have the same interface as the global 'cluster interface'.
+
+            # First, we collect all addresses and check if they have interface specified
+            # If not, we substitute the global interface option
+            # or throw an error if it's not in the config.
+            ips = []
+            for ip in services["ip"]:
+                ip_with_intf = re.match(r'^(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2})/(?P<intf>[a-z]+\d+)$', ip)
+                if ip_with_intf:
+                    ips.append({"ip": ip_with_intf.group("ip"), "interface": ip_with_intf.group("intf")})
+                else:
+                    if global_interface is not None:
+                        ips.append({"ip": ip, "interface": global_interface})
+                    else:
+                        print("Error: cluster has groups with IPs without interfaces and 'cluster interface' is not specified.", file=sys.stderr)
+                        sys.exit(1)
+
+            # Then we check if all addresses are for the same interface.
+            intfs_set = set(map(lambda i: i["interface"], ips))
+            if len(intfs_set) > 1:
+                print("Error: cluster group has addresses for different interfaces", file=sys.stderr)
+                sys.exit(1)
+
+            # If we got this far, the group is migratable.
+
+            # Extract the interface from the set -- we know there's only a single member.
+            interface = intfs_set.pop()
+
+            addresses = list(map(lambda i: i["ip"], ips))
+            vrrp_path = ['high-availability', 'vrrp', 'group', g]
+
+            # If there's already a VRRP group with exactly the same name,
+            # we probably shouldn't try to make up a unique name, just leave migration to the user...
+            if config.exists(vrrp_path):
+                print("Error: VRRP group with the same name as a cluster group already exists", file=sys.stderr)
+                sys.exit(1)
+
+            config.set(vrrp_path + ['interface'], value=interface)
+            for a in addresses:
+                config.set(vrrp_path + ['virtual-address'], value=a, replace=False)
+
+            # Take the next free VRID and assign it to the group
+            vrid = free_vrids.pop()
+            config.set(vrrp_path + ['vrid'], value=vrid)
+
+            # Convert the monitor option to VRRP ping health check
+            if config.exists(base_path + ['monitor']):
+                monitor_ip = config.return_value(base_path + ['monitor'])
+                config.set(vrrp_path + ['health-check', 'ping'], value=monitor_ip)
+
+            # Convert "auto-failback" to "no-preempt", if necessary
+            if config.exists(base_path + ['auto-failback']):
+                # It's a boolean node that requires "true" or "false"
+                # so if it exists we still need to check its value
+                auto_failback = config.return_value(base_path + ['auto-failback'])
+                if auto_failback == "false":
+                    config.set(vrrp_path + ['no-preempt'])
+                else:
+                    # It's "true" or we assume it is, which means preemption is desired,
+                    # and in VRRP config it's the default
+                    pass
+            else:
+                # The old default for that option is false
+                config.set(vrrp_path + ['no-preempt'])
+
+            # Inject settings from the global cluster config that have to be per-group in VRRP
+            if advertise_interval is not None:
+                config.set(vrrp_path + ['advertise-interval'], value=advertise_interval)
+
+            if password is not None:
+                config.set(vrrp_path + ['authentication', 'password'], value=password)
+                config.set(vrrp_path + ['authentication', 'type'], value='plaintext-password')
+
+    # Finally, clean up the old cluster node
+    config.delete(['cluster'])
+
+    try:
+        with open(file_name, 'w') as f:
+            f.write(config.to_string())
+    except OSError as e:
+        print("Failed to save the modified config: {}".format(e))
+        sys.exit(1)
