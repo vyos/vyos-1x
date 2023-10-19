@@ -123,6 +123,9 @@
                   <completionHelp>
                     <script>${vyos_completion_dir}/list_interfaces --bridgeable</script>
                   </completionHelp>
+                  <constraint>
+                    #include <include/constraint/interface-name.xml.i>
+                  </constraint>
                 </properties>
                 <children>
                   <leafNode name="native-vlan">
