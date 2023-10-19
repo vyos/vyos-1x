@@ -21,7 +21,7 @@ from netifaces import interfaces
 
 from vyos.config import Config
 from vyos.configdict import get_interface_dict
-from vyos.configdict import leaf_node_changed
+from vyos.configdict import is_node_changed
 from vyos.configverify import verify_address
 from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
@@ -53,7 +53,7 @@ def get_config(config=None):
                        'source-address', 'source-interface', 'vni',
                        'parameters ip dont-fragment', 'parameters ip tos',
                        'parameters ip ttl']:
-        if leaf_node_changed(conf, cli_option.split()):
+        if is_node_changed(conf, cli_option.split()):
             vxlan.update({'rebuild_required': {}})
 
     return vxlan
