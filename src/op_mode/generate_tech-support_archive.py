@@ -100,7 +100,7 @@ if __name__ == '__main__':
     location_path = args.path[:-1] if args.path[-1] == '/' else args.path
 
     hostname: str = gethostname()
-    time_now: str = datetime.now().isoformat(timespec='seconds')
+    time_now: str = datetime.now().isoformat(timespec='seconds').replace(":", "-")
 
     remote = False
     tmp_path = ''
