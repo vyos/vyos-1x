@@ -327,6 +327,63 @@ def verify(firewall):
                         for rule_id, rule_conf in name_conf['rule'].items():
                             verify_rule(firewall, rule_conf, True)
 
+    #### ZONESSSS
+    local_zone = False
+    zone_interfaces = []
+
+    if 'zone' in firewall:
+        for zone, zone_conf in firewall['zone'].items():
+            if 'local_zone' not in zone_conf and 'interface' not in zone_conf:
+                raise ConfigError(f'Zone "{zone}" has no interfaces and is not the local zone')
+
+            if 'local_zone' in zone_conf:
+                if local_zone:
+                    raise ConfigError('There cannot be multiple local zones')
+                if 'interface' in zone_conf:
+                    raise ConfigError('Local zone cannot have interfaces assigned')
+                if 'intra_zone_filtering' in zone_conf:
+                    raise ConfigError('Local zone cannot use intra-zone-filtering')
+                local_zone = True
+
+            if 'interface' in zone_conf:
+                found_duplicates = [intf for intf in zone_conf['interface'] if intf in zone_interfaces]
+
+                if found_duplicates:
+                    raise ConfigError(f'Interfaces cannot be assigned to multiple zones')
+
+                zone_interfaces += zone_conf['interface']
+
+            if 'intra_zone_filtering' in zone_conf:
+                intra_zone = zone_conf['intra_zone_filtering']
+
+                if len(intra_zone) > 1:
+                    raise ConfigError('Only one intra-zone-filtering action must be specified')
+
+                if 'firewall' in intra_zone:
+                    v4_name = dict_search_args(intra_zone, 'firewall', 'name')
+                    if v4_name and not dict_search_args(firewall, 'ipv4', 'name', v4_name):
+                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+
+                    v6_name = dict_search_args(intra_zone, 'firewall', 'ipv6_name')
+                    if v6_name and not dict_search_args(firewall, 'ipv6', 'name', v6_name):
+                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+
+                    if not v4_name and not v6_name:
+                        raise ConfigError('No firewall names specified for intra-zone-filtering')
+
+            if 'from' in zone_conf:
+                for from_zone, from_conf in zone_conf['from'].items():
+                    if from_zone not in firewall['zone']:
+                        raise ConfigError(f'Zone "{zone}" refers to a non-existent or deleted zone "{from_zone}"')
+
+                    v4_name = dict_search_args(from_conf, 'firewall', 'name')
+                    if v4_name and not dict_search_args(firewall, 'ipv4', 'name', v4_name):
+                        raise ConfigError(f'Firewall name "{v4_name}" does not exist')
+
+                    v6_name = dict_search_args(from_conf, 'firewall', 'ipv6_name')
+                    if v6_name and not dict_search_args(firewall, 'ipv6', 'name', v6_name):
+                        raise ConfigError(f'Firewall ipv6-name "{v6_name}" does not exist')
+
     return None
 
 def generate(firewall):
