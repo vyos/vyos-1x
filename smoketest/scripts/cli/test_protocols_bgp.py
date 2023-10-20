@@ -340,6 +340,8 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         # AFI maximum path support
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ebgp', max_path_v4])
         self.cli_set(base_path + ['address-family', 'ipv4-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
+        self.cli_set(base_path + ['address-family', 'ipv4-labeled-unicast', 'maximum-paths', 'ebgp', max_path_v4])
+        self.cli_set(base_path + ['address-family', 'ipv4-labeled-unicast', 'maximum-paths', 'ibgp', max_path_v4ibgp])
         self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ebgp', max_path_v6])
         self.cli_set(base_path + ['address-family', 'ipv6-unicast', 'maximum-paths', 'ibgp', max_path_v6ibgp])
 
@@ -370,6 +372,10 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f' no bgp suppress-duplicates', frrconfig)
 
         afiv4_config = self.getFRRconfig(' address-family ipv4 unicast')
+        self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
+        self.assertIn(f'  maximum-paths ibgp {max_path_v4ibgp}', afiv4_config)
+
+        afiv4_config = self.getFRRconfig(' address-family ipv4 labeled-unicast')
         self.assertIn(f'  maximum-paths {max_path_v4}', afiv4_config)
         self.assertIn(f'  maximum-paths ibgp {max_path_v4ibgp}', afiv4_config)
 
