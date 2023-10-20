@@ -33,7 +33,6 @@ interfaces {
         parameters {
             nolearning
         }
-        port 4789
         source-address 172.29.0.1
         vni 100
     }

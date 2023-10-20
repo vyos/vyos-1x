@@ -93,7 +93,7 @@
           </node>
           #include <include/port-number.xml.i>
           <leafNode name="port">
-            <defaultValue>8472</defaultValue>
+            <defaultValue>4789</defaultValue>
           </leafNode>
           #include <include/source-address-ipv4-ipv6.xml.i>
           #include <include/source-interface.xml.i>
