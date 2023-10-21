@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -91,10 +91,7 @@ def show_images_summary(raw: bool) -> Union[image.BootDetails, str]:
 
 
 def show_images_details(raw: bool) -> Union[list[image.ImageDetails], str]:
-    images: list[str] = grub.version_list()
-    images_details: list[image.ImageDetails] = list()
-    for image_name in images:
-        images_details.append(image.get_details(image_name))
+    images_details = image.get_images_details()
 
     if raw:
         return images_details

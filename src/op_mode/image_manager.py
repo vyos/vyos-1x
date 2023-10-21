@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -22,10 +22,11 @@ from pathlib import Path
 from shutil import rmtree
 from sys import exit
 
-from vyos.system import disk, grub, image
+from vyos.system import disk, grub, image, compat
 from vyos.utils.io import ask_yes_no
 
 
+@compat.grub_cfg_update
 def delete_image(image_name: str) -> None:
     """Remove installed image files and boot entry
 
@@ -57,6 +58,7 @@ def delete_image(image_name: str) -> None:
         exit(f'Unable to remove the image "{image_name}": {err}')
 
 
+@compat.grub_cfg_update
 def set_image(image_name: str) -> None:
     """Set default boot image
 
@@ -86,6 +88,7 @@ def set_image(image_name: str) -> None:
         exit(f'Unable to set default image "{image_name}": {err}')
 
 
+@compat.grub_cfg_update
 def rename_image(name_old: str, name_new: str) -> None:
     """Rename installed image
 

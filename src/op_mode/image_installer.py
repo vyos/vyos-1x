@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This file is part of VyOS.
 #
@@ -28,7 +28,7 @@ from psutil import disk_partitions
 
 from vyos.configtree import ConfigTree
 from vyos.remote import download
-from vyos.system import disk, grub, image
+from vyos.system import disk, grub, image, compat, SYSTEM_CFG_VER
 from vyos.template import render
 from vyos.utils.io import ask_input, ask_yes_no
 from vyos.utils.file import chmod_2775
@@ -462,6 +462,7 @@ def install_image() -> None:
         exit(1)
 
 
+@compat.grub_cfg_update
 def add_image(image_path: str) -> None:
     """Add a new image
 
@@ -488,10 +489,16 @@ def add_image(image_path: str) -> None:
         Path(DIR_ROOTFS_SRC).mkdir(mode=0o755, parents=True)
         disk.partition_mount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs',
                              DIR_ROOTFS_SRC, 'squashfs')
-        version_file: str = Path(
-            f'{DIR_ROOTFS_SRC}/opt/vyatta/etc/version').read_text()
+
+        cfg_ver: str = image.get_image_tools_version(DIR_ROOTFS_SRC)
+        version_name: str = image.get_image_version(DIR_ROOTFS_SRC)
+
         disk.partition_umount(f'{DIR_ISO_MOUNT}/live/filesystem.squashfs')
-        version_name: str = version_file.lstrip('Version: ').strip()
+
+        if cfg_ver < SYSTEM_CFG_VER:
+            raise compat.DowngradingImageTools(
+                f'Adding image would downgrade image tools to v.{cfg_ver}; disallowed')
+
         image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
         set_as_default: bool = ask_yes_no(MSG_INPUT_IMAGE_DEFAULT, default=True)
 

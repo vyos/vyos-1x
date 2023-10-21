@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,7 @@ from vyos.system import disk
 
 # Define variables
 GRUB_DIR_MAIN: str = '/boot/grub'
+GRUB_CFG_MAIN: str = f'{GRUB_DIR_MAIN}/grub.cfg'
 GRUB_DIR_VYOS: str = f'{GRUB_DIR_MAIN}/grub.cfg.d'
 CFG_VYOS_HEADER: str = f'{GRUB_DIR_VYOS}/00-vyos-header.cfg'
 CFG_VYOS_MODULES: str = f'{GRUB_DIR_VYOS}/10-vyos-modules-autoload.cfg'
@@ -181,8 +182,8 @@ def get_cfg_ver(root_dir: str = '') -> int:
     if not root_dir:
         root_dir = disk.find_persistence()
 
-    cfg_ver: Union[str, None] = vars_read(f'{root_dir}/{CFG_VYOS_HEADER}').get(
-        'VYOS_CFG_VER')
+    cfg_ver: str = vars_read(f'{root_dir}/{CFG_VYOS_HEADER}').get(
+            'VYOS_CFG_VER')
     if cfg_ver:
         cfg_ver_int: int = int(cfg_ver)
     else:
