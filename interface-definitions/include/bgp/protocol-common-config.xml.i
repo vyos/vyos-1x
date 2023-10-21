@@ -343,6 +343,7 @@
             #include <include/route-map.xml.i>
           </children>
         </tagNode>
+          #include <include/bgp/afi-maximum-paths.xml.i>
       </children>
     </node>
     <node name="ipv4-flowspec">
