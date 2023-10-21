@@ -1,0 +1,62 @@
+cluster {
+    dead-interval 500
+    group VyOS {
+        auto-failback true
+        primary vyos1
+        secondary vyos2
+        service 192.0.2.10/24/eth1
+        service 192.0.2.20/24
+    }
+    interface eth1
+    keepalive-interval 100
+    monitor-dead-interval 420
+    pre-shared-secret qwerty
+}
+interfaces {
+    ethernet eth0 {
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+    ethernet eth1 {
+        address 192.0.2.1/24
+        duplex auto
+        smp-affinity auto
+        speed auto
+    }
+    loopback lo {
+    }
+}
+system {
+    config-management {
+        commit-revisions 100
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    host-name vyos
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$O5gJRlDYQpj$MtrCV9lxMnZPMbcxlU7.FI793MImNHznxGoMFgm3Q6QP3vfKJyOSRCt3Ka/GzFQyW1yZS4NS616NLHaIPPFHc0
+                plaintext-password ""
+            }
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level info
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    time-zone Antarctica/South_Pole
+}
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.3
