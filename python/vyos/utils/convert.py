@@ -52,7 +52,8 @@ def seconds_to_human(s, separator=""):
 
     return result
 
-def bytes_to_human(bytes, initial_exponent=0, precision=2):
+def bytes_to_human(bytes, initial_exponent=0, precision=2,
+                   int_below_exponent=0):
     """ Converts a value in bytes to a human-readable size string like 640 KB
 
     The initial_exponent parameter is the exponent of 2,
@@ -68,6 +69,8 @@ def bytes_to_human(bytes, initial_exponent=0, precision=2):
 
     # log2 is a float, while range checking requires an int
     exponent = int(log2(bytes))
+    if exponent < int_below_exponent:
+        precision = 0
 
     if exponent < 10:
         value = bytes
