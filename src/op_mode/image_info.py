@@ -20,11 +20,11 @@
 import sys
 from typing import List, Union
 
-from hurry.filesize import size
 from tabulate import tabulate
 
 from vyos import opmode
 from vyos.system import disk, grub, image
+from vyos.utils.convert import bytes_to_human
 
 
 def _format_show_images_summary(images_summary: image.BootDetails) -> str:
@@ -58,11 +58,15 @@ def _format_show_images_details(
     for image_item in images_details:
         name: str = image_item.get('name')
         version: str = image_item.get('version')
-        disk_ro: int = size(image_item.get('disk_ro'))
-        disk_rw: int = size(image_item.get('disk_rw'))
-        disk_total: int = size(image_item.get('disk_total'))
+        disk_ro: str = bytes_to_human(image_item.get('disk_ro'),
+                                      precision=1, int_below_exponent=30)
+        disk_rw: str = bytes_to_human(image_item.get('disk_rw'),
+                                      precision=1, int_below_exponent=30)
+        disk_total: str = bytes_to_human(image_item.get('disk_total'),
+                                         precision=1, int_below_exponent=30)
         table_data.append([name, version, disk_ro, disk_rw, disk_total])
-    tabulated: str = tabulate(table_data, headers)
+    tabulated: str = tabulate(table_data, headers,
+                              colalign=('left', 'left', 'right', 'right', 'right'))
 
     return tabulated
 
