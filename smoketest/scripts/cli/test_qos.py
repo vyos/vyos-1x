@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2022 VyOS maintainers and contributors
+# Copyright (C) 2022-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -542,6 +542,61 @@ class TestQoS(VyOSUnitTestSHIM.TestCase):
                     if 'dport' in match_config:
                         dport = int(match_config['dport'])
                         self.assertEqual(f'{dport:x}', filter['options']['match']['value'])
+
+
+    def test_11_shaper(self):
+        bandwidth = 250
+        default_bandwidth = 20
+        default_ceil = 30
+        class_bandwidth = 50
+        class_ceil = 80
+        dst_address = '192.0.2.8/32'
+
+        for interface in self._interfaces:
+            shaper_name = f'qos-shaper-{interface}'
+
+            self.cli_set(base_path + ['interface', interface, 'egress', shaper_name])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'bandwidth', f'{bandwidth}mbit'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'bandwidth', f'{default_bandwidth}mbit'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'ceiling', f'{default_ceil}mbit'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'default', 'queue-type', 'fair-queue'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'bandwidth', f'{class_bandwidth}mbit'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'ceiling', f'{class_ceil}mbit'])
+            self.cli_set(base_path + ['policy', 'shaper', shaper_name, 'class', '23', 'match', '10', 'ip', 'destination', 'address', dst_address])
+
+            bandwidth += 1
+            default_bandwidth += 1
+            default_ceil += 1
+            class_bandwidth += 1
+            class_ceil += 1
+
+        # commit changes
+        self.cli_commit()
+
+        bandwidth = 250
+        default_bandwidth = 20
+        default_ceil = 30
+        class_bandwidth = 50
+        class_ceil = 80
+
+        for interface in self._interfaces:
+            config_entries = (
+                f'root rate {bandwidth}Mbit ceil {bandwidth}Mbit',
+                f'prio 0 rate {class_bandwidth}Mbit ceil {class_ceil}Mbit',
+                f'prio 7 rate {default_bandwidth}Mbit ceil {default_ceil}Mbit'
+            )
+
+            output = cmd(f'tc class show dev {interface}')
+
+            for config_entry in config_entries:
+                self.assertIn(config_entry, output)
+
+            bandwidth += 1
+            default_bandwidth += 1
+            default_ceil += 1
+            class_bandwidth += 1
+            class_ceil += 1
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
