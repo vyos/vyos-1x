@@ -1,4 +1,4 @@
-# Copyright 2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2022-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -89,6 +89,10 @@ class TrafficShaper(QoSBase):
                 if 'priority' in cls_config:
                     priority = cls_config['priority']
                     tmp += f' prio {priority}'
+
+                if 'ceiling' in cls_config:
+                    f_ceil = self._rate_convert(cls_config['ceiling'])
+                    tmp += f' ceil {f_ceil}'
                 self._cmd(tmp)
 
                 tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{cls:x} sfq'
@@ -102,6 +106,9 @@ class TrafficShaper(QoSBase):
                 if 'priority' in config['default']:
                     priority = config['default']['priority']
                     tmp += f' prio {priority}'
+                if 'ceiling' in config['default']:
+                    f_ceil = self._rate_convert(config['default']['ceiling'])
+                    tmp += f' ceil {f_ceil}'
                 self._cmd(tmp)
 
                 tmp = f'tc qdisc replace dev {self._interface} parent {self._parent:x}:{default_minor_id:x} sfq'
