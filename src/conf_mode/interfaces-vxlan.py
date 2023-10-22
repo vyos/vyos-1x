@@ -168,6 +168,13 @@ def verify(vxlan):
     verify_address(vxlan)
     verify_bond_bridge_member(vxlan)
     verify_mirror_redirect(vxlan)
+
+    # We use a defaultValue for port, thus it's always safe to use
+    if vxlan['port'] == '8472':
+        Warning('Starting from VyOS 1.4, the default port for VXLAN '\
+                'has been changed to 4789. This matches the IANA assigned '\
+                'standard port number!')
+
     return None
 
 def generate(vxlan):
