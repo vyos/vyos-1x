@@ -199,6 +199,31 @@ def dict_search_recursive(dict_object, key, path=[]):
             for x in dict_search_recursive(j, key, new_path):
                 yield x
 
+
+def dict_set(key_path, value, dict_object):
+    """ Set value to Python dictionary (dict_object) using path to key delimited by dot (.).
+        The key will be added if it does not exist.
+    """
+    path_list = key_path.split(".")
+    dynamic_dict = dict_object
+    if len(path_list) > 0:
+        for i in range(0, len(path_list)-1):
+            dynamic_dict = dynamic_dict[path_list[i]]
+        dynamic_dict[path_list[len(path_list)-1]] = value
+
+def dict_delete(key_path, dict_object):
+    """ Delete key in Python dictionary (dict_object) using path to key delimited by dot (.).
+    """
+    path_dict = dict_object
+    path_list = key_path.split('.')
+    inside = path_list[:-1]
+    if not inside:
+        del dict_object[path_list]
+    else:
+        for key in path_list[:-1]:
+            path_dict = path_dict[key]
+        del path_dict[path_list[len(path_list)-1]]
+
 def dict_to_list(d, save_key_to=None):
     """ Convert a dict to a list of dicts.
 
@@ -227,6 +252,39 @@ def dict_to_list(d, save_key_to=None):
             collect.append(item)
 
     return collect
+
+def dict_to_paths_values(conf: dict) -> dict:
+    """
+    Convert nested dictionary to simple dictionary, where key is a path is delimited by dot (.).
+    """
+    list_of_paths = []
+    dict_of_options ={}
+    for path in dict_to_key_paths(conf):
+        str_path = '.'.join(path)
+        list_of_paths.append(str_path)
+
+    for path in list_of_paths:
+        dict_of_options[path] = dict_search(path,conf)
+
+    return dict_of_options
+def dict_to_key_paths(d: dict) -> list:
+    """ Generator to return list of key paths from dict of list[str]|str
+    """
+    def func(d, path):
+        if isinstance(d, dict):
+            if not d:
+                yield path
+            for k, v in d.items():
+                for r in func(v, path + [k]):
+                    yield r
+        elif isinstance(d, list):
+            yield path
+        elif isinstance(d, str):
+            yield path
+        else:
+            raise ValueError('object is not a dict of strings/list of strings')
+    for r in func(d, []):
+        yield r
 
 def dict_to_paths(d: dict) -> list:
     """ Generator to return list of paths from dict of list[str]|str
@@ -305,3 +363,4 @@ class FixedDict(dict):
         if k not in self._allowed:
             raise ConfigError(f'Option "{k}" has no defined default')
         super().__setitem__(k, v)
+

@@ -92,6 +92,19 @@ class BondIf(Interface):
         }
     }}
 
+    @staticmethod
+    def get_inherit_bond_options() -> list:
+        """
+        Returns list of option
+        which are inherited from bond interface to member interfaces
+        :return: List of interface options
+        :rtype: list
+        """
+        options = [
+            'mtu'
+        ]
+        return options
+
     def remove(self):
         """
         Remove interface from operating system. Removing the interface
