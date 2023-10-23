@@ -114,7 +114,10 @@ def _get_formatted_output(raw_data):
 
             # Remote software platform
             platform = jmespath.search('chassis.[*][0][0].descr', values)
-            tmp.append(platform[:37])
+            if platform:
+                tmp.append(platform[:37])
+            else:
+                tmp.append('')
 
             # Remote interface
             interface = jmespath.search('port.descr', values)
