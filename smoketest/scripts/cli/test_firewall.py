@@ -226,6 +226,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'ttl', 'gt', '102'])
 
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'enable-default-log'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'destination', 'port', '22'])
@@ -248,7 +249,8 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '6', 'connection-mark', conn_mark])
 
-        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'enable-default-log'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv4', 'output', 'filter', 'rule', '5', 'outbound-interface', 'interface-name', interface_inv])
@@ -262,21 +264,23 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy drop;'],
+            ['type filter hook forward priority filter; policy accept;'],
             ['tcp dport 22', 'limit rate 5/minute', 'accept'],
             ['tcp dport 22', 'add @RECENT_FWD_filter_4 { ip saddr limit rate over 10/minute burst 10 packets }', 'meta pkttype host', 'drop'],
+            ['log prefix "[ipv4-FWD-filter-default-D]"','FWD-filter default-action drop', 'drop'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
             ['tcp flags & syn == syn', f'tcp option maxseg size {mss_range}', f'iifname "{interface_wc}"', 'meta pkttype broadcast', 'accept'],
             ['meta l4proto gre', f'ct mark {mark_hex}', 'return'],
+            ['INP-filter default-action accept', 'accept'],
             ['chain VYOS_OUTPUT_filter'],
             ['type filter hook output priority filter; policy accept;'],
             ['meta l4proto gre', f'oifname != "{interface}"', 'drop'],
             ['meta l4proto icmp', f'ct mark {mark_hex}', 'return'],
             ['chain NAME_smoketest'],
-            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
-            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
-            ['log prefix "[smoketest-default-D]"','smoketest default-action', 'drop']
+            ['saddr 172.16.20.10', 'daddr 172.16.10.10', 'log prefix "[ipv4-NAM-smoketest-1-A]" log level debug', 'ip ttl 15', 'accept'],
+            ['tcp flags syn / syn,ack', 'tcp dport 8888', 'log prefix "[ipv4-NAM-smoketest-2-R]" log level err', 'ip ttl > 102', 'reject'],
+            ['log prefix "[ipv4-smoketest-default-D]"','smoketest default-action', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -324,16 +328,18 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy drop;'],
+            ['type filter hook forward priority filter; policy accept;'],
             ['ip saddr 198.51.100.1', f'jump NAME_{name}'],
+            ['FWD-filter default-action drop', 'drop'],
             ['chain VYOS_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
             [f'meta l4proto tcp','queue to 3'],
-            [f'meta l4proto udp','queue flags bypass,fanout to 0-15'],
+            ['meta l4proto udp','queue flags bypass,fanout to 0-15'],
+            ['INP-filter default-action accept', 'accept'],
             [f'chain NAME_{name}'],
-            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
+            ['ip length { 64, 512, 1024 }', 'ip dscp { 0x11, 0x34 }', f'log prefix "[ipv4-NAM-{name}-6-A]" log group 66 snaplen 6666 queue-threshold 32000', 'accept'],
             ['ip length 1-30000', 'ip length != 60000-65535', 'ip dscp 0x03-0x0b', 'ip dscp != 0x15-0x19', 'accept'],
-            [f'log prefix "[{name}-default-D]"', 'drop']
+            [f'log prefix "[ipv4-{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -384,12 +390,14 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'enable-default-log'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'protocol', 'tcp_udp'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'destination', 'port', '8888'])
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '2', 'inbound-interface', 'interface-name', interface])
 
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'enable-default-log'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'action', 'return'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'protocol', 'gre'])
         self.cli_set(['firewall', 'ipv6', 'output', 'filter', 'rule', '3', 'outbound-interface', 'interface-name', interface])
@@ -405,15 +413,18 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['chain VYOS_IPV6_FORWARD_filter'],
             ['type filter hook forward priority filter; policy accept;'],
             ['meta l4proto { tcp, udp }', 'th dport 8888', f'iifname "{interface}"', 'reject'],
+            ['log prefix "[ipv6-FWD-filter-default-A]"','FWD-filter default-action accept', 'accept'],
             ['chain VYOS_IPV6_INPUT_filter'],
             ['type filter hook input priority filter; policy accept;'],
             ['meta l4proto udp', 'ip6 saddr 2002::1:2', f'iifname "{interface}"', 'accept'],
+            ['INP-filter default-action accept', 'accept'],
             ['chain VYOS_IPV6_OUTPUT_filter'],
-            ['type filter hook output priority filter; policy drop;'],
+            ['type filter hook output priority filter; policy accept;'],
             ['meta l4proto gre', f'oifname "{interface}"', 'return'],
+            ['log prefix "[ipv6-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
             [f'chain NAME6_{name}'],
-            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[v6-smoketest-1-A]" log level crit', 'accept'],
-            [f'"{name} default-action drop"', f'log prefix "[{name}-default-D]"', 'drop']
+            ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
+            [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
@@ -455,7 +466,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ip6 saddr 2001:db8::/64', f'jump NAME6_{name}'],
             [f'chain NAME6_{name}'],
             ['ip6 length { 65, 513, 1025 }', 'ip6 dscp { af21, 0x35 }', 'accept'],
-            [f'log prefix "[{name}-default-D]"', 'drop']
+            [f'log prefix "[ipv6-{name}-default-D]"', 'drop']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')

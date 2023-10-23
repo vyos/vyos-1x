@@ -40,9 +40,8 @@ table ip vyos_filter {
 {%     set ns = namespace(sets=[]) %}
 {%     if ipv4.forward is vyos_defined %}
 {%         for prior, conf in ipv4.forward.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_FORWARD_{{ prior }} {
-        type filter hook forward priority {{ prior }}; policy {{ def_action }};
+        type filter hook forward priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('FWD', prior, rule_id) }}
@@ -51,15 +50,15 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('FWD-filter') }}
     }
 {%         endfor %}
 {%     endif %}
 
 {%     if ipv4.input is vyos_defined %}
 {%         for prior, conf in ipv4.input.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_INPUT_{{ prior }} {
-        type filter hook input priority {{ prior }}; policy {{ def_action }};
+        type filter hook input priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('INP',prior, rule_id) }}
@@ -68,15 +67,15 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('INP-filter') }}
     }
 {%         endfor %}
 {%     endif %}
 
 {%     if ipv4.output is vyos_defined %}
 {%         for prior, conf in ipv4.output.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_OUTPUT_{{ prior }} {
-        type filter hook output priority {{ prior }}; policy {{ def_action }};
+        type filter hook output priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('OUT', prior, rule_id) }}
@@ -85,6 +84,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('OUT-filter') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -94,9 +94,8 @@ table ip vyos_filter {
     }
 {%     if ipv4.prerouting is vyos_defined %}
 {%         for prior, conf in ipv4.prerouting.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_PREROUTING_{{ prior }} {
-        type filter hook prerouting priority {{ prior }}; policy {{ def_action }};
+        type filter hook prerouting priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('PRE', prior, rule_id) }}
@@ -105,7 +104,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule(prior) }}
+        {{ conf | nft_default_rule('PRE-filter') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -163,9 +162,8 @@ table ip6 vyos_filter {
 {%     set ns = namespace(sets=[]) %}
 {%     if ipv6.forward is vyos_defined %}
 {%         for prior, conf in ipv6.forward.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_IPV6_FORWARD_{{ prior }} {
-        type filter hook forward priority {{ prior }}; policy {{ def_action }};
+        type filter hook forward priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('FWD', prior, rule_id ,'ip6') }}
@@ -174,15 +172,15 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('FWD-filter', ipv6=True) }}
     }
 {%         endfor %}
 {%     endif %}
 
 {%     if ipv6.input is vyos_defined %}
 {%         for prior, conf in ipv6.input.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_IPV6_INPUT_{{ prior }} {
-        type filter hook input priority {{ prior }}; policy {{ def_action }};
+        type filter hook input priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('INP', prior, rule_id ,'ip6') }}
@@ -191,15 +189,15 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('INP-filter', ipv6=True) }}
     }
 {%         endfor %}
 {%     endif %}
 
 {%     if ipv6.output is vyos_defined %}
 {%         for prior, conf in ipv6.output.items() %}
-{%             set def_action = conf.default_action %}
     chain VYOS_IPV6_OUTPUT_{{ prior }} {
-        type filter hook output priority {{ prior }}; policy {{ def_action }};
+        type filter hook output priority {{ prior }}; policy accept;
 {%             if conf.rule is vyos_defined %}
 {%                 for rule_id, rule_conf in conf.rule.items() if rule_conf.disable is not vyos_defined %}
         {{ rule_conf | nft_rule('OUT', prior, rule_id ,'ip6') }}
@@ -208,6 +206,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
+        {{ conf | nft_default_rule('OUT-filter', ipv6=True) }}
     }
 {%         endfor %}
 {%     endif %}
