@@ -11,7 +11,7 @@ menuentry "{{ version_name }}" --id {{ version_uuid }} {
         set boot_opts="${boot_opts} toram"
     fi
     if [ "${bootmode}" == "pw_reset" ]; then
-        set boot_opts="${boot_opts} console=${console_type}${console_num} init=/opt/vyatta/sbin/standalone_root_pw_reset"
+        set boot_opts="${boot_opts} console=${console_type}${console_num} init=/usr/libexec/vyos/system/standalone_root_pw_reset"
     elif [ "${bootmode}" == "recovery" ]; then
         set boot_opts="${boot_opts} console=${console_type}${console_num} init=/usr/bin/busybox init"
     else
