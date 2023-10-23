@@ -1,0 +1,178 @@
+#!/bin/bash
+# **** License ****
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# This code was originally developed by Vyatta, Inc.
+# Portions created by Vyatta are Copyright (C) 2007 Vyatta, Inc.
+# All Rights Reserved.
+#
+# Author:	Bob Gilligan <gilligan@vyatta.com>
+# Description:	Standalone script to set the admin passwd to new value
+#		value.  Note:  This script can ONLY be run as a standalone
+#		init program by grub.
+#
+# **** End License ****
+
+# The Vyatta config file:
+CF=/opt/vyatta/etc/config/config.boot
+
+# Admin user name
+ADMIN=vyos
+
+set_encrypted_password() {
+    sed -i \
+       -e "/ user $1 {/,/encrypted-password/s/encrypted-password .*\$/encrypted-password \"$2\"/" $3
+}
+
+
+# How long to wait for user to respond, in seconds
+TIME_TO_WAIT=30
+
+change_password() {
+    local user=$1
+    local pwd1="1"
+    local pwd2="2"
+
+    until [ "$pwd1" == "$pwd2" ]
+    do
+        read -p "Enter $user password: " -r -s pwd1
+	echo
+	read -p "Retype $user password: " -r -s pwd2
+	echo
+
+	if [ "$pwd1" != "$pwd2" ]
+	then echo "Passwords do not match"
+	fi
+    done
+
+    # set the password for the user then store it in the config
+    # so the user is recreated on the next full system boot.
+    local epwd=$(mkpasswd --method=sha-512 "$pwd1")
+    # escape any slashes in resulting password
+    local eepwd=$(sed 's:/:\\/:g' <<< $epwd)
+    set_encrypted_password $user $eepwd $CF
+}
+
+# System is so messed up that doing anything would be a mistake
+dead() {
+    echo $*
+    echo
+    echo "This tool can only recover missing admininistrator password."
+    echo "It is not a full system restore"
+    echo
+    echo -n "Hit return to reboot system: "
+    read
+    /sbin/reboot -f
+}
+
+echo "Standalone root password recovery tool."
+echo
+#
+# Check to see if we are running in standalone mode.  We'll
+# know that we are if our pid is 1.
+#
+if [ "$$" != "1" ]; then
+    echo "This tool can only be run in standalone mode."
+    exit 1
+fi
+
+#
+# OK, now we know we are running in standalone mode.  Talk to the
+# user.
+#
+echo -n "Do you wish to reset the admin password? (y or n) "
+read -t $TIME_TO_WAIT response
+if [ "$?" != "0" ]; then
+    echo 
+    echo "Response not received in time."
+    echo "The admin password will not be reset."
+    echo "Rebooting in 5 seconds..."
+    sleep 5
+    echo
+    /sbin/reboot -f
+fi
+
+response=${response:0:1}
+if [ "$response" != "y" -a "$response" != "Y" ]; then
+    echo "OK, the admin password will not be reset."
+    echo -n "Rebooting in 5 seconds..."
+    sleep 5
+    echo
+    /sbin/reboot -f
+fi
+
+echo -en "Which admin account do you want to reset? [$ADMIN] "
+read admin_user
+ADMIN=${admin_user:-$ADMIN}
+
+echo "Starting process to reset the admin password..."
+
+echo "Re-mounting root filesystem read/write..."
+mount -o remount,rw /
+
+if [ ! -f /etc/passwd ]
+then dead "Missing password file"
+fi
+
+if [ ! -d /opt/vyatta/etc/config ]
+then dead "Missing VyOS config directory /opt/vyatta/etc/config"
+fi
+
+# Leftover from V3.0
+if grep -q /opt/vyatta/etc/config /etc/fstab
+then 
+    echo "Mounting the config filesystem..."
+    mount /opt/vyatta/etc/config/
+fi
+
+if [ ! -f $CF ]
+then dead "$CF file not found"
+fi
+
+if ! grep -q 'system {' $CF
+then dead "$CF file does not contain system settings"
+fi
+
+if ! grep -q ' login {' $CF
+then
+    # Recreate login section of system
+    sed -i -e '/system {/a\
+    login {\
+    }' $CF
+fi
+
+if ! grep -q " user $ADMIN " $CF
+then
+    echo "Recreating administrator $ADMIN in $CF..."
+    sed -i -e "/ login {/a\\
+        user $ADMIN {\\
+            authentication {\\
+                encrypted-password \$6$IhbXHdwgYkLnt/$VRIsIN5c2f2v4L2l4F9WPDrRDEtWXzH75yBswmWGERAdX7oBxmq6m.sWON6pO6mi6mrVgYBxdVrFcCP5bI.nt.\\
+                plaintext-password \"\"\\
+            }\\
+            level admin\\
+        }" $CF
+fi
+
+echo "Saving backup copy of config.boot..."
+cp $CF ${CF}.before_pwrecovery
+sync
+
+echo "Setting the administrator ($ADMIN) password..."
+change_password $ADMIN
+
+echo $(date "+%b%e %T") $(hostname) "Admin password changed" \
+    | tee -a /var/log/auth.log  >>/var/log/messages
+
+sync
+
+echo "System will reboot in 10 seconds..."
+sleep 10
+/sbin/reboot -f
