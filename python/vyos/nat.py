@@ -150,7 +150,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
             operator = ''
             if addr_prefix[:1] == '!':
                 operator = '!='
-                addr_prefix = addr[1:]
+                addr_prefix = addr_prefix[1:]
             output.append(f'ip6 {prefix}addr {operator} {addr_prefix}')
 
         port = dict_search_args(side_conf, 'port')
