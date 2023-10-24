@@ -32,14 +32,34 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     translation_str = ''
 
     if 'inbound_interface' in rule_conf:
-        ifname = rule_conf['inbound_interface']
-        if ifname != 'any':
-            output.append(f'iifname "{ifname}"')
+        operator = ''
+        if 'interface_name' in rule_conf['inbound_interface']:
+            iiface = rule_conf['inbound_interface']['interface_name']
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} {{{iiface}}}')
+        else:
+            iiface = rule_conf['inbound_interface']['interface_group']
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} @I_{iiface}')
 
     if 'outbound_interface' in rule_conf:
-        ifname = rule_conf['outbound_interface']
-        if ifname != 'any':
-            output.append(f'oifname "{ifname}"')
+        operator = ''
+        if 'interface_name' in rule_conf['outbound_interface']:
+            oiface = rule_conf['outbound_interface']['interface_name']
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} {{{oiface}}}')
+        else:
+            oiface = rule_conf['outbound_interface']['interface_group']
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} @I_{oiface}')
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
         protocol = rule_conf['protocol']
