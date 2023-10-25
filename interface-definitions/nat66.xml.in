@@ -38,14 +38,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="outbound-interface">
-                <properties>
-                  <help>Outbound interface of NAT66 traffic</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces</script>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/firewall/outbound-interface-no-group.xml.i>
               #include <include/nat/protocol.xml.i>
               <node name="destination">
                 <properties>
@@ -166,15 +159,7 @@
                   <valueless/>
                 </properties>
               </leafNode>
-              <leafNode name="inbound-interface">
-                <properties>
-                  <help>Inbound interface of NAT66 traffic</help>
-                  <completionHelp>
-                    <list>any</list>
-                    <script>${vyos_completion_dir}/list_interfaces</script>
-                  </completionHelp>
-                </properties>
-              </leafNode>
+              #include <include/firewall/inbound-interface-no-group.xml.i>
               #include <include/nat/protocol.xml.i>
               <node name="destination">
                 <properties>

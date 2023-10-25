@@ -32,6 +32,7 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
     translation_str = ''
 
     if 'inbound_interface' in rule_conf:
+<<<<<<< HEAD
         ifname = rule_conf['inbound_interface']
         if ifname != 'any':
             output.append(f'iifname "{ifname}"')
@@ -40,6 +41,36 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
         ifname = rule_conf['outbound_interface']
         if ifname != 'any':
             output.append(f'oifname "{ifname}"')
+=======
+        operator = ''
+        if 'name' in rule_conf['inbound_interface']:
+            iiface = rule_conf['inbound_interface']['name']
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} {{{iiface}}}')
+        else:
+            iiface = rule_conf['inbound_interface']['group']
+            if iiface[0] == '!':
+                operator = '!='
+                iiface = iiface[1:]
+            output.append(f'iifname {operator} @I_{iiface}')
+
+    if 'outbound_interface' in rule_conf:
+        operator = ''
+        if 'name' in rule_conf['outbound_interface']:
+            oiface = rule_conf['outbound_interface']['name']
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} {{{oiface}}}')
+        else:
+            oiface = rule_conf['outbound_interface']['group']
+            if oiface[0] == '!':
+                operator = '!='
+                oiface = oiface[1:]
+            output.append(f'oifname {operator} @I_{oiface}')
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
 
     if 'protocol' in rule_conf and rule_conf['protocol'] != 'all':
         protocol = rule_conf['protocol']

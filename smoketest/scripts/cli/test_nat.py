@@ -82,12 +82,20 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
             # or configured destination address for NAT
             if int(rule) < 200:
                 self.cli_set(src_path + ['rule', rule, 'source', 'address', network])
+<<<<<<< HEAD
                 self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_100])
+=======
+                self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'name', outbound_iface_100])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
                 self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
                 nftables_search.append([f'saddr {network}', f'oifname "{outbound_iface_100}"', 'masquerade'])
             else:
                 self.cli_set(src_path + ['rule', rule, 'destination', 'address', network])
+<<<<<<< HEAD
                 self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface_200])
+=======
+                self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'name', outbound_iface_200])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
                 self.cli_set(src_path + ['rule', rule, 'exclude'])
                 nftables_search.append([f'daddr {network}', f'oifname "{outbound_iface_200}"', 'return'])
 
@@ -104,7 +112,11 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'group', 'address-group', address_group, 'address', address_group_member])
 
         self.cli_set(src_path + ['rule', rule, 'source', 'group', 'address-group', address_group])
+<<<<<<< HEAD
         self.cli_set(src_path + ['rule', rule, 'outbound-interface', outbound_iface])
+=======
+        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'group', interface_group])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(src_path + ['rule', rule, 'translation', 'address', 'masquerade'])
 
         self.cli_commit()
@@ -136,12 +148,20 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
             rule_search = [f'dnat to 192.0.2.1:{port}']
             if int(rule) < 200:
                 self.cli_set(dst_path + ['rule', rule, 'protocol', inbound_proto_100])
+<<<<<<< HEAD
                 self.cli_set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_100])
+=======
+                self.cli_set(dst_path + ['rule', rule, 'inbound-interface', 'name', inbound_iface_100])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
                 rule_search.append(f'{inbound_proto_100} sport {port}')
                 rule_search.append(f'iifname "{inbound_iface_100}"')
             else:
                 self.cli_set(dst_path + ['rule', rule, 'protocol', inbound_proto_200])
+<<<<<<< HEAD
                 self.cli_set(dst_path + ['rule', rule, 'inbound-interface', inbound_iface_200])
+=======
+                self.cli_set(dst_path + ['rule', rule, 'inbound-interface', 'name', inbound_iface_200])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
                 rule_search.append(f'iifname "{inbound_iface_200}"')
 
             nftables_search.append(rule_search)
@@ -167,7 +187,11 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         rule = '1000'
         self.cli_set(dst_path + ['rule', rule, 'destination', 'address', '!192.0.2.1'])
         self.cli_set(dst_path + ['rule', rule, 'destination', 'port', '53'])
+<<<<<<< HEAD
         self.cli_set(dst_path + ['rule', rule, 'inbound-interface', 'eth0'])
+=======
+        self.cli_set(dst_path + ['rule', rule, 'inbound-interface', 'name', 'eth0'])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(dst_path + ['rule', rule, 'protocol', 'tcp_udp'])
         self.cli_set(dst_path + ['rule', rule, 'source', 'address', '!192.0.2.1'])
         self.cli_set(dst_path + ['rule', rule, 'translation', 'address', '192.0.2.1'])
@@ -186,7 +210,11 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_dnat_without_translation_address(self):
+<<<<<<< HEAD
         self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+=======
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '443'])
         self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
         self.cli_set(dst_path + ['rule', '1', 'packet-type', 'host'])
@@ -236,13 +264,21 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(dst_path + ['rule', '10', 'destination', 'address', dst_addr_1])
         self.cli_set(dst_path + ['rule', '10', 'destination', 'port', dest_port])
         self.cli_set(dst_path + ['rule', '10', 'protocol', protocol])
+<<<<<<< HEAD
         self.cli_set(dst_path + ['rule', '10', 'inbound-interface', ifname])
+=======
+        self.cli_set(dst_path + ['rule', '10', 'inbound-interface', 'name', ifname])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(dst_path + ['rule', '10', 'translation', 'redirect', 'port', redirected_port])
 
         self.cli_set(dst_path + ['rule', '20', 'destination', 'address', dst_addr_1])
         self.cli_set(dst_path + ['rule', '20', 'destination', 'port', dest_port])
         self.cli_set(dst_path + ['rule', '20', 'protocol', protocol])
+<<<<<<< HEAD
         self.cli_set(dst_path + ['rule', '20', 'inbound-interface', ifname])
+=======
+        self.cli_set(dst_path + ['rule', '20', 'inbound-interface', 'name', ifname])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(dst_path + ['rule', '20', 'translation', 'redirect'])
 
         self.cli_commit()
@@ -266,7 +302,11 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         weight_4 = '65'
         dst_port = '443'
 
+<<<<<<< HEAD
         self.cli_set(dst_path + ['rule', '1', 'inbound-interface', ifname])
+=======
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', ifname])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', dst_port])
         self.cli_set(dst_path + ['rule', '1', 'load-balance', 'hash', 'source-address'])
@@ -276,7 +316,11 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_1, 'weight', weight_1])
         self.cli_set(dst_path + ['rule', '1', 'load-balance', 'backend', member_2, 'weight', weight_2])
 
+<<<<<<< HEAD
         self.cli_set(src_path + ['rule', '1', 'outbound-interface', ifname])
+=======
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', ifname])
+>>>>>>> 51abbc0f1 (T5681: Firewall,Nat and Nat66: simplified and standarize interface matcher (valid for interfaces and groups) in firewal, nat and nat66.)
         self.cli_set(src_path + ['rule', '1', 'load-balance', 'hash', 'random'])
         self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_3, 'weight', weight_3])
         self.cli_set(src_path + ['rule', '1', 'load-balance', 'backend', member_4, 'weight', weight_4])
