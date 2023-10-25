@@ -283,8 +283,8 @@ def verify_rule(firewall, rule_conf, ipv6):
 
     for direction in ['inbound_interface','outbound_interface']:
         if direction in rule_conf:
-            if 'interface_name' in rule_conf[direction] and 'interface_group' in rule_conf[direction]:
-                raise ConfigError(f'Cannot specify both interface-group and interface-name for {direction}')
+            if 'name' in rule_conf[direction] and 'group' in rule_conf[direction]:
+                raise ConfigError(f'Cannot specify both interface group and interface name for {direction}')
 
 def verify_nested_group(group_name, group, groups, seen):
     if 'include' not in group:
