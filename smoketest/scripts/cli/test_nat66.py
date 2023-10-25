@@ -56,15 +56,15 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
     def test_source_nat66(self):
         source_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'
-        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', 'eth1'])
         self.cli_set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_prefix])
 
-        self.cli_set(src_path + ['rule', '2', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '2', 'outbound-interface', 'name', 'eth1'])
         self.cli_set(src_path + ['rule', '2', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '2', 'translation', 'address', 'masquerade'])
 
-        self.cli_set(src_path + ['rule', '3', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '3', 'outbound-interface', 'name', 'eth1'])
         self.cli_set(src_path + ['rule', '3', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '3', 'exclude'])
 
@@ -81,7 +81,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
     def test_source_nat66_address(self):
         source_prefix = 'fc00::/64'
         translation_address = 'fc00::1'
-        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', 'eth1'])
         self.cli_set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '1', 'translation', 'address', translation_address])
 
@@ -98,11 +98,11 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         destination_address = 'fc00::1'
         translation_address = 'fc01::1'
         source_address = 'fc02::1'
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'address', destination_address])
         self.cli_set(dst_path + ['rule', '1', 'translation', 'address', translation_address])
 
-        self.cli_set(dst_path + ['rule', '2', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '2', 'inbound-interface', 'name', 'eth1'])
         self.cli_set(dst_path + ['rule', '2', 'destination', 'address', destination_address])
         self.cli_set(dst_path + ['rule', '2', 'source', 'address', source_address])
         self.cli_set(dst_path + ['rule', '2', 'exclude'])
@@ -124,7 +124,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         sport = '8080'
         tport = '5555'
         proto = 'tcp'
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', dport])
         self.cli_set(dst_path + ['rule', '1', 'source', 'address', source_prefix])
         self.cli_set(dst_path + ['rule', '1', 'source', 'port', sport])
@@ -144,7 +144,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
     def test_destination_nat66_prefix(self):
         destination_prefix = 'fc00::/64'
         translation_prefix = 'fc01::/64'
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'address', destination_prefix])
         self.cli_set(dst_path + ['rule', '1', 'translation', 'address', translation_prefix])
 
@@ -158,7 +158,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip6 vyos_nat')
 
     def test_destination_nat66_without_translation_address(self):
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '443'])
         self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
         self.cli_set(dst_path + ['rule', '1', 'translation', 'port', '443'])
@@ -180,7 +180,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         # check validate() - outbound-interface must be defined
         with self.assertRaises(ConfigSessionError):
             self.cli_commit()
-        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'eth0'])
+        self.cli_set(src_path + ['rule', rule, 'outbound-interface', 'name', 'eth0'])
 
         # check validate() - translation address not specified
         with self.assertRaises(ConfigSessionError):
@@ -196,7 +196,7 @@ class TestNAT66(VyOSUnitTestSHIM.TestCase):
         sport = '8080'
         tport = '80'
         proto = 'tcp'
-        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'eth1'])
+        self.cli_set(src_path + ['rule', '1', 'outbound-interface', 'name', 'eth1'])
         self.cli_set(src_path + ['rule', '1', 'destination', 'port', dport])
         self.cli_set(src_path + ['rule', '1', 'source', 'prefix', source_prefix])
         self.cli_set(src_path + ['rule', '1', 'source', 'port', sport])
