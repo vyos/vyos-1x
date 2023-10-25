@@ -62,11 +62,13 @@ def verify(nat):
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
             err_msg = f'Source NAT66 configuration error in rule {rule}:'
-            if 'outbound_interface' not in config:
-                raise ConfigError(f'{err_msg} outbound-interface not specified')
 
-            if config['outbound_interface'] not in interfaces():
-                raise ConfigError(f'rule "{rule}" interface "{config["outbound_interface"]}" does not exist on this system')
+            if 'outbound_interface' in config:
+                if 'name' in config['outbound_interface'] and 'group' in config['outbound_interface']:
+                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for nat source rule "{rule}"')
+                elif 'name' in config['outbound_interface']:
+                    if config['outbound_interface']['name'] not in 'any' and config['outbound_interface']['name'] not in interfaces():
+                        Warning(f'{err_msg} - interface "{config["outbound_interface"]["name"]}" does not exist on this system')
 
             addr = dict_search('translation.address', config)
             if addr != None:
@@ -85,12 +87,12 @@ def verify(nat):
         for rule, config in dict_search('destination.rule', nat).items():
             err_msg = f'Destination NAT66 configuration error in rule {rule}:'
 
-            if 'inbound_interface' not in config:
-                raise ConfigError(f'{err_msg}\n' \
-                                  'inbound-interface not specified')
-            else:
-                if config['inbound_interface'] not in 'any' and config['inbound_interface'] not in interfaces():
-                    Warning(f'rule "{rule}" interface "{config["inbound_interface"]}" does not exist on this system')
+            if 'inbound_interface' in config:
+                if 'name' in config['inbound_interface'] and 'group' in config['inbound_interface']:
+                    raise ConfigError(f'{err_msg} - Cannot specify both interface group and interface name for destination nat rule "{rule}"')
+                elif 'name' in config['inbound_interface']:
+                    if config['inbound_interface']['name'] not in 'any' and config['inbound_interface']['name'] not in interfaces():
+                        Warning(f'{err_msg} -  interface "{config["inbound_interface"]["name"]}" does not exist on this system')
 
     return None
 

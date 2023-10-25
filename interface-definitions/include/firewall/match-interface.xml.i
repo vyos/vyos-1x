@@ -1,5 +1,5 @@
 <!-- include start from firewall/match-interface.xml.i -->
-<leafNode name="interface-name">
+<leafNode name="name">
   <properties>
     <help>Match interface</help>
     <completionHelp>
@@ -24,7 +24,7 @@
     </constraint>
   </properties>
 </leafNode>
-<leafNode name="interface-group">
+<leafNode name="group">
   <properties>
     <help>Match interface-group</help>
     <completionHelp>

@@ -33,14 +33,14 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
 
     if 'inbound_interface' in rule_conf:
         operator = ''
-        if 'interface_name' in rule_conf['inbound_interface']:
-            iiface = rule_conf['inbound_interface']['interface_name']
+        if 'name' in rule_conf['inbound_interface']:
+            iiface = rule_conf['inbound_interface']['name']
             if iiface[0] == '!':
                 operator = '!='
                 iiface = iiface[1:]
             output.append(f'iifname {operator} {{{iiface}}}')
         else:
-            iiface = rule_conf['inbound_interface']['interface_group']
+            iiface = rule_conf['inbound_interface']['group']
             if iiface[0] == '!':
                 operator = '!='
                 iiface = iiface[1:]
@@ -48,14 +48,14 @@ def parse_nat_rule(rule_conf, rule_id, nat_type, ipv6=False):
 
     if 'outbound_interface' in rule_conf:
         operator = ''
-        if 'interface_name' in rule_conf['outbound_interface']:
-            oiface = rule_conf['outbound_interface']['interface_name']
+        if 'name' in rule_conf['outbound_interface']:
+            oiface = rule_conf['outbound_interface']['name']
             if oiface[0] == '!':
                 operator = '!='
                 oiface = oiface[1:]
             output.append(f'oifname {operator} {{{oiface}}}')
         else:
-            oiface = rule_conf['outbound_interface']['interface_group']
+            oiface = rule_conf['outbound_interface']['group']
             if oiface[0] == '!':
                 operator = '!='
                 oiface = oiface[1:]
