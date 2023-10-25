@@ -3,7 +3,7 @@
   <node name="netns" owner="${vyos_conf_scripts_dir}/netns.py">
     <properties>
       <help>Network namespace</help>
-      <priority>291</priority>
+      <priority>10</priority>
     </properties>
     <children>
       <tagNode name="name">
