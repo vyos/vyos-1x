@@ -16,7 +16,7 @@
                 <properties>
                   <help>Show configured source NAT66 rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet6</command>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction source --family inet6</command>
               </node>
               <node name="statistics">
                 <properties>
@@ -39,7 +39,7 @@
                     <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet6 --address "$6"</command>
                   </tagNode>
                 </children>
-                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet6</command>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction source --family inet6</command>
               </node>
             </children>
           </node>
@@ -52,7 +52,7 @@
                 <properties>
                   <help>Show configured destination NAT66 rules</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet6</command>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_rules --direction destination --family inet6</command>
               </node>
               <node name="statistics">
                 <properties>
@@ -75,7 +75,7 @@
                     <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet6 --address "$6"</command>
                   </tagNode>
                 </children>
-                <command>${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet6</command>
+                <command>sudo ${vyos_op_scripts_dir}/nat.py show_translations --direction destination --family inet6</command>
               </node>
             </children>
           </node>
