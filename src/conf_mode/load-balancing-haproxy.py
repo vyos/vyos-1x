@@ -94,8 +94,8 @@ def generate(lb):
             if os.path.isfile(file):
                 os.unlink(file)
         # Delete old directories
-        #if os.path.isdir(load_balancing_dir):
-        #    rmtree(load_balancing_dir, ignore_errors=True)
+        if os.path.isdir(load_balancing_dir):
+            rmtree(load_balancing_dir, ignore_errors=True)
 
         return None
 
@@ -106,15 +106,12 @@ def generate(lb):
     # SSL Certificates for frontend
     for front, front_config in lb['service'].items():
         if 'ssl' in front_config:
-            cert_file_path = os.path.join(load_balancing_dir, 'cert.pem')
-            cert_key_path = os.path.join(load_balancing_dir, 'cert.pem.key')
-            ca_cert_file_path = os.path.join(load_balancing_dir, 'ca.pem')
 
             if 'certificate' in front_config['ssl']:
-                #cert_file_path = os.path.join(load_balancing_dir, 'cert.pem')
-                #cert_key_path = os.path.join(load_balancing_dir, 'cert.key')
                 cert_name = front_config['ssl']['certificate']
                 pki_cert = lb['pki']['certificate'][cert_name]
+                cert_file_path = os.path.join(load_balancing_dir, f'{cert_name}.pem')
+                cert_key_path = os.path.join(load_balancing_dir, f'{cert_name}.pem.key')
 
                 with open(cert_file_path, 'w') as f:
                     f.write(wrap_certificate(pki_cert['certificate']))
@@ -126,6 +123,7 @@ def generate(lb):
             if 'ca_certificate' in front_config['ssl']:
                 ca_name = front_config['ssl']['ca_certificate']
                 pki_ca_cert = lb['pki']['ca'][ca_name]
+                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
 
                 with open(ca_cert_file_path, 'w') as f:
                     f.write(wrap_certificate(pki_ca_cert['certificate']))
@@ -133,11 +131,11 @@ def generate(lb):
     # SSL Certificates for backend
     for back, back_config in lb['backend'].items():
         if 'ssl' in back_config:
-            ca_cert_file_path = os.path.join(load_balancing_dir, 'ca.pem')
 
             if 'ca_certificate' in back_config['ssl']:
                 ca_name = back_config['ssl']['ca_certificate']
                 pki_ca_cert = lb['pki']['ca'][ca_name]
+                ca_cert_file_path = os.path.join(load_balancing_dir, f'{ca_name}.pem')
 
                 with open(ca_cert_file_path, 'w') as f:
                     f.write(wrap_certificate(pki_ca_cert['certificate']))
