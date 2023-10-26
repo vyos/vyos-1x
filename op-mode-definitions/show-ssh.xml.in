@@ -7,17 +7,23 @@
           <help>Show SSH server information</help>
         </properties>
         <children>
+          <node name="dynamic-protection">
+            <properties>
+              <help>Show SSH server dynamic-protection blocked attackers</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/ssh.py show_dynamic_protection</command>
+          </node>
           <node name="fingerprints">
             <properties>
               <help>Show SSH server public key fingerprints</help>
             </properties>
-            <command>${vyos_op_scripts_dir}/show-ssh-fingerprints.py</command>
+            <command>${vyos_op_scripts_dir}/ssh.py show_fingerprints</command>
             <children>
               <node name="ascii">
                 <properties>
                   <help>Show visual ASCII art representation of the public key</help>
                 </properties>
-                <command>${vyos_op_scripts_dir}/show-ssh-fingerprints.py --ascii</command>
+                <command>${vyos_op_scripts_dir}/ssh.py show_fingerprints --ascii</command>
               </node>
             </children>
           </node>
