@@ -70,14 +70,16 @@ def get_config(config=None):
     for iface in conf.list_effective_nodes('interface'):
         pim_conf['old_pim']['ifaces'].update({
             iface : {
+                'bfd' : conf.return_effective_value('interface {0} bfd'.format(iface)),
                 'hello' : conf.return_effective_value('interface {0} hello'.format(iface)),
-                'dr_prio' : conf.return_effective_value('interface {0} dr-priority'.format(iface))
+                'dr_prio' : conf.return_effective_value('interface {0} dr-priority'.format(iface)),
             }
         })
 
     for iface in conf.list_nodes('interface'):
         pim_conf['pim']['ifaces'].update({
             iface : {
+                'bfd' : conf.return_value('interface {0} bfd'.format(iface)),
                 'hello' : conf.return_value('interface {0} hello'.format(iface)),
                 'dr_prio' : conf.return_value('interface {0} dr-priority'.format(iface)),
             }

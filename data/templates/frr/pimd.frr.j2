@@ -12,14 +12,17 @@ interface {{ iface }}
 no ip pim
 !
 {% endfor %}
-{% for iface in pim.ifaces %}
-interface {{ iface }}
+{% for interface, interface_config in pim.ifaces.items() %}
+interface {{ interface }}
 ip pim
-{%     if pim.ifaces[iface].dr_prio %}
-ip pim drpriority {{ pim.ifaces[iface].dr_prio }}
+{%     if interface_config.dr_prio %}
+ip pim drpriority {{ interface_config.dr_prio }}
 {%     endif %}
-{%     if pim.ifaces[iface].hello %}
-ip pim hello {{ pim.ifaces[iface].hello }}
+{%     if interface_config.hello %}
+ip pim hello {{ interface_config.hello }}
+{%     endif %}
+{%     if interface_config.bfd is vyos_defined('enable') %}
+ip pim bfd
 {%     endif %}
 !
 {% endfor %}

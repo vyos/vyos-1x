@@ -41,6 +41,25 @@
                   </constraint>
                 </properties>
               </leafNode>
+              <leafNode name="bfd">
+                <properties>
+                  <help>BFD support</help>
+                  <completionHelp>
+                    <list>enable disable</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>enable</format>
+                    <description>BFD enable</description>
+                  </valueHelp>
+                 <valueHelp>
+                    <format>disable</format>
+                    <description>BFD disable</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(enable|disable)</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
             </children>
           </tagNode>
           <node name="rp">
