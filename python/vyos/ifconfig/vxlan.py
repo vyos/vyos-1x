@@ -56,6 +56,10 @@ class VXLANIf(Interface):
     }
 
     _command_set = {**Interface._command_set, **{
+        'neigh_suppress': {
+            'validate': lambda v: assert_list(v, ['on', 'off']),
+            'shellcmd': 'bridge link set dev {ifname} neigh_suppress {value} learning off',
+        },
         'vlan_tunnel': {
             'validate': lambda v: assert_list(v, ['on', 'off']),
             'shellcmd': 'bridge link set dev {ifname} vlan_tunnel {value}',
@@ -113,6 +117,19 @@ class VXLANIf(Interface):
                        'port {port} dev {ifname}'
                 self._cmd(cmd.format(**self.config))
 
+    def set_neigh_suppress(self, state):
+        """
+        Controls whether neigh discovery (arp and nd) proxy and suppression
+        is enabled on the port. By default this flag is off.
+        """
+
+        # Determine current OS Kernel neigh_suppress setting - only adjust when needed
+        tmp = get_interface_config(self.ifname)
+        cur_state = 'on' if dict_search(f'linkinfo.info_slave_data.neigh_suppress', tmp) == True else 'off'
+        new_state = 'on' if state else 'off'
+        if cur_state != new_state:
+            self.set_interface('neigh_suppress', state)
+
     def set_vlan_vni_mapping(self, state):
         """
         Controls whether vlan to tunnel mapping is enabled on the port.
@@ -163,3 +180,9 @@ class VXLANIf(Interface):
         # Enable/Disable VLAN tunnel mapping
         # This is only possible after the interface was assigned to the bridge
         self.set_vlan_vni_mapping(dict_search('vlan_to_vni', config) != None)
+
+        # Enable/Disable neighbor suppression and learning, there is no need to
+        # explicitly "disable" it, as VXLAN interface will be recreated if anything
+        # under "parameters" changes.
+        if dict_search('parameters.neighbor_suppress', config) != None:
+            self.set_neigh_suppress('on')

@@ -165,6 +165,11 @@ def verify(vxlan):
                 raise ConfigError(f'VNI "{vni}" is already assigned to a different VLAN!')
             vnis_used.append(vni)
 
+    if dict_search('parameters.neighbor_suppress', vxlan):
+        if 'is_bridge_member' not in vxlan:
+            raise ConfigError('Neighbor suppression requires that VXLAN interface '\
+                              'is member of a bridge interface!')
+
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
     verify_bond_bridge_member(vxlan)
