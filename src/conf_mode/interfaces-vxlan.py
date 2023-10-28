@@ -34,6 +34,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
 from vyos.template import is_ipv6
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -163,6 +164,11 @@ def verify(vxlan):
             if vni in vnis_used:
                 raise ConfigError(f'VNI "{vni}" is already assigned to a different VLAN!')
             vnis_used.append(vni)
+
+    if dict_search('parameters.neighbor_suppress', vxlan):
+        if 'is_bridge_member' not in vxlan:
+            raise ConfigError('Neighbor suppression requires that VXLAN interface '\
+                              'is member of a bridge interface!')
 
     verify_mtu_ipv6(vxlan)
     verify_address(vxlan)
