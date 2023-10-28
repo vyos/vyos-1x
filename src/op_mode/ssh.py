@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import sys
 import glob
 import vyos.opmode
@@ -60,3 +61,40 @@ def show_fingerprints(raw: bool, ascii: bool):
             return []
         else:
             return "No SSH server public keys are found."
+
+def show_dynamic_protection(raw: bool):
+    config = ConfigTreeQuery()
+    if not config.exists("service ssh dynamic-protection"):
+        raise vyos.opmode.UnconfiguredSubsystem("SSH server dynamic-protection is not enabled.")
+
+    attackers = []
+    try:
+        # IPv4
+        attackers = attackers + json.loads(cmd("sudo nft -j list set ip sshguard attackers"))["nftables"][1]["set"]["elem"]
+    except:
+        pass
+    try:
+        # IPv6
+        attackers = attackers + json.loads(cmd("sudo nft -j list set ip6 sshguard attackers"))["nftables"][1]["set"]["elem"]
+    except:
+        pass
+    if attackers:
+        if raw:
+            return attackers
+        else:
+            output = "Blocked attackers:\n" + "\n".join(attackers)
+            return output
+    else:
+        if raw:
+            return []
+        else:
+            return "No blocked attackers."
+
+if __name__ == '__main__':
+    try:
+        res = vyos.opmode.run(sys.modules[__name__])
+        if res:
+            print(res)
+    except (ValueError, vyos.opmode.Error) as e:
+        print(e)
+        sys.exit(1)
