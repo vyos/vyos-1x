@@ -626,9 +626,9 @@
             <children>
               <node name="dynamic-protection">
                 <properties>
-                  <help>Show dynamic-protection log</help>
+                  <help>Show SSH guard log</help>
                 </properties>
-                <command>journalctl --no-hostname -p info -t sshguard -o short</command>
+                <command>journalctl --no-hostname --boot --unit sshguard.service</command>
               </node>
             </children>
           </node>
