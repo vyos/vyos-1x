@@ -274,12 +274,20 @@
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit snmpd.service</command>
           </leafNode>
-          <leafNode name="ssh">
+          <node name="ssh">
             <properties>
               <help>Monitor last lines of Secure Shell log</help>
             </properties>
             <command>journalctl --no-hostname --boot --follow --unit ssh.service</command>
-          </leafNode>
+            <children>
+              <node name="dynamic-protection">
+                <properties>
+                  <help>Monitor last lines of SSH guard log</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --follow --unit sshguard.service</command>
+              </node>
+            </children>
+          </node>
           <leafNode name="vpn">
             <properties>
               <help>Monitor last lines of ALL Virtual Private Network services</help>
