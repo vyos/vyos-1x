@@ -7,6 +7,12 @@
           <help>Show SSH server information</help>
         </properties>
         <children>
+          <node name="dynamic-protection">
+            <properties>
+              <help>Show SSH server dynamic-protection blocked attackers</help>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/ssh.py show_dynamic_protection</command>
+          </node>
           <node name="fingerprints">
             <properties>
               <help>Show SSH server public key fingerprints</help>
