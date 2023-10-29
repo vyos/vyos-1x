@@ -64,18 +64,18 @@ def show_fingerprints(raw: bool, ascii: bool):
 
 def show_dynamic_protection(raw: bool):
     config = ConfigTreeQuery()
-    if not config.exists("service ssh dynamic-protection"):
+    if not config.exists(['service', 'ssh', 'dynamic-protection']):
         raise vyos.opmode.UnconfiguredSubsystem("SSH server dynamic-protection is not enabled.")
 
     attackers = []
     try:
         # IPv4
-        attackers = attackers + json.loads(cmd("sudo nft -j list set ip sshguard attackers"))["nftables"][1]["set"]["elem"]
+        attackers = attackers + json.loads(cmd("nft -j list set ip sshguard attackers"))["nftables"][1]["set"]["elem"]
     except:
         pass
     try:
         # IPv6
-        attackers = attackers + json.loads(cmd("sudo nft -j list set ip6 sshguard attackers"))["nftables"][1]["set"]["elem"]
+        attackers = attackers + json.loads(cmd("nft -j list set ip6 sshguard attackers"))["nftables"][1]["set"]["elem"]
     except:
         pass
     if attackers:
