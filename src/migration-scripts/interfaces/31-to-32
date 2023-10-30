@@ -27,7 +27,8 @@ if len(argv) < 2:
 file_name = argv[1]
 with open(file_name, 'r') as f:
     config_file = f.read()
-    base = ['interfaces', 'vxlan']
+
+base = ['interfaces', 'vxlan']
 
 config = ConfigTree(config_file)
 if not config.exists(base):
@@ -35,7 +36,11 @@ if not config.exists(base):
     exit(0)
 
 for vxlan in config.list_nodes(base):
-    if not config.exists(base + ['port']):
+    if config.exists(base + [vxlan, 'external']):
+        config.delete(base + [vxlan, 'external'])
+        config.set(base + [vxlan, 'parameters', 'external'])
+
+    if not config.exists(base + [vxlan, 'port']):
         config.set(base + [vxlan, 'port'], value='8472')
 
 try:
