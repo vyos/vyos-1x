@@ -107,7 +107,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     def test_vxlan_external(self):
         interface = 'vxlan0'
         source_address = '192.0.2.1'
-        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-address', source_address])
 
         # Both 'VNI' and 'external' can not be specified at the same time.
@@ -150,7 +150,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
             '31': '10031',
         }
 
-        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
 
         for vlan, vni in vlan_to_vni.items():
