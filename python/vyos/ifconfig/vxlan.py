@@ -68,8 +68,8 @@ class VXLANIf(Interface):
         # - https://man7.org/linux/man-pages/man8/ip-link.8.html
         mapping = {
             'group'                      : 'group',
-            'external'                   : 'external',
             'gpe'                        : 'gpe',
+            'parameters.external'        : 'external',
             'parameters.ip.df'           : 'df',
             'parameters.ip.tos'          : 'tos',
             'parameters.ip.ttl'          : 'ttl',

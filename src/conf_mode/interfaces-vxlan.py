@@ -34,6 +34,7 @@ from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import Interface
 from vyos.ifconfig import VXLANIf
 from vyos.template import is_ipv6
+from vyos.utils.dict import dict_search
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
@@ -53,7 +54,7 @@ def get_config(config=None):
     # VXLAN interfaces are picky and require recreation if certain parameters
     # change. But a VXLAN interface should - of course - not be re-created if
     # it's description or IP address is adjusted. Feels somehow logic doesn't it?
-    for cli_option in ['parameters', 'external', 'gpe', 'group', 'port', 'remote',
+    for cli_option in ['parameters', 'gpe', 'group', 'port', 'remote',
                        'source-address', 'source-interface', 'vni']:
         if is_node_changed(conf, base + [ifname, cli_option]):
             vxlan.update({'rebuild_required': {}})
@@ -94,17 +95,17 @@ def verify(vxlan):
     if not any(tmp in ['group', 'remote', 'source_address', 'source_interface'] for tmp in vxlan):
         raise ConfigError('Group, remote, source-address or source-interface must be configured')
 
-    if 'vni' not in vxlan and 'external' not in vxlan:
-        raise ConfigError(
-            'Must either configure VXLAN "vni" or use "external" CLI option!')
+    if 'vni' not in vxlan and dict_search('parameters.external', vxlan) == None:
+        raise ConfigError('Must either configure VXLAN "vni" or use "external" CLI option!')
 
-    if {'external', 'vni'} <= set(vxlan):
-        raise ConfigError('Can not specify both "external" and "VNI"!')
+    if dict_search('parameters.external', vxlan):
+        if 'vni' in vxlan:
+            raise ConfigError('Can not specify both "external" and "VNI"!')
 
-    if {'external', 'other_tunnels'} <= set(vxlan):
-        other_tunnels = ', '.join(vxlan['other_tunnels'])
-        raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
-                          f'CLI option is used. Additional tunnels: {other_tunnels}')
+        if 'other_tunnels' in vxlan:
+            other_tunnels = ', '.join(vxlan['other_tunnels'])
+            raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
+                              f'CLI option is used. Additional tunnels: {other_tunnels}')
 
     if 'gpe' in vxlan and 'external' not in vxlan:
         raise ConfigError(f'VXLAN-GPE is only supported when "external" '\
