@@ -104,7 +104,7 @@
               </leafNode>
               <leafNode name="uplink">
                 <properties>
-                  <help>Uplink to the VxLAN core</help>
+                  <help>Uplink to the VXLAN core</help>
                   <valueless/>
                 </properties>
               </leafNode>
