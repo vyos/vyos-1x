@@ -728,14 +728,24 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def test_bgp_07_l2vpn_evpn(self):
         vnis = ['10010', '10020', '10030']
         neighbors = ['192.0.2.10', '192.0.2.20', '192.0.2.30']
+        evi_limit = '1000'
+        route_targets = ['1.1.1.1:100', '1.1.1.1:200', '1.1.1.1:300']
 
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-all-vni'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-default-gw'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'advertise-svi-ip'])
         self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'flooding', 'disable'])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'default-originate', 'ipv4'])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'default-originate', 'ipv6'])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'disable-ead-evi-rx'])
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'disable-ead-evi-tx'])
         for vni in vnis:
             self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-default-gw'])
             self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'vni', vni, 'advertise-svi-ip'])
+
+        self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'ead-es-frag', 'evi-limit', evi_limit])
+        for route_target in route_targets:
+            self.cli_set(base_path + ['address-family', 'l2vpn-evpn', 'ead-es-route-target', 'export', route_target])
 
         # commit changes
         self.cli_commit()
@@ -747,12 +757,20 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'  advertise-all-vni', frrconfig)
         self.assertIn(f'  advertise-default-gw', frrconfig)
         self.assertIn(f'  advertise-svi-ip', frrconfig)
+        self.assertIn(f'  default-originate ipv4', frrconfig)
+        self.assertIn(f'  default-originate ipv6', frrconfig)
+        self.assertIn(f'  disable-ead-evi-rx', frrconfig)
+        self.assertIn(f'  disable-ead-evi-tx', frrconfig)
         self.assertIn(f'  flooding disable', frrconfig)
         for vni in vnis:
             vniconfig = self.getFRRconfig(f'  vni {vni}')
             self.assertIn(f'vni {vni}', vniconfig)
             self.assertIn(f'   advertise-default-gw', vniconfig)
             self.assertIn(f'   advertise-svi-ip', vniconfig)
+        self.assertIn(f'  ead-es-frag evi-limit {evi_limit}', frrconfig)
+        for route_target in route_targets:
+            self.assertIn(f'  ead-es-route-target export {route_target}', frrconfig)
+
 
     def test_bgp_09_distance_and_flowspec(self):
         distance_external = '25'

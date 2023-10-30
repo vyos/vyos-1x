@@ -373,6 +373,26 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is vyos_defined }}
 {%         if afi_config.advertise_svi_ip is vyos_defined %}
   advertise-svi-ip
 {%         endif %}
+{%         if afi_config.default_originate.ipv4 is vyos_defined %}
+  default-originate ipv4
+{%         endif %}
+{%         if afi_config.default_originate.ipv6 is vyos_defined %}
+  default-originate ipv6
+{%         endif %}
+{%         if afi_config.disable_ead_evi_rx is vyos_defined %}
+  disable-ead-evi-rx
+{%         endif %}
+{%         if afi_config.disable_ead_evi_tx is vyos_defined %}
+  disable-ead-evi-tx
+{%         endif %}
+{%         if afi_config.ead_es_frag.evi_limit is vyos_defined %}
+  ead-es-frag evi-limit {{ afi_config.ead_es_frag.evi_limit }}
+{%         endif %}
+{%         if afi_config.ead_es_route_target.export is vyos_defined %}
+{%             for route_target in afi_config.ead_es_route_target.export %}
+ ead-es-route-target export {{ route_target }}
+{%             endfor %}
+{%         endif %}
 {%         if afi_config.rt_auto_derive is vyos_defined %}
   autort rfc8365-compatible
 {%         endif %}
