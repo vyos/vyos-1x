@@ -38,6 +38,7 @@ from vyos.utils.process import run
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
 MSG_ERR_LIVE: str = 'The system is in live-boot mode. Please use "install image" instead.'
 MSG_ERR_NO_DISK: str = 'No suitable disk was found. There must be at least one disk of 2GB or greater size.'
+MSG_ERR_IMPROPER_IMAGE: str = 'Missing sha256sum.txt.\nEither this image is corrupted, or of era 1.2.x (md5sum) and would downgrade image tools;\ndisallowed in either case.'
 MSG_INFO_INSTALL_WELCOME: str = 'Welcome to VyOS installation!\nThis command will install the VyOS to your permanent storage.'
 MSG_INFO_INSTALL_EXIT: str = 'Exitting from VyOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
@@ -481,6 +482,9 @@ def add_image(image_path: str) -> None:
 
         # check sums
         print('Validating image checksums')
+        if not Path(DIR_ISO_MOUNT).joinpath('sha256sum.txt').exists():
+            cleanup()
+            exit(MSG_ERR_IMPROPER_IMAGE)
         if run(f'cd {DIR_ISO_MOUNT} && sha256sum --status -c sha256sum.txt'):
             cleanup()
             exit('Image checksum verification failed.')
