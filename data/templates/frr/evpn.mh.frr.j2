@@ -1,0 +1,16 @@
+!
+interface {{ ifname }}
+{% if evpn.es_df_pref is vyos_defined %}
+ evpn mh es-df-pref {{ evpn.es_df_pref }}
+{% endif %}
+{% if evpn.es_id is vyos_defined %}
+ evpn mh es-id {{ evpn.es_id }}
+{% endif %}
+{% if evpn.es_sys_mac is vyos_defined %}
+ evpn mh es-sys-mac {{ evpn.es_sys_mac }}
+{% endif %}
+{% if evpn.uplink is vyos_defined %}
+ evpn mh uplink
+{% endif %}
+exit
+!
