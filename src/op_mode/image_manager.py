@@ -21,23 +21,39 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from shutil import rmtree
 from sys import exit
+from typing import Optional
 
 from vyos.system import disk, grub, image, compat
-from vyos.utils.io import ask_yes_no
+from vyos.utils.io import ask_yes_no, select_entry
+
+SET_IMAGE_LIST_MSG: str = 'The following images are available:'
+SET_IMAGE_PROMPT_MSG: str = 'Select an image to set as default:'
+DELETE_IMAGE_LIST_MSG: str = 'The following images are installed:'
+DELETE_IMAGE_PROMPT_MSG: str = 'Select an image to delete:'
+MSG_DELETE_IMAGE_RUNNING: str = 'Currently running image cannot be deleted; reboot into another image first'
+MSG_DELETE_IMAGE_DEFAULT: str = 'Default image cannot be deleted; set another image as default first'
 
 
 @compat.grub_cfg_update
-def delete_image(image_name: str) -> None:
+def delete_image(image_name: Optional[str] = None,
+                 prompt: bool = True) -> None:
     """Remove installed image files and boot entry
 
     Args:
         image_name (str): a name of image to delete
     """
-    if image_name == image.get_running_image():
-        exit('Currently running image cannot be deleted')
-    if image_name == image.get_default_image():
-        exit('Default image cannot be deleted')
     available_images: list[str] = grub.version_list()
+    if image_name is None:
+        if not prompt:
+            exit('An image name is required for delete action')
+        else:
+            image_name = select_entry(available_images,
+                                      DELETE_IMAGE_LIST_MSG,
+                                      DELETE_IMAGE_PROMPT_MSG)
+    if image_name == image.get_running_image():
+        exit(MSG_DELETE_IMAGE_RUNNING)
+    if image_name == image.get_default_image():
+        exit(MSG_DELETE_IMAGE_DEFAULT)
     if image_name not in available_images:
         exit(f'The image "{image_name}" cannot be found')
     presistence_storage: str = disk.find_persistence()
@@ -59,15 +75,23 @@ def delete_image(image_name: str) -> None:
 
 
 @compat.grub_cfg_update
-def set_image(image_name: str) -> None:
+def set_image(image_name: Optional[str] = None,
+              prompt: bool = True) -> None:
     """Set default boot image
 
     Args:
         image_name (str): an image name
     """
+    available_images: list[str] = grub.version_list()
+    if image_name is None:
+        if not prompt:
+            exit('An image name is required for set action')
+        else:
+            image_name = select_entry(available_images,
+                                      SET_IMAGE_LIST_MSG,
+                                      SET_IMAGE_PROMPT_MSG)
     if image_name == image.get_default_image():
         exit(f'The image "{image_name}" already configured as default')
-    available_images: list[str] = grub.version_list()
     if image_name not in available_images:
         exit(f'The image "{image_name}" cannot be found')
     presistence_storage: str = disk.find_persistence()
@@ -154,10 +178,6 @@ def parse_arguments() -> Namespace:
     parser.add_argument('--image_new_name', help='a new name for image')
     args: Namespace = parser.parse_args()
     # Validate arguments
-    if args.action == 'delete' and not args.image_name:
-        exit('An image name is required for delete action')
-    if args.action == 'set' and not args.image_name:
-        exit('An image name is required for set action')
     if args.action == 'rename' and (not args.image_name or
                                     not args.image_new_name):
         exit('Both old and new image names are required for rename action')

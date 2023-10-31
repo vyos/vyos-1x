@@ -72,3 +72,22 @@ def is_dumb_terminal():
     """Check if the current TTY is dumb, so that we can disable advanced terminal features."""
     import os
     return os.getenv('TERM') in ['vt100', 'dumb']
+
+def select_entry(l: list, list_msg: str = '', prompt_msg: str = '') -> str:
+    """Select an entry from a list
+
+    Args:
+        l (list): a list of entries
+        list_msg (str): a message to print before listing the entries
+        prompt_msg (str): a message to print as prompt for selection
+
+    Returns:
+        str: a selected entry
+    """
+    en = list(enumerate(l, 1))
+    print(list_msg)
+    for i, e in en:
+        print(f'\t{i}: {e}')
+    select = ask_input(prompt_msg, numeric_only=True,
+                       valid_responses=range(1, len(l)+1))
+    return next(filter(lambda x: x[0] == select, en))[1]
