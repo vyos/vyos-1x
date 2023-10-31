@@ -24,6 +24,7 @@ from ipaddress import IPv6Interface
 
 from vyos.config import Config
 from vyos.configdict import dict_merge
+from vyos.configdict import leaf_node_changed
 from vyos.ifconfig.vrrp import VRRP
 from vyos.template import render
 from vyos.template import is_ipv4
@@ -35,6 +36,10 @@ from vyos.xml import defaults
 from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
+
+
+systemd_override = r'/run/systemd/system/keepalived.service.d/10-override.conf'
+
 
 def get_config(config=None):
     if config:
@@ -59,6 +64,9 @@ def get_config(config=None):
     conntrack_path = ['service', 'conntrack-sync', 'failover-mechanism', 'vrrp', 'sync-group']
     if conf.exists(conntrack_path):
         vrrp['conntrack_sync_group'] = conf.return_value(conntrack_path)
+
+    if leaf_node_changed(conf, base + ['snmp']):
+        vrrp.update({'restart_required': {}})
 
     return vrrp
 
@@ -138,13 +146,17 @@ def verify(vrrp):
 
 def generate(vrrp):
     if not vrrp:
+        if os.path.isfile(systemd_override):
+            os.unlink(systemd_override)
         return None
 
     render(VRRP.location['config'], 'vrrp/keepalived.conf.tmpl', vrrp)
+    render(systemd_override, 'vrrp/10-override.conf.j2', vrrp)
     return None
 
 def apply(vrrp):
     service_name = 'keepalived.service'
+    call('systemctl daemon-reload')
     if not vrrp:
         call(f'systemctl stop {service_name}')
         return None
@@ -163,10 +175,11 @@ def apply(vrrp):
 
     # XXX: T3944 - reload keepalived configuration if service is already running
     # to not cause any service disruption when applying changes.
-    if is_systemd_service_running(service_name):
-        call(f'systemctl reload {service_name}')
-    else:
-        call(f'systemctl restart {service_name}')
+    systemd_action = 'reload-or-restart'
+    if 'restart_required' in vrrp:
+        systemd_action = 'restart'
+
+    call(f'systemctl {systemd_action} {service_name}')
     return None
 
 if __name__ == '__main__':
