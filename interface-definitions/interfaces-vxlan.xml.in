@@ -19,12 +19,6 @@
           #include <include/interface/address-ipv4-ipv6.xml.i>
           #include <include/generic-description.xml.i>
           #include <include/interface/disable.xml.i>
-          <leafNode name="external">
-            <properties>
-              <help>Use external control plane</help>
-              <valueless/>
-            </properties>
-          </leafNode>
           <leafNode name="gpe">
             <properties>
               <help>Enable Generic Protocol extension (VXLAN-GPE)</help>
@@ -83,6 +77,12 @@
                   #include <include/interface/parameters-flowlabel.xml.i>
                 </children>
               </node>
+              <leafNode name="external">
+                <properties>
+                  <help>Use external control plane</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
               <leafNode name="nolearning">
                 <properties>
                   <help>Do not add unknown addresses into forwarding database</help>
