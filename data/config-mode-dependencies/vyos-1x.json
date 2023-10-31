@@ -48,8 +48,5 @@
            "wireguard": ["interfaces-wireguard"],
            "wireless": ["interfaces-wireless"],
            "wwan": ["interfaces-wwan"]
-         },
-  "vpp": {
-           "ethernet": ["interfaces-ethernet"]
          }
 }
