@@ -74,12 +74,6 @@ def set_image(image_name: str) -> None:
     if not presistence_storage:
         exit('Persistence storage cannot be found')
 
-    if not ask_yes_no(
-            f'Do you really want to set the image {image_name} '
-            'as default boot image?',
-            default=False):
-        exit()
-
     # set default boot image
     try:
         grub.set_default(image_name, presistence_storage)
