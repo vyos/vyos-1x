@@ -89,6 +89,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="neighbor-suppress">
+                <properties>
+                  <help>Enable neighbor discovery (ARP and ND) suppression</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           #include <include/port-number.xml.i>

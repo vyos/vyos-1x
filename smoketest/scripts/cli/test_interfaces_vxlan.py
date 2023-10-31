@@ -177,9 +177,48 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
 
         tmp = get_interface_config(interface)
         self.assertEqual(tmp['master'], bridge)
+        self.assertFalse(tmp['linkinfo']['info_slave_data']['neigh_suppress'])
 
         tmp = get_vxlan_vlan_tunnels('vxlan0')
         self.assertEqual(tmp, list(vlan_to_vni))
+
+        self.cli_delete(['interfaces', 'bridge', bridge])
+
+    def test_vxlan_neighbor_suppress(self):
+        bridge = 'br555'
+        interface = 'vxlan555'
+        source_interface = 'eth0'
+
+        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'neighbor-suppress'])
+
+        # This must fail as this VXLAN interface is not associated with any bridge
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', interface])
+
+        # commit configuration
+        self.cli_commit()
+
+        self.assertTrue(interface_exists(bridge))
+        self.assertTrue(interface_exists(interface))
+
+        tmp = get_interface_config(interface)
+        self.assertEqual(tmp['master'], bridge)
+        self.assertTrue(tmp['linkinfo']['info_slave_data']['neigh_suppress'])
+        self.assertFalse(tmp['linkinfo']['info_slave_data']['learning'])
+
+        # Remove neighbor suppress configuration and re-test
+        self.cli_delete(self._base_path + [interface, 'parameters', 'neighbor-suppress'])
+        # commit configuration
+        self.cli_commit()
+
+        tmp = get_interface_config(interface)
+        self.assertEqual(tmp['master'], bridge)
+        self.assertFalse(tmp['linkinfo']['info_slave_data']['neigh_suppress'])
+        self.assertTrue(tmp['linkinfo']['info_slave_data']['learning'])
 
         self.cli_delete(['interfaces', 'bridge', bridge])
 
