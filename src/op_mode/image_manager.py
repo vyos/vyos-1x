@@ -56,8 +56,8 @@ def delete_image(image_name: Optional[str] = None,
         exit(MSG_DELETE_IMAGE_DEFAULT)
     if image_name not in available_images:
         exit(f'The image "{image_name}" cannot be found')
-    presistence_storage: str = disk.find_persistence()
-    if not presistence_storage:
+    persistence_storage: str = disk.find_persistence()
+    if not persistence_storage:
         exit('Persistence storage cannot be found')
 
     if not ask_yes_no(f'Do you really want to delete the image {image_name}?',
@@ -65,10 +65,10 @@ def delete_image(image_name: Optional[str] = None,
         exit()
 
     # remove files and menu entry
-    version_path: Path = Path(f'{presistence_storage}/boot/{image_name}')
+    version_path: Path = Path(f'{persistence_storage}/boot/{image_name}')
     try:
         rmtree(version_path)
-        grub.version_del(image_name, presistence_storage)
+        grub.version_del(image_name, persistence_storage)
         print(f'The image "{image_name}" was successfully deleted')
     except Exception as err:
         exit(f'Unable to remove the image "{image_name}": {err}')
@@ -94,13 +94,13 @@ def set_image(image_name: Optional[str] = None,
         exit(f'The image "{image_name}" already configured as default')
     if image_name not in available_images:
         exit(f'The image "{image_name}" cannot be found')
-    presistence_storage: str = disk.find_persistence()
-    if not presistence_storage:
+    persistence_storage: str = disk.find_persistence()
+    if not persistence_storage:
         exit('Persistence storage cannot be found')
 
     # set default boot image
     try:
-        grub.set_default(image_name, presistence_storage)
+        grub.set_default(image_name, persistence_storage)
         print(f'The image "{image_name}" is now default boot image')
     except Exception as err:
         exit(f'Unable to set default image "{image_name}": {err}')
@@ -124,8 +124,8 @@ def rename_image(name_old: str, name_new: str) -> None:
     if not image.validate_name(name_new):
         exit(f'The image name "{name_new}" is not allowed')
 
-    presistence_storage: str = disk.find_persistence()
-    if not presistence_storage:
+    persistence_storage: str = disk.find_persistence()
+    if not persistence_storage:
         exit('Persistence storage cannot be found')
 
     if not ask_yes_no(
@@ -137,16 +137,16 @@ def rename_image(name_old: str, name_new: str) -> None:
     try:
         # replace default boot item
         if name_old == image.get_default_image():
-            grub.set_default(name_new, presistence_storage)
+            grub.set_default(name_new, persistence_storage)
 
         # rename files and dirs
-        old_path: Path = Path(f'{presistence_storage}/boot/{name_old}')
-        new_path: Path = Path(f'{presistence_storage}/boot/{name_new}')
+        old_path: Path = Path(f'{persistence_storage}/boot/{name_old}')
+        new_path: Path = Path(f'{persistence_storage}/boot/{name_new}')
         old_path.rename(new_path)
 
         # replace boot item
-        grub.version_del(name_old, presistence_storage)
-        grub.version_add(name_new, presistence_storage)
+        grub.version_del(name_old, persistence_storage)
+        grub.version_add(name_new, persistence_storage)
 
         print(f'The image "{name_old}" was renamed to "{name_new}"')
     except Exception as err:
