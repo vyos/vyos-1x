@@ -118,7 +118,7 @@
                     <script>${vyos_completion_dir}/list_interfaces.py --bridgeable</script>
                   </completionHelp>
                   <constraint>
-                    #include <include/constraint/interface-name.xml.i>
+                    #include <include/constraint/interface-name.xml.in>
                   </constraint>
                 </properties>
                 <children>
