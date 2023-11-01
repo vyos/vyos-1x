@@ -189,7 +189,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         interface = 'vxlan555'
         source_interface = 'eth0'
 
-        self.cli_set(self._base_path + [interface, 'external'])
+        self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
 
         self.cli_set(self._base_path + [interface, 'parameters', 'neighbor-suppress'])
