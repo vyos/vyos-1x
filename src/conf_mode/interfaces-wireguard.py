@@ -51,17 +51,9 @@ def get_config(config=None):
     tmp = is_node_changed(conf, base + [ifname, 'port'])
     if tmp: wireguard['port_changed'] = {}
 
-    # Determine which Wireguard peer has been removed.
-    # Peers can only be removed with their public key!
-    if 'peer' in wireguard:
-        peer_remove = {}
-        for peer, peer_config in wireguard['peer'].items():
-            # T4702: If anything on a peer changes we remove the peer first and re-add it
-            if is_node_changed(conf, base + [ifname, 'peer', peer]):
-                if 'public_key' in peer_config:
-                    peer_remove = dict_merge({'peer_remove' : {peer : peer_config['public_key']}}, peer_remove)
-        if peer_remove:
-           wireguard.update(peer_remove)
+    # T4702: If anything on a peer changes we remove the peer first and re-add it
+    if is_node_changed(conf, base + [ifname, 'peer']):
+        wireguard.update({'rebuild_required': {}})
 
     return wireguard
 
@@ -113,12 +105,21 @@ def verify(wireguard):
         public_keys.append(peer['public_key'])
 
 def apply(wireguard):
-    tmp = WireGuardIf(wireguard['ifname'])
-    if 'deleted' in wireguard:
-        tmp.remove()
-        return None
+    if 'rebuild_required' in wireguard or 'deleted' in wireguard:
+        wg = WireGuardIf(**wireguard)
+        # WireGuard only supports peer removal based on the configured public-key,
+        # by deleting the entire interface this is the shortcut instead of parsing
+        # out all peers and removing them one by one.
+        #
+        # Peer reconfiguration will always come with a short downtime while the
+        # WireGuard interface is recreated (see below)
+        wg.remove()
 
-    tmp.update(wireguard)
+    # Create the new interface if required
+    if 'deleted' not in wireguard:
+        wg = WireGuardIf(**wireguard)
+        wg.update(wireguard)
+
     return None
 
 if __name__ == '__main__':

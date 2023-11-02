@@ -167,11 +167,6 @@ class WireGuardIf(Interface):
         interface setup code and provide a single point of entry when workin
         on any interface. """
 
-        # remove no longer associated peers first
-        if 'peer_remove' in config:
-            for peer, public_key in config['peer_remove'].items():
-                self._cmd(f'wg set {self.ifname} peer {public_key} remove')
-
         tmp_file = NamedTemporaryFile('w')
         tmp_file.write(config['private_key'])
         tmp_file.flush()
