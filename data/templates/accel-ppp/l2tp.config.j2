@@ -20,6 +20,11 @@ ipv6_dhcp
 [core]
 thread-count={{ thread_cnt }}
 
+[common]
+{% if max_concurrent_sessions is vyos_defined %}
+max-starting={{ max_concurrent_sessions }}
+{% endif %}
+
 [log]
 syslog=accel-l2tp,daemon
 copy=1

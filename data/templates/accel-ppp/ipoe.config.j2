@@ -14,6 +14,11 @@ ippool
 [core]
 thread-count={{ thread_count }}
 
+[common]
+{% if max_concurrent_sessions is vyos_defined %}
+max-starting={{ max_concurrent_sessions }}
+{% endif %}
+
 [log]
 syslog=accel-ipoe,daemon
 copy=1

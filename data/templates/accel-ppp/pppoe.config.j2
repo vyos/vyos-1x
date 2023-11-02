@@ -62,9 +62,12 @@ wins{{ loop.index }}={{ server }}
 {# Common chap-secrets and RADIUS server/option definitions #}
 {% include 'accel-ppp/config_chap_secrets_radius.j2' %}
 
-{% if session_control is vyos_defined and session_control is not vyos_defined('disable') %}
 [common]
+{% if session_control is vyos_defined and session_control is not vyos_defined('disable') %}
 single-session={{ session_control }}
+{% endif %}
+{% if max_concurrent_sessions is vyos_defined %}
+max-starting={{ max_concurrent_sessions }}
 {% endif %}
 
 [ppp]
