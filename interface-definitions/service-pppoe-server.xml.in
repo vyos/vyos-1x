@@ -73,6 +73,7 @@
             </children>
           </tagNode>
           #include <include/accel-ppp/gateway-address.xml.i>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
           #include <include/accel-ppp/mtu-128-16384.xml.i>
           <node name="limits">
             <properties>

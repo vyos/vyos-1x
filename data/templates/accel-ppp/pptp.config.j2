@@ -16,6 +16,11 @@ ippool
 [core]
 thread-count={{ thread_cnt }}
 
+[common]
+{% if max_concurrent_sessions is vyos_defined %}
+max-starting={{ max_concurrent_sessions }}
+{% endif %}
+
 [log]
 syslog=accel-pptp,daemon
 copy=1
