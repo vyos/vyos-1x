@@ -15,7 +15,7 @@ $outchannel global,/var/log/messages,262144,/usr/sbin/logrotate {{ logrotate }}
 {% if global.facility is vyos_defined %}
 {%     set tmp = [] %}
 {%     for facility, facility_options in global.facility.items() %}
-{%         set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%         set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level.replace('all', '*')) %}
 {%     endfor %}
 {{ tmp | join(';') }} :omfile:$global
 {% endif %}
@@ -27,7 +27,7 @@ $outchannel global,/var/log/messages,262144,/usr/sbin/logrotate {{ logrotate }}
 $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archive.size }},/usr/sbin/logrotate {{ logrotate }}
 {%         if file_options.facility is vyos_defined %}
 {%             for facility, facility_options in file_options.facility.items() %}
-{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level.replace('all', '*')) %}
 {%             endfor %}
 {%         endif %}
 {{ tmp | join(';') }} :omfile:${{ file }}
@@ -38,7 +38,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 # Console logging
 {%     set tmp = [] %}
 {%     for facility, facility_options in console.facility.items() %}
-{%         set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%         set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level.replace('all', '*')) %}
 {%     endfor %}
 {{ tmp | join(';') }} /dev/console
 {% endif %}
@@ -49,7 +49,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {%         set tmp = [] %}
 {%         if host_options.facility is vyos_defined %}
 {%             for facility, facility_options in host_options.facility.items() %}
-{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level.replace('all', '*')) %}
 {%             endfor %}
 {%         endif %}
 {%         if host_options.protocol is vyos_defined('tcp') %}
@@ -70,7 +70,7 @@ $outchannel {{ file_name }},/var/log/user/{{ file_name }},{{ file_options.archiv
 {%         set tmp = [] %}
 {%         if user_options.facility is vyos_defined %}
 {%             for facility, facility_options in user_options.facility.items() %}
-{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level) %}
+{%                 set _ = tmp.append(facility.replace('all', '*') + '.' + facility_options.level.replace('all', '*')) %}
 {%             endfor %}
 {%         endif %}
 {{ tmp | join(';') }} :omusrmsg:{{ username }}
