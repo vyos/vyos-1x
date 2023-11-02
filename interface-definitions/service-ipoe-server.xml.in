@@ -102,6 +102,7 @@
               #include <include/accel-ppp/vlan.xml.i>
             </children>
           </tagNode>
+          #include <include/accel-ppp/max-concurrent-sessions.xml.i>
           #include <include/name-server-ipv4-ipv6.xml.i>
           <node name="client-ip-pool">
             <properties>

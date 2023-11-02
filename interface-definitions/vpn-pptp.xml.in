@@ -13,6 +13,7 @@
               <help>Remote access PPTP VPN</help>
             </properties>
             <children>
+              #include <include/accel-ppp/max-concurrent-sessions.xml.i>
               #include <include/accel-ppp/mtu-128-16384.xml.i>
               <leafNode name="outside-address">
                 <properties>
