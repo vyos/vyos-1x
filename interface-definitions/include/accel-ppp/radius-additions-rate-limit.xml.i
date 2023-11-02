@@ -13,12 +13,6 @@
     <leafNode name="vendor">
       <properties>
         <help>Vendor dictionary</help>
-        <completionHelp>
-          <list>alcatel cisco microsoft mikrotik</list>
-        </completionHelp>
-        <constraint>
-          <validator name="accel-radius-dictionary" />
-        </constraint>
       </properties>
     </leafNode>
     <leafNode name="enable">
