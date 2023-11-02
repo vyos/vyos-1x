@@ -16,6 +16,9 @@ thread-count={{ thread_count }}
 
 [common]
 single-session=replace
+{% if max_concurrent_sessions is vyos_defined %}
+max-starting={{ max_concurrent_sessions }}
+{% endif %}
 
 [log]
 syslog=accel-sstp,daemon
