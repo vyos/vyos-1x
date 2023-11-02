@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2022 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -35,12 +35,14 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import BondIf
 from vyos.ifconfig.ethernet import EthernetIf
 from vyos.ifconfig import Section
+from vyos.template import render_to_string
 from vyos.utils.dict import dict_search
 from vyos.utils.dict import dict_to_paths_values
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
 from vyos.configdep import set_dependents, call_dependents
 from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
 
@@ -247,21 +249,38 @@ def verify(bond):
     return None
 
 def generate(bond):
+    bond['frr_zebra_config'] = ''
+    if 'deleted' not in bond:
+        bond['frr_zebra_config'] = render_to_string('frr/evpn.mh.frr.j2', bond)
     return None
 
 def apply(bond):
-    b = BondIf(bond['ifname'])
+    ifname = bond['ifname']
+    b = BondIf(ifname)
     if 'deleted' in bond:
         # delete interface
         b.remove()
     else:
         b.update(bond)
+
     if dict_search('member.interface_remove', bond):
         try:
             call_dependents()
         except ConfigError:
             raise ConfigError('Error in updating ethernet interface '
                               'after deleting it from bond')
+
+    zebra_daemon = 'zebra'
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
+
+    # The route-map used for the FIB (zebra) is part of the zebra daemon
+    frr_cfg.load_configuration(zebra_daemon)
+    frr_cfg.modify_section(f'^interface {ifname}', stop_pattern='^exit', remove_stop_mark=True)
+    if 'frr_zebra_config' in bond:
+        frr_cfg.add_before(frr.default_add_before, bond['frr_zebra_config'])
+    frr_cfg.commit_configuration(zebra_daemon)
+
     return None
 
 if __name__ == '__main__':
