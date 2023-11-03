@@ -20,6 +20,7 @@ import unittest
 from base_vyostest_shim import VyOSUnitTestSHIM
 from vyos.configsession import ConfigSessionError
 from vyos.utils.file import read_file
+from vyos.utils.process import cmd
 
 base_path = ['interfaces', 'wireguard']
 
@@ -151,6 +152,53 @@ class WireGuardInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
         tmp = read_file(f'/sys/class/net/{interface}/threaded')
         self.assertTrue(tmp, "1")
+
+    def test_05_wireguard_peer_pubkey_change(self):
+        # T5707 changing WireGuard CLI public key of a peer - it's not removed
+
+        def get_peers(interface) -> list:
+            tmp = cmd(f'sudo wg show {interface} dump')
+            first_line = True
+            peers = []
+            for line in tmp.split('\n'):
+                if not line:
+                    continue # Skip empty lines and last line
+                items = line.split('\t')
+                if first_line:
+                    self.assertEqual(privkey, items[0])
+                    first_line = False
+                else:
+                    peers.append(items[0])
+            return peers
+
+
+        interface = 'wg1337'
+        port = '1337'
+        privkey = 'iJi4lb2HhkLx2KSAGOjji2alKkYsJjSPkHkrcpxgEVU='
+        pubkey_1 = 'srQ8VF6z/LDjKCzpxBzFpmaNUOeuHYzIfc2dcmoc/h4='
+        pubkey_2 = '8pbMHiQ7NECVP7F65Mb2W8+4ldGG2oaGvDSpSEsOBn8='
+
+        self.cli_set(base_path + [interface, 'address', '172.16.0.1/24'])
+        self.cli_set(base_path + [interface, 'port', port])
+        self.cli_set(base_path + [interface, 'private-key', privkey])
+
+        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'public-key', pubkey_1])
+        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'allowed-ips', '10.205.212.10/32'])
+
+        self.cli_commit()
+
+        peers = get_peers(interface)
+        self.assertIn(pubkey_1, peers)
+        self.assertNotIn(pubkey_2, peers)
+
+        # Now change the public key of our peer
+        self.cli_set(base_path + [interface, 'peer', 'VyOS', 'public-key', pubkey_2])
+        self.cli_commit()
+
+        # Verify config
+        peers = get_peers(interface)
+        self.assertNotIn(pubkey_1, peers)
+        self.assertIn(pubkey_2, peers)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
