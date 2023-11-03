@@ -246,10 +246,11 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'{name}', ddclient_conf)
 
     def test_06_dyndns_vrf(self):
-        vrf_name = f'vyos-test-{"".join(random.choices(string.ascii_letters + string.digits, k=5))}'
+        vrf_table = "".join(random.choices(string.digits, k=5))
+        vrf_name = f'vyos-test-{vrf_table}'
         svc_path = ['address', interface, 'service', 'cloudflare']
 
-        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(['vrf', 'name', vrf_name, 'table', vrf_table])
         self.cli_set(base_path + ['vrf', vrf_name])
 
         self.cli_set(base_path + svc_path + ['protocol', 'cloudflare'])

@@ -155,7 +155,7 @@ Depends:
 # For "set service aws glb"
   aws-gwlbtun,
 # For "service dns dynamic"
-  ddclient (>= 3.9.1),
+  ddclient (>= 3.11.1),
 # End "service dns dynamic"
 # # For "service ids"
   fastnetmon [amd64],
