@@ -17,6 +17,7 @@
 # T5708:
 # - migrate "service dns dynamic timeout ..."
 #        to "service dns dynamic interval ..."
+# - remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
 
 import sys
 from vyos.configtree import ConfigTree
@@ -34,6 +35,7 @@ config = ConfigTree(config_file)
 
 base_path = ['service', 'dns', 'dynamic']
 timeout_path = base_path + ['timeout']
+address_path = base_path + ['address']
 
 if not config.exists(base_path):
     # Nothing to do
@@ -43,6 +45,11 @@ if not config.exists(base_path):
 #      to "service dns dynamic interval ..."
 if config.exists(timeout_path):
     config.rename(timeout_path, 'interval')
+
+# Remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
+for address in config.list_nodes(address_path):
+    if config.exists(address_path + [address, 'web-options']) and address != 'web':
+        config.delete(address_path + [address, 'web-options'])
 
 try:
     with open(file_name, 'w') as f:

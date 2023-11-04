@@ -82,6 +82,10 @@ def verify(dyndns):
                                           f'based Dynamic DNS service on "{address}"')
 
         # Dynamic DNS service provider - configuration validation
+        if 'web_options' in dyndns['address'][address] and address != 'web':
+            raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
+
+        # Dynamic DNS service provider - configuration validation
         if 'service' in dyndns['address'][address]:
             for service, config in dyndns['address'][address]['service'].items():
                 error_msg = f'is required for Dynamic DNS service "{service}" on "{address}"'
