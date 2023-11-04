@@ -119,6 +119,7 @@ if __name__ == "__main__":
         (True, re.compile(r'(shared-secret-key-file|ca-cert-file|cert-file|dh-file|key-file|client) (\S+)'), r'\1 xxxxxx'),
         # Strip IPSEC secrets
         (True, re.compile(r'pre-shared-secret \S+'), 'pre-shared-secret xxxxxx'),
+        (True, re.compile(r'\ssecret \S+'), ' secret xxxxxx'),
         # Strip OSPF md5-key
         (True, re.compile(r'md5-key \S+'), 'md5-key xxxxxx'),
         # Strip WireGuard private-key
