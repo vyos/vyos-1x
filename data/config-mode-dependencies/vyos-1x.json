@@ -4,6 +4,9 @@
   "interfaces_bonding": {
            "ethernet": ["interfaces-ethernet"]
          },
+  "interfaces_bridge": {
+           "vxlan": ["interfaces-vxlan"]
+         },
   "pki": {
            "ethernet": ["interfaces-ethernet"],
            "openvpn": ["interfaces-openvpn"],
