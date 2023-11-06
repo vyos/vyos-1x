@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5708:
+# - migrate "service dns dynamic timeout ..."
+#        to "service dns dynamic interval ..."
+# - remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
+# - migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
+#        to "service dns dynamic address <interface> service <service> protocol dnsexit2"
+
+import sys
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base_path = ['service', 'dns', 'dynamic']
+timeout_path = base_path + ['timeout']
+address_path = base_path + ['address']
+
+if not config.exists(base_path):
+    # Nothing to do
+    sys.exit(0)
+
+# Migrate "service dns dynamic timeout ..."
+#      to "service dns dynamic interval ..."
+if config.exists(timeout_path):
+    config.rename(timeout_path, 'interval')
+
+# Remove "service dns dynamic address <interface> web-options ..." when <interface> != "web"
+for address in config.list_nodes(address_path):
+    if config.exists(address_path + [address, 'web-options']) and address != 'web':
+        config.delete(address_path + [address, 'web-options'])
+
+# Migrate "service dns dynamic address <interface> service <service> protocol dnsexit"
+#      to "service dns dynamic address <interface> service <service> protocol dnsexit2"
+for address in config.list_nodes(address_path):
+    for svc_cfg in config.list_nodes(address_path + [address, 'service']):
+        if config.exists(address_path + [address, 'service', svc_cfg, 'protocol']):
+            protocol = config.return_value(address_path + [address, 'service', svc_cfg, 'protocol'])
+            if protocol == 'dnsexit':
+                config.set(address_path + [address, 'service', svc_cfg, 'protocol'], 'dnsexit2')
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)

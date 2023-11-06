@@ -112,7 +112,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     # IPv6 only DDNS service configuration
     def test_02_dyndns_service_ipv6(self):
-        timeout = '60'
+        interval = '60'
         svc_path = ['address', interface, 'service', 'dynv6']
         proto = 'dyndns2'
         ip_version = 'ipv6'
@@ -120,7 +120,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         expiry_time_good = '3600'
         expiry_time_bad = '360'
 
-        self.cli_set(base_path + ['timeout', timeout])
+        self.cli_set(base_path + ['interval', interval])
         self.cli_set(base_path + svc_path + ['ip-version', ip_version])
         self.cli_set(base_path + svc_path + ['protocol', proto])
         self.cli_set(base_path + svc_path + ['server', server])
@@ -140,7 +140,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
         # Check the generating config parameters
         ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
-        self.assertIn(f'daemon={timeout}', ddclient_conf)
+        self.assertIn(f'daemon={interval}', ddclient_conf)
         self.assertIn(f'usev6=ifv6', ddclient_conf)
         self.assertIn(f'ifv6={interface}', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
@@ -246,10 +246,11 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'{name}', ddclient_conf)
 
     def test_06_dyndns_vrf(self):
-        vrf_name = f'vyos-test-{"".join(random.choices(string.ascii_letters + string.digits, k=5))}'
+        vrf_table = "".join(random.choices(string.digits, k=5))
+        vrf_name = f'vyos-test-{vrf_table}'
         svc_path = ['address', interface, 'service', 'cloudflare']
 
-        self.cli_set(['vrf', 'name', vrf_name, 'table', '12345'])
+        self.cli_set(['vrf', 'name', vrf_name, 'table', vrf_table])
         self.cli_set(base_path + ['vrf', vrf_name])
 
         self.cli_set(base_path + svc_path + ['protocol', 'cloudflare'])
