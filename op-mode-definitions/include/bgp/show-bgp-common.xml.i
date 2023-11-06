@@ -138,9 +138,9 @@
         </tagNode>
         <tagNode name="rd">
           <properties>
-            <help>Show detailed BGP neighbor information</help>
+            <help>Display information for a route distinguisher</help>
             <completionHelp>
-              <list>ASN:NN IPADDRESS:NN</list>
+              <list>ASN:NN IPADDRESS:NN all</list>
             </completionHelp>
           </properties>
           <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
