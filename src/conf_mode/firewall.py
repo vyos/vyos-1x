@@ -390,6 +390,19 @@ def generate(firewall):
     if not os.path.exists(nftables_conf):
         firewall['first_install'] = True
 
+    if 'zone' in firewall:
+        for local_zone, local_zone_conf in firewall['zone'].items():
+            if 'local_zone' not in local_zone_conf:
+                continue
+
+            local_zone_conf['from_local'] = {}
+
+            for zone, zone_conf in firewall['zone'].items():
+                if zone == local_zone or 'from' not in zone_conf:
+                    continue
+                if local_zone in zone_conf['from']:
+                    local_zone_conf['from_local'][zone] = zone_conf['from'][local_zone]
+
     # Determine if conntrack is needed
     firewall['ipv4_conntrack_action'] = 'return'
     firewall['ipv6_conntrack_action'] = 'return'
