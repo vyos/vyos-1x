@@ -39,8 +39,8 @@
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
-{%         if zone_conf.from is vyos_defined %}
-{%             for from_zone, from_conf in zone_conf.from.items() if from_conf.firewall[fw_name] is vyos_defined %}
+{%         if zone_conf.from_local is vyos_defined %}
+{%             for from_zone, from_conf in zone_conf.from_local.items() if from_conf.firewall[fw_name] is vyos_defined %}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter jump NAME{{ suffix }}_{{ from_conf.firewall[fw_name] }}
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
