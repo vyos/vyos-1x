@@ -107,6 +107,12 @@
             #include <include/vni-tagnode.xml.i>
           </children>
         </node>
+        <leafNode name="es-vrf">
+          <properties>
+            <help>Ethernet Segment per VRF</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </leafNode>
         <leafNode name="import-rt">
           <properties>
             <help>Show import route target</help>
@@ -136,6 +142,12 @@
             </leafNode>
           </children>
         </tagNode>
+        <leafNode name="next-hops">
+          <properties>
+            <help>EVPN Nexthops</help>
+          </properties>
+          <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+        </leafNode>
         <tagNode name="rd">
           <properties>
             <help>Display information for a route distinguisher</help>
