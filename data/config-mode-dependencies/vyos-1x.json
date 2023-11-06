@@ -9,6 +9,9 @@
   "interfaces_bonding": {
            "ethernet": ["interfaces-ethernet"]
          },
+  "interfaces_bridge": {
+           "vxlan": ["interfaces-vxlan"]
+         },
   "load_balancing_wan": {
                           "conntrack": ["conntrack"],
                           "conntrack_sync": ["conntrack_sync"]

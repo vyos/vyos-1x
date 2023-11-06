@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,7 +28,8 @@ from vyos.configverify import verify_vrf
 from vyos.ifconfig import BridgeIf
 from vyos.configdict import has_address_configured
 from vyos.configdict import has_vrf_configured
-
+from vyos.configdep import set_dependents
+from vyos.configdep import call_dependents
 from vyos.utils.dict import dict_search
 from vyos import ConfigError
 
@@ -82,6 +83,12 @@ def get_config(config=None):
             tmp = has_vlan_subinterface_configured(conf,interface)
             if 'enable_vlan' in bridge and tmp:
                 bridge['member']['interface'][interface].update({'has_vlan' : ''})
+
+            # When using VXLAN member interfaces that are configured for Single
+            # VXLAN Device (SVD) we need to call the VXLAN conf-mode script to re-create
+            # VLAN to VNI mappings if required
+            if interface.startswith('vxlan'):
+                set_dependents('vxlan', conf, interface)
 
     # delete empty dictionary keys - no need to run code paths if nothing is there to do
     if 'member' in bridge:
@@ -158,6 +165,13 @@ def apply(bridge):
         br.remove()
     else:
         br.update(bridge)
+
+    for interface in dict_search('member.interface', bridge) or []:
+        if interface.startswith('vxlan'):
+            try:
+                call_dependents()
+            except ConfigError:
+                raise ConfigError('Error in updating VXLAN interface after changing bridge!')
 
     return None
 
