@@ -1,6 +1,7 @@
 {% if authentication.mode is vyos_defined('radius') or shaper is vyos_defined %}
 [shaper]
 verbose=1
+down-limiter=tbf
 {%     if authentication.radius.rate_limit.enable is vyos_defined %}
 attr={{ authentication.radius.rate_limit.attribute }}
 {%         if authentication.radius.rate_limit.vendor is vyos_defined %}
@@ -13,7 +14,6 @@ rate-multiplier={{ authentication.radius.rate_limit.multiplier }}
 {%     if shaper is vyos_defined %}
 {%         if shaper.fwmark is vyos_defined %}
 fwmark={{ shaper.fwmark }}
-down-limiter=htb
 {%         endif %}
 {%     endif %}
 {% endif %}
