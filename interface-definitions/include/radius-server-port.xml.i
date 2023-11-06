@@ -4,7 +4,7 @@
     <help>Authentication port</help>
     <valueHelp>
       <format>u32:1-65535</format>
-      <description>Numeric IP port (default: 1812)</description>
+      <description>Numeric IP port</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-65535"/>

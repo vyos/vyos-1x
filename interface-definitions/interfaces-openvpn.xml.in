@@ -36,7 +36,7 @@
           #include <include/interface/description.xml.i>
           <leafNode name="device-type">
             <properties>
-              <help>OpenVPN interface device-type (default: tun)</help>
+              <help>OpenVPN interface device-type</help>
               <completionHelp>
                 <list>tun tap</list>
               </completionHelp>
@@ -204,7 +204,7 @@
             <children>
               <leafNode name="failure-count">
                 <properties>
-                  <help>Maximum number of keepalive packet failures (default: 60)</help>
+                  <help>Maximum number of keepalive packet failures</help>
                   <valueHelp>
                     <format>u32:0-1000</format>
                     <description>Maximum number of keepalive packet failures</description>
@@ -217,7 +217,7 @@
               </leafNode>
               <leafNode name="interval">
                 <properties>
-                  <help>Keepalive packet interval in seconds (default: 10)</help>
+                  <help>Keepalive packet interval in seconds</help>
                   <valueHelp>
                     <format>u32:0-600</format>
                     <description>Keepalive packet interval (seconds)</description>
@@ -611,13 +611,13 @@
               </leafNode>
               <leafNode name="topology">
                 <properties>
-                  <help>Topology for clients (default: net30)</help>
+                  <help>Topology for clients</help>
                   <completionHelp>
                     <list>net30 point-to-point subnet</list>
                   </completionHelp>
                   <valueHelp>
                     <format>net30</format>
-                    <description>net30 topology (default)</description>
+                    <description>net30 topology</description>
                   </valueHelp>
                   <valueHelp>
                     <format>point-to-point</format>

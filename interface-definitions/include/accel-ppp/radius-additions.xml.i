@@ -34,7 +34,7 @@
             <help>Accounting port</help>
             <valueHelp>
               <format>u32:1-65535</format>
-              <description>Numeric IP port (default: 1813)</description>
+              <description>Numeric IP port</description>
             </valueHelp>
             <constraint>
               <validator name="numeric" argument="--range 1-65535"/>
@@ -143,7 +143,7 @@
         </leafNode>
         <leafNode name="port">
           <properties>
-            <help>Port for Dynamic Authorization Extension server (DM/CoA) (default: 1700)</help>
+            <help>Port for Dynamic Authorization Extension server (DM/CoA)</help>
             <valueHelp>
               <format>u32:1-65535</format>
               <description>TCP port</description>

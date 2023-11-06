@@ -124,7 +124,7 @@
                       <help>Session timeout</help>
                       <valueHelp>
                         <format>u32:1-30</format>
-                        <description>Session timeout in seconds (default: 2)</description>
+                        <description>Session timeout in seconds</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-30"/>
@@ -138,7 +138,7 @@
                       <help>Server priority</help>
                       <valueHelp>
                         <format>u32:1-255</format>
-                        <description>Server priority (default: 255)</description>
+                        <description>Server priority</description>
                       </valueHelp>
                       <constraint>
                         <validator name="numeric" argument="--range 1-255"/>

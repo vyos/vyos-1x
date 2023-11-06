@@ -147,7 +147,7 @@
           </leafNode>
           <leafNode name="memory">
             <properties>
-              <help>Memory (RAM) available to this container (default: 512)</help>
+              <help>Memory (RAM) available to this container</help>
               <valueHelp>
                 <format>u32:0</format>
                 <description>Unlimited</description>
@@ -165,7 +165,7 @@
           </leafNode>
           <leafNode name="shared-memory">
             <properties>
-              <help>Shared memory available to this container (default: 64)</help>
+              <help>Shared memory available to this container</help>
               <valueHelp>
                 <format>u32:0</format>
                 <description>Unlimited</description>
@@ -243,7 +243,7 @@
               </leafNode>
               <leafNode name="protocol">
                 <properties>
-                  <help>Transport protocol used for port mapping (default: tcp)</help>
+                  <help>Transport protocol used for port mapping</help>
                   <completionHelp>
                     <list>tcp udp</list>
                   </completionHelp>
@@ -265,7 +265,7 @@
           </tagNode>
           <leafNode name="restart">
             <properties>
-              <help>Restart options for container (default: on-failure)</help>
+              <help>Restart options for container</help>
               <completionHelp>
                 <list>no on-failure always</list>
               </completionHelp>
@@ -312,7 +312,7 @@
               </leafNode>
               <leafNode name="mode">
                 <properties>
-                  <help>Volume access mode ro/rw (default: rw)</help>
+                  <help>Volume access mode ro/rw</help>
                   <completionHelp>
                     <list>ro rw</list>
                   </completionHelp>

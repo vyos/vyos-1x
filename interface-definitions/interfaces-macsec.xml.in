@@ -83,7 +83,7 @@
                   </leafNode>
                   <leafNode name="priority">
                     <properties>
-                      <help>Priority of MACsec Key Agreement protocol (MKA) actor (default: 255)</help>
+                      <help>Priority of MACsec Key Agreement protocol (MKA) actor</help>
                       <valueHelp>
                         <format>u32:0-255</format>
                         <description>MACsec Key Agreement protocol (MKA) priority</description>
