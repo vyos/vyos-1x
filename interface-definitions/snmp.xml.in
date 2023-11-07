@@ -79,6 +79,101 @@
             </properties>
           </leafNode>
           #include <include/generic-description.xml.i>
+          <node name="mib">
+            <properties>
+              <help>Management information base (MIB)</help>
+            </properties>
+            <children>
+              <leafNode name="interface-max">
+                <properties>
+                  <help>Sets the maximum number of interfaces included in IF-MIB data collection</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Sets the maximum number of interfaces included in IF-MIB data collection</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="interface">
+                <properties>
+                  <help>Sets the interface name prefix to include in the IF-MIB data collection</help>
+                  <completionHelp>
+                    <list>br bond dum eth gnv macsec peth sstpc tun veth vti vtun vxlan wg wlan wwan</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>br</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>bond</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>dum</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>eth</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>gnv</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>macsec</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>peth</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sstpc</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tun</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>veth</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>vti</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>vtun</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>vxlan</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>wg</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>wlan</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>wwan</format>
+                    <description>Allow prefix for IF-MIB data collection</description>
+                  </valueHelp>
+                  <constraint>
+                    <regex>(br|bond|dum|eth|gnv|macsec|peth|sstpc|tun|veth|vti|vtun|vxlan|wg|wlan|wwan)</regex>
+                  </constraint>
+                  <multi/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <tagNode name="listen-address">
             <properties>
               <help>IP address to listen for incoming SNMP requests</help>

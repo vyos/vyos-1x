@@ -56,6 +56,16 @@ SysDescr {{ description }}
 {% endif %}
 agentaddress unix:/run/snmpd.socket{{ ',' ~ options | join(',') if options is vyos_defined }}
 
+{% if mib is vyos_defined %}
+# Interface MIB limits
+{%     if mib.interface_max is vyos_defined %}
+ifmib_max_num_ifaces {{ mib.interface_max }}
+{%     endif %}
+{%     if mib.interface is vyos_defined %}
+include_ifmib_iface_prefix {{ mib.interface | join(' ') }}
+{%     endif %}
+{% endif %}
+
 # SNMP communities
 {% if community is vyos_defined %}
 {%     for comm, comm_config in community.items() %}
