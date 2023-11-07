@@ -144,7 +144,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         subnet = '172.18.0.0/24'
         fwmark = '223'
-        limiter = 'htb'
+        limiter = 'tbf'
 
         self.set(['client-ip-pool', 'subnet', subnet])
 
