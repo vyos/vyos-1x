@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="static">
+        <children>
+          <node name="neighbor-proxy" owner="${vyos_conf_scripts_dir}/protocols_static_neighbor-proxy.py">
+            <properties>
+              <help>Neighbor proxy parameters</help>
+            </properties>
+            <children>
+              <tagNode name="arp">
+                <properties>
+                  <help>IP address for selective ARP proxy</help>
+                  <valueHelp>
+                    <format>ipv4</format>
+                    <description>IPv4 destination address allowed for proxy-arp</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv4-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-interface-multi.xml.i>
+                </children>
+              </tagNode>
+              <tagNode name="nd">
+                <properties>
+                  <help>IPv6 address for selective NDP proxy</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>IPv6 destination address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  #include <include/generic-interface-multi.xml.i>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
