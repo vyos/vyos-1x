@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright 2021-2022 VyOS maintainers and contributors <maintainers@vyos.io>
+# Copyright 2021-2023 VyOS maintainers and contributors <maintainers@vyos.io>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -20,7 +20,6 @@ import re
 import sys
 
 from netaddr import IPNetwork, AddrFormatError
-
 
 parser = argparse.ArgumentParser(description='strip off private information from VyOS config')
 
@@ -119,6 +118,7 @@ if __name__ == "__main__":
         (True, re.compile(r'(shared-secret-key-file|ca-cert-file|cert-file|dh-file|key-file|client) (\S+)'), r'\1 xxxxxx'),
         # Strip IPSEC secrets
         (True, re.compile(r'pre-shared-secret \S+'), 'pre-shared-secret xxxxxx'),
+        (True, re.compile(r'secret \S+'), 'secret xxxxxx'),
         # Strip OSPF md5-key
         (True, re.compile(r'md5-key \S+'), 'md5-key xxxxxx'),
         # Strip WireGuard private-key
