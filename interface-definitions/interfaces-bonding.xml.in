@@ -56,6 +56,60 @@
           #include <include/interface/disable.xml.i>
           #include <include/interface/vrf.xml.i>
           #include <include/interface/mirror.xml.i>
+          <node name="evpn">
+            <properties>
+              <help>EVPN Multihoming</help>
+            </properties>
+            <children>
+              <leafNode name="es-df-pref">
+                <properties>
+                  <help>Preference value used for designated forwarder (DF) election</help>
+                  <valueHelp>
+                    <format>u32:1-65535</format>
+                    <description>DF Preference value</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="es-id">
+                <properties>
+                  <help>Ethernet segment identifier</help>
+                  <valueHelp>
+                    <format>u32:1-16777215</format>
+                    <description>Local discriminator</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>txt</format>
+                    <description>10-byte ID - 00:11:22:33:44:55:AA:BB:CC:DD</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-65535"/>
+                    <regex>([0-9A-Fa-f][0-9A-Fa-f]:){9}[0-9A-Fa-f][0-9A-Fa-f]</regex>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="es-sys-mac">
+                <properties>
+                  <help>Ethernet segment system MAC</help>
+                  <valueHelp>
+                    <format>macaddr</format>
+                    <description>MAC address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="mac-address"/>
+                  </constraint>
+                </properties>
+              </leafNode>
+              <leafNode name="uplink">
+                <properties>
+                  <help>Uplink to the VXLAN core</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+            </children>
+          </node>
           <leafNode name="hash-policy">
             <properties>
               <help>Bonding transmit hash policy</help>

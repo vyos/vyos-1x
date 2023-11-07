@@ -806,6 +806,76 @@
             <valueless/>
           </properties>
         </leafNode>
+        <node name="default-originate">
+          <properties>
+            <help>Originate a default route</help>
+          </properties>
+          <children>
+            <leafNode name="ipv4">
+              <properties>
+                <help>IPv4 address family</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+            <leafNode name="ipv6">
+              <properties>
+                <help>IPv6 address family</help>
+                <valueless/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <leafNode name="disable-ead-evi-rx">
+          <properties>
+            <help>Activate PE on EAD-ES even if EAD-EVI is not received</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <leafNode name="disable-ead-evi-tx">
+          <properties>
+            <help>Do not advertise EAD-EVI for local ESs</help>
+            <valueless/>
+          </properties>
+        </leafNode>
+        <node name="ead-es-frag">
+          <properties>
+            <help>EAD ES fragment config</help>
+          </properties>
+          <children>
+            <leafNode name="evi-limit">
+              <properties>
+                <help>EVIs per-fragment</help>
+                <valueHelp>
+                  <format>u32:1-1000</format>
+                  <description>limit</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="numeric" argument="--range 1-1000"/>
+                </constraint>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
+        <node name="ead-es-route-target">
+          <properties>
+            <help>EAD ES Route Target</help>
+          </properties>
+          <children>
+            <leafNode name="export">
+              <properties>
+                <help>Route Target export</help>
+                <valueHelp>
+                  <format>txt</format>
+                  <description>Route target (A.B.C.D:MN|EF:OPQR|GHJK:MN)</description>
+                </valueHelp>
+                <constraint>
+                  <validator name="bgp-rd-rt" argument="--route-target-multi"/>
+                </constraint>
+                <multi/>
+              </properties>
+            </leafNode>
+          </children>
+        </node>
         <node name="flooding">
           <properties>
             <help>Specify handling for BUM packets</help>

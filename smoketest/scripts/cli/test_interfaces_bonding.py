@@ -241,5 +241,45 @@ class BondingInterfaceTest(BasicInterfaceTest.TestCase):
             for member in self._members:
                 self.assertIn(member, slaves)
 
+    def test_bonding_evpn_multihoming(self):
+        id = '5'
+        for interface in self._interfaces:
+            for option in self._options.get(interface, []):
+                self.cli_set(self._base_path + [interface] + option.split())
+
+            self.cli_set(self._base_path + [interface, 'evpn', 'es-id', id])
+            self.cli_set(self._base_path + [interface, 'evpn', 'es-df-pref', id])
+            self.cli_set(self._base_path + [interface, 'evpn', 'es-sys-mac', f'00:12:34:56:78:0{id}'])
+            self.cli_set(self._base_path + [interface, 'evpn', 'uplink'])
+
+            id = int(id) + 1
+
+        self.cli_commit()
+
+        id = '5'
+        for interface in self._interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon='zebra')
+
+            self.assertIn(f' evpn mh es-id {id}', frrconfig)
+            self.assertIn(f' evpn mh es-df-pref {id}', frrconfig)
+            self.assertIn(f' evpn mh es-sys-mac 00:12:34:56:78:0{id}', frrconfig)
+            self.assertIn(f' evpn mh uplink', frrconfig)
+
+            id = int(id) + 1
+
+        for interface in self._interfaces:
+            self.cli_delete(self._base_path + [interface, 'evpn', 'es-id'])
+            self.cli_delete(self._base_path + [interface, 'evpn', 'es-df-pref'])
+
+        self.cli_commit()
+
+        id = '5'
+        for interface in self._interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon='zebra')
+            self.assertIn(f' evpn mh es-sys-mac 00:12:34:56:78:0{id}', frrconfig)
+            self.assertIn(f' evpn mh uplink', frrconfig)
+
+            id = int(id) + 1
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
