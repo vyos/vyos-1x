@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="log">
+        <children>
+          <node name="mdns">
+            <properties>
+              <help>Monitor last lines of multicast Domain Name System related services</help>
+            </properties>
+            <children>
+              <node name="repeater">
+                <properties>
+                  <help>Monitor last lines of mDNS repeater service</help>
+                </properties>
+                <command>journalctl --no-hostname --follow --boot --unit avahi-daemon.service</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="show">
+    <children>
+      <node name="log">
+        <children>
+          <node name="mdns">
+            <properties>
+              <help>Show log for multicast Domain Name System related services</help>
+            </properties>
+            <children>
+              <node name="repeater">
+                <properties>
+                  <help>Show log for mDNS repeater service</help>
+                </properties>
+                <command>journalctl --no-hostname --boot --unit avahi-daemon.service</command>
+              </node>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="mdns">
+        <properties>
+          <help>Restart specific multicast Domain Name System service</help>
+        </properties>
+        <children>
+          <node name="repeater">
+            <properties>
+              <help>Restart mDNS repeater service</help>
+            </properties>
+            <command>sudo systemctl restart avahi-daemon.service</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
