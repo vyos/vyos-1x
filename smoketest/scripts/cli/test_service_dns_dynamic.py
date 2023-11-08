@@ -100,7 +100,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'daemon=300', ddclient_conf)
             self.assertIn(f'usev4=ifv4', ddclient_conf)
             self.assertIn(f'ifv4={interface}', ddclient_conf)
-            self.assertIn(f'password={password}', ddclient_conf)
+            self.assertIn(f'password=\'{password}\'', ddclient_conf)
 
             for opt in details.keys():
                 if opt == 'username':
@@ -146,7 +146,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'server={server}', ddclient_conf)
         self.assertIn(f'login={username}', ddclient_conf)
-        self.assertIn(f'password={password}', ddclient_conf)
+        self.assertIn(f'password=\'{password}\'', ddclient_conf)
         self.assertIn(f'min-interval={wait_time}', ddclient_conf)
         self.assertIn(f'max-interval={expiry_time_good}', ddclient_conf)
 
@@ -185,7 +185,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
                 self.assertIn(f'usev6=ifv6', ddclient_conf)
                 self.assertIn(f'ifv4={interface}', ddclient_conf)
                 self.assertIn(f'ifv6={interface}', ddclient_conf)
-            self.assertIn(f'password={password}', ddclient_conf)
+            self.assertIn(f'password=\'{password}\'', ddclient_conf)
 
             for opt in details.keys():
                 if opt == 'username':
@@ -218,7 +218,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'protocol=nsupdate', ddclient_conf)
             self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'zone={zone}', ddclient_conf)
-            self.assertIn(f'password={key_file.name}', ddclient_conf)
+            self.assertIn(f'password=\'{key_file.name}\'', ddclient_conf)
             self.assertIn(f'ttl={ttl}', ddclient_conf)
 
     def test_05_dyndns_hostname(self):
@@ -242,7 +242,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'protocol={proto}', ddclient_conf)
             self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'login={username}', ddclient_conf)
-            self.assertIn(f'password={password}', ddclient_conf)
+            self.assertIn(f'password=\'{password}\'', ddclient_conf)
             self.assertIn(f'{name}', ddclient_conf)
 
     def test_06_dyndns_vrf(self):

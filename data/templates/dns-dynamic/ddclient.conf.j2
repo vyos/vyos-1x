@@ -13,9 +13,9 @@ web-skip{{ ipv }}='{{ web_options.skip }}', \
 if{{ ipv }}={{ address }}, \
 {%     endif %}
 {% endfor %}
-{# Other service options #}
+{# Other service options with special treatment for password #}
 {% for k,v in kwargs.items() if v is vyos_defined %}
-{{ k | replace('_', '-') }}={{ v }}{{ ',' if not loop.last }} \
+{{ k | replace('_', '-') }}={{ "'%s'" % (v) if k == 'password' else v }}{{ ',' if not loop.last }} \
 {% endfor %}
 {# Actual hostname for the service #}
 {{ host }}
@@ -29,7 +29,7 @@ cache={{ config_file | replace('.conf', '.cache') }}
 {# ddclient default (web=dyndns) doesn't support ssl and results in process lockup #}
 web=googledomains
 {# ddclient default (use=ip) results in confusing warning message in log #}
-use=no
+use=disabled
 
 {% if address is vyos_defined %}
 {%     for address, service_cfg in address.items() %}
