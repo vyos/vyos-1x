@@ -38,7 +38,7 @@
                       <help>Options when using HTTP(S) web request to obtain the IP address</help>
                     </properties>
                     <children>
-                      #include <include/url.xml.i>
+                      #include <include/url-http-https.xml.i>
                       <leafNode name="skip">
                         <properties>
                           <help>Pattern to skip from the HTTP(S) respose</help>
