@@ -55,7 +55,10 @@ if __name__ == '__main__':
     vyos_menuentries = compat.parse_menuentries(grub_cfg_main)
     vyos_versions = compat.find_versions(vyos_menuentries)
     unparsed_items = compat.filter_unparsed(grub_cfg_main)
-
+    # compatibilty for raid installs
+    search_root = compat.get_search_root(unparsed_items)
+    common_dict = {}
+    common_dict['search_root'] = search_root
     # find default values
     default_entry = vyos_menuentries[int(vars['default'])]
     default_settings = {
@@ -65,11 +68,6 @@ if __name__ == '__main__':
         'console_num': default_entry['console_num']
     }
     vars.update(default_settings)
-
-    # print(f'vars: {vars}')
-    # print(f'modules: {modules}')
-    # print(f'vyos_menuentries: {vyos_menuentries}')
-    # print(f'unparsed_items: {unparsed_items}')
 
     # create new files
     grub_cfg_vars = f'{root_dir}/{grub.CFG_VYOS_VARS}'
@@ -81,8 +79,7 @@ if __name__ == '__main__':
     Path(image.GRUB_DIR_VYOS).mkdir(exist_ok=True)
     grub.vars_write(grub_cfg_vars, vars)
     grub.modules_write(grub_cfg_modules, modules)
-    # Path(grub_cfg_platform).write_text(unparsed_items)
-    grub.common_write()
+    grub.common_write(grub_common=common_dict)
     render(grub_cfg_menu, grub.TMPL_GRUB_MENU, {})
     render(grub_cfg_options, grub.TMPL_GRUB_OPTS, {})
 
