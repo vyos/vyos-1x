@@ -86,6 +86,12 @@ def filter_unparsed(grub_path: str) -> str:
     return filtered
 
 
+def get_search_root(unparsed: str) -> str:
+    unparsed_lines = unparsed.splitlines()
+    search_root = next((x for x in unparsed_lines if 'search' in x), '')
+    return search_root
+
+
 def sanitize_boot_opts(boot_opts: str) -> str:
     """Sanitize boot options from console and init
 
@@ -269,18 +275,21 @@ def grub_cfg_fields(root_dir: str = '') -> dict:
     fields = {'default': 0, 'timeout': 5}
     # 'default' and 'timeout' from legacy grub.cfg
     fields |= grub.vars_read(grub_cfg_main)
+
     fields['tools_version'] = SYSTEM_CFG_VER
     menu_entries = update_version_list(root_dir)
     fields['versions'] = menu_entries
+
     default = get_default(menu_entries, root_dir)
     if default is not None:
         fields['default'] = default
 
-    p = Path('/sys/firmware/efi')
-    if p.is_dir():
-        fields['efi'] = True
-    else:
-        fields['efi'] = False
+    modules = grub.modules_read(grub_cfg_main)
+    fields['modules'] = modules
+
+    unparsed = filter_unparsed(grub_cfg_main).splitlines()
+    search_root = next((x for x in unparsed if 'search' in x), '')
+    fields['search_root'] = search_root
 
     return fields
 

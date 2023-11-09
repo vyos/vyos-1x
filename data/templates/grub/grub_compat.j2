@@ -45,9 +45,14 @@ serial --unit=0 --speed=115200
 {% endif %}
 terminal_output --append serial
 terminal_input serial console
-{% if efi %}
-insmod efi_gop
-insmod efi_uga
+{% for mod in modules %}
+insmod {{ mod }}
+{% endfor %}
+{% if root %}
+set root={{ root }}
+{% endif %}
+{% if search_root %}
+{{ search_root }}
 {% endif %}
 
 {% for v in versions %}
