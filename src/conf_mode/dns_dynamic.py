@@ -93,7 +93,7 @@ def verify(dyndns):
         # Dynamic DNS service provider - configuration validation
         if 'service' in dyndns['address'][address]:
             for service, config in dyndns['address'][address]['service'].items():
-                error_msg_req = f'is required for Dynamic DNS service "{service}" on "{address}" with protocol "{config["protocol"]}"'
+                error_msg_req = f'is required for Dynamic DNS service "{service}" on "{address}"'
                 error_msg_uns = f'is not supported for Dynamic DNS service "{service}" on "{address}" with protocol "{config["protocol"]}"'
 
                 for field in ['host_name', 'password', 'protocol']:
@@ -101,13 +101,13 @@ def verify(dyndns):
                         raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
 
                 if config['protocol'] in zone_necessary and 'zone' not in config:
-                    raise ConfigError(f'"zone" {error_msg_req}')
+                    raise ConfigError(f'"zone" {error_msg_req} with protocol "{config["protocol"]}"')
 
                 if config['protocol'] not in zone_supported and 'zone' in config:
                     raise ConfigError(f'"zone" {error_msg_uns}')
 
                 if config['protocol'] not in username_unnecessary and 'username' not in config:
-                    raise ConfigError(f'"username" {error_msg_req}')
+                    raise ConfigError(f'"username" {error_msg_req} with protocol "{config["protocol"]}"')
 
                 if config['protocol'] not in ttl_supported and 'ttl' in config:
                     raise ConfigError(f'"ttl" {error_msg_uns}')
