@@ -180,6 +180,7 @@ Depends:
   uidmap,
   usb-modeswitch,
   usbutils,
+<<<<<<< HEAD
   vpp [amd64],
   vpp-plugin-core [amd64],
   vpp-plugin-dpdk [amd64],
@@ -194,6 +195,29 @@ Depends:
   zabbix-agent2,
   ndppd,
   miniupnpd-nftables
+=======
+# For "run show hardware storage nvme"
+  nvme-cli,
+# For "run monitor bandwidth-test"
+  iperf,
+  iperf3,
+# End "run monitor bandwidth-test"
+# For "run wake-on-lan"
+  etherwake,
+# For "run force ipv6-nd"
+  ndisc6,
+# For "run monitor bandwidth"
+  bmon,
+# End Operational mode
+## Optional utilities
+  easy-rsa,
+  tcptraceroute,
+  mtr-tiny,
+  telnet,
+  stunnel4,
+  uidmap
+## End optional utilities
+>>>>>>> e10cf9f42 (T1797: Remove vpp packages and mentions)
 Description: VyOS configuration scripts and data
  VyOS configuration scripts, interface definitions, and everything
 
