@@ -341,12 +341,6 @@
               </tagNode>
             </children>
           </node>
-          <leafNode name="vpp">
-            <properties>
-              <help>Monitor last lines of Vector Packet Processor log</help>
-            </properties>
-            <command>journalctl --no-hostname --boot --follow --unit vpp.service</command>
-          </leafNode>
           <leafNode name="vrrp">
             <properties>
               <help>Monitor last lines of Virtual Router Redundancy Protocol log</help>
