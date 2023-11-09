@@ -295,13 +295,6 @@ Depends:
 # For "run monitor bandwidth"
   bmon,
 # End Operational mode
-## VPP
-  vpp [amd64],
-  vpp-plugin-core [amd64],
-  vpp-plugin-dpdk [amd64],
-  python3-vpp-api [amd64],
-  libvppinfra [amd64],
-## End VPP
 ## Optional utilities
   easy-rsa,
   tcptraceroute,
