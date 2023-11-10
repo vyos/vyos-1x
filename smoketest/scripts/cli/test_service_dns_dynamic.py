@@ -245,7 +245,58 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
             self.assertIn(f'password=\'{password}\'', ddclient_conf)
             self.assertIn(f'{name}', ddclient_conf)
 
-    def test_06_dyndns_vrf(self):
+    def test_06_dyndns_web_options(self):
+        # Check if DDNS service can be configured and runs
+        base_path_iface = base_path + ['address', interface]
+        base_path_web = base_path + ['address', 'web']
+        svc_path_iface = base_path_iface + ['service', 'cloudflare']
+        svc_path_web = base_path_web + ['service', 'cloudflare']
+        proto = 'cloudflare'
+        web_url_good = 'https://ifconfig.me/ip'
+        web_url_bad = 'http:/ifconfig.me/ip'
+
+        self.cli_set(svc_path_iface + ['protocol', proto])
+        self.cli_set(svc_path_iface + ['zone', zone])
+        self.cli_set(svc_path_iface + ['password', password])
+        self.cli_set(svc_path_iface + ['host-name', hostname])
+        self.cli_set(base_path_iface + ['web-options', 'url', web_url_good])
+
+        # web-options is supported only with web service based address lookup
+        # exception is raised for interface based address lookup
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path_iface + ['web-options'])
+
+        # commit changes
+        self.cli_commit()
+
+        # web-options is supported with web service based address lookup
+        # this should work, but clear interface based config first
+        self.cli_delete(base_path_iface)
+        self.cli_set(svc_path_web + ['protocol', proto])
+        self.cli_set(svc_path_web + ['zone', zone])
+        self.cli_set(svc_path_web + ['password', password])
+        self.cli_set(svc_path_web + ['host-name', hostname])
+
+        # web-options must be a valid URL
+        with self.assertRaises(ConfigSessionError) as cm:
+            self.cli_set(base_path_web + ['web-options', 'url', web_url_bad])
+        self.assertIn(f'"{web_url_bad.removeprefix("http:")}" is not a valid URI', str(cm.exception))
+        self.cli_set(base_path_web + ['web-options', 'url', web_url_good])
+
+        # commit changes
+        self.cli_commit()
+
+        # Check the generating config parameters
+        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        self.assertIn(f'usev4=webv4', ddclient_conf)
+        self.assertIn(f'webv4={web_url_good}', ddclient_conf)
+        self.assertIn(f'protocol={proto}', ddclient_conf)
+        self.assertIn(f'zone={zone}', ddclient_conf)
+        self.assertIn(f'password=\'{password}\'', ddclient_conf)
+        self.assertIn(f'{hostname}', ddclient_conf)
+
+    def test_07_dyndns_vrf(self):
         vrf_table = "".join(random.choices(string.digits, k=5))
         vrf_name = f'vyos-test-{vrf_table}'
         svc_path = ['address', interface, 'service', 'cloudflare']
