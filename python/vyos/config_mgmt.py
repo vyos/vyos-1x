@@ -26,6 +26,7 @@ from textwrap import dedent, indent
 from pathlib import Path
 from tabulate import tabulate
 from shutil import copy, chown
+from urllib.parse import urlsplit, urlunsplit
 
 from vyos.config import Config
 from vyos.configtree import ConfigTree, ConfigTreeError, show_diff
@@ -380,7 +381,10 @@ Proceed ?'''
         if self.effective_locations:
             print("Archiving config...")
         for location in self.effective_locations:
-            print(f"  {location}", end=" ", flush=True)
+            url = urlsplit(location)
+            _, _, netloc = url.netloc.rpartition("@")
+            redacted_location = urlunsplit(url._replace(netloc=netloc))
+            print(f"  {redacted_location}", end=" ", flush=True)
             try:
                 upload(archive_config_file, f'{location}/{remote_file}',
                        source_host=source_address, raise_error=True)
