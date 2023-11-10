@@ -369,17 +369,6 @@ class GitC:
             # build ssh command for git
             ssh_command = ["ssh"]
 
-            # Try to use /config/auth/commit-archive.key as SSH identity
-            # We copy over the key so we can control the permissions
-            try:
-                path_privatekey = Path(directory) / "private.key"
-                path_privatekey.write_bytes(
-                    Path("/config/auth/commit-archive.key").read_bytes()
-                )
-                ssh_command += ["-i", str(path_privatekey)]
-            except Exception:
-                pass
-
             # if we are not interactive, we use StrictHostKeyChecking=yes to avoid any prompts
             if not sys.stdout.isatty():
                 ssh_command += ["-o", "StrictHostKeyChecking=yes"]
