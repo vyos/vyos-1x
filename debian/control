@@ -59,6 +59,7 @@ Depends:
   python3-pyudev,
   python3-six,
   python3-tabulate,
+  python3-toml,
   python3-voluptuous,
   python3-xmltodict,
   python3-zmq,

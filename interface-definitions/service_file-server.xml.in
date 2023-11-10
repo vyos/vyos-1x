@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="file-server" owner="${vyos_conf_scripts_dir}/service_file-server.py">
+        <properties>
+          <help>File server</help>
+          <priority>990</priority>
+        </properties>
+        <children>
+          <leafNode name="directory">
+            <properties>
+              <help>Folder containing files served by file server</help>
+            </properties>
+          </leafNode>
+          #include <include/port-number.xml.i>
+          <leafNode name="port">
+            <defaultValue>8000</defaultValue>
+          </leafNode>
+          #include <include/listen-address-ipv4-single.xml.i>
+          <leafNode name="listen-address">
+            <defaultValue>0.0.0.0</defaultValue>
+          </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

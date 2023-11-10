@@ -1,0 +1,11 @@
+[Unit]
+Description=File server service
+After=vyos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/vyos/vyos_service_file-server.py --config /run/vyos-fileserver.conf
+
+[Install]
+WantedBy=multi-user.target
