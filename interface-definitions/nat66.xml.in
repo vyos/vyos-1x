@@ -32,12 +32,7 @@
                 </properties>
               </leafNode>
               #include <include/nat-exclude.xml.i>
-              <leafNode name="log">
-                <properties>
-                  <help>NAT66 rule logging</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
+              #include <include/firewall/log.xml.i>
               #include <include/firewall/outbound-interface-no-group.xml.i>
               #include <include/nat/protocol.xml.i>
               <node name="destination">

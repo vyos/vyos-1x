@@ -272,7 +272,7 @@ def verify_rule(firewall, rule_conf, ipv6):
                 raise ConfigError(f'{side} port-group and port cannot both be defined')
 
     if 'log_options' in rule_conf:
-        if 'log' not in rule_conf or 'enable' not in rule_conf['log']:
+        if 'log' not in rule_conf:
             raise ConfigError('log-options defined, but log is not enable')
 
         if 'snapshot_length' in rule_conf['log_options'] and 'group' not in rule_conf['log_options']:
