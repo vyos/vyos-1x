@@ -297,7 +297,8 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'{hostname}', ddclient_conf)
 
     def test_07_dyndns_vrf(self):
-        vrf_table = "".join(random.choices(string.digits, k=5))
+        # Table number randomized, but should be within range 100-65535
+        vrf_table = "".join(random.choices(string.digits, k=4))
         vrf_name = f'vyos-test-{vrf_table}'
         svc_path = ['address', interface, 'service', 'cloudflare']
 
