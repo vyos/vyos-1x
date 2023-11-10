@@ -1,15 +1,8 @@
 <!-- include start from firewall/log.xml.i -->
-<node name="log">
+<leafNode name="log">
   <properties>
-    <help>Option to log packets</help>
+    <help>Enable log</help>
+    <valueless/>
   </properties>
-  <children>
-    <leafNode name="enable">
-      <properties>
-        <help>Enable logging</help>
-        <valueless/>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+</leafNode>
 <!-- include end -->

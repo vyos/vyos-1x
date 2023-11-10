@@ -87,7 +87,11 @@ def nft_action(vyos_action):
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     output = []
+<<<<<<< HEAD
     #def_suffix = '6' if ip_name == 'ip6' else ''
+=======
+
+>>>>>>> c4409d6a4 (T5729: firewall: switch to valueless in order to remove unnecessary <enable|disable> commands; log and state moved to new syntax.)
     if ip_name == 'ip6':
         def_suffix = '6'
         family = 'ipv6'
@@ -96,7 +100,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         family = 'bri' if ip_name == 'bri' else 'ipv4'
 
     if 'state' in rule_conf and rule_conf['state']:
-        states = ",".join([s for s, v in rule_conf['state'].items() if v == 'enable'])
+        states = ",".join([s for s in rule_conf['state']])
 
         if states:
             output.append(f'ct state {{{states}}}')
@@ -400,6 +404,46 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         conn_mark_str = ','.join(rule_conf['connection_mark'])
         output.append(f'ct mark {{{conn_mark_str}}}')
 
+<<<<<<< HEAD
+=======
+    if 'mark' in rule_conf:
+        mark = rule_conf['mark']
+        operator = ''
+        if mark[0] == '!':
+            operator = '!='
+            mark = mark[1:]
+        output.append(f'meta mark {operator} {{{mark}}}')
+
+    if 'vlan' in rule_conf:
+        if 'id' in rule_conf['vlan']:
+            output.append(f'vlan id {rule_conf["vlan"]["id"]}')
+        if 'priority' in rule_conf['vlan']:
+            output.append(f'vlan pcp {rule_conf["vlan"]["priority"]}')
+
+    if 'log' in rule_conf:
+        action = rule_conf['action'] if 'action' in rule_conf else 'accept'
+        #output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
+        output.append(f'log prefix "[{family}-{hook}-{fw_name}-{rule_id}-{action[:1].upper()}]"')
+                        ##{family}-{hook}-{fw_name}-{rule_id}
+        if 'log_options' in rule_conf:
+
+            if 'level' in rule_conf['log_options']:
+                log_level = rule_conf['log_options']['level']
+                output.append(f'log level {log_level}')
+
+            if 'group' in rule_conf['log_options']:
+                log_group = rule_conf['log_options']['group']
+                output.append(f'log group {log_group}')
+
+                if 'queue_threshold' in rule_conf['log_options']:
+                    queue_threshold = rule_conf['log_options']['queue_threshold']
+                    output.append(f'queue-threshold {queue_threshold}')
+
+                if 'snapshot_length' in rule_conf['log_options']:
+                    log_snaplen = rule_conf['log_options']['snapshot_length']
+                    output.append(f'snaplen {log_snaplen}')
+
+>>>>>>> c4409d6a4 (T5729: firewall: switch to valueless in order to remove unnecessary <enable|disable> commands; log and state moved to new syntax.)
     output.append('counter')
 
     if 'set' in rule_conf:

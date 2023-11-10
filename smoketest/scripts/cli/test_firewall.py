@@ -213,13 +213,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'source', 'address', '172.16.20.10'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'destination', 'address', '172.16.10.10'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'log'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'log-options', 'level', 'debug'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'ttl', 'eq', '15'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'action', 'reject'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'destination', 'port', '8888'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'log'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'log-options', 'level', 'err'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'tcp', 'flags', 'syn'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'tcp', 'flags', 'not', 'ack'])
@@ -231,7 +231,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'destination', 'port', '22'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'limit', 'rate', '5/minute'])
-        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'log', 'disable'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '3', 'log'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '4', 'destination', 'port', '22'])
@@ -299,7 +299,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'packet-length', '1024'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'dscp', '17'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'dscp', '52'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'log'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'log-options', 'group', '66'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'log-options', 'snapshot-length', '6666'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '6', 'log-options', 'queue-threshold','32000'])
@@ -386,7 +386,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'source', 'address', '2002::1'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'destination', 'address', '2002::1:1'])
-        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log', 'enable'])
+        self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'default-action', 'accept'])
@@ -508,19 +508,19 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'state', 'established', 'enable'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'state', 'related', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'state', 'related'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'action', 'reject'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'state', 'invalid', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '2', 'state', 'invalid'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'state', 'new', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'state', 'new'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '3', 'connection-status', 'nat', 'destination'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'new', 'enable'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'established', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'new'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'state', 'established'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '4', 'connection-status', 'nat', 'source'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'action', 'accept'])
-        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'state', 'related', 'enable'])
+        self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'state', 'related'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'conntrack-helper', 'ftp'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '5', 'conntrack-helper', 'pptp'])
 
@@ -538,8 +538,48 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip vyos_filter')
 
         # Check conntrack
+<<<<<<< HEAD
         self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
         self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
+=======
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['return']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
+    def test_bridge_basic_rules(self):
+        name = 'smoketest'
+        interface_in = 'eth0'
+        mac_address = '00:53:00:00:00:01'
+        vlan_id = '12'
+        vlan_prior = '3'
+
+        self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'source', 'mac-address', mac_address])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'inbound-interface', 'name', interface_in])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
+
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VYOS_FORWARD_filter'],
+            ['type filter hook forward priority filter; policy drop;'],
+            [f'vlan id {vlan_id}', 'accept'],
+            [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            [f'chain NAME_{name}'],
+            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'bridge vyos_filter')
+>>>>>>> c4409d6a4 (T5729: firewall: switch to valueless in order to remove unnecessary <enable|disable> commands; log and state moved to new syntax.)
 
     def test_source_validation(self):
         # Strict
@@ -616,5 +656,47 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(matched)
 
+<<<<<<< HEAD
+=======
+
+    def test_flow_offload(self):
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
+
+        # QEMU virtual NIC does not support hw-tc-offload
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'related'])
+
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'related'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['flowtable VYOS_FLOWTABLE_smoketest'],
+            ['hook ingress priority filter'],
+            ['devices = { eth0 }'],
+            ['ct state { established, related }', 'meta l4proto { tcp, udp }', 'flow add @VYOS_FLOWTABLE_smoketest'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # Check conntrack
+        self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
+>>>>>>> c4409d6a4 (T5729: firewall: switch to valueless in order to remove unnecessary <enable|disable> commands; log and state moved to new syntax.)
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -81,44 +81,7 @@
     </leafNode>
   </children>
 </node>
-<leafNode name="log">
-  <properties>
-    <help>Option to log packets matching rule</help>
-    <completionHelp>
-      <list>enable disable</list>
-    </completionHelp>
-    <valueHelp>
-      <format>enable</format>
-      <description>Enable log</description>
-    </valueHelp>
-    <valueHelp>
-      <format>disable</format>
-      <description>Disable log</description>
-    </valueHelp>
-    <constraint>
-      <regex>(enable|disable)</regex>
-    </constraint>
-  </properties>
-</leafNode>
-<leafNode name="log">
-  <properties>
-    <help>Option to log packets matching rule</help>
-    <completionHelp>
-      <list>enable disable</list>
-    </completionHelp>
-    <valueHelp>
-      <format>enable</format>
-      <description>Enable log</description>
-    </valueHelp>
-    <valueHelp>
-      <format>disable</format>
-      <description>Disable log</description>
-    </valueHelp>
-    <constraint>
-      <regex>(enable|disable)</regex>
-    </constraint>
-  </properties>
-</leafNode>
+#include <include/firewall/log.xml.i>
 #include <include/firewall/rule-log-options.xml.i>
 <node name="connection-status">
   <properties>
@@ -220,6 +183,7 @@
     </leafNode>
   </children>
 </node>
+<<<<<<< HEAD
 <node name="state">
   <properties>
     <help>Session state</help>
@@ -303,6 +267,10 @@
     </leafNode>
   </children>
 </node>
+=======
+#include <include/firewall/synproxy.xml.i>
+#include <include/firewall/state.xml.i>
+>>>>>>> c4409d6a4 (T5729: firewall: switch to valueless in order to remove unnecessary <enable|disable> commands; log and state moved to new syntax.)
 #include <include/firewall/tcp-flags.xml.i>
 <node name="time">
   <properties>
