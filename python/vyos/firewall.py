@@ -87,7 +87,6 @@ def nft_action(vyos_action):
 
 def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     output = []
-    #def_suffix = '6' if ip_name == 'ip6' else ''
 
     if ip_name == 'ip6':
         def_suffix = '6'
@@ -97,7 +96,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         family = 'bri' if ip_name == 'bri' else 'ipv4'
 
     if 'state' in rule_conf and rule_conf['state']:
-        states = ",".join([s for s, v in rule_conf['state'].items() if v == 'enable'])
+        states = ",".join([s for s in rule_conf['state']])
 
         if states:
             output.append(f'ct state {{{states}}}')
@@ -395,7 +394,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if 'priority' in rule_conf['vlan']:
             output.append(f'vlan pcp {rule_conf["vlan"]["priority"]}')
 
-    if 'log' in rule_conf and rule_conf['log'] == 'enable':
+    if 'log' in rule_conf:
         action = rule_conf['action'] if 'action' in rule_conf else 'accept'
         #output.append(f'log prefix "[{fw_name[:19]}-{rule_id}-{action[:1].upper()}]"')
         output.append(f'log prefix "[{family}-{hook}-{fw_name}-{rule_id}-{action[:1].upper()}]"')

@@ -82,44 +82,7 @@
     </leafNode>
   </children>
 </node>
-<leafNode name="log">
-  <properties>
-    <help>Option to log packets matching rule</help>
-    <completionHelp>
-      <list>enable disable</list>
-    </completionHelp>
-    <valueHelp>
-      <format>enable</format>
-      <description>Enable log</description>
-    </valueHelp>
-    <valueHelp>
-      <format>disable</format>
-      <description>Disable log</description>
-    </valueHelp>
-    <constraint>
-      <regex>(enable|disable)</regex>
-    </constraint>
-  </properties>
-</leafNode>
-<leafNode name="log">
-  <properties>
-    <help>Option to log packets matching rule</help>
-    <completionHelp>
-      <list>enable disable</list>
-    </completionHelp>
-    <valueHelp>
-      <format>enable</format>
-      <description>Enable log</description>
-    </valueHelp>
-    <valueHelp>
-      <format>disable</format>
-      <description>Disable log</description>
-    </valueHelp>
-    <constraint>
-      <regex>(enable|disable)</regex>
-    </constraint>
-  </properties>
-</leafNode>
+#include <include/firewall/log.xml.i>
 #include <include/firewall/rule-log-options.xml.i>
 <node name="connection-status">
   <properties>
@@ -222,89 +185,7 @@
   </children>
 </node>
 #include <include/firewall/synproxy.xml.i>
-<node name="state">
-  <properties>
-    <help>Session state</help>
-  </properties>
-  <children>
-    <leafNode name="established">
-      <properties>
-        <help>Established state</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>(enable|disable)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="invalid">
-      <properties>
-        <help>Invalid state</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>(enable|disable)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="new">
-      <properties>
-        <help>New state</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>(enable|disable)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-    <leafNode name="related">
-      <properties>
-        <help>Related state</help>
-        <completionHelp>
-          <list>enable disable</list>
-        </completionHelp>
-        <valueHelp>
-          <format>enable</format>
-          <description>Enable</description>
-        </valueHelp>
-        <valueHelp>
-          <format>disable</format>
-          <description>Disable</description>
-        </valueHelp>
-        <constraint>
-          <regex>(enable|disable)</regex>
-        </constraint>
-      </properties>
-    </leafNode>
-  </children>
-</node>
+#include <include/firewall/state.xml.i>
 #include <include/firewall/tcp-flags.xml.i>
 #include <include/firewall/tcp-mss.xml.i>
 <node name="time">
