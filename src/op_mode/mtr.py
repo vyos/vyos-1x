@@ -242,8 +242,11 @@ if __name__ == '__main__':
     if not host:
         sys.exit("mtr: Missing host")
 
-    if host == '--get-options':
-        args.first()  # pop ping
+
+    if host == '--get-options' or host == '--get-options-nested':
+        if host == '--get-options-nested':
+            args.first()  # pop monitor
+        args.first()  # pop mtr | traceroute
         args.first()  # pop IP
         usedoptionslist = []
         while args:
