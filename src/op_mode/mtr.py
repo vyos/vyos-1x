@@ -33,30 +33,10 @@ options = {
         'type': 'noarg',
         'help': 'This option puts mtr into wide report mode. When in this mode, mtr will not cut hostnames in the report.'
     },
-    'xml': {
-        'mtr': '{command} --xml',
-        'type': 'noarg',
-        'help': 'Use this option to tell mtr to use the xml output format. This format is better suited for automated processing of the measurement results.'
-    },
-    'curses': {
-        'mtr': '{command} --curses',
-        'type': 'noarg',
-        'help': 'Use this option to force mtr to use the curses based terminal interface (if available). In case the list of hops exceeds the height of your terminal, you can use  the  + and - keys to scroll up and down half a page.'
-    },
-    'displaymode': {
-        'mtr': '{command} --displaymode',
-        'type': '<num>',
-        'help': 'Use  this option to select the initial display mode: 0 (default) selects statistics, 1 selects the stripchart without latency information, and 2 selects the stripchart with latency information.'
-    },
     'raw': {
         'mtr': '{command} --raw',
         'type': 'noarg',
         'help': 'Use the raw output format. This format is better suited for archival of the measurement results.'
-    },
-    'csv': {
-        'mtr': '{command} --csv',
-        'type': 'noarg',
-        'help': 'Use the Comma-Separated-Value (CSV) output format.'
     },
     'json': {
         'mtr': '{command} --json',
@@ -86,7 +66,7 @@ options = {
     'aslookup': {
         'mtr': '{command} --aslookup',
         'type': 'noarg',
-        'help': 'Displays the Autonomous System (AS) number alongside each hop.  Equivalent to --ipinfo 0.'
+        'help': 'Displays the Autonomous System (AS) number alongside each hop. Equivalent to --ipinfo 0.'
     },
     'interval': {
         'mtr': '{command} --interval {value}',
@@ -101,12 +81,12 @@ options = {
     'psize': {
         'mtr': '{command} --psize {value}',
         'type': '<num>',
-        'help': 'This option sets the packet size used for probing.  It is in bytes, inclusive IP and ICMP headers. If set to a negative number, every iteration will use a different, random packet size up to that number.'
+        'help': 'This option sets the packet size used for probing. It is in bytes, inclusive IP and ICMP headers. If set to a negative number, every iteration will use a different, random packet size up to that number.'
     },
     'bitpattern': {
         'mtr': '{command} --bitpattern {value}',
         'type': '<num>',
-        'help': 'Specifies bit pattern to use in payload.  Should be within range 0 - 255.  If NUM is greater than 255, a random pattern is used.'
+        'help': 'Specifies bit pattern to use in payload. Should be within range 0 - 255. If NUM is greater than 255, a random pattern is used.'
     },
     'gracetime': {
         'mtr': '{command} --gracetime {value}',
@@ -116,7 +96,7 @@ options = {
     'tos': {
         'mtr': '{command} --tos {value}',
         'type': '<tos>',
-        'help': 'Specifies value for type of service field in IP header.  Should be within range 0 - 255.'
+        'help': 'Specifies value for type of service field in IP header. Should be within range 0 - 255.'
     },
     'mpls': {
         'mtr': '{command} --mpls {value}',
@@ -182,7 +162,7 @@ options = {
     'mark': {
         'mtr': '{command} --mark {value}',
         'type': '<num>',
-        'help': ' Set the mark for each packet sent through this socket similar to the netfilter MARK target but socket-based.  MARK is 32 unsigned integer.'
+        'help': ' Set the mark for each packet sent through this socket similar to the netfilter MARK target but socket-based. MARK is 32 unsigned integer.'
     },
     'vrf': {
         'mtr': 'sudo ip vrf exec {value} {command}',
