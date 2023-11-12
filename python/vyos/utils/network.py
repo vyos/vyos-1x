@@ -194,6 +194,21 @@ def get_all_vrfs():
         data[name] = entry
     return data
 
+def interface_list() -> list:
+    """
+    Get list of interfaces in system
+    :rtype: list
+    """
+    return Section.interfaces()
+
+
+def vrf_list() -> list:
+    """
+    Get list of VRFs in system
+    :rtype: list
+    """
+    return list(get_all_vrfs().keys())
+
 def mac2eui64(mac, prefix=None):
     """
     Convert a MAC address to a EUI64 address or, with prefix provided, a full

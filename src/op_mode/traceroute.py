@@ -14,29 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import sys
 import socket
 import ipaddress
-from vyos.utils.network import get_all_vrfs
-from vyos.ifconfig import Section
 
-
-def interface_list() -> list:
-    """
-    Get list of interfaces in system
-    :rtype: list
-    """
-    return Section.interfaces()
-
-
-def vrf_list() -> list:
-    """
-    Get list of VRFs in system
-    :rtype: list
-    """
-    return list(get_all_vrfs().keys())
-
+from vyos.utils.network import interface_list
+from vyos.utils.network import vrf_list
+from vyos.utils.process import call
 
 options = {
     'backward-hops': {
@@ -251,6 +235,4 @@ if __name__ == '__main__':
         sys.exit(f'traceroute: Unknown host: {host}')
 
     command = convert(traceroute[version], args)
-
-    # print(f'{command} {host}')
-    os.system(f'{command} {host}')
+    call(f'{command} {host}')
