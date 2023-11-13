@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <children>
+          <node name="pim">
+            <properties>
+              <help>Show PIM (Protocol Independent Multicast) information</help>
+            </properties>
+            <children>
+              <leafNode name="bsm-database">
+                <properties>
+                  <help>PIM cached bsm packets information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="bsr">
+                <properties>
+                  <help>PIM boot-strap router information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="bsrp-info">
+                <properties>
+                  <help>PIM cached group-rp mappings information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="channel">
+                <properties>
+                  <help>PIM downstream channel info</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="interface">
+                <properties>
+                  <help>PIM interfaces information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="join">
+                <properties>
+                  <help>PIM join information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="local-membership">
+                <properties>
+                  <help>PIM interface local-membership</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="neighbor">
+                <properties>
+                  <help>PIM neighbor information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="nexthop">
+                <properties>
+                  <help>PIM cached nexthop rpf information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="rp-info">
+                <properties>
+                  <help>PIM rendezvous point information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="rpf">
+                <properties>
+                  <help>PIM reverse path forwarding information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="secondary">
+                <properties>
+                  <help>PIM neighbor addresses</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="state">
+                <properties>
+                  <help>PIM state information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="statistics">
+                <properties>
+                  <help>PIM statistics</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="upstream">
+                <properties>
+                  <help>PIM upstream information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="upstream-join-desired">
+                <properties>
+                  <help>PIM upstream join-desired</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="upstream-rpf">
+                <properties>
+                  <help>PIM upstream source reverse path forwarding</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
