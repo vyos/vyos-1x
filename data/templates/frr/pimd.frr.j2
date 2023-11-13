@@ -58,13 +58,13 @@ ip pim ecmp {{ 'rebalance' if ecmp.rebalance is vyos_defined }}
 ip pim join-prune-interval {{ join_prune_interval }}
 {% endif %}
 {% if keep_alive_timer is vyos_defined %}
-ip pim rp keep-alive-timer {{ keep_alive_timer }}
+ip pim keep-alive-timer {{ keep_alive_timer }}
 {% endif %}
 {% if packets is vyos_defined %}
 ip pim packets {{ packets }}
 {% endif %}
-{% if register_accept_list is vyos_defined %}
-ip pim register-accept-list {{ register_accept_list }}
+{% if register_accept_list.prefix_list is vyos_defined %}
+ip pim register-accept-list {{ register_accept_list.prefix_list }}
 {% endif %}
 {% if register_suppress_time is vyos_defined %}
 ip pim register-suppress-time {{ register_suppress_time }}
@@ -76,14 +76,17 @@ ip pim rp {{ address }} {{ group }}
 {%         endfor %}
 {%     endfor %}
 {% endif %}
-{% if send_v6_secondary is vyos_defined %}
-ip pim send-v6-secondary
+{% if rp.keep_alive_timer is vyos_defined %}
+ip pim rp keep-alive-timer {{ rp.keep_alive_timer }}
+{% endif %}
+{% if no_v6_secondary is vyos_defined %}
+no ip pim send-v6-secondary
 {% endif %}
 {% if spt_switchover.infinity_and_beyond is vyos_defined %}
 ip pim spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.infinity_and_beyond.prefix_list if spt_switchover.infinity_and_beyond.prefix_list is defined }}
 {% endif %}
-{% if ssm is vyos_defined %}
-ip pim ssm {{ ssm }}
+{% if ssm.prefix_list is vyos_defined %}
+ip pim ssm prefix-list {{ ssm.prefix_list }}
 {% endif %}
 !
 {% if igmp.watermark_warning is vyos_defined %}

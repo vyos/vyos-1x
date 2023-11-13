@@ -73,7 +73,55 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-    def test_02_pim_igmp_proxy(self):
+    def test_02_pim_advanced(self):
+        rp = '127.0.0.2'
+        group = '224.0.0.0/4'
+        join_prune_interval = '123'
+        rp_keep_alive_timer = '190'
+        keep_alive_timer = '180'
+        packets = '10'
+        prefix_list = 'pim-test'
+        register_suppress_time = '300'
+
+        self.cli_set(base_path + ['rp', 'address', rp, 'group', group])
+        self.cli_set(base_path + ['rp', 'keep-alive-timer', rp_keep_alive_timer])
+
+        self.cli_set(base_path + ['ecmp', 'rebalance'])
+        self.cli_set(base_path + ['join-prune-interval', join_prune_interval])
+        self.cli_set(base_path + ['keep-alive-timer', keep_alive_timer])
+        self.cli_set(base_path + ['packets', packets])
+        self.cli_set(base_path + ['register-accept-list', 'prefix-list', prefix_list])
+        self.cli_set(base_path + ['register-suppress-time', register_suppress_time])
+        self.cli_set(base_path + ['no-v6-secondary'])
+        self.cli_set(base_path + ['spt-switchover', 'infinity-and-beyond', 'prefix-list', prefix_list])
+        self.cli_set(base_path + ['ssm', 'prefix-list', prefix_list])
+
+        # check validate() - PIM require defined interfaces!
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface])
+
+        # commit changes
+        self.cli_commit()
+
+        # Verify FRR pimd configuration
+        frrconfig = self.getFRRconfig(daemon=PROCESS_NAME)
+        self.assertIn(f'ip pim rp {rp} {group}', frrconfig)
+        self.assertIn(f'ip pim rp keep-alive-timer {rp_keep_alive_timer}', frrconfig)
+        self.assertIn(f'ip pim ecmp rebalance', frrconfig)
+        self.assertIn(f'ip pim join-prune-interval {join_prune_interval}', frrconfig)
+        self.assertIn(f'ip pim keep-alive-timer {keep_alive_timer}', frrconfig)
+        self.assertIn(f'ip pim packets {packets}', frrconfig)
+        self.assertIn(f'ip pim register-accept-list {prefix_list}', frrconfig)
+        self.assertIn(f'ip pim register-suppress-time {register_suppress_time}', frrconfig)
+        self.assertIn(f'no ip pim send-v6-secondary', frrconfig)
+        self.assertIn(f'ip pim spt-switchover infinity-and-beyond prefix-list {prefix_list}', frrconfig)
+        self.assertIn(f'ip pim ssm prefix-list {prefix_list}', frrconfig)
+
+    def test_03_pim_igmp_proxy(self):
         igmp_proxy = ['protocols', 'igmp-proxy']
         rp = '127.0.0.1'
         group = '224.0.0.0/4'
@@ -95,7 +143,7 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-    def test_03_igmp(self):
+    def test_04_igmp(self):
         watermark_warning = '2000'
         query_interval = '1000'
         query_max_response_time = '200'
@@ -141,4 +189,4 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
                     self.assertIn(f' ip igmp join {join}', frrconfig)
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2, failfast=True)
+    unittest.main(verbosity=2)

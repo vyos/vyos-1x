@@ -25,6 +25,7 @@ from vyos.config import config_dict_merge
 from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
 from vyos.utils.dict import dict_search
+from vyos.configverify import verify_interface_exists
 from vyos.utils.process import process_named_running
 from vyos.utils.process import call
 from vyos.template import render_to_string
@@ -92,6 +93,9 @@ def verify(pim):
 
     if 'interface' not in pim:
         raise ConfigError('PIM require defined interfaces!')
+
+    for interface in pim['interface']:
+        verify_interface_exists(interface)
 
     if 'rp' in pim:
         if 'address' not in pim['rp']:

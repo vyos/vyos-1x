@@ -10,6 +10,5 @@
       <validator name="numeric" argument="--range 1-65535"/>
     </constraint>
   </properties>
-  <defaultValue>210</defaultValue>
 </leafNode>
 <!-- include end -->
