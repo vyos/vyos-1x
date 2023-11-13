@@ -63,7 +63,7 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
-              <leafNode name="interfaces">
+              <leafNode name="interface">
                 <properties>
                   <help>PIM interfaces information</help>
                 </properties>

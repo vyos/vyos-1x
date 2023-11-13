@@ -130,18 +130,14 @@
           #include <include/pim/keep-alive-timer.xml.i>
           #include <include/pim/packets.xml.i>
           #include <include/pim/register-suppress-time.xml.i>
-          <leafNode name="register-accept-list">
+          <node name="register-accept-list">
             <properties>
               <help>Only accept registers from a specific source prefix list</help>
-              <valueHelp>
-                <format>txt</format>
-                <description>Prefix-list to apply</description>
-              </valueHelp>
-              <completionHelp>
-                <path>policy prefix-list</path>
-              </completionHelp>
             </properties>
-          </leafNode>
+            <children>
+              #include <include/policy/prefix-list.xml.i>
+            </children>
+          </node>
           <node name="rp">
             <properties>
               <help>Rendezvous Point</help>
@@ -174,50 +170,36 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <leafNode name="send-v6-secondary">
+              #include <include/pim/keep-alive-timer.xml.i>
+            </children>
+          </node>
+          <leafNode name="no-v6-secondary">
+            <properties>
+              <help>Disable IPv6 secondary address in hello packets</help>
+              <valueless/>
+            </properties>
+          </leafNode>
+          <node name="spt-switchover">
+            <properties>
+              <help>Send v6 secondary addresses</help>
+            </properties>
+            <children>
+              <node name="infinity-and-beyond">
                 <properties>
-                  <help>Send v6 secondary addresses</help>
-                  <valueless/>
-                </properties>
-              </leafNode>
-              <node name="spt-switchover">
-                <properties>
-                  <help>Send v6 secondary addresses</help>
+                  <help>Never switch to SPT Tree</help>
                 </properties>
                 <children>
-                  <node name="infinity-and-beyond">
-                    <properties>
-                      <help>Never switch to SPT Tree</help>
-                    </properties>
-                    <children>
-                      <leafNode name="prefix-list">
-                        <properties>
-                          <help>Prefix-List to control which groups to switch</help>
-                          <valueHelp>
-                            <format>txt</format>
-                            <description>Prefix-list to apply</description>
-                          </valueHelp>
-                          <completionHelp>
-                            <path>policy prefix-list</path>
-                          </completionHelp>
-                        </properties>
-                      </leafNode>
-                    </children>
-                  </node>
+                  #include <include/policy/prefix-list.xml.i>
                 </children>
               </node>
-              <leafNode name="ssm">
-                <properties>
-                  <help>Source-Specific Multicast</help>
-                  <completionHelp>
-                    <path>policy prefix-list</path>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>txt</format>
-                    <description>Prefix-list to apply</description>
-                  </valueHelp>
-                </properties>
-              </leafNode>
+            </children>
+          </node>
+          <node name="ssm">
+            <properties>
+              <help>Source-Specific Multicast</help>
+            </properties>
+            <children>
+              #include <include/policy/prefix-list.xml.i>
             </children>
           </node>
         </children>
