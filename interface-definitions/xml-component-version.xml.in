@@ -30,6 +30,7 @@
   #include <include/version/ntp-version.xml.i>
   #include <include/version/openconnect-version.xml.i>
   #include <include/version/ospf-version.xml.i>
+  #include <include/version/pim-version.xml.i>
   #include <include/version/policy-version.xml.i>
   #include <include/version/pppoe-server-version.xml.i>
   #include <include/version/pptp-version.xml.i>

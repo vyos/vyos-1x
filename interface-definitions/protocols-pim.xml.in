@@ -5,7 +5,7 @@
     <children>
       <node name="pim" owner="${vyos_conf_scripts_dir}/protocols_pim.py">
         <properties>
-          <help>Protocol Independent Multicast (PIM)</help>
+          <help>Protocol Independent Multicast (PIM) and IGMP</help>
           <priority>400</priority>
         </properties>
         <children>
@@ -31,11 +31,50 @@
                 <help>Internet Group Management Protocol (IGMP) options</help>
               </properties>
               <children>
+                <tagNode name="join">
+                  <properties>
+                    <help>IGMP join multicast group</help>
+                    <valueHelp>
+                      <format>ipv4</format>
+                      <description>Multicast group address</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="ipv4-address"/>
+                    </constraint>
+                  </properties>
+                  <children>
+                    #include <include/source-address-ipv4-multi.xml.i>
+                  </children>
+                </tagNode>
+                <leafNode name="query-interval">
+                  <properties>
+                    <help>IGMP host query interval</help>
+                    <valueHelp>
+                      <format>u32:1-1800</format>
+                      <description>Query interval in seconds</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 1-1800"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
+                <leafNode name="query-max-response-time">
+                  <properties>
+                    <help>IGMP max query response time</help>
+                    <valueHelp>
+                      <format>u32:10-250</format>
+                      <description>Query response value in deci-seconds</description>
+                    </valueHelp>
+                    <constraint>
+                      <validator name="numeric" argument="--range 10-250"/>
+                    </constraint>
+                  </properties>
+                </leafNode>
                 <leafNode name="version">
                   <properties>
                     <help>Interface IGMP version</help>
                     <completionHelp>
-                      <list>1 2</list>
+                      <list>2 3</list>
                     </completionHelp>
                     <valueHelp>
                       <format>2</format>

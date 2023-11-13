@@ -13,31 +13,31 @@
                 <properties>
                   <help>IGMP groups information</help>
                 </properties>
-                <command>vtysh -c "show ip igmp groups"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
-              <leafNode name="interfaces">
+              <leafNode name="interface">
                 <properties>
                   <help>IGMP interfaces information</help>
                 </properties>
-                <command>vtysh -c "show ip igmp interface"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
               <leafNode name="join">
                 <properties>
                   <help>IGMP static join information</help>
                 </properties>
-                <command>vtysh -c "show ip igmp join"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
               <leafNode name="sources">
                 <properties>
                   <help>IGMP sources information</help>
                 </properties>
-                <command>vtysh -c "show ip igmp sources"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
               <leafNode name="statistics">
                 <properties>
                   <help>IGMP statistics</help>
                 </properties>
-                <command>vtysh -c "show ip igmp statistics"</command>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
             </children>
           </node>
