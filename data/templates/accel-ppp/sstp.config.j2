@@ -36,6 +36,9 @@ accept=ssl
 ssl-ca-file=/run/accel-pppd/sstp-ca.pem
 ssl-pemfile=/run/accel-pppd/sstp-cert.pem
 ssl-keyfile=/run/accel-pppd/sstp-cert.key
+{% if default_pool is vyos_defined %}
+ip-pool={{ default_pool }}
+{% endif %}
 
 {# Common IP pool definitions #}
 {% include 'accel-ppp/config_ip_pool.j2' %}
@@ -56,7 +59,6 @@ check-ip=1
 mtu={{ mtu }}
 ipv6={{ 'allow' if ppp_options.ipv6 is vyos_defined("deny") and client_ipv6_pool is vyos_defined else ppp_options.ipv6 }}
 ipv4={{ ppp_options.ipv4 }}
-
 mppe={{ ppp_options.mppe }}
 lcp-echo-interval={{ ppp_options.lcp_echo_interval }}
 lcp-echo-timeout={{ ppp_options.lcp_echo_timeout }}

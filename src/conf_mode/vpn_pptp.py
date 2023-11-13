@@ -21,10 +21,14 @@ from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 
+
 from vyos.config import Config
 from vyos.template import render
 from vyos.utils.system import get_half_cpus
 from vyos.utils.process import call
+from vyos.utils.dict import dict_search
+from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
+from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
 
 from vyos import airbag
@@ -54,7 +58,7 @@ default_pptp = {
     'outside_addr': '',
     'dnsv4': [],
     'wins': [],
-    'client_ip_pool': '',
+    'client_ip_pool': {},
     'mtu': '1436',
     'auth_proto' : ['auth_mschap_v2'],
     'ppp_mppe' : 'prefer',
@@ -205,22 +209,24 @@ def get_config(config=None):
 
     conf.set_level(base_path)
     if conf.exists(['client-ip-pool']):
-        if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
-            start = conf.return_value(['client-ip-pool', 'start'])
-            stop  = conf.return_value(['client-ip-pool', 'stop'])
-            pptp['client_ip_pool'] = start + '-' + re.search('[0-9]+$', stop).group(0)
+        for pool_name in conf.list_nodes(['client-ip-pool']):
+            pptp['client_ip_pool'][pool_name] = {}
+            pptp['client_ip_pool'][pool_name]['range'] = conf.return_value(['client-ip-pool', pool_name, 'range'])
+            pptp['client_ip_pool'][pool_name]['next_pool'] = conf.return_value(['client-ip-pool', pool_name, 'next-pool'])
+
+    if dict_search('client_ip_pool', pptp):
+        # Multiple named pools require ordered values T5099
+        pptp['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', pptp))
+
+    if conf.exists(['default-pool']):
+        pptp['default_pool'] = conf.return_value(['default-pool'])
 
     if conf.exists(['mtu']):
         pptp['mtu'] = conf.return_value(['mtu'])
 
     # gateway address
     if conf.exists(['gateway-address']):
-        pptp['gw_ip'] = conf.return_value(['gateway-address'])
-    else:
-        # calculate gw-ip-address
-        if conf.exists(['client-ip-pool', 'start']):
-            # use start ip as gw-ip-address
-            pptp['gateway_address'] = conf.return_value(['client-ip-pool', 'start'])
+        pptp['gateway_address'] = conf.return_value(['gateway-address'])
 
     if conf.exists(['authentication', 'require']):
         # clear default list content, now populate with actual CLI values
@@ -238,6 +244,7 @@ def get_config(config=None):
     if conf.exists(['authentication', 'mppe']):
         pptp['ppp_mppe'] = conf.return_value(['authentication', 'mppe'])
 
+    pptp['server_type'] = 'pptp'
     return pptp
 
 
@@ -248,20 +255,24 @@ def verify(pptp):
     if pptp['auth_mode'] == 'local':
         if not pptp['local_users']:
             raise ConfigError('PPTP local auth mode requires local users to be configured!')
-
         for user in pptp['local_users']:
             username = user['name']
             if not user['password']:
                 raise ConfigError(f'Password required for local user "{username}"')
-
     elif pptp['auth_mode'] == 'radius':
         if len(pptp['radius_server']) == 0:
             raise ConfigError('RADIUS authentication requires at least one server')
-
         for radius in pptp['radius_server']:
             if not radius['key']:
                 server = radius['server']
                 raise ConfigError(f'Missing RADIUS secret key for server "{ server }"')
+
+    if pptp['auth_mode'] == 'local' or pptp['auth_mode'] == 'noauth':
+        if not pptp['client_ip_pool']:
+            raise ConfigError(
+                "PPTP local auth mode requires local client-ip-pool to be configured!")
+
+    verify_accel_ppp_ip_pool(pptp)
 
     if len(pptp['dnsv4']) > 2:
         raise ConfigError('Not more then two IPv4 DNS name-servers can be configured')

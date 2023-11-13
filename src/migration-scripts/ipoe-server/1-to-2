@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - changed cli of all named pools
+# - moved gateway-address from pool to global configuration with / netmask
+#   gateway can exist without pool if radius is used
+#   and Framed-ip-address is transmited
+# - There are several gateway-addresses in ipoe
+# - default-pool by migration.
+#       1. The first pool that contains next-poll.
+#       2. Else, the first pool in the list
+
+import os
+
+from sys import argv
+from sys import exit
+from vyos.configtree import ConfigTree
+
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['service', 'ipoe-server']
+pool_base = base + ['client-ip-pool']
+if not config.exists(base):
+    exit(0)
+
+if not config.exists(pool_base):
+    exit(0)
+default_pool = ''
+gateway = ''
+
+#named pool migration
+namedpools_base = pool_base + ['name']
+
+for pool_name in config.list_nodes(namedpools_base):
+    pool_path = namedpools_base + [pool_name]
+    if config.exists(pool_path + ['subnet']):
+        subnet = config.return_value(pool_path + ['subnet'])
+        config.set(pool_base + [pool_name, 'range'], value=subnet)
+        # Get netmask from subnet
+        mask = subnet.split("/")[1]
+    if config.exists(pool_path + ['next-pool']):
+        next_pool = config.return_value(pool_path + ['next-pool'])
+        config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
+        if not default_pool:
+            default_pool = pool_name
+    if config.exists(pool_path + ['gateway-address']) and mask:
+        gateway = f'{config.return_value(pool_path + ["gateway-address"])}/{mask}'
+        config.set(base + ['gateway-address'], value=gateway, replace=False)
+
+if not default_pool and config.list_nodes(namedpools_base):
+    default_pool = config.list_nodes(namedpools_base)[0]
+
+config.delete(namedpools_base)
+
+if default_pool:
+    config.set(base + ['default-pool'], value=default_pool)
+# format as tag node
+config.set_tag(pool_base)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)

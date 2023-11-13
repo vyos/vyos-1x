@@ -21,15 +21,16 @@ from copy import deepcopy
 from stat import S_IRUSR, S_IWUSR, S_IRGRP
 from sys import exit
 
-from ipaddress import ip_network
-
 from vyos.config import Config
 from vyos.template import is_ipv4
 from vyos.template import render
 from vyos.utils.process import call
 from vyos.utils.system import get_half_cpus
+from vyos.utils.dict import dict_search
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
+from vyos.accel_ppp_util import verify_accel_ppp_ip_pool
+from vyos.accel_ppp_util import get_pools_in_order
 from vyos import ConfigError
 
 from vyos import airbag
@@ -43,7 +44,7 @@ default_config_data = {
     'auth_ppp_mppe': 'prefer',
     'auth_proto': ['auth_mschap_v2'],
     'chap_secrets_file': l2tp_chap_secrets, # used in Jinja2 template
-    'client_ip_pool': None,
+    'client_ip_pool': {},
     'client_ip_subnets': [],
     'client_ipv6_pool': [],
     'client_ipv6_pool_configured': False,
@@ -246,13 +247,14 @@ def get_config(config=None):
 
     conf.set_level(base_path)
     if conf.exists(['client-ip-pool']):
-        if conf.exists(['client-ip-pool', 'start']) and conf.exists(['client-ip-pool', 'stop']):
-            start = conf.return_value(['client-ip-pool', 'start'])
-            stop  = conf.return_value(['client-ip-pool', 'stop'])
-            l2tp['client_ip_pool'] = start + '-' + re.search('[0-9]+$', stop).group(0)
+        for pool_name in conf.list_nodes(['client-ip-pool']):
+            l2tp['client_ip_pool'][pool_name] = {}
+            l2tp['client_ip_pool'][pool_name]['range'] = conf.return_value(['client-ip-pool', pool_name, 'range'])
+            l2tp['client_ip_pool'][pool_name]['next_pool'] = conf.return_value(['client-ip-pool', pool_name, 'next-pool'])
 
-    if conf.exists(['client-ip-pool', 'subnet']):
-        l2tp['client_ip_subnets'] = conf.return_values(['client-ip-pool', 'subnet'])
+    if dict_search('client_ip_pool', l2tp):
+        # Multiple named pools require ordered values T5099
+        l2tp['ordered_named_pools'] = get_pools_in_order(dict_search('client_ip_pool', l2tp))
 
     if conf.exists(['client-ipv6-pool', 'prefix']):
         l2tp['client_ipv6_pool_configured'] = True
@@ -281,23 +283,15 @@ def get_config(config=None):
 
             l2tp['client_ipv6_delegate_prefix'].append(tmp)
 
+    if conf.exists(['default-pool']):
+        l2tp['default_pool'] = conf.return_value(['default-pool'])
+
     if conf.exists(['mtu']):
         l2tp['mtu'] = conf.return_value(['mtu'])
 
     # gateway address
     if conf.exists(['gateway-address']):
         l2tp['gateway_address'] = conf.return_value(['gateway-address'])
-    else:
-        # calculate gw-ip-address
-        if conf.exists(['client-ip-pool', 'start']):
-            # use start ip as gw-ip-address
-            l2tp['gateway_address'] = conf.return_value(['client-ip-pool', 'start'])
-
-        elif conf.exists(['client-ip-pool', 'subnet']):
-            # use first ip address from first defined pool
-            subnet = conf.return_values(['client-ip-pool', 'subnet'])[0]
-            subnet = ip_network(subnet)
-            l2tp['gateway_address'] = str(list(subnet.hosts())[0])
 
     # LNS secret
     if conf.exists(['lns', 'shared-secret']):
@@ -330,7 +324,11 @@ def get_config(config=None):
     if conf.exists(['ppp-options', 'ipv6-peer-intf-id']):
         l2tp['ppp_ipv6_peer_intf_id'] = conf.return_value(['ppp-options', 'ipv6-peer-intf-id'])
 
+    l2tp['server_type'] = 'l2tp'
     return l2tp
+
+
+
 
 
 def verify(l2tp):
@@ -366,10 +364,11 @@ def verify(l2tp):
                 not is_listen_port_bind_service(int(port), 'accel-pppd'):
                 raise ConfigError(f'"{proto}" port "{port}" is used by another service')
 
-    # check for the existence of a client ip pool
-    if not (l2tp['client_ip_pool'] or l2tp['client_ip_subnets']):
-        raise ConfigError(
-            "set vpn l2tp remote-access client-ip-pool requires subnet or start/stop IP pool")
+    if l2tp['auth_mode'] == 'local' or l2tp['auth_mode'] == 'noauth':
+        if not l2tp['client_ip_pool']:
+            raise ConfigError(
+                "L2TP local auth mode requires local client-ip-pool to be configured!")
+    verify_accel_ppp_ip_pool(l2tp)
 
     # check ipv6
     if l2tp['client_ipv6_delegate_prefix'] and not l2tp['client_ipv6_pool']:
