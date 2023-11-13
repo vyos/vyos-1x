@@ -77,8 +77,6 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
         igmp_proxy = ['protocols', 'igmp-proxy']
         rp = '127.0.0.1'
         group = '224.0.0.0/4'
-        hello = '100'
-        dr_priority = '64'
 
         self.cli_set(base_path)
         self.cli_set(igmp_proxy)
@@ -96,6 +94,51 @@ class TestProtocolsPIM(VyOSUnitTestSHIM.TestCase):
 
         # commit changes
         self.cli_commit()
+
+    def test_03_igmp(self):
+        watermark_warning = '2000'
+        query_interval = '1000'
+        query_max_response_time = '200'
+        version = '2'
+
+        igmp_join = {
+            '224.1.1.1' : { 'source' : ['1.1.1.1', '2.2.2.2', '3.3.3.3'] },
+            '224.1.2.2' : { 'source' : [] },
+            '224.1.3.3' : {},
+        }
+
+        self.cli_set(base_path + ['igmp', 'watermark-warning', watermark_warning])
+        interfaces = Section.interfaces('ethernet')
+        for interface in interfaces:
+            self.cli_set(base_path + ['interface', interface , 'igmp', 'version', version])
+            self.cli_set(base_path + ['interface', interface , 'igmp', 'query-interval', query_interval])
+            self.cli_set(base_path + ['interface', interface , 'igmp', 'query-max-response-time', query_max_response_time])
+
+            for join, join_config in igmp_join.items():
+                self.cli_set(base_path + ['interface', interface , 'igmp', 'join', join])
+                if 'source' in join_config:
+                    for source in join_config['source']:
+                        self.cli_set(base_path + ['interface', interface , 'igmp', 'join', join, 'source-address', source])
+
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig(daemon=PROCESS_NAME)
+        self.assertIn(f'ip igmp watermark-warn {watermark_warning}', frrconfig)
+
+        for interface in interfaces:
+            frrconfig = self.getFRRconfig(f'interface {interface}', daemon=PROCESS_NAME)
+            self.assertIn(f'interface {interface}', frrconfig)
+            self.assertIn(f' ip igmp', frrconfig)
+            self.assertIn(f' ip igmp version {version}', frrconfig)
+            self.assertIn(f' ip igmp query-interval {query_interval}', frrconfig)
+            self.assertIn(f' ip igmp query-max-response-time {query_max_response_time}', frrconfig)
+
+            for join, join_config in igmp_join.items():
+                if 'source' in join_config:
+                    for source in join_config['source']:
+                        self.assertIn(f' ip igmp join {join} {source}', frrconfig)
+                else:
+                    self.assertIn(f' ip igmp join {join}', frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=True)

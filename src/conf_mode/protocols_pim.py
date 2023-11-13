@@ -93,22 +93,24 @@ def verify(pim):
     if 'interface' not in pim:
         raise ConfigError('PIM require defined interfaces!')
 
-    if dict_search('rp.address', pim) == None:
-        raise ConfigError('PIM rendezvous point needs to be defined!')
+    if 'rp' in pim:
+        if 'address' not in pim['rp']:
+            raise ConfigError('PIM rendezvous point needs to be defined!')
 
-    # Check unique multicast groups
-    unique = []
-    for address, address_config in pim['rp']['address'].items():
-        if 'group' not in address_config:
-            raise ConfigError(f'PIM rendezvous point group should be defined for "{address}"!')
+        # Check unique multicast groups
+        unique = []
+        pim_base_error = 'PIM rendezvous point group'
+        for address, address_config in pim['rp']['address'].items():
+            if 'group' not in address_config:
+                raise ConfigError(f'{pim_base_error} should be defined for "{address}"!')
 
-        # Check if it is a multicast group
-        for gr_addr in address_config['group']:
-            if not IPv4Network(gr_addr).is_multicast:
-                raise ConfigError(f'PIM rendezvous point group "{gr_addr}" is not a multicast group!')
-            if gr_addr in unique:
-                raise ConfigError('PIM rendezvous point group must be unique!')
-            unique.append(gr_addr)
+            # Check if it is a multicast group
+            for gr_addr in address_config['group']:
+                if not IPv4Network(gr_addr).is_multicast:
+                    raise ConfigError(f'{pim_base_error} "{gr_addr}" is not a multicast group!')
+                if gr_addr in unique:
+                    raise ConfigError(f'{pim_base_error} must be unique!')
+                unique.append(gr_addr)
 
 def generate(pim):
     if not pim or 'deleted' in pim:
