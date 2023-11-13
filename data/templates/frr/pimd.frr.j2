@@ -24,28 +24,28 @@ interface {{ iface }}
 {%         if iface_config.source_address is vyos_defined %}
  ip pim use-source {{ iface_config.source_address }}
 {%         endif %}
-{%         if iface_config.igmp is vyos_defined %}
+{%         if iface_config.igmp is vyos_defined and iface_config.igmp.disable is not vyos_defined %}
  ip igmp
-{%         endif %}
-{%         if iface_config.igmp.query_interval %}
+{%             if iface_config.igmp.query_interval %}
  ip igmp query-interval {{ iface_config.igmp.query_interval }}
-{%         endif %}
-{%         if iface_config.igmp.query_max_response_time %}
+{%             endif %}
+{%             if iface_config.igmp.query_max_response_time %}
  ip igmp query-max-response-time {{ iface_config.igmp.query_max_response_time }}
-{%         endif %}
-{%         if iface_config.igmp.version is vyos_defined %}
+{%             endif %}
+{%             if iface_config.igmp.version is vyos_defined %}
  ip igmp version {{ iface_config.igmp.version }}
-{%         endif %}
-{%         if iface_config.igmp.join is vyos_defined %}
-{%             for join, join_config in iface_config.igmp.join.items() %}
-{%                 if join_config.source_address is vyos_defined %}
-{%                     for source_address in join_config.source_address %}
+{%             endif %}
+{%             if iface_config.igmp.join is vyos_defined %}
+{%                 for join, join_config in iface_config.igmp.join.items() %}
+{%                     if join_config.source_address is vyos_defined %}
+{%                         for source_address in join_config.source_address %}
  ip igmp join {{ join }} {{ source_address }}
-{%                     endfor %}
-{%                 else %}
+{%                         endfor %}
+{%                     else %}
  ip igmp join {{ join }}
-{%                 endif %}
-{%             endfor %}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
 {%         endif %}
 exit
 {%     endfor %}

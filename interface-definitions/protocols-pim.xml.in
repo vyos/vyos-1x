@@ -31,6 +31,7 @@
                 <help>Internet Group Management Protocol (IGMP) options</help>
               </properties>
               <children>
+                #include <include/generic-disable-node.xml.i>
                 <tagNode name="join">
                   <properties>
                     <help>IGMP join multicast group</help>
