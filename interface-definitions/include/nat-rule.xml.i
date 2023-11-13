@@ -34,12 +34,7 @@
         #include <include/firewall/nat-balance.xml.i>
       </children>
     </node>
-    <leafNode name="log">
-      <properties>
-        <help>NAT rule logging</help>
-        <valueless/>
-      </properties>
-    </leafNode>
+    #include <include/firewall/log.xml.i>
     <leafNode name="packet-type">
       <properties>
         <help>Packet type</help>

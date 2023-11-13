@@ -1,0 +1,8 @@
+#!/bin/sh
+path=$(dirname "$0")
+num="${@: -1}"
+if [ "${num:0:1}" != "!" ]; then
+   ${path}/numeric $@
+else
+    ${path}/numeric ${@:1:$#-1} ${num:1}
+fi

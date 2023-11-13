@@ -46,7 +46,6 @@ if not config.exists(base):
     # Nothing to do
     exit(0)
 
-## FORT
 ## Migration from base chains
 #if config.exists(base + ['interface', iface, direction]):
 for family in ['ipv4', 'ipv6']:
