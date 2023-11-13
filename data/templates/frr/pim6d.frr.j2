@@ -1,0 +1,81 @@
+!
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
+!
+interface {{ iface }}
+ ipv6 pim
+{%         if iface_config.no_bsm is vyos_defined %}
+ no ipv6 pim bsm
+{%         endif %}
+{%         if iface_config.dr_priority is vyos_defined %}
+ ipv6 pim drpriority {{ iface_config.dr_priority }}
+{%         endif %}
+{%         if iface_config.hello is vyos_defined %}
+ ipv6 pim hello {{ iface_config.hello }}
+{%         endif %}
+{%         if iface_config.no_unicast_bsm is vyos_defined %}
+ no ipv6 pim unicast-bsm
+{%         endif %}
+{%         if iface_config.passive is vyos_defined %}
+ ipv6 pim passive
+{%         endif %}
+{%         if iface_config.mld is vyos_defined and iface_config.mld.disable is not vyos_defined %}
+ ipv6 mld
+{%             if iface_config.mld.version is vyos_defined %}
+ ipv6 mld version {{ iface_config.mld.version }}
+{%             endif %}
+{%             if iface_config.mld.interval is vyos_defined %}
+ ipv6 mld query-interval {{ iface_config.mld.interval }}
+{%             endif %}
+{%             if iface_config.mld.max_response_time is vyos_defined %}
+ ipv6 mld query-max-response-time {{ iface_config.mld.max_response_time // 100 }}
+{%             endif %}
+{%             if iface_config.mld.last_member_query_count is vyos_defined %}
+ ipv6 mld last-member-query-count {{ iface_config.mld.last_member_query_count }}
+{%             endif %}
+{%             if iface_config.mld.last_member_query_interval is vyos_defined %}
+ ipv6 mld last-member-query-interval {{ iface_config.mld.last_member_query_interval // 100 }}
+{%             endif %}
+{%             if iface_config.mld.join is vyos_defined %}
+{%                 for group, group_config in iface_config.mld.join.items() %}
+{%                     if group_config.source is vyos_defined %}
+{%                         for source in group_config.source %}
+ ipv6 mld join {{ group }} {{ source }}
+{%                         endfor %}
+{%                     else %}
+ ipv6 mld join {{ group }}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+{%         endif %}
+exit
+{%     endfor %}
+{% endif %}
+!
+{% if join_prune_interval is vyos_defined %}
+ipv6 pim join-prune-interval {{ join_prune_interval }}
+{% endif %}
+{% if keep_alive_timer is vyos_defined %}
+ipv6 pim keep-alive-timer {{ keep_alive_timer }}
+{% endif %}
+{% if packets is vyos_defined %}
+ipv6 pim packets {{ packets }}
+{% endif %}
+{% if register_suppress_time is vyos_defined %}
+ipv6 pim register-suppress-time {{ register_suppress_time }}
+{% endif %}
+{% if rp.address is vyos_defined %}
+{%     for address, address_config in rp.address.items() %}
+{%         if address_config.group is vyos_defined %}
+{%             for group in address_config.group %}
+ipv6 pim rp {{ address }} {{ group }}
+{%             endfor %}
+{%         endif %}
+{%         if address_config.prefix_list6 is vyos_defined %}
+ipv6 pim rp {{ address }} prefix-list {{ address_config.prefix_list6 }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if rp.keep_alive_timer is vyos_defined %}
+ipv6 pim rp keep-alive-timer {{ rp.keep_alive_timer }}
+{% endif %}

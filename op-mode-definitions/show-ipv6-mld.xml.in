@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="ipv6">
+        <children>
+          <node name="mld">
+            <properties>
+              <help>Show MLD (Multicast Listener Discovery) information</help>
+            </properties>
+            <children>
+              <leafNode name="groups">
+                <properties>
+                  <help>MLD group information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="interface">
+                <properties>
+                  <help>MLD interface information</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="joins">
+                <properties>
+                  <help>MLD joined groups and sources</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+              <leafNode name="statistics">
+                <properties>
+                  <help>MLD statistics</help>
+                </properties>
+                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

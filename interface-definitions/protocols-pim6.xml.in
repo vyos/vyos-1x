@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<!-- Protocol Independent Multicast for IPv6 (PIMv6) configuration -->
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="pim6" owner="${vyos_conf_scripts_dir}/protocols_pim6.py">
+        <properties>
+          <help>Protocol Independent Multicast for IPv6 (PIMv6) and MLD</help>
+          <priority>400</priority>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <properties>
+              <help>PIMv6 interface</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_interfaces</script>
+              </completionHelp>
+              <constraint>
+                #include <include/constraint/interface-name.xml.i>
+              </constraint>
+            </properties>
+            <children>
+              #include <include/pim/bsm.xml.i>
+              #include <include/pim/dr-priority.xml.i>
+              #include <include/pim/hello.xml.i>
+              #include <include/pim/passive.xml.i>
+              <node name="mld">
+                <properties>
+                  <help>Multicast Listener Discovery (MLD)</help>
+                </properties>
+                <children>
+                  #include <include/generic-disable-node.xml.i>
+                  <tagNode name="join">
+                    <properties>
+                      <help>MLD join multicast group</help>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>Multicast group address</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-address"/>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="source">
+                        <properties>
+                          <help>Source address</help>
+                          <valueHelp>
+                            <format>ipv6</format>
+                            <description>Source address</description>
+                          </valueHelp>
+                          <completionHelp>
+                            <script>${vyos_completion_dir}/list_local_ips.sh --ipv6</script>
+                          </completionHelp>
+                          <constraint>
+                            <validator name="ipv6-address"/>
+                          </constraint>
+                          <multi/>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                  <leafNode name="last-member-query-count">
+                    <properties>
+                      <help>Last member query count</help>
+                      <valueHelp>
+                        <format>u32:1-255</format>
+                        <description>Count</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-255"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="last-member-query-interval">
+                    <properties>
+                      <help>Last member query interval</help>
+                      <valueHelp>
+                        <format>u32:100-6553500</format>
+                        <description>Last member query interval in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 100-6553500"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="interval">
+                    <properties>
+                      <help>Query interval</help>
+                      <valueHelp>
+                        <format>u32:1-65535</format>
+                        <description>Query interval in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-65535"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="max-response-time">
+                    <properties>
+                      <help>Max query response time</help>
+                      <valueHelp>
+                        <format>u32:100-6553500</format>
+                        <description>Query response value in milliseconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 100-6553500"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="version">
+                    <properties>
+                      <help>MLD version</help>
+                      <completionHelp>
+                        <list>1 2</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>1</format>
+                        <description>MLD version 1</description>
+                      </valueHelp>
+                     <valueHelp>
+                        <format>2</format>
+                        <description>MLD version 2</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 1-2"/>
+                      </constraint>
+                    </properties>
+                    <defaultValue>2</defaultValue>
+                  </leafNode>
+                </children>
+              </node>
+            </children>
+          </tagNode>
+          #include <include/pim/join-prune-interval.xml.i>
+          #include <include/pim/keep-alive-timer.xml.i>
+          #include <include/pim/packets.xml.i>
+          #include <include/pim/register-suppress-time.xml.i>
+          <node name="rp">
+            <properties>
+              <help>Rendezvous Point</help>
+            </properties>
+            <children>
+              <tagNode name="address">
+                <properties>
+                  <help>Rendezvous Point address</help>
+                  <valueHelp>
+                    <format>ipv6</format>
+                    <description>Rendezvous Point address</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="ipv6-address"/>
+                  </constraint>
+                </properties>
+                <children>
+                  <leafNode name="group">
+                    <properties>
+                      <help>Group Address range</help>
+                      <valueHelp>
+                        <format>ipv6net</format>
+                        <description>Group Address range</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ipv6-prefix"/>
+                      </constraint>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  #include <include/policy/prefix-list6.xml.i>
+                </children>
+              </tagNode>
+              #include <include/pim/keep-alive-timer.xml.i>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
