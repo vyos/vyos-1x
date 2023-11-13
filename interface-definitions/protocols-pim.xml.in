@@ -73,7 +73,7 @@
               <help>Internet Group Management Protocol (IGMP) options</help>
             </properties>
             <children>
-              <leafNode name="watermark-warn">
+              <leafNode name="watermark-warning">
                 <properties>
                   <help>Configure group limit for watermark warning</help>
                   <valueHelp>
