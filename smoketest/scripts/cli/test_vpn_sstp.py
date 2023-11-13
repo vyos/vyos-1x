@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2020-2022 VyOS maintainers and contributors
+# Copyright (C) 2020-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -47,7 +47,7 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
         cls._base_path = ['vpn', 'sstp']
         cls._config_file = '/run/accel-pppd/sstp.conf'
         cls._chap_secrets = '/run/accel-pppd/sstp.chap-secrets'
-
+        cls._protocol_section = 'sstp'
         # call base-classes classmethod
         super(TestVPNSSTPServer, cls).setUpClass()
 
@@ -58,26 +58,23 @@ class TestVPNSSTPServer(BasicAccelPPPTest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.cli_delete(cls, pki_path)
-
         super(TestVPNSSTPServer, cls).tearDownClass()
 
-    def basic_config(self):
-        # SSL is mandatory
+    def basic_protocol_specific_config(self):
         self.set(['ssl', 'ca-certificate', 'sstp'])
         self.set(['ssl', 'certificate', 'sstp'])
-        self.set(['client-ip-pool', 'subnet', '192.0.2.0/24'])
-
-        super().basic_config()
 
     def test_accel_local_authentication(self):
         # Change default port
         port = '8443'
         self.set(['port', port])
 
+        self.basic_config()
         super().test_accel_local_authentication()
 
         config = read_file(self._config_file)
         self.assertIn(f'port={port}', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

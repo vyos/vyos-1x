@@ -32,7 +32,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         cls._base_path = ['service', 'pppoe-server']
         cls._config_file = '/run/accel-pppd/pppoe.conf'
         cls._chap_secrets = '/run/accel-pppd/pppoe.chap-secrets'
-
+        cls._protocol_section = 'pppoe'
         # call base-classes classmethod
         super(TestServicePPPoEServer, cls).setUpClass()
 
@@ -65,13 +65,11 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         super().verify(conf)
 
-    def basic_config(self):
+    def basic_protocol_specific_config(self):
         self.cli_set(local_if + ['address', '192.0.2.1/32'])
-
         self.set(['access-concentrator', ac_name])
         self.set(['interface', interface])
 
-        super().basic_config()
 
     def test_pppoe_server_ppp_options(self):
         # Test configuration of local authentication for PPPoE server
@@ -120,7 +118,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         # check interface-cache
         self.assertEqual(conf['ppp']['unit-cache'], interface_cache)
 
-
     def test_pppoe_server_authentication_protocols(self):
         # Test configuration of local authentication for PPPoE server
         self.basic_config()
@@ -137,68 +134,25 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         self.assertEqual(conf['modules']['auth_mschap_v2'], None)
 
-
-    def test_pppoe_server_client_ip_pool(self):
-        # Test configuration of IPv6 client pools
-        self.basic_config()
-
-        subnet = '172.18.0.0/24'
+    def test_pppoe_server_shaper(self):
         fwmark = '223'
         limiter = 'tbf'
-
-        self.set(['client-ip-pool', 'subnet', subnet])
-
-        start = '192.0.2.10'
-        stop = '192.0.2.20'
-        stop_octet = stop.split('.')[3]
-        start_stop = f'{start}-{stop_octet}'
-        self.set(['client-ip-pool', 'start', start])
-        self.set(['client-ip-pool', 'stop', stop])
-        self.set(['shaper', 'fwmark', fwmark])
-
-        # commit changes
-        self.cli_commit()
-
-        # Validate configuration values
-        conf = ConfigParser(allow_no_value=True)
-        conf.read(self._config_file)
-
-        # check configured subnet
-        self.assertEqual(conf['ip-pool'][subnet], None)
-        self.assertEqual(conf['ip-pool'][start_stop], None)
-        self.assertEqual(conf['ip-pool']['gw-ip-address'], self._gateway)
-        self.assertEqual(conf['shaper']['fwmark'], fwmark)
-        self.assertEqual(conf['shaper']['down-limiter'], limiter)
-
-
-    def test_pppoe_server_client_ip_pool_name(self):
-        # Test configuration of named client pools
         self.basic_config()
 
-        subnet = '192.0.2.0/24'
-        gateway = '192.0.2.1'
-        pool = 'VYOS'
-
-        subnet_name = f'{subnet},name'
-        gw_ip_prefix = f'{gateway}/24'
-
-        self.set(['client-ip-pool', 'name', pool, 'subnet', subnet])
-        self.set(['client-ip-pool', 'name', pool, 'gateway-address', gateway])
-        self.cli_delete(self._base_path + ['gateway-address'])
-
+        self.set(['shaper', 'fwmark', fwmark])
         # commit changes
+
         self.cli_commit()
 
         # Validate configuration values
         conf = ConfigParser(allow_no_value=True, delimiters='=')
         conf.read(self._config_file)
 
-        # Validate configuration
-        self.assertEqual(conf['ip-pool'][subnet_name], pool)
-        self.assertEqual(conf['ip-pool']['gw-ip-address'], gateway)
-        self.assertEqual(conf['pppoe']['ip-pool'], pool)
-        self.assertEqual(conf['pppoe']['gw-ip-address'], gw_ip_prefix)
+        # basic verification
+        self.verify(conf)
 
+        self.assertEqual(conf['shaper']['fwmark'], fwmark)
+        self.assertEqual(conf['shaper']['down-limiter'], limiter)
 
     def test_pppoe_server_client_ipv6_pool(self):
         # Test configuration of IPv6 client pools
@@ -239,7 +193,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['ipv6-pool'][client_prefix], None)
         self.assertEqual(conf['ipv6-pool']['delegate'], f'{delegate_prefix},{delegate_mask}')
 
-
     def test_accel_radius_authentication(self):
         radius_called_sid = 'ifname:mac'
         radius_acct_interim_jitter = '9'
@@ -260,7 +213,6 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         self.assertEqual(conf['pppoe']['called-sid'], radius_called_sid)
         self.assertEqual(conf['radius']['acct-interim-jitter'], radius_acct_interim_jitter)
         self.assertEqual(conf['radius']['acct-interim-interval'], radius_acct_interim_interval)
-
 
     def test_pppoe_server_vlan(self):
 
@@ -283,6 +235,7 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
 
         tmp = ','.join(vlans)
         self.assertIn(f'vlan-mon={interface},{tmp}', config)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

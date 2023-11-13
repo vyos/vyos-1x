@@ -51,14 +51,15 @@ ppp-max-mtu={{ mtu }}
 mppe={{ ppp_mppe }}
 echo-interval=10
 echo-failure=3
-
+{% if default_pool is vyos_defined %}
+ip-pool={{ default_pool }}
+{% endif %}
 
 [client-ip-range]
 0.0.0.0/0
 
-[ip-pool]
-tunnel={{ client_ip_pool }}
-gw-ip-address={{ gw_ip }}
+{# Common IP pool definitions #}
+{% include 'accel-ppp/config_ip_pool.j2' %}
 
 [ppp]
 verbose=5
@@ -74,18 +75,15 @@ verbose=1
 {%     for r in radius_server %}
 server={{ r.server }},{{ r.key }},auth-port={{ r.port }},acct-port={{ r.acct_port }},req-limit=0,fail-time={{ r.fail_time }}
 {%     endfor %}
-
 {%     if radius_acct_interim_interval is vyos_defined %}
 acct-interim-interval={{ radius_acct_interim_interval }}
 {%     endif %}
 {%     if radius_acct_inter_jitter %}
 acct-interim-jitter={{ radius_acct_inter_jitter }}
 {%     endif %}
-
 acct-timeout={{ radius_acct_tmo }}
 timeout={{ radius_timeout }}
 max-try={{ radius_max_try }}
-
 {%     if radius_nas_id %}
 nas-identifier={{ radius_nas_id }}
 {%     endif %}
@@ -97,8 +95,8 @@ bind={{ radius_source_address }}
 {%     endif %}
 {% endif %}
 {# Both chap-secrets and radius block required the gw-ip-address #}
-{% if gw_ip is defined and gw_ip is not none %}
-gw-ip-address={{ gw_ip }}
+{% if gateway_address is vyos_defined %}
+gw-ip-address={{ gateway_address }}
 {% endif %}
 
 {% if radius_shaper_enable %}
