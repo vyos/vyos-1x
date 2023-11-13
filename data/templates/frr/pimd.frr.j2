@@ -69,7 +69,7 @@ ip pim spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.inf
 ip pim ssm {{ ssm }}
 {% endif %}
 !
-{% if igmp.watermark_warn is vyos_defined %}
-ip igmp watermark-warn {{ igmp.watermark_warn }}
+{% if igmp.watermark_warning is vyos_defined %}
+ip igmp watermark-warn {{ igmp.watermark_warning }}
 {% endif %}
 !
