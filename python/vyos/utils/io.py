@@ -62,3 +62,13 @@ def ask_yes_no(question, default=False) -> bool:
                 stdout.write("Please respond with yes/y or no/n\n")
         except EOFError:
             stdout.write("\nPlease respond with yes/y or no/n\n")
+
+def is_interactive():
+    """Try to determine if the routine was called from an interactive shell."""
+    import os, sys
+    return os.getenv('TERM', default=False) and sys.stderr.isatty() and sys.stdout.isatty()
+
+def is_dumb_terminal():
+    """Check if the current TTY is dumb, so that we can disable advanced terminal features."""
+    import os
+    return os.getenv('TERM') in ['vt100', 'dumb']
