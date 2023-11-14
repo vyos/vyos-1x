@@ -34,6 +34,7 @@ from requests.packages.urllib3 import PoolManager
 
 from vyos.progressbar import Progressbar
 from vyos.utils.io import ask_yes_no
+from vyos.utils.io import is_interactive
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
 from vyos.utils.process import cmd
@@ -49,7 +50,7 @@ class InteractivePolicy(MissingHostKeyPolicy):
     def missing_host_key(self, client, hostname, key):
         print_error(f"Host '{hostname}' not found in known hosts.")
         print_error('Fingerprint: ' + key.get_fingerprint().hex())
-        if sys.stdout.isatty() and ask_yes_no('Do you wish to continue?'):
+        if is_interactive() and ask_yes_no('Do you wish to continue?'):
             if client._host_keys_filename\
                and ask_yes_no('Do you wish to permanently add this host/key pair to known hosts?'):
                 client._host_keys.add(hostname, key.get_name(), key)
@@ -250,7 +251,6 @@ class HttpC:
                         allow_redirects=True,
                         timeout=self.timeout) as r:
                 # Abort early if the destination is inaccessible.
-                print('pre-3')
                 r.raise_for_status()
                 # If the request got redirected, keep the last URL we ended up with.
                 final_urlstring = r.url
@@ -323,17 +323,25 @@ def urlc(urlstring, *args, **kwargs):
     except KeyError:
         raise ValueError(f'Unsupported URL scheme: "{url.scheme}"')
 
-def download(local_path, urlstring, *args, **kwargs):
+def download(local_path, urlstring, progressbar=False, check_space=False,
+             source_host='', source_port=0, timeout=10.0):
     try:
-        urlc(urlstring, *args, **kwargs).download(local_path)
+        progressbar = progressbar and is_interactive()
+        urlc(urlstring, progressbar, check_space, source_host, source_port, timeout).download(local_path)
     except Exception as err:
         print_error(f'Unable to download "{urlstring}": {err}')
+    except KeyboardInterrupt:
+        print_error('\nDownload aborted by user.')
 
-def upload(local_path, urlstring, *args, **kwargs):
+def upload(local_path, urlstring, progressbar=False,
+           source_host='', source_port=0, timeout=10.0):
     try:
-        urlc(urlstring, *args, **kwargs).upload(local_path)
+        progressbar = progressbar and is_interactive()
+        urlc(urlstring, progressbar, source_host, source_port, timeout).upload(local_path)
     except Exception as err:
         print_error(f'Unable to upload "{urlstring}": {err}')
+    except KeyboardInterrupt:
+        print_error('\nUpload aborted by user.')
 
 def get_remote_config(urlstring, source_host='', source_port=0):
     """
@@ -346,26 +354,3 @@ def get_remote_config(urlstring, source_host='', source_port=0):
             return f.read()
     finally:
         os.remove(temp)
-
-def friendly_download(local_path, urlstring, source_host='', source_port=0):
-    """
-    Download with a progress bar, reassuring messages and free space checks.
-    """
-    try:
-        print_error('Downloading...')
-        download(local_path, urlstring, True, True, source_host, source_port)
-    except KeyboardInterrupt:
-        print_error('\nDownload aborted by user.')
-        sys.exit(1)
-    except:
-        import traceback
-        print_error(f'Failed to download {urlstring}.')
-        # There are a myriad different reasons a download could fail.
-        # SSH errors, FTP errors, I/O errors, HTTP errors (403, 404...)
-        # We omit the scary stack trace but print the error nevertheless.
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback.print_exception(exc_type, exc_value, None, 0, None, False)
-        sys.exit(1)
-    else:
-        print_error('Download complete.')
-        sys.exit(0)

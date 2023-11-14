@@ -19,26 +19,35 @@ import signal
 import subprocess
 import sys
 
+from vyos.utils.io import is_dumb_terminal
 from vyos.utils.io import print_error
+
 
 class Progressbar:
     def __init__(self, step=None):
         self.total = 0.0
         self.step = step
+        # Silently ignore all calls if terminal capabilities are lacking.
+        # This will also prevent the output from littering Ansible logs,
+        # as `ansible.netcommon.network_cli' coaxes the terminal into believing
+        # it is interactive.
+        self._dumb = is_dumb_terminal()
     def __enter__(self):
-        # Recalculate terminal width with every window resize.
-        signal.signal(signal.SIGWINCH, lambda signum, frame: self._update_cols())
-        # Disable line wrapping to prevent the staircase effect.
-        subprocess.run(['tput', 'rmam'], check=False)
-        self._update_cols()
-        # Print an empty progressbar with entry.
-        self.progress(0, 1)
+        if not self._dumb:
+            # Recalculate terminal width with every window resize.
+            signal.signal(signal.SIGWINCH, lambda signum, frame: self._update_cols())
+            # Disable line wrapping to prevent the staircase effect.
+            subprocess.run(['tput', 'rmam'], check=False)
+            self._update_cols()
+            # Print an empty progressbar with entry.
+            self.progress(0, 1)
         return self
     def __exit__(self, exc_type, kexc_val, exc_tb):
-        # Revert to the default SIGWINCH handler (ie nothing).
-        signal.signal(signal.SIGWINCH, signal.SIG_DFL)
-        # Reenable line wrapping.
-        subprocess.run(['tput', 'smam'], check=False)
+        if not self._dumb:
+            # Revert to the default SIGWINCH handler (ie nothing).
+            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            # Reenable line wrapping.
+            subprocess.run(['tput', 'smam'], check=False)
     def _update_cols(self):
         # `os.get_terminal_size()' is fast enough for our purposes.
         self.col = max(os.get_terminal_size().columns - 15, 20)
@@ -60,7 +69,7 @@ class Progressbar:
         Stateless progressbar taking no input at init and current progress with
         final size at callback (for SSH)
         """
-        if done <= total:
+        if done <= total and not self._dumb:
             length = math.ceil(self.col * done / total)
             percentage = str(math.ceil(100 * done / total)).rjust(3)
             # Carriage return at the end will make sure the line will get overwritten.
