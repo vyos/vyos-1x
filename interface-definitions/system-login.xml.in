@@ -244,21 +244,7 @@
                   </leafNode>
                 </children>
               </tagNode>
-              <leafNode name="source-address">
-                <properties>
-                  <help>Source IP used to communicate with TACACS+ server</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_local_ips.sh --ipv4</script>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 source address</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="ipv4-address"/>
-                  </constraint>
-                </properties>
-              </leafNode>
+              #include <include/source-address-ipv4.xml.i>
               <leafNode name="security-mode">
                 <properties>
                   <help>Security mode for TACACS+ authentication</help>

@@ -684,25 +684,8 @@
                 <defaultValue>1500</defaultValue>
               </leafNode>
               #include <include/name-server-ipv4-ipv6-port.xml.i>
+              #include <include/source-address-ipv4-ipv6-multi.xml.i>
               <leafNode name="source-address">
-                <properties>
-                  <help>Local addresses from which to send DNS queries</help>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_local_ips.sh --both</script>
-                  </completionHelp>
-                  <valueHelp>
-                    <format>ipv4</format>
-                    <description>IPv4 address from which to send traffic</description>
-                  </valueHelp>
-                  <valueHelp>
-                    <format>ipv6</format>
-                    <description>IPv6 address from which to send traffic</description>
-                  </valueHelp>
-                  <multi/>
-                  <constraint>
-                    <validator name="ip-address"/>
-                  </constraint>
-                </properties>
                 <defaultValue>0.0.0.0 ::</defaultValue>
               </leafNode>
               <leafNode name="system">
