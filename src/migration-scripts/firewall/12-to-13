@@ -70,7 +70,7 @@ for family in ['ipv4', 'ipv6', 'bridge']:
                                         state_value = config.return_value(base + [family, hook, priority, 'rule', rule, 'state', state])
                                         config.delete(base + [family, hook, priority, 'rule', rule, 'state', state])
                                         if state_value == 'enable':
-                                            config.set(base + [family, hook, priority, 'rule', rule, 'state', state])
+                                            config.set(base + [family, hook, priority, 'rule', rule, 'state'], value=state, replace=False)
                                             flag_enable = 'True'
                                 if flag_enable == 'False':
                                     config.delete(base + [family, hook, priority, 'rule', rule, 'state'])
