@@ -184,6 +184,19 @@ class ImageModel(ApiModel):
             }
         }
 
+class ImportPkiModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "key": "id_key",
+                "op": "import_pki",
+                "path": ["op", "mode", "path"],
+            }
+        }
+
 class ContainerImageModel(ApiModel):
     op: StrictStr
     name: StrictStr = None
@@ -723,6 +736,26 @@ def reset_op(data: ResetModel):
     try:
         if op == 'reset':
             res = session.reset(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+@app.post('/import-pki')
+def import_pki(data: ImportPkiModel):
+    session = app.state.vyos_session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'import-pki':
+            res = session.import_pki(path)
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
