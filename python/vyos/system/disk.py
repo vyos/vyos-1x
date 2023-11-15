@@ -15,10 +15,18 @@
 
 from json import loads as json_loads
 from os import sync
+from dataclasses import dataclass
 
 from psutil import disk_partitions
 
 from vyos.utils.process import run, cmd
+
+
+@dataclass
+class DiskDetails:
+    """Disk details"""
+    name: str
+    partition: dict[str, str]
 
 
 def disk_cleanup(drive_path: str) -> None:
@@ -67,6 +75,62 @@ def parttable_create(drive_path: str, root_size: int) -> None:
     sync()
     run(f'partprobe {drive_path}')
 
+    partitions: list[str] = partition_list(drive_path)
+
+    disk: DiskDetails = DiskDetails(
+        name = drive_path,
+        partition = {
+            'efi': next(x for x in partitions if x.endswith('2')),
+            'root': next(x for x in partitions if x.endswith('3'))
+        }
+    )
+
+    return disk
+
+
+def partition_list(drive_path: str) -> list[str]:
+    """Get a list of partitions on a drive
+
+    Args:
+        drive_path (str): path to a drive
+
+    Returns:
+        list[str]: a list of partition paths
+    """
+    lsblk: str = cmd(f'lsblk -Jp {drive_path}')
+    drive_info: dict = json_loads(lsblk)
+    device: list = drive_info.get('blockdevices')
+    children: list[str] = device[0].get('children', []) if device else []
+    partitions: list[str] = [child.get('name') for child in children]
+    return partitions
+
+
+def partition_parent(partition_path: str) -> str:
+    """Get a parent device for a partition
+
+    Args:
+        partition (str): path to a partition
+
+    Returns:
+        str: path to a parent device
+    """
+    parent: str = cmd(f'lsblk -ndpo pkname {partition_path}')
+    return parent
+
+
+def from_partition(partition_path: str) -> DiskDetails:
+    drive_path: str = partition_parent(partition_path)
+    partitions: list[str] = partition_list(drive_path)
+
+    disk: DiskDetails = DiskDetails(
+        name = drive_path,
+        partition = {
+            'efi': next(x for x in partitions if x.endswith('2')),
+            'root': next(x for x in partitions if x.endswith('3'))
+        }
+    )
+
+    return disk
 
 def filesystem_create(partition: str, fstype: str) -> None:
     """Create a filesystem on a partition
@@ -136,25 +200,6 @@ def find_device(mountpoint: str) -> str:
         if partition.mountpoint == mountpoint:
             return partition.mountpoint
     return ''
-
-
-def raid_create(raid_name: str,
-                raid_members: list[str],
-                raid_level: str = 'raid1') -> None:
-    """Create a RAID array
-
-    Args:
-        raid_name (str): a name of array (data, backup, test, etc.)
-        raid_members (list[str]): a list of array members
-        raid_level (str, optional): an array level. Defaults to 'raid1'.
-    """
-    raid_devices_num: int = len(raid_members)
-    raid_members_str: str = ' '.join(raid_members)
-    command: str = f'mdadm --create /dev/md/{raid_name} --metadata=1.2 \
-        --raid-devices={raid_devices_num} --level={raid_level} \
-        {raid_members_str}'
-
-    run(command)
 
 
 def disks_size() -> dict[str, int]:

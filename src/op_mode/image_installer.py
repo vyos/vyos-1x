@@ -21,18 +21,20 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from shutil import copy, chown, rmtree, copytree
 from sys import exit
-from passlib.hosts import linux_context
+from time import sleep
+from typing import Union
 from urllib.parse import urlparse
+from passlib.hosts import linux_context
 
 from psutil import disk_partitions
 
 from vyos.configtree import ConfigTree
 from vyos.remote import download
-from vyos.system import disk, grub, image, compat, SYSTEM_CFG_VER
+from vyos.system import disk, grub, image, compat, raid, SYSTEM_CFG_VER
 from vyos.template import render
-from vyos.utils.io import ask_input, ask_yes_no
+from vyos.utils.io import ask_input, ask_yes_no, select_entry
 from vyos.utils.file import chmod_2775
-from vyos.utils.process import run
+from vyos.utils.process import cmd, run
 
 # define text messages
 MSG_ERR_NOT_LIVE: str = 'The system is already installed. Please use "add system image" instead.'
@@ -44,11 +46,15 @@ MSG_INFO_INSTALL_EXIT: str = 'Exiting from VyOS installation'
 MSG_INFO_INSTALL_SUCCESS: str = 'The image installed successfully; please reboot now.'
 MSG_INFO_INSTALL_DISKS_LIST: str = 'The following disks were found:'
 MSG_INFO_INSTALL_DISK_SELECT: str = 'Which one should be used for installation?'
+MSG_INFO_INSTALL_RAID_CONFIGURE: str = 'Would you like to configure RAID-1 mirroring?'
+MSG_INFO_INSTALL_RAID_FOUND_DISKS: str = 'Would you like to configure RAID-1 mirroring on them?'
+MSG_INFO_INSTALL_RAID_CHOOSE_DISKS: str = 'Would you like to choose two disks for RAID-1 mirroring?'
 MSG_INFO_INSTALL_DISK_CONFIRM: str = 'Installation will delete all data on the drive. Continue?'
+MSG_INFO_INSTALL_RAID_CONFIRM: str = 'Installation will delete all data on both drives. Continue?'
 MSG_INFO_INSTALL_PARTITONING: str = 'Creating partition table...'
 MSG_INPUT_CONFIG_FOUND: str = 'An active configuration was found. Would you like to copy it to the new image?'
 MSG_INPUT_IMAGE_NAME: str = 'What would you like to name this image?'
-MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set a new image as default one for boot?'
+MSG_INPUT_IMAGE_DEFAULT: str = 'Would you like to set the new image as the default one for boot?'
 MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user'
 MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the drive?'
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
@@ -107,13 +113,14 @@ def gb_to_bytes(size: float) -> int:
     return int(size * 1024**3)
 
 
-def find_disk() -> tuple[str, int]:
+def find_disks() -> dict[str, int]:
     """Find a target disk for installation
 
     Returns:
-        tuple[str, int]: disk name and size in bytes
+        dict[str, int]: a list of available disks by name and size
     """
     # check for available disks
+    print('Probing disks')
     disks_available: dict[str, int] = disk.disks_size()
     for disk_name, disk_size in disks_available.copy().items():
         if disk_size < CONST_MIN_DISK_SIZE:
@@ -122,17 +129,10 @@ def find_disk() -> tuple[str, int]:
         print(MSG_ERR_NO_DISK)
         exit(MSG_INFO_INSTALL_EXIT)
 
-    # select one as a target
-    print(MSG_INFO_INSTALL_DISKS_LIST)
-    default_disk: str = list(disks_available)[0]
-    for disk_name, disk_size in disks_available.items():
-        disk_size_human: str = bytes_to_gb(disk_size)
-        print(f'Drive: {disk_name} ({disk_size_human} GB)')
-    disk_selected: str = ask_input(MSG_INFO_INSTALL_DISK_SELECT,
-                                   default=default_disk,
-                                   valid_responses=list(disks_available))
+    num_disks: int = len(disks_available)
+    print(f'{num_disks} disk(s) found')
 
-    return disk_selected, disks_available[disk_selected]
+    return disks_available
 
 
 def ask_root_size(available_space: int) -> int:
@@ -159,6 +159,126 @@ def ask_root_size(available_space: int) -> int:
             continue
 
         return root_size_kbytes
+
+def create_partitions(target_disk: str, target_size: int,
+                      prompt: bool = True) -> None:
+    """Create partitions on a target disk
+
+    Args:
+        target_disk (str): a target disk
+        target_size (int): size of disk in bytes
+    """
+    # define target rootfs size in KB (smallest unit acceptable by sgdisk)
+    available_size: int = (target_size - CONST_RESERVED_SPACE) // 1024
+    if prompt:
+        rootfs_size: int = ask_root_size(available_size)
+    else:
+        rootfs_size: int = available_size
+
+    print(MSG_INFO_INSTALL_PARTITONING)
+    disk.disk_cleanup(target_disk)
+    disk_details: disk.DiskDetails = disk.parttable_create(target_disk,
+                                                           rootfs_size)
+
+    return disk_details
+
+
+def ask_single_disk(disks_available: dict[str, int]) -> str:
+    """Ask user to select a disk for installation
+
+    Args:
+        disks_available (dict[str, int]): a list of available disks
+    """
+    print(MSG_INFO_INSTALL_DISKS_LIST)
+    default_disk: str = list(disks_available)[0]
+    for disk_name, disk_size in disks_available.items():
+        disk_size_human: str = bytes_to_gb(disk_size)
+        print(f'Drive: {disk_name} ({disk_size_human} GB)')
+    disk_selected: str = ask_input(MSG_INFO_INSTALL_DISK_SELECT,
+                                   default=default_disk,
+                                   valid_responses=list(disks_available))
+
+    # create partitions
+    if not ask_yes_no(MSG_INFO_INSTALL_DISK_CONFIRM):
+        print(MSG_INFO_INSTALL_EXIT)
+        exit()
+
+    disk_details: disk.DiskDetails = create_partitions(disk_selected,
+                                                       disks_available[disk_selected])
+
+    disk.filesystem_create(disk_details.partition['efi'], 'efi')
+    disk.filesystem_create(disk_details.partition['root'], 'ext4')
+
+    return disk_details
+
+
+def check_raid_install(disks_available: dict[str, int]) -> Union[str, None]:
+    """Ask user to select disks for RAID installation
+
+    Args:
+        disks_available (dict[str, int]): a list of available disks
+    """
+    if len(disks_available) < 2:
+        return None
+
+    if not ask_yes_no(MSG_INFO_INSTALL_RAID_CONFIGURE, default=True):
+        return None
+
+    def format_selection(disk_name: str) -> str:
+        return f'{disk_name}\t({bytes_to_gb(disks_available[disk_name])} GB)'
+
+    disk0, disk1 = list(disks_available)[0], list(disks_available)[1]
+    disks_selected: dict[str, int] = { disk0: disks_available[disk0],
+                                       disk1: disks_available[disk1] }
+
+    target_size: int = min(disks_selected[disk0], disks_selected[disk1])
+
+    print(MSG_INFO_INSTALL_DISKS_LIST)
+    for disk_name, disk_size in disks_selected.items():
+        disk_size_human: str = bytes_to_gb(disk_size)
+        print(f'\t{disk_name} ({disk_size_human} GB)')
+    if not ask_yes_no(MSG_INFO_INSTALL_RAID_FOUND_DISKS, default=True):
+        if not ask_yes_no(MSG_INFO_INSTALL_RAID_CHOOSE_DISKS, default=True):
+            return None
+        else:
+            disks_selected = {}
+            disk0 = select_entry(list(disks_available), 'Disks available:',
+                                 'Select first disk:', format_selection)
+
+            disks_selected[disk0] = disks_available[disk0]
+            del disks_available[disk0]
+            disk1 = select_entry(list(disks_available), 'Remaining disks:',
+                                 'Select second disk:', format_selection)
+            disks_selected[disk1] = disks_available[disk1]
+
+            target_size: int = min(disks_selected[disk0],
+                                   disks_selected[disk1])
+
+    # create partitions
+    if not ask_yes_no(MSG_INFO_INSTALL_RAID_CONFIRM):
+        print(MSG_INFO_INSTALL_EXIT)
+        exit()
+
+    disks: list[disk.DiskDetails] = []
+    for disk_selected in list(disks_selected):
+        print(f'Creating partitions on {disk_selected}')
+        disk_details = create_partitions(disk_selected, target_size,
+                                         prompt=False)
+        disk.filesystem_create(disk_details.partition['efi'], 'efi')
+
+        disks.append(disk_details)
+
+    print('Creating RAID array')
+    members = [disk.partition['root'] for disk in disks]
+    raid_details: raid.RaidDetails = raid.raid_create(members)
+    # raid init stuff
+    print('Updating initramfs')
+    raid.update_initramfs()
+    # end init
+    print('Creating filesystem on RAID array')
+    disk.filesystem_create(raid_details.name, 'ext4')
+
+    return raid_details
 
 
 def prepare_tmp_disr() -> None:
@@ -294,7 +414,7 @@ def image_fetch(image_path: str) -> Path:
             if local_path.is_file():
                 return local_path
             else:
-                raise
+                raise FileNotFoundError
     except Exception:
         print(f'The image cannot be fetched from: {image_path}')
         exit(1)
@@ -351,6 +471,27 @@ def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
                 if Path(remove_item).is_dir():
                     rmtree(remove_item)
 
+def cleanup_raid(details: raid.RaidDetails) -> None:
+    efiparts = []
+    for raid_disk in details.disks:
+        efiparts.append(raid_disk.partition['efi'])
+    cleanup([details.name, *efiparts],
+            ['/mnt/installation'])
+
+
+def is_raid_install(install_object: Union[disk.DiskDetails, raid.RaidDetails]) -> bool:
+    """Check if installation target is a RAID array
+
+    Args:
+        install_object (Union[disk.DiskDetails, raid.RaidDetails]): a target disk
+
+    Returns:
+        bool: True if it is a RAID array
+    """
+    if isinstance(install_object, raid.RaidDetails):
+        return True
+    return False
+
 
 def install_image() -> None:
     """Install an image to a disk
@@ -363,50 +504,44 @@ def install_image() -> None:
         print(MSG_INFO_INSTALL_EXIT)
         exit()
 
+    # configure image name
+    running_image_name: str = image.get_running_image()
+    while True:
+        image_name: str = ask_input(MSG_INPUT_IMAGE_NAME,
+                                    running_image_name)
+        if image.validate_name(image_name):
+            break
+        print(MSG_WARN_IMAGE_NAME_WRONG)
+
+    # ask for password
+    user_password: str = ask_input(MSG_INPUT_PASSWORD, default='vyos')
+
+    # ask for default console
+    console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
+                                  default='K',
+                                  valid_responses=['K', 'S', 'U'])
+    console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS', 'U': 'ttyUSB'}
+
+    disks: dict[str, int] = find_disks()
+
+    install_target: Union[disk.DiskDetails, raid.RaidDetails, None] = None
     try:
-        # configure image name
-        running_image_name: str = image.get_running_image()
-        while True:
-            image_name: str = ask_input(MSG_INPUT_IMAGE_NAME,
-                                        running_image_name)
-            if image.validate_name(image_name):
-                break
-            print(MSG_WARN_IMAGE_NAME_WRONG)
+        install_target = check_raid_install(disks)
+        if install_target is None:
+            install_target = ask_single_disk(disks)
 
-        # define target drive
-        install_target, target_size = find_disk()
-
-        # define target rootfs size in KB (smallest unit acceptable by sgdisk)
-        availabe_size: int = (target_size - CONST_RESERVED_SPACE) // 1024
-        rootfs_size: int = ask_root_size(availabe_size)
-
-        # ask for password
-        user_password: str = ask_input(MSG_INPUT_PASSWORD, default='vyos')
-
-        # ask for default console
-        console_type: str = ask_input(MSG_INPUT_CONSOLE_TYPE,
-                                      default='K',
-                                      valid_responses=['K', 'S', 'U'])
-        console_dict: dict[str, str] = {'K': 'tty', 'S': 'ttyS', 'U': 'ttyUSB'}
-
-        # create partitions
-        if not ask_yes_no(MSG_INFO_INSTALL_DISK_CONFIRM):
-            print(MSG_INFO_INSTALL_EXIT)
-            exit()
-        print(MSG_INFO_INSTALL_PARTITONING)
-        disk.disk_cleanup(install_target)
-        disk.parttable_create(install_target, rootfs_size)
-        disk.filesystem_create(f'{install_target}2', 'efi')
-        disk.filesystem_create(f'{install_target}3', 'ext4')
-
-        # create directiroes for installation media
+        # create directories for installation media
         prepare_tmp_disr()
 
         # mount target filesystem and create required dirs inside
         print('Mounting new partitions')
-        disk.partition_mount(f'{install_target}3', DIR_DST_ROOT)
-        Path(f'{DIR_DST_ROOT}/boot/efi').mkdir(parents=True)
-        disk.partition_mount(f'{install_target}2', f'{DIR_DST_ROOT}/boot/efi')
+        if is_raid_install(install_target):
+            disk.partition_mount(install_target.name, DIR_DST_ROOT)
+            Path(f'{DIR_DST_ROOT}/boot/efi').mkdir(parents=True)
+        else:
+            disk.partition_mount(install_target.partition['root'], DIR_DST_ROOT)
+            Path(f'{DIR_DST_ROOT}/boot/efi').mkdir(parents=True)
+            disk.partition_mount(install_target.partition['efi'], f'{DIR_DST_ROOT}/boot/efi')
 
         # a config dir. It is the deepest one, so the comand will
         # create all the rest in a single step
@@ -432,10 +567,10 @@ def install_image() -> None:
         copy(FILE_ROOTFS_SRC,
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
 
-        # install GRUB
-        print('Installing GRUB to the drive')
-        grub.install(install_target, f'{DIR_DST_ROOT}/boot/',
-                     f'{DIR_DST_ROOT}/boot/efi')
+        if is_raid_install(install_target):
+            write_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw'
+            raid.update_default(write_dir)
+
         setup_grub(DIR_DST_ROOT)
         # add information about version
         grub.create_structure()
@@ -443,9 +578,34 @@ def install_image() -> None:
         grub.set_default(image_name, DIR_DST_ROOT)
         grub.set_console_type(console_dict[console_type], DIR_DST_ROOT)
 
+        if is_raid_install(install_target):
+            # add RAID specific modules
+            grub.modules_write(f'{DIR_DST_ROOT}/{grub.CFG_VYOS_MODULES}',
+                               ['part_msdos', 'part_gpt', 'diskfilter',
+                                'ext2','mdraid1x'])
+        # install GRUB
+        if is_raid_install(install_target):
+            print('Installing GRUB to the drives')
+            l = install_target.disks
+            for disk_target in l:
+                disk.partition_mount(disk_target.partition['efi'], f'{DIR_DST_ROOT}/boot/efi')
+                grub.install(disk_target.name, f'{DIR_DST_ROOT}/boot/',
+                             f'{DIR_DST_ROOT}/boot/efi',
+                             id=f'VyOS (RAID disk {l.index(disk_target) + 1})')
+                disk.partition_umount(disk_target.partition['efi'])
+        else:
+            print('Installing GRUB to the drive')
+            grub.install(install_target.name, f'{DIR_DST_ROOT}/boot/',
+                         f'{DIR_DST_ROOT}/boot/efi')
+
         # umount filesystems and remove temporary files
-        cleanup([f'{install_target}2', f'{install_target}3'],
-                ['/mnt/installation'])
+        if is_raid_install(install_target):
+            cleanup([install_target.name],
+                    ['/mnt/installation'])
+        else:
+            cleanup([install_target.partition['efi'],
+                     install_target.partition['root']],
+                    ['/mnt/installation'])
 
         # we are done
         print(MSG_INFO_INSTALL_SUCCESS)
@@ -455,8 +615,13 @@ def install_image() -> None:
         print(f'Unable to install VyOS: {err}')
         # unmount filesystems and clenup
         try:
-            cleanup([f'{install_target}2', f'{install_target}3'],
-                    ['/mnt/installation'])
+            if install_target is not None:
+                if is_raid_install(install_target):
+                    cleanup_raid(install_target)
+                else:
+                    cleanup([install_target.partition['efi'],
+                             install_target.partition['root']],
+                            ['/mnt/installation'])
         except Exception as err:
             print(f'Cleanup failed: {err}')
 
