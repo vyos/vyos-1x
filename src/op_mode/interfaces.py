@@ -243,6 +243,9 @@ def _get_summary_data(ifname: typing.Optional[str],
         res_intf['admin_state'] = interface.get_admin_state()
         res_intf['addr'] = [_ for _ in interface.get_addr() if not _.startswith('fe80::')]
         res_intf['description'] = interface.get_alias()
+        res_intf['mtu'] = interface.get_mtu()
+        res_intf['mac'] = interface.get_mac()
+        res_intf['vrf'] = interface.get_vrf()
 
         ret.append(res_intf)
 
@@ -373,6 +376,51 @@ def _format_show_summary(data):
     return 0
 
 @catch_broken_pipe
+def _format_show_summary_extended(data):
+    headers = ["Interface", "IP Address", "MAC", "VRF", "MTU", "S/L", "Description"]
+    table_data = []
+
+    print('Codes: S - State, L - Link, u - Up, D - Down, A - Admin Down')
+
+    for intf in data:
+        if 'unhandled' in intf:
+            continue
+
+        ifname = intf['ifname']
+        oper_state = 'u' if intf['oper_state'] in ('up', 'unknown') else 'D'
+        admin_state = 'u' if intf['admin_state'] in ('up', 'unknown') else 'A'
+        addrs = intf['addr'] or ['-']
+        description = '\n'.join(_split_text(intf['description'], 0))
+        mac = intf['mac'] if intf['mac'] else 'n/a'
+        mtu = intf['mtu'] if intf['mtu'] else 'n/a'
+        vrf = intf['vrf'] if intf['vrf'] else 'default'
+
+        ip_addresses = '\n'.join(ip for ip in addrs)
+
+        # Create a row for the table
+        row = [
+            ifname,
+            ip_addresses,
+            mac,
+            vrf,
+            mtu,
+            f"{admin_state}/{oper_state}",
+            description,
+        ]
+
+        # Append the row to the table data
+        table_data.append(row)
+
+    for intf in data:
+        if 'unhandled' in intf:
+            string = {'C': 'u/D', 'D': 'A/D'}[intf['state']]
+            table_data.append([intf['ifname'], '', '', '', '', string, ''])
+
+    print(tabulate(table_data, headers))
+
+    return 0
+
+@catch_broken_pipe
 def _format_show_counters(data: list):
     data_entries = []
     for entry in data:
@@ -407,6 +455,14 @@ def show_summary(raw: bool, intf_name: typing.Optional[str],
     if raw:
         return data
     return _format_show_summary(data)
+
+def show_summary_extended(raw: bool, intf_name: typing.Optional[str],
+                            intf_type: typing.Optional[str],
+                            vif: bool, vrrp: bool):
+    data = _get_summary_data(intf_name, intf_type, vif, vrrp)
+    if raw:
+        return data
+    return _format_show_summary_extended(data)
 
 def show_counters(raw: bool, intf_name: typing.Optional[str],
                              intf_type: typing.Optional[str],
