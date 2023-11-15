@@ -182,7 +182,7 @@
           </leafNode>
           <node name="spt-switchover">
             <properties>
-              <help>Send v6 secondary addresses</help>
+              <help>Shortest-path tree (SPT) switchover</help>
             </properties>
             <children>
               <node name="infinity-and-beyond">
