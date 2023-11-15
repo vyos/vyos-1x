@@ -16,144 +16,139 @@
 
 import os
 
-from ipaddress import IPv4Address
+from ipaddress import IPv4Network
+from signal import SIGTERM
 from sys import exit
 
 from vyos.config import Config
-from vyos import ConfigError
+from vyos.config import config_dict_merge
+from vyos.configdict import node_changed
+from vyos.configverify import verify_interface_exists
 from vyos.utils.process import process_named_running
 from vyos.utils.process import call
-from vyos.template import render
-from signal import SIGTERM
-
+from vyos.template import render_to_string
+from vyos import ConfigError
+from vyos import frr
 from vyos import airbag
 airbag.enable()
-
-# Required to use the full path to pimd, in another case daemon will not be started
-pimd_cmd = f'/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1'
-
-config_file = r'/tmp/pimd.frr'
 
 def get_config(config=None):
     if config:
         conf = config
     else:
         conf = Config()
-    pim_conf = {
-        'pim_conf' : False,
-        'igmp_conf' : False,
-        'igmp_proxy_conf' : False,
-        'old_pim' : {
-            'ifaces' : {},
-            'rp'     : {}
-        },
-        'pim' : {
-            'ifaces' : {},
-            'rp'     : {}
-        }
-    }
-    if not (conf.exists('protocols pim') or conf.exists_effective('protocols pim')):
-        return None
 
-    if conf.exists('protocols igmp-proxy'):
-        pim_conf['igmp_proxy_conf'] = True
+    base = ['protocols', 'pim']
 
-    if conf.exists('protocols igmp'):
-        pim_conf['igmp_conf'] = True
+    pim = conf.get_config_dict(base, key_mangling=('-', '_'),
+                               get_first_key=True, no_tag_node_value_mangle=True)
 
-    if conf.exists('protocols pim'):
-        pim_conf['pim_conf'] = True
+    # We can not run both IGMP proxy and PIM at the same time - get IGMP
+    # proxy status
+    if conf.exists(['protocols', 'igmp-proxy']):
+        pim.update({'igmp_proxy_enabled' : {}})
 
-    conf.set_level('protocols pim')
+    # FRR has VRF support for different routing daemons. As interfaces belong
+    # to VRFs - or the global VRF, we need to check for changed interfaces so
+    # that they will be properly rendered for the FRR config. Also this eases
+    # removal of interfaces from the running configuration.
+    interfaces_removed = node_changed(conf, base + ['interface'])
+    if interfaces_removed:
+        pim['interface_removed'] = list(interfaces_removed)
 
-    # Get interfaces
-    for iface in conf.list_effective_nodes('interface'):
-        pim_conf['old_pim']['ifaces'].update({
-            iface : {
-                'hello' : conf.return_effective_value('interface {0} hello'.format(iface)),
-                'dr_prio' : conf.return_effective_value('interface {0} dr-priority'.format(iface))
-            }
-        })
+    # Bail out early if configuration tree does no longer exist. this must
+    # be done after retrieving the list of interfaces to be removed.
+    if not conf.exists(base):
+        pim.update({'deleted' : ''})
+        return pim
 
-    for iface in conf.list_nodes('interface'):
-        pim_conf['pim']['ifaces'].update({
-            iface : {
-                'hello' : conf.return_value('interface {0} hello'.format(iface)),
-                'dr_prio' : conf.return_value('interface {0} dr-priority'.format(iface)),
-            }
-        })
+    # We have gathered the dict representation of the CLI, but there are default
+    # options which we need to update into the dictionary retrived.
+    default_values = conf.get_config_defaults(**pim.kwargs, recursive=True)
 
-    conf.set_level('protocols pim rp')
+    # We have to cleanup the default dict, as default values could enable features
+    # which are not explicitly enabled on the CLI. Example: default-information
+    # originate comes with a default metric-type of 2, which will enable the
+    # entire default-information originate tree, even when not set via CLI so we
+    # need to check this first and probably drop that key.
+    for interface in pim.get('interface', []):
+        # We need to reload the defaults on every pass b/c of
+        # hello-multiplier dependency on dead-interval
+        # If hello-multiplier is set, we need to remove the default from
+        # dead-interval.
+        if 'igmp' not in pim['interface'][interface]:
+            del default_values['interface'][interface]['igmp']
 
-    # Get RPs addresses
-    for rp_addr in conf.list_effective_nodes('address'):
-        pim_conf['old_pim']['rp'][rp_addr] = conf.return_effective_values('address {0} group'.format(rp_addr))
-
-    for rp_addr in conf.list_nodes('address'):
-        pim_conf['pim']['rp'][rp_addr] = conf.return_values('address {0} group'.format(rp_addr))
-
-    # Get RP keep-alive-timer
-    if conf.exists_effective('rp keep-alive-timer'):
-        pim_conf['old_pim']['rp_keep_alive'] = conf.return_effective_value('rp keep-alive-timer')
-    if conf.exists('rp keep-alive-timer'):
-        pim_conf['pim']['rp_keep_alive'] = conf.return_value('rp keep-alive-timer')
-
-    return pim_conf
+    pim = config_dict_merge(default_values, pim)
+    return pim
 
 def verify(pim):
-    if pim is None:
+    if not pim or 'deleted' in pim:
         return None
 
-    if pim['pim_conf']:
-        # Check conflict with IGMP-Proxy
-        if pim['igmp_proxy_conf']:
-            raise ConfigError(f"IGMP proxy and PIM cannot be both configured at the same time")
+    if 'igmp_proxy_enabled' in pim:
+        raise ConfigError('IGMP proxy and PIM cannot be configured at the same time!')
 
-        # Check interfaces
-        if not pim['pim']['ifaces']:
-            raise ConfigError(f"PIM require defined interfaces!")
+    if 'interface' not in pim:
+        raise ConfigError('PIM require defined interfaces!')
 
-        if not pim['pim']['rp']:
-            raise ConfigError(f"RP address required")
+    for interface in pim['interface']:
+        verify_interface_exists(interface)
+
+    if 'rp' in pim:
+        if 'address' not in pim['rp']:
+            raise ConfigError('PIM rendezvous point needs to be defined!')
 
         # Check unique multicast groups
-        uniq_groups = []
-        for rp_addr in pim['pim']['rp']:
-            if not pim['pim']['rp'][rp_addr]:
-                raise ConfigError(f"Group should be specified for RP " + rp_addr)
-            for group in pim['pim']['rp'][rp_addr]:
-                if (group in uniq_groups):
-                    raise ConfigError(f"Group range " + group + " specified cannot exact match another")
+        unique = []
+        pim_base_error = 'PIM rendezvous point group'
+        for address, address_config in pim['rp']['address'].items():
+            if 'group' not in address_config:
+                raise ConfigError(f'{pim_base_error} should be defined for "{address}"!')
 
-                # Check, is this multicast group
-                gr_addr = group.split('/')
-                if IPv4Address(gr_addr[0]) < IPv4Address('224.0.0.0'):
-                    raise ConfigError(group + " not a multicast group")
-
-            uniq_groups.extend(pim['pim']['rp'][rp_addr])
+            # Check if it is a multicast group
+            for gr_addr in address_config['group']:
+                if not IPv4Network(gr_addr).is_multicast:
+                    raise ConfigError(f'{pim_base_error} "{gr_addr}" is not a multicast group!')
+                if gr_addr in unique:
+                    raise ConfigError(f'{pim_base_error} must be unique!')
+                unique.append(gr_addr)
 
 def generate(pim):
-    if pim is None:
+    if not pim or 'deleted' in pim:
         return None
-
-    render(config_file, 'frr/pimd.frr.j2', pim)
+    pim['frr_pimd_config']  = render_to_string('frr/pimd.frr.j2', pim)
     return None
 
 def apply(pim):
-    if pim is None:
+    pim_daemon = 'pimd'
+    pim_pid = process_named_running(pim_daemon)
+
+    if not pim or 'deleted' in pim:
+        if 'deleted' in pim:
+            os.kill(int(pim_pid), SIGTERM)
+
         return None
 
-    pim_pid = process_named_running('pimd')
-    if pim['igmp_conf'] or pim['pim_conf']:
-        if not pim_pid:
-            call(pimd_cmd)
+    if not pim_pid:
+        call('/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1')
 
-        if os.path.exists(config_file):
-            call("vtysh -d pimd -f " + config_file)
-            os.remove(config_file)
-    elif pim_pid:
-        os.kill(int(pim_pid), SIGTERM)
+    # Save original configuration prior to starting any commit actions
+    frr_cfg = frr.FRRConfig()
 
+    frr_cfg.load_configuration(pim_daemon)
+    frr_cfg.modify_section(f'^ip pim')
+    frr_cfg.modify_section(f'^ip igmp')
+
+    for key in ['interface', 'interface_removed']:
+        if key not in pim:
+            continue
+        for interface in pim[key]:
+            frr_cfg.modify_section(f'^interface {interface}', stop_pattern='^exit', remove_stop_mark=True)
+
+    if 'frr_pimd_config' in pim:
+        frr_cfg.add_before(frr.default_add_before, pim['frr_pimd_config'])
+    frr_cfg.commit_configuration(pim_daemon)
     return None
 
 if __name__ == '__main__':
