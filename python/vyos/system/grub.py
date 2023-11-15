@@ -19,7 +19,7 @@ from typing import Union
 from uuid import uuid5, NAMESPACE_URL, UUID
 
 from vyos.template import render
-from vyos.utils.process import run, cmd
+from vyos.utils.process import cmd
 from vyos.system import disk
 
 # Define variables
@@ -49,7 +49,7 @@ REGEX_GRUB_MODULES: str = r'^insmod (?P<module_name>.+)$'
 REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
 
 
-def install(drive_path: str, boot_dir: str, efi_dir: str) -> None:
+def install(drive_path: str, boot_dir: str, efi_dir: str, id: str = 'VyOS') -> None:
     """Install GRUB for both BIOS and EFI modes (hybrid boot)
 
     Args:
@@ -62,11 +62,11 @@ def install(drive_path: str, boot_dir: str, efi_dir: str) -> None:
             {drive_path} --force',
         f'grub-install --no-floppy --recheck --target=x86_64-efi \
             --force-extra-removable --boot-directory={boot_dir} \
-            --efi-directory={efi_dir} --bootloader-id="VyOS" \
+            --efi-directory={efi_dir} --bootloader-id="{id}" \
             --no-uefi-secure-boot'
     ]
     for command in commands:
-        run(command)
+        cmd(command)
 
 
 def gen_version_uuid(version_name: str) -> str:
@@ -294,7 +294,7 @@ def set_default(version_name: str, root_dir: str = '') -> None:
     vars_write(vars_file, vars_current)
 
 
-def common_write(root_dir: str = '') -> None:
+def common_write(root_dir: str = '', grub_common: dict[str, str] = {}) -> None:
     """Write common GRUB configuration file (overwrite everything)
 
     Args:
@@ -304,7 +304,7 @@ def common_write(root_dir: str = '') -> None:
     if not root_dir:
         root_dir = disk.find_persistence()
     common_config = f'{root_dir}/{CFG_VYOS_COMMON}'
-    render(common_config, TMPL_GRUB_COMMON, {})
+    render(common_config, TMPL_GRUB_COMMON, grub_common)
 
 
 def create_structure(root_dir: str = '') -> None:
@@ -335,3 +335,6 @@ def set_console_type(console_type: str, root_dir: str = '') -> None:
     vars_current: dict[str, str] = vars_read(vars_file)
     vars_current['console_type'] = str(console_type)
     vars_write(vars_file, vars_current)
+
+def set_raid(root_dir: str = '') -> None:
+    pass
