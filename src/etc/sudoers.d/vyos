@@ -42,6 +42,7 @@ Cmnd_Alias FORCE_CLUSTER = /usr/share/heartbeat/hb_takeover, \
                            /usr/share/heartbeat/hb_standby
 Cmnd_Alias DIAGNOSTICS = /bin/ip vrf exec * /bin/ping *,       \
                          /bin/ip vrf exec * /bin/traceroute *, \
+                         /bin/ip vrf exec * /usr/bin/mtr *, \
                          /usr/libexec/vyos/op_mode/*
 %operator ALL=NOPASSWD: DATE, IPTABLES, ETHTOOL, IPFLUSH, HWINFO, \
 			PPPOE_CMDS, PCAPTURE, /usr/sbin/wanpipemon, \
