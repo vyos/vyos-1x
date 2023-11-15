@@ -22,9 +22,7 @@ from sys import exit
 
 from vyos.config import Config
 from vyos.config import config_dict_merge
-from vyos.configdict import dict_merge
 from vyos.configdict import node_changed
-from vyos.utils.dict import dict_search
 from vyos.configverify import verify_interface_exists
 from vyos.utils.process import process_named_running
 from vyos.utils.process import call

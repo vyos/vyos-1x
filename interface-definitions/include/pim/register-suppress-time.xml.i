@@ -1,10 +1,10 @@
 <!-- include start from pim/register-suppress-time.xml.i -->
 <leafNode name="register-suppress-time">
   <properties>
-    <help>Register Suppress Timer</help>
+    <help>Register suppress timer</help>
     <valueHelp>
       <format>u32:1-65535</format>
-      <description>In seconds</description>
+      <description>Timer in seconds</description>
     </valueHelp>
     <constraint>
       <validator name="numeric" argument="--range 1-65535"/>

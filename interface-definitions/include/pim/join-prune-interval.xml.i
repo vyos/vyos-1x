@@ -1,7 +1,7 @@
 <!-- include start from pim/join-prune-interval.xml.i -->
 <leafNode name="join-prune-interval">
   <properties>
-    <help>Join Prune Send Interval</help>
+    <help>Join prune send interval</help>
     <valueHelp>
       <format>u32:1-65535</format>
       <description>Interval in seconds</description>
