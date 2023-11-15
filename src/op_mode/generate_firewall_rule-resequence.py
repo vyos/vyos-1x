@@ -41,6 +41,10 @@ def convert_to_set_commands(config_dict, parent_key=''):
                 commands.extend(
                     convert_to_set_commands(value, f"{current_key} "))
 
+        elif isinstance(value, list):
+            for item in value:
+                commands.append(f"set {current_key} '{item}'")
+
         elif isinstance(value, str):
             commands.append(f"set {current_key} '{value}'")
 
