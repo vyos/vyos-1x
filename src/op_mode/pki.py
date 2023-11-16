@@ -896,11 +896,15 @@ def show_certificate(name=None, pem=False):
             cert_subject_cn = cert.subject.rfc4514_string().split(",")[0]
             cert_issuer_cn = cert.issuer.rfc4514_string().split(",")[0]
             cert_type = 'Unknown'
-            ext = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
-            if ext and ExtendedKeyUsageOID.SERVER_AUTH in ext.value:
-                cert_type = 'Server'
-            elif ext and ExtendedKeyUsageOID.CLIENT_AUTH in ext.value:
-                cert_type = 'Client'
+
+            try:
+                ext = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
+                if ext and ExtendedKeyUsageOID.SERVER_AUTH in ext.value:
+                    cert_type = 'Server'
+                elif ext and ExtendedKeyUsageOID.CLIENT_AUTH in ext.value:
+                    cert_type = 'Client'
+            except:
+                pass
 
             revoked = 'Yes' if 'revoke' in cert_dict else 'No'
             have_private = 'Yes' if 'private' in cert_dict and 'key' in cert_dict['private'] else 'No'
