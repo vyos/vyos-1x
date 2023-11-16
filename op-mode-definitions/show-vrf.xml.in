@@ -7,6 +7,14 @@
           <help>Show VRF (Virtual Routing and Forwarding) information</help>
         </properties>
         <command>${vyos_op_scripts_dir}/vrf.py show</command>
+        <children>
+          <leafNode name="vni">
+            <properties>
+              <help>Show information on VRF/VXLAN VNI mapping</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+          </leafNode>
+        </children>
       </node>
       <tagNode name="vrf">
         <properties>
@@ -22,6 +30,12 @@
               <help>Shows all process ids associated with VRF</help>
             </properties>
             <command>ip vrf pids "$3"</command>
+          </leafNode>
+          <leafNode name="vni">
+            <properties>
+              <help>Show VXLAN VNI association</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
           </leafNode>
         </children>
       </tagNode>
