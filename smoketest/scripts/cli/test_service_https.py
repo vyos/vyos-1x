@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import json
 
 from requests import request
 from urllib3.exceptions import InsecureRequestWarning
@@ -138,6 +139,13 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         # Must get HTTP code 401 on missing key (Unauthorized)
         self.assertEqual(r.status_code, 401)
 
+        # Check path config
+        payload = {'data': '{"op": "showConfig", "path": ["system", "login"]}', 'key': f'{key}'}
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        response = r.json()
+        vyos_user_exists = 'vyos' in response.get('data', {}).get('user', {})
+        self.assertTrue(vyos_user_exists, "The 'vyos' user does not exist in the response.")
+
         # GraphQL auth test: a missing key will return status code 400, as
         # 'key' is a non-nullable field in the schema; an incorrect key is
         # caught by the resolver, and returns success 'False', so one must
@@ -239,6 +247,100 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         r = request('POST', graphql_url, verify=False, headers=headers, json={'query': query})
         success = r.json()['data']['ShowVersion']['success']
         self.assertTrue(success)
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_show(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/show'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload = {
+            'data': '{"op": "show", "path": ["system", "image"]}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_generate(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/generate'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload = {
+            'data': '{"op": "generate", "path": ["macsec", "mka", "cak", "gcm-aes-256"]}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_configure(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/configure'
+        headers = {}
+        conf_interface = 'dum0'
+        conf_address = '192.0.2.44/32'
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload_path = [
+            "interfaces",
+            "dummy",
+            f"{conf_interface}",
+            "address",
+            f"{conf_address}",
+        ]
+
+        payload = {'data': json.dumps({"op": "set", "path": payload_path}), 'key': key}
+
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_config_file(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/config-file'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload = {
+            'data': '{"op": "save"}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
+    @ignore_warning(InsecureRequestWarning)
+    def test_api_reset(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/reset'
+        headers = {}
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        payload = {
+            'data': '{"op": "reset", "path": ["ip", "arp", "table"]}',
+            'key': f'{key}',
+        }
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        self.assertEqual(r.status_code, 200)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
