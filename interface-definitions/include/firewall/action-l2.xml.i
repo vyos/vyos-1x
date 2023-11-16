@@ -1,9 +1,9 @@
-<!-- include start from firewall/action.xml.i -->
+<!-- include start from firewall/action-l2.xml.i -->
 <leafNode name="action">
   <properties>
     <help>Rule action</help>
     <completionHelp>
-      <list>accept continue jump reject return drop queue</list>
+      <list>accept continue jump return drop queue</list>
     </completionHelp>
     <valueHelp>
       <format>accept</format>
@@ -18,10 +18,6 @@
       <description>Jump to another chain</description>
     </valueHelp>
     <valueHelp>
-      <format>reject</format>
-      <description>Reject matching entries</description>
-    </valueHelp>
-    <valueHelp>
       <format>return</format>
       <description>Return from the current chain and continue at the next rule of the last chain</description>
     </valueHelp>
@@ -34,7 +30,7 @@
       <description>Enqueue packet to userspace</description>
     </valueHelp>
     <constraint>
-      <regex>(accept|continue|jump|reject|return|drop|queue)</regex>
+      <regex>(accept|continue|jump|return|drop|queue)</regex>
     </constraint>
   </properties>
 </leafNode>

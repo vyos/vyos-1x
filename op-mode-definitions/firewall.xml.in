@@ -132,6 +132,58 @@
             </properties>
             <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_group</command>
           </leafNode>
+          <node name="bridge">
+            <properties>
+              <help>Show bridge firewall</help>
+            </properties>
+            <children>
+              <node name="forward">
+                <properties>
+                  <help>Show bridge forward firewall ruleset</help>
+                </properties>
+                <children>
+                  <node name="filter">
+                    <properties>
+                      <help>Show bridge forward filter firewall ruleset</help>
+                    </properties>
+                    <children>
+                      <tagNode name="rule">
+                        <properties>
+                          <help>Show summary of bridge forward filter firewall rules</help>
+                          <completionHelp>
+                            <path>firewall bridge forward filter rule</path>
+                          </completionHelp>
+                        </properties>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
+                      </tagNode>
+                    </children>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
+                  </node>
+                </children>
+              </node>
+              <tagNode name="name">
+                <properties>
+                  <help>Show bridge custom firewall chains</help>
+                  <completionHelp>
+                    <path>firewall bridge name</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <tagNode name="rule">
+                    <properties>
+                      <help>Show summary of bridge custom firewall ruleset</help>
+                      <completionHelp>
+                        <path>firewall bridge name ${COMP_WORDS[6]} rule</path>
+                      </completionHelp>
+                    </properties>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
+                  </tagNode>
+                </children>
+                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
+              </tagNode>
+            </children>
+            <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_family --family $3</command>
+          </node>
           <node name="ipv6">
             <properties>
               <help>Show IPv6 firewall</help>
@@ -154,10 +206,10 @@
                             <path>firewall ipv6 forward filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7 --ipv6</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --ipv6</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -178,10 +230,10 @@
                             <path>firewall ipv6 input filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7 --ipv6</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --ipv6</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -202,10 +254,10 @@
                             <path>firewall ipv6 output filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7 --ipv6</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --ipv6</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -224,10 +276,10 @@
                         <path>firewall ipv6 ipv6-name ${COMP_WORDS[6]} rule</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7 --ipv6</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --ipv6</command>
+                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
               </tagNode>
             </children>
             <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_family --family $3</command>
@@ -254,10 +306,10 @@
                             <path>firewall ipv4 forward filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -278,10 +330,10 @@
                             <path>firewall ipv4 input filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -302,10 +354,10 @@
                             <path>firewall ipv4 output filter rule</path>
                           </completionHelp>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
+                        <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                       </tagNode>
                     </children>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
                   </node>
                 </children>
               </node>
@@ -324,10 +376,10 @@
                         <path>firewall ipv4 name ${COMP_WORDS[6]} rule</path>
                       </completionHelp>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5 --rule $7</command>
+                    <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5 --rule $7</command>
                   </tagNode>
                 </children>
-                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --hook $4 --priority $5</command>
+                <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show --family $3 --hook $4 --priority $5</command>
               </tagNode>
             </children>
           <command>sudo ${vyos_op_scripts_dir}/firewall.py --action show_family --family $3</command>

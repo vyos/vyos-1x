@@ -7,12 +7,7 @@
 #include <include/firewall/connection-mark.xml.i>
 #include <include/firewall/conntrack-helper.xml.i>
 #include <include/firewall/nft-queue.xml.i>
-<leafNode name="disable">
-  <properties>
-    <help>Option to disable firewall rule</help>
-    <valueless/>
-  </properties>
-</leafNode>
+#include <include/generic-disable-node.xml.i>
 <node name="fragment">
   <properties>
     <help>IP fragment match</help>
