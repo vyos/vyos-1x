@@ -488,12 +488,12 @@ class Interface(Control):
         from hashlib import sha256
 
         # Get processor ID number
-        cpu_id = self._cmd('sudo dmidecode -t 4 | grep ID | head -n1 |  sed "s/.*ID://;s/ //g"')
+        cpu_id = self._cmd('sudo dmidecode -t 4 | grep ID | head -n1 | sed "s/.*ID://;s/ //g"')
 
         # XXX: T3894 - it seems not all systems have eth0 - get a list of all
         # available Ethernet interfaces on the system (without VLAN subinterfaces)
         # and then take the first one.
-        all_eth_ifs = [x for x in Section.interfaces('ethernet') if '.' not in x]
+        all_eth_ifs = Section.interfaces('ethernet', vlan=False)
         first_mac = Interface(all_eth_ifs[0]).get_mac()
 
         sha = sha256()
