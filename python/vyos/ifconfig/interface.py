@@ -571,6 +571,16 @@ class Interface(Control):
         self._cmd(f'ip link set dev {self.ifname} netns {netns}')
         return True
 
+    def get_vrf(self):
+        """
+        Get VRF from interface
+
+        Example:
+        >>> from vyos.ifconfig import Interface
+        >>> Interface('eth0').get_vrf()
+        """
+        return self.get_interface('vrf')
+
     def set_vrf(self, vrf: str) -> bool:
         """
         Add/Remove interface from given VRF instance.
