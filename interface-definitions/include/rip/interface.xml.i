@@ -19,12 +19,7 @@
         <help>Split horizon parameters</help>
       </properties>
       <children>
-        <leafNode name="disable">
-          <properties>
-            <help>Disable split horizon on specified interface</help>
-            <valueless/>
-          </properties>
-        </leafNode>
+        #include <include/generic-disable-node.xml.i>
         <leafNode name="poison-reverse">
           <properties>
             <help>Disable split horizon on specified interface</help>
