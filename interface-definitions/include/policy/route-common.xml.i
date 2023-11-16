@@ -2,12 +2,7 @@
 #include <include/policy/route-rule-action.xml.i>
 #include <include/generic-description.xml.i>
 #include <include/firewall/firewall-mark.xml.i>
-<leafNode name="disable">
-  <properties>
-    <help>Option to disable firewall rule</help>
-    <valueless/>
-  </properties>
-</leafNode>
+#include <include/generic-disable-node.xml.i>
 <node name="fragment">
   <properties>
     <help>IP fragment match</help>
