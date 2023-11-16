@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="interfaces">
+        <properties>
+          <help>Interface specific commands</help>
+        </properties>
+        <children>
+          <node name="debug-archive">
+            <properties>
+              <help>Generate interfaces debug-archive</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/generate_interfaces_debug_archive.py</command>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
