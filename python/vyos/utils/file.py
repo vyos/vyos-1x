@@ -134,6 +134,12 @@ def chmod_755(path):
               S_IROTH | S_IXOTH
     chmod(path, bitmask)
 
+def chmod_2775(path):
+    """ user/group permissions with set-group-id bit set """
+    from stat import S_ISGID, S_IRWXU, S_IRWXG, S_IROTH, S_IXOTH
+
+    bitmask = S_ISGID | S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH
+    chmod(path, bitmask)
 
 def makedir(path, user=None, group=None):
     if os.path.exists(path):

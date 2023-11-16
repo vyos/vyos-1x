@@ -1,0 +1,5 @@
+for cfgfile in ${config_directory}/vyos-versions/*.cfg
+do
+    source "${cfgfile}"
+done
+source ${config_directory}/50-vyos-options.cfg

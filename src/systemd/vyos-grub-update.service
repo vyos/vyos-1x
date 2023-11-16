@@ -1,0 +1,14 @@
+[Unit]
+Description=Update GRUB loader configuration structure
+After=local-fs.target
+Before=vyos-router.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/vyos/system/grub_update.py
+TimeoutSec=5
+KillMode=process
+StandardOutput=journal+console
+
+[Install]
+WantedBy=vyos-router.service
