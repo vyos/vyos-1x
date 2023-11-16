@@ -44,7 +44,6 @@
 "policy-local-route.py",
 "protocols_bfd.py",
 "protocols_bgp.py",
-"protocols_igmp.py",
 "protocols_isis.py",
 "protocols_mpls.py",
 "protocols_nhrp.py",

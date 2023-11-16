@@ -2,37 +2,13 @@
 <interfaceDefinition>
   <node name="show">
     <children>
-      <node name="ip">
+      <node name="ipv6">
         <children>
           <node name="pim">
             <properties>
               <help>Show PIM (Protocol Independent Multicast) information</help>
             </properties>
             <children>
-              <leafNode name="assert">
-                <properties>
-                  <help>PIM interfaces assert</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-              <leafNode name="assert-internal">
-                <properties>
-                  <help>PIM interface internal assert state</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-              <leafNode name="assert-metric">
-                <properties>
-                  <help>PIM interface assert metric</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-              <leafNode name="assert-winner-metric">
-                <properties>
-                  <help>PIM interface assert winner metric</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
               <leafNode name="bsm-database">
                 <properties>
                   <help>PIM cached bsm packets information</help>
@@ -54,12 +30,6 @@
               <leafNode name="channel">
                 <properties>
                   <help>PIM downstream channel info</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-              <leafNode name="group-type">
-                <properties>
-                  <help>PIM multicast group type</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>
@@ -138,12 +108,6 @@
               <leafNode name="upstream-rpf">
                 <properties>
                   <help>PIM upstream source reverse path forwarding</help>
-                </properties>
-                <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
-              </leafNode>
-              <leafNode name="vxlan-groups">
-                <properties>
-                  <help>VXLAN BUM groups</help>
                 </properties>
                 <command>${vyos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
               </leafNode>

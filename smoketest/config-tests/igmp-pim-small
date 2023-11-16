@@ -1,0 +1,17 @@
+set interfaces ethernet eth1 address '100.64.0.1/24'
+set interfaces ethernet eth2 address '172.16.0.2/24'
+set protocols pim interface eth1 igmp join 224.1.0.0 source-address '1.1.1.1'
+set protocols pim interface eth1 igmp join 224.1.0.0 source-address '1.1.1.2'
+set protocols pim interface eth1 igmp query-interval '1000'
+set protocols pim interface eth1 igmp query-max-response-time '30'
+set protocols pim interface eth1 igmp version '2'
+set protocols pim interface eth2
+set protocols pim rp address 172.16.255.1 group '224.0.0.0/4'
+set service ntp server 0.pool.ntp.org
+set service ntp server 1.pool.ntp.org
+set service ntp server 2.pool.ntp.org
+set system domain-name 'vyos.io'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system console device ttyS0 speed '115200'

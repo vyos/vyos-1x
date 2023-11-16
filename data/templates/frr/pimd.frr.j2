@@ -1,34 +1,95 @@
+{% if interface is vyos_defined %}
+{%     for iface, iface_config in interface.items() %}
 !
-{% for rp_addr in old_pim.rp %}
-{%     for group in old_pim.rp[rp_addr] %}
-no ip pim rp {{ rp_addr }} {{ group }}
+interface {{ iface }}
+ ip pim
+{%         if iface_config.bfd is vyos_defined %}
+ ip pim bfd {{ 'profile ' ~ iface_config.bfd.profile if iface_config.bfd.profile is vyos_defined }}
+{%         endif %}
+{%         if iface_config.no_bsm is vyos_defined %}
+ no ip pim bsm
+{%         endif %}
+{%         if iface_config.dr_priority is vyos_defined %}
+ ip pim drpriority {{ iface_config.dr_priority }}
+{%         endif %}
+{%         if iface_config.hello is vyos_defined %}
+ ip pim hello {{ iface_config.hello }}
+{%         endif %}
+{%         if iface_config.no_unicast_bsm is vyos_defined %}
+ no ip pim unicast-bsm
+{%         endif %}
+{%         if iface_config.passive is vyos_defined %}
+ ip pim passive
+{%         endif %}
+{%         if iface_config.source_address is vyos_defined %}
+ ip pim use-source {{ iface_config.source_address }}
+{%         endif %}
+{%         if iface_config.igmp is vyos_defined and iface_config.igmp.disable is not vyos_defined %}
+ ip igmp
+{%             if iface_config.igmp.query_interval %}
+ ip igmp query-interval {{ iface_config.igmp.query_interval }}
+{%             endif %}
+{%             if iface_config.igmp.query_max_response_time %}
+ ip igmp query-max-response-time {{ iface_config.igmp.query_max_response_time }}
+{%             endif %}
+{%             if iface_config.igmp.version is vyos_defined %}
+ ip igmp version {{ iface_config.igmp.version }}
+{%             endif %}
+{%             if iface_config.igmp.join is vyos_defined %}
+{%                 for join, join_config in iface_config.igmp.join.items() %}
+{%                     if join_config.source_address is vyos_defined %}
+{%                         for source_address in join_config.source_address %}
+ ip igmp join {{ join }} {{ source_address }}
+{%                         endfor %}
+{%                     else %}
+ ip igmp join {{ join }}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+{%         endif %}
+exit
 {%     endfor %}
-{% endfor %}
-{% if old_pim.rp_keep_alive %}
-no ip pim rp keep-alive-timer {{ old_pim.rp_keep_alive }}
 {% endif %}
-{% for iface in old_pim.ifaces %}
-interface {{ iface }}
-no ip pim
 !
-{% endfor %}
-{% for iface in pim.ifaces %}
-interface {{ iface }}
-ip pim
-{%     if pim.ifaces[iface].dr_prio %}
-ip pim drpriority {{ pim.ifaces[iface].dr_prio }}
-{%     endif %}
-{%     if pim.ifaces[iface].hello %}
-ip pim hello {{ pim.ifaces[iface].hello }}
-{%     endif %}
-!
-{% endfor %}
-{% for rp_addr in pim.rp %}
-{%     for group in pim.rp[rp_addr] %}
-ip pim rp {{ rp_addr }} {{ group }}
+{% if ecmp is vyos_defined %}
+ip pim ecmp {{ 'rebalance' if ecmp.rebalance is vyos_defined }}
+{% endif %}
+{% if join_prune_interval is vyos_defined %}
+ip pim join-prune-interval {{ join_prune_interval }}
+{% endif %}
+{% if keep_alive_timer is vyos_defined %}
+ip pim keep-alive-timer {{ keep_alive_timer }}
+{% endif %}
+{% if packets is vyos_defined %}
+ip pim packets {{ packets }}
+{% endif %}
+{% if register_accept_list.prefix_list is vyos_defined %}
+ip pim register-accept-list {{ register_accept_list.prefix_list }}
+{% endif %}
+{% if register_suppress_time is vyos_defined %}
+ip pim register-suppress-time {{ register_suppress_time }}
+{% endif %}
+{% if rp.address is vyos_defined %}
+{%     for address, address_config in rp.address.items() %}
+{%         for group in address_config.group %}
+ip pim rp {{ address }} {{ group }}
+{%         endfor %}
 {%     endfor %}
-{% endfor %}
-{% if pim.rp_keep_alive %}
-ip pim rp keep-alive-timer {{ pim.rp_keep_alive }}
+{% endif %}
+{% if rp.keep_alive_timer is vyos_defined %}
+ip pim rp keep-alive-timer {{ rp.keep_alive_timer }}
+{% endif %}
+{% if no_v6_secondary is vyos_defined %}
+no ip pim send-v6-secondary
+{% endif %}
+{% if spt_switchover.infinity_and_beyond is vyos_defined %}
+ip pim spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.infinity_and_beyond.prefix_list if spt_switchover.infinity_and_beyond.prefix_list is defined }}
+{% endif %}
+{% if ssm.prefix_list is vyos_defined %}
+ip pim ssm prefix-list {{ ssm.prefix_list }}
+{% endif %}
+!
+{% if igmp.watermark_warning is vyos_defined %}
+ip igmp watermark-warn {{ igmp.watermark_warning }}
 {% endif %}
 !

@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5736: igmp: migrate "protocols igmp" to "protocols pim"
+
+import sys
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base = ['protocols', 'igmp']
+pim_base = ['protocols', 'pim']
+if not config.exists(base):
+    # Nothing to do
+    sys.exit(0)
+
+for interface in config.list_nodes(base + ['interface']):
+    base_igmp_iface = base + ['interface', interface]
+    pim_base_iface = pim_base + ['interface', interface]
+
+    # Create IGMP note under PIM interface
+    if not config.exists(pim_base_iface + ['igmp']):
+        config.set(pim_base_iface + ['igmp'])
+
+    if config.exists(base_igmp_iface + ['join']):
+        config.copy(base_igmp_iface + ['join'], pim_base_iface + ['igmp', 'join'])
+        config.set_tag(pim_base_iface + ['igmp', 'join'])
+
+        new_join_base = pim_base_iface + ['igmp', 'join']
+        for address in config.list_nodes(new_join_base):
+            if config.exists(new_join_base + [address, 'source']):
+                config.rename(new_join_base + [address, 'source'], 'source-address')
+
+    if config.exists(base_igmp_iface + ['query-interval']):
+        config.copy(base_igmp_iface + ['query-interval'], pim_base_iface + ['igmp', 'query-interval'])
+
+    if config.exists(base_igmp_iface + ['query-max-response-time']):
+        config.copy(base_igmp_iface + ['query-max-response-time'], pim_base_iface + ['igmp', 'query-max-response-time'])
+
+    if config.exists(base_igmp_iface + ['version']):
+        config.copy(base_igmp_iface + ['version'], pim_base_iface + ['igmp', 'version'])
+
+config.delete(base)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)

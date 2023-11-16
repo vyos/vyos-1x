@@ -12,9 +12,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import unittest
-
 from binascii import hexlify
 
 from netifaces import AF_INET
@@ -24,7 +21,6 @@ from netifaces import interfaces
 
 from base_vyostest_shim import VyOSUnitTestSHIM
 
-from vyos.configsession import ConfigSession
 from vyos.configsession import ConfigSessionError
 from vyos.defaults import directories
 from vyos.ifconfig import Interface
