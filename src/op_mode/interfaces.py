@@ -235,6 +235,11 @@ def _get_summary_data(ifname: typing.Optional[str],
     if iftype is None:
         iftype = ''
     ret = []
+
+    def is_interface_has_mac(interface_name):
+        interface_no_mac = ('tun', 'wg')
+        return not any(interface_name.startswith(prefix) for prefix in interface_no_mac)
+
     for interface in filtered_interfaces(ifname, iftype, vif, vrrp):
         res_intf = {}
 
@@ -244,7 +249,7 @@ def _get_summary_data(ifname: typing.Optional[str],
         res_intf['addr'] = [_ for _ in interface.get_addr() if not _.startswith('fe80::')]
         res_intf['description'] = interface.get_alias()
         res_intf['mtu'] = interface.get_mtu()
-        res_intf['mac'] = interface.get_mac()
+        res_intf['mac'] = interface.get_mac() if is_interface_has_mac(interface.ifname) else 'n/a'
         res_intf['vrf'] = interface.get_vrf()
 
         ret.append(res_intf)
