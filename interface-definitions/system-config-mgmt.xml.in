@@ -22,6 +22,7 @@
                   </valueHelp>
                   <constraint>
                     <validator name="url --file-transport"/>
+                    <regex>(ssh|git|git\+(\w+)):\/\/.*</regex>
                   </constraint>
                   <multi/>
                 </properties>

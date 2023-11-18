@@ -62,6 +62,7 @@ Depends:
   frr-snmp,
   fuse-overlayfs,
   libpam-google-authenticator,
+  git,
   grc,
   haproxy,
   hostapd,
