@@ -145,6 +145,8 @@ def get_properties(p, default=None):
             description = v.find("description").text
             if default != None and default.text == format:
                 description += f' (default)'
+            # Is no description was specified, keep it empty
+            if not description: description = ''
             vh.append( (format, description) )
         props["val_help"] = vh
     except:
