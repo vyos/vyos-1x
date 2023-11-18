@@ -230,6 +230,9 @@ Depends:
   lcdproc,
   lcdproc-extra-drivers,
 # End "system lcd"
+# For "system config-management commit-archive"
+  git
+# End "system config-management commit-archive"
 # For firewall
   libndp-tools,
   libnetfilter-conntrack3,

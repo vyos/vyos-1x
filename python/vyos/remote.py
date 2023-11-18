@@ -14,6 +14,7 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pwd
 import shutil
 import socket
 import ssl
@@ -21,6 +22,9 @@ import stat
 import sys
 import tempfile
 import urllib.parse
+
+from contextlib import contextmanager
+from pathlib import Path
 
 from ftplib import FTP
 from ftplib import FTP_TLS
@@ -37,10 +41,21 @@ from vyos.utils.io import ask_yes_no
 from vyos.utils.io import is_interactive
 from vyos.utils.io import print_error
 from vyos.utils.misc import begin
-from vyos.utils.process import cmd
+from vyos.utils.process import cmd, rc_cmd
 from vyos.version import get_version
 
 CHUNK_SIZE = 8192
+
+@contextmanager
+def umask(mask: int):
+    """
+    Context manager that temporarily sets the process umask.
+    """
+    oldmask = os.umask(mask)
+    try:
+        yield
+    finally:
+        os.umask(oldmask)
 
 class InteractivePolicy(MissingHostKeyPolicy):
     """
@@ -310,35 +325,137 @@ class TftpC:
         with open(location, 'rb') as f:
             cmd(f'{self.command} -T - "{self.urlstring}"', input=f.read())
 
+class GitC:
+    def __init__(self,
+        url,
+        progressbar=False,
+        check_space=False,
+        source_host=None,
+        source_port=0,
+        timeout=10,
+    ):
+        self.command = 'git'
+        self.url = url
+        self.urlstring = urllib.parse.urlunsplit(url)
+        if self.urlstring.startswith("git+"):
+            self.urlstring = self.urlstring.replace("git+", "", 1)
+
+    def download(self, location: str):
+        raise NotImplementedError("not supported")
+
+    @umask(0o077)
+    def upload(self, location: str):
+        scheme = self.url.scheme
+        _, _, scheme = scheme.partition("+")
+        netloc = self.url.netloc
+        url = Path(self.url.path).parent
+        with tempfile.TemporaryDirectory(prefix="git-commit-archive-") as directory:
+            # Determine username, fullname, email for Git commit
+            pwd_entry = pwd.getpwuid(os.getuid())
+            user = pwd_entry.pw_name
+            name = pwd_entry.pw_gecos.split(",")[0] or user
+            fqdn = socket.getfqdn()
+            email = f"{user}@{fqdn}"
+
+            # environment vars for our git commands
+            env = {
+                "GIT_TERMINAL_PROMPT": "0",
+                "GIT_AUTHOR_NAME": name,
+                "GIT_AUTHOR_EMAIL": email,
+                "GIT_COMMITTER_NAME": name,
+                "GIT_COMMITTER_EMAIL": email,
+            }
+
+            # build ssh command for git
+            ssh_command = ["ssh"]
+
+            # if we are not interactive, we use StrictHostKeyChecking=yes to avoid any prompts
+            if not sys.stdout.isatty():
+                ssh_command += ["-o", "StrictHostKeyChecking=yes"]
+
+            env["GIT_SSH_COMMAND"] = " ".join(ssh_command)
+
+            # git clone
+            path_repository = Path(directory) / "repository"
+            scheme = f"{scheme}://" if scheme else ""
+            rc, out = rc_cmd(
+                [self.command, "clone", f"{scheme}{netloc}{url}", str(path_repository), "--depth=1"],
+                env=env,
+                shell=False,
+            )
+            if rc:
+                raise Exception(out)
+
+            # git add
+            filename = Path(Path(self.url.path).name).stem
+            dst = path_repository / filename
+            shutil.copy2(location, dst)
+            rc, out = rc_cmd(
+                [self.command, "-C", str(path_repository), "add", filename],
+                env=env,
+                shell=False,
+            )
+
+            # git commit -m
+            commit_message = os.environ.get("COMMIT_COMMENT", "commit")
+            rc, out = rc_cmd(
+                [self.command, "-C", str(path_repository), "commit", "-m", commit_message],
+                env=env,
+                shell=False,
+            )
+
+            # git push
+            rc, out = rc_cmd(
+                [self.command, "-C", str(path_repository), "push"],
+                env=env,
+                shell=False,
+            )
+            if rc:
+                raise Exception(out)
+
 
 def urlc(urlstring, *args, **kwargs):
     """
     Dynamically dispatch the appropriate protocol class.
     """
-    url_classes = {'http': HttpC, 'https': HttpC, 'ftp': FtpC, 'ftps': FtpC, \
-                   'sftp': SshC, 'ssh': SshC, 'scp': SshC, 'tftp': TftpC}
+    url_classes = {
+        "http": HttpC,
+        "https": HttpC,
+        "ftp": FtpC,
+        "ftps": FtpC,
+        "sftp": SshC,
+        "ssh": SshC,
+        "scp": SshC,
+        "tftp": TftpC,
+        "git": GitC,
+    }
     url = urllib.parse.urlsplit(urlstring)
+    scheme, _, _ = url.scheme.partition("+")
     try:
-        return url_classes[url.scheme](url, *args, **kwargs)
+        return url_classes[scheme](url, *args, **kwargs)
     except KeyError:
-        raise ValueError(f'Unsupported URL scheme: "{url.scheme}"')
+        raise ValueError(f'Unsupported URL scheme: "{scheme}"')
 
-def download(local_path, urlstring, progressbar=False, check_space=False,
+def download(local_path, urlstring, progressbar=False, raise_error=False, check_space=False,
              source_host='', source_port=0, timeout=10.0):
     try:
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, check_space, source_host, source_port, timeout).download(local_path)
     except Exception as err:
+        if raise_error:
+            raise
         print_error(f'Unable to download "{urlstring}": {err}')
     except KeyboardInterrupt:
         print_error('\nDownload aborted by user.')
 
-def upload(local_path, urlstring, progressbar=False,
+def upload(local_path, urlstring, progressbar=False, raise_error=False,
            source_host='', source_port=0, timeout=10.0):
     try:
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, source_host, source_port, timeout).upload(local_path)
     except Exception as err:
+        if raise_error:
+            raise
         print_error(f'Unable to upload "{urlstring}": {err}')
     except KeyboardInterrupt:
         print_error('\nUpload aborted by user.')
