@@ -438,7 +438,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
     else:
         output.append('return')
 
-    output.append(f'comment "{hook}-{fw_name}-{rule_id}"')
+    output.append(f'comment "{family}-{hook}-{fw_name}-{rule_id}"')
     return " ".join(output)
 
 def parse_tcp_flags(flags):

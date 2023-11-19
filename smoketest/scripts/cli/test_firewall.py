@@ -543,6 +543,41 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.verify_nftables_chain([['accept']], 'raw', 'FW_CONNTRACK')
         self.verify_nftables_chain([['return']], 'ip6 raw', 'FW_CONNTRACK')
 
+    def test_bridge_basic_rules(self):
+        name = 'smoketest'
+        interface_in = 'eth0'
+        mac_address = '00:53:00:00:00:01'
+        vlan_id = '12'
+        vlan_prior = '3'
+
+        self.cli_set(['firewall', 'bridge', 'name', name, 'default-action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'enable-default-log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'source', 'mac-address', mac_address])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'inbound-interface', 'name', interface_in])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log'])
+        self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
+
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'jump-target', name])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'vlan', 'priority', vlan_prior])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VYOS_FORWARD_filter'],
+            ['type filter hook forward priority filter; policy drop;'],
+            [f'vlan id {vlan_id}', 'accept'],
+            [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            [f'chain NAME_{name}'],
+            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept']
+        ]
+
+        self.verify_nftables(nftables_search, 'bridge vyos_filter')
+
     def test_source_validation(self):
         # Strict
         self.cli_set(['firewall', 'global-options', 'source-validation', 'strict'])
