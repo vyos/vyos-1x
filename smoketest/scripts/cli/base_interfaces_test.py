@@ -162,6 +162,7 @@ class BasicInterfaceTest:
             distance = '100'
             hostname = 'vyos'
             vendor_class_id = 'vyos-vendor'
+            user_class = 'vyos'
 
             for interface in self._interfaces:
                 for option in self._options.get(interface, []):
@@ -172,6 +173,7 @@ class BasicInterfaceTest:
                 self.cli_set(self._base_path + [interface, 'dhcp-options', 'default-route-distance', distance])
                 self.cli_set(self._base_path + [interface, 'dhcp-options', 'host-name', hostname])
                 self.cli_set(self._base_path + [interface, 'dhcp-options', 'vendor-class-id', vendor_class_id])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'user-class', user_class])
 
             self.cli_commit()
 
@@ -186,6 +188,7 @@ class BasicInterfaceTest:
                 self.assertIn(f'send host-name "{hostname}";', dhclient_config)
                 self.assertIn(f'send dhcp-client-identifier "{client_id}";', dhclient_config)
                 self.assertIn(f'send vendor-class-identifier "{vendor_class_id}";', dhclient_config)
+                self.assertIn(f'send user-class "{user_class}";', dhclient_config)
 
                 # and the commandline has the appropriate options
                 cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
