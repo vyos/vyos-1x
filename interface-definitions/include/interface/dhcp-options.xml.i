@@ -43,6 +43,18 @@
         </constraint>
       </properties>
     </leafNode>
+    <leafNode name="user-class">
+      <properties>
+        <help>Identify to the DHCP server, user configurable option</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>DHCP option string</description>
+        </valueHelp>
+        <constraint>
+          #include <include/constraint/dhcp-client-string-option.xml.i>
+        </constraint>
+      </properties>
+    </leafNode>
     #include <include/interface/no-default-route.xml.i>
     #include <include/interface/default-route-distance.xml.i>
     <leafNode name="reject">
