@@ -37,7 +37,7 @@
                     <description/>
                   </valueHelp>
                   <valueHelp>
-                    <format>tftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <format>tftp://&lt;host&gt;/&lt;path&gt;</format>
                     <description/>
                   </valueHelp>
                   <valueHelp>
