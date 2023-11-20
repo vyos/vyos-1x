@@ -9,14 +9,30 @@ interface "{{ ifname }}" {
     send host-name "{{ dhcp_options.host_name }}";
 {% if dhcp_options.client_id is vyos_defined %}
 {%     set client_id = dhcp_options.client_id %}
-{#   Use HEX representation of client-id as it is send in MAC-address style using hex characters. If not HEX, use double quotes ASCII format #}
-{%     if not dhcp_options.client_id.split(':') | length >= 5 %}
-{%         set client_id = '"' + dhcp_options.client_id + '"' %}
+{#   Use HEX representation of client-id as it is send in MAC-address style using hex characters. #}
+{#   If not HEX, use double quotes ASCII format #}
+{%     if not client_id.split(':') | length >= 3 %}
+{%         set client_id = '"' ~ dhcp_options.client_id ~ '"' %}
 {%     endif %}
     send dhcp-client-identifier {{ client_id }};
 {% endif %}
 {% if dhcp_options.vendor_class_id is vyos_defined %}
-    send vendor-class-identifier "{{ dhcp_options.vendor_class_id }}";
+{%     set vendor_class_id = dhcp_options.vendor_class_id %}
+{#   Use HEX representation of client-id as it is send in MAC-address style using hex characters. #}
+{#   If not HEX, use double quotes ASCII format #}
+{%     if not vendor_class_id.split(':') | length >= 3 %}
+{%         set vendor_class_id = '"' ~ dhcp_options.vendor_class_id ~ '"' %}
+{%     endif %}
+    send vendor-class-identifier {{ vendor_class_id }};
+{% endif %}
+{% if dhcp_options.user_class is vyos_defined %}
+{%     set user_class = dhcp_options.user_class %}
+{#   Use HEX representation of client-id as it is send in MAC-address style using hex characters. #}
+{#   If not HEX, use double quotes ASCII format #}
+{%     if not user_class.split(':') | length >= 3 %}
+{%         set user_class = '"' ~ dhcp_options.user_class ~ '"' %}
+{%     endif %}
+    send user-class {{ user_class }};
 {% endif %}
     # The request statement causes the client to request that any server responding to the
     # client send the client its values for the specified options.
