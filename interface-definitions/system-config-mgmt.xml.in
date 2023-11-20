@@ -17,11 +17,36 @@
                 <properties>
                   <help>Commit archive location</help>
                   <valueHelp>
-                    <format>uri</format>
-                    <description>Uniform Resource Identifier</description>
+                    <format>http://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>ftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>sftp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>scp://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>tftp://&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>git+https://&lt;user&gt;:&lt;passwd&gt;@&lt;host&gt;/&lt;path&gt;</format>
+                    <description/>
                   </valueHelp>
                   <constraint>
                     <validator name="url --file-transport"/>
+                    <regex>(ssh|git|git\+(\w+)):\/\/.*</regex>
                   </constraint>
                   <multi/>
                 </properties>
