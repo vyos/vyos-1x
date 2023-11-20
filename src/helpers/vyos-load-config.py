@@ -66,7 +66,7 @@ def get_local_config(filename):
 
     return config_str
 
-if any(x in file_name for x in protocols):
+if any(file_name.startswith(f'{x}://') for x in protocols):
     config_string = vyos.remote.get_remote_config(file_name)
     if not config_string:
         sys.exit(f"No such config file at '{file_name}'")
