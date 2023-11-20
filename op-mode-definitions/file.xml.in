@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <tagNode name="file">
+        <properties>
+          <help>Show the contents of a file, a directory or an image</help>
+          <completionHelp><imagePath/></completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/file.py --show $3</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="copy">
+    <properties>
+      <help>Copy an object</help>
+    </properties>
+    <children>
+      <tagNode name="file">
+        <properties>
+          <help>Copy a file or a directory</help>
+          <completionHelp><imagePath/></completionHelp>
+        </properties>
+        <children>
+          <tagNode name="to">
+            <properties>
+              <help>Destination path</help>
+              <completionHelp><imagePath/></completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/file.py --copy $3 $5
+            </command>
+          </tagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <node name="delete">
+    <properties>
+      <help>Delete an object</help>
+    </properties>
+    <children>
+      <tagNode name="file">
+        <properties>
+          <help>Delete a local file, possibly from an image</help>
+          <completionHelp><imagePath/></completionHelp>
+        </properties>
+        <command>sudo ${vyos_op_scripts_dir}/file.py --delete $3</command>
+      </tagNode>
+    </children>
+  </node>
+  <node name="clone">
+    <properties>
+      <help>Clone an object</help> 
+    </properties>
+    <children>
+      <node name="system">
+        <properties>
+          <help>Clone a system object</help>
+        </properties>
+        <children>
+          <tagNode name="config">
+            <properties>
+              <help>Clone the current system configuration to an image</help>
+              <completionHelp>
+                <script>${vyos_completion_dir}/list_images.py --no-running</script>
+              </completionHelp>
+            </properties>
+            <command>sudo ${vyos_op_scripts_dir}/file.py --clone $4</command>
+            <children>
+              <tagNode name="from">
+                <properties>
+                  <help>Clone system configuration from an image to another one</help>
+                  <completionHelp>
+                    <list>running</list>
+                    <script>${vyos_completion_dir}/list_images.py</script>
+                  </completionHelp>
+                </properties>
+                <command>sudo ${vyos_op_scripts_dir}/file.py --clone-from $6 $4</command>
+              </tagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>
