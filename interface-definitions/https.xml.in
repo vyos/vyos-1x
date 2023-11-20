@@ -68,7 +68,6 @@
               <priority>1002</priority>
             </properties>
             <children>
-              #include <include/port-number.xml.i>
               <node name="keys">
                 <properties>
                   <help>HTTP API keys</help>
@@ -99,12 +98,6 @@
                   <help>Debug</help>
                   <valueless/>
                   <hidden/>
-                </properties>
-              </leafNode>
-              <leafNode name="socket">
-                <properties>
-                  <help>Run server on Unix domain socket</help>
-                  <valueless/>
                 </properties>
               </leafNode>
               <node name="graphql">

@@ -215,14 +215,9 @@ def generate(https):
         api_data = vyos.defaults.api_data
     api_settings = https.get('api', {})
     if api_settings:
-        port = api_settings.get('port', '')
-        if port:
-            api_data['port'] = port
         vhosts = https.get('api-restrict', {}).get('virtual-host', [])
         if vhosts:
             api_data['vhost'] = vhosts[:]
-        if 'socket' in list(api_settings):
-            api_data['socket'] = True
 
     if api_data:
         vhost_list = api_data.get('vhost', [])

@@ -1,3 +1,3 @@
 <!-- include start from include/version/https-version.xml.i -->
-<syntaxVersion component='https' version='4'></syntaxVersion>
+<syntaxVersion component='https' version='5'></syntaxVersion>
 <!-- include end -->
