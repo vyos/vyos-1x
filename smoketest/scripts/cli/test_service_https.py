@@ -23,7 +23,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from base_vyostest_shim import VyOSUnitTestSHIM
 from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
-from vyos.utils.process import run
+from vyos.utils.process import process_named_running
 
 base_path = ['service', 'https']
 pki_base = ['pki']
@@ -49,24 +49,28 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgPLpD0Ohhoq0g4nhx
 u8/3jHMM7sDwL3aWzW/zp54/LhCWUoLMjDdDEEigK4fal4ZF9aA9F0Ww
 """
 
+PROCESS_NAME = 'nginx'
+
 class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(TestHTTPSService, cls).setUpClass()
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
-        self.cli_delete(base_path)
-        self.cli_delete(pki_base)
+        cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, pki_base)
 
     def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_delete(pki_base)
         self.cli_commit()
 
-    def test_default(self):
-        self.cli_set(base_path)
-        self.cli_commit()
-
-        ret = run('sudo /usr/sbin/nginx -t')
-        self.assertEqual(ret, 0)
+        # Check for stopped  process
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_server_block(self):
         vhost_id = 'example'
@@ -82,9 +86,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        ret = run('sudo /usr/sbin/nginx -t')
-        self.assertEqual(ret, 0)
-
         nginx_config = read_file('/etc/nginx/sites-enabled/default')
         self.assertIn(f'listen {address}:{port} ssl;', nginx_config)
         self.assertIn(f'ssl_protocols TLSv1.2 TLSv1.3;', nginx_config)
@@ -97,9 +98,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        ret = run('sudo /usr/sbin/nginx -t')
-        self.assertEqual(ret, 0)
-
     @ignore_warning(InsecureRequestWarning)
     def test_api_auth(self):
         vhost_id = 'example'
@@ -107,7 +105,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         port = '443'
         name = 'localhost'
 
-        self.cli_set(base_path + ['api', 'socket'])
         key = 'MySuperSecretVyOS'
         self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
 

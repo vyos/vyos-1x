@@ -1,0 +1,12 @@
+set interfaces ethernet eth0 address '192.0.2.1/31'
+set interfaces ethernet eth0 address '2001:db8::1234/64'
+set interfaces loopback lo
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set service https api keys id 1 key 'S3cur3'
+set system config-management commit-revisions '100'
+set system host-name 'vyos'
+set system login user vyos authentication encrypted-password '$6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/'
+set system login user vyos authentication plaintext-password ''
+set system console device ttyS0 speed '115200'

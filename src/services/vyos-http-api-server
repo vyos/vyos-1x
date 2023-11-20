@@ -825,15 +825,7 @@ def initialization(session: ConfigSession, app: FastAPI = app):
     if app.state.vyos_graphql:
         graphql_init(app)
 
-    if not server_config['socket']:
-        config = ApiServerConfig(app,
-                                 host=server_config["listen_address"],
-                                 port=int(server_config["port"]),
-                                 proxy_headers=True)
-    else:
-        config = ApiServerConfig(app,
-                                 uds="/run/api.sock",
-                                 proxy_headers=True)
+    config = ApiServerConfig(app, uds="/run/api.sock", proxy_headers=True)
     server = ApiServer(config)
 
 def run_server():
