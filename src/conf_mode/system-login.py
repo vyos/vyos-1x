@@ -104,6 +104,9 @@ def get_config(config=None):
     # prune TACACS global defaults if not set by user
     if login.from_defaults(['tacacs']):
         del login['tacacs']
+    # same for RADIUS
+    if login.from_defaults(['radius']):
+        del login['radius']
 
     # create a list of all users, cli and users
     all_users = list(set(local_users + cli_users))
@@ -377,17 +380,23 @@ def apply(login):
             except Exception as e:
                 raise ConfigError(f'Deleting user "{user}" raised exception: {e}')
 
-    # Enable RADIUS in PAM configuration
-    pam_cmd = '--remove'
+    # Enable/disable RADIUS in PAM configuration
+    cmd('pam-auth-update --disable radius-mandatory radius-optional')
     if 'radius' in login:
-        pam_cmd = '--enable'
-    cmd(f'pam-auth-update --package {pam_cmd} radius')
+        if login['radius'].get('security_mode', '') == 'mandatory':
+            pam_profile = 'radius-mandatory'
+        else:
+            pam_profile = 'radius-optional'
+        cmd(f'pam-auth-update --enable {pam_profile}')
 
-    # Enable/Disable TACACS in PAM configuration
-    pam_cmd = '--remove'
+    # Enable/disable TACACS+ in PAM configuration
+    cmd('pam-auth-update --disable tacplus-mandatory tacplus-optional')
     if 'tacacs' in login:
-        pam_cmd = '--enable'
-    cmd(f'pam-auth-update --package {pam_cmd} tacplus')
+        if login['tacacs'].get('security_mode', '') == 'mandatory':
+            pam_profile = 'tacplus-mandatory'
+        else:
+            pam_profile = 'tacplus-optional'
+        cmd(f'pam-auth-update --enable {pam_profile}')
 
     return None
 
