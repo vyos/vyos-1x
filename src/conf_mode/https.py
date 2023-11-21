@@ -52,7 +52,7 @@ default_server_block = {
     'address'   : '*',
     'port'      : '443',
     'name'      : ['_'],
-    'api'       : {},
+    'api'       : False,
     'vyos_cert' : {},
     'certbot'   : False
 }
@@ -232,35 +232,18 @@ def generate(https):
                     # certbot organizes certificates by first domain
                     sb['certbot_domain_dir'] = cert_domains[0]
 
-    # get api data
-
-    api_set = False
-    api_data = {}
     if 'api' in list(https):
-        api_set = True
-        api_data = vyos.defaults.api_data
-    api_settings = https.get('api', {})
-    if api_settings:
-        vhosts = https.get('api-restrict', {}).get('virtual-host', [])
-        if vhosts:
-            api_data['vhost'] = vhosts[:]
-
-    if api_data:
-        vhost_list = api_data.get('vhost', [])
+        vhost_list = https.get('api-restrict', {}).get('virtual-host', [])
         if not vhost_list:
             for block in server_block_list:
-                block['api'] = api_data
+                block['api'] = True
         else:
             for block in server_block_list:
                 if block['id'] in vhost_list:
-                    block['api'] = api_data
-
-    if 'server_block_list' not in https or not https['server_block_list']:
-        https['server_block_list'] = [default_server_block]
+                    block['api'] = True
 
     data = {
         'server_block_list': server_block_list,
-        'api_set': api_set,
         'certbot': certbot
     }
 
