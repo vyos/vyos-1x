@@ -653,5 +653,43 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
                     break
             self.assertTrue(matched)
 
+    def test_flow_offload(self):
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'interface', 'eth0'])
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'hardware'])
+
+        # QEMU virtual NIC does not support hw-tc-offload
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        self.cli_set(['firewall', 'flowtable', 'smoketest', 'offload', 'software'])
+
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'state', 'related'])
+
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'action', 'offload'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'offload-target', 'smoketest'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'protocol', 'tcp_udp'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'established'])
+        self.cli_set(['firewall', 'ipv6', 'forward', 'filter', 'rule', '1', 'state', 'related'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['flowtable VYOS_FLOWTABLE_smoketest'],
+            ['hook ingress priority filter'],
+            ['devices = { eth0 }'],
+            ['ct state { established, related }', 'meta l4proto { tcp, udp }', 'flow add @VYOS_FLOWTABLE_smoketest'],
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_filter')
+        self.verify_nftables(nftables_search, 'ip6 vyos_filter')
+
+        # Check conntrack
+        #self.verify_nftables_chain([['accept']], 'ip vyos_conntrack', 'FW_CONNTRACK')
+        #self.verify_nftables_chain([['accept']], 'ip6 vyos_conntrack', 'FW_CONNTRACK')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
