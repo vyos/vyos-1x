@@ -35,6 +35,8 @@ REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
+REBOOT = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reboot']
+POWEROFF = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'poweroff']
 OP_CMD_ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
 OP_CMD_DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
 
@@ -220,8 +222,16 @@ class ConfigSession(object):
         out = self.__run_command(SHOW + path)
         return out
 
+    def reboot(self, path):
+        out = self.__run_command(REBOOT + path)
+        return out
+
     def reset(self, path):
         out = self.__run_command(RESET + path)
+        return out
+
+    def poweroff(self, path):
+        out = self.__run_command(POWEROFF + path)
         return out
 
     def add_container_image(self, name):
