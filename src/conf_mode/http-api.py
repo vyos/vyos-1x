@@ -19,7 +19,6 @@ import os
 import json
 
 from time import sleep
-from copy import deepcopy
 
 import vyos.defaults
 
@@ -32,29 +31,12 @@ from vyos import ConfigError
 from vyos import airbag
 airbag.enable()
 
-api_conf_file = '/etc/vyos/http-api.conf'
+api_config_state = '/tmp/api-config-state'
 systemd_service = '/run/systemd/system/vyos-http-api.service'
 
 vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 
-def _translate_values_to_boolean(d: dict) -> dict:
-    for k in list(d):
-        if d[k] == {}:
-            d[k] = True
-        elif isinstance(d[k], dict):
-            _translate_values_to_boolean(d[k])
-        else:
-            pass
-
 def get_config(config=None):
-    http_api = deepcopy(vyos.defaults.api_data)
-    x = http_api.get('api_keys')
-    if x is None:
-        default_key = None
-    else:
-        default_key = x[0]
-    keys_added = False
-
     if config:
         conf = config
     else:
@@ -69,61 +51,34 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
-    api_dict = conf.get_config_dict(base, key_mangling=('-', '_'),
+    http_api = conf.get_config_dict(base, key_mangling=('-', '_'),
                                     no_tag_node_value_mangle=True,
                                     get_first_key=True,
                                     with_recursive_defaults=True)
-
-    # One needs to 'flatten' the keys dict from the config into the
-    # http-api.conf format for api_keys:
-    if 'keys' in api_dict:
-        api_dict['api_keys'] = []
-        for el in list(api_dict['keys'].get('id', {})):
-            key = api_dict['keys']['id'][el].get('key', '')
-            if key:
-                api_dict['api_keys'].append({'id': el, 'key': key})
-        del api_dict['keys']
 
     # Do we run inside a VRF context?
     vrf_path = ['service', 'https', 'vrf']
     if conf.exists(vrf_path):
         http_api['vrf'] = conf.return_value(vrf_path)
 
-    if 'api_keys' in api_dict:
-        keys_added = True
-
-    if api_dict.from_defaults(['graphql']):
-        del api_dict['graphql']
-
-    http_api.update(api_dict)
-
-    if keys_added and default_key:
-        if default_key in http_api['api_keys']:
-            http_api['api_keys'].remove(default_key)
-
-    # Finally, translate entries in http_api into boolean settings for
-    # backwards compatability of JSON http-api.conf file
-    _translate_values_to_boolean(http_api)
+    if http_api.from_defaults(['graphql']):
+        del http_api['graphql']
 
     return http_api
 
-def verify(http_api):
-    return None
+def verify(_http_api):
+    return
 
 def generate(http_api):
     if http_api is None:
         if os.path.exists(systemd_service):
             os.unlink(systemd_service)
-        return None
+        return
 
-    if not os.path.exists('/etc/vyos'):
-        os.mkdir('/etc/vyos')
-
-    with open(api_conf_file, 'w') as f:
+    with open(api_config_state, 'w') as f:
         json.dump(http_api, f, indent=2)
 
     render(systemd_service, 'https/vyos-http-api.service.j2', http_api)
-    return None
 
 def apply(http_api):
     # Reload systemd manager configuration
@@ -142,6 +97,9 @@ def apply(http_api):
     sleep(1)
 
     call_dependents()
+
+    if os.path.exists(api_config_state):
+        os.unlink(api_config_state)
 
 if __name__ == '__main__':
     try:
