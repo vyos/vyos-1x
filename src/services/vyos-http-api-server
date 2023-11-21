@@ -50,7 +50,6 @@ from vyos.configsession import ConfigSession, ConfigSessionError
 
 import api.graphql.state
 
-DEFAULT_CONFIG_FILE = '/etc/vyos/http-api.conf'
 CFG_GROUP = 'vyattacfg'
 
 debug = True
@@ -67,10 +66,19 @@ else:
 # Giant lock!
 lock = threading.Lock()
 
-def load_server_config():
-    with open(DEFAULT_CONFIG_FILE) as f:
-        config = json.load(f)
-    return config
+def load_server_config(session: ConfigSession):
+    env = session.get_session_env()
+    config = Config(session_env=env)
+    session_config = config.get_config_dict(['service', 'https', 'api'],
+                                            key_mangling=('-', '_'),
+                                            no_tag_node_value_mangle=True,
+                                            get_first_key=True,
+                                            with_recursive_defaults=True)
+
+    if session_config.from_defaults(['graphql']):
+        del session_config['graphql']
+
+    return session_config
 
 def check_auth(key_list, key):
     key_id = None
@@ -860,19 +868,28 @@ def shutdown_handler(signum, frame):
     logger.info('Server shutdown...')
     shutdown = True
 
+def flatten_keys(d: dict) -> list[dict]:
+    keys_list = []
+    for el in list(d['keys'].get('id', {})):
+        key = d['keys']['id'][el].get('key', '')
+        if key:
+            keys_list.append({'id': el, 'key': key})
+    return keys_list
+
 def initialization(session: ConfigSession, app: FastAPI = app):
     global server
     try:
-        server_config = load_server_config()
+        server_config = load_server_config(session)
+        keys = flatten_keys(server_config)
     except Exception as e:
         logger.critical(f'Failed to load the HTTP API server config: {e}')
         sys.exit(1)
 
     app.state.vyos_session = session
-    app.state.vyos_keys = server_config['api_keys']
+    app.state.vyos_keys = keys
 
-    app.state.vyos_debug = server_config['debug']
-    app.state.vyos_strict = server_config['strict']
+    app.state.vyos_debug = bool('debug' in server_config)
+    app.state.vyos_strict = bool('strict' in server_config)
     app.state.vyos_origins = server_config.get('cors', {}).get('allow_origin', [])
     if 'graphql' in server_config:
         app.state.vyos_graphql = True
@@ -881,7 +898,7 @@ def initialization(session: ConfigSession, app: FastAPI = app):
                 app.state.vyos_introspection = True
             else:
                 app.state.vyos_introspection = False
-            # default value is merged in conf_mode http-api.py, if not set
+            # default values if not set explicitly
             app.state.vyos_auth_type = server_config['graphql']['authentication']['type']
             app.state.vyos_token_exp = server_config['graphql']['authentication']['expiration']
             app.state.vyos_secret_len = server_config['graphql']['authentication']['secret_length']
