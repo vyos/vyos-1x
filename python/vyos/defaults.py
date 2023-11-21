@@ -51,9 +51,6 @@ https_data = {
 }
 
 api_data = {
-    'listen_address' : '127.0.0.1',
-    'port' : '8080',
-    'socket' : False,
     'strict' : False,
     'debug' : False,
     'api_keys' : [ {'id' : 'testapp', 'key' : 'qwerty'} ]

@@ -18,8 +18,28 @@ service {
             }
             socket
         }
-    }
-    ssh {
+        virtual-host bar {
+            allow-client {
+                address 172.16.0.0/12
+            }
+            listen-port 5555
+            server-name bar
+        }
+        virtual-host baz {
+            allow-client {
+                address 192.168.0.0/16
+            }
+            listen-port 6666
+            server-name baz
+        }
+        virtual-host foo {
+            allow-client {
+                address 10.0.0.0/8
+                address 2001:db8::/32
+            }
+            listen-port 7777
+            server-name foo
+        }
     }
 }
 system {

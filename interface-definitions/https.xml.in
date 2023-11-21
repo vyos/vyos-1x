@@ -41,17 +41,9 @@
                   </constraint>
                 </properties>
               </leafNode>
-              <leafNode name='listen-port'>
-                <properties>
-                  <help>Port to listen for HTTPS requests; default 443</help>
-                  <valueHelp>
-                    <format>u32:1-65535</format>
-                    <description>Numeric IP port</description>
-                  </valueHelp>
-                  <constraint>
-                    <validator name="numeric" argument="--range 1-65535"/>
-                  </constraint>
-                </properties>
+              #include <include/port-number.xml.i>
+              <leafNode name='port'>
+                <defaultValue>443</defaultValue>
               </leafNode>
               <leafNode name="server-name">
                 <properties>
