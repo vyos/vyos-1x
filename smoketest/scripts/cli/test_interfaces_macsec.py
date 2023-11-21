@@ -22,10 +22,10 @@ from netifaces import interfaces
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import interface_exists
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'wpa_supplicant'
@@ -138,7 +138,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
+        self.assertTrue(interface_exists(interface))
 
         # Verify proper cipher suite (T4537)
         tmp = get_interface_config(interface)
@@ -162,7 +162,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
+        self.assertTrue(interface_exists(interface))
 
         # Verify proper cipher suite (T4537)
         tmp = get_interface_config(interface)
@@ -193,7 +193,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
             # final commit and verify
             self.cli_commit()
-            self.assertIn(interface, interfaces())
+            self.assertTrue(interface_exists(interface))
 
     def test_macsec_static_keys(self):
         src_interface = 'eth0'
@@ -263,11 +263,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
-        self.assertTrue(interface_exists(interface))
 
+        self.assertTrue(interface_exists(interface))
         tmp = get_interface_config(interface)
-        self.assertEqual(cipher, tmp['linkinfo']['info_data']['cipher_suite'].lower())
+        self.assertEqual(cipher2, tmp['linkinfo']['info_data']['cipher_suite'].lower())
         # Encryption enabled?
         self.assertTrue(tmp['linkinfo']['info_data']['encrypt'])
 
