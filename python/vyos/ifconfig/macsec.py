@@ -45,6 +45,10 @@ class MACsecIf(Interface):
         # create tunnel interface
         cmd  = 'ip link add link {source_interface} {ifname} type {type}'.format(**self.config)
         cmd += f' cipher {self.config["security"]["cipher"]}'
+
+        if 'encrypt' in self.config["security"]:
+            cmd += ' encrypt on'
+
         self._cmd(cmd)
 
         # Check if using static keys
