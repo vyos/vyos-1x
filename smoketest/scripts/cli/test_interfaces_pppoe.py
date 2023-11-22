@@ -36,6 +36,9 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(PPPoEInterfaceTest, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
         cls._interfaces = ['pppoe10', 'pppoe20', 'pppoe30']
         cls._source_interface = 'eth0'
@@ -53,29 +56,22 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_delete(base_path)
         self.cli_commit()
 
-    def test_01_pppoe_client(self):
+    def test_pppoe_client(self):
         # Check if PPPoE dialer can be configured and runs
         for interface in self._interfaces:
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
             mtu = '1400'
-            mru = '1300'
 
             self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'mtu', mtu])
-            self.cli_set(base_path + [interface, 'mru', '9000'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
-
-            # check validate() - MRU needs to be less or equal then MTU
-            with self.assertRaises(ConfigSessionError):
-                self.cli_commit()
-            self.cli_set(base_path + [interface, 'mru', mru])
 
         # commit changes
         self.cli_commit()
@@ -87,8 +83,9 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, mtu)
+            # MRU must default to MTU if not specified on CLI
             tmp = get_config_value(interface, 'mru')[1]
-            self.assertEqual(tmp, mru)
+            self.assertEqual(tmp, mtu)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
@@ -96,7 +93,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value(interface, 'ifname')[1]
             self.assertEqual(tmp, interface)
 
-    def test_02_pppoe_client_disabled_interface(self):
+    def test_pppoe_client_disabled_interface(self):
         # Check if PPPoE Client can be disabled
         for interface in self._interfaces:
             user = f'VyOS-user-{interface}'
@@ -125,16 +122,16 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
 
-    def test_03_pppoe_authentication(self):
+    def test_pppoe_authentication(self):
         # When username or password is set - so must be the other
         for interface in self._interfaces:
             user = f'VyOS-user-{interface}'
             passwd = f'VyOS-passwd-{interface}'
 
-            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
             self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
 
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
             # check validate() - if user is set, so must be the password
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
@@ -143,7 +140,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-    def test_04_pppoe_dhcpv6pd(self):
+    def test_pppoe_dhcpv6pd(self):
         # Check if PPPoE dialer can be configured with DHCPv6-PD
         address = '1'
         sla_id = '0'
@@ -183,7 +180,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value(interface, '+ipv6 ipv6cp-use-ipaddr')
             self.assertListEqual(tmp, ['+ipv6', 'ipv6cp-use-ipaddr'])
 
-    def test_05_pppoe_options(self):
+    def test_pppoe_options(self):
         # Check if PPPoE dialer can be configured with DHCPv6-PD
         for interface in self._interfaces:
             user = f'VyOS-user-{interface}'
@@ -214,6 +211,48 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp, f'"{service_name}"')
             tmp = get_config_value(interface, 'pppoe-host-uniq')[1]
             self.assertEqual(tmp, f'"{host_uniq}"')
+
+    def test_pppoe_mtu_mru(self):
+        # Check if PPPoE dialer can be configured and runs
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+            mtu = '1400'
+            mru = '1300'
+
+            self.cli_set(base_path + [interface, 'authentication', 'username', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'mtu', mtu])
+            self.cli_set(base_path + [interface, 'mru', '9000'])
+
+            # check validate() - a source-interface is required
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+
+            # check validate() - MRU needs to be less or equal then MTU
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'mru', mru])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration file(s)
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+
+            tmp = get_config_value(interface, 'mtu')[1]
+            self.assertEqual(tmp, mtu)
+            tmp = get_config_value(interface, 'mru')[1]
+            self.assertEqual(tmp, mru)
+            tmp = get_config_value(interface, 'user')[1].replace('"', '')
+            self.assertEqual(tmp, user)
+            tmp = get_config_value(interface, 'password')[1].replace('"', '')
+            self.assertEqual(tmp, passwd)
+            tmp = get_config_value(interface, 'ifname')[1]
+            self.assertEqual(tmp, interface)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
