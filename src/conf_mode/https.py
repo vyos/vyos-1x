@@ -122,7 +122,7 @@ def verify(https):
             server_block = deepcopy(default_server_block)
             data = vhost_dict.get(vhost, {})
             server_block['address'] = data.get('listen-address', '*')
-            server_block['port'] = data.get('listen-port', '443')
+            server_block['port'] = data.get('port', '443')
             server_block_list.append(server_block)
 
     for entry in server_block_list:
@@ -156,7 +156,7 @@ def generate(https):
             server_block['id'] = vhost
             data = vhost_dict.get(vhost, {})
             server_block['address'] = data.get('listen-address', '*')
-            server_block['port'] = data.get('listen-port', '443')
+            server_block['port'] = data.get('port', '443')
             name = data.get('server-name', ['_'])
             server_block['name'] = name
             allow_client = data.get('allow-client', {})

@@ -81,7 +81,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         test_path = base_path + ['virtual-host', vhost_id]
 
         self.cli_set(test_path + ['listen-address', address])
-        self.cli_set(test_path + ['listen-port', port])
+        self.cli_set(test_path + ['port', port])
         self.cli_set(test_path + ['server-name', name])
 
         self.cli_commit()
@@ -102,7 +102,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
     def test_api_auth(self):
         vhost_id = 'example'
         address = '127.0.0.1'
-        port = '443'
+        port = '443' # default value
         name = 'localhost'
 
         key = 'MySuperSecretVyOS'
@@ -110,7 +110,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
         test_path = base_path + ['virtual-host', vhost_id]
         self.cli_set(test_path + ['listen-address', address])
-        self.cli_set(test_path + ['listen-port', port])
         self.cli_set(test_path + ['server-name', name])
 
         self.cli_commit()
