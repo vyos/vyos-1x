@@ -48,6 +48,12 @@ if config.exists(base + ['api', 'socket']):
 if config.exists(base + ['api', 'port']):
     config.delete(base + ['api', 'port'])
 
+# rename listen-port -> port ver virtual-host
+if config.exists(base + ['virtual-host']):
+    for vhost in config.list_nodes(base + ['virtual-host']):
+        if config.exists(base + ['virtual-host', vhost, 'listen-port']):
+            config.rename(base + ['virtual-host', vhost, 'listen-port'], 'port')
+
 try:
     with open(file_name, 'w') as f:
         f.write(config.to_string())
