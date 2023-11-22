@@ -111,7 +111,7 @@
           </leafNode>
           <leafNode name="mru">
             <properties>
-              <help>Maximum Receive Unit (MRU)</help>
+              <help>Maximum Receive Unit (MRU) (default: MTU value)</help>
               <valueHelp>
                 <format>u32:128-16384</format>
                 <description>Maximum Receive Unit in byte</description>
@@ -121,7 +121,6 @@
               </constraint>
               <constraintErrorMessage>MRU must be between 128 and 16384</constraintErrorMessage>
             </properties>
-            <defaultValue>1492</defaultValue>
           </leafNode>
           #include <include/interface/no-peer-dns.xml.i>
           <leafNode name="remote-address">
