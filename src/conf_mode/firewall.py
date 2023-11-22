@@ -26,7 +26,8 @@ from vyos.config import Config
 from vyos.configdict import node_changed
 from vyos.configdiff import get_config_diff, Diff
 from vyos.configdep import set_dependents, call_dependents
-# from vyos.configverify import verify_interface_exists
+from vyos.configverify import verify_interface_exists
+from vyos.ethtool import Ethtool
 from vyos.firewall import fqdn_config_parse
 from vyos.firewall import geoip_update
 from vyos.template import render
@@ -160,6 +161,15 @@ def verify_rule(firewall, rule_conf, ipv6):
             if target not in dict_search_args(firewall, 'ipv6', 'name'):
                 raise ConfigError(f'Invalid jump-target. Firewall ipv6 name {target} does not exist on the system')
 
+    if rule_conf['action'] == 'offload':
+        if 'offload_target' not in rule_conf:
+            raise ConfigError('Action set to offload, but no offload-target specified')
+
+        offload_target = rule_conf['offload_target']
+
+        if not dict_search_args(firewall, 'flowtable', offload_target):
+            raise ConfigError(f'Invalid offload-target. Flowtable "{offload_target}" does not exist on the system')
+
     if 'queue_options' in rule_conf:
         if 'queue' not in rule_conf['action']:
             raise ConfigError('queue-options defined, but action queue needed and it is not defined')
@@ -279,7 +289,31 @@ def verify_nested_group(group_name, group, groups, seen):
         if 'include' in groups[g]:
             verify_nested_group(g, groups[g], groups, seen)
 
+def verify_hardware_offload(ifname):
+    ethtool = Ethtool(ifname)
+    enabled, fixed = ethtool.get_hw_tc_offload()
+
+    if not enabled and fixed:
+        raise ConfigError(f'Interface "{ifname}" does not support hardware offload')
+
+    if not enabled:
+        raise ConfigError(f'Interface "{ifname}" requires "offload hw-tc-offload"')
+
 def verify(firewall):
+    if 'flowtable' in firewall:
+        for flowtable, flowtable_conf in firewall['flowtable'].items():
+            if 'interface' not in flowtable_conf:
+                raise ConfigError(f'Flowtable "{flowtable}" requires at least one interface')
+
+            for ifname in flowtable_conf['interface']:
+                verify_interface_exists(ifname)
+
+            if dict_search_args(flowtable_conf, 'offload') == 'hardware':
+                interfaces = flowtable_conf['interface']
+
+                for ifname in interfaces:
+                    verify_hardware_offload(ifname)
+
     if 'group' in firewall:
         for group_type in nested_group_types:
             if group_type in firewall['group']:

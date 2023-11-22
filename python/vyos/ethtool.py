@@ -172,6 +172,9 @@ class Ethtool:
     def get_generic_segmentation_offload(self):
         return self._get_generic('generic-segmentation-offload')
 
+    def get_hw_tc_offload(self):
+        return self._get_generic('hw-tc-offload')
+
     def get_large_receive_offload(self):
         return self._get_generic('large-receive-offload')
 
