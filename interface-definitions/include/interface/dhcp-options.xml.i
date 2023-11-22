@@ -7,6 +7,13 @@
     <leafNode name="client-id">
       <properties>
         <help>Identifier used by client to identify itself to the DHCP server</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>DHCP option string</description>
+        </valueHelp>
+        <constraint>
+          #include <include/constraint/dhcp-client-string-option.xml.i>
+        </constraint>
       </properties>
     </leafNode>
     <leafNode name="host-name">
@@ -27,6 +34,25 @@
     <leafNode name="vendor-class-id">
       <properties>
         <help>Identify the vendor client type to the DHCP server</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>DHCP option string</description>
+        </valueHelp>
+        <constraint>
+          #include <include/constraint/dhcp-client-string-option.xml.i>
+        </constraint>
+      </properties>
+    </leafNode>
+    <leafNode name="user-class">
+      <properties>
+        <help>Identify to the DHCP server, user configurable option</help>
+        <valueHelp>
+          <format>txt</format>
+          <description>DHCP option string</description>
+        </valueHelp>
+        <constraint>
+          #include <include/constraint/dhcp-client-string-option.xml.i>
+        </constraint>
       </properties>
     </leafNode>
     #include <include/interface/no-default-route.xml.i>

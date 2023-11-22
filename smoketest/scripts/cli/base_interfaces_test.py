@@ -158,14 +158,22 @@ class BasicInterfaceTest:
             if not self._test_dhcp or not self._test_vrf:
                 self.skipTest('not supported')
 
+            client_id = 'VyOS-router'
             distance = '100'
+            hostname = 'vyos'
+            vendor_class_id = 'vyos-vendor'
+            user_class = 'vyos'
 
             for interface in self._interfaces:
                 for option in self._options.get(interface, []):
                     self.cli_set(self._base_path + [interface] + option.split())
 
                 self.cli_set(self._base_path + [interface, 'address', 'dhcp'])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'client-id', client_id])
                 self.cli_set(self._base_path + [interface, 'dhcp-options', 'default-route-distance', distance])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'host-name', hostname])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'vendor-class-id', vendor_class_id])
+                self.cli_set(self._base_path + [interface, 'dhcp-options', 'user-class', user_class])
 
             self.cli_commit()
 
@@ -175,8 +183,12 @@ class BasicInterfaceTest:
                 self.assertTrue(dhclient_pid)
 
                 dhclient_config = read_file(f'{dhclient_base_dir}/dhclient_{interface}.conf')
-                self.assertIn('request subnet-mask, broadcast-address, routers, domain-name-servers', dhclient_config)
-                self.assertIn('require subnet-mask;', dhclient_config)
+                self.assertIn(f'request subnet-mask, broadcast-address, routers, domain-name-servers', dhclient_config)
+                self.assertIn(f'require subnet-mask;', dhclient_config)
+                self.assertIn(f'send host-name "{hostname}";', dhclient_config)
+                self.assertIn(f'send dhcp-client-identifier "{client_id}";', dhclient_config)
+                self.assertIn(f'send vendor-class-identifier "{vendor_class_id}";', dhclient_config)
+                self.assertIn(f'send user-class "{user_class}";', dhclient_config)
 
                 # and the commandline has the appropriate options
                 cmdline = read_file(f'/proc/{dhclient_pid}/cmdline')
