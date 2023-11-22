@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import re
 import unittest
 
@@ -23,9 +22,10 @@ from netifaces import interfaces
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Section
-from vyos.utils.process import cmd
 from vyos.utils.file import read_file
 from vyos.utils.network import get_interface_config
+from vyos.utils.network import interface_exists
+from vyos.utils.process import cmd
 from vyos.utils.process import process_named_running
 
 PROCESS_NAME = 'wpa_supplicant'
@@ -34,10 +34,6 @@ def get_config_value(interface, key):
     tmp = read_file(f'/run/wpa_supplicant/{interface}.conf')
     tmp = re.findall(r'\n?{}=(.*)'.format(key), tmp)
     return tmp[0]
-
-def get_cipher(interface):
-    tmp = get_interface_config(interface)
-    return tmp['linkinfo']['info_data']['cipher_suite'].lower()
 
 class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
     @classmethod
@@ -117,6 +113,10 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
             tmp = read_file(f'/sys/class/net/{interface}/mtu')
             self.assertEqual(tmp, '1460')
 
+            # Encryption enabled?
+            tmp = get_interface_config(interface)
+            self.assertTrue(tmp['linkinfo']['info_data']['encrypt'])
+
         # Check for running process
         self.assertTrue(process_named_running(PROCESS_NAME))
 
@@ -138,10 +138,11 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
+        self.assertTrue(interface_exists(interface))
 
         # Verify proper cipher suite (T4537)
-        self.assertEqual(cipher, get_cipher(interface))
+        tmp = get_interface_config(interface)
+        self.assertEqual(cipher, tmp['linkinfo']['info_data']['cipher_suite'].lower())
 
     def test_macsec_gcm_aes_256(self):
         src_interface = 'eth0'
@@ -161,10 +162,11 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
+        self.assertTrue(interface_exists(interface))
 
         # Verify proper cipher suite (T4537)
-        self.assertEqual(cipher, get_cipher(interface))
+        tmp = get_interface_config(interface)
+        self.assertEqual(cipher, tmp['linkinfo']['info_data']['cipher_suite'].lower())
 
     def test_macsec_source_interface(self):
         # Ensure source-interface can bot be part of any other bond or bridge
@@ -191,7 +193,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
             # final commit and verify
             self.cli_commit()
-            self.assertIn(interface, interfaces())
+            self.assertTrue(interface_exists(interface))
 
     def test_macsec_static_keys(self):
         src_interface = 'eth0'
@@ -205,7 +207,7 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
         peer_mac = '00:11:22:33:44:55'
         self.cli_set(self._base_path + [interface])
 
-         # Encrypt link
+        # Encrypt link
         self.cli_set(self._base_path + [interface, 'security', 'encrypt'])
 
         # check validate() - source interface is mandatory
@@ -261,9 +263,12 @@ class MACsecInterfaceTest(BasicInterfaceTest.TestCase):
 
         # final commit and verify
         self.cli_commit()
-        self.assertIn(interface, interfaces())
-        self.assertEqual(cipher2, get_cipher(interface))
-        self.assertTrue(os.path.isdir(f'/sys/class/net/{interface}'))
+
+        self.assertTrue(interface_exists(interface))
+        tmp = get_interface_config(interface)
+        self.assertEqual(cipher2, tmp['linkinfo']['info_data']['cipher_suite'].lower())
+        # Encryption enabled?
+        self.assertTrue(tmp['linkinfo']['info_data']['encrypt'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
