@@ -95,6 +95,12 @@
                   <valueless/>
                 </properties>
               </leafNode>
+              <leafNode name="vni-filter">
+                <properties>
+                  <help>Enable VNI filter support</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
             </children>
           </node>
           #include <include/port-number.xml.i>
