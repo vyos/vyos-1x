@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # T5671: change port to IANA assigned default port
+# T5759: change default MTU 1450 -> 1500
 
 from sys import argv
 from sys import exit
@@ -42,6 +43,9 @@ for vxlan in config.list_nodes(base):
 
     if not config.exists(base + [vxlan, 'port']):
         config.set(base + [vxlan, 'port'], value='8472')
+
+    if not config.exists(base + [vxlan, 'mtu']):
+        config.set(base + [vxlan, 'mtu'], value='1450')
 
 try:
     with open(file_name, 'w') as f:
