@@ -223,6 +223,19 @@ class ShowModel(ApiModel):
             }
         }
 
+class RebootModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "key": "id_key",
+                "op": "reboot",
+                "path": ["op", "mode", "path"],
+            }
+        }
+
 class ResetModel(ApiModel):
     op: StrictStr
     path: List[StrictStr]
@@ -232,6 +245,19 @@ class ResetModel(ApiModel):
             "example": {
                 "key": "id_key",
                 "op": "reset",
+                "path": ["op", "mode", "path"],
+            }
+        }
+
+class PoweroffModel(ApiModel):
+    op: StrictStr
+    path: List[StrictStr]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "key": "id_key",
+                "op": "poweroff",
                 "path": ["op", "mode", "path"],
             }
         }
@@ -713,6 +739,26 @@ def show_op(data: ShowModel):
 
     return success(res)
 
+@app.post('/reboot')
+def reboot_op(data: RebootModel):
+    session = app.state.vyos_session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'reboot':
+            res = session.reboot(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
 @app.post('/reset')
 def reset_op(data: ResetModel):
     session = app.state.vyos_session
@@ -723,6 +769,26 @@ def reset_op(data: ResetModel):
     try:
         if op == 'reset':
             res = session.reset(path)
+        else:
+            return error(400, f"'{op}' is not a valid operation")
+    except ConfigSessionError as e:
+        return error(400, str(e))
+    except Exception as e:
+        logger.critical(traceback.format_exc())
+        return error(500, "An internal error occured. Check the logs for details.")
+
+    return success(res)
+
+@app.post('/poweroff')
+def poweroff_op(data: PoweroffModel):
+    session = app.state.vyos_session
+
+    op = data.op
+    path = data.path
+
+    try:
+        if op == 'poweroff':
+            res = session.poweroff(path)
         else:
             return error(400, f"'{op}' is not a valid operation")
     except ConfigSessionError as e:
