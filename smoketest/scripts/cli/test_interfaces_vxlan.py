@@ -22,6 +22,7 @@ from vyos.utils.network import get_bridge_fdb
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import interface_exists
 from vyos.utils.network import get_vxlan_vlan_tunnels
+from vyos.utils.network import get_vxlan_vni_filter
 from vyos.template import is_ipv6
 from base_interfaces_test import BasicInterfaceTest
 
@@ -151,6 +152,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         }
 
         self.cli_set(self._base_path + [interface, 'parameters', 'external'])
+        self.cli_set(self._base_path + [interface, 'parameters', 'vni-filter'])
         self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
 
         for vlan, vni in vlan_to_vni.items():
@@ -219,6 +221,94 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertEqual(tmp['master'], bridge)
         self.assertFalse(tmp['linkinfo']['info_slave_data']['neigh_suppress'])
         self.assertTrue(tmp['linkinfo']['info_slave_data']['learning'])
+
+        self.cli_delete(['interfaces', 'bridge', bridge])
+
+    def test_vxlan_vni_filter(self):
+        interfaces = ['vxlan987', 'vxlan986', 'vxlan985']
+        source_address = '192.0.2.77'
+
+        for interface in interfaces:
+            self.cli_set(self._base_path + [interface, 'parameters', 'external'])
+            self.cli_set(self._base_path + [interface, 'source-address', source_address])
+
+        # This must fail as there can only be one "external" VXLAN device unless "vni-filter" is defined
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        # Enable "vni-filter" on the first VXLAN interface
+        self.cli_set(self._base_path + [interfaces[0], 'parameters', 'vni-filter'])
+
+        # This must fail as if it's enabled on one VXLAN interface, it must be enabled on all
+        # VXLAN interfaces
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        for interface in interfaces:
+            self.cli_set(self._base_path + [interface, 'parameters', 'vni-filter'])
+
+        # commit configuration
+        self.cli_commit()
+
+        for interface in interfaces:
+            self.assertTrue(interface_exists(interface))
+
+            tmp = get_interface_config(interface)
+            self.assertTrue(tmp['linkinfo']['info_data']['vnifilter'])
+
+    def test_vxlan_vni_filter_add_remove(self):
+        interface = 'vxlan987'
+        source_address = '192.0.2.66'
+        bridge = 'br0'
+
+        self.cli_set(self._base_path + [interface, 'parameters', 'external'])
+        self.cli_set(self._base_path + [interface, 'source-address', source_address])
+        self.cli_set(self._base_path + [interface, 'parameters', 'vni-filter'])
+
+        # commit configuration
+        self.cli_commit()
+
+        # Check if VXLAN interface got created
+        self.assertTrue(interface_exists(interface))
+
+        # VNI filter configured?
+        tmp = get_interface_config(interface)
+        self.assertTrue(tmp['linkinfo']['info_data']['vnifilter'])
+
+        # Now create some VLAN mappings and VNI filter
+        vlan_to_vni = {
+            '50': '10050',
+            '51': '10051',
+            '52': '10052',
+            '53': '10053',
+            '54': '10054',
+            '60': '10060',
+            '69': '10069',
+        }
+        for vlan, vni in vlan_to_vni.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+        # we need a bridge ...
+        self.cli_set(['interfaces', 'bridge', bridge, 'member', 'interface', interface])
+        # commit configuration
+        self.cli_commit()
+
+        # All VNIs configured?
+        tmp = get_vxlan_vni_filter(interface)
+        self.assertListEqual(list(vlan_to_vni.values()), tmp)
+
+        #
+        # Delete a VLAN mappings and check if all VNIs are properly set up
+        #
+        vlan_to_vni.popitem()
+        self.cli_delete(self._base_path + [interface, 'vlan-to-vni'])
+        for vlan, vni in vlan_to_vni.items():
+            self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
+
+        # commit configuration
+        self.cli_commit()
+
+        # All VNIs configured?
+        tmp = get_vxlan_vni_filter(interface)
+        self.assertListEqual(list(vlan_to_vni.values()), tmp)
 
         self.cli_delete(['interfaces', 'bridge', bridge])
 

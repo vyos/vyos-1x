@@ -56,6 +56,13 @@ def _get_raw_data_vlan(tunnel:bool=False):
     data_dict = json.loads(json_data)
     return data_dict
 
+def _get_raw_data_vni() -> dict:
+    """
+    :returns dict
+    """
+    json_data = cmd(f'bridge --json vni show')
+    data_dict = json.loads(json_data)
+    return data_dict
 
 def _get_raw_data_fdb(bridge):
     """Get MAC-address for the bridge brX
@@ -165,6 +172,22 @@ def _get_formatted_output_vlan_tunnel(data):
     output = tabulate(data_entries, headers)
     return output
 
+def _get_formatted_output_vni(data):
+    data_entries = []
+    for entry in data:
+        interface = entry.get('ifname')
+        vlans = entry.get('vnis')
+        for vlan_entry in vlans:
+            vlan = vlan_entry.get('vni')
+            if vlan_entry.get('vniEnd'):
+                vlan_end = vlan_entry.get('vniEnd')
+                vlan = f'{vlan}-{vlan_end}'
+            data_entries.append([interface, vlan])
+
+    headers = ["Interface", "VNI"]
+    output = tabulate(data_entries, headers)
+    return output
+
 def _get_formatted_output_fdb(data):
     data_entries = []
     for entry in data:
@@ -228,6 +251,12 @@ def show_vlan(raw: bool, tunnel: typing.Optional[bool]):
         else:
             return _get_formatted_output_vlan(bridge_vlan)
 
+def show_vni(raw: bool):
+    bridge_vni = _get_raw_data_vni()
+    if raw:
+        return bridge_vni
+    else:
+        return _get_formatted_output_vni(bridge_vni)
 
 def show_fdb(raw: bool, interface: str):
     fdb_data = _get_raw_data_fdb(interface)

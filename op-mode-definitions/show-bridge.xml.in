@@ -21,6 +21,12 @@
               </leafNode>
             </children>
           </node>
+          <leafNode name="vni">
+            <properties>
+              <help>Virtual Network Identifier</help>
+            </properties>
+            <command>${vyos_op_scripts_dir}/bridge.py show_vni</command>
+          </leafNode>
         </children>
       </node>
       <leafNode name="bridge">

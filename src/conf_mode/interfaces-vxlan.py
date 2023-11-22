@@ -60,8 +60,14 @@ def get_config(config=None):
             vxlan.update({'rebuild_required': {}})
             break
 
+    # When dealing with VNI filtering we need to know what VNI was actually removed,
+    # so build up a dict matching the vlan_to_vni structure but with removed values.
     tmp = node_changed(conf, base + [ifname, 'vlan-to-vni'], recursive=True)
-    if tmp: vxlan.update({'vlan_to_vni_removed': tmp})
+    if tmp:
+        vxlan.update({'vlan_to_vni_removed': {}})
+        for vlan in tmp:
+            vni = leaf_node_changed(conf, base + [ifname, 'vlan-to-vni', vlan, 'vni'])
+            vxlan['vlan_to_vni_removed'].update({vlan : {'vni' : vni[0]}})
 
     # We need to verify that no other VXLAN tunnel is configured when external
     # mode is in use - Linux Kernel limitation
@@ -98,14 +104,31 @@ def verify(vxlan):
     if 'vni' not in vxlan and dict_search('parameters.external', vxlan) == None:
         raise ConfigError('Must either configure VXLAN "vni" or use "external" CLI option!')
 
-    if dict_search('parameters.external', vxlan):
+    if dict_search('parameters.external', vxlan) != None:
         if 'vni' in vxlan:
             raise ConfigError('Can not specify both "external" and "VNI"!')
 
         if 'other_tunnels' in vxlan:
-            other_tunnels = ', '.join(vxlan['other_tunnels'])
-            raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
-                              f'CLI option is used. Additional tunnels: {other_tunnels}')
+            # When multiple VXLAN interfaces are defined and "external" is used,
+            # all VXLAN interfaces need to have vni-filter enabled!
+            # See Linux Kernel commit f9c4bb0b245cee35ef66f75bf409c9573d934cf9
+            other_vni_filter = False
+            for tunnel, tunnel_config in vxlan['other_tunnels'].items():
+                if dict_search('parameters.vni_filter', tunnel_config) != None:
+                    other_vni_filter = True
+                    break
+            # eqivalent of the C foo ? 'a' : 'b' statement
+            vni_filter = True and (dict_search('parameters.vni_filter', vxlan) != None) or False
+            # If either one is enabled, so must be the other. Both can be off and both can be on
+            if (vni_filter and not other_vni_filter) or (not vni_filter and other_vni_filter):
+                raise ConfigError(f'Using multiple VXLAN interfaces with "external" '\
+                    'requires all VXLAN interfaces to have "vni-filter" configured!')
+
+            if not vni_filter and not other_vni_filter:
+                other_tunnels = ', '.join(vxlan['other_tunnels'])
+                raise ConfigError(f'Only one VXLAN tunnel is supported when "external" '\
+                                f'CLI option is used and "vni-filter" is unset. '\
+                                f'Additional tunnels: {other_tunnels}')
 
     if 'gpe' in vxlan and 'external' not in vxlan:
         raise ConfigError(f'VXLAN-GPE is only supported when "external" '\
@@ -165,7 +188,7 @@ def verify(vxlan):
                 raise ConfigError(f'VNI "{vni}" is already assigned to a different VLAN!')
             vnis_used.append(vni)
 
-    if dict_search('parameters.neighbor_suppress', vxlan):
+    if dict_search('parameters.neighbor_suppress', vxlan) != None:
         if 'is_bridge_member' not in vxlan:
             raise ConfigError('Neighbor suppression requires that VXLAN interface '\
                               'is member of a bridge interface!')

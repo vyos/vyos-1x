@@ -22,6 +22,7 @@ from vyos.utils.assertion import assert_list
 from vyos.utils.dict import dict_search
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import get_vxlan_vlan_tunnels
+from vyos.utils.network import get_vxlan_vni_filter
 
 @Interface.register
 class VXLANIf(Interface):
@@ -79,6 +80,7 @@ class VXLANIf(Interface):
             'parameters.ip.ttl'          : 'ttl',
             'parameters.ipv6.flowlabel'  : 'flowlabel',
             'parameters.nolearning'      : 'nolearning',
+            'parameters.vni_filter'      : 'vnifilter',
             'remote'                     : 'remote',
             'source_address'             : 'local',
             'source_interface'           : 'dev',
@@ -138,10 +140,14 @@ class VXLANIf(Interface):
         if not isinstance(state, bool):
             raise ValueError('Value out of range')
 
-        cur_vlan_ids = []
         if 'vlan_to_vni_removed' in self.config:
-            cur_vlan_ids = self.config['vlan_to_vni_removed']
-            for vlan in cur_vlan_ids:
+            cur_vni_filter = get_vxlan_vni_filter(self.ifname)
+            for vlan, vlan_config in self.config['vlan_to_vni_removed'].items():
+                # If VNI filtering is enabled, remove matching VNI filter
+                if dict_search('parameters.vni_filter', self.config) != None:
+                    vni = vlan_config['vni']
+                    if vni in cur_vni_filter:
+                        self._cmd(f'bridge vni delete dev {self.ifname} vni {vni}')
                 self._cmd(f'bridge vlan del dev {self.ifname} vid {vlan}')
 
         # Determine current OS Kernel vlan_tunnel setting - only adjust when needed
@@ -151,10 +157,9 @@ class VXLANIf(Interface):
         if cur_state != new_state:
             self.set_interface('vlan_tunnel', new_state)
 
-        # Determine current OS Kernel configured VLANs
-        os_configured_vlan_ids = get_vxlan_vlan_tunnels(self.ifname)
-
         if 'vlan_to_vni' in self.config:
+            # Determine current OS Kernel configured VLANs
+            os_configured_vlan_ids = get_vxlan_vlan_tunnels(self.ifname)
             add_vlan = list_diff(list(self.config['vlan_to_vni'].keys()), os_configured_vlan_ids)
 
             for vlan, vlan_config in self.config['vlan_to_vni'].items():
@@ -167,6 +172,10 @@ class VXLANIf(Interface):
                 # they can not be combined with linux 6.1 and iproute2 6.1
                 self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan}')
                 self._cmd(f'bridge vlan add dev {self.ifname} vid {vlan} tunnel_info id {vni}')
+
+                # If VNI filtering is enabled, install matching VNI filter
+                if dict_search('parameters.vni_filter', self.config) != None:
+                    self._cmd(f'bridge vni add dev {self.ifname} vni {vni}')
 
     def update(self, config):
         """ General helper function which works on a dictionary retrived by
