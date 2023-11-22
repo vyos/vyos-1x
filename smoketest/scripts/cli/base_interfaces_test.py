@@ -412,10 +412,9 @@ class BasicInterfaceTest:
 
             for intf in self._interfaces:
                 base = self._base_path + [intf]
-                self.cli_set(base + ['mtu', self._mtu])
-
                 for option in self._options.get(intf, []):
                     self.cli_set(base + option.split())
+                self.cli_set(base + ['mtu', self._mtu])
 
             # check validate() - can not set low MTU if 'no-default-link-local'
             # is not set on CLI

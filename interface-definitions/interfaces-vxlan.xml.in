@@ -48,9 +48,6 @@
           #include <include/interface/mac.xml.i>
           #include <include/interface/mtu-1200-16000.xml.i>
           #include <include/interface/mirror.xml.i>
-          <leafNode name="mtu">
-            <defaultValue>1450</defaultValue>
-          </leafNode>
           <node name="parameters">
             <properties>
               <help>VXLAN tunnel parameters</help>

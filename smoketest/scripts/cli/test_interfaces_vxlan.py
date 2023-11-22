@@ -18,6 +18,7 @@ import unittest
 
 from vyos.configsession import ConfigSessionError
 from vyos.ifconfig import Interface
+from vyos.ifconfig import Section
 from vyos.utils.network import get_bridge_fdb
 from vyos.utils.network import get_interface_config
 from vyos.utils.network import interface_exists
@@ -32,12 +33,13 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         cls._base_path = ['interfaces', 'vxlan']
         cls._options = {
             'vxlan10': ['vni 10', 'remote 127.0.0.2'],
-            'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0'],
+            'vxlan20': ['vni 20', 'group 239.1.1.1', 'source-interface eth0', 'mtu 1450'],
             'vxlan30': ['vni 30', 'remote 2001:db8:2000::1', 'source-address 2001:db8:1000::1', 'parameters ipv6 flowlabel 0x1000'],
             'vxlan40': ['vni 40', 'remote 127.0.0.2', 'remote 127.0.0.3'],
             'vxlan50': ['vni 50', 'remote 2001:db8:2000::1', 'remote 2001:db8:2000::2', 'parameters ipv6 flowlabel 0x1000'],
         }
         cls._interfaces = list(cls._options)
+        cls._mtu = '1450'
         # call base-classes classmethod
         super(VXLANInterfaceTest, cls).setUpClass()
 
@@ -139,7 +141,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     def test_vxlan_vlan_vni_mapping(self):
         bridge = 'br0'
         interface = 'vxlan0'
-        source_interface = 'eth0'
+        source_address = '192.0.2.99'
 
         vlan_to_vni = {
             '10': '10010',
@@ -152,8 +154,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         }
 
         self.cli_set(self._base_path + [interface, 'parameters', 'external'])
-        self.cli_set(self._base_path + [interface, 'parameters', 'vni-filter'])
-        self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
+        self.cli_set(self._base_path + [interface, 'source-address', source_address])
 
         for vlan, vni in vlan_to_vni.items():
             self.cli_set(self._base_path + [interface, 'vlan-to-vni', vlan, 'vni', vni])
@@ -189,11 +190,12 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
     def test_vxlan_neighbor_suppress(self):
         bridge = 'br555'
         interface = 'vxlan555'
-        source_interface = 'eth0'
+        source_interface = 'dum0'
+
+        self.cli_set(['interfaces', Section.section(source_interface), source_interface, 'mtu', '9000'])
 
         self.cli_set(self._base_path + [interface, 'parameters', 'external'])
         self.cli_set(self._base_path + [interface, 'source-interface', source_interface])
-
         self.cli_set(self._base_path + [interface, 'parameters', 'neighbor-suppress'])
 
         # This must fail as this VXLAN interface is not associated with any bridge
@@ -223,6 +225,7 @@ class VXLANInterfaceTest(BasicInterfaceTest.TestCase):
         self.assertTrue(tmp['linkinfo']['info_slave_data']['learning'])
 
         self.cli_delete(['interfaces', 'bridge', bridge])
+        self.cli_delete(['interfaces', Section.section(source_interface), source_interface])
 
     def test_vxlan_vni_filter(self):
         interfaces = ['vxlan987', 'vxlan986', 'vxlan985']
