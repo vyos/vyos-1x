@@ -1,7 +1,13 @@
 
-{% macro zone_chains(zone, ipv6=False) %}
-{% set fw_name = 'ipv6_name' if ipv6 else 'name' %}
-{% set suffix = '6' if ipv6 else '' %}
+{% macro zone_chains(zone, family) %}
+{% if family == 'ipv6' %}
+{%     set fw_name = 'ipv6_name' %}
+{%     set suffix = '6' %}
+{% else %}
+{%     set fw_name = 'name' %}
+{%     set suffix = '' %}
+{% endif %}
+
     chain VYOS_ZONE_FORWARD {
         type filter hook forward priority 1; policy accept;
 {% for zone_name, zone_conf in zone.items() %}
@@ -36,7 +42,7 @@
         iifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
     chain VZONE_{{ zone_name }}_OUT {
         oifname lo counter return
@@ -46,7 +52,7 @@
         oifname { {{ zone[from_zone].interface | join(",") }} } counter return
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
 {%     else %}
     chain VZONE_{{ zone_name }} {
@@ -62,7 +68,7 @@
 {%                 endif %}
 {%             endfor %}
 {%         endif %}
-        {{ zone_conf | nft_default_rule('zone_' + zone_name) }}
+        {{ zone_conf | nft_default_rule('zone_' + zone_name, family) }}
     }
 {%     endif %}
 {% endfor %}

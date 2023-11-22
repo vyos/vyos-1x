@@ -586,6 +586,7 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'bridge', 'name', name, 'rule', '1', 'log-options', 'level', 'crit'])
 
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'default-action', 'drop'])
+        self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'enable-default-log'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '1', 'vlan', 'id', vlan_id])
         self.cli_set(['firewall', 'bridge', 'forward', 'filter', 'rule', '2', 'action', 'jump'])
@@ -596,11 +597,13 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
 
         nftables_search = [
             ['chain VYOS_FORWARD_filter'],
-            ['type filter hook forward priority filter; policy drop;'],
+            ['type filter hook forward priority filter; policy accept;'],
             [f'vlan id {vlan_id}', 'accept'],
             [f'vlan pcp {vlan_prior}', f'jump NAME_{name}'],
+            ['log prefix "[bri-FWD-filter-default-D]"', 'drop', 'FWD-filter default-action drop'],
             [f'chain NAME_{name}'],
-            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept']
+            [f'ether saddr {mac_address}', f'iifname "{interface_in}"', f'log prefix "[bri-NAM-{name}-1-A]" log level crit', 'accept'],
+            ['accept', f'{name} default-action accept']
         ]
 
         self.verify_nftables(nftables_search, 'bridge vyos_filter')
