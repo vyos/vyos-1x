@@ -54,7 +54,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('FWD-filter') }}
+        {{ conf | nft_default_rule('FWD-filter', 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -71,7 +71,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('INP-filter') }}
+        {{ conf | nft_default_rule('INP-filter', 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -88,7 +88,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('OUT-filter') }}
+        {{ conf | nft_default_rule('OUT-filter', 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -108,7 +108,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('PRE-filter') }}
+        {{ conf | nft_default_rule('PRE-filter', 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -124,7 +124,7 @@ table ip vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule(name_text) }}
+        {{ conf | nft_default_rule(name_text, 'ipv4') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -154,7 +154,7 @@ table ip vyos_filter {
 {{ group_tmpl.groups(group, False, True) }}
 
 {% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, False) }}
+{{ zone_tmpl.zone_chains(zone, 'ipv4') }}
 {% endif %}
 }
 
@@ -182,7 +182,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('FWD-filter', ipv6=True) }}
+        {{ conf | nft_default_rule('FWD-filter', 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -199,7 +199,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('INP-filter', ipv6=True) }}
+        {{ conf | nft_default_rule('INP-filter', 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -216,7 +216,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule('OUT-filter', ipv6=True) }}
+        {{ conf | nft_default_rule('OUT-filter', 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -237,7 +237,7 @@ table ip6 vyos_filter {
 {%                     endif %}
 {%                 endfor %}
 {%             endif %}
-        {{ conf | nft_default_rule(name_text, ipv6=True) }}
+        {{ conf | nft_default_rule(name_text, 'ipv6') }}
     }
 {%         endfor %}
 {%     endif %}
@@ -266,7 +266,7 @@ table ip6 vyos_filter {
 {% endif %}
 {{ group_tmpl.groups(group, True, True) }}
 {% if zone is vyos_defined %}
-{{ zone_tmpl.zone_chains(zone, True) }}
+{{ zone_tmpl.zone_chains(zone, 'ipv6') }}
 {% endif %}
 }
 

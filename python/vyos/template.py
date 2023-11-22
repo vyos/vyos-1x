@@ -579,10 +579,10 @@ def nft_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name='ip'):
     return parse_rule(rule_conf, fw_hook, fw_name, rule_id, ip_name)
 
 @register_filter('nft_default_rule')
-def nft_default_rule(fw_conf, fw_name, ipv6=False):
+def nft_default_rule(fw_conf, fw_name, family):
     output = ['counter']
     default_action = fw_conf['default_action']
-    family = 'ipv6' if ipv6 else 'ipv4'
+    #family = 'ipv6' if ipv6 else 'ipv4'
 
     if 'enable_default_log' in fw_conf:
         action_suffix = default_action[:1].upper()
@@ -592,7 +592,7 @@ def nft_default_rule(fw_conf, fw_name, ipv6=False):
     output.append(f'{default_action}')
     if 'default_jump_target' in fw_conf:
         target = fw_conf['default_jump_target']
-        def_suffix = '6' if ipv6 else ''
+        def_suffix = '6' if family == 'ipv6' else ''
         output.append(f'NAME{def_suffix}_{target}')
 
     output.append(f'comment "{fw_name} default-action {default_action}"')
