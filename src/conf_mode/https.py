@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -25,6 +25,7 @@ from vyos.config import Config
 from vyos.configverify import verify_vrf
 from vyos import ConfigError
 from vyos.util import call
+from vyos.util import dict_search
 from vyos.template import render
 
 from vyos import airbag
@@ -160,6 +161,30 @@ def verify(https):
                           "matching the 'certbot domain-name' is required.")
 
     verify_vrf(https)
+
+    # Verify API server settings, if present
+    if 'api' in https:
+        keys = dict_search('api.keys.id', https)
+        gql_auth_type = dict_search('api.graphql.authentication.type', https)
+
+        # If "api graphql" is not defined and `gql_auth_type` is None,
+        # there's certainly no JWT auth option, and keys are required
+        jwt_auth = (gql_auth_type == "token")
+
+        # Check for incomplete key configurations in every case
+        valid_keys_exist = False
+        if keys:
+            for k in keys:
+                if 'key' not in keys[k]:
+                    raise ConfigError(f'Missing HTTPS API key string for key id "{k}"')
+                else:
+                    valid_keys_exist = True
+
+        # If only key-based methods are enabled,
+        # fail the commit if no valid key configurations are found
+        if (not valid_keys_exist) and (not jwt_auth):
+            raise ConfigError('At least one HTTPS API key is required unless GraphQL token authentication is enabled')
+
     return None
 
 def generate(https):
