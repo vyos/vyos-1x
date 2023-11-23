@@ -136,6 +136,14 @@ def get_config():
         if conf.exists('api port'):
             port = conf.return_value('api port')
             api_data['port'] = port
+        if conf.exists('api keys id'):
+            for id in conf.list_nodes('api keys id'):
+                tmp = {"id": id}
+                if conf.exists('api keys id ' + id + ' key'):
+                    key = conf.return_value('api keys id ' + id + ' key')
+                    tmp.update({'key':key})
+                api_data['api_keys'].append(tmp)
+
     if api_data:
         for block in server_block_list:
             block['api'] = api_data
@@ -144,28 +152,23 @@ def get_config():
     return https
 
 def verify(https):
+    if https is None:
+        return None
+
     # Verify API server settings, if present
-    if 'api' in https:
-        keys = dict_search('api.keys.id', https)
-        gql_auth_type = dict_search('api.graphql.authentication.type', https)
+    if 'server_block_list' in https:
+        for server in https['server_block_list']:
+            if 'api' in server:
+                keys = dict_search('api.api_keys', server)
 
-        # If "api graphql" is not defined and `gql_auth_type` is None,
-        # there's certainly no JWT auth option, and keys are required
-        jwt_auth = (gql_auth_type == "token")
-
-        # Check for incomplete key configurations in every case
-        valid_keys_exist = False
-        if keys:
-            for k in keys:
-                if 'key' not in keys[k]:
-                    raise ConfigError(f'Missing HTTPS API key string for key id "{k}"')
+                # Check for incomplete key configurations in every case
+                valid_keys_exist = False
+                if keys:
+                    for k in keys:
+                        if 'key' not in k:
+                            raise ConfigError('Missing HTTPS API key string for key id: ' + k['id'])
                 else:
-                    valid_keys_exist = True
-
-        # If only key-based methods are enabled,
-        # fail the commit if no valid key configurations are found
-        if (not valid_keys_exist) and (not jwt_auth):
-            raise ConfigError('At least one HTTPS API key is required unless GraphQL token authentication is enabled')
+                    raise ConfigError('At least one HTTPS API key is required!')
 
     return None
 
