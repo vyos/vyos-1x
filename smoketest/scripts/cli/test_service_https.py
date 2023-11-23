@@ -25,6 +25,8 @@ from base_vyostest_shim import ignore_warning
 from vyos.utils.file import read_file
 from vyos.utils.process import process_named_running
 
+from vyos.configsession import ConfigSessionError
+
 base_path = ['service', 'https']
 pki_base = ['pki']
 
@@ -62,9 +64,6 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         cls.cli_delete(cls, pki_base)
 
     def tearDown(self):
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
-
         self.cli_delete(base_path)
         self.cli_delete(pki_base)
         self.cli_commit()
@@ -89,6 +88,7 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         nginx_config = read_file('/etc/nginx/sites-enabled/default')
         self.assertIn(f'listen {address}:{port} ssl;', nginx_config)
         self.assertIn(f'ssl_protocols TLSv1.2 TLSv1.3;', nginx_config)
+        self.assertTrue(process_named_running(PROCESS_NAME))
 
     def test_certificate(self):
         self.cli_set(pki_base + ['certificate', 'test_https', 'certificate', cert_data.replace('\n','')])
@@ -97,6 +97,15 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['certificates', 'certificate', 'test_https'])
 
         self.cli_commit()
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
+    def test_api_missing_keys(self):
+        self.cli_set(base_path + ['api'])
+        self.assertRaises(ConfigSessionError, self.cli_commit)
+
+    def test_api_incomplete_key(self):
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01'])
+        self.assertRaises(ConfigSessionError, self.cli_commit)
 
     @ignore_warning(InsecureRequestWarning)
     def test_api_auth(self):
@@ -339,4 +348,4 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    unittest.main(verbosity=5)
