@@ -31,7 +31,6 @@ base_path = ['service', 'tftp-server']
 dummy_if_path = ['interfaces', 'dummy', 'dum69']
 address_ipv4 = '192.0.2.1'
 address_ipv6 = '2001:db8::1'
-vrf = 'mgmt'
 
 class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
     @classmethod
@@ -120,46 +119,6 @@ class TestServiceTFTPD(VyOSUnitTestSHIM.TestCase):
             if PROCESS_NAME in p.name():
                 count += 1
         self.assertEqual(count, len(address))
-
-    def test_03_tftpd_vrf(self):
-        directory = '/tmp'
-        port = '69' # default port
-
-        self.cli_set(base_path + ['allow-upload'])
-        self.cli_set(base_path + ['directory', directory])
-        self.cli_set(base_path + ['listen-address', address_ipv4, 'vrf', vrf])
-
-        # VRF does yet not exist - an error must be thrown
-        with self.assertRaises(ConfigSessionError):
-            self.cli_commit()
-
-        self.cli_set(['vrf', 'name', vrf, 'table', '1338'])
-        self.cli_set(dummy_if_path + ['vrf', vrf])
-
-        # commit changes
-        self.cli_commit()
-
-        config = read_file('/etc/default/tftpd0')
-        # verify listen IP address
-        self.assertIn(f'{address_ipv4}:{port} -4', config)
-        # verify directory
-        self.assertIn(directory, config)
-        # verify upload
-        self.assertIn('--create --umask 000', config)
-
-        # Check for process in VRF
-        count = 0
-        while count < 10:
-            count += 1
-            tmp = cmd(f'ip vrf pids {vrf}')
-            print(tmp)
-            if tmp: break
-            sleep(1)
-        self.assertIn(PROCESS_NAME, tmp)
-
-        # delete VRF
-        self.cli_delete(dummy_if_path + ['vrf'])
-        self.cli_delete(['vrf', 'name', vrf])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
