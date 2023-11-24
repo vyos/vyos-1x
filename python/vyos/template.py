@@ -602,7 +602,7 @@ def nft_default_rule(fw_conf, fw_name, family):
 def nft_state_policy(conf, state):
     out = [f'ct state {state}']
 
-    if 'log' in conf and 'enable' in conf['log']:
+    if 'log' in conf:
         log_state = state[:3].upper()
         log_action = (conf['action'] if 'action' in conf else 'accept')[:1].upper()
         out.append(f'log prefix "[STATE-POLICY-{log_state}-{log_action}]"')
