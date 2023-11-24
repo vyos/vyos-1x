@@ -1,8 +1,24 @@
+<<<<<<< HEAD
 {% macro zone_chains(zone, ipv6=False) %}
 {% set fw_name = 'ipv6_name' if ipv6 else 'name' %}
 {% set suffix = '6' if ipv6 else '' %}
+=======
+
+{% macro zone_chains(zone, family, state_policy=False) %}
+{% if family == 'ipv6' %}
+{%     set fw_name = 'ipv6_name' %}
+{%     set suffix = '6' %}
+{% else %}
+{%     set fw_name = 'name' %}
+{%     set suffix = '' %}
+{% endif %}
+
+>>>>>>> 64ee13cf9 (T5775: firewall: re-add state-policy to firewall. These commands are now included in <set firewall global-options state-policy> node.)
     chain VYOS_ZONE_FORWARD {
         type filter hook forward priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
 {% for zone_name, zone_conf in zone.items() %}
 {%     if 'local_zone' not in zone_conf %}
         oifname { {{ zone_conf.interface | join(',') }} } counter jump VZONE_{{ zone_name }}
@@ -11,6 +27,9 @@
     }
     chain VYOS_ZONE_LOCAL {
         type filter hook input priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
 {% for zone_name, zone_conf in zone.items() %}
 {%     if 'local_zone' in zone_conf %}
         counter jump VZONE_{{ zone_name }}_IN
@@ -19,6 +38,9 @@
     }
     chain VYOS_ZONE_OUTPUT {
         type filter hook output priority 1; policy accept;
+{% if state_policy %}
+        jump VYOS_STATE_POLICY{{ suffix }}
+{% endif %}
 {% for zone_name, zone_conf in zone.items() %}
 {%     if 'local_zone' in zone_conf %}
         counter jump VZONE_{{ zone_name }}_OUT
