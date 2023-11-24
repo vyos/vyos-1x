@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2018-2020 VyOS maintainers and contributors
+# Copyright (C) 2018-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -28,6 +28,7 @@ from vyos.configverify import verify_bridge_delete
 from vyos.configverify import verify_mtu_ipv6
 from vyos.configverify import verify_bond_bridge_member
 from vyos.ifconfig import WireGuardIf
+from vyos.validate import is_wireguard_key_pair
 from vyos.util import check_kmod
 from vyos import ConfigError
 from vyos import airbag
@@ -94,6 +95,11 @@ def verify(wireguard):
             raise ConfigError('Both Wireguard port and address must be defined '
                               f'for peer "{tmp}" if either one of them is set!')
 
+        if 'disable' not in peer:
+            with open(wireguard['private_key'], 'r') as file:
+                private_key = file.read().rstrip()
+                if is_wireguard_key_pair(private_key, peer['pubkey']):
+                    raise ConfigError(f'Peer "{tmp}" has the same public key as the interface "{wireguard["ifname"]}"')
 def apply(wireguard):
     tmp = WireGuardIf(wireguard['ifname'])
     if 'deleted' in wireguard:
