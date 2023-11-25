@@ -46,17 +46,6 @@ from vyos.version import get_version
 
 CHUNK_SIZE = 8192
 
-@contextmanager
-def umask(mask: int):
-    """
-    Context manager that temporarily sets the process umask.
-    """
-    oldmask = os.umask(mask)
-    try:
-        yield
-    finally:
-        os.umask(oldmask)
-
 class InteractivePolicy(MissingHostKeyPolicy):
     """
     Paramiko policy for interactively querying the user on whether to proceed
@@ -88,6 +77,17 @@ class SourceAdapter(HTTPAdapter):
             num_pools=connections, maxsize=maxsize,
             block=block, source_address=self._source_pair)
 
+@contextmanager
+def umask(mask: int):
+    """
+    Context manager that temporarily sets the process umask.
+    """
+    import os
+    oldmask = os.umask(mask)
+    try:
+        yield
+    finally:
+        os.umask(oldmask)
 
 def check_storage(path, size):
     """
@@ -436,26 +436,22 @@ def urlc(urlstring, *args, **kwargs):
     except KeyError:
         raise ValueError(f'Unsupported URL scheme: "{scheme}"')
 
-def download(local_path, urlstring, progressbar=False, raise_error=False, check_space=False,
+def download(local_path, urlstring, progressbar=False, check_space=False,
              source_host='', source_port=0, timeout=10.0):
     try:
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, check_space, source_host, source_port, timeout).download(local_path)
     except Exception as err:
-        if raise_error:
-            raise
         print_error(f'Unable to download "{urlstring}": {err}')
     except KeyboardInterrupt:
         print_error('\nDownload aborted by user.')
 
-def upload(local_path, urlstring, progressbar=False, raise_error=False,
+def upload(local_path, urlstring, progressbar=False,
            source_host='', source_port=0, timeout=10.0):
     try:
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, source_host, source_port, timeout).upload(local_path)
     except Exception as err:
-        if raise_error:
-            raise
         print_error(f'Unable to upload "{urlstring}": {err}')
     except KeyboardInterrupt:
         print_error('\nUpload aborted by user.')
