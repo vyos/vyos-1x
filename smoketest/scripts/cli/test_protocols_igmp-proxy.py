@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -29,13 +29,31 @@ upstream_if = 'eth1'
 downstream_if = 'eth2'
 
 class TestProtocolsIGMPProxy(VyOSUnitTestSHIM.TestCase):
-    def setUp(self):
-        self.cli_set(['interfaces', 'ethernet', upstream_if, 'address', '172.16.1.1/24'])
+    @classmethod
+    def setUpClass(cls):
+        # call base-classes classmethod
+        super(TestProtocolsIGMPProxy, cls).setUpClass()
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+        cls.cli_set(cls, ['interfaces', 'ethernet', upstream_if, 'address', '172.16.1.1/24'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, ['interfaces', 'ethernet', upstream_if, 'address'])
+
+        # call base-classes classmethod
+        super(TestProtocolsIGMPProxy, cls).tearDownClass()
 
     def tearDown(self):
-        self.cli_delete(['interfaces', 'ethernet', upstream_if, 'address'])
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # Check for no longer running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
 
     def test_igmpproxy(self):
         threshold = '20'
@@ -73,9 +91,6 @@ class TestProtocolsIGMPProxy(VyOSUnitTestSHIM.TestCase):
         self.assertIn(f'altnet {altnet}', config)
         self.assertIn(f'whitelist {whitelist}', config)
         self.assertIn(f'phyint {downstream_if} downstream ratelimit 0 threshold 1', config)
-
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
