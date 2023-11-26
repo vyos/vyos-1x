@@ -165,6 +165,30 @@ class ConfigDiff(object):
             return True
         return False
 
+    def node_changed_presence(self, path=[]) -> bool:
+        if self._diff_tree is None:
+            raise NotImplementedError("diff_tree class not available")
+
+        path = self._make_path(path)
+        before = self._diff_tree.left.exists(path)
+        after = self._diff_tree.right.exists(path)
+        return (before and not after) or (not before and after)
+
+    def node_changed_children(self, path=[]) -> list:
+        if self._diff_tree is None:
+            raise NotImplementedError("diff_tree class not available")
+
+        path = self._make_path(path)
+        add = self._diff_tree.add
+        sub = self._diff_tree.sub
+        children = set()
+        if add.exists(path):
+            children.update(add.list_nodes(path))
+        if sub.exists(path):
+            children.update(sub.list_nodes(path))
+
+        return list(children)
+
     def get_child_nodes_diff_str(self, path=[]):
         ret = {'add': {}, 'change': {}, 'delete': {}}
 

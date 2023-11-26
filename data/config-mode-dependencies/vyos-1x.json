@@ -7,9 +7,6 @@
         "conntrack_sync": ["conntrack_sync"],
         "group_resync": ["conntrack", "nat", "policy-route"]
     },
-    "http_api": {
-        "https": ["https"]
-    },
     "interfaces_bonding": {
         "ethernet": ["interfaces-ethernet"]
     },
