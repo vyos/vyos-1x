@@ -174,9 +174,16 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         super(TestProtocolsBGP, cls).setUpClass()
 
+        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
+        cls.daemon_pid = process_named_running(PROCESS_NAME)
+
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['policy', 'route-map'])
+        cls.cli_delete(cls, ['policy', 'prefix-list'])
+        cls.cli_delete(cls, ['policy', 'prefix-list6'])
+        cls.cli_delete(cls, ['vrf'])
 
         cls.cli_set(cls, ['policy', 'route-map', route_map_in, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map_out, 'rule', '10', 'action', 'permit'])
@@ -192,18 +199,23 @@ class TestProtocolsBGP(VyOSUnitTestSHIM.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.cli_delete(cls, ['policy'])
+        cls.cli_delete(cls, ['policy', 'route-map'])
+        cls.cli_delete(cls, ['policy', 'prefix-list'])
+        cls.cli_delete(cls, ['policy', 'prefix-list6'])
 
     def setUp(self):
         self.cli_set(base_path + ['system-as', ASN])
 
     def tearDown(self):
+        # cleanup any possible VRF mess
         self.cli_delete(['vrf'])
+        # always destrox the entire bgpd configuration to make the processes
+        # life as hard as possible
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        # check process health and continuity
+        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def create_bgp_instances_for_import_test(self):
         table = '1000'

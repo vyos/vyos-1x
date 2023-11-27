@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,6 +32,9 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         super(TestProtocolsOSPF, cls).setUpClass()
 
+        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
+        cls.daemon_pid = process_named_running(PROCESS_NAME)
+
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
 
@@ -45,10 +48,11 @@ class TestProtocolsOSPF(VyOSUnitTestSHIM.TestCase):
         super(TestProtocolsOSPF, cls).tearDownClass()
 
     def tearDown(self):
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
         self.cli_delete(base_path)
         self.cli_commit()
+
+        # check process health and continuity
+        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def test_ospf_01_defaults(self):
         # commit changes

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -77,11 +77,23 @@ profiles = {
 }
 
 class TestProtocolsBFD(VyOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestProtocolsBFD, cls).setUpClass()
+
+        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
+        cls.daemon_pid = process_named_running(PROCESS_NAME)
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
+
     def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+
+        # check process health and continuity
+        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def test_bfd_peer(self):
         self.cli_set(['vrf', 'name', vrf_name, 'table', '1000'])
