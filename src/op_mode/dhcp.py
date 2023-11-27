@@ -114,8 +114,9 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[]) -> l
                 data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
 
         # Do not add old leases
-        if data_lease['remaining'] != '' and data_lease['pool'] in pool and data_lease['state'] != 'free':
-            if not state or data_lease['state'] in state:
+        if data_lease['remaining'] != '' and data_lease['state'] != 'free':
+            if not state or data_lease['state'] in state or state == 'all':
+                data_lease['pool'] = 'Failover-Server' if data_lease['pool'] == '' else data_lease['pool']
                 data.append(data_lease)
 
         # deduplicate
