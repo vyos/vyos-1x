@@ -1107,6 +1107,33 @@ class TestPolicy(VyOSUnitTestSHIM.TestCase):
                             'metric' : '-20',
                         },
                     },
+                    '30': {
+                        'action': 'permit',
+                        'match': {
+                            'ip-nexthop-addr': ipv4_nexthop_address,
+                        },
+                        'set': {
+                            'metric': 'rtt',
+                        },
+                    },
+                    '40': {
+                        'action': 'permit',
+                        'match': {
+                            'ip-nexthop-addr': ipv4_nexthop_address,
+                        },
+                        'set': {
+                            'metric': '+rtt',
+                        },
+                    },
+                    '50': {
+                        'action': 'permit',
+                        'match': {
+                            'ip-nexthop-addr': ipv4_nexthop_address,
+                        },
+                        'set': {
+                            'metric': '-rtt',
+                        },
+                    },
                 },
             },
         }
