@@ -55,14 +55,17 @@ def get_vrf_members(vrf: str) -> list:
     """
     import json
     from vyos.utils.process import cmd
-    if not interface_exists(vrf):
-        raise ValueError(f'VRF "{vrf}" does not exist!')
-    output = cmd(f'ip --json --brief link show master {vrf}')
-    answer = json.loads(output)
     interfaces = []
-    for data in answer:
-        if 'ifname' in data:
-            interfaces.append(data.get('ifname'))
+    try:
+        if not interface_exists(vrf):
+            raise ValueError(f'VRF "{vrf}" does not exist!')
+        output = cmd(f'ip --json --brief link show vrf {vrf}')
+        answer = json.loads(output)
+        for data in answer:
+            if 'ifname' in data:
+                interfaces.append(data.get('ifname'))
+    except:
+        pass
     return interfaces
 
 def get_interface_vrf(interface):
