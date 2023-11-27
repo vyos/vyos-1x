@@ -261,3 +261,8 @@ def is_live_boot() -> bool:
         if boot_type == 'live':
             return True
     return False
+
+def is_running_as_container() -> bool:
+    if Path('/.dockerenv').exists():
+        return True
+    return False

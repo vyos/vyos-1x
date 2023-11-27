@@ -41,6 +41,9 @@ if __name__ == '__main__':
     if image.is_live_boot():
         exit(0)
 
+    if image.is_running_as_container():
+        exit(0)
+
     # Skip everything if update is not required
     if not cfg_check_update():
         exit(0)
