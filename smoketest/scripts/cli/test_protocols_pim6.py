@@ -25,15 +25,22 @@ PROCESS_NAME = 'pim6d'
 base_path = ['protocols', 'pim6']
 
 class TestProtocolsPIMv6(VyOSUnitTestSHIM.TestCase):
-    def tearDown(self):
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+    @classmethod
+    def setUpClass(cls):
+        # call base-classes classmethod
+        super(TestProtocolsPIMv6, cls).setUpClass()
+        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
+        cls.daemon_pid = process_named_running(PROCESS_NAME)
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, base_path)
 
+    def tearDown(self):
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        # check process health and continuity
+        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def test_pim6_01_mld_simple(self):
         # commit changes

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021-2022 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -31,20 +31,25 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._interfaces = Section.interfaces('ethernet')
-
         # call base-classes classmethod
         super(TestProtocolsISIS, cls).setUpClass()
-
+        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
+        cls.daemon_pid = process_named_running(PROCESS_NAME)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
+        cls.cli_delete(cls, ['vrf'])
 
     def tearDown(self):
+        # cleanup any possible VRF mess
+        self.cli_delete(['vrf'])
+        # always destrox the entire isisd configuration to make the processes
+        # life as hard as possible
         self.cli_delete(base_path)
         self.cli_commit()
 
-        # Check for running process
-        self.assertTrue(process_named_running(PROCESS_NAME))
+        # check process health and continuity
+        self.assertEqual(self.daemon_pid, process_named_running(PROCESS_NAME))
 
     def isis_base_config(self):
         self.cli_set(base_path + ['net', net])
@@ -333,7 +338,7 @@ class TestProtocolsISIS(VyOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['interface', interface])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'action', 'permit'])
         self.cli_set(['policy', 'prefix-list', prefix_list, 'rule', '1', 'prefix', prefix_list_address])
-        
+
         # Commit main ISIS changes
         self.cli_commit()
 
