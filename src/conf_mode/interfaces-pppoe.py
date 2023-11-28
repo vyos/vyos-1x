@@ -44,6 +44,12 @@ def get_config(config=None):
     base = ['interfaces', 'pppoe']
     pppoe = get_interface_dict(conf, base)
 
+    if 'deleted' not in pppoe:
+        # We always set the MRU value to the MTU size. This code path only re-creates
+        # the old behavior if MRU is not set on the CLI.
+        if 'mru' not in pppoe:
+            pppoe['mru'] = pppoe['mtu']
+
     return pppoe
 
 def verify(pppoe):

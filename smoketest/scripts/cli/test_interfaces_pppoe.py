@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2020 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -58,24 +58,17 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             user = 'VyOS-user-' + interface
             passwd = 'VyOS-passwd-' + interface
             mtu = '1400'
-            mru = '1300'
 
             self.cli_set(base_path + [interface, 'authentication', 'user', user])
             self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
             self.cli_set(base_path + [interface, 'default-route', 'auto'])
             self.cli_set(base_path + [interface, 'mtu', mtu])
-            self.cli_set(base_path + [interface, 'mru', '9000'])
             self.cli_set(base_path + [interface, 'no-peer-dns'])
 
             # check validate() - a source-interface is required
             with self.assertRaises(ConfigSessionError):
                 self.cli_commit()
             self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
-
-            # check validate() - MRU needs to be less or equal then MTU
-            with self.assertRaises(ConfigSessionError):
-                self.cli_commit()
-            self.cli_set(base_path + [interface, 'mru', mru])
 
         # commit changes
         self.cli_commit()
@@ -88,7 +81,7 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             tmp = get_config_value(interface, 'mtu')[1]
             self.assertEqual(tmp, mtu)
             tmp = get_config_value(interface, 'mru')[1]
-            self.assertEqual(tmp, mru)
+            self.assertEqual(tmp, mtu)
             tmp = get_config_value(interface, 'user')[1].replace('"', '')
             self.assertEqual(tmp, user)
             tmp = get_config_value(interface, 'password')[1].replace('"', '')
@@ -232,6 +225,48 @@ class PPPoEInterfaceTest(VyOSUnitTestSHIM.TestCase):
             self.assertEqual(tmp, f'"{service_name}"')
             tmp = get_config_value(interface, 'host-uniq')[1]
             self.assertEqual(tmp, f'"{host_uniq}"')
+
+    def test_pppoe_mtu_mru(self):
+        # Check if PPPoE dialer can be configured and runs
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+            mtu = '1400'
+            mru = '1300'
+
+            self.cli_set(base_path + [interface, 'authentication', 'user', user])
+            self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
+            self.cli_set(base_path + [interface, 'mtu', mtu])
+            self.cli_set(base_path + [interface, 'mru', '9000'])
+
+            # check validate() - a source-interface is required
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+
+            # check validate() - MRU needs to be less or equal then MTU
+            with self.assertRaises(ConfigSessionError):
+                self.cli_commit()
+            self.cli_set(base_path + [interface, 'mru', mru])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify configuration file(s)
+        for interface in self._interfaces:
+            user = f'VyOS-user-{interface}'
+            passwd = f'VyOS-passwd-{interface}'
+
+            tmp = get_config_value(interface, 'mtu')[1]
+            self.assertEqual(tmp, mtu)
+            tmp = get_config_value(interface, 'mru')[1]
+            self.assertEqual(tmp, mru)
+            tmp = get_config_value(interface, 'user')[1].replace('"', '')
+            self.assertEqual(tmp, user)
+            tmp = get_config_value(interface, 'password')[1].replace('"', '')
+            self.assertEqual(tmp, passwd)
+            tmp = get_config_value(interface, 'ifname')[1]
+            self.assertEqual(tmp, interface)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
