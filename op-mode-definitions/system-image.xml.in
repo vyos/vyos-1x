@@ -17,7 +17,7 @@
                 <list>/path/to/vyos-image.iso "http://example.com/vyos-image.iso"</list>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}"</command>
             <children>
               <tagNode name="vrf">
                 <properties>
@@ -26,7 +26,7 @@
                     <path>vrf name</path>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --vrf "${6}"</command>
+                <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}"</command>
                 <children>
                   <tagNode name="username">
                     <properties>
@@ -37,7 +37,7 @@
                         <properties>
                           <help>Password to use with authentication</help>
                         </properties>
-                        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
+                        <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --vrf "${6}" --username "${8}" --password "${10}"</command>
                       </tagNode>
                     </children>
                   </tagNode>
@@ -52,7 +52,7 @@
                     <properties>
                       <help>Password to use with authentication</help>
                     </properties>
-                    <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image_path "${4}" --username "${6}" --password "${8}"</command>
+                    <command>sudo ${vyos_op_scripts_dir}/image_installer.py --action add --image-path "${4}" --username "${6}" --password "${8}"</command>
                   </tagNode>
                 </children>
               </tagNode>
@@ -90,7 +90,7 @@
                     <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
                   </completionHelp>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set --image_name "${5}"</command>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action set --image-name "${5}"</command>
               </tagNode>
             </children>
           </node>
@@ -134,7 +134,7 @@
                 <script>sudo ${vyos_op_scripts_dir}/image_manager.py --action list</script>
               </completionHelp>
             </properties>
-            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image_name "${4}"</command>
+            <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action delete --image-name "${4}"</command>
           </tagNode>
         </children>
       </node>
@@ -162,7 +162,7 @@
                 <properties>
                   <help>A new name for an image</help>
                 </properties>
-                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action rename --image_name "${4}" --image_new_name "${6}"</command>
+                <command>sudo ${vyos_op_scripts_dir}/image_manager.py --action rename --image-name "${4}" --image-new-name "${6}"</command>
               </tagNode>
             </children>
           </tagNode>

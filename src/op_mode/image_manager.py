@@ -172,10 +172,10 @@ def parse_arguments() -> Namespace:
                         required=True,
                         help='action to perform with an image')
     parser.add_argument(
-        '--image_name',
+        '--image-name',
         help=
         'a name of an image to add, delete, install, rename, or set as default')
-    parser.add_argument('--image_new_name', help='a new name for image')
+    parser.add_argument('--image-new-name', help='a new name for image')
     args: Namespace = parser.parse_args()
     # Validate arguments
     if args.action == 'rename' and (not args.image_name or

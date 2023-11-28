@@ -728,7 +728,7 @@ def parse_arguments() -> Namespace:
                         required=True,
                         help='action to perform with an image')
     parser.add_argument(
-        '--image_path',
+        '--image-path',
         help='a path (HTTP or local file) to an image that needs to be installed'
     )
     # parser.add_argument('--image_new_name', help='a new name for image')
