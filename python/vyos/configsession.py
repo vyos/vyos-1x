@@ -30,8 +30,10 @@ SHOW_CONFIG = ['/bin/cli-shell-api', 'showConfig']
 LOAD_CONFIG = ['/bin/cli-shell-api', 'loadFile']
 MIGRATE_LOAD_CONFIG = ['/usr/libexec/vyos/vyos-load-config.py']
 SAVE_CONFIG = ['/usr/libexec/vyos/vyos-save-config.py']
-INSTALL_IMAGE = ['/opt/vyatta/sbin/install-image', '--url']
-REMOVE_IMAGE = ['/opt/vyatta/bin/vyatta-boot-image.pl', '--del']
+INSTALL_IMAGE = ['/usr/libexec/vyos/op_mode/image_installer.py',
+                 '--action', 'add', '--no-prompt', '--image-path']
+REMOVE_IMAGE = ['/usr/libexec/vyos/op_mode/image_manager.py',
+                '--action', 'delete', '--no-prompt', '--image-name']
 GENERATE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'generate']
 SHOW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'show']
 RESET = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'reset']
