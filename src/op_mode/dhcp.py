@@ -43,6 +43,7 @@ sort_valid_inet6 = ['end', 'iaid_duid', 'ip', 'last_communication', 'pool', 'rem
 
 ArgFamily = typing.Literal['inet', 'inet6']
 ArgState = typing.Literal['all', 'active', 'free', 'expired', 'released', 'abandoned', 'reset', 'backup']
+ArgOrigin = typing.Literal['local', 'remote']
 
 def _utc_to_local(utc_dt):
     return datetime.fromtimestamp((datetime.fromtimestamp(utc_dt) - datetime(1970, 1, 1)).total_seconds())
@@ -71,7 +72,7 @@ def _find_list_of_dict_index(lst, key='ip', value='') -> int:
     return idx
 
 
-def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[]) -> list:
+def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[], origin=None) -> list:
     """
     Get DHCP server leases
     :return list
@@ -82,52 +83,61 @@ def _get_raw_server_leases(family='inet', pool=None, sorted=None, state=[]) -> l
 
     if pool is None:
         pool = _get_dhcp_pools(family=family)
+        aux = False
     else:
         pool = [pool]
+        aux = True
 
-    for lease in leases:
-        data_lease = {}
-        data_lease['ip'] = lease.ip
-        data_lease['state'] = lease.binding_state
-        data_lease['pool'] = lease.sets.get('shared-networkname', '')
-        data_lease['end'] = lease.end.timestamp() if lease.end else None
+    ## Search leases for every pool
+    for pool_name in pool:
+        for lease in leases:
+            if lease.sets.get('shared-networkname', '') == pool_name or lease.sets.get('shared-networkname', '') == '':
+            #if lease.sets.get('shared-networkname', '') == pool_name:
+                data_lease = {}
+                data_lease['ip'] = lease.ip
+                data_lease['state'] = lease.binding_state
+                #data_lease['pool'] = pool_name if lease.sets.get('shared-networkname', '') != '' else 'Fail-Over Server'
+                data_lease['pool'] = lease.sets.get('shared-networkname', '')
+                data_lease['end'] = lease.end.timestamp() if lease.end else None
+                data_lease['origin'] = 'local' if data_lease['pool'] != '' else 'remote'
 
-        if family == 'inet':
-            data_lease['mac'] = lease.ethernet
-            data_lease['start'] = lease.start.timestamp()
-            data_lease['hostname'] = lease.hostname
+                if family == 'inet':
+                    data_lease['mac'] = lease.ethernet
+                    data_lease['start'] = lease.start.timestamp()
+                    data_lease['hostname'] = lease.hostname
 
-        if family == 'inet6':
-            data_lease['last_communication'] = lease.last_communication.timestamp()
-            data_lease['iaid_duid'] = _format_hex_string(lease.host_identifier_string)
-            lease_types_long = {'na': 'non-temporary', 'ta': 'temporary', 'pd': 'prefix delegation'}
-            data_lease['type'] = lease_types_long[lease.type]
+                if family == 'inet6':
+                    data_lease['last_communication'] = lease.last_communication.timestamp()
+                    data_lease['iaid_duid'] = _format_hex_string(lease.host_identifier_string)
+                    lease_types_long = {'na': 'non-temporary', 'ta': 'temporary', 'pd': 'prefix delegation'}
+                    data_lease['type'] = lease_types_long[lease.type]
 
-        data_lease['remaining'] = '-'
+                data_lease['remaining'] = '-'
 
-        if lease.end:
-            data_lease['remaining'] = lease.end - datetime.utcnow()
+                if lease.end:
+                    data_lease['remaining'] = lease.end - datetime.utcnow()
 
-            if data_lease['remaining'].days >= 0:
-                # substraction gives us a timedelta object which can't be formatted with strftime
-                # so we use str(), split gets rid of the microseconds
-                data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
+                    if data_lease['remaining'].days >= 0:
+                        # substraction gives us a timedelta object which can't be formatted with strftime
+                        # so we use str(), split gets rid of the microseconds
+                        data_lease['remaining'] = str(data_lease["remaining"]).split('.')[0]
 
-        # Do not add old leases
-        if data_lease['remaining'] != '' and data_lease['state'] != 'free':
-            if not state or data_lease['state'] in state or state == 'all':
-                data_lease['pool'] = 'Failover-Server' if data_lease['pool'] == '' else data_lease['pool']
-                data.append(data_lease)
+                # Do not add old leases
+                if data_lease['remaining'] != '' and data_lease['state'] != 'free':
+                    if not state or data_lease['state'] in state or state == 'all':
+                        if not origin or data_lease['origin'] in origin:
+                            if not aux or (aux and data_lease['pool'] == pool_name):
+                                data.append(data_lease)
 
-        # deduplicate
-        checked = []
-        for entry in data:
-            addr = entry.get('ip')
-            if addr not in checked:
-                checked.append(addr)
-            else:
-                idx = _find_list_of_dict_index(data, key='ip', value=addr)
-                data.pop(idx)
+                # deduplicate
+                checked = []
+                for entry in data:
+                    addr = entry.get('ip')
+                    if addr not in checked:
+                        checked.append(addr)
+                    else:
+                        idx = _find_list_of_dict_index(data, key='ip', value=addr)
+                        data.pop(idx)
 
     if sorted:
         if sorted == 'ip':
@@ -151,10 +161,11 @@ def _get_formatted_server_leases(raw_data, family='inet'):
             remain = lease.get('remaining')
             pool = lease.get('pool')
             hostname = lease.get('hostname')
-            data_entries.append([ipaddr, hw_addr, state, start, end, remain, pool, hostname])
+            origin = lease.get('origin')
+            data_entries.append([ipaddr, hw_addr, state, start, end, remain, pool, hostname, origin])
 
         headers = ['IP Address', 'MAC address', 'State', 'Lease start', 'Lease expiration', 'Remaining', 'Pool',
-                   'Hostname']
+                   'Hostname', 'Origin']
 
     if family == 'inet6':
         for lease in raw_data:
@@ -268,7 +279,8 @@ def show_pool_statistics(raw: bool, family: ArgFamily, pool: typing.Optional[str
 
 @_verify
 def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
-                       sorted: typing.Optional[str], state: typing.Optional[ArgState]):
+                       sorted: typing.Optional[str], state: typing.Optional[ArgState],
+                       origin: typing.Optional[ArgOrigin] ):
     # if dhcp server is down, inactive leases may still be shown as active, so warn the user.
     v = '6' if family == 'inet6' else ''
     service_name = 'DHCPv6' if family == 'inet6' else 'DHCP'
@@ -286,7 +298,7 @@ def show_server_leases(raw: bool, family: ArgFamily, pool: typing.Optional[str],
     if sorted and sorted not in sort_valid:
         raise vyos.opmode.IncorrectValue(f'DHCP{v} sort "{sorted}" is invalid!')
 
-    lease_data = _get_raw_server_leases(family=family, pool=pool, sorted=sorted, state=state)
+    lease_data = _get_raw_server_leases(family=family, pool=pool, sorted=sorted, state=state, origin=origin)
     if raw:
         return lease_data
     else:
