@@ -437,11 +437,13 @@ def urlc(urlstring, *args, **kwargs):
         raise ValueError(f'Unsupported URL scheme: "{scheme}"')
 
 def download(local_path, urlstring, progressbar=False, check_space=False,
-             source_host='', source_port=0, timeout=10.0):
+             source_host='', source_port=0, timeout=10.0, raise_error=False):
     try:
         progressbar = progressbar and is_interactive()
         urlc(urlstring, progressbar, check_space, source_host, source_port, timeout).download(local_path)
     except Exception as err:
+        if raise_error:
+            raise
         print_error(f'Unable to download "{urlstring}": {err}')
     except KeyboardInterrupt:
         print_error('\nDownload aborted by user.')
