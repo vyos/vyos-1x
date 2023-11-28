@@ -49,6 +49,15 @@ if not config.exists(base):
     # Nothing to do
     exit(0)
 
+# State Policy logs:
+if config.exists(base + ['global-options', 'state-policy']):
+    for state in config.list_nodes(base + ['global-options', 'state-policy']):
+        if config.exists(base + ['global-options', 'state-policy', state, 'log']):
+            log_value = config.return_value(base + ['global-options', 'state-policy', state, 'log'])
+            config.delete(base + ['global-options', 'state-policy', state, 'log'])
+            if log_value == 'enable':
+                config.set(base + ['global-options', 'state-policy', state, 'log'])
+
 for family in ['ipv4', 'ipv6', 'bridge']:
     if config.exists(base + [family]):
         for hook in ['forward', 'input', 'output', 'name']:
