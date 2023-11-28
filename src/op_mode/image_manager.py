@@ -36,7 +36,7 @@ MSG_DELETE_IMAGE_DEFAULT: str = 'Default image cannot be deleted; set another im
 
 @compat.grub_cfg_update
 def delete_image(image_name: Optional[str] = None,
-                 prompt: bool = True) -> None:
+                 no_prompt: bool = False) -> None:
     """Remove installed image files and boot entry
 
     Args:
@@ -44,7 +44,7 @@ def delete_image(image_name: Optional[str] = None,
     """
     available_images: list[str] = grub.version_list()
     if image_name is None:
-        if not prompt:
+        if no_prompt:
             exit('An image name is required for delete action')
         else:
             image_name = select_entry(available_images,
@@ -60,8 +60,9 @@ def delete_image(image_name: Optional[str] = None,
     if not persistence_storage:
         exit('Persistence storage cannot be found')
 
-    if not ask_yes_no(f'Do you really want to delete the image {image_name}?',
-                      default=False):
+    if (not no_prompt and
+        not ask_yes_no(f'Do you really want to delete the image {image_name}?',
+                       default=False)):
         exit()
 
     # remove files and menu entry
@@ -171,6 +172,8 @@ def parse_arguments() -> Namespace:
                         choices=['delete', 'set', 'rename', 'list'],
                         required=True,
                         help='action to perform with an image')
+    parser.add_argument('--no-prompt', action='store_true',
+                        help='perform action non-interactively')
     parser.add_argument(
         '--image-name',
         help=
@@ -189,7 +192,7 @@ if __name__ == '__main__':
     try:
         args: Namespace = parse_arguments()
         if args.action == 'delete':
-            delete_image(args.image_name)
+            delete_image(args.image_name, args.no_prompt)
         if args.action == 'set':
             set_image(args.image_name)
         if args.action == 'rename':
