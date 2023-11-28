@@ -376,7 +376,7 @@ def validate_signature(file_path: str, sign_type: str) -> None:
         print('Signature is valid')
 
 
-def image_fetch(image_path: str) -> Path:
+def image_fetch(image_path: str, no_prompt: bool = False) -> Path:
     """Fetch an ISO image
 
     Args:
@@ -404,7 +404,8 @@ def image_fetch(image_path: str) -> Path:
             if sign_file[0]:
                 validate_signature(ISO_DOWNLOAD_PATH, sign_file[1])
             else:
-                if not ask_yes_no(MSG_WARN_ISO_SIGN_UNAVAL, default=False):
+                if (not no_prompt and
+                    not ask_yes_no(MSG_WARN_ISO_SIGN_UNAVAL, default=False)):
                     cleanup()
                     exit(MSG_INFO_INSTALL_EXIT)
 
@@ -629,7 +630,7 @@ def install_image() -> None:
 
 
 @compat.grub_cfg_update
-def add_image(image_path: str) -> None:
+def add_image(image_path: str, no_prompt: bool = False) -> None:
     """Add a new image
 
     Args:
@@ -639,7 +640,7 @@ def add_image(image_path: str) -> None:
         exit(MSG_ERR_LIVE)
 
     # fetch an image
-    iso_path: Path = image_fetch(image_path)
+    iso_path: Path = image_fetch(image_path, no_prompt)
     try:
         # mount an ISO
         Path(DIR_ISO_MOUNT).mkdir(mode=0o755, parents=True)
@@ -668,8 +669,12 @@ def add_image(image_path: str) -> None:
             raise compat.DowngradingImageTools(
                 f'Adding image would downgrade image tools to v.{cfg_ver}; disallowed')
 
-        image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
-        set_as_default: bool = ask_yes_no(MSG_INPUT_IMAGE_DEFAULT, default=True)
+        if not no_prompt:
+            image_name: str = ask_input(MSG_INPUT_IMAGE_NAME, version_name)
+            set_as_default: bool = ask_yes_no(MSG_INPUT_IMAGE_DEFAULT, default=True)
+        else:
+            image_name: str = version_name
+            set_as_default: bool = True
 
         # find target directory
         root_dir: str = disk.find_persistence()
@@ -678,7 +683,7 @@ def add_image(image_path: str) -> None:
         # create all the rest in a single step
         target_config_dir: str = f'{root_dir}/boot/{image_name}/rw/opt/vyatta/etc/config/'
         # copy config
-        if migrate_config():
+        if no_prompt or migrate_config():
             print('Copying configuration directory')
             # copytree preserves perms but not ownership:
             Path(target_config_dir).mkdir(parents=True)
@@ -727,6 +732,8 @@ def parse_arguments() -> Namespace:
                         choices=['install', 'add'],
                         required=True,
                         help='action to perform with an image')
+    parser.add_argument('--no-prompt', action='store_true',
+                        help='perform action non-interactively')
     parser.add_argument(
         '--image-path',
         help='a path (HTTP or local file) to an image that needs to be installed'
@@ -746,7 +753,7 @@ if __name__ == '__main__':
         if args.action == 'install':
             install_image()
         if args.action == 'add':
-            add_image(args.image_path)
+            add_image(args.image_path, args.no_prompt)
 
         exit()
 
