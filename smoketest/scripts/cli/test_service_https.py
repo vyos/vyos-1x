@@ -254,6 +254,35 @@ class TestHTTPSService(VyOSUnitTestSHIM.TestCase):
         self.assertTrue(success)
 
     @ignore_warning(InsecureRequestWarning)
+    def test_api_add_delete(self):
+        address = '127.0.0.1'
+        key = 'VyOS-key'
+        url = f'https://{address}/retrieve'
+        payload = {'data': '{"op": "showConfig", "path": []}', 'key': f'{key}'}
+        headers = {}
+
+        self.cli_set(base_path)
+        self.cli_commit()
+
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        # api not configured; expect 503
+        self.assertEqual(r.status_code, 503)
+
+        self.cli_set(base_path + ['api', 'keys', 'id', 'key-01', 'key', key])
+        self.cli_commit()
+
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        # api configured; expect 200
+        self.assertEqual(r.status_code, 200)
+
+        self.cli_delete(base_path + ['api'])
+        self.cli_commit()
+
+        r = request('POST', url, verify=False, headers=headers, data=payload)
+        # api deleted; expect 503
+        self.assertEqual(r.status_code, 503)
+
+    @ignore_warning(InsecureRequestWarning)
     def test_api_show(self):
         address = '127.0.0.1'
         key = 'VyOS-key'

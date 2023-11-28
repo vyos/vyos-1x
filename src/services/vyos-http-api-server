@@ -50,7 +50,7 @@ from vyos.configsession import ConfigSession, ConfigSessionError
 
 import api.graphql.state
 
-api_config_state = '/tmp/api-config-state'
+api_config_state = '/run/http-api-state'
 CFG_GROUP = 'vyattacfg'
 
 debug = True
