@@ -389,13 +389,14 @@ def image_fetch(image_path: str, no_prompt: bool = False) -> Path:
         # check a type of path
         if urlparse(image_path).scheme:
             # download an image
-            download(ISO_DOWNLOAD_PATH, image_path, True, True)
+            download(ISO_DOWNLOAD_PATH, image_path, True, True,
+                     raise_error=True)
             # download a signature
             sign_file = (False, '')
             for sign_type in ['minisig', 'asc']:
                 try:
                     download(f'{ISO_DOWNLOAD_PATH}.{sign_type}',
-                             f'{image_path}.{sign_type}')
+                             f'{image_path}.{sign_type}', raise_error=True)
                     sign_file = (True, sign_type)
                     break
                 except Exception:
