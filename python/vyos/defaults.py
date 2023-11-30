@@ -50,7 +50,7 @@ api_data = {
     'strict' : False,
     'gql' : False,
     'debug' : False,
-    'api_keys' : [ {"id": "testapp", "key": "qwerty"} ]
+    'api_keys' : [ ]
 }
 
 vyos_cert_data = {
