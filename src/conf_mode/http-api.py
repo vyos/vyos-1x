@@ -39,7 +39,7 @@ vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 def get_config(config=None):
     http_api = deepcopy(vyos.defaults.api_data)
     x = http_api.get('api_keys')
-    if x is None:
+    if not x:
         default_key = None
     else:
         default_key = x[0]
