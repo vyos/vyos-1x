@@ -20,6 +20,7 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from shutil import copy, chown, rmtree, copytree
+from glob import glob
 from sys import exit
 from time import sleep
 from typing import Union
@@ -435,6 +436,17 @@ def migrate_config() -> bool:
     return False
 
 
+def copy_ssh_host_keys() -> bool:
+    """Ask user to copy SSH host keys
+
+    Returns:
+        bool: user's decision
+    """
+    if ask_yes_no('Would you like to copy SSH host keys?', default=True):
+        return True
+    return False
+
+
 def cleanup(mounts: list[str] = [], remove_items: list[str] = []) -> None:
     """Clean up after installation
 
@@ -697,6 +709,14 @@ def add_image(image_path: str, no_prompt: bool = False) -> None:
             chown(target_config_dir, group='vyattacfg')
             chmod_2775(target_config_dir)
             Path(f'{target_config_dir}/.vyatta_config').touch()
+
+        target_ssh_dir: str = f'{root_dir}/boot/{image_name}/rw/etc/ssh/'
+        if no_prompt or copy_ssh_host_keys():
+            print('Copying SSH host keys')
+            Path(target_ssh_dir).mkdir(parents=True)
+            host_keys: list[str] = glob('/etc/ssh/ssh_host*')
+            for host_key in host_keys:
+                copy(host_key, target_ssh_dir)
 
         # copy system image and kernel files
         print('Copying system image files')
