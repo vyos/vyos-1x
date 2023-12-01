@@ -172,7 +172,7 @@ fi
 DELETE="/etc/logrotate.d/conntrackd.distrib /etc/init.d/conntrackd /etc/default/conntrackd
         /etc/default/pmacctd /etc/pmacct
         /etc/networks_list /etc/networks_whitelist /etc/fastnetmon.conf
-        /etc/ntp.conf /etc/default/ssh
+        /etc/ntp.conf /etc/default/ssh /etc/avahi
         /etc/powerdns /etc/default/pdns-recursor
         /etc/ppp/ip-up.d/0000usepeerdns /etc/ppp/ip-down.d/0000usepeerdns"
 for tmp in $DELETE; do
@@ -200,4 +200,3 @@ systemctl enable vyos-config-cloud-init.service
 
 # Update XML cache
 python3 /usr/lib/python3/dist-packages/vyos/xml_ref/update_cache.py
-
