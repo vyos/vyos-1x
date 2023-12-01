@@ -48,7 +48,7 @@ Depends:
   cron,
   curl,
   dbus,
-  ddclient (>= 3.9.1),
+  ddclient (>= 3.11.1),
   dropbear,
   easy-rsa,
   etherwake,

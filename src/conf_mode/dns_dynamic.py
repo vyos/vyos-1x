@@ -19,6 +19,7 @@ import os
 from sys import exit
 
 from vyos.config import Config
+from vyos.configverify import verify_interface_exists
 from vyos.template import render
 from vyos.utils.process import call
 from vyos import ConfigError
@@ -29,13 +30,25 @@ config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 
 # Protocols that require zone
-zone_allowed = ['cloudflare', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+zone_supported = zone_necessary + ['dnsexit2', 'zoneedit1']
 
 # Protocols that do not require username
-username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla']
+username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'digitalocean', 'dnsexit2',
+                        'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla',
+                        'regfishde']
+
+# Protocols that support TTL
+ttl_supported = ['cloudflare', 'dnsexit2', 'gandi', 'hetzner', 'godaddy', 'nfsn']
 
 # Protocols that support both IPv4 and IPv6
-dualstack_supported = ['cloudflare', 'dyndns2', 'freedns', 'njalla']
+dualstack_supported = ['cloudflare', 'digitalocean', 'dnsexit2', 'duckdns',
+                       'dyndns2', 'easydns', 'freedns', 'hetzner', 'infomaniak',
+                       'njalla']
+
+# dyndns2 protocol in ddclient honors dual stack for selective servers
+# because of the way it is implemented in ddclient
+dyndns_dualstack_servers = ['members.dyndns.org', 'dynv6.com']
 
 def get_config(config=None):
     if config:
@@ -43,11 +56,11 @@ def get_config(config=None):
     else:
         conf = Config()
 
-    base_level = ['service', 'dns', 'dynamic']
-    if not conf.exists(base_level):
+    base = ['service', 'dns', 'dynamic']
+    if not conf.exists(base):
         return None
 
-    dyndns = conf.get_config_dict(base_level, key_mangling=('-', '_'),
+    dyndns = conf.get_config_dict(base, key_mangling=('-', '_'),
                                   no_tag_node_value_mangle=True,
                                   get_first_key=True,
                                   with_recursive_defaults=True)
@@ -61,6 +74,10 @@ def verify(dyndns):
         return None
 
     for address in dyndns['address']:
+        # If dyndns address is an interface, ensure it exists
+        if address != 'web':
+            verify_interface_exists(address)
+
         # RFC2136 - configuration validation
         if 'rfc2136' in dyndns['address'][address]:
             for config in dyndns['address'][address]['rfc2136'].values():
@@ -70,32 +87,40 @@ def verify(dyndns):
                                           f'based Dynamic DNS service on "{address}"')
 
         # Dynamic DNS service provider - configuration validation
+        if 'web_options' in dyndns['address'][address] and address != 'web':
+            raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
+
+        # Dynamic DNS service provider - configuration validation
         if 'service' in dyndns['address'][address]:
             for service, config in dyndns['address'][address]['service'].items():
-                error_msg = f'is required for Dynamic DNS service "{service}" on "{address}"'
+                error_msg_req = f'is required for Dynamic DNS service "{service}" on "{address}"'
+                error_msg_uns = f'is not supported for Dynamic DNS service "{service}" on "{address}" with protocol "{config["protocol"]}"'
 
                 for field in ['host_name', 'password', 'protocol']:
                     if field not in config:
-                        raise ConfigError(f'"{field.replace("_", "-")}" {error_msg}')
+                        raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
 
-                if config['protocol'] in zone_allowed and 'zone' not in config:
-                        raise ConfigError(f'"zone" {error_msg}')
+                if config['protocol'] in zone_necessary and 'zone' not in config:
+                    raise ConfigError(f'"zone" {error_msg_req} with protocol "{config["protocol"]}"')
 
-                if config['protocol'] not in zone_allowed and 'zone' in config:
-                        raise ConfigError(f'"{config["protocol"]}" does not support "zone"')
+                if config['protocol'] not in zone_supported and 'zone' in config:
+                    raise ConfigError(f'"zone" {error_msg_uns}')
 
-                if config['protocol'] not in username_unnecessary:
-                    if 'username' not in config:
-                        raise ConfigError(f'"username" {error_msg}')
+                if config['protocol'] not in username_unnecessary and 'username' not in config:
+                    raise ConfigError(f'"username" {error_msg_req} with protocol "{config["protocol"]}"')
+
+                if config['protocol'] not in ttl_supported and 'ttl' in config:
+                    raise ConfigError(f'"ttl" {error_msg_uns}')
 
                 if config['ip_version'] == 'both':
                     if config['protocol'] not in dualstack_supported:
-                        raise ConfigError(f'"{config["protocol"]}" does not support '
-                                          f'both IPv4 and IPv6 at the same time')
+                        raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns}')
                     # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
-                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] != 'members.dyndns.org':
-                        raise ConfigError(f'"{config["protocol"]}" does not support '
-                                          f'both IPv4 and IPv6 at the same time for "{config["server"]}"')
+                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] not in dyndns_dualstack_servers:
+                        raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} for "{config["server"]}"')
+
+                if {'wait_time', 'expiry_time'} <= config.keys() and int(config['expiry_time']) < int(config['wait_time']):
+                        raise ConfigError(f'"expiry-time" must be greater than "wait-time"')
 
     return None
 
