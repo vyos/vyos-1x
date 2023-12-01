@@ -29,44 +29,28 @@ cache={{ config_file | replace('.conf', '.cache') }}
 {# ddclient default (web=dyndns) doesn't support ssl and results in process lockup #}
 web=googledomains
 {# ddclient default (use=ip) results in confusing warning message in log #}
-use=disabled
+use=no
 
-{% if address is vyos_defined %}
-{%     for address, service_cfg in address.items() %}
-{%         if service_cfg.rfc2136 is vyos_defined %}
-{%             for name, config in service_cfg.rfc2136.items() %}
-{%                 if config.description is vyos_defined %}
+{% if name is vyos_defined %}
+{%     for service, config in name.items() %}
+{%         if config.description is vyos_defined %}
 
 # {{ config.description }}
-{%                 endif %}
-{%                 for host in config.host_name if config.host_name is vyos_defined %}
-
-# RFC2136 dynamic DNS configuration for {{ name }}: [{{ config.zone }}, {{ host }}]
-{# Don't append 'new-style' compliant suffix ('usev4', 'usev6', 'ifv4', 'ifv6' etc.)
-   to the properties since 'nsupdate' doesn't support that yet. #}
-{{ render_config(host, address, service_cfg.web_options,
-                 protocol='nsupdate', server=config.server, zone=config.zone,
-                 password=config.key, ttl=config.ttl) }}
-{%                 endfor %}
-{%             endfor %}
 {%         endif %}
-{%         if service_cfg.service is vyos_defined %}
-{%             for name, config in service_cfg.service.items() %}
-{%                 if config.description is vyos_defined %}
+{%         for host in config.host_name if config.host_name is vyos_defined %}
+{#             ip_suffixes can be either of ['v4'], ['v6'], ['v4', 'v6'] for all protocols except 'nsupdate'
+               ip_suffixes must be [''] for nsupdate since it doesn't support usevX/wantipvX yet #}
+{%             set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
+                                 else ([config.ip_version[2:]] if config.protocol != 'nsupdate'
+                                       else ['']) %}
+{%             set password = config.key if config.protocol == 'nsupdate'
+                              else config.password %}
 
-# {{ config.description }}
-{%                 endif %}
-{%                 for host in config.host_name if config.host_name is vyos_defined %}
-{%                     set ip_suffixes = ['v4', 'v6'] if config.ip_version == 'both'
-                                                      else [config.ip_version[2:]] %}
-
-# Web service dynamic DNS configuration for {{ name }}: [{{ config.protocol }}, {{ host }}]
-{{ render_config(host, address, service_cfg.web_options, ip_suffixes,
+# Web service dynamic DNS configuration for {{ service }}: [{{ config.protocol }}, {{ host }}]
+{{ render_config(host, config.address, config.web_options, ip_suffixes,
                  protocol=config.protocol, server=config.server, zone=config.zone,
-                 login=config.username, password=config.password, ttl=config.ttl,
+                 login=config.username, password=password, ttl=config.ttl,
                  min_interval=config.wait_time, max_interval=config.expiry_time) }}
-{%                 endfor %}
-{%             endfor %}
-{%         endif %}
+{%         endfor %}
 {%     endfor %}
 {% endif %}

@@ -30,16 +30,18 @@ config_file = r'/run/ddclient/ddclient.conf'
 systemd_override = r'/run/systemd/system/ddclient.service.d/override.conf'
 
 # Protocols that require zone
-zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi', 'nfsn']
+zone_necessary = ['cloudflare', 'digitalocean', 'godaddy', 'hetzner', 'gandi',
+                  'nfsn', 'nsupdate']
 zone_supported = zone_necessary + ['dnsexit2', 'zoneedit1']
 
 # Protocols that do not require username
 username_unnecessary = ['1984', 'cloudflare', 'cloudns', 'digitalocean', 'dnsexit2',
                         'duckdns', 'freemyip', 'hetzner', 'keysystems', 'njalla',
-                        'regfishde']
+                        'nsupdate', 'regfishde']
 
 # Protocols that support TTL
-ttl_supported = ['cloudflare', 'dnsexit2', 'gandi', 'hetzner', 'godaddy', 'nfsn']
+ttl_supported = ['cloudflare', 'dnsexit2', 'gandi', 'hetzner', 'godaddy', 'nfsn',
+                 'nsupdate']
 
 # Protocols that support both IPv4 and IPv6
 dualstack_supported = ['cloudflare', 'digitalocean', 'dnsexit2', 'duckdns',
@@ -70,63 +72,65 @@ def get_config(config=None):
 
 def verify(dyndns):
     # bail out early - looks like removal from running config
-    if not dyndns or 'address' not in dyndns:
+    if not dyndns or 'name' not in dyndns:
         return None
 
-    for address in dyndns['address']:
-        # If dyndns address is an interface, ensure it exists
-        if address != 'web':
-            verify_interface_exists(address)
+    # Dynamic DNS service provider - configuration validation
+    for service, config in dyndns['name'].items():
 
-        # RFC2136 - configuration validation
-        if 'rfc2136' in dyndns['address'][address]:
-            for config in dyndns['address'][address]['rfc2136'].values():
-                for field in ['host_name', 'zone', 'server', 'key']:
-                    if field not in config:
-                        raise ConfigError(f'"{field.replace("_", "-")}" is required for RFC2136 '
-                                          f'based Dynamic DNS service on "{address}"')
+        error_msg_req = f'is required for Dynamic DNS service "{service}"'
+        error_msg_uns = f'is not supported for Dynamic DNS service "{service}"'
 
-        # Dynamic DNS service provider - configuration validation
-        if 'web_options' in dyndns['address'][address] and address != 'web':
-            raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
+        for field in ['protocol', 'address', 'host_name']:
+            if field not in config:
+                raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
 
-        # Dynamic DNS service provider - configuration validation
-        if 'service' in dyndns['address'][address]:
-            for service, config in dyndns['address'][address]['service'].items():
-                error_msg_req = f'is required for Dynamic DNS service "{service}" on "{address}"'
-                error_msg_uns = f'is not supported for Dynamic DNS service "{service}" on "{address}" with protocol "{config["protocol"]}"'
+        # If dyndns address is an interface, ensure that it exists
+        # and that web-options are not set
+        if config['address'] != 'web':
+            verify_interface_exists(config['address'])
+            if 'web_options' in config:
+                raise ConfigError(f'"web-options" is applicable only when using HTTP(S) web request to obtain the IP address')
 
-                for field in ['host_name', 'password', 'protocol']:
-                    if field not in config:
-                        raise ConfigError(f'"{field.replace("_", "-")}" {error_msg_req}')
+        # RFC2136 uses 'key' instead of 'password'
+        if config['protocol'] != 'nsupdate' and 'password' not in config:
+            raise ConfigError(f'"password" {error_msg_req}')
 
-                if config['protocol'] in zone_necessary and 'zone' not in config:
-                    raise ConfigError(f'"zone" {error_msg_req} with protocol "{config["protocol"]}"')
+        # Other RFC2136 specific configuration validation
+        if config['protocol'] == 'nsupdate':
+            if 'password' in config:
+                raise ConfigError(f'"password" {error_msg_uns} with protocol "{config["protocol"]}"')
+            for field in ['server', 'key']:
+                if field not in config:
+                    raise ConfigError(f'"{field}" {error_msg_req} with protocol "{config["protocol"]}"')
 
-                if config['protocol'] not in zone_supported and 'zone' in config:
-                    raise ConfigError(f'"zone" {error_msg_uns}')
+        if config['protocol'] in zone_necessary and 'zone' not in config:
+            raise ConfigError(f'"zone" {error_msg_req} with protocol "{config["protocol"]}"')
 
-                if config['protocol'] not in username_unnecessary and 'username' not in config:
-                    raise ConfigError(f'"username" {error_msg_req} with protocol "{config["protocol"]}"')
+        if config['protocol'] not in zone_supported and 'zone' in config:
+            raise ConfigError(f'"zone" {error_msg_uns} with protocol "{config["protocol"]}"')
 
-                if config['protocol'] not in ttl_supported and 'ttl' in config:
-                    raise ConfigError(f'"ttl" {error_msg_uns}')
+        if config['protocol'] not in username_unnecessary and 'username' not in config:
+            raise ConfigError(f'"username" {error_msg_req} with protocol "{config["protocol"]}"')
 
-                if config['ip_version'] == 'both':
-                    if config['protocol'] not in dualstack_supported:
-                        raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns}')
-                    # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
-                    if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] not in dyndns_dualstack_servers:
-                        raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} for "{config["server"]}"')
+        if config['protocol'] not in ttl_supported and 'ttl' in config:
+            raise ConfigError(f'"ttl" {error_msg_uns} with protocol "{config["protocol"]}"')
 
-                if {'wait_time', 'expiry_time'} <= config.keys() and int(config['expiry_time']) < int(config['wait_time']):
-                        raise ConfigError(f'"expiry-time" must be greater than "wait-time"')
+        if config['ip_version'] == 'both':
+            if config['protocol'] not in dualstack_supported:
+                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} with protocol "{config["protocol"]}"')
+            # dyndns2 protocol in ddclient honors dual stack only for dyn.com (dyndns.org)
+            if config['protocol'] == 'dyndns2' and 'server' in config and config['server'] not in dyndns_dualstack_servers:
+                raise ConfigError(f'Both IPv4 and IPv6 at the same time {error_msg_uns} for "{config["server"]}" with protocol "{config["protocol"]}"')
+
+        if {'wait_time', 'expiry_time'} <= config.keys() and int(config['expiry_time']) < int(config['wait_time']):
+                raise ConfigError(f'"expiry-time" must be greater than "wait-time" for Dynamic DNS service "{service}"')
 
     return None
 
 def generate(dyndns):
     # bail out early - looks like removal from running config
-    if not dyndns or 'address' not in dyndns:
+    if not dyndns or 'name' not in dyndns:
         return None
 
     render(config_file, 'dns-dynamic/ddclient.conf.j2', dyndns, permission=0o600)
@@ -139,7 +143,7 @@ def apply(dyndns):
     call('systemctl daemon-reload')
 
     # bail out early - looks like removal from running config
-    if not dyndns or 'address' not in dyndns:
+    if not dyndns or 'name' not in dyndns:
         call(f'systemctl stop {systemd_service}')
         if os.path.exists(config_file):
             os.unlink(config_file)
