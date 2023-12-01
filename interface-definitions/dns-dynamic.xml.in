@@ -12,27 +12,48 @@
               <help>Dynamic DNS</help>
             </properties>
             <children>
-              <tagNode name="address">
+              <tagNode name="name">
                 <properties>
-                  <help>Obtain IP address to send Dynamic DNS update for</help>
+                  <help>Dynamic DNS configuration</help>
                   <valueHelp>
                     <format>txt</format>
-                    <description>Use interface to obtain the IP address</description>
+                    <description>Dynamic DNS service name</description>
                   </valueHelp>
-                  <valueHelp>
-                    <format>web</format>
-                    <description>Use HTTP(S) web request to obtain the IP address</description>
-                  </valueHelp>
-                  <completionHelp>
-                    <script>${vyos_completion_dir}/list_interfaces</script>
-                    <list>web</list>
-                  </completionHelp>
-                  <constraint>
-                    #include <include/constraint/interface-name.xml.i>
-                    <regex>web</regex>
-                  </constraint>
                 </properties>
                 <children>
+                  #include <include/generic-description.xml.i>
+                  <leafNode name="protocol">
+                    <properties>
+                      <help>ddclient protocol used for Dynamic DNS service</help>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_ddclient_protocols.sh</script>
+                      </completionHelp>
+                      <constraint>
+                        <validator name="ddclient-protocol"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="address">
+                    <properties>
+                      <help>Obtain IP address to send Dynamic DNS update for</help>
+                      <valueHelp>
+                        <format>txt</format>
+                        <description>Use interface to obtain the IP address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>web</format>
+                        <description>Use HTTP(S) web request to obtain the IP address</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <script>${vyos_completion_dir}/list_interfaces</script>
+                        <list>web</list>
+                      </completionHelp>
+                      <constraint>
+                        #include <include/constraint/interface-name.xml.i>
+                        <regex>web</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
                   <node name="web-options">
                     <properties>
                       <help>Options when using HTTP(S) web request to obtain the IP address</help>
@@ -50,88 +71,117 @@
                       </leafNode>
                     </children>
                   </node>
-                  <tagNode name="rfc2136">
+                  <leafNode name="ip-version">
                     <properties>
-                      <help>RFC2136 nsupdate configuration</help>
+                      <help>IP address version to use</help>
+                      <valueHelp>
+                        <format>_ipv4</format>
+                        <description>Use only IPv4 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>_ipv6</format>
+                        <description>Use only IPv6 address</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>both</format>
+                        <description>Use both IPv4 and IPv6 address</description>
+                      </valueHelp>
+                      <completionHelp>
+                        <list>ipv4 ipv6 both</list>
+                      </completionHelp>
+                      <constraint>
+                        <regex>(ipv[46]|both)</regex>
+                      </constraint>
+                      <constraintErrorMessage>IP Version must be literal 'ipv4', 'ipv6' or 'both'</constraintErrorMessage>
+                    </properties>
+                    <defaultValue>ipv4</defaultValue>
+                  </leafNode>
+                  <leafNode name="host-name">
+                    <properties>
+                      <help>Hostname to register with Dynamic DNS service</help>
+                      <constraint>
+                          #include <include/constraint/host-name.xml.i>
+                          <regex>(\@|\*)[-.A-Za-z0-9]*</regex>
+                      </constraint>
+                      <constraintErrorMessage>Host-name must be alphanumeric, can contain hyphens and can be prefixed with '@' or '*'</constraintErrorMessage>
+                      <multi/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="server">
+                    <properties>
+                      <help>Remote Dynamic DNS server to send updates to</help>
+                      <valueHelp>
+                        <format>ipv4</format>
+                        <description>IPv4 address of the remote server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>ipv6</format>
+                        <description>IPv6 address of the remote server</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>hostname</format>
+                        <description>Fully qualified domain name of the remote server</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="ip-address"/>
+                        <validator name="fqdn"/>
+                      </constraint>
+                      <constraintErrorMessage>Remote server must be IP address or fully qualified domain name</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="zone">
+                    <properties>
+                      <help>DNS zone to be updated</help>
                       <valueHelp>
                         <format>txt</format>
-                        <description>RFC2136 nsupdate service name</description>
+                        <description>Name of DNS zone</description>
                       </valueHelp>
+                      <constraint>
+                        <validator name="fqdn"/>
+                      </constraint>
                     </properties>
-                    <children>
-                      #include <include/generic-description.xml.i>
-                      #include <include/dns/dynamic-service-host-name-server.xml.i>
-                      #include <include/dns/dynamic-service-wait-expiry-time.xml.i>
-                      <leafNode name="key">
-                        <properties>
-                          <help>File containing the TSIG secret key shared with remote DNS server</help>
-                          <valueHelp>
-                            <format>filename</format>
-                            <description>File in /config/auth directory</description>
-                          </valueHelp>
-                          <constraint>
-                            <validator name="file-path" argument="--strict --parent-dir /config/auth"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      #include <include/dns/time-to-live.xml.i>
-                      #include <include/dns/dynamic-service-zone.xml.i>
-                    </children>
-                  </tagNode>
-                  <tagNode name="service">
+                  </leafNode>
+                  #include <include/generic-username.xml.i>
+                  #include <include/generic-password.xml.i>
+                  <leafNode name="key">
                     <properties>
-                      <help>Dynamic DNS configuration</help>
+                      <help>File containing TSIG authentication key for RFC2136 nsupdate on remote DNS server</help>
                       <valueHelp>
-                        <format>txt</format>
-                        <description>Dynamic DNS service name</description>
+                        <format>filename</format>
+                        <description>File in /config/auth directory</description>
                       </valueHelp>
+                      <constraint>
+                        <validator name="file-path" argument="--strict --parent-dir /config/auth"/>
+                      </constraint>
                     </properties>
-                    <children>
-                      #include <include/generic-description.xml.i>
-                      #include <include/dns/dynamic-service-host-name-server.xml.i>
-                      #include <include/dns/dynamic-service-wait-expiry-time.xml.i>
-                      #include <include/generic-username.xml.i>
-                      #include <include/generic-password.xml.i>
-                      #include <include/dns/time-to-live.xml.i>
-                      <leafNode name="protocol">
-                        <properties>
-                          <help>ddclient protocol used for Dynamic DNS service</help>
-                          <completionHelp>
-                            <script>${vyos_completion_dir}/list_ddclient_protocols.sh</script>
-                          </completionHelp>
-                          <constraint>
-                            <validator name="ddclient-protocol"/>
-                          </constraint>
-                        </properties>
-                      </leafNode>
-                      #include <include/dns/dynamic-service-zone.xml.i>
-                      <leafNode name="ip-version">
-                        <properties>
-                          <help>IP address version to use</help>
-                          <valueHelp>
-                            <format>_ipv4</format>
-                            <description>Use only IPv4 address</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>_ipv6</format>
-                            <description>Use only IPv6 address</description>
-                          </valueHelp>
-                          <valueHelp>
-                            <format>both</format>
-                            <description>Use both IPv4 and IPv6 address</description>
-                          </valueHelp>
-                          <completionHelp>
-                            <list>ipv4 ipv6 both</list>
-                          </completionHelp>
-                          <constraint>
-                            <regex>(ipv[46]|both)</regex>
-                          </constraint>
-                          <constraintErrorMessage>IP Version must be literal 'ipv4', 'ipv6' or 'both'</constraintErrorMessage>
-                        </properties>
-                        <defaultValue>ipv4</defaultValue>
-                      </leafNode>
-                    </children>
-                  </tagNode>
+                  </leafNode>
+                  #include <include/dns/time-to-live.xml.i>
+                  <leafNode name="wait-time">
+                    <properties>
+                      <help>Time in seconds to wait between update attempts</help>
+                      <valueHelp>
+                        <format>u32:60-86400</format>
+                        <description>Time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 60-86400"/>
+                      </constraint>
+                      <constraintErrorMessage>Wait time must be between 60 and 86400 seconds</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="expiry-time">
+                    <properties>
+                      <help>Time in seconds for the hostname to be marked expired in cache</help>
+                      <valueHelp>
+                        <format>u32:300-2160000</format>
+                        <description>Time in seconds</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="numeric" argument="--range 300-2160000"/>
+                      </constraint>
+                      <constraintErrorMessage>Expiry time must be between 300 and 2160000 seconds</constraintErrorMessage>
+                    </properties>
+                  </leafNode>
                 </children>
               </tagNode>
               <leafNode name="interval">
