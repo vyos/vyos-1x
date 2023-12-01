@@ -14,7 +14,7 @@
               <valueless/>
             </properties>
           </leafNode>
-          #include <include/url.xml.i>
+          #include <include/url-http-https.xml.i>
         </children>
       </node>
     </children>
