@@ -29,6 +29,7 @@ from vyos import airbag
 airbag.enable()
 
 config_file = '/run/avahi-daemon/avahi-daemon.conf'
+systemd_override = r'/run/systemd/system/avahi-daemon.service.d/override.conf'
 vrrp_running_file = '/run/mdns_vrrp_active'
 
 def get_config(config=None):
@@ -48,6 +49,8 @@ def get_config(config=None):
 
     if mdns:
         mdns['vrrp_exists'] = conf.exists('high-availability vrrp')
+        mdns['config_file'] = config_file
+
     return mdns
 
 def verify(mdns):
@@ -101,11 +104,16 @@ def generate(mdns):
             return None
 
     render(config_file, 'mdns-repeater/avahi-daemon.conf.j2', mdns)
+    render(systemd_override, 'mdns-repeater/override.conf.j2', mdns)
     return None
 
 def apply(mdns):
+    systemd_service = 'avahi-daemon.service'
+    # Reload systemd manager configuration
+    call('systemctl daemon-reload')
+
     if not mdns or 'disable' in mdns:
-        call('systemctl stop avahi-daemon.service')
+        call(f'systemctl stop {systemd_service}')
         if os.path.exists(config_file):
             os.unlink(config_file)
 
@@ -120,10 +128,10 @@ def apply(mdns):
                 os.mknod(vrrp_running_file) # vrrp script looks for this file to update mdns repeater
 
             if len(mdns['interface']) < 2:
-                call('systemctl stop avahi-daemon.service')
+                call(f'systemctl stop {systemd_service}')
                 return None
 
-        call('systemctl restart avahi-daemon.service')
+        call(f'systemctl restart {systemd_service}')
 
     return None
 
