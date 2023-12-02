@@ -54,10 +54,9 @@
               #include <include/allow-client.xml.i>
             </children>
           </tagNode>
-          <node name="api" owner="${vyos_conf_scripts_dir}/http-api.py">
+          <node name="api">
             <properties>
               <help>VyOS HTTP API configuration</help>
-              <priority>1002</priority>
             </properties>
             <children>
               <node name="keys">

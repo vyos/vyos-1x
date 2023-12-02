@@ -16,19 +16,24 @@
 
 import os
 import sys
+import json
 
 from copy import deepcopy
+from time import sleep
 
 import vyos.defaults
 import vyos.certbot_util
 
 from vyos.config import Config
+from vyos.configdiff import get_config_diff
 from vyos.configverify import verify_vrf
 from vyos import ConfigError
 from vyos.pki import wrap_certificate
 from vyos.pki import wrap_private_key
 from vyos.template import render
 from vyos.utils.process import call
+from vyos.utils.process import is_systemd_service_running
+from vyos.utils.process import is_systemd_service_active
 from vyos.utils.network import check_port_availability
 from vyos.utils.network import is_listen_port_bind_service
 from vyos.utils.file import write_file
@@ -42,6 +47,9 @@ cert_dir = '/etc/ssl/certs'
 key_dir = '/etc/ssl/private'
 certbot_dir = vyos.defaults.directories['certbot']
 
+api_config_state = '/run/http-api-state'
+systemd_service = '/run/systemd/system/vyos-http-api.service'
+
 # https config needs to coordinate several subsystems: api, certbot,
 # self-signed certificate, as well as the virtual hosts defined within the
 # https config definition itself. Consequently, one needs a general dict,
@@ -52,7 +60,7 @@ default_server_block = {
     'address'   : '*',
     'port'      : '443',
     'name'      : ['_'],
-    'api'       : {},
+    'api'       : False,
     'vyos_cert' : {},
     'certbot'   : False
 }
@@ -67,11 +75,35 @@ def get_config(config=None):
     if not conf.exists(base):
         return None
 
+    diff = get_config_diff(conf)
+
     https = conf.get_config_dict(base, get_first_key=True)
 
     if https:
         https['pki'] = conf.get_config_dict(['pki'], key_mangling=('-', '_'),
-                                get_first_key=True, no_tag_node_value_mangle=True)
+                                            no_tag_node_value_mangle=True,
+                                            get_first_key=True)
+
+    https['children_changed'] = diff.node_changed_children(base)
+    https['api_add_or_delete'] = diff.node_changed_presence(base + ['api'])
+
+    if 'api' not in https:
+        return https
+
+    http_api = conf.get_config_dict(base + ['api'], key_mangling=('-', '_'),
+                                    no_tag_node_value_mangle=True,
+                                    get_first_key=True,
+                                    with_recursive_defaults=True)
+
+    if http_api.from_defaults(['graphql']):
+        del http_api['graphql']
+
+    # Do we run inside a VRF context?
+    vrf_path = ['service', 'https', 'vrf']
+    if conf.exists(vrf_path):
+        http_api['vrf'] = conf.return_value(vrf_path)
+
+    https['api'] = http_api
 
     return https
 
@@ -103,7 +135,7 @@ def verify(https):
 
         if 'certbot' in https['certificates']:
             vhost_names = []
-            for vh, vh_conf in https.get('virtual-host', {}).items():
+            for _, vh_conf in https.get('virtual-host', {}).items():
                 vhost_names += vh_conf.get('server-name', [])
             domains = https['certificates']['certbot'].get('domain-name', [])
             domains_found = [domain for domain in domains if domain in vhost_names]
@@ -166,6 +198,14 @@ def verify(https):
 def generate(https):
     if https is None:
         return None
+
+    if 'api' not in https:
+        if os.path.exists(systemd_service):
+            os.unlink(systemd_service)
+    else:
+        render(systemd_service, 'https/vyos-http-api.service.j2', https['api'])
+        with open(api_config_state, 'w') as f:
+            json.dump(https['api'], f, indent=2)
 
     server_block_list = []
 
@@ -232,35 +272,18 @@ def generate(https):
                     # certbot organizes certificates by first domain
                     sb['certbot_domain_dir'] = cert_domains[0]
 
-    # get api data
-
-    api_set = False
-    api_data = {}
     if 'api' in list(https):
-        api_set = True
-        api_data = vyos.defaults.api_data
-    api_settings = https.get('api', {})
-    if api_settings:
-        vhosts = https.get('api-restrict', {}).get('virtual-host', [])
-        if vhosts:
-            api_data['vhost'] = vhosts[:]
-
-    if api_data:
-        vhost_list = api_data.get('vhost', [])
+        vhost_list = https.get('api-restrict', {}).get('virtual-host', [])
         if not vhost_list:
             for block in server_block_list:
-                block['api'] = api_data
+                block['api'] = True
         else:
             for block in server_block_list:
                 if block['id'] in vhost_list:
-                    block['api'] = api_data
-
-    if 'server_block_list' not in https or not https['server_block_list']:
-        https['server_block_list'] = [default_server_block]
+                    block['api'] = True
 
     data = {
         'server_block_list': server_block_list,
-        'api_set': api_set,
         'certbot': certbot
     }
 
@@ -271,10 +294,31 @@ def generate(https):
 def apply(https):
     # Reload systemd manager configuration
     call('systemctl daemon-reload')
-    if https is not None:
-        call('systemctl restart nginx.service')
-    else:
-        call('systemctl stop nginx.service')
+    http_api_service_name = 'vyos-http-api.service'
+    https_service_name = 'nginx.service'
+
+    if https is None:
+        if is_systemd_service_active(f'{http_api_service_name}'):
+            call(f'systemctl stop {http_api_service_name}')
+        call(f'systemctl stop {https_service_name}')
+        return
+
+    if 'api' in https['children_changed']:
+        if 'api' in https:
+            if is_systemd_service_running(f'{http_api_service_name}'):
+                call(f'systemctl reload {http_api_service_name}')
+            else:
+                call(f'systemctl restart {http_api_service_name}')
+            # Let uvicorn settle before (possibly) restarting nginx
+            sleep(1)
+        else:
+            if is_systemd_service_active(f'{http_api_service_name}'):
+                call(f'systemctl stop {http_api_service_name}')
+
+    if (not is_systemd_service_running(f'{https_service_name}') or
+        https['api_add_or_delete'] or
+        set(https['children_changed']) - set(['api'])):
+        call(f'systemctl restart {https_service_name}')
 
 if __name__ == '__main__':
     try:
