@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2021 VyOS maintainers and contributors
+# Copyright (C) 2021-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -13,8 +13,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-## Script called up strongswan to bring the vti interface up/down based on the state of the IPSec tunnel.
-## Called as vti_up_down vti_intf_name
+
+# Script called up strongswan to bring the VTI interface up/down based on
+# the state of the IPSec tunnel. Called as vti_up_down vti_intf_name
 
 import os
 import sys
@@ -25,9 +26,10 @@ from syslog import LOG_PID
 from syslog import LOG_INFO
 
 from vyos.configquery import ConfigTreeQuery
+from vyos.configdict import get_interface_dict
+from vyos.ifconfig import VTIIf
 from vyos.utils.process import call
 from vyos.utils.network import get_interface_config
-from vyos.utils.network import get_interface_address
 
 if __name__ == '__main__':
     verb = os.getenv('PLUTO_VERB')
@@ -48,14 +50,13 @@ if __name__ == '__main__':
 
     vti_link_up = (vti_link['operstate'] != 'DOWN' if 'operstate' in vti_link else False)
 
-    config = ConfigTreeQuery()
-    vti_dict = config.get_config_dict(['interfaces', 'vti', interface],
-                                      get_first_key=True)
-
     if verb in ['up-client', 'up-host']:
         if not vti_link_up:
-            if 'disable' not in vti_dict:
-                call(f'sudo ip link set {interface} up')
+            conf = ConfigTreeQuery()
+            _, vti = get_interface_dict(conf.config, ['interfaces', 'vti'], interface)
+            if 'disable' not in vti:
+                tmp = VTIIf(interface)
+                tmp.update(vti)
             else:
                 syslog(f'Interface {interface} is admin down ...')
     elif verb in ['down-client', 'down-host']:
