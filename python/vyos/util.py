@@ -237,22 +237,3 @@ def process_named_running(name):
         if name in p.name():
             return p.pid
     return None
-
-def dict_search(path, dict_object):
-    """ Traverse Python dictionary (dict_object) delimited by dot (.).
-    Return value of key if found, None otherwise.
-    This is faster implementation then jmespath.search('foo.bar', dict_object)"""
-    if not isinstance(dict_object, dict) or not path:
-        return None
-
-    parts = path.split('.')
-    inside = parts[:-1]
-    if not inside:
-        if path not in dict_object:
-            return None
-        return dict_object[path]
-    c = dict_object
-    for p in parts[:-1]:
-        c = c.get(p, {})
-    return c.get(parts[-1], None)
-
