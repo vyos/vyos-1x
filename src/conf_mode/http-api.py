@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019-2021 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -38,7 +38,7 @@ vyos_conf_scripts_dir=vyos.defaults.directories['conf_mode']
 
 def get_config(config=None):
     http_api = deepcopy(vyos.defaults.api_data)
-    x = http_api.get('api_keys')
+    x = http_api.get('api_keys', [])
     if not x:
         default_key = None
     else:
@@ -94,16 +94,21 @@ def get_config(config=None):
                 key = conf.return_value('keys id {0} key'.format(name))
                 new_key = { 'id': name, 'key': key }
                 http_api['api_keys'].append(new_key)
-                keys_added = True
-
-    if keys_added and default_key:
-        if default_key in http_api['api_keys']:
-            http_api['api_keys'].remove(default_key)
+            else:
+                raise ConfigError(f'Missing HTTPS API key string for key id "{name}"')
 
     return http_api
 
 def verify(http_api):
-    return None
+    if http_api is None:
+        return
+    # Verify API server settings, if present
+    keys = http_api['api_keys']
+
+    if not keys:
+        raise ConfigError('At least one HTTPS API key is required')
+
+    return
 
 def generate(http_api):
     if http_api is None:
