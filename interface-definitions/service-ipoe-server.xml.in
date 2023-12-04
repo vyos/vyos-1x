@@ -104,14 +104,8 @@
           </tagNode>
           #include <include/accel-ppp/max-concurrent-sessions.xml.i>
           #include <include/name-server-ipv4-ipv6.xml.i>
-          <node name="client-ip-pool">
-            <properties>
-              <help>Client IP pools and gateway setting</help>
-            </properties>
-            <children>
-              #include <include/accel-ppp/client-ip-pool-name.xml.i>
-            </children>
-          </node>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
+          #include <include/accel-ppp/gateway-address-multi.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           <node name="authentication">
             <properties>
@@ -188,6 +182,7 @@
               #include <include/accel-ppp/radius-additions.xml.i>
             </children>
           </node>
+          #include <include/accel-ppp/default-pool.xml.i>
         </children>
       </node>
     </children>

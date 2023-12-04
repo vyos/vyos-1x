@@ -29,19 +29,13 @@
           #include <include/interface/mtu-68-1500.xml.i>
           #include <include/accel-ppp/gateway-address.xml.i>
           #include <include/name-server-ipv4-ipv6.xml.i>
-          <node name="client-ip-pool">
-            <properties>
-              <help>Client IP pools and gateway setting</help>
-            </properties>
-            <children>
-              #include <include/accel-ppp/client-ip-pool-subnet.xml.i>
-            </children>
-          </node>
+          #include <include/accel-ppp/client-ip-pool.xml.i>
           #include <include/accel-ppp/client-ipv6-pool.xml.i>
           #include <include/port-number.xml.i>
           <leafNode name="port">
             <defaultValue>443</defaultValue>
           </leafNode>
+          #include <include/accel-ppp/default-pool.xml.i>
           <node name="ppp-options">
             <properties>
               <help>PPP (Point-to-Point Protocol) settings</help>

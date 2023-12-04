@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+#
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# - move all pool to named pools
+#       'start-stop' migrate to namedpool 'default-range-pool'
+#       'default-subnet-pool' is the next pool for 'default-range-pool'
+
+import os
+
+from sys import argv
+from sys import exit
+from vyos.configtree import ConfigTree
+
+
+if len(argv) < 2:
+    print("Must specify file name!")
+    exit(1)
+
+file_name = argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+base = ['vpn', 'pptp', 'remote-access']
+pool_base = base + ['client-ip-pool']
+if not config.exists(base):
+    exit(0)
+
+if not config.exists(pool_base):
+    exit(0)
+
+range_pool_name = 'default-range-pool'
+
+if config.exists(pool_base + ['start']) and config.exists(pool_base + ['stop']):
+    start_ip = config.return_value(pool_base + ['start'])
+    stop_ip = config.return_value(pool_base + ['stop'])
+    ip_range = f'{start_ip}-{stop_ip}'
+    config.delete(pool_base + ['start'])
+    config.delete(pool_base + ['stop'])
+    config.set(pool_base + [range_pool_name, 'range'], value=ip_range)
+    config.set(base + ['default-pool'], value=range_pool_name)
+# format as tag node
+config.set_tag(pool_base)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    exit(1)
