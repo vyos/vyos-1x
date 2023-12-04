@@ -94,15 +94,18 @@ def get_config(config=None):
                 key = conf.return_value('keys id {0} key'.format(name))
                 new_key = { 'id': name, 'key': key }
                 http_api['api_keys'].append(new_key)
-                keys_added = True
-
-    if keys_added and default_key:
-        if default_key in http_api['api_keys']:
-            http_api['api_keys'].remove(default_key)
+            else:
+                raise ConfigError(f'Missing HTTPS API key string for key id "{name}"')
 
     return http_api
 
 def verify(http_api):
+    # Verify API server settings, if present
+    keys = http_api['api_keys']
+
+    if not keys:
+        raise ConfigError('At least one HTTPS API key is required')
+
     return None
 
 def generate(http_api):
