@@ -1,18 +1,26 @@
 {
-    "files.trimTrailingWhitespace": true,
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true,
     "files.insertFinalNewline": true,
-    "files.eol": "\n",
-    # https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true,
+
+    // https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
     "files.associations": {
+        "*.j2": "jinja",
         "*.xml.i": "xml",
         "*.xml.in": "xml",
-        "*.j2": "jinja",
     },
-    "editor.indentSize": "tabSize",
     "[jinja]": {
-        "editor.tabSize": 4,
         "editor.wordBasedSuggestions": false
-    }
+    },
+    // https://code.visualstudio.com/docs/python/settings-reference
+    "python.analysis.extraPaths": [
+        "./python"
+    ],
+    // https://help.gitkraken.com/gitlens/gitlens-settings/#autolink-settings
+    "gitlens.autolinks": [
+        {
+            "prefix": "T",
+            "url": "https://vyos.dev/T<num>"
+        }
+    ],
 }
