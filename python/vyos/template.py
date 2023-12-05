@@ -664,8 +664,8 @@ def nat_static_rule(rule_conf, rule_id, nat_type):
     from vyos.nat import parse_nat_static_rule
     return parse_nat_static_rule(rule_conf, rule_id, nat_type)
 
-@register_filter('conntrack_ignore_rule')
-def conntrack_ignore_rule(rule_conf, rule_id, ipv6=False):
+@register_filter('conntrack_rule')
+def conntrack_rule(rule_conf, rule_id, action, ipv6=False):
     ip_prefix = 'ip6' if ipv6 else 'ip'
     def_suffix = '6' if ipv6 else ''
     output = []
@@ -676,11 +676,15 @@ def conntrack_ignore_rule(rule_conf, rule_id, ipv6=False):
             output.append(f'iifname {ifname}')
 
     if 'protocol' in rule_conf:
-        proto = rule_conf['protocol']
+        if action != 'timeout':
+            proto = rule_conf['protocol']
+        else:
+            for protocol, protocol_config in rule_conf['protocol'].items():
+                proto = protocol
         output.append(f'meta l4proto {proto}')
 
     tcp_flags = dict_search_args(rule_conf, 'tcp', 'flags')
-    if tcp_flags:
+    if tcp_flags and action != 'timeout':
         from vyos.firewall import parse_tcp_flags
         output.append(parse_tcp_flags(tcp_flags))
 
@@ -743,10 +747,23 @@ def conntrack_ignore_rule(rule_conf, rule_id, ipv6=False):
 
                     output.append(f'{proto} {prefix}port {operator} @P_{group_name}')
 
-    output.append('counter notrack')
-    output.append(f'comment "ignore-{rule_id}"')
+    if action == 'ignore':
+        output.append('counter notrack')
+        output.append(f'comment "ignore-{rule_id}"')
+    else:
+        output.append(f'counter ct timeout set ct-timeout-{rule_id}')
+        output.append(f'comment "timeout-{rule_id}"')
 
     return " ".join(output)
+
+@register_filter('conntrack_ct_policy')
+def conntrack_ct_policy(protocol_conf):
+    output = []
+    for item in protocol_conf:
+        item_value = protocol_conf[item]
+        output.append(f'{item}: {item_value}')
+
+    return ", ".join(output)
 
 @register_filter('range_to_regex')
 def range_to_regex(num_range):
