@@ -112,6 +112,9 @@ Depends:
   wireless-regdb,
   wpasupplicant (>= 0.6.7),
 # End "interfaces wireless"
+# For "nat64"
+  jool,
+# End "nat64"
 # For "interfaces wwan"
   modemmanager,
   usb-modeswitch,
