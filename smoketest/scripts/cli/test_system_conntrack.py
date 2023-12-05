@@ -297,5 +297,49 @@ class TestSystemConntrack(VyOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['firewall'])
 
+    def test_conntrack_timeout_custom(self):
+
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'source', 'address', '192.0.2.1'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'destination', 'address', '192.0.2.2'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'destination', 'port', '22'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'protocol', 'tcp', 'syn-sent', '77'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'protocol', 'tcp', 'close', '88'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '1', 'protocol', 'tcp', 'established', '99'])
+
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '2', 'inbound-interface', 'eth1'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '2', 'source', 'address', '198.51.100.1'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv4', 'rule', '2', 'protocol', 'udp', 'unreplied', '55'])
+
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'source', 'address', '2001:db8::1'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'inbound-interface', 'eth2'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'protocol', 'tcp', 'time-wait', '22'])
+        self.cli_set(base_path + ['timeout', 'custom', 'ipv6', 'rule', '1', 'protocol', 'tcp', 'last-ack', '33'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['ct timeout ct-timeout-1 {'],
+            ['protocol tcp'],
+            ['policy = { syn_sent : 77, established : 99, close : 88 }'],
+            ['ct timeout ct-timeout-2 {'],
+            ['protocol udp'],
+            ['policy = { unreplied : 55 }'],
+            ['chain VYOS_CT_TIMEOUT {'],
+            ['ip saddr 192.0.2.1', 'ip daddr 192.0.2.2', 'tcp dport 22', 'ct timeout set "ct-timeout-1"'],
+            ['iifname "eth1"', 'meta l4proto udp', 'ip saddr 198.51.100.1', 'ct timeout set "ct-timeout-2"']
+        ]
+
+        nftables6_search = [
+            ['ct timeout ct-timeout-1 {'],
+            ['protocol tcp'],
+            ['policy = { last_ack : 33, time_wait : 22 }'],
+            ['chain VYOS_CT_TIMEOUT {'],
+            ['iifname "eth2"', 'meta l4proto tcp', 'ip6 saddr 2001:db8::1', 'ct timeout set "ct-timeout-1"']
+        ]
+
+        self.verify_nftables(nftables_search, 'ip vyos_conntrack')
+        self.verify_nftables(nftables6_search, 'ip6 vyos_conntrack')
+
+        self.cli_delete(['firewall'])
 if __name__ == '__main__':
     unittest.main(verbosity=2)

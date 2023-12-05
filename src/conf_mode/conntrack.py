@@ -159,6 +159,13 @@ def verify(conntrack):
                                     if not group_obj:
                                         Warning(f'{error_group} "{group_name}" has no members!')
 
+        if dict_search_args(conntrack, 'timeout', 'custom', inet, 'rule') != None:
+            for rule, rule_config in conntrack['timeout']['custom'][inet]['rule'].items():
+                if 'protocol' not in rule_config:
+                    raise ConfigError(f'Conntrack custom timeout rule {rule} requires protocol tcp or udp')
+                else:
+                    if 'tcp' in rule_config['protocol'] and 'udp' in rule_config['protocol']:
+                        raise ConfigError(f'conntrack custom timeout rule {rule} - Cant use both tcp and udp protocol')
     return None
 
 def generate(conntrack):
