@@ -24,6 +24,7 @@ import traceback
 import threading
 
 import vyos.config
+import vyos.configtree
 
 import bottle
 

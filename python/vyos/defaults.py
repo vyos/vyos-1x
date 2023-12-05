@@ -37,7 +37,7 @@ api_data = {
     'port' : '8080',
     'strict' : 'false',
     'debug' : 'false',
-    'api_keys' : [],
+    'api_keys' : [ ]
 }
 
 vyos_cert_data = {

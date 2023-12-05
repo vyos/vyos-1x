@@ -23,7 +23,6 @@ import jinja2
 
 import vyos.defaults
 from vyos.config import Config
-from vyos.util import dict_search
 from vyos import ConfigError
 
 config_file = '/etc/nginx/sites-available/default'
@@ -136,14 +135,6 @@ def get_config():
         if conf.exists('api port'):
             port = conf.return_value('api port')
             api_data['port'] = port
-        if conf.exists('api keys id'):
-            for id in conf.list_nodes('api keys id'):
-                tmp = {"id": id}
-                if conf.exists('api keys id ' + id + ' key'):
-                    key = conf.return_value('api keys id ' + id + ' key')
-                    tmp.update({'key':key})
-                api_data['api_keys'].append(tmp)
-
     if api_data:
         for block in server_block_list:
             block['api'] = api_data
@@ -152,26 +143,7 @@ def get_config():
     return https
 
 def verify(https):
-    if https is None:
-        return None
-
-    # Verify API server settings, if present
-    if 'server_block_list' in https:
-        for server in https['server_block_list']:
-            if 'api' in server:
-                keys = dict_search('api.api_keys', server)
-
-                # Check for incomplete key configurations in every case
-                valid_keys_exist = False
-                if keys:
-                    for k in keys:
-                        if 'key' not in k:
-                            raise ConfigError('Missing HTTPS API key string for key id: ' + k['id'])
-                else:
-                    raise ConfigError('At least one HTTPS API key is required!')
-
     return None
-
 
 def generate(https):
     if https is None:

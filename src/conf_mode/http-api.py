@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2019 VyOS maintainers and contributors
+# Copyright (C) 2019-2023 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -59,10 +59,21 @@ def get_config():
                 key = conf.return_value('keys id {0} key'.format(name))
                 new_key = { 'id': name, 'key': key }
                 http_api['api_keys'].append(new_key)
+            else:
+                raise ConfigError('Missing HTTPS API key string for key id "{}"'.format(name))
 
     return http_api
 
 def verify(http_api):
+    if not http_api:
+        return None
+
+    # Verify API server settings, if present
+    keys = http_api['api_keys']
+
+    if not keys:
+        raise ConfigError('At least one HTTPS API key is required')
+
     return None
 
 def generate(http_api):
