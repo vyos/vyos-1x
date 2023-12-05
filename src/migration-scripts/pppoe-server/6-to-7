@@ -76,23 +76,25 @@ if config.exists(base + ['gateway-address']):
 
 #named pool migration
 namedpools_base = pool_base + ['name']
-if config.return_value(base + ['authentication', 'mode']) == 'local':
-    if config.list_nodes(namedpools_base):
-        default_pool = config.list_nodes(namedpools_base)[0]
+if config.exists(namedpools_base):
+    if config.exists(base + ['authentication', 'mode']):
+        if config.return_value(base + ['authentication', 'mode']) == 'local':
+            if config.list_nodes(namedpools_base):
+                default_pool = config.list_nodes(namedpools_base)[0]
 
-for pool_name in config.list_nodes(namedpools_base):
-    pool_path = namedpools_base + [pool_name]
-    if config.exists(pool_path + ['subnet']):
-        subnet = config.return_value(pool_path + ['subnet'])
-        config.set(pool_base + [pool_name, 'range'], value=subnet)
-    if config.exists(pool_path + ['next-pool']):
-        next_pool = config.return_value(pool_path + ['next-pool'])
-        config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
-    if not gateway:
-        if config.exists(pool_path + ['gateway-address']):
-            gateway = config.return_value(pool_path + ['gateway-address'])
+    for pool_name in config.list_nodes(namedpools_base):
+        pool_path = namedpools_base + [pool_name]
+        if config.exists(pool_path + ['subnet']):
+            subnet = config.return_value(pool_path + ['subnet'])
+            config.set(pool_base + [pool_name, 'range'], value=subnet)
+        if config.exists(pool_path + ['next-pool']):
+            next_pool = config.return_value(pool_path + ['next-pool'])
+            config.set(pool_base + [pool_name, 'next-pool'], value=next_pool)
+        if not gateway:
+            if config.exists(pool_path + ['gateway-address']):
+                gateway = config.return_value(pool_path + ['gateway-address'])
 
-config.delete(namedpools_base)
+    config.delete(namedpools_base)
 
 if gateway:
     config.set(base + ['gateway-address'], value=gateway)
