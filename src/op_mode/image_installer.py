@@ -60,6 +60,8 @@ MSG_INPUT_PASSWORD: str = 'Please enter a password for the "vyos" user'
 MSG_INPUT_ROOT_SIZE_ALL: str = 'Would you like to use all the free space on the drive?'
 MSG_INPUT_ROOT_SIZE_SET: str = 'Please specify the size (in GB) of the root partition (min is 1.5 GB)?'
 MSG_INPUT_CONSOLE_TYPE: str = 'What console should be used by default? (K: KVM, S: Serial, U: USB-Serial)?'
+MSG_INPUT_COPY_DATA: str = 'Would you like to copy data to the new image?'
+MSG_INPUT_CHOOSE_COPY_DATA: str = 'From which image would you like to save config information?'
 MSG_WARN_ISO_SIGN_INVALID: str = 'Signature is not valid. Do you want to continue with installation?'
 MSG_WARN_ISO_SIGN_UNAVAL: str = 'Signature is not available. Do you want to continue with installation?'
 MSG_WARN_ROOT_SIZE_TOOBIG: str = 'The size is too big. Try again.'
@@ -184,6 +186,83 @@ def create_partitions(target_disk: str, target_size: int,
     return disk_details
 
 
+def search_format_selection(image: tuple[str, str]) -> str:
+    """Format a string for selection of image
+
+    Args:
+        image (tuple[str, str]): a tuple of image name and drive
+
+    Returns:
+        str: formatted string
+    """
+    return f'{image[0]} on {image[1]}'
+
+
+def search_previous_installation(disks: list[str]) -> None:
+    """Search disks for previous installation config and SSH keys
+
+    Args:
+        disks (list[str]): a list of available disks
+    """
+    mnt_config = '/mnt/config'
+    mnt_ssh = '/mnt/ssh'
+    mnt_tmp = '/mnt/tmp'
+    rmtree(Path(mnt_config), ignore_errors=True)
+    rmtree(Path(mnt_ssh), ignore_errors=True)
+    Path(mnt_tmp).mkdir(exist_ok=True)
+
+    print('Searching for data from previous installations')
+    image_data = []
+    for disk_name in disks:
+        for partition in disk.partition_list(disk_name):
+            if disk.partition_mount(partition, mnt_tmp):
+                if Path(mnt_tmp + '/boot').exists():
+                    for path in Path(mnt_tmp + '/boot').iterdir():
+                        if path.joinpath('rw/config/.vyatta_config').exists():
+                            image_data.append((path.name, partition))
+
+                disk.partition_umount(partition)
+
+    if len(image_data) == 1:
+        image_name, image_drive = image_data[0]
+        print('Found data from previous installation:')
+        print(f'\t{image_name} on {image_drive}')
+        if not ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
+            return
+
+    elif len(image_data) > 1:
+        print('Found data from previous installations')
+        if not ask_yes_no(MSG_INPUT_COPY_DATA, default=True):
+            return
+
+        image_name, image_drive = select_entry(image_data,
+                                               'Available versions:',
+                                               MSG_INPUT_CHOOSE_COPY_DATA,
+                                               search_format_selection)
+    else:
+        print('No previous installation found')
+        return
+
+    disk.partition_mount(image_drive, mnt_tmp)
+
+    copytree(f'{mnt_tmp}/boot/{image_name}/rw/config', mnt_config)
+    Path(mnt_ssh).mkdir()
+    host_keys: list[str] = glob(f'{mnt_tmp}/boot/{image_name}/rw/etc/ssh/ssh_host*')
+    for host_key in host_keys:
+        copy(host_key, mnt_ssh)
+
+    disk.partition_umount(image_drive)
+
+
+def copy_previous_installation_data(target_dir: str) -> None:
+    if Path('/mnt/config').exists():
+        copytree('/mnt/config', f'{target_dir}/opt/vyatta/etc/config',
+                 dirs_exist_ok=True)
+    if Path('/mnt/ssh').exists():
+        copytree('/mnt/ssh', f'{target_dir}/etc/ssh',
+                 dirs_exist_ok=True)
+
+
 def ask_single_disk(disks_available: dict[str, int]) -> str:
     """Ask user to select a disk for installation
 
@@ -203,6 +282,8 @@ def ask_single_disk(disks_available: dict[str, int]) -> str:
     if not ask_yes_no(MSG_INFO_INSTALL_DISK_CONFIRM):
         print(MSG_INFO_INSTALL_EXIT)
         exit()
+
+    search_previous_installation(list(disks_available))
 
     disk_details: disk.DiskDetails = create_partitions(disk_selected,
                                                        disks_available[disk_selected])
@@ -259,6 +340,8 @@ def check_raid_install(disks_available: dict[str, int]) -> Union[str, None]:
     if not ask_yes_no(MSG_INFO_INSTALL_RAID_CONFIRM):
         print(MSG_INFO_INSTALL_EXIT)
         exit()
+
+    search_previous_installation(list(disks_available))
 
     disks: list[disk.DiskDetails] = []
     for disk_selected in list(disks_selected):
@@ -580,6 +663,10 @@ def install_image() -> None:
                 copy(file, f'{DIR_DST_ROOT}/boot/{image_name}/')
         copy(FILE_ROOTFS_SRC,
              f'{DIR_DST_ROOT}/boot/{image_name}/{image_name}.squashfs')
+
+        # copy saved config data and SSH keys
+        # owner restored on copy of config data by chmod_2775, above
+        copy_previous_installation_data(f'{DIR_DST_ROOT}/boot/{image_name}/rw')
 
         if is_raid_install(install_target):
             write_dir: str = f'{DIR_DST_ROOT}/boot/{image_name}/rw'
