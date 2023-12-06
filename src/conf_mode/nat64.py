@@ -21,6 +21,7 @@ import os
 import re
 
 from ipaddress import IPv6Network
+from json import dumps as json_write
 
 from vyos import ConfigError
 from vyos import airbag
@@ -28,7 +29,7 @@ from vyos.config import Config
 from vyos.configdict import dict_merge
 from vyos.configdict import is_node_changed
 from vyos.utils.dict import dict_search
-from vyos.utils.file import write_json
+from vyos.utils.file import write_file
 from vyos.utils.kernel import check_kmod
 from vyos.utils.process import cmd
 from vyos.utils.process import run
@@ -40,26 +41,11 @@ JOOL_CONFIG_DIR = "/run/jool"
 
 
 def get_config(config: Config | None = None) -> None:
-    """ """
     if config is None:
         config = Config()
 
     base = ["nat64"]
     nat64 = config.get_config_dict(base, key_mangling=("-", "_"), get_first_key=True)
-
-    # T2665: we must add the tagNode defaults individually until this is
-    # moved to the base class
-    for direction in ["source"]:
-        if direction in nat64:
-            default_values = defaults(base + [direction, "rule"])
-            if "rule" in nat64[direction]:
-                for rule in nat64[direction]["rule"]:
-                    nat64[direction]["rule"][rule] = dict_merge(
-                        default_values, nat64[direction]["rule"][rule]
-                    )
-
-                    # Only support netfilter for now
-                    nat64[direction]["rule"][rule]["mode"] = "netfilter"
 
     base_src = base + ["source", "rule"]
 
@@ -95,7 +81,6 @@ def get_config(config: Config | None = None) -> None:
 
 
 def verify(nat64) -> None:
-    """ """
     if not nat64:
         # no need to verify the CLI as nat64 is going to be deactivated
         return
@@ -103,7 +88,7 @@ def verify(nat64) -> None:
     if dict_search("source.rule", nat64):
         # Ensure only 1 netfilter instance per namespace
         nf_rules = filter(
-            lambda i: "deleted" not in i and i["mode"] == "netfilter",
+            lambda i: "deleted" not in i and i.get('mode') == "netfilter",
             nat64["source"]["rule"].values(),
         )
         next(nf_rules, None)  # Discard the first element
@@ -138,7 +123,6 @@ def verify(nat64) -> None:
 
 
 def generate(nat64) -> None:
-    """ """
     os.makedirs(JOOL_CONFIG_DIR, exist_ok=True)
 
     if dict_search("source.rule", nat64):
@@ -183,11 +167,10 @@ def generate(nat64) -> None:
                 if pool4:
                     config["pool4"] = pool4
 
-            write_json(f"{JOOL_CONFIG_DIR}/{name}.json", config)
+            write_file(f'{JOOL_CONFIG_DIR}/{name}.json', json_write(config, indent=2))
 
 
 def apply(nat64) -> None:
-    """ """
     if not nat64:
         return
 

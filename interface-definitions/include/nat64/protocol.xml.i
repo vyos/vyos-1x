@@ -1,4 +1,4 @@
-<!-- include start from nat64-protocol.xml.i -->
+<!-- include start from nat64/protocol.xml.i -->
 <node name="protocol">
   <properties>
     <help>Apply translation address to a specfic protocol</help>
