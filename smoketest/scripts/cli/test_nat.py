@@ -188,7 +188,7 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
     def test_dnat_without_translation_address(self):
-        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'eth1'])
+        self.cli_set(dst_path + ['rule', '1', 'inbound-interface', 'name', 'any'])
         self.cli_set(dst_path + ['rule', '1', 'destination', 'port', '443'])
         self.cli_set(dst_path + ['rule', '1', 'protocol', 'tcp'])
         self.cli_set(dst_path + ['rule', '1', 'packet-type', 'host'])
@@ -197,7 +197,7 @@ class TestNAT(VyOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         nftables_search = [
-            ['iifname "eth1"', 'tcp dport 443', 'pkttype host', 'dnat to :443']
+            ['tcp dport 443', 'pkttype host', 'dnat to :443']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_nat')
