@@ -66,7 +66,7 @@
                       #include <include/generic-description.xml.i>
                       #include <include/generic-disable-node.xml.i>
                       #include <include/nat-translation-port.xml.i>
-                      #include <include/nat64-protocol.xml.i>
+                      #include <include/nat64/protocol.xml.i>
                       <leafNode name="address">
                         <properties>
                           <help>IPv4 address or prefix to translate to</help>
