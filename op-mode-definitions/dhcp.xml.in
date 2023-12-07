@@ -42,6 +42,15 @@
                 </properties>
                 <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet</command>
                 <children>
+                  <tagNode name="origin">
+                    <properties>
+                      <help>Show DHCP server leases granted by local or remote DHCP server</help>
+                      <completionHelp>
+                        <list>local remote</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${vyos_op_scripts_dir}/dhcp.py show_server_leases --family inet --origin $6</command>
+                  </tagNode>
                   <tagNode name="pool">
                     <properties>
                       <help>Show DHCP server leases for a specific pool</help>
