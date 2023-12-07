@@ -249,6 +249,9 @@ Depends:
   libstrongswan-standard-plugins (>=5.9),
   python3-vici (>= 5.7.2),
 # End "vpn ipsec"
+# For "nat64"
+  jool,
+# End "nat64"
 # For nat66
   ndppd,
 # End nat66
