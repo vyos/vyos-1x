@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2023 VyOS maintainers and contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# T5791:
+# - migrate "service dns dynamic address web web-options ..."
+#        to "service dns dynamic name <service> address web ..." (per service)
+# - migrate "service dns dynamic address <address> rfc2136 <service> ..."
+#        to "service dns dynamic name <service> address <interface> protocol 'nsupdate'"
+# - migrate "service dns dynamic address <interface> service <service> ..."
+#        to "service dns dynamic name <service> address <interface> ..."
+
+import sys
+from vyos.configtree import ConfigTree
+
+if len(sys.argv) < 2:
+    print("Must specify file name!")
+    sys.exit(1)
+
+file_name = sys.argv[1]
+
+with open(file_name, 'r') as f:
+    config_file = f.read()
+
+config = ConfigTree(config_file)
+
+base_path = ['service', 'dns', 'dynamic']
+address_path = base_path + ['address']
+name_path = base_path + ['name']
+
+if not config.exists(address_path):
+    # Nothing to do
+    sys.exit(0)
+
+# config.copy does not recursively create a path, so initialize the name path as tagged node
+if not config.exists(name_path):
+    config.set(name_path)
+    config.set_tag(name_path)
+
+for address in config.list_nodes(address_path):
+
+    address_path_tag = address_path + [address]
+
+    # Move web-option as a configuration in each service instead of top level web-option
+    if config.exists(address_path_tag + ['web-options']) and address == 'web':
+        for svc_type in ['service', 'rfc2136']:
+            if config.exists(address_path_tag + [svc_type]):
+                for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
+                    config.copy(address_path_tag + ['web-options'],
+                                address_path_tag + [svc_type, svc_cfg, 'web-options'])
+        config.delete(address_path_tag + ['web-options'])
+
+    for svc_type in ['service', 'rfc2136']:
+        if config.exists(address_path_tag + [svc_type]):
+            # Move RFC2136 as service configuration, rename to avoid name conflict and set protocol to 'nsupdate'
+            if svc_type == 'rfc2136':
+                for rfc_cfg_old in config.list_nodes(address_path_tag + ['rfc2136']):
+                    rfc_cfg_new = f'{rfc_cfg_old}-rfc2136'
+                    config.rename(address_path_tag + ['rfc2136', rfc_cfg_old], rfc_cfg_new)
+                    config.set(address_path_tag + ['rfc2136', rfc_cfg_new, 'protocol'], 'nsupdate')
+
+            # Add address as config value in each service before moving the service path
+            # And then copy the services from 'address <interface> service <service>' to 'name <service>'
+            for svc_cfg in config.list_nodes(address_path_tag + [svc_type]):
+                config.set(address_path_tag + [svc_type, svc_cfg, 'address'], address)
+                config.copy(address_path_tag + [svc_type, svc_cfg], name_path + [svc_cfg])
+
+# Finally cleanup the old address path
+config.delete(address_path)
+
+try:
+    with open(file_name, 'w') as f:
+        f.write(config.to_string())
+except OSError as e:
+    print("Failed to save the modified config: {}".format(e))
+    sys.exit(1)
