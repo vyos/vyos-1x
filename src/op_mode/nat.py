@@ -28,9 +28,6 @@ from vyos.configquery import ConfigTreeQuery
 from vyos.utils.process import cmd
 from vyos.utils.dict import dict_search
 
-base = 'nat'
-unconf_message = 'NAT is not configured'
-
 ArgDirection = typing.Literal['source', 'destination']
 ArgFamily = typing.Literal['inet', 'inet6']
 
@@ -293,8 +290,9 @@ def _verify(func):
     @wraps(func)
     def _wrapper(*args, **kwargs):
         config = ConfigTreeQuery()
+        base = 'nat66' if 'inet6' in sys.argv[1:] else 'nat'
         if not config.exists(base):
-            raise vyos.opmode.UnconfiguredSubsystem(unconf_message)
+            raise vyos.opmode.UnconfiguredSubsystem(f'{base.upper()} is not configured')
         return func(*args, **kwargs)
     return _wrapper
 
