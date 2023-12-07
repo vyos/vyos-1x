@@ -16,7 +16,7 @@
                 <properties>
                   <help>Username used for authentication</help>
                   <completionHelp>
-                    <list>&lt;username&gt;</list>
+                    <path>system login user</path>
                   </completionHelp>
                 </properties>
                 <children>
