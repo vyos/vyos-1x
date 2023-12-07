@@ -1,6 +1,6 @@
 <node name="graceful-restart">
     <properties>
-      <help>Show IPv4 OSPF Graceful Restart</help>
+      <help>Show OSPF Graceful Restart</help>
     </properties>
     <children>
       <leafNode name="helper">
