@@ -1,0 +1,1629 @@
+firewall {
+    all-ping enable
+    broadcast-ping disable
+    config-trap disable
+    group {
+        address-group DMZ-WEBSERVER {
+            address 172.16.36.10
+            address 172.16.36.40
+            address 172.16.36.20
+        }
+        address-group DMZ-RDP-SERVER {
+            address 172.16.33.40
+        }
+        address-group DOMAIN-CONTROLLER {
+            address 172.16.100.10
+            address 172.16.100.20
+            address 172.16.110.30
+        }
+        address-group VIDEO {
+            address 172.16.33.211
+            address 172.16.33.212
+            address 172.16.33.213
+            address 172.16.33.214
+        }
+        ipv6-network-group LOCAL-ADDRESSES {
+            network ff02::/64
+            network fe80::/10
+        }
+        network-group SSH-IN-ALLOW {
+            network 100.65.150.0/23
+            network 100.64.69.205/32
+            network 100.64.8.67/32
+            network 100.64.55.1/32
+        }
+    }
+    ipv6-name ALLOW-ALL-6 {
+        default-action accept
+    }
+    ipv6-name ALLOW-BASIC-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            protocol icmpv6
+        }
+    }
+    ipv6-name ALLOW-ESTABLISHED-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            destination {
+                group {
+                    network-group LOCAL-ADDRESSES
+                }
+            }
+            protocol icmpv6
+            source {
+                address fe80::/10
+            }
+        }
+        rule 20 {
+            action accept
+            icmpv6 {
+                type echo-request
+            }
+            protocol icmpv6
+        }
+        rule 21 {
+            action accept
+            icmpv6 {
+                type destination-unreachable
+            }
+            protocol icmpv6
+        }
+        rule 22 {
+            action accept
+            icmpv6 {
+                type packet-too-big
+            }
+            protocol icmpv6
+        }
+        rule 23 {
+            action accept
+            icmpv6 {
+                type time-exceeded
+            }
+            protocol icmpv6
+        }
+        rule 24 {
+            action accept
+            icmpv6 {
+                type parameter-problem
+            }
+            protocol icmpv6
+        }
+    }
+    ipv6-name WAN-LOCAL-6 {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            destination {
+                address ff02::/64
+            }
+            protocol icmpv6
+            source {
+                address fe80::/10
+            }
+        }
+        rule 50 {
+            action accept
+            destination {
+                address fe80::/10
+                port 546
+            }
+            protocol udp
+            source {
+                address fe80::/10
+                port 547
+            }
+        }
+    }
+    ipv6-receive-redirects disable
+    ipv6-src-route disable
+    ip-src-route disable
+    log-martians enable
+    name DMZ-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name DMZ-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            destination {
+                group {
+                    address-group DOMAIN-CONTROLLER
+                }
+                port 123,389,636
+            }
+            protocol tcp_udp
+        }
+        rule 300 {
+            action accept
+            destination {
+                group {
+                    address-group DMZ-RDP-SERVER
+                }
+                port 3389
+            }
+            protocol tcp_udp
+            source {
+                address 172.16.36.20
+            }
+        }
+    }
+    name DMZ-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 50 {
+            action accept
+            destination {
+                address 172.16.254.30
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 123 {
+            action accept
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+    }
+    name DMZ-WAN {
+        default-action accept
+    }
+    name GUEST-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name GUEST-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name GUEST-LOCAL {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            destination {
+                address 172.31.0.254
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 11 {
+            action accept
+            destination {
+                port 67
+            }
+            protocol udp
+        }
+        rule 15 {
+            action accept
+            destination {
+                address 172.31.0.254
+            }
+            protocol icmp
+        }
+        rule 100 {
+            action accept
+            destination {
+                address 172.31.0.254
+                port 80,443
+            }
+            protocol tcp
+        }
+    }
+    name GUEST-WAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 25 {
+            action accept
+            destination {
+                port 25,587
+            }
+            protocol tcp
+        }
+        rule 53 {
+            action accept
+            destination {
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 60 {
+            action accept
+            source {
+                address 172.31.0.200
+            }
+        }
+        rule 80 {
+            action accept
+            source {
+                address 172.31.0.200
+            }
+        }
+        rule 100 {
+            action accept
+            protocol icmp
+        }
+        rule 110 {
+            action accept
+            destination {
+                port 110,995
+            }
+            protocol tcp
+        }
+        rule 123 {
+            action accept
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+        rule 143 {
+            action accept
+            destination {
+                port 143,993
+            }
+            protocol tcp
+        }
+        rule 200 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 500 {
+            action accept
+            destination {
+                port 500,4500
+            }
+            protocol udp
+        }
+        rule 600 {
+            action accept
+            destination {
+                port 5222-5224
+            }
+            protocol tcp
+        }
+        rule 601 {
+            action accept
+            destination {
+                port 3478-3497,4500,16384-16387,16393-16402
+            }
+            protocol udp
+        }
+        rule 1000 {
+            action accept
+            source {
+                address 172.31.0.184
+            }
+        }
+    }
+    name LAN-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 22 {
+            action accept
+            destination {
+                port 22
+            }
+            protocol tcp
+        }
+        rule 100 {
+            action accept
+            destination {
+                group {
+                    address-group DMZ-WEBSERVER
+                }
+                port 22
+            }
+            protocol tcp
+        }
+    }
+    name LAN-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+    }
+    name LAN-LOCAL {
+        default-action accept
+    }
+    name LAN-WAN {
+        default-action accept
+        rule 90 {
+            action accept
+            destination {
+                address 100.65.150.0/23
+                port 25
+            }
+            protocol tcp_udp
+            source {
+                group {
+                    address-group VIDEO
+                }
+            }
+        }
+        rule 100 {
+            action drop
+            source {
+                group {
+                    address-group VIDEO
+                }
+            }
+        }
+    }
+    name LOCAL-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            destination {
+                address 172.16.36.40
+                port 80,443
+            }
+            protocol tcp
+        }
+    }
+    name LOCAL-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 5 {
+            action accept
+            protocol icmp
+        }
+        rule 300 {
+            action accept
+            destination {
+                port 1900
+            }
+            protocol udp
+        }
+    }
+    name LOCAL-LAN {
+        default-action accept
+    }
+    name LOCAL-WAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 10 {
+            action accept
+            protocol icmp
+        }
+        rule 50 {
+            action accept
+            destination {
+                port 53
+            }
+            protocol tcp_udp
+        }
+        rule 80 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 123 {
+            action accept
+            destination {
+                port 123
+            }
+            protocol udp
+        }
+        rule 800 {
+            action accept
+            destination {
+                address 100.65.151.213
+            }
+            protocol udp
+        }
+        rule 805 {
+            action accept
+            destination {
+                address 100.65.151.2
+            }
+            protocol all
+        }
+        rule 1010 {
+            action accept
+            destination {
+                address 100.64.69.205
+                port 7705
+            }
+            protocol udp
+            source {
+                port 7705
+            }
+        }
+        rule 1990 {
+            action accept
+            destination {
+                address 100.64.55.1
+                port 10666
+            }
+            protocol udp
+        }
+        rule 2000 {
+            action accept
+            destination {
+                address 100.64.39.249
+            }
+        }
+        rule 10200 {
+            action accept
+            destination {
+                address 100.64.89.98
+                port 10200
+            }
+            protocol udp
+            source {
+                port 10200
+            }
+        }
+    }
+    name WAN-DMZ {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 100 {
+            action accept
+            destination {
+                address 172.16.36.10
+                port 80,443
+            }
+            protocol tcp
+        }
+    }
+    name WAN-GUEST {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 1000 {
+            action accept
+            destination {
+                address 172.31.0.184
+            }
+        }
+        rule 8000 {
+            action accept
+            destination {
+                address 172.31.0.200
+                port 10000
+            }
+            protocol udp
+        }
+    }
+    name WAN-LAN {
+        default-action drop
+        enable-default-log
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 1000 {
+            action accept
+            destination {
+                address 172.16.33.40
+                port 3389
+            }
+            protocol tcp
+            source {
+                group {
+                    network-group SSH-IN-ALLOW
+                }
+            }
+        }
+    }
+    name WAN-LOCAL {
+        default-action drop
+        rule 1 {
+            action accept
+            state {
+                established enable
+                related enable
+            }
+        }
+        rule 2 {
+            action drop
+            log enable
+            state {
+                invalid enable
+            }
+        }
+        rule 22 {
+            action accept
+            destination {
+                port 22
+            }
+            protocol tcp
+            source {
+                group {
+                    network-group SSH-IN-ALLOW
+                }
+            }
+        }
+        rule 1990 {
+            action accept
+            destination {
+                port 10666
+            }
+            protocol udp
+            source {
+                address 100.64.55.1
+            }
+        }
+        rule 10000 {
+            action accept
+            destination {
+                port 80,443
+            }
+            protocol tcp
+        }
+        rule 10100 {
+            action accept
+            destination {
+                port 10100
+            }
+            protocol udp
+            source {
+                port 10100
+            }
+        }
+        rule 10200 {
+            action accept
+            destination {
+                port 10200
+            }
+            protocol udp
+            source {
+                address 100.64.89.98
+                port 10200
+            }
+        }
+    }
+    options {
+        interface pppoe0 {
+            adjust-mss 1452
+            adjust-mss6 1432
+        }
+    }
+    receive-redirects disable
+    send-redirects enable
+    source-validation disable
+    syn-cookies enable
+    twa-hazards-protection disable
+}
+interfaces {
+    dummy dum0 {
+        address 172.16.254.30/32
+    }
+    ethernet eth0 {
+        duplex auto
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+        ring-buffer {
+            rx 256
+            tx 256
+        }
+        speed auto
+        vif 5 {
+            address 172.16.37.254/24
+            ip {
+                ospf {
+                    authentication {
+                        md5 {
+                            key-id 10 {
+                                md5-key ospf
+                            }
+                        }
+                    }
+                    dead-interval 40
+                    hello-interval 10
+                    priority 1
+                    retransmit-interval 5
+                    transmit-delay 1
+                }
+            }
+        }
+        vif 10 {
+            address 172.16.33.254/24
+            address 172.16.40.254/24
+        }
+        vif 50 {
+            address 172.16.36.254/24
+        }
+    }
+    ethernet eth1 {
+        duplex auto
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+        speed auto
+        vif 20 {
+            address 172.31.0.254/24
+        }
+    }
+    ethernet eth2 {
+        disable
+        duplex auto
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+        speed auto
+    }
+    ethernet eth3 {
+        duplex auto
+        offload {
+            gro
+            gso
+            sg
+            tso
+        }
+        ring-buffer {
+            rx 256
+            tx 256
+        }
+        speed auto
+        vif 7 {
+        }
+    }
+    loopback lo {
+        address 172.16.254.30/32
+    }
+    pppoe pppoe0 {
+        authentication {
+            password vyos
+            user vyos
+        }
+        default-route force
+        dhcpv6-options {
+            pd 0 {
+                interface eth0.10 {
+                    address 1
+                    sla-id 10
+                }
+                interface eth1.20 {
+                    address 1
+                    sla-id 20
+                }
+                length 56
+            }
+        }
+        ipv6 {
+            address {
+                autoconf
+            }
+        }
+        no-peer-dns
+        source-interface eth3.7
+    }
+    wireguard wg100 {
+        address 172.16.252.128/31
+        mtu 1500
+        peer HR6 {
+            address 100.65.151.213
+            allowed-ips 0.0.0.0/0
+            port 10100
+            pubkey yLpi+UZuI019bmWH2h5fX3gStbpPPPLgEoYMyrdkOnQ=
+        }
+        port 10100
+    }
+    wireguard wg200 {
+        address 172.16.252.130/31
+        mtu 1500
+        peer WH56 {
+            address 80.151.69.205
+            allowed-ips 0.0.0.0/0
+            port 10200
+            pubkey XQbkj6vnKKBJfJQyThXysU0iGxCvEOEb31kpaZgkrD8=
+        }
+        port 10200
+    }
+    wireguard wg666 {
+        address 172.29.0.1/31
+        mtu 1500
+        peer WH34 {
+            address 100.65.55.1
+            allowed-ips 0.0.0.0/0
+            port 10666
+            pubkey yaTN4+xAafKM04D+Baeg5GWfbdaw35TE9HQivwRgAk0=
+        }
+        port 10666
+    }
+}
+nat {
+    destination {
+        rule 8000 {
+            destination {
+                port 10000
+            }
+            inbound-interface pppoe0
+            protocol udp
+            translation {
+                address 172.31.0.200
+            }
+        }
+    }
+    source {
+        rule 50 {
+            outbound-interface pppoe0
+            source {
+                address 100.64.0.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 100 {
+            outbound-interface pppoe0
+            source {
+                address 172.16.32.0/21
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 200 {
+            outbound-interface pppoe0
+            source {
+                address 172.16.100.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 300 {
+            outbound-interface pppoe0
+            source {
+                address 172.31.0.0/24
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 400 {
+            outbound-interface pppoe0
+            source {
+                address 172.18.200.0/21
+            }
+            translation {
+                address masquerade
+            }
+        }
+        rule 1000 {
+            destination {
+                address 192.168.189.0/24
+            }
+            outbound-interface wg666
+            source {
+                address 172.16.32.0/21
+            }
+            translation {
+                address 172.29.0.1
+            }
+        }
+        rule 1001 {
+            destination {
+                address 192.168.189.0/24
+            }
+            outbound-interface wg666
+            source {
+                address 172.16.100.0/24
+            }
+            translation {
+                address 172.29.0.1
+            }
+        }
+    }
+}
+policy {
+    route-map MAP-OSPF-CONNECTED {
+        rule 1 {
+            action deny
+            match {
+                interface eth1.20
+            }
+        }
+        rule 20 {
+            action permit
+            match {
+                interface eth0.10
+            }
+        }
+        rule 40 {
+            action permit
+            match {
+                interface eth0.50
+            }
+        }
+    }
+}
+protocols {
+    bfd {
+        peer 172.16.252.129 {
+        }
+        peer 172.16.252.131 {
+        }
+        peer 172.18.254.201 {
+        }
+    }
+    bgp 64503 {
+        address-family {
+            ipv4-unicast {
+                network 172.16.32.0/21 {
+                }
+                network 172.16.100.0/24 {
+                }
+                network 172.16.252.128/31 {
+                }
+                network 172.16.252.130/31 {
+                }
+                network 172.16.254.30/32 {
+                }
+                network 172.18.0.0/16 {
+                }
+            }
+        }
+        neighbor 172.16.252.129 {
+            peer-group WIREGUARD
+        }
+        neighbor 172.16.252.131 {
+            peer-group WIREGUARD
+        }
+        neighbor 172.18.254.201 {
+            address-family {
+                ipv4-unicast {
+                    nexthop-self {
+                    }
+                }
+            }
+            bfd {
+            }
+            remote-as 64503
+            update-source dum0
+        }
+        parameters {
+            default {
+                no-ipv4-unicast
+            }
+            log-neighbor-changes
+        }
+        peer-group WIREGUARD {
+            address-family {
+                ipv4-unicast {
+                    soft-reconfiguration {
+                        inbound
+                    }
+                }
+            }
+            bfd
+            remote-as external
+        }
+        timers {
+            holdtime 30
+            keepalive 10
+        }
+    }
+    ospf {
+        area 0 {
+            network 172.16.254.30/32
+            network 172.16.37.0/24
+            network 172.18.201.0/24
+            network 172.18.202.0/24
+            network 172.18.203.0/24
+            network 172.18.204.0/24
+        }
+        default-information {
+            originate {
+                always
+                metric-type 2
+            }
+        }
+        log-adjacency-changes {
+            detail
+        }
+        parameters {
+            abr-type cisco
+            router-id 172.16.254.30
+        }
+        passive-interface default
+        passive-interface-exclude eth0.5
+        redistribute {
+            connected {
+                metric-type 2
+                route-map MAP-OSPF-CONNECTED
+            }
+        }
+    }
+    static {
+        interface-route6 2000::/3 {
+            next-hop-interface pppoe0 {
+            }
+        }
+        route 10.0.0.0/8 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 169.254.0.0/16 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 172.16.0.0/12 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 172.16.32.0/21 {
+            blackhole {
+            }
+        }
+        route 172.18.0.0/16 {
+            blackhole {
+            }
+        }
+        route 172.29.0.2/31 {
+            next-hop 172.29.0.0 {
+            }
+        }
+        route 192.168.0.0/16 {
+            blackhole {
+                distance 254
+            }
+        }
+        route 192.168.189.0/24 {
+            next-hop 172.29.0.0 {
+            }
+        }
+    }
+}
+service {
+    dhcp-server {
+        shared-network-name BACKBONE {
+            authoritative
+            subnet 172.16.37.0/24 {
+                default-router 172.16.37.254
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                name-server 172.16.254.30
+                ntp-server 172.16.254.30
+                range 0 {
+                    start 172.16.37.120
+                    stop 172.16.37.149
+                }
+                static-mapping AP1 {
+                    ip-address 172.16.37.231
+                    mac-address 02:00:00:00:ee:18
+                }
+                static-mapping AP2 {
+                    ip-address 172.16.37.232
+                    mac-address 02:00:00:00:52:84
+                }
+                static-mapping AP3 {
+                    ip-address 172.16.37.233
+                    mac-address 02:00:00:00:51:c0
+                }
+                static-mapping AP4 {
+                    ip-address 172.16.37.234
+                    mac-address 02:00:00:00:e6:fc
+                }
+                static-mapping AP5 {
+                    ip-address 172.16.37.235
+                    mac-address 02:00:00:00:c3:50
+                }
+            }
+        }
+        shared-network-name GUEST {
+            authoritative
+            subnet 172.31.0.0/24 {
+                default-router 172.31.0.254
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                name-server 172.31.0.254
+                range 0 {
+                    start 172.31.0.101
+                    stop 172.31.0.199
+                }
+            }
+        }
+        shared-network-name LAN {
+            authoritative
+            subnet 172.16.33.0/24 {
+                default-router 172.16.33.254
+                domain-name vyos.net
+                domain-search vyos.net
+                lease 86400
+                name-server 172.16.254.30
+                ntp-server 172.16.254.30
+                range 0 {
+                    start 172.16.33.100
+                    stop 172.16.33.189
+                }
+                static-mapping one {
+                    ip-address 172.16.33.221
+                    mac-address 02:00:00:00:eb:a6
+                }
+                static-mapping two {
+                    ip-address 172.16.33.211
+                    mac-address 02:00:00:00:58:90
+                }
+                static-mapping three {
+                    ip-address 172.16.33.212
+                    mac-address 02:00:00:00:12:c7
+                }
+                static-mapping four {
+                    ip-address 172.16.33.214
+                    mac-address 02:00:00:00:c4:33
+                }
+            }
+        }
+    }
+    dns {
+        dynamic {
+            interface pppoe0 {
+                service vyos {
+                    host-name r1.vyos.net
+                    login vyos-vyos
+                    password vyos
+                    protocol dyndns2
+                    server dyndns.vyos.io
+                }
+            }
+        }
+        forwarding {
+            allow-from 172.16.0.0/12
+            domain 16.172.in-addr.arpa {
+                addnta
+                recursion-desired
+                server 172.16.100.10
+                server 172.16.100.20
+            }
+            domain 18.172.in-addr.arpa {
+                addnta
+                recursion-desired
+                server 172.16.100.10
+                server 172.16.100.20
+            }
+            domain vyos.net {
+                addnta
+                recursion-desired
+                server 172.16.100.20
+                server 172.16.100.10
+            }
+            ignore-hosts-file
+            listen-address 172.16.254.30
+            listen-address 172.31.0.254
+            negative-ttl 60
+        }
+    }
+    lldp {
+        legacy-protocols {
+            cdp
+            edp
+            fdp
+            sonmp
+        }
+        snmp {
+            enable
+        }
+    }
+    router-advert {
+        interface eth0.10 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+        interface eth1.20 {
+            prefix ::/64 {
+                preferred-lifetime 2700
+                valid-lifetime 5400
+            }
+        }
+    }
+    snmp {
+        community ro-community {
+            authorization ro
+            network 172.16.100.0/24
+        }
+        contact "VyOS"
+        listen-address 172.16.254.30 {
+            port 161
+        }
+        location "CLOUD"
+    }
+    ssh {
+        disable-host-validation
+        port 22
+    }
+}
+system {
+    config-management {
+        commit-revisions 200
+    }
+    conntrack {
+        expect-table-size 2048
+        hash-size 32768
+        modules {
+            ftp
+            h323
+            nfs
+            pptp
+            sqlnet
+            tftp
+        }
+        table-size 262144
+        timeout {
+            icmp 30
+            other 600
+            udp {
+                other 300
+                stream 300
+            }
+        }
+    }
+    console {
+        device ttyS0 {
+            speed 115200
+        }
+    }
+    domain-name vyos.net
+    host-name r1
+    login {
+        user vyos {
+            authentication {
+                encrypted-password $6$2Ta6TWHd/U$NmrX0x9kexCimeOcYK1MfhMpITF9ELxHcaBU/znBq.X2ukQOj61fVI2UYP/xBzP4QtiTcdkgs7WOQMHWsRymO/
+                plaintext-password ""
+            }
+        }
+    }
+    name-server 172.16.254.30
+    ntp {
+        allow-clients {
+            address 172.16.0.0/12
+        }
+        server time1.vyos.net {
+        }
+        server time2.vyos.net {
+        }
+    }
+    option {
+        ctrl-alt-delete ignore
+        performance latency
+        reboot-on-panic
+        startup-beep
+    }
+    syslog {
+        global {
+            facility all {
+                level debug
+            }
+            facility protocols {
+                level debug
+            }
+        }
+        host 172.16.100.1 {
+            facility all {
+                level warning
+            }
+        }
+    }
+    time-zone Europe/Berlin
+}
+traffic-policy {
+    shaper QoS {
+        bandwidth 50mbit
+        default {
+            bandwidth 100%
+            burst 15k
+            queue-limit 1000
+            queue-type fq-codel
+        }
+    }
+}
+zone-policy {
+    zone DMZ {
+        default-action drop
+        from GUEST {
+            firewall {
+                name GUEST-DMZ
+            }
+        }
+        from LAN {
+            firewall {
+                name LAN-DMZ
+            }
+        }
+        from LOCAL {
+            firewall {
+                name LOCAL-DMZ
+            }
+        }
+        from WAN {
+            firewall {
+                name WAN-DMZ
+            }
+        }
+        interface eth0.50
+    }
+    zone GUEST {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-GUEST
+            }
+        }
+        from LAN {
+            firewall {
+                name LAN-GUEST
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-GUEST
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name WAN-GUEST
+            }
+        }
+        interface eth1.20
+    }
+    zone LAN {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-LAN
+            }
+        }
+        from GUEST {
+            firewall {
+                name GUEST-LAN
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-LAN
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name WAN-LAN
+            }
+        }
+        interface eth0.5
+        interface eth0.10
+        interface wg100
+        interface wg200
+    }
+    zone LOCAL {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-LOCAL
+            }
+        }
+        from GUEST {
+            firewall {
+                ipv6-name ALLOW-ESTABLISHED-6
+                name GUEST-LOCAL
+            }
+        }
+        from LAN {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LAN-LOCAL
+            }
+        }
+        from WAN {
+            firewall {
+                ipv6-name WAN-LOCAL-6
+                name WAN-LOCAL
+            }
+        }
+        local-zone
+    }
+    zone WAN {
+        default-action drop
+        from DMZ {
+            firewall {
+                name DMZ-WAN
+            }
+        }
+        from GUEST {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name GUEST-WAN
+            }
+        }
+        from LAN {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LAN-WAN
+            }
+        }
+        from LOCAL {
+            firewall {
+                ipv6-name ALLOW-ALL-6
+                name LOCAL-WAN
+            }
+        }
+        interface pppoe0
+        interface wg666
+    }
+}
+
+
+// Warning: Do not remove the following line.
+// vyos-config-version: "broadcast-relay@1:cluster@1:config-management@1:conntrack@3:conntrack-sync@2:container@1:dhcp-relay@2:dhcp-server@6:dhcpv6-server@1:dns-forwarding@3:firewall@5:https@2:interfaces@22:ipoe-server@1:ipsec@5:isis@1:l2tp@3:lldp@1:mdns@1:nat@5:ntp@1:pppoe-server@5:pptp@2:qos@1:quagga@8:rpki@1:salt@1:snmp@2:ssh@2:sstp@3:system@21:vrrp@2:vyos-accel-ppp@2:wanloadbalance@3:webproxy@2:zone-policy@1"
+// Release version: 1.3.4
