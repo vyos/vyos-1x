@@ -150,7 +150,7 @@ def filesystem_create(partition: str, fstype: str) -> None:
 def partition_mount(partition: str,
                     path: str,
                     fsype: str = '',
-                    overlay_params: dict[str, str] = {}) -> None:
+                    overlay_params: dict[str, str] = {}) -> bool:
     """Mount a partition into a path
 
     Args:
@@ -159,6 +159,9 @@ def partition_mount(partition: str,
         fsype (str): optionally, set fstype ('squashfs', 'overlay', 'iso9660')
         overlay_params (dict): optionally, set overlay parameters.
         Defaults to None.
+
+    Returns:
+        bool: True on success
     """
     if fsype in ['squashfs', 'iso9660']:
         command: str = f'mount -o loop,ro -t {fsype} {partition} {path}'
@@ -171,7 +174,11 @@ def partition_mount(partition: str,
     else:
         command = f'mount {partition} {path}'
 
-    run(command)
+    rc = run(command)
+    if rc == 0:
+        return True
+
+    return False
 
 
 def partition_umount(partition: str = '', path: str = '') -> None:
