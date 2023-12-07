@@ -408,6 +408,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name = 'v6-smoketest'
         interface = 'eth0'
 
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
+
         self.cli_set(['firewall', 'ipv6', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'name', name, 'enable-default-log'])
 
@@ -452,7 +456,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['log prefix "[ipv6-OUT-filter-default-D]"','OUT-filter default-action drop', 'drop'],
             [f'chain NAME6_{name}'],
             ['saddr 2002::1', 'daddr 2002::1:1', 'log prefix "[ipv6-NAM-v6-smoketest-1-A]" log level crit', 'accept'],
-            [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop']
+            [f'"{name} default-action drop"', f'log prefix "[ipv6-{name}-default-D]"', 'drop'],
+            ['jump VYOS_STATE_POLICY6'],
+            ['chain VYOS_STATE_POLICY6'],
+            ['ct state established', 'accept'],
+            ['ct state invalid', 'drop'],
+            ['ct state related', 'accept']
         ]
 
         self.verify_nftables(nftables_search, 'ip6 vyos_filter')
@@ -535,6 +544,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         name = 'smoketest-state'
         interface = 'eth0'
 
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
+
         self.cli_set(['firewall', 'ipv4', 'name', name, 'default-action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'action', 'accept'])
         self.cli_set(['firewall', 'ipv4', 'name', name, 'rule', '1', 'state', 'established'])
@@ -561,7 +574,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['ct state new', 'ct status dnat', 'accept'],
             ['ct state { established, new }', 'ct status snat', 'accept'],
             ['ct state related', 'ct helper { "ftp", "pptp" }', 'accept'],
-            ['drop', f'comment "{name} default-action drop"']
+            ['drop', f'comment "{name} default-action drop"'],
+            ['jump VYOS_STATE_POLICY'],
+            ['chain VYOS_STATE_POLICY'],
+            ['ct state established', 'accept'],
+            ['ct state invalid', 'drop'],
+            ['ct state related', 'accept']
         ]
 
         self.verify_nftables(nftables_search, 'ip vyos_filter')
@@ -657,6 +675,10 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
         self.cli_set(['firewall', 'zone', 'smoketest-eth0', 'from', 'smoketest-local', 'firewall', 'name', 'smoketest'])
         self.cli_set(['firewall', 'zone', 'smoketest-local', 'local-zone'])
         self.cli_set(['firewall', 'zone', 'smoketest-local', 'from', 'smoketest-eth0', 'firewall', 'name', 'smoketest'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'established', 'log'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'related', 'action', 'accept'])
+        self.cli_set(['firewall', 'global-options', 'state-policy', 'invalid', 'action', 'drop'])
 
         self.cli_commit()
 
@@ -674,7 +696,12 @@ class TestFirewall(VyOSUnitTestSHIM.TestCase):
             ['jump VZONE_smoketest-local_IN'],
             ['jump VZONE_smoketest-local_OUT'],
             ['iifname "eth0"', 'jump NAME_smoketest'],
-            ['oifname "eth0"', 'jump NAME_smoketest']
+            ['oifname "eth0"', 'jump NAME_smoketest'],
+            ['jump VYOS_STATE_POLICY'],
+            ['chain VYOS_STATE_POLICY'],
+            ['ct state established', 'log prefix "[STATE-POLICY-EST-A]"', 'accept'],
+            ['ct state invalid', 'drop'],
+            ['ct state related', 'accept']
         ]
 
         nftables_output = cmd('sudo nft list table ip vyos_filter')
