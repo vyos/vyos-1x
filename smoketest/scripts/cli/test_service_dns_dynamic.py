@@ -294,7 +294,7 @@ class TestServiceDDNS(VyOSUnitTestSHIM.TestCase):
 
     def test_07_dyndns_vrf(self):
         # Table number randomized, but should be within range 100-65535
-        vrf_table = "".join(random.choices(string.digits, k=4))
+        vrf_table = '58710'
         vrf_name = f'vyos-test-{vrf_table}'
         svc_path = name_path + ['cloudflare']
         proto = 'cloudflare'
