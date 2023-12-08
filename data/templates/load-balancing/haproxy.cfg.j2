@@ -50,13 +50,19 @@ defaults
 {% if service is vyos_defined %}
 {%     for front, front_config in service.items() %}
 frontend {{ front }}
-{%         set ssl_front =  'ssl crt /run/haproxy/' ~ front_config.ssl.certificate ~ '.pem' if front_config.ssl.certificate is vyos_defined else '' %}
+{%         set ssl_front = [] %}
+{%         if front_config.ssl.certificate is vyos_defined and front_config.ssl.certificate is iterable %}
+{%             for cert in front_config.ssl.certificate %}
+{%                 set _ = ssl_front.append('crt /run/haproxy/' ~ cert ~ '.pem') %}
+{%             endfor %}
+{%         endif %}
+{%         set ssl_directive = 'ssl' if ssl_front else '' %}
 {%         if front_config.listen_address is vyos_defined %}
 {%             for address in front_config.listen_address %}
-    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_front }}
+    bind {{ address | bracketize_ipv6 }}:{{ front_config.port }} {{ ssl_directive }} {{ ssl_front | join(' ') }}
 {%             endfor %}
 {%         else %}
-    bind :::{{ front_config.port }} v4v6 {{ ssl_front }}
+    bind :::{{ front_config.port }} v4v6 {{ ssl_directive }} {{ ssl_front | join(' ') }}
 {%         endif %}
 {%         if front_config.redirect_http_to_https is vyos_defined %}
     http-request redirect scheme https unless { ssl_fc }
@@ -161,4 +167,3 @@ backend {{ back }}
 
 {%     endfor %}
 {% endif %}
-
