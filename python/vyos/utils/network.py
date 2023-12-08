@@ -201,6 +201,7 @@ def get_all_vrfs():
     return data
 
 def interface_list() -> list:
+    from vyos.ifconfig import Section
     """
     Get list of interfaces in system
     :rtype: list
