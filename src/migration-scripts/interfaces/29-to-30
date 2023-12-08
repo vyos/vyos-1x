@@ -35,16 +35,19 @@ if __name__ == '__main__':
         # Nothing to do
         sys.exit(0)
     for interface in config.list_nodes(base):
+        if not config.exists(base + [interface, 'private-key']):
+            continue
         private_key = config.return_value(base + [interface, 'private-key'])
         interface_base = base + [interface]
         if config.exists(interface_base + ['peer']):
             for peer in config.list_nodes(interface_base + ['peer']):
                 peer_base = interface_base + ['peer', peer]
+                if not config.exists(peer_base + ['public-key']):
+                    continue
                 peer_public_key = config.return_value(peer_base + ['public-key'])
-                if config.exists(peer_base + ['public-key']):
-                    if not config.exists(peer_base + ['disable']) \
-                            and is_wireguard_key_pair(private_key, peer_public_key):
-                        config.set(peer_base + ['disable'])
+                if not config.exists(peer_base + ['disable']) \
+                        and is_wireguard_key_pair(private_key, peer_public_key):
+                    config.set(peer_base + ['disable'])
 
     try:
         with open(file_name, 'w') as f:
