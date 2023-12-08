@@ -306,6 +306,7 @@ def generate(login):
 
 
 def apply(login):
+    enable_otp = False
     if 'user' in login:
         for user, user_config in login['user'].items():
             # make new user using vyatta shell and make home directory (-m),
@@ -350,6 +351,7 @@ def apply(login):
 
             # Generate 2FA/MFA One-Time-Pad configuration
             if dict_search('authentication.otp.key', user_config):
+                enable_otp = True
                 render(f'{home_dir}/.google_authenticator', 'login/pam_otp_ga.conf.j2',
                        user_config, permission=0o400, user=user, group='users')
             else:
@@ -397,6 +399,11 @@ def apply(login):
         else:
             pam_profile = 'tacplus-optional'
         cmd(f'pam-auth-update --enable {pam_profile}')
+
+    # Enable/disable Google authenticator
+    cmd('pam-auth-update --disable mfa-google-authenticator')
+    if enable_otp:
+        cmd(f'pam-auth-update --enable mfa-google-authenticator')
 
     return None
 
