@@ -1,0 +1,8 @@
+Name: Google Authenticator PAM module (2FA/MFA)
+Default: no
+Priority: 384
+
+Auth-Type: Primary
+Auth:
+    [default=ignore success=ok auth_err=die] pam_google_authenticator.so nullok forward_pass
+

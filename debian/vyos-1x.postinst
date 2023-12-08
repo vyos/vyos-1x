@@ -21,14 +21,6 @@ if ! grep -q '^openvpn' /etc/passwd; then
     adduser --quiet --firstuid 100 --system --group --shell /usr/sbin/nologin openvpn
 fi
 
-# Enable 2FA/MFA support for SSH and local logins
-for file in /etc/pam.d/sshd /etc/pam.d/login
-do
-    PAM_CONFIG="# Check 2FA/MFA authentication token if enabled (per user)\nauth       required     pam_google_authenticator.so nullok forward_pass\n"
-    grep -qF -- "pam_google_authenticator.so" $file || \
-    sed -i "/^# Standard Un\*x authentication\./i${PAM_CONFIG}" $file
-done
-
 # We need to have a group for RADIUS service users to use it inside PAM rules
 if ! grep -q '^radius' /etc/group; then
     addgroup --firstgid 1000 --quiet radius
